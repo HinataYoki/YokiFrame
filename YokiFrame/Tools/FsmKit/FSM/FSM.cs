@@ -1,3 +1,4 @@
+using NUnit;
 using System;
 using System.Collections.Generic;
 
@@ -16,15 +17,20 @@ namespace YokiFrame
         /// <summary>
         /// 状态机状态
         /// </summary>
-        public MachineState MachineState => mMachineState;
+        public MachineState MachineState => machineState;
 
-        protected MachineState mMachineState = MachineState.End;
+        protected MachineState machineState = MachineState.End;
         protected readonly Dictionary<TEnum, IState> mStateDic = new();
 
         public void Add(TEnum id, IState state)
         {
             if (mStateDic.ContainsKey(id))
             {
+                if (CurState == state && machineState is MachineState.Running)
+                {
+                    CurState.End();
+                    CurState = null;
+                }
                 mStateDic.Remove(id);
             }
             mStateDic.Add(id, state);
@@ -40,7 +46,12 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                if (CurState == state) CurState = null;
+                if (CurState == state && machineState is MachineState.Running)
+                {
+                    CurState.End(); 
+                    CurState = null;
+                    machineState = MachineState.End;
+                }
                 mStateDic.Remove(id);
             }
         }
@@ -82,14 +93,17 @@ namespace YokiFrame
 
         public void Clear()
         {
+            if (CurState != null)
+            {
+                End();
+                CurState = null;
+            }
             mStateDic.Clear();
-            CurState = null;
-            mMachineState = MachineState.End;
         }
 
         public void CustomUpdate()
         {
-            if (mMachineState is MachineState.Running)
+            if (machineState is MachineState.Running)
             {
                 CurState?.CustomUpdate();
             }
@@ -97,33 +111,35 @@ namespace YokiFrame
 
         public void End()
         {
-            mMachineState = MachineState.End;
-            CurState?.End();
+            if (machineState is not MachineState.End)
+            {
+                machineState = MachineState.End;
+                CurState?.End();
+            }
         }
 
         public void FixedUpdate()
         {
-            if (mMachineState is MachineState.Running)
+            if (machineState is MachineState.Running)
             {
                 CurState?.FixedUpdate();
             }
         }
 
-
         public void Start()
         {
-            if (CurState != null)
+            if (CurState != null && machineState is not MachineState.Running)
             {
-                mMachineState = MachineState.Running;
+                machineState = MachineState.Running;
                 CurState.Start();
             }
         }
 
         public void Start(TEnum id)
         {
-            if (mStateDic.TryGetValue(id, out var state))
+            if (mStateDic.TryGetValue(id, out var state) && machineState is not MachineState.Running)
             {
-                mMachineState = MachineState.Running;
+                machineState = MachineState.Running;
                 CurState = state;
                 CurEnum = id;
                 state.Start();
@@ -132,16 +148,16 @@ namespace YokiFrame
 
         public void Suspend()
         {
-            if (mMachineState is MachineState.Running)
+            if (CurState != null && machineState is MachineState.Running)
             {
-                mMachineState = MachineState.Suspend;
+                machineState = MachineState.Suspend;
                 CurState?.Suspend();
             }
         }
 
         public void Update()
         {
-            if (mMachineState is MachineState.Running)
+            if (machineState is MachineState.Running)
             {
                 CurState?.Update();
             }
@@ -152,9 +168,9 @@ namespace YokiFrame
     {
         public void Start(TArgs args)
         {
-            if (CurState != null)
+            if (CurState != null && machineState is not MachineState.Running)
             {
-                mMachineState = MachineState.Running;
+                machineState = MachineState.Running;
                 if (CurState is IState<TArgs> stateWithArgs)
                 {
                     stateWithArgs.Start(args);
@@ -170,7 +186,7 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                mMachineState = MachineState.Running;
+                machineState = MachineState.Running;
                 CurState = state;
                 CurEnum = id;
                 if (state is IState<TArgs> stateWithArgs)
