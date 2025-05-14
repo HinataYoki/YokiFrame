@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+
+namespace YokiFrame
+{
+    /// <summary>
+    /// 对象池接口
+    /// </summary>
+    public interface IPool<T>
+    {
+        /// <summary>
+        /// 分配对象
+        /// </summary>
+        T Allocate();
+        /// <summary>
+        /// 回收对象
+        /// </summary>
+        bool Recycle(T obj);
+    }
+
+    public abstract class Pool<T> : IPool<T>
+    {
+        /// <summary>
+        /// 当前池内对象数量
+        /// </summary>
+        public int CurCount => mCacheStack.Count;
+        /// <summary>
+        /// 池缓存
+        /// </summary>
+        protected readonly Stack<T> mCacheStack = new();
+        /// <summary>
+        /// 池对象创建工厂
+        /// </summary>
+        protected IObjectFactory<T> mFactory;
+
+        /// <summary>
+        /// 设置工厂
+        /// </summary>
+        /// <param name="factory"></param>
+        public void SetObjectFactory(IObjectFactory<T> factory) => mFactory = factory;
+        /// <summary>
+        /// 设置构造函数
+        /// </summary>
+        public void SetFactoryMethod(Func<T> factoryMethod) => mFactory = new CustomObjectFactory<T>(factoryMethod);
+
+        public virtual T Allocate()
+        {
+            return mCacheStack.Count == 0
+                ? mFactory.Create()
+                : mCacheStack.Pop();
+        }
+
+        public abstract bool Recycle(T obj);
+    }
+}
