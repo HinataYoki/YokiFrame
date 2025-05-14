@@ -1,34 +1,22 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace YokiFrame
 {
-    public struct CustomUnRegister
+    public abstract class UnRegisterTrigger<T> : MonoBehaviour where T : IUnRegister
     {
-        private Action UnRegisterAction;
-        public CustomUnRegister(Action UnRegister) => UnRegisterAction = UnRegister;
+        private readonly HashSet<T> mUnRegisters = new();
 
-        public void UnRegister()
-        {
-            UnRegisterAction?.Invoke();
-            UnRegisterAction = null;
-        }
-    }
-
-    public abstract class UnRegisterTrigger : MonoBehaviour
-    {
-        private readonly HashSet<CustomUnRegister> mUnRegisters = new();
-
-        public CustomUnRegister AddUnRegister(ref CustomUnRegister unRegister)
+        public T AddUnRegister(ref T unRegister)
         {
             mUnRegisters.Add(unRegister);
             return unRegister;
         }
 
-        public void RemoveUnRegister(CustomUnRegister unRegister) => mUnRegisters.Remove(unRegister);
+        public void RemoveUnRegister(T unRegister)
+            => mUnRegisters.Remove(unRegister);
 
-        public void UnRegister()
+        protected void UnRegister()
         {
             foreach (var unRegister in mUnRegisters)
             {
@@ -39,12 +27,12 @@ namespace YokiFrame
         }
     }
 
-    public class UnRegisterOnDestroyTrigger : UnRegisterTrigger
+    public class UnRegisterOnDestroyTrigger<T> : UnRegisterTrigger<T> where T : IUnRegister
     {
         private void OnDestroy() => UnRegister();
     }
 
-    public class UnRegisterOnDisableTrigger : UnRegisterTrigger
+    public class UnRegisterOnDisableTrigger<T> : UnRegisterTrigger<T> where T : IUnRegister
     {
         private void OnDisable() => UnRegister();
     }
@@ -65,14 +53,14 @@ namespace YokiFrame
         }
 
 
-        public static CustomUnRegister UnRegisterWhenGameObjectDestroyed<T>(this CustomUnRegister self, T component) where T : Component =>
+        public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, Component component) where T : IUnRegister =>
             self.UnRegisterWhenGameObjectDestroyed(component.gameObject);
-        public static CustomUnRegister UnRegisterWhenGameObjectDestroyed(this CustomUnRegister unRegister, GameObject gameObject) =>
-            GetOrAddComponent<UnRegisterOnDestroyTrigger>(gameObject).AddUnRegister(ref unRegister);
+        public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, GameObject gameObject) where T : IUnRegister =>
+            GetOrAddComponent<UnRegisterOnDestroyTrigger<T>>(gameObject).AddUnRegister(ref self);
 
-        public static CustomUnRegister UnRegisterWhenDisabled<T>(this CustomUnRegister self, T component) where T : Component =>
+        public static T UnRegisterWhenDisabled<T>(this T self, Component component) where T : IUnRegister =>
             self.UnRegisterWhenDisabled(component.gameObject);
-        public static CustomUnRegister UnRegisterWhenDisabled(this CustomUnRegister unRegister, GameObject gameObject) =>
-            GetOrAddComponent<UnRegisterOnDisableTrigger>(gameObject).AddUnRegister(ref unRegister);
+        public static T UnRegisterWhenDisabled<T>(this T self, GameObject gameObject) where T : IUnRegister =>
+            GetOrAddComponent<UnRegisterOnDestroyTrigger<T>>(gameObject).AddUnRegister(ref self);
     }
 }

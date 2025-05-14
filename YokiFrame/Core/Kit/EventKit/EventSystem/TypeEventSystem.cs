@@ -4,14 +4,22 @@ namespace YokiFrame
 {
     public class TypeEventSystem
     {
-        private readonly EasyEvents mEvents = new();
+        private readonly EasyEvents mEventDic = new();
 
-        public void Send<T>(T args = default) => mEvents.GetEvent<EasyEvent<T>>()?.Trigger(args);
+        /// <summary>
+        /// 触发方法
+        /// </summary>
+        public void Send<T>(T args = default) => mEventDic.GetEvent<EasyEvent<T>>()?.Trigger(args);
+        /// <summary>
+        /// 注册方法
+        /// </summary>
+        /// <returns></returns>
+        public LinkUnRegister<T> Register<T>(Action<T> onEvent) => mEventDic.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
+        /// <summary>
+        /// 注销方法
+        /// </summary>
+        public void UnRegister<T>(Action<T> onEvent) => mEventDic.GetEvent<EasyEvent<T>>()?.UnRegister(onEvent);
 
-        public CustomUnRegister Register<T>(Action<T> onEvent) => mEvents.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
-
-        public void UnRegister<T>(Action<T> onEvent) => mEvents.GetEvent<EasyEvent<T>>()?.UnRegister(onEvent);
-
-        public void Clear() => mEvents.Clear();
+        public void Clear() => mEventDic.Clear();
     }
 }

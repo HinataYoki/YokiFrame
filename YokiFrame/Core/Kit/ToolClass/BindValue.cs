@@ -20,7 +20,7 @@ namespace YokiFrame
         public void SetValueWithoutEvent(T value) => mValue = value;
 
         private readonly EasyEvent<(T, T)> onValueChanged = new();
-        public CustomUnRegister Bind(Action<(T, T)> callback)
+        public LinkUnRegister<(T, T)> Bind(Action<(T, T)> callback)
         {
             if (callback != null)
             {
@@ -28,7 +28,7 @@ namespace YokiFrame
             }
             throw new ArgumentNullException(nameof(callback));
         }
-        public CustomUnRegister BindWithCallback(Action<(T, T)> callback)
+        public LinkUnRegister<(T, T)> BindWithCallback(Action<(T, T)> callback)
         {
             if (callback != null)
             {
@@ -37,6 +37,7 @@ namespace YokiFrame
             }
             throw new ArgumentNullException(nameof(callback));
         }
+
         public void UnBind(Action<(T, T)> callback)
         {
             if (callback != null) onValueChanged.UnRegister(callback);

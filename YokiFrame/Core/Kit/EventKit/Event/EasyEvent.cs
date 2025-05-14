@@ -10,22 +10,22 @@ namespace YokiFrame
 
     public class EasyEvent : IEasyEvent
     {
-        private readonly PooledLinkedList<Action> Events = new();
+        private readonly PooledLinkedList<Action> mEventList = new();
 
-        public CustomUnRegister Register(Action action)
+        public LinkUnRegister Register(Action action)
         {
-            var node = Events.AddLast(action);
-            return new CustomUnRegister(() => Events.Remove(node));
+            var node = mEventList.AddLast(action);
+            return new LinkUnRegister(mEventList, node);
         }
 
         public void UnRegister(Action action)
         {
-            var node = Events.Last;
+            var node = mEventList.Last;
             while (node != null)
             {
                 if (node.Value == action)
                 {
-                    Events.Remove(node);
+                    mEventList.Remove(node);
                     break;
                 }
                 else
@@ -37,7 +37,7 @@ namespace YokiFrame
 
         public void Trigger()
         {
-            var node = Events.First;
+            var node = mEventList.First;
             while (node != null)
             {
                 var nxt = node.Next;
@@ -53,27 +53,27 @@ namespace YokiFrame
             }
         }
 
-        public void UnRegisterAll() => Events.Clear();
+        public void UnRegisterAll() => mEventList.Clear();
     }
 
     public class EasyEvent<T> : IEasyEvent
     {
-        private readonly PooledLinkedList<Action<T>> Events = new();
+        private readonly PooledLinkedList<Action<T>> mEventList = new();
 
-        public CustomUnRegister Register(Action<T> action)
+        public LinkUnRegister<T> Register(Action<T> action)
         {
-            var node = Events.AddLast(action);
-            return new CustomUnRegister(() => { Events.Remove(node); });
+            var node = mEventList.AddLast(action);
+            return new LinkUnRegister<T>(mEventList, node);
         }
 
         public void UnRegister(Action<T> action)
         {
-            var node = Events.Last;
+            var node = mEventList.Last;
             while (node != null)
             {
                 if (node.Value == action)
                 {
-                    Events.Remove(node);
+                    mEventList.Remove(node);
                     break;
                 }
                 else
@@ -85,7 +85,7 @@ namespace YokiFrame
 
         public void Trigger(T args)
         {
-            var node = Events.First;
+            var node = mEventList.First;
             while (node != null)
             {
                 var nxt = node.Next;
@@ -101,32 +101,32 @@ namespace YokiFrame
             }
         }
 
-        public void UnRegisterAll() => Events.Clear();
+        public void UnRegisterAll() => mEventList.Clear();
     }
 
     public class EasyEvents
     {
-        private readonly Dictionary<Type, IEasyEvent> mTypeEvents = new();
+        private readonly Dictionary<Type, IEasyEvent> mTypeEventDic = new();
 
-        public void AddEvent<T>() where T : IEasyEvent, new() => mTypeEvents.Add(typeof(T), new T());
+        public void AddEvent<T>() where T : IEasyEvent, new() => mTypeEventDic.Add(typeof(T), new T());
 
         public T GetEvent<T>() where T : IEasyEvent
         {
-            return mTypeEvents.TryGetValue(typeof(T), out var typeEvent) ? (T)typeEvent : default;
+            return mTypeEventDic.TryGetValue(typeof(T), out var typeEvent) ? (T)typeEvent : default;
         }
 
         public T GetOrAddEvent<T>() where T : IEasyEvent, new()
         {
             var type = typeof(T);
-            if (!mTypeEvents.TryGetValue(type, out var typeEvent))
+            if (!mTypeEventDic.TryGetValue(type, out var typeEvent))
             {
                 typeEvent = new T();
-                mTypeEvents.Add(type, typeEvent);
+                mTypeEventDic.Add(type, typeEvent);
             }
 
             return (T)typeEvent;
         }
 
-        public void Clear() => mTypeEvents.Clear();
+        public void Clear() => mTypeEventDic.Clear();
     }
 }

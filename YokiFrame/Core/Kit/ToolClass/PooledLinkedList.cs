@@ -9,27 +9,27 @@ namespace YokiFrame
     /// </summary>
     public class PooledLinkedList<T> : IEnumerable<T>
     {
-        private readonly LinkedList<T> _linkedList = new();
-        private readonly static Stack<LinkedListNode<T>> _nodePool = new();
-        private const int _DefaultPoolCapacity = 25;
-        private int _maxPoolSize = _DefaultPoolCapacity;
+        private readonly LinkedList<T> mLinkedList = new();
+        private readonly static Stack<LinkedListNode<T>> nodePool = new();
+        private const int DefaultPoolCapacity = 25;
+        private int maxPoolSize = DefaultPoolCapacity;
 
-        public int Count => _linkedList.Count;
-        public int PoolSize => _nodePool.Count;
-        public LinkedListNode<T> First => _linkedList.First;
-        public LinkedListNode<T> Last => _linkedList.Last;
+        public int Count => mLinkedList.Count;
+        public int PoolSize => nodePool.Count;
+        public LinkedListNode<T> First => mLinkedList.First;
+        public LinkedListNode<T> Last => mLinkedList.Last;
 
         public int MaxPoolSize
         {
-            get => _maxPoolSize;
-            set => _maxPoolSize = value >= 0 ? value : _DefaultPoolCapacity;
+            get => maxPoolSize;
+            set => maxPoolSize = value >= 0 ? value : DefaultPoolCapacity;
         }
 
         // 添加到链表尾部
         public LinkedListNode<T> AddLast(T value)
         {
             var node = GetNode(value);
-            _linkedList.AddLast(node);
+            mLinkedList.AddLast(node);
             return node;
         }
 
@@ -37,7 +37,7 @@ namespace YokiFrame
         public LinkedListNode<T> AddFirst(T value)
         {
             var node = GetNode(value);
-            _linkedList.AddFirst(node);
+            mLinkedList.AddFirst(node);
             return node;
         }
 
@@ -45,11 +45,11 @@ namespace YokiFrame
         public LinkedListNode<T> InsertAfter(LinkedListNode<T> node, T value)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
-            if (node.List != _linkedList)
+            if (node.List != mLinkedList)
                 throw new InvalidOperationException("指定的节点不属于此链表");
 
             var newNode = GetNode(value);
-            _linkedList.AddAfter(node, newNode);
+            mLinkedList.AddAfter(node, newNode);
             return newNode;
         }
 
@@ -57,18 +57,18 @@ namespace YokiFrame
         public LinkedListNode<T> InsertBefore(LinkedListNode<T> node, T value)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
-            if (node.List != _linkedList)
+            if (node.List != mLinkedList)
                 throw new InvalidOperationException("指定的节点不属于此链表");
 
             var newNode = GetNode(value);
-            _linkedList.AddBefore(node, newNode);
+            mLinkedList.AddBefore(node, newNode);
             return newNode;
         }
 
         // 按值移除第一个匹配的节点
         public bool Remove(T value)
         {
-            var node = _linkedList.Find(value);
+            var node = mLinkedList.Find(value);
             if (node != null)
             {
                 RemoveNode(node);
@@ -81,45 +81,45 @@ namespace YokiFrame
         public void Remove(LinkedListNode<T> node)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
-            if (node.List != _linkedList) return;
+            if (node.List != mLinkedList) return;
             RemoveNode(node);
         }
 
         // 移除首节点
         public void RemoveFirst()
         {
-            if (_linkedList.First != null)
+            if (mLinkedList.First != null)
             {
-                RemoveNode(_linkedList.First);
+                RemoveNode(mLinkedList.First);
             }
         }
 
         // 移除尾节点
         public void RemoveLast()
         {
-            if (_linkedList.Last != null)
+            if (mLinkedList.Last != null)
             {
-                RemoveNode(_linkedList.Last);
+                RemoveNode(mLinkedList.Last);
             }
         }
 
         // 清空链表：将链表节点逐个回收到节点池中
         public void Clear()
         {
-            while (_linkedList.First != null)
+            while (mLinkedList.First != null)
             {
                 RemoveFirst();
             }
         }
 
-        public bool Contains(T value) => _linkedList.Contains(value);
+        public bool Contains(T value) => mLinkedList.Contains(value);
 
-        public LinkedListNode<T> Find(T value) => _linkedList.Find(value);
+        public LinkedListNode<T> Find(T value) => mLinkedList.Find(value);
 
         // 提供反向枚举器的支持
         public IEnumerable<T> Reverse()
         {
-            var node = _linkedList.Last;
+            var node = mLinkedList.Last;
             while (node != null)
             {
                 yield return node.Value;
@@ -127,7 +127,7 @@ namespace YokiFrame
             }
         }
 
-        public IEnumerator<T> GetEnumerator() => _linkedList.GetEnumerator();
+        public IEnumerator<T> GetEnumerator() => mLinkedList.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         // 索引器，虽然性能不佳，但适用于少量数据
@@ -137,7 +137,7 @@ namespace YokiFrame
             {
                 if (index < 0 || index >= Count)
                     throw new ArgumentOutOfRangeException(nameof(index));
-                var node = _linkedList.First;
+                var node = mLinkedList.First;
                 while (index-- > 0)
                 {
                     node = node.Next;
@@ -153,7 +153,7 @@ namespace YokiFrame
         /// </summary>
         private LinkedListNode<T> GetNode(T value)
         {
-            var node = _nodePool.Count > 0 ? _nodePool.Pop() : new LinkedListNode<T>(default);
+            var node = nodePool.Count > 0 ? nodePool.Pop() : new LinkedListNode<T>(default);
             node.Value = value;
             return node;
         }
@@ -163,7 +163,7 @@ namespace YokiFrame
         /// </summary>
         private void RemoveNode(LinkedListNode<T> node)
         {
-            _linkedList.Remove(node);
+            mLinkedList.Remove(node);
             ReturnNode(node);
         }
 
@@ -175,8 +175,8 @@ namespace YokiFrame
             if (node.List != null)
                 throw new InvalidOperationException("节点仍挂在链表上，无法回收");
             node.Value = default;
-            if (_nodePool.Count < MaxPoolSize)
-                _nodePool.Push(node);
+            if (nodePool.Count < MaxPoolSize)
+                nodePool.Push(node);
         }
 
         #endregion
@@ -188,9 +188,9 @@ namespace YokiFrame
         /// </summary>
         public void TrimPool()
         {
-            while (_nodePool.Count > MaxPoolSize)
+            while (nodePool.Count > MaxPoolSize)
             {
-                _nodePool.Pop();
+                nodePool.Pop();
             }
         }
 
@@ -199,7 +199,7 @@ namespace YokiFrame
         /// </summary>
         public void ClearPool()
         {
-            _nodePool.Clear();
+            nodePool.Clear();
         }
 
         #endregion
@@ -225,7 +225,7 @@ namespace YokiFrame
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
             int removedCount = 0;
-            for (var node = _linkedList.First; node != null;)
+            for (var node = mLinkedList.First; node != null;)
             {
                 var next = node.Next;
                 if (match(node.Value))
@@ -245,7 +245,7 @@ namespace YokiFrame
         {
             T[] array = new T[Count];
             int i = 0;
-            foreach (var item in _linkedList)
+            foreach (var item in mLinkedList)
             {
                 array[i++] = item;
             }

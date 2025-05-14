@@ -2,8 +2,8 @@ namespace YokiFrame
 {
     public class EventKit
     {
-        public static TypeEventSystem Type = new();
-        public static EnumEventSystem Enum = new();
-        public static StringEventSystem String = new();
+        public readonly static TypeEventSystem Type = new();
+        public readonly static EnumEventSystem Enum = new();
+        public readonly static StringEventSystem String = new();
     }
 }
