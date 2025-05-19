@@ -92,8 +92,7 @@ namespace YokiFrame
         /// <summary>
         /// 在GameObject上创建T组件（脚本）
         /// </summary>
-        /// <param name="path">路径（应该就是Hierarchy下的树结构路径）</param>
-        /// <param name="dontDestroy">不要销毁 标签</param>
+        /// <param name="defineAttri">路径</param>
         /// <returns></returns>
         private static T CreateComponentOnGameObject<T>(MonoSingletonPathAttribute defineAttri) where T : class
         {
@@ -112,7 +111,6 @@ namespace YokiFrame
         /// </summary>
         /// <param name="path">路径</param>
         /// <param name="build">true</param>
-        /// <param name="dontDestroy">不要销毁 标签</param>
         /// <returns></returns>
         private static GameObject FindGameObject(string path, bool build)
         {
@@ -137,7 +135,6 @@ namespace YokiFrame
         /// <param name="subPath">拆分后的路径节点</param>
         /// <param name="index">下标</param>
         /// <param name="build">true</param>
-        /// <param name="dontDestroy">不要销毁 标签</param>
         /// <returns></returns>
         private static GameObject FindGameObject(GameObject root, string[] subPath, int index, bool build)
         {

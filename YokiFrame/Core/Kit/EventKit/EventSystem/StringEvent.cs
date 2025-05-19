@@ -3,7 +3,7 @@ using System;
 
 namespace YokiFrame
 {
-    public class StringEventSystem
+    public class StringEvent
     {
         private readonly Dictionary<string, EasyEvents> mEventDic = new();
         private void GetEvents(string key, out EasyEvents stringEvent)

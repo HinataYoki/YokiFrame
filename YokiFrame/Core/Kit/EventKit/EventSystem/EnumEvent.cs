@@ -4,7 +4,7 @@ using Unity.Collections.LowLevel.Unsafe;
 
 namespace YokiFrame
 {
-    public class EnumEventSystem
+    public class EnumEvent
     {
         private readonly Dictionary<(Type, int), EasyEvents> mEventDic = new();
 
@@ -16,7 +16,7 @@ namespace YokiFrame
 #else
             var intKey = key.ToInt32(null);
 #endif
-            if (mEventDic.TryGetValue((type, intKey), out enumEvent))
+            if (!mEventDic.TryGetValue((type, intKey), out enumEvent))
             {
                 enumEvent = new();
                 mEventDic.Add((type, intKey), enumEvent);
