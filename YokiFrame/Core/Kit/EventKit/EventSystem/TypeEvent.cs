@@ -2,7 +2,7 @@
 
 namespace YokiFrame
 {
-    public class TypeEventSystem
+    public class TypeEvent
     {
         private readonly EasyEvents mEventDic = new();
 
