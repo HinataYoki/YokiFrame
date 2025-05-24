@@ -8,7 +8,7 @@ namespace YokiFrame
 
         public List<ICode> Codes { get; set; } = new();
 
-        public void Gen(ICodeWriter writer)
+        public void Gen(ICodeWriteKit writer)
         {
             GenFirstLine(writer);
 
@@ -26,6 +26,6 @@ namespace YokiFrame
             new CloseBraceCode(Semicolon).Gen(writer);
         }
 
-        protected abstract void GenFirstLine(ICodeWriter codeWriter);
+        protected abstract void GenFirstLine(ICodeWriteKit codeWriter);
     }
 }

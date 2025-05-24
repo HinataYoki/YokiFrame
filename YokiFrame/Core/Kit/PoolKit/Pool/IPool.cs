@@ -18,7 +18,7 @@ namespace YokiFrame
         bool Recycle(T obj);
     }
 
-    public abstract class Pool<T> : IPool<T>
+    public abstract class PoolKit<T> : IPool<T>
     {
         /// <summary>
         /// 当前池内对象数量

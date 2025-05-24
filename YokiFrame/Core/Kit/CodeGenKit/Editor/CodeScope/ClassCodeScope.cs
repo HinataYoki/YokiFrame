@@ -20,7 +20,7 @@ namespace YokiFrame
             IsStatic = isStatic;
         }
 
-        protected override void GenFirstLine(ICodeWriter codeWriter)
+        protected override void GenFirstLine(ICodeWriteKit codeWriter)
         {
             var staticKey = IsStatic ? Static : string.Empty;
             var partialKey = IsPartial ? Partial : string.Empty;

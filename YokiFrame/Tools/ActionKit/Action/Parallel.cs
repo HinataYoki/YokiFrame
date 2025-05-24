@@ -18,7 +18,7 @@ namespace YokiFrame
         /// <summary>
         /// 并行任务池
         /// </summary>
-        private static readonly SimpleObjectPool<Parallel> parallelPool = new(() => new Parallel());
+        private static readonly SimplePoolKit<Parallel> parallelPool = new(() => new Parallel());
         /// <summary>
         /// 等待所有任务完成
         /// </summary>

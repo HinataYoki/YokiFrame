@@ -25,7 +25,7 @@ namespace YokiFrame
         /// <summary>
         /// 序列任务池
         /// </summary>
-        private static readonly SimpleObjectPool<Sequence> sequencePool = new(() => new Sequence());
+        private static readonly SimplePoolKit<Sequence> sequencePool = new(() => new Sequence());
 
         public static Sequence Allocate()
         {

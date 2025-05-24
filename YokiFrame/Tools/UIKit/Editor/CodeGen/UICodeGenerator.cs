@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -7,74 +6,60 @@ using UnityEngine;
 
 namespace YokiFrame
 {
-    public interface IBaseTemplate
-    {
-        void Generate(string generateFilePath, string behaviourName, string nameSpace, PanelCodeInfo panelCodeInfo);
-    }
-    /// <summary>
-    /// 存储一些ScriptKit相关的信息
-    /// </summary>
-    public class ScriptKitInfo
-    {
-        public string HotScriptFilePath;
-        public string HotScriptSuffix;
-        public IBaseTemplate[] Templates;
-        public ScriptKitCodeBind CodeBind;
-    }
-
-    public delegate void ScriptKitCodeBind(GameObject uiPrefab, string filePath);
-
     public class UICodeGenerator
     {
         private static readonly UICodeGenerator mInstance = new();
 
-        private static ScriptKitInfo ScriptKitInfo;
-
-        [MenuItem("Asset/UIKit - Create UICode")]
+        [MenuItem("Assets/UIKit - Create UICode")]
         private static void CreateUICode()
         {
             var obj = Selection.GetFiltered(typeof(GameObject), SelectionMode.Assets | SelectionMode.TopLevel).First() as GameObject;
 
-            var prefabPath = $"{UIKitCreateConfig.GeneratePrePath}{UIKitCreateConfig.Instance.PrefabGeneratePath}/{obj.name}.prefab";
-            var scriptPath = $"{UIKitCreateConfig.GeneratePrePath}{UIKitCreateConfig.Instance.ScriptGeneratePath}/{obj.name}/{obj.name}.cs";
-            var designerPath = $"{UIKitCreateConfig.GeneratePrePath}{UIKitCreateConfig.Instance.ScriptGeneratePath}/{obj.name}/{obj.name}.Designer.cs";
+            var scriptPath = $"{UIKitCreateConfig.Instance.ScriptGeneratePath}/{obj.name}/{obj.name}.cs";
+            var designerPath = $"{UIKitCreateConfig.Instance.ScriptGeneratePath}/{obj.name}/{obj.name}.Designer.cs";
 
-            DoCreateCode(obj, prefabPath, scriptPath, designerPath, UIKitCreateConfig.Instance.ScriptNamespace);
+            DoCreateCode(obj, scriptPath, designerPath, UIKitCreateConfig.Instance.ScriptNamespace);
         }
 
         [MenuItem("GameObject/UIKit/(Alt+B)Add Bind &b", false, 1)]
         private static void AddBind()
         {
-            foreach (var o in Selection.objects.OfType<GameObject>())
+            foreach (var obj in Selection.objects.OfType<GameObject>())
             {
-                if (o)
+                if (obj)
                 {
-                    var uiMark = o.GetComponent<Bind>();
+                    var bind = obj.GetComponent<Bind>();
 
-                    if (!uiMark)
+                    if (!bind)
                     {
-                        o.AddComponent<Bind>();
+                        obj.AddComponent<Bind>();
                     }
 
-                    EditorUtility.SetDirty(o);
-                    EditorSceneManager.MarkSceneDirty(o.scene);
+                    EditorUtility.SetDirty(obj);
+                    EditorSceneManager.MarkSceneDirty(obj.scene);
                 }
             }
         }
 
-        public static void DoCreateCode(GameObject prefab, string prefabPath, string scriptPath, string designerPath, string scriptNamespace)
+        public static void DoCreateCode(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace)
         {
-            ScriptKitInfo = null;
-            mInstance.CreateCode(prefab, prefabPath, scriptPath, designerPath, scriptNamespace);
+            mInstance.CreateCodePipeline(prefab, scriptPath, designerPath, scriptNamespace);
         }
 
-        private void CreateCode(GameObject prefab, string prefabPath, string scriptPath, string designerPath, string scriptNamespace)
+        /// <summary>
+        /// 代码生成管道
+        /// </summary>
+        /// <param name="prefab">需要生成代码的UI预制体</param>
+        /// <param name="scriptPath">代码路径</param>
+        /// <param name="designerPath">定义代码路径</param>
+        /// <param name="scriptNamespace">命名空间</param>
+        private void CreateCodePipeline(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace)
         {
             if (prefab != null)
             {
                 var objType = PrefabUtility.GetPrefabAssetType(prefab);
 
-                if (objType == PrefabAssetType.NotAPrefab)
+                if (objType is PrefabAssetType.NotAPrefab)
                 {
                     LogKit.Warning<UICodeGenerator>($"{prefab} 不是预制体", prefab);
                     return;
@@ -88,105 +73,57 @@ namespace YokiFrame
                     return;
                 }
 
-                var panelCodeInfo = new PanelCodeInfo
+                var bindCodeInfo = new BindCodeInfo
                 {
-                    GameObjectName = clone.name.Replace("(clone)", string.Empty)
+                    TypeName = prefab.name,
+                    Name = prefab.name,
                 };
 
-                BindCollector.SearchBinds(clone.transform, string.Empty, panelCodeInfo);
+                BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
 
-                CreateUIPanelCode(prefab, prefabPath, scriptPath, designerPath, scriptNamespace, panelCodeInfo);
+                CreateUIPanelCode(prefab, scriptPath, designerPath, scriptNamespace, bindCodeInfo);
 
-                UnityEngine.Object.DestroyImmediate(clone);
+
+                UISerializer.AddPrefabReferencesAfterCompoile(prefab);
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+
+                Object.DestroyImmediate(clone);
             }
         }
-
-        private void CreateUIPanelCode(GameObject prefab, string prefabPath, string scriptPath, string designerPath, string scriptNamespace, PanelCodeInfo panelCodeInfo)
+        /// <summary>
+        /// 创建UI面板代码
+        /// </summary>
+        /// <param name="prefab">预制体</param>
+        /// <param name="scriptFilePath">面板代码路径</param>
+        /// <param name="designerPath">成员定义代码路径</param>
+        /// <param name="scriptNamespace">代码命名空间</param>
+        /// <param name="bindCodeInfo">成员绑定信息</param>
+        private void CreateUIPanelCode(GameObject prefab, string scriptFilePath, string designerPath, string scriptNamespace, BindCodeInfo bindCodeInfo)
         {
-            var behaviourName = prefab.name;
+            var name = prefab.name;
 
-            if (!File.Exists(scriptPath))
+            if (!File.Exists(scriptFilePath))
             {
-                if (ScriptKitInfo != null)
-                {
-                    if (ScriptKitInfo.Templates != null && ScriptKitInfo.Templates[0] != null)
-                    {
-                        ScriptKitInfo.Templates[0].Generate(scriptPath, behaviourName, scriptNamespace, null);
-                    }
-                } 
-                else
-                {
-                    Directory.CreateDirectory(PathUtils.GetDirectoryPath(scriptPath));
-                    UIPanelTemplate.Write(behaviourName, scriptPath, scriptNamespace);
-                }
+                Directory.CreateDirectory(PathUtils.GetDirectoryPath(scriptFilePath));
+                UICodeGenTemplate.WritePanel(name, scriptFilePath, scriptNamespace);
             }
+            LogKit.Log<UICodeGenerator>($">>>>>>>Success Create UIPrefab Code: {name}");
 
-            CreateUIPanelDesignerCode(behaviourName, designerPath, scriptNamespace, panelCodeInfo);
-
-            LogKit.Log<UICodeGenerator>($">>>>>>>Success Create UIPrefab Code: {behaviourName}");
+            CreateUIPanelDesignerCode(name, designerPath, scriptNamespace, bindCodeInfo);
         }
-
-        private void CreateUIPanelDesignerCode(string behaviourName, string designerPath, string scriptNamespace, PanelCodeInfo panelCodeInfo)
+        /// <summary>
+        /// 创建定义代码
+        /// </summary>
+        /// <param name="name">代码名称</param>
+        /// <param name="designerPath">定义代码路径</param>
+        /// <param name="scriptNamespace">代码命名空间</param>
+        /// <param name="panelCodeInfo">成员绑定信息</param>
+        private void CreateUIPanelDesignerCode(string name, string designerPath, string scriptNamespace, BindCodeInfo panelCodeInfo)
         {
-            if (ScriptKitInfo != null)
-            {
-                if (ScriptKitInfo.Templates != null && ScriptKitInfo.Templates[1] != null)
-                {
-                    ScriptKitInfo.Templates[0].Generate(designerPath, behaviourName, scriptNamespace, null);
-                }
-            }
-            else
-            {
-                Directory.CreateDirectory(PathUtils.GetDirectoryPath(designerPath));
-                UIPanelTemplate.WriteDesigner(behaviourName, designerPath, scriptNamespace, panelCodeInfo);
-            }
-
-            var dir = designerPath.Replace($"{behaviourName}.Designer.cs", string.Empty);
-
-            foreach (var elementCodeData in panelCodeInfo.ElementCodeDatas)
-            {
-                string elementDirPath;
-                if (elementCodeData.BindInfo.BindScript.GetBindType() is BindType.Element)
-                {
-                    var dirFullPath = dir + behaviourName + "/";
-                    if (!Directory.Exists(dirFullPath))
-                    {
-                        Directory.CreateDirectory(dirFullPath);
-                    }
-                    elementDirPath = dirFullPath;
-                }
-                else
-                {
-                    var dirFullPath = dir + "/Components/";
-                    if (!Directory.Exists(dirFullPath))
-                    {
-                        Directory.CreateDirectory(dirFullPath);
-                    }
-                    elementDirPath = dirFullPath;
-                }
-
-                CreateUIElementCode(elementDirPath, elementCodeData);
-            }
-        }
-
-        private void CreateUIElementCode(string elementDirPath, ElementCodeInfo elementCodeData)
-        {
-            var panelFilePathWhithoutExt = elementDirPath + elementCodeData.BehaviourName;
-
-            if (!File.Exists(panelFilePathWhithoutExt + ".cs"))
-            {
-                UIPanelTemplate.WriteElement(panelFilePathWhithoutExt + ".cs",
-                    elementCodeData.BehaviourName, UIKitCreateConfig.Instance.ScriptNamespace, elementCodeData);
-            }
-
-            UIPanelTemplate.WriteElementComponent(panelFilePathWhithoutExt + ".Designer.cs",
-                elementCodeData.BehaviourName, UIKitCreateConfig.Instance.ScriptNamespace, elementCodeData);
-
-            foreach (var childElementCodeData in elementCodeData.ElementCodeDatas)
-            {
-                var elementDir = (panelFilePathWhithoutExt + "/").CreateDirIfNotExists();
-                CreateUIElementCode(elementDir, childElementCodeData);
-            }
+            Directory.CreateDirectory(PathUtils.GetDirectoryPath(designerPath));
+            UICodeGenTemplate.WritePanelDesigner(name, designerPath, scriptNamespace, panelCodeInfo);
         }
     }
 }

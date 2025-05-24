@@ -12,7 +12,7 @@ namespace YokiFrame
         public Action OnLerpFinish;
         private float mCurrentTime = 0.0f;
 
-        private static readonly SimpleObjectPool<Lerp> lerpPool = new(() => new Lerp());
+        private static readonly SimplePoolKit<Lerp> lerpPool = new(() => new Lerp());
 
         public static Lerp Allocate(float a, float b, float duration, Action<float> onLerp = null, Action onLerpFinish = null)
         {

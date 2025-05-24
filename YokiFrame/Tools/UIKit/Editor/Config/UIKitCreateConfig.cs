@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,16 +13,20 @@ namespace YokiFrame
             {
                 if (mInstance == null)
                 {
-                    var guid = AssetDatabase.FindAssets(nameof(UIKitCreateConfig)).First();
-                    if (guid != null)
+                    var guids = AssetDatabase.FindAssets(nameof(UIKitCreateConfig));
+                    if (guids != null && guids.Length > 0)
                     {
-                        var path = AssetDatabase.GUIDToAssetPath(guid);
-                        mInstance = AssetDatabase.LoadAssetAtPath<UIKitCreateConfig>(path);
-                    }
+                        var guid = guids[0];
+                        if (guid != null)
+                        {
+                            var path = AssetDatabase.GUIDToAssetPath(guid);
+                            mInstance = AssetDatabase.LoadAssetAtPath<UIKitCreateConfig>(path);
+                        }
 
-                    if (mInstance == null)
-                    {
-                        LogKit.Error<UIKitCreateConfig>("UIKit配置文件查询失败，请检查是否有同名或丢失文件");
+                        if (mInstance == null)
+                        {
+                            LogKit.Error<UIKitCreateConfig>("UIKit配置文件查询失败，请检查是否有同名或丢失文件");
+                        }
                     }
                 }
                 return mInstance;
@@ -32,6 +36,12 @@ namespace YokiFrame
         public string PrefabGeneratePath = "Assets/Art/UIPrefab";
         public string ScriptGeneratePath = "Assets/Scripts/UI";
         public string ScriptNamespace = "GameUI";
+        /// <summary>
+        /// UI脚本所在的程序集名称
+        /// </summary>
+        public string AssemblyName = "Assembly-CSharp";
+
+        public List<string> BindPrefabPathList = new();
 
         public readonly static string GeneratePrePath = $"{Application.dataPath.Replace("Assets", string.Empty)}";
     }

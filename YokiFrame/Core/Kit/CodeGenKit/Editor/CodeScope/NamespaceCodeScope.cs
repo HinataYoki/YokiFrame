@@ -7,7 +7,7 @@ namespace YokiFrame
         private readonly string Namespace;
         public NamespaceCodeScope(string @namespace) => Namespace = @namespace;
 
-        protected override void GenFirstLine(ICodeWriter codeWriter)
+        protected override void GenFirstLine(ICodeWriteKit codeWriter)
         {
             codeWriter.WriteLine(string.Format("namespace {0}", Namespace));
         }

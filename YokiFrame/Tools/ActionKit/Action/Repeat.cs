@@ -13,7 +13,7 @@ namespace YokiFrame
         private int mCurrentRepeatCount = 0;
         private Func<bool> mCondition = () => true;
 
-        private static readonly SimpleObjectPool<Repeat> repeatPool = new(() => new Repeat());
+        private static readonly SimplePoolKit<Repeat> repeatPool = new(() => new Repeat());
 
         public static Repeat Allocate(int repeatCount = 0, Func<bool> condition = null)
         {

@@ -5,7 +5,7 @@
         private readonly string Namespace;
         public UsingCode(string @namespace) => Namespace = @namespace;
 
-        public void Gen(ICodeWriter writer)
+        public void Gen(ICodeWriteKit writer)
         {
             writer.WriteFormatLine("using {0};", Namespace);
         }

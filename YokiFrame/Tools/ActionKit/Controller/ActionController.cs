@@ -4,7 +4,7 @@ namespace YokiFrame
 {
     public class ActionController : IActionController
     {
-        private static readonly SimpleObjectPool<IActionController> controllerPool = new(() => new ActionController(),
+        private static readonly SimplePoolKit<IActionController> controllerPool = new(() => new ActionController(),
             controller =>
             {
                 controller.UpdateMode = ActionUpdateModes.ScaledDeltaTime;

@@ -2,7 +2,7 @@
 {
     public class OpenBraceCode : ICode
     {
-        public void Gen(ICodeWriter writer)
+        public void Gen(ICodeWriteKit writer)
         {
             writer.WriteLine("{");
         }

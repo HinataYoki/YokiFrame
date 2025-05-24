@@ -12,7 +12,7 @@
             mSemicolon = semicolon;
         }
 
-        public void Gen(ICodeWriter writer)
+        public void Gen(ICodeWriteKit writer)
         {
             var semicolonKey = mSemicolon ? ";" : string.Empty;
             writer.WriteLine("}" + semicolonKey);

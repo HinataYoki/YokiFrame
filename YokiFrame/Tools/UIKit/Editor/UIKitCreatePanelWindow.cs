@@ -52,17 +52,16 @@ namespace YokiFrame
             };
             return labelStyle;
         });
-
-        private readonly static string GeneratePrePath = $"{Application.dataPath.Replace("Assets", string.Empty)}";
+        private readonly static string Asstes = "Asstes";
         private readonly static string AlreadyExist = "<color=red>[已存在]</color>";
 
         private string PrefabName => $"{PanelCreateName}.prefab";
         private string ScriptName => $"{PanelCreateName}.cs";
         private string DesignerName => $"{PanelCreateName}.Designer.cs";
 
-        private string PrefabPath => $"{GeneratePrePath}{PrefabGeneratePath}/{PrefabName}";
-        private string ScriptPath => $"{GeneratePrePath}{ScriptGeneratePath}/{PanelCreateName}/{ScriptName}";
-        private string DesignerPath => $"{GeneratePrePath}{ScriptGeneratePath}/{PanelCreateName}/{DesignerName}";
+        private string PrefabPath => $"{PrefabGeneratePath}/{PrefabName}";
+        private string ScriptPath => $"{ScriptGeneratePath}/{PanelCreateName}/{ScriptName}";
+        private string DesignerPath => $"{ScriptGeneratePath}/{PanelCreateName}/{DesignerName}";
         #endregion
 
         private void OnGUI()
@@ -84,11 +83,11 @@ namespace YokiFrame
                 EditorGUILayout.LabelField(ScriptGeneratePath);
                 if (GUILayout.Button("..."))
                 {
-                    var folderPath = EditorUtility.OpenFolderPanel("Scripts目录", $"{GeneratePrePath}{ScriptGeneratePath}", string.Empty);
+                    var folderPath = EditorUtility.OpenFolderPanel("Scripts目录", ScriptGeneratePath, string.Empty);
 
                     if (!string.IsNullOrEmpty(folderPath))
                     {
-                        ScriptGeneratePath = folderPath[folderPath.IndexOf("Assets")..];
+                        ScriptGeneratePath = folderPath[folderPath.IndexOf(Asstes)..];
                     }
                 }
                 GUILayout.FlexibleSpace();
@@ -103,10 +102,10 @@ namespace YokiFrame
                 EditorGUILayout.LabelField(PrefabGeneratePath);
                 if (GUILayout.Button("..."))
                 {
-                    var folderPath = EditorUtility.OpenFolderPanel("Prefab目录", $"{GeneratePrePath}{PrefabGeneratePath}", string.Empty);
+                    var folderPath = EditorUtility.OpenFolderPanel("Prefab目录", PrefabGeneratePath, string.Empty);
                     if (!string.IsNullOrEmpty(folderPath))
                     {
-                        PrefabGeneratePath = folderPath[folderPath.IndexOf("Assets")..];
+                        PrefabGeneratePath = folderPath[folderPath.IndexOf(Asstes)..];
                     }
                 }
                 GUILayout.FlexibleSpace();
@@ -116,9 +115,9 @@ namespace YokiFrame
 
             #region Panel名字
 
-            /*GUILayout.BeginHorizontal("box");
+            /*EditorGUILayout.LabelField("面板选项：");
+            GUILayout.BeginHorizontal("box");
             {
-                EditorGUILayout.LabelField("在场景中生成预制件");
                 IsCloneInScene = EditorGUILayout.Toggle("在场景中生成预制件", IsCloneInScene);
             }
             GUILayout.EndHorizontal();*/
@@ -162,13 +161,16 @@ namespace YokiFrame
             #endregion
         }
 
+        /// <summary>
+        /// 创建UI预制体
+        /// </summary>
         private void OnCreateUIPanelClick()
         {
             var panelName = PanelCreateName;
 
             if (!string.IsNullOrEmpty(panelName))
             {
-                var uiKitPrefab = Resources.Load<GameObject>("UIKit");
+                var uiKitPrefab = Resources.Load<GameObject>(nameof(UIKit));
                 var uikit = Instantiate(uiKitPrefab);
                 var uiRoot = uikit.GetComponentInChildren<UIRoot>();
 
@@ -194,14 +196,9 @@ namespace YokiFrame
                 rectTransform.anchorMin = Vector2.zero;
                 rectTransform.anchorMax = Vector2.one;
 
-                var panel = new GameObject("Panel", typeof(RectTransform));
-                var icon = panel.AddComponent<Image>();
-                icon.rectTransform.pivot = new Vector2(.5f,.5f);
-                panel.transform.SetParent(gameObj.transform);
-
                 var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(gameObj, PrefabPath, InteractionMode.AutomatedAction);
 
-                UICodeGenerator.DoCreateCode(prefab, PrefabPath, ScriptPath, DesignerPath, ScriptNamespace);
+                UICodeGenerator.DoCreateCode(prefab, ScriptPath, DesignerPath, ScriptNamespace);
 
                 DestroyImmediate(gameObj);
                 DestroyImmediate(uikit);

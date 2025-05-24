@@ -7,7 +7,7 @@ namespace YokiFrame
     {
         private Func<Task> mTaskGetter = null;
         private Task mExecutingTask;
-        private static readonly SimpleObjectPool<TaskAction> taskActionPool = new(() => new TaskAction());
+        private static readonly SimplePoolKit<TaskAction> taskActionPool = new(() => new TaskAction());
 
         public static TaskAction Allocate(Func<Task> taskGetter)
         {

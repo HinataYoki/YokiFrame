@@ -20,7 +20,7 @@ namespace YokiFrame
         /// <summary>
         /// 延迟帧任务池
         /// </summary>
-        private static readonly SimpleObjectPool<DelayFrame> delayFramePool = new(() => new DelayFrame());
+        private static readonly SimplePoolKit<DelayFrame> delayFramePool = new(() => new DelayFrame());
 
         public static DelayFrame Allocate(int frameCount, Action onDelayFinish = null)
         {

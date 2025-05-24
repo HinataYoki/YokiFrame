@@ -6,7 +6,7 @@ namespace YokiFrame
     {
         public List<ICode> Codes { get; set; } = new();
 
-        public void Gen(ICodeWriter writer)
+        public void Gen(ICodeWriteKit writer)
         {
             foreach (var code in Codes)
             {

@@ -11,7 +11,7 @@ namespace YokiFrame
         /// <summary>
         /// 条件任务池
         /// </summary>
-        private static readonly SimpleObjectPool<Condition> conditionPool = new(() => new Condition());
+        private static readonly SimplePoolKit<Condition> conditionPool = new(() => new Condition());
 
         public static Condition Allocate(Func<bool> callback)
         {

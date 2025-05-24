@@ -12,7 +12,7 @@ namespace YokiFrame
         /// <summary>
         /// 协程任务池
         /// </summary>
-        private static readonly SimpleObjectPool<Coroutine> coroutinePool = new(() => new Coroutine());
+        private static readonly SimplePoolKit<Coroutine> coroutinePool = new(() => new Coroutine());
 
         public static Coroutine Allocate(Func<IEnumerator> coroutineGetter)
         {

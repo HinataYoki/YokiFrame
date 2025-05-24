@@ -11,7 +11,7 @@ namespace YokiFrame
         /// <summary>
         /// 回调任务池
         /// </summary>
-        private static readonly SimpleObjectPool<Callback> callbackPool = new(() => new Callback());
+        private static readonly SimplePoolKit<Callback> callbackPool = new(() => new Callback());
 
         public static Callback Allocate(Action callback)
         {

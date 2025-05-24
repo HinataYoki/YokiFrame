@@ -7,7 +7,7 @@ namespace YokiFrame
         private readonly string FirstLine;
         public CustomCodeScope(string firstLine) => FirstLine = firstLine;
 
-        protected override void GenFirstLine(ICodeWriter codeWriter)
+        protected override void GenFirstLine(ICodeWriteKit codeWriter)
         {
             codeWriter.WriteLine(FirstLine);
         }
