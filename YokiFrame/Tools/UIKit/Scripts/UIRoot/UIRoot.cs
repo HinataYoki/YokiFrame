@@ -20,14 +20,26 @@ namespace YokiFrame
 
                     if (mInstance == null)
                     {
-                        mInstance = SingletonKit<UIRoot>.Instance;
+                        var uikitPrefab = Resources.Load<GameObject>(nameof(UIKit));
+                        var uikit = Instantiate(uikitPrefab);
+                        uikit.name = nameof(UIKit);
+                        DontDestroyOnLoad(uikit);
+                        mInstance = uikit.GetComponentInChildren<UIRoot>();
+
 
                         UILevelDic.Clear();
                         foreach (UILevel level in Enum.GetValues(typeof(UILevel)))
                         {
-                            var obj = new GameObject(level.ToString());
-                            UILevelDic.Add(level, obj.transform);
+                            var obj = new GameObject(level.ToString(),typeof(RectTransform));
+                            UILevelDic.Add(level, obj.transform as RectTransform);
                             UILevelDic[level].SetParent(mInstance.transform);
+                            if (UILevelDic[level] is RectTransform rect)
+                            {
+                                rect.anchorMin = new Vector2(0, 0);
+                                rect.anchorMax = new Vector2(1, 1);
+                                rect.offsetMin = Vector2.zero; // 左下角偏移
+                                rect.offsetMax = Vector2.zero; // 右上角偏移
+                            }
                         }
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -47,7 +59,7 @@ namespace YokiFrame
             }
         }
 
-        public static Dictionary<UILevel, Transform> UILevelDic = new();
+        public static Dictionary<UILevel, RectTransform> UILevelDic = new();
 
         public Canvas Canvas;
         public CanvasScaler CanvasScaler;

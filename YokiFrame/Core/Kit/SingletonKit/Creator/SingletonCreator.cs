@@ -77,7 +77,7 @@ namespace YokiFrame
         {
             var type = typeof(T);
             // 获取构造函数
-            var constructorInfos = type.GetConstructors();
+            var constructorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
             // 获取无参构造函数
             var ctor = Array.Find(constructorInfos, c => c.GetParameters().Length == 0);

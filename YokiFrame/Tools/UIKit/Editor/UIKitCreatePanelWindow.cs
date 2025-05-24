@@ -189,12 +189,14 @@ namespace YokiFrame
                     }
                 };
 
-                var rectTransform = gameObj.AddComponent<RectTransform>();
-                rectTransform.offsetMin = Vector2.zero;
-                rectTransform.offsetMax = Vector2.zero;
-                rectTransform.anchoredPosition3D = Vector3.zero;
-                rectTransform.anchorMin = Vector2.zero;
-                rectTransform.anchorMax = Vector2.one;
+                var rect = gameObj.AddComponent<RectTransform>();
+
+                rect.anchoredPosition3D = Vector3.zero;
+                rect.localEulerAngles = Vector3.zero;
+                rect.localScale = Vector3.one;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = Vector2.zero;
 
                 var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(gameObj, PrefabPath, InteractionMode.AutomatedAction);
 

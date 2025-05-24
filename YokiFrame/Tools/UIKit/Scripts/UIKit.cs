@@ -4,7 +4,7 @@ namespace YokiFrame
 {
     public class UIKit
     {
-        public UIRoot Root => UIRoot.Instance;
+        static UIKit() => _ = UIRoot.Instance;
 
         public static T GetPanel<T>() where T : UIPanel
         {

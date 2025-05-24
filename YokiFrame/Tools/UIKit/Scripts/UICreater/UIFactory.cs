@@ -92,15 +92,14 @@ namespace YokiFrame
 
         public void SetDefaultSizeOfPanel(IPanel panel)
         {
-            var panelRectTrans = panel.Transform as RectTransform;
+            var rect = panel.Transform as RectTransform;
 
-            panelRectTrans.offsetMin = Vector2.zero;
-            panelRectTrans.offsetMax = Vector2.zero;
-            panelRectTrans.anchoredPosition3D = Vector3.zero;
-            panelRectTrans.anchorMin = Vector2.zero;
-            panelRectTrans.anchorMax = Vector2.one;
-
-            panelRectTrans.localScale = Vector3.one;
+            rect.anchoredPosition3D = Vector3.zero;
+            rect.localEulerAngles = Vector3.zero;
+            rect.localScale = Vector3.one;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.sizeDelta = Vector2.zero;
         }
 
 
