@@ -11,11 +11,11 @@ namespace YokiFrame
         /// <summary> 通过名字查找指定名字的子物体，然后获取挂载的Component </summary>
         /// <param name="targetName">物体的名字</param>
         /// <returns>返回找到的该物体的组件T，没有找到则返回null</returns>
-        public static T FindComponent<T>(this Transform parent, string targetName) where T : Component
+        public static T FindComponent<T>(this Component parent, string targetName) where T : Component
         {
             if (parent.name == targetName && parent.TryGetComponent<T>(out var component))
                 return component;
-            foreach (Transform child in parent)
+            foreach (Transform child in parent.transform)
             {
                 T result = child.FindComponent<T>(targetName);
                 if (result) return result;
@@ -28,6 +28,13 @@ namespace YokiFrame
             self.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             if (resetScale)
                 self.localScale = Vector3.one;
+        }
+        /// <summary> 在UI的局部空间中，复位RectTransform到默认位置 </summary>
+        public static void ResetRectTransform(this RectTransform self, bool resetScale = true)
+        {
+            self.anchorMin = Vector2.zero;
+            self.anchorMax = Vector2.one;
+            ResetTransform(self, resetScale);
         }
     }
 }
