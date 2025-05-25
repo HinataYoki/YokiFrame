@@ -143,7 +143,6 @@ namespace YokiFrame
             var panel = UIFactory.Instance.LoadPanel(handler);
             if (panel != null)
             {
-                UIFactory.Instance.SetDefaultSizeOfPanel(panel);
                 panel.Transform.gameObject.name = handler.Type.Name;
 
                 PanelCacheDic.Add(handler.Type, panel);
@@ -160,7 +159,6 @@ namespace YokiFrame
             {
                 if (panel != null)
                 {
-                    UIFactory.Instance.SetDefaultSizeOfPanel(panel);
                     panel.Transform.gameObject.name = handler.Type.Name;
 
                     PanelCacheDic.Add(handler.Type, panel);

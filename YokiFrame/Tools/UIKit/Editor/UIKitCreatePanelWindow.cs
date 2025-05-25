@@ -35,6 +35,11 @@ namespace YokiFrame
             get => UIKitCreateConfig.Instance.ScriptNamespace;
             set => UIKitCreateConfig.Instance.ScriptNamespace = value;
         }
+        private string AssemblyName
+        {
+            get => UIKitCreateConfig.Instance.AssemblyName;
+            set => UIKitCreateConfig.Instance.AssemblyName = value;
+        }
 
         private string PanelCreateName = string.Empty;
 
@@ -66,6 +71,16 @@ namespace YokiFrame
 
         private void OnGUI()
         {
+            #region UI脚本所在的程序集
+            EditorGUILayout.LabelField("UI脚本所在的程序集：");
+            GUILayout.BeginHorizontal("box");
+            {
+                AssemblyName = EditorGUILayout.TextField(AssemblyName);
+                GUILayout.FlexibleSpace();
+            }
+            GUILayout.EndHorizontal();
+            #endregion
+
             #region Scripts命名空间
             EditorGUILayout.LabelField("Scripts命名空间：");
             GUILayout.BeginHorizontal("box");

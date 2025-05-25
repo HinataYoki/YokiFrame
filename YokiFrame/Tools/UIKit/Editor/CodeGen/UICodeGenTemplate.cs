@@ -75,7 +75,6 @@ namespace YokiFrame
                 .Using(nameof(System))
                 .Using(nameof(UnityEngine))
                 .Using("UnityEngine.UI")
-                .Using($"{scriptNamespace}.{name}{nameof(UIElement)}")
                 .Using(nameof(YokiFrame))
                 .EmptyLine()
                 .Namespace(scriptNamespace, scope =>
@@ -92,7 +91,7 @@ namespace YokiFrame
                                 classScope.Custom("/// </summary>");
                             }
                             classScope.Custom("[SerializeField]");
-                            classScope.Custom($"public {bindInfo.TypeName} m{bindInfo.Name};");
+                            classScope.Custom($"public {(bindInfo.BindType is BindType.Element ? $"{scriptNamespace}.{name}{nameof(UIElement)}." : "")}{bindInfo.TypeName} {bindInfo.Name};");
 
                             RecursionGen(bindInfo, codeContext);
                         }
@@ -102,7 +101,11 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in panelCodeInfo.MemberDic.Values)
                             {
-                                function.Custom($"m{bindInfo.Name} = default;");
+                                if (bindInfo.BindType is BindType.Element or BindType.Component)
+                                {
+                                    function.Custom($"{bindInfo.Name}.Clear();");
+                                }
+                                function.Custom($"{bindInfo.Name} = default;");
                             }
 
                             function.EmptyLine();
@@ -190,8 +193,9 @@ namespace YokiFrame
                             }
 
                             classScope.Custom("[SerializeField]");
-                            classScope.Custom($"public {bindInfo.TypeName} m{bindInfo.Name};");
+                            classScope.Custom($"public {bindInfo.TypeName} {bindInfo.Name};");
 
+                            RecursionGen(bindInfo, codeContext);
                         }
 
                         classScope.EmptyLine();
@@ -204,7 +208,11 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
-                                property.Custom($"m{bindInfo.Name} = default;");
+                                if (bindInfo.BindType is BindType.Element or BindType.Component)
+                                {
+                                    property.Custom($"{bindInfo.Name}.Clear();");
+                                }
+                                property.Custom($"{bindInfo.Name} = default;");
                             }
                         });
                     });
@@ -283,7 +291,7 @@ namespace YokiFrame
                             }
 
                             classScope.Custom("[SerializeField]");
-                            classScope.Custom($"public {bindInfo.TypeName} m{bindInfo.Name};");
+                            classScope.Custom($"public {bindInfo.TypeName} {bindInfo.Name};");
 
                             RecursionGen(bindInfo, codeContext);
                         }
@@ -298,7 +306,11 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
-                                property.Custom($"m{bindInfo.Name} = default;");
+                                if (bindInfo.BindType is BindType.Element or BindType.Component)
+                                {
+                                    property.Custom($"{bindInfo.Name}.Clear();");
+                                }
+                                property.Custom($"{bindInfo.Name} = default;");
                             }
                         });
                     });

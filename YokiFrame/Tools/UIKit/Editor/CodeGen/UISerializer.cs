@@ -36,18 +36,23 @@ namespace YokiFrame
 
                 for (int i = 0; i < prefabPaths.Count; i++)
                 {
-                    EditorUtility.DisplayProgressBar("UIKit", "Serialize UIPrefab...", i);
                     string prefabPath = prefabPaths[i];
-                    Debug.Log(">>>>>>>SerializeUIPrefab: " + prefabPath);
+                    EditorUtility.DisplayProgressBar("UIKit", $"Serialize UIPrefab...{prefabPath}", i);
 
                     var uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                    Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
                     if (uiPrefab == null)
                     {
                         Debug.LogError($"Prefab at path {prefabPath} not found.");
                         continue;
                     }
                     SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
+                    Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
                 }
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+
+                EditorUtility.ClearProgressBar();
             }
         }
 
@@ -63,6 +68,9 @@ namespace YokiFrame
 
             var serialized = new SerializedObject(typeIns);
             SetObjectRef2Property(prefab.transform, name, assembly, serialized);
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SavePrefabAsset(prefab);
         }
 
         private static void SetObjectRef2Property(Transform transform, string name, System.Reflection.Assembly assembly, SerializedObject serialized)
@@ -72,7 +80,7 @@ namespace YokiFrame
                 if (curTrans.TryGetComponent<IBind>(out var bind))
                 {
                     //把对应的Bind添加到prefab引用中
-                    var objectReference = serialized.FindProperty($"m{bind.Name}");
+                    var objectReference = serialized.FindProperty($"{bind.Name}");
                     if (objectReference == null)
                     {
                         Debug.LogError($"未在类：{name}中查询到对应序列化字段名m{bind.Name}");
@@ -92,14 +100,15 @@ namespace YokiFrame
                             objectReference.objectReferenceValue = typeIns.gameObject;
                             var newSerialized = new SerializedObject(typeIns);
                             SetObjectRef2Property(curTrans, name, assembly, newSerialized);
+
                             if (curTrans.TryGetComponent<AbstractBind>(out var markBind))
                             {
                                 Object.DestroyImmediate(markBind, true);
                             }
+                            newSerialized.ApplyModifiedPropertiesWithoutUndo();
                         }
                         else
                         {
-
                             objectReference.objectReferenceValue = bind.Transform.gameObject;
                             SetObjectRef2Property(curTrans, name, assembly, serialized);
                         }
@@ -109,8 +118,6 @@ namespace YokiFrame
                 {
                     SetObjectRef2Property(curTrans, name, assembly, serialized);
                 }
-
-                serialized.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 

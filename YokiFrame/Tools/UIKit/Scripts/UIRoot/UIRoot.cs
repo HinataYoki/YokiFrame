@@ -35,10 +35,13 @@ namespace YokiFrame
                             UILevelDic[level].SetParent(mInstance.transform);
                             if (UILevelDic[level] is RectTransform rect)
                             {
-                                rect.anchorMin = new Vector2(0, 0);
-                                rect.anchorMax = new Vector2(1, 1);
-                                rect.offsetMin = Vector2.zero; // 左下角偏移
-                                rect.offsetMax = Vector2.zero; // 右上角偏移
+                                rect.anchorMin = Vector2.zero;
+                                rect.anchorMax = Vector2.one;
+                                rect.anchoredPosition3D = Vector3.zero;
+                                rect.localEulerAngles = Vector3.zero;
+                                rect.localScale = Vector3.one;
+
+                                rect.sizeDelta = Vector2.zero;
                             }
                         }
 
@@ -95,6 +98,7 @@ namespace YokiFrame
             {
                 panel.Transform.SetParent(UILevelDic[level]);
             }
+            UIFactory.Instance.SetDefaultSizeOfPanel(panel);
         }
 
         void ISingleton.OnSingletonInit() { }
