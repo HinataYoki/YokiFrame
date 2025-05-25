@@ -5,7 +5,7 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// UI配置
+    /// UI工厂
     /// </summary>
     [MonoSingletonPath("UIKit/Factory")]
     public class UIFactory : MonoBehaviour, ISingleton

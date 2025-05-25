@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
@@ -6,121 +7,291 @@ namespace YokiFrame
     {
         static UIKit() => _ = UIRoot.Instance;
 
+        // 创建界面时赋予的热度值
+        public static int OpenHot = 3;
+        // 获取界面时赋予的热度值
+        public static int GetHot = 2;
+        // 每次行为造成的衰减热度值
+        public static int Weaken = 1;
+
+        /// <summary>
+        /// 已经存在的Panel缓存
+        /// </summary>
+        private static readonly Dictionary<Type, PanelHandler> PanelCacheDic = new();
+        /// <summary>
+        /// UI界面堆栈
+        /// </summary>
+        private static readonly PooledLinkedList<IPanel> PanelStack = new();
+
+        /// <summary>
+        /// 获取指定类型的Panel,如果不存在则返回null
+        /// </summary>
         public static T GetPanel<T>() where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-            handler.Type = typeof(T);
-
-            var panel = UIManager.Instance.GetUI(handler);
-
-            return panel as T;
+            WeakenHot();
+            if (PanelCacheDic.TryGetValue(typeof(T), out var handler))
+            {
+                handler.Hot += GetHot;
+                return handler.Panel as T;
+            }
+            else return null;
         }
-
+        /// <summary>
+        /// 创建指定类型的Panel
+        /// </summary>
         public static T OpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
+            WeakenHot();
+            var type = typeof(T);
+            if (!PanelCacheDic.TryGetValue(type, out var handler))
+            {
+                handler = PanelHandler.Allocate();
+                handler.Type = type;
+                handler.Level = level;
+                handler.Data = data;
+                CreateUI(handler);
+            }
+            handler.Panel.Init(data);
+            handler.Panel.Open();
+            handler.Panel.Show();
 
-            handler.Type = typeof(T);
-            handler.Level = level;
-            handler.Data = data;
-
-            var panel = UIManager.Instance.OpenUI(handler);
-
-            return panel as T;
+            return handler.Panel as T;
         }
-
-        public static void OpenPanelAsync<T>(UILevel level = UILevel.Common, IUIData data = null, Action<IPanel> callbaack = null) where T : UIPanel
+        /// <summary>
+        /// 异步创建指定类型的Panel
+        /// </summary>
+        public static void OpenPanelAsync<T>(Action<IPanel> callbaack = null, UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-
-            handler.Type = typeof(T);
-            handler.Level = level;
-            handler.Data = data;
-
-            UIManager.Instance.OpenUIAsync(handler, callbaack);
+            var type = typeof(T);
+            if (!PanelCacheDic.TryGetValue(type, out var handler))
+            {
+                handler = PanelHandler.Allocate();
+                handler.Type = type;
+                handler.Level = level;
+                handler.Data = data;
+                CreateUIAsync(handler, callbaack);
+            }
+            else
+            {
+                callbaack?.Invoke(handler.Panel);
+            }
         }
-
+        /// <summary>
+        /// 显示一个指定类型的Panel
+        /// </summary>
         public static void ShowPanel<T>() where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-
-            handler.Type = typeof(T);
-            UIManager.Instance.ShowUI(handler);
+            var panel = GetPanel<T>();
+            if (panel == null)
+            {
+                panel.Show();
+            }
         }
-
+        /// <summary>
+        /// 隐藏一个指定类型的Panel
+        /// </summary>
         public static void HidePanel<T>() where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-
-            handler.Type = typeof(T);
-            UIManager.Instance.HideUI(handler);
+            var panel = GetPanel<T>();
+            if (panel == null)
+            {
+                panel.Hide();
+            }
         }
-
+        /// <summary>
+        /// 隐藏所有Panel
+        /// </summary>
         public static void HideAllPanel()
         {
-            UIManager.Instance.HideAllUI();
+            foreach (var handler in PanelCacheDic.Values)
+            {
+                handler.Panel.Hide();
+            }
         }
-
+        /// <summary>
+        /// 关闭指定类型的Panel
+        /// </summary>
         public static void ClosePanel<T>() where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-
-            handler.Type = typeof(T);
-
-            UIManager.Instance.CloseUI(handler);
+            if (PanelCacheDic.TryGetValue(typeof(T), out var handler))
+            {
+                ClosePanel(handler.Panel);
+            }
         }
-
+        /// <summary>
+        /// 关闭传入的Panel实例
+        /// </summary>
+        /// <param name="panel"></param>
         public static void ClosePanel(IPanel panel)
         {
-            var handler = PanelHandler.Allocate();
-
-            handler.Type = panel.Handler.Type;
-
-            UIManager.Instance.CloseUI(handler);
+            panel.Close();
+            if (panel.Handler.Hot <= 0)
+            {
+                UnityEngine.Object.Destroy(panel.Transform.gameObject);
+                panel.Handler.Recycle();
+                PanelCacheDic.Remove(panel.Handler.Type);
+            }
+            if (panel.Handler.OnStack != null)
+            {
+                PanelStack.Remove(panel.Handler.OnStack);
+            }
         }
-
+        /// <summary>
+        /// 关闭所有面板
+        /// </summary>
         public static void CloseAllPanel()
         {
-            UIManager.Instance.CloseAllUI();
+            foreach (var handler in PanelCacheDic.Values)
+            {
+                ClosePanel(handler.Panel);
+            }
+            PanelStack.Clear();
         }
-
-        public static void PushOpenPanel<T>() where T : UIPanel
+        /// <summary>
+        /// 压入一个Panel到栈中
+        /// </summary>
+        /// <param name="hidePreLevel">隐藏栈中上一层UI</param>
+        public static void PushPanel<T>(bool hidePreLevel = true) where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-            handler.Type = typeof(T);
-            UIManager.Instance.PushOpenUI(handler);
+            var panel = GetPanel<T>();
+            if (panel != null) PushPanel(panel, hidePreLevel);
         }
-
-        public static void PushOpenPanelAysnc<T>() where T : UIPanel
+        /// <summary>
+        /// 压入一个Panel到栈中
+        /// </summary>
+        /// <param name="hidePreLevel">隐藏栈中上一层UI</param>
+        public static void PushPanel(IPanel panel, bool hidePreLevel = true)
         {
-            var handler = PanelHandler.Allocate();
-            handler.Type = typeof(T);
-
-            UIManager.Instance.PushOpenUIAsync(handler);
+            if (panel.Handler.OnStack != null)
+            {
+                if (hidePreLevel && PanelStack.Count > 0)
+                {
+                    PanelStack.Last.Value.Hide();
+                }
+                panel.Handler.OnStack = PanelStack.AddLast(panel);
+            }
         }
-
-        public static void PushPanel<T>() where T : UIPanel
+        /// <summary>
+        /// 打开并且压入指定类型的Panel到栈中
+        /// </summary>
+        public static void PushOpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
-            var handler = PanelHandler.Allocate();
-            handler.Type = typeof(T);
-
-            UIManager.Instance.PushUI(handler);
+            var panel = OpenPanel<T>(level, data);
+            PushPanel(panel, hidePreLevel);
         }
-
-        public static void PushPanel(IPanel panel)
+        /// <summary>
+        /// 异步打开并且压入指定类型的Panel到栈中
+        /// </summary>
+        public static void PushOpenPanelAysnc<T>(Action<IPanel> callbaack = null, UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
-            UIManager.Instance.PushUI(panel);
+            callbaack += panel =>
+            {
+                PushPanel(panel, hidePreLevel);
+            };
+            OpenPanelAsync<T>(callbaack, level, data);
         }
-
-        public static UIPanel PopPanel()
+        /// <summary>
+        /// 弹出一个面板
+        /// </summary>
+        /// <param name="showPreLevel">自动显示上一层面板</param>
+        /// <param name="autoClose">自动关闭弹出面板</param>
+        /// <returns></returns>
+        public static IPanel PopPanel(bool showPreLevel = true, bool autoClose = true)
         {
-            var panel = UIManager.Instance.PopUI();
-            return panel as UIPanel;
-        }
+            if (PanelStack.Count > 0)
+            {
+                var panel = PanelStack.Last.Value;
+                PanelStack.RemoveLast();
+                panel.Handler.OnStack = null;
 
+                if (showPreLevel && PanelStack.Count > 0)
+                {
+                    PanelStack.Last.Value.Show();
+                }
+                if (autoClose)
+                {
+                    panel.Close();
+                }
+                return panel;
+            }
+
+            return null;
+        }
+        /// <summary>
+        /// 关闭所有栈上面板
+        /// </summary>
         public static void CloseAllStackPanel()
         {
-            UIManager.Instance.CloseAllStackUI();
+            Pool.List<IPanel>(list =>
+            {
+                foreach (var panel in PanelStack)
+                {
+                    list.Add(panel);
+                }
+                foreach (var panel in list)
+                {
+                    ClosePanel(panel);
+                }
+            });
+        }
+
+        public static void SetPanelLoader(IPanelLoader panelLoader)
+        {
+            
+        }
+
+        private static IPanel CreateUI(PanelHandler handler)
+        {
+            var panel = UIFactory.Instance.LoadPanel(handler);
+            if (panel != null)
+            {
+                panel.Transform.gameObject.name = handler.Type.Name;
+
+                PanelCacheDic.Add(handler.Type, handler);
+                handler.Hot += OpenHot;
+            }
+
+            return panel;
+        }
+
+        private static void CreateUIAsync(PanelHandler handler, Action<IPanel> onPanelCreate)
+        {
+            UIFactory.Instance.LoadPanelAsync(handler, panel =>
+            {
+                if (panel != null)
+                {
+                    panel.Transform.gameObject.name = handler.Type.Name;
+
+                    PanelCacheDic.Add(handler.Type, handler);
+                    handler.Hot += OpenHot;
+
+                    panel.Init(handler.Data);
+                    onPanelCreate?.Invoke(panel);
+                }
+            });
+        }
+        /// <summary>
+        /// 衰减UI热度
+        /// </summary>
+        private static void WeakenHot()
+        {
+            Pool.List<Type>(list =>
+            {
+                foreach (var handler in PanelCacheDic.Values)
+                {
+                    handler.Hot -= Weaken;
+                    if (handler.Hot <= 0 && handler.Panel.State is PanelState.Close)
+                    {
+                        UnityEngine.Object.Destroy(handler.Panel.Transform.gameObject);
+                        handler.Recycle();
+                        list.Add(handler.Type);
+                    }
+                }
+                foreach (var type in list)
+                {
+                    PanelCacheDic.Remove(type);
+                }
+            });
         }
     }
 }

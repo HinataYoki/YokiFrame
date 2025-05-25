@@ -10,10 +10,7 @@ namespace YokiFrame
         public PanelHandler Handler { get; set; }
         private Action mOnClosed;
 
-        public void Init(IUIData data = null)
-        {
-            OnInit(data);
-        }
+        public void Init(IUIData data = null) => OnInit(data);
 
         public void Open()
         {
@@ -41,8 +38,6 @@ namespace YokiFrame
             mOnClosed?.Invoke();
             mOnClosed = null;
             OnClose();
-            Destroy(gameObject);
-            Handler.Recycle();
         }
 
         public void OnClosed(Action onClosed) => mOnClosed = onClosed;
