@@ -241,7 +241,7 @@ namespace YokiFrame
         /// 设置自定义的Panel加载器池
         /// </summary>
         /// <param name="loaderPool"></param>
-        public static void SetPanelLoader(ILoaderPool loaderPool) => UIFactory.Instance.SetPanelLoader(loaderPool);
+        public static void SetPanelLoader(IPanelLoaderPool loaderPool) => UIFactory.Instance.SetPanelLoader(loaderPool);
 
         private static IPanel CreateUI(PanelHandler handler)
         {

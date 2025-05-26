@@ -17,7 +17,7 @@ namespace YokiFrame
     /// <summary>
     /// 加载池
     /// </summary>
-    public interface ILoaderPool
+    public interface IPanelLoaderPool
     {
         IPanelLoader AllocateLoader();
         void RecycleLoader(IPanelLoader panelLoader);
@@ -26,7 +26,7 @@ namespace YokiFrame
     /// <summary>
     /// 抽象加载池
     /// </summary>
-    public abstract class AbsPanelLoderPool : ILoaderPool
+    public abstract class AbstractPanelLoaderPool : IPanelLoaderPool
     {
         private readonly Stack<IPanelLoader> loaderPool = new();
         public IPanelLoader AllocateLoader() => loaderPool.Count > 0 ? loaderPool.Pop() : CreatePanelLoader();
@@ -37,16 +37,16 @@ namespace YokiFrame
     /// <summary>
     /// 默认加载池
     /// </summary>
-    public class DefaultPanelLoaderPool : AbsPanelLoderPool
+    public class DefaultPanelLoaderPool : AbstractPanelLoaderPool
     {
         protected override IPanelLoader CreatePanelLoader() => new DefaultPanelLoader(this);
 
         public class DefaultPanelLoader : IPanelLoader
         {
-            private ILoaderPool mLoaderPool;
+            private IPanelLoaderPool mLoaderPool;
             private GameObject mPanelPrefab;
 
-            public DefaultPanelLoader(ILoaderPool pool) => mLoaderPool = pool;
+            public DefaultPanelLoader(IPanelLoaderPool pool) => mLoaderPool = pool;
 
             public GameObject Load(PanelHandler handler)
             {

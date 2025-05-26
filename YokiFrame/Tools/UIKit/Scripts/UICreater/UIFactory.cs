@@ -14,7 +14,7 @@ namespace YokiFrame
         /// <summary>
         /// 加载池
         /// </summary>
-        private ILoaderPool mLoaderPool = new DefaultPanelLoaderPool();
+        private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderPool();
 
         public IPanel LoadPanel(PanelHandler handler)
         {
@@ -93,7 +93,7 @@ namespace YokiFrame
             }
         }
 
-        internal void SetPanelLoader(ILoaderPool loaderPool) => mLoaderPool = loaderPool;
+        internal void SetPanelLoader(IPanelLoaderPool loaderPool) => mLoaderPool = loaderPool;
         void ISingleton.OnSingletonInit() { }
     }
 }
