@@ -34,6 +34,7 @@ namespace YokiFrame
                     handler.Loader = loader;
                     handler.Panel = panel;
                     panel.Handler = handler;
+                    UIRoot.Instance.SetLevelOfPanel(handler.Level, panel);
                 }
             }
             catch (Exception e)
@@ -71,6 +72,7 @@ namespace YokiFrame
                                 var panel = op.Result[0].GetComponent<UIPanel>();
                                 handler.Panel = panel;
                                 panel.Handler = handler;
+                                UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
                                 onPanelComplete?.Invoke(handler.Panel);
                             }
                         }
@@ -78,6 +80,7 @@ namespace YokiFrame
                         var panel = Instantiate(prefab).GetComponent<UIPanel>();
                         handler.Panel = panel;
                         panel.Handler = handler;
+                        UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
                         onPanelComplete?.Invoke(handler.Panel);
 #endif
                     }
@@ -90,20 +93,7 @@ namespace YokiFrame
             }
         }
 
-        public void SetDefaultSizeOfPanel(IPanel panel)
-        {
-            var rect = panel.Transform as RectTransform;
-
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.anchoredPosition3D = Vector3.zero;
-            rect.localEulerAngles = Vector3.zero;
-            rect.localScale = Vector3.one;
-
-            rect.sizeDelta = Vector2.zero;
-        }
-
-
+        internal void SetPanelLoader(ILoaderPool loaderPool) => mLoaderPool = loaderPool;
         void ISingleton.OnSingletonInit() { }
     }
 }

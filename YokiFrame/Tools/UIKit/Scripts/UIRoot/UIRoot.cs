@@ -98,7 +98,21 @@ namespace YokiFrame
             {
                 panel.Transform.SetParent(UILevelDic[level]);
             }
-            UIFactory.Instance.SetDefaultSizeOfPanel(panel);
+            SetDefaultSizeOfPanel(panel);
+        }
+
+
+        public void SetDefaultSizeOfPanel(IPanel panel)
+        {
+            var rect = panel.Transform as RectTransform;
+
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.anchoredPosition3D = Vector3.zero;
+            rect.localEulerAngles = Vector3.zero;
+            rect.localScale = Vector3.one;
+
+            rect.sizeDelta = Vector2.zero;
         }
 
         void ISingleton.OnSingletonInit() { }

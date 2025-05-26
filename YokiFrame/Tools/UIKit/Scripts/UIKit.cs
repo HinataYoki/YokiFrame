@@ -60,7 +60,8 @@ namespace YokiFrame
         /// <summary>
         /// 异步创建指定类型的Panel
         /// </summary>
-        public static void OpenPanelAsync<T>(Action<IPanel> callbaack = null, UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
+        public static void OpenPanelAsync<T>(Action<IPanel> callbaack = null,
+            UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
             var type = typeof(T);
             if (!PanelCacheDic.TryGetValue(type, out var handler))
@@ -174,7 +175,8 @@ namespace YokiFrame
         /// <summary>
         /// 打开并且压入指定类型的Panel到栈中
         /// </summary>
-        public static void PushOpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
+        public static void PushOpenPanel<T>(UILevel level = UILevel.Common, 
+            IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
             var panel = OpenPanel<T>(level, data);
             PushPanel(panel, hidePreLevel);
@@ -182,7 +184,8 @@ namespace YokiFrame
         /// <summary>
         /// 异步打开并且压入指定类型的Panel到栈中
         /// </summary>
-        public static void PushOpenPanelAysnc<T>(Action<IPanel> callbaack = null, UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
+        public static void PushOpenPanelAysnc<T>(Action<IPanel> callbaack = null, 
+            UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
             callbaack += panel =>
             {
@@ -234,11 +237,11 @@ namespace YokiFrame
                 }
             });
         }
-
-        public static void SetPanelLoader(IPanelLoader panelLoader)
-        {
-            
-        }
+        /// <summary>
+        /// 设置自定义的Panel加载器池
+        /// </summary>
+        /// <param name="loaderPool"></param>
+        public static void SetPanelLoader(ILoaderPool loaderPool) => UIFactory.Instance.SetPanelLoader(loaderPool);
 
         private static IPanel CreateUI(PanelHandler handler)
         {
