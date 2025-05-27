@@ -12,6 +12,11 @@ namespace YokiFrame
             return new StringBuilder(selfStr);
         }
 
+        public static bool IsNullOrEmpty(this string self)
+        {
+            return string.IsNullOrEmpty(self);
+        }
+
         /// <summary>
         /// StringBuilder 添加前缀
         /// </summary>

@@ -23,6 +23,7 @@ namespace YokiFrame
     {
         IArchitecture Architecture { get; }
         void SetArchitecture(IArchitecture architecture);
+        T GetService<T>() where T : class, IService, new();
     }
     /// <summary>
     /// 数据服务
@@ -32,7 +33,7 @@ namespace YokiFrame
     public interface ICanInit
     {
         abstract bool Initialized { get; }
-        abstract void OnInit();
+        abstract void Init();
     }
 
     public interface ICanDispose : ICanInit
@@ -65,7 +66,10 @@ namespace YokiFrame
             }
         }
 
-        public abstract void OnInit();
+
+        void ICanInit.Init() => OnInit();
+
+        protected virtual void OnInit() { }
 
         public K GetService<K>(bool force = false) where K : class, IService, new()
         {
@@ -99,8 +103,8 @@ namespace YokiFrame
             {
                 mServices.Add(key, service);
             }
-            service.OnInit();
             service.SetArchitecture(mArchitecture);
+            service.Init();
         }
     }
 
@@ -112,12 +116,20 @@ namespace YokiFrame
         private bool mInitialized = false;
         public bool Initialized => mInitialized;
 
-        public abstract void OnInit();
 
         void IService.SetArchitecture(IArchitecture architecture)
         {
             mArchitecture = architecture;
             mInitialized = true;
+        }
+
+        void ICanInit.Init() => OnInit();
+
+        protected virtual void OnInit() { }
+
+        public T GetService<T>() where T : class, IService, new()
+        {
+            return mArchitecture.GetService<T>() as T;
         }
     }
 

@@ -1,27 +1,220 @@
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace YokiFrame
 {
-    public class LogKit
+    public static class LogKit
     {
         public enum LogLevel { None, Error, Warning, All }
-        public static LogLevel Level { get; set; } = LogLevel.All;
-        
-        public static void Log(string message, Object context = null)
+        public static LogLevel Level = LogLevel.All;
+        public static bool Encrypt = true;
+
+        // 日志文件路径
+        private static readonly string logFilePath;
+        // 日志队列
+        private static readonly BlockingCollection<LogEntry> _queue;
+        // 取消令牌源，用于应用退出时停止写盘任务
+        private static readonly CancellationTokenSource _cts;
+
+        // AES 加密密钥与 IV
+        private static readonly byte[] _key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
+        private static readonly byte[] _iv = Encoding.UTF8.GetBytes("FEDCBA9876543210");
+
+        static LogKit()
         {
-            if (context != null)
+            // 设置日志文件路径
+            if (Application.isEditor)
             {
-                Debug.Log($"{message}", context);
+                //编辑器下不需要记录日志
+                logFilePath = $"{Application.persistentDataPath}/LogFile/log.log";
+                return;
             }
-            else
+            else logFilePath = $"{Application.dataPath}/LogFile/log.log";
+
+            // 确保目录存在
+            Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
+
+            // 订阅 Unity 的日志回调
+            Application.logMessageReceived += HandleLog;
+            Application.quitting += OnApplicationQuit;
+
+            _queue = new();
+            _cts = new();
+            // 启动后台写盘任务
+            Task.Run(() => ProcessQueueAsync(_cts.Token));
+        }
+
+        /// <summary>
+        /// Unity 日志回调处理，将日志条目推入队列
+        /// </summary>
+        private static void HandleLog(string logText, string stackTrace, LogType type)
+        {
+            var entry = new LogEntry
             {
-                Debug.Log($"{message}");
+                Time = DateTime.Now,
+                Type = type,
+                Message = logText,
+                StackTrace = stackTrace
+            };
+            _queue.Add(entry);
+        }
+        /// <summary>
+        /// 应用退出时触发，停止写盘循环并完成队列
+        /// </summary>
+        private static void OnApplicationQuit()
+        {
+            _cts.Cancel();
+            _queue.CompleteAdding();
+        }
+        /// <summary>
+        /// 后台处理队列并写入磁盘
+        /// </summary>
+        private static async Task ProcessQueueAsync(CancellationToken token)
+        {
+            try
+            {
+                foreach (var entry in _queue.GetConsumingEnumerable(token))
+                {
+                    // 构造日志文本
+                    var builder = new StringBuilder();
+                    builder.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] [{1}]\n{2}\n", entry.Time, entry.Type, entry.Message);
+                    if (!string.IsNullOrEmpty(entry.StackTrace) && entry.Type is not LogType.Log)
+                        builder.AppendLine(entry.StackTrace);
+
+                    var logLine = builder.ToString().TrimEnd();
+
+                    if (Encrypt)
+                    {
+                        logLine = EncryptString(logLine);
+                    }
+
+                    // 写入文件（每条日志单独一行）
+                    await File.AppendAllTextAsync(logFilePath, logLine + Environment.NewLine, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 应用退出时正常取消
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LogKit] 后台写盘出错: {ex}");
+            }
+        }
+        /// <summary>
+        /// AES 加密并返回 Base64 字符串
+        /// </summary>
+        public static string EncryptString(string plainText)
+        {
+            using var aes = Aes.Create();
+            aes.Key = _key;
+            aes.IV = _iv;
+            using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+            var plainBytes = Encoding.UTF8.GetBytes(plainText);
+            var encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+            return Convert.ToBase64String(encryptedBytes);
+        }
+        /// <summary>
+        /// AES 解密 Base64 字符串
+        /// </summary>
+        public static string DecryptString(string cipherText)
+        {
+            var cipherBytes = Convert.FromBase64String(cipherText);
+            using var aes = Aes.Create();
+            aes.Key = _key;
+            aes.IV = _iv;
+            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+            var decryptedBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+            return Encoding.UTF8.GetString(decryptedBytes);
+        }
+        // 日志条目结构体
+        private struct LogEntry
+        {
+            public DateTime Time;
+            public LogType Type;
+            public string Message;
+            public string StackTrace;
+        }
+
+
+
+#if UNITY_EDITOR
+        private const string MenuPath = "Tools/解密log文件";
+
+        [UnityEditor.MenuItem(MenuPath)]
+        public static void DecryptLogFileMenu()
+        {
+            // 弹出文件选择对话框，过滤 .log/.txt 等日志文件
+            string path = UnityEditor.EditorUtility.OpenFilePanel("选择加密log文件", logFilePath, "log,txt");
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            string directory = Path.GetDirectoryName(path);
+            string filenameWithoutExt = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            string outputPath = Path.Combine(directory, filenameWithoutExt + "Decrypt" + extension);
+
+            try
+            {
+                var lines = File.ReadAllLines(path);
+                using (var writer = new StreamWriter(outputPath, false, System.Text.Encoding.UTF8))
+                {
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            writer.WriteLine();
+                            continue;
+                        }
+
+                        try
+                        {
+                            // 使用 LogKit 提供的解密方法
+                            string plain = DecryptString(line.Trim());
+                            writer.WriteLine(plain);
+                        }
+                        catch
+                        {
+                            // 解密失败，则原样写入
+                            writer.WriteLine(line);
+                        }
+                    }
+                }
+
+                // 在编辑器中显示输出文件
+                UnityEditor.EditorUtility.RevealInFinder(outputPath);
+            }
+            catch (Exception e)
+            {
+                UnityEditor.EditorUtility.DisplayDialog("Decrypt Log File", $"解密失败:\n{e.Message}", "OK");
+            }
+        }
+#endif
+        public static void Log(object message, Object context = null)
+        {
+            if (Level >= LogLevel.None)
+            {
+                if (context != null)
+                {
+                    Debug.Log($"{message}", context);
+                }
+                else
+                {
+                    Debug.Log($"{message}");
+                }
             }
         }
 
-        public static void Log<T>(string message, Object context = null)
+        public static void Log<T>(object message, Object context = null)
         {
-            if (Level >= LogLevel.Warning)
+            if (Level >= LogLevel.None)
             {
                 if (context != null)
                 {
@@ -34,19 +227,22 @@ namespace YokiFrame
             }
         }
 
-        public static void Warning(string message, Object context = null)
+        public static void Warning(object message, Object context = null)
         {
-            if (context != null)
+            if (Level >= LogLevel.Warning)
             {
-                Debug.LogWarning($"{message}", context);
-            }
-            else
-            {
-                Debug.LogWarning($"{message}");
+                if (context != null)
+                {
+                    Debug.LogWarning($"{message}", context);
+                }
+                else
+                {
+                    Debug.LogWarning($"{message}");
+                }
             }
         }
 
-        public static void Warning<T>(string message, Object context = null)
+        public static void Warning<T>(object message, Object context = null)
         {
             if (Level >= LogLevel.Warning)
             {
@@ -61,19 +257,22 @@ namespace YokiFrame
             }
         }
 
-        public static void Error(string message, Object context = null)
+        public static void Error(object message, Object context = null)
         {
-            if (context != null)
+            if (Level >= LogLevel.Error)
             {
-                Debug.LogError($"{message}", context);
-            }
-            else
-            {
-                Debug.LogError($"{message}");
+                if (context != null)
+                {
+                    Debug.LogError($"{message}", context);
+                }
+                else
+                {
+                    Debug.LogError($"{message}");
+                }
             }
         }
 
-        public static void Error<T>(string message, Object context = null)
+        public static void Error<T>(object message, Object context = null)
         {
             if (Level >= LogLevel.Error)
             {

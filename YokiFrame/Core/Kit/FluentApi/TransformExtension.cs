@@ -36,5 +36,15 @@ namespace YokiFrame
             self.anchorMax = Vector2.one;
             ResetTransform(self, resetScale);
         }
+
+        public static Vector2 Position2D(this Transform self)
+        {
+            return new Vector2(self.position.x, self.position.y);
+        }
+
+        public static void Position2D(this Transform self, Vector2 pos)
+        {
+            self.position = new Vector3(pos.x, pos.y, self.position.z);
+        }
     }
 }

@@ -5,8 +5,8 @@ namespace YokiFrame
     public class BindValue<T>
     {
         public BindValue(T value = default) => mValue = value;
-        private T mValue;
-        public T Value
+        protected T mValue;
+        public virtual T Value
         {
             get => mValue;
             set
