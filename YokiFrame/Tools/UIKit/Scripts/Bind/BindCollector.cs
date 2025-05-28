@@ -14,7 +14,7 @@ namespace YokiFrame
         {
             foreach (Transform child in curTrans)
             {
-                string nextFullName = $"{fullName}{child.name}/";
+                string nextFullName = $"{fullName}/{child.name}";
                 if (child.TryGetComponent<IBind>(out var bind))
                 {
                     // 绑定为叶子节点，直接跳过
@@ -22,7 +22,10 @@ namespace YokiFrame
                     // 进行成员命名查重检查
                     if (bindCodeInfo.MemberDic.ContainsKey(bind.Name))
                     {
-                        Debug.LogError($"Repaet Name: {bind.Name} for {bindCodeInfo.MemberDic[bind.Name].PathToRoot}", child);
+                        if (bind.Bind is BindType.Member)
+                        {
+                            Debug.LogError($"Repaet {BindType.Member} Name: {bind.Name} for {bindCodeInfo.MemberDic[bind.Name].PathToRoot}", child);
+                        }
                     }
                     else
                     {
@@ -33,6 +36,7 @@ namespace YokiFrame
                             Comment = bind.Comment,
                             PathToRoot = nextFullName,
                             BindType = bind.Bind,
+                            Self = child.gameObject,
                             BindScript = bind,
                         });
                         SearchBinds(child, nextFullName, bind.Bind is BindType.Member ? bindCodeInfo : bindCodeInfo.MemberDic[bind.Name]);

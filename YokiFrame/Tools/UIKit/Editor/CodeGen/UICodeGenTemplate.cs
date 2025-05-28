@@ -328,7 +328,7 @@ namespace YokiFrame
         /// <param name="codeContext"></param>
         private static void RecursionGen(BindCodeInfo bindInfo, UIGenCodeContext codeContext)
         {
-            if (bindInfo.BindScript.Bind is BindType.Element)
+            if (bindInfo.BindType is BindType.Element)
             {
                 if (!codeContext.AlreadyElementSet.Contains(bindInfo.TypeName))
                 {
@@ -336,7 +336,7 @@ namespace YokiFrame
                     WriteElement(bindInfo, codeContext);
                 }
             }
-            else if (bindInfo.BindScript.Bind is BindType.Component)
+            else if (bindInfo.BindType is BindType.Component)
             {
                 if (!codeContext.AlreadyElementSet.Contains(bindInfo.TypeName))
                 {

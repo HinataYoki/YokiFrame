@@ -40,9 +40,9 @@ namespace YokiFrame
         /// UI脚本所在的程序集名称
         /// </summary>
         public string AssemblyName = "Assembly-CSharp";
-
+        /// <summary>
+        /// 需要绑定的Prefab列表
+        /// </summary>
         public List<string> BindPrefabPathList = new();
-
-        public readonly static string GeneratePrePath = $"{Application.dataPath.Replace("Assets", string.Empty)}";
     }
 }

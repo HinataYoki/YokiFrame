@@ -10,6 +10,8 @@ namespace YokiFrame
         /// <summary>
         /// 把Bind关系序列化到Prefab中
         /// </summary>
+        /// <param name="uiPrefab">需要生成bind关系的预制体</param>
+        /// <param name="bindCodeInfo">关系引用</param>
         public static void AddPrefabReferencesAfterCompoile(GameObject uiPrefab)
         {
             var path = AssetDatabase.GetAssetPath(uiPrefab);
@@ -58,6 +60,15 @@ namespace YokiFrame
 
         private static void SetObjectRef2Property(GameObject prefab, string name, System.Reflection.Assembly assembly)
         {
+            var bindCodeInfo = new BindCodeInfo()
+            {
+                TypeName = prefab.name,
+                Name = name,
+                Self = prefab,
+            };
+
+            BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
+
             var typeName = UIKitCreateConfig.Instance.ScriptNamespace + "." + prefab.name;
             var type = assembly.GetType(typeName);
             var typeIns = prefab.GetComponent(type);
@@ -67,56 +78,48 @@ namespace YokiFrame
             }
 
             var serialized = new SerializedObject(typeIns);
-            SetObjectRef2Property(prefab.transform, name, assembly, serialized);
+            SetObjectRef2Property(name, assembly, serialized, bindCodeInfo);
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SavePrefabAsset(prefab);
         }
 
-        private static void SetObjectRef2Property(Transform transform, string name, System.Reflection.Assembly assembly, SerializedObject serialized)
+        private static void SetObjectRef2Property(string name, System.Reflection.Assembly assembly, SerializedObject serialized, BindCodeInfo bindCodeInfo)
         {
-            foreach (Transform curTrans in transform)
+            foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
             {
-                if (curTrans.TryGetComponent<IBind>(out var bind))
+                //把对应的Bind添加到prefab引用中
+                var objectReference = serialized.FindProperty($"{bindInfo.Name}");
+                if (objectReference == null)
                 {
-                    //把对应的Bind添加到prefab引用中
-                    var objectReference = serialized.FindProperty($"{bind.Name}");
-                    if (objectReference == null)
-                    {
-                        Debug.LogError($"未在类：{name}中查询到对应序列化字段名m{bind.Name}");
-                    }
-                    else
-                    {
-                        //如果不是成员或者叶子节点，则删除Mark标记替换成对应的组件
-                        if (bind.Bind is not BindType.Member or BindType.Leaf)
-                        {
-                            var typeName = bind.Bind is BindType.Component ? bind.TypeName : $"{name}{nameof(UIElement)}.{bind.TypeName}";
-                            var type = assembly.GetType($"{UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}");
-                            var typeIns = curTrans.GetComponent(type);
-                            if (typeIns == null)
-                            {
-                                typeIns = curTrans.gameObject.AddComponent(type);
-                            }
-                            objectReference.objectReferenceValue = typeIns.gameObject;
-                            var newSerialized = new SerializedObject(typeIns);
-                            SetObjectRef2Property(curTrans, name, assembly, newSerialized);
-
-                            if (curTrans.TryGetComponent<AbstractBind>(out var markBind))
-                            {
-                                Object.DestroyImmediate(markBind, true);
-                            }
-                            newSerialized.ApplyModifiedPropertiesWithoutUndo();
-                        }
-                        else
-                        {
-                            objectReference.objectReferenceValue = bind.Transform.gameObject;
-                            SetObjectRef2Property(curTrans, name, assembly, serialized);
-                        }
-                    }
+                    Debug.LogError($"未在类：{bindInfo.TypeName}中查询到对应序列化字段名{bindInfo.Name}");
                 }
                 else
                 {
-                    SetObjectRef2Property(curTrans, name, assembly, serialized);
+                    //如果不是成员或者叶子节点，则删除Mark标记替换成对应的组件
+                    if (bindInfo.BindType is not BindType.Member or BindType.Leaf)
+                    {
+                        var typeName = bindInfo.BindType is BindType.Component ? bindInfo.TypeName : $"{name}{nameof(UIElement)}.{bindInfo.TypeName}";
+                        var type = assembly.GetType($"{UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}");
+                        var typeIns = bindInfo.Self.GetComponent(type);
+                        if (typeIns == null)
+                        {
+                            typeIns = bindInfo.Self.AddComponent(type);
+                        }
+                        objectReference.objectReferenceValue = typeIns.gameObject;
+                        var newSerialized = new SerializedObject(typeIns);
+                        SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
+
+                        if (bindInfo.Self.TryGetComponent<AbstractBind>(out var markBind))
+                        {
+                            Object.DestroyImmediate(markBind, true);
+                        }
+                        newSerialized.ApplyModifiedPropertiesWithoutUndo();
+                    }
+                    else
+                    {
+                        objectReference.objectReferenceValue = bindInfo.Self;
+                    }
                 }
             }
         }

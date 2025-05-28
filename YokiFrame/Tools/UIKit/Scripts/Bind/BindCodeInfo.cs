@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace YokiFrame
 {
@@ -28,6 +29,10 @@ namespace YokiFrame
         /// 成员字典
         /// </summary>
         public Dictionary<string, BindCodeInfo> MemberDic = new();
+        /// <summary>
+        /// 自身引用
+        /// </summary>
+        public GameObject Self;
         /// <summary>
         /// 绑定组件
         /// </summary>

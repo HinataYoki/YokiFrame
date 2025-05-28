@@ -47,7 +47,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 代码生成管道
+        /// 代码生成管线
         /// </summary>
         /// <param name="prefab">需要生成代码的UI预制体</param>
         /// <param name="scriptPath">代码路径</param>
@@ -57,19 +57,11 @@ namespace YokiFrame
         {
             if (prefab != null)
             {
-                var objType = PrefabUtility.GetPrefabAssetType(prefab);
+                var prefabType = PrefabUtility.GetPrefabAssetType(prefab);
 
-                if (objType is PrefabAssetType.NotAPrefab)
+                if (prefabType is PrefabAssetType.NotAPrefab)
                 {
-                    LogKit.Warning<UICodeGenerator>($"{prefab} 不是预制体", prefab);
-                    return;
-                }
-
-                var clone = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
-
-                if (clone == null)
-                {
-                    LogKit.Warning<UICodeGenerator>($"实例化预制体{prefab}失败", prefab);
+                    Debug.LogError($"{prefab} 是预制体", prefab);
                     return;
                 }
 
@@ -77,6 +69,7 @@ namespace YokiFrame
                 {
                     TypeName = prefab.name,
                     Name = prefab.name,
+                    Self = prefab,
                 };
 
                 BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
@@ -88,8 +81,6 @@ namespace YokiFrame
 
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-
-                Object.DestroyImmediate(clone);
             }
         }
         /// <summary>
@@ -119,11 +110,11 @@ namespace YokiFrame
         /// <param name="name">代码名称</param>
         /// <param name="designerPath">定义代码路径</param>
         /// <param name="scriptNamespace">代码命名空间</param>
-        /// <param name="panelCodeInfo">成员绑定信息</param>
-        private void CreateUIPanelDesignerCode(string name, string designerPath, string scriptNamespace, BindCodeInfo panelCodeInfo)
+        /// <param name="bindCodeInfo">成员绑定信息</param>
+        private void CreateUIPanelDesignerCode(string name, string designerPath, string scriptNamespace, BindCodeInfo bindCodeInfo)
         {
             Directory.CreateDirectory(PathUtils.GetDirectoryPath(designerPath));
-            UICodeGenTemplate.WritePanelDesigner(name, designerPath, scriptNamespace, panelCodeInfo);
+            UICodeGenTemplate.WritePanelDesigner(name, designerPath, scriptNamespace, bindCodeInfo);
         }
     }
 }

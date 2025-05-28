@@ -93,7 +93,12 @@ namespace YokiFrame
             }
         }
 
-        internal void SetPanelLoader(IPanelLoaderPool loaderPool) => mLoaderPool = loaderPool;
+        internal void SetPanelLoader(IPanelLoaderPool loaderPool)
+        {
+            mLoaderPool = loaderPool;
+            Debug.Log($"当前UIKit加载池为： {mLoaderPool}");
+        }
+
         void ISingleton.OnSingletonInit() { }
     }
 }
