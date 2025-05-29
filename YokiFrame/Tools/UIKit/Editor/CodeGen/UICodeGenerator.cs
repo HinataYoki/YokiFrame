@@ -76,7 +76,6 @@ namespace YokiFrame
 
                 CreateUIPanelCode(prefab, scriptPath, designerPath, scriptNamespace, bindCodeInfo);
 
-
                 UISerializer.AddPrefabReferencesAfterCompoile(prefab);
 
                 AssetDatabase.SaveAssets();

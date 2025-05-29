@@ -50,7 +50,9 @@ namespace YokiFrame
                     }
                     SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
                     Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
+                    PrefabUtility.SavePrefabAsset(uiPrefab);
                 }
+
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
@@ -76,13 +78,11 @@ namespace YokiFrame
             {
                 typeIns = prefab.AddComponent(type);
             }
-            PrefabUtility.SavePrefabAsset(prefab);
 
             var serialized = new SerializedObject(typeIns);
             SetObjectRef2Property(name, assembly, serialized, bindCodeInfo);
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
-            PrefabUtility.SavePrefabAsset(prefab);
         }
 
         private static void SetObjectRef2Property(string name, System.Reflection.Assembly assembly, SerializedObject serialized, BindCodeInfo bindCodeInfo)
