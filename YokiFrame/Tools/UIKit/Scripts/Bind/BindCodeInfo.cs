@@ -37,5 +37,13 @@ namespace YokiFrame
         /// 绑定组件
         /// </summary>
         public IBind BindScript;
+        /// <summary>
+        /// 重复元素
+        /// </summary>
+        public bool RepeatElement;
+        /// <summary>
+        /// 顺序
+        /// </summary>
+        public int order;
     }
 }

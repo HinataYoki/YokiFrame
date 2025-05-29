@@ -10,7 +10,7 @@ namespace YokiFrame
         /// <param name="curTrans">当前Trans</param>
         /// <param name="fullName">当前Trans全路径</param>
         /// <param name="bindCodeInfo">绑定信息</param>
-        public static void SearchBinds(Transform curTrans, string fullName, BindCodeInfo bindCodeInfo = null)
+        public static void SearchBinds(Transform curTrans, string fullName, BindCodeInfo bindCodeInfo = null, int order = 0)
         {
             foreach (Transform child in curTrans)
             {
@@ -20,31 +20,40 @@ namespace YokiFrame
                     // 绑定为叶子节点，直接跳过
                     if (bind.Bind is BindType.Leaf) continue;
                     // 进行成员命名查重检查
-                    if (bindCodeInfo.MemberDic.ContainsKey(bind.Name))
+                    var repreat = bindCodeInfo.MemberDic.ContainsKey(bind.Name);
+                    if (repreat && bind.Bind is BindType.Member)
                     {
-                        if (bind.Bind is BindType.Member)
-                        {
-                            Debug.LogError($"Repaet {BindType.Member} Name: {bind.Name} for {bindCodeInfo.MemberDic[bind.Name].PathToRoot}", child);
-                        }
+                        Debug.LogError($"Repaet {BindType.Member} Name: {bind.Name} for {bindCodeInfo.MemberDic[bind.Name].PathToRoot}", child);
+                        continue;
                     }
                     else
                     {
-                        bindCodeInfo.MemberDic.Add(bind.Name, new BindCodeInfo
+                        if (bindCodeInfo.BindType is BindType.Component && bind.Bind is BindType.Element)
                         {
-                            TypeName = bind.TypeName,
-                            Name = bind.Name,
-                            Comment = bind.Comment,
-                            PathToRoot = nextFullName,
-                            BindType = bind.Bind,
-                            Self = child.gameObject,
-                            BindScript = bind,
-                        });
-                        SearchBinds(child, nextFullName, bind.Bind is BindType.Member ? bindCodeInfo : bindCodeInfo.MemberDic[bind.Name]);
+                            Debug.LogWarning("Component组件下不持支定义Element元素 ", bind.Transform);
+                        }
+                        else
+                        {
+                            var newBindInfo = new BindCodeInfo()
+                            {
+                                TypeName = bind.TypeName,
+                                Name = bind.Name,
+                                Comment = bind.Comment,
+                                PathToRoot = nextFullName,
+                                BindType = bind.Bind,
+                                Self = child.gameObject,
+                                BindScript = bind,
+                                RepeatElement = repreat,
+                                order = order,
+                            };
+                            bindCodeInfo.MemberDic.Add(bind.Name, newBindInfo);
+                            SearchBinds(child, nextFullName, bind.Bind is BindType.Member ? bindCodeInfo : newBindInfo, order + 1);
+                        }
                     }
                 }
                 else
                 {
-                    SearchBinds(child, nextFullName, bindCodeInfo);
+                    SearchBinds(child, nextFullName, bindCodeInfo, order + 1);
                 }
             }
         }

@@ -76,6 +76,7 @@ namespace YokiFrame
             {
                 typeIns = prefab.AddComponent(type);
             }
+            PrefabUtility.SavePrefabAsset(prefab);
 
             var serialized = new SerializedObject(typeIns);
             SetObjectRef2Property(name, assembly, serialized, bindCodeInfo);
@@ -92,7 +93,7 @@ namespace YokiFrame
                 var objectReference = serialized.FindProperty($"{bindInfo.Name}");
                 if (objectReference == null)
                 {
-                    Debug.LogError($"未在类：{bindInfo.TypeName}中查询到对应序列化字段名{bindInfo.Name}");
+                    Debug.LogError($"未在类：{bindInfo.TypeName}中查询到对应序列化字段名{bindInfo.Name}", bindInfo.Self);
                 }
                 else
                 {
@@ -106,7 +107,10 @@ namespace YokiFrame
                         {
                             typeIns = bindInfo.Self.AddComponent(type);
                         }
-                        objectReference.objectReferenceValue = typeIns.gameObject;
+                        if (!bindInfo.RepeatElement)
+                        {
+                            objectReference.objectReferenceValue = typeIns.gameObject;
+                        }
                         var newSerialized = new SerializedObject(typeIns);
                         SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
 

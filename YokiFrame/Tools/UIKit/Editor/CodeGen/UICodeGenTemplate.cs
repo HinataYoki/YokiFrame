@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace YokiFrame
@@ -58,8 +59,8 @@ namespace YokiFrame
         /// <param name="name">面板名称</param>
         /// <param name="designerPath">定义路径</param>
         /// <param name="scriptNamespace">命名空间</param>
-        /// <param name="panelCodeInfo">绑定信息</param>
-        public static void WritePanelDesigner(string name, string designerPath, string scriptNamespace, BindCodeInfo panelCodeInfo)
+        /// <param name="bindCodeInfo">绑定信息</param>
+        public static void WritePanelDesigner(string name, string designerPath, string scriptNamespace, BindCodeInfo bindCodeInfo)
         {
             var codeContext = new UIGenCodeContext
             {
@@ -82,7 +83,9 @@ namespace YokiFrame
                     scope.Custom($"// Generate Id:{Guid.NewGuid()}");
                     scope.Class(name, string.Empty, true, false, classScope =>
                     {
-                        foreach (var bindInfo in panelCodeInfo.MemberDic.Values)
+                        //根据order排序
+                        var sortList = bindCodeInfo.MemberDic.Values.OrderBy(info => info.order).ToList();
+                        foreach (var bindInfo in sortList)
                         {
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
@@ -91,7 +94,8 @@ namespace YokiFrame
                                 classScope.Custom("/// </summary>");
                             }
                             classScope.Custom("[SerializeField]");
-                            classScope.Custom($"public {(bindInfo.BindType is BindType.Element ? $"{scriptNamespace}.{name}{nameof(UIElement)}." : "")}{bindInfo.TypeName} {bindInfo.Name};");
+                            var typeName = $"{(bindInfo.BindType is BindType.Element ? $"{scriptNamespace}.{name}{nameof(UIElement)}." : "")}{bindInfo.TypeName}";
+                            classScope.Custom($"public {typeName} {bindInfo.Name};");
 
                             RecursionGen(bindInfo, codeContext);
                         }
@@ -99,7 +103,7 @@ namespace YokiFrame
 
                         classScope.CustomScope("protected override void ClearUIComponents()", false, (function) =>
                         {
-                            foreach (var bindInfo in panelCodeInfo.MemberDic.Values)
+                            foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
                                 if (bindInfo.BindType is BindType.Element or BindType.Component)
                                 {
@@ -183,7 +187,9 @@ namespace YokiFrame
                 {
                     scope.Class(name, string.Empty, true, false, classScope =>
                     {
-                        foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
+                        //根据order排序
+                        var sortList = bindCodeInfo.MemberDic.Values.OrderBy(info => info.order).ToList();
+                        foreach (var bindInfo in sortList)
                         {
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
@@ -281,8 +287,16 @@ namespace YokiFrame
                 {
                     scope.Class(name, string.Empty, true, false, classScope =>
                     {
-                        foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
+                        //根据order排序
+                        var sortList = bindCodeInfo.MemberDic.Values.OrderBy(info => info.order).ToList();
+                        foreach (var bindInfo in sortList)
                         {
+                            if (bindInfo.BindType is BindType.Element)
+                            {
+                                Debug.LogWarning("Component组件下不持支定义Element元素");
+                                bindCodeInfo.MemberDic.Remove(bindInfo.Name);
+                                continue;
+                            }
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
                                 classScope.Custom("/// <summary>");
@@ -293,7 +307,7 @@ namespace YokiFrame
                             classScope.Custom("[SerializeField]");
                             classScope.Custom($"public {bindInfo.TypeName} {bindInfo.Name};");
 
-                            RecursionGen(bindInfo, codeContext);
+                            RecursionGen(bindInfo, codeContext, true);
                         }
 
                         classScope.EmptyLine();
@@ -326,21 +340,24 @@ namespace YokiFrame
         /// </summary>
         /// <param name="bindInfo"></param>
         /// <param name="codeContext"></param>
-        private static void RecursionGen(BindCodeInfo bindInfo, UIGenCodeContext codeContext)
+        private static void RecursionGen(BindCodeInfo bindInfo, UIGenCodeContext codeContext, bool isComponent = false)
         {
-            if (bindInfo.BindType is BindType.Element)
+            //重复Element不用反复生成代码
+            if (bindInfo.RepeatElement) return;
+            var typeName = $"{nameof(bindInfo.BindType)}{bindInfo.TypeName}";
+            if (!isComponent && bindInfo.BindType is BindType.Element)
             {
-                if (!codeContext.AlreadyElementSet.Contains(bindInfo.TypeName))
+                if (!codeContext.AlreadyElementSet.Contains(typeName))
                 {
-                    codeContext.AlreadyElementSet.Add(bindInfo.TypeName);
+                    codeContext.AlreadyElementSet.Add(typeName);
                     WriteElement(bindInfo, codeContext);
                 }
             }
             else if (bindInfo.BindType is BindType.Component)
             {
-                if (!codeContext.AlreadyElementSet.Contains(bindInfo.TypeName))
+                if (!codeContext.AlreadyElementSet.Contains(typeName))
                 {
-                    codeContext.AlreadyElementSet.Add(bindInfo.TypeName);
+                    codeContext.AlreadyElementSet.Add(typeName);
                     WriteComponent(bindInfo, codeContext);
                 }
             }
