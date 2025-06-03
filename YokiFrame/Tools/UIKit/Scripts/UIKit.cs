@@ -286,8 +286,8 @@ namespace YokiFrame
                     if (handler.Hot <= 0 && handler.Panel.State is PanelState.Close)
                     {
                         UnityEngine.Object.Destroy(handler.Panel.Transform.gameObject);
-                        handler.Recycle();
                         list.Add(handler.Type);
+                        handler.Recycle();
                     }
                 }
                 foreach (var type in list)
