@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace YokiFrame
@@ -8,7 +9,8 @@ namespace YokiFrame
         public Transform Transform => transform;
         public PanelState State { get; set; }
         public PanelHandler Handler { get; set; }
-        private Action mOnClosed;
+
+        private List<Action> mOnClosed = new();
 
         public void Init(IUIData data = null) => OnInit(data);
 
@@ -35,12 +37,15 @@ namespace YokiFrame
         {
             Hide();
             State = PanelState.Close;
-            mOnClosed?.Invoke();
-            mOnClosed = null;
+            foreach (var action in mOnClosed)
+            {
+                action?.Invoke();
+            }
+            mOnClosed.Clear();
             OnClose();
         }
 
-        public void OnClosed(Action onClosed) => mOnClosed = onClosed;
+        public void OnClosed(Action onClosed) => mOnClosed.Add(onClosed);
 
         protected virtual void OnInit(IUIData data = null) { }
         protected virtual void OnOpen() { }
