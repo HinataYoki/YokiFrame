@@ -87,6 +87,7 @@ namespace YokiFrame
                         var sortList = bindCodeInfo.MemberDic.Values.OrderBy(info => info.order).ToList();
                         foreach (var bindInfo in sortList)
                         {
+                            if (bindInfo.RepeatElement) continue;
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
                                 classScope.Custom("/// <summary>");
@@ -191,6 +192,7 @@ namespace YokiFrame
                         var sortList = bindCodeInfo.MemberDic.Values.OrderBy(info => info.order).ToList();
                         foreach (var bindInfo in sortList)
                         {
+                            if (bindInfo.RepeatElement) continue;
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
                                 classScope.Custom("/// <summary>");
@@ -297,6 +299,7 @@ namespace YokiFrame
                                 bindCodeInfo.MemberDic.Remove(bindInfo.Name);
                                 continue;
                             }
+                            if (bindInfo.RepeatElement) continue;
                             if (!string.IsNullOrEmpty(bindInfo.Comment))
                             {
                                 classScope.Custom("/// <summary>");

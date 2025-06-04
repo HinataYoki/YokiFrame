@@ -42,15 +42,23 @@ namespace YokiFrame
                     EditorUtility.DisplayProgressBar("UIKit", $"Serialize UIPrefab...{prefabPath}", i);
 
                     var uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-                    Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
                     if (uiPrefab == null)
                     {
                         Debug.LogError($"Prefab at path {prefabPath} not found.");
                         continue;
                     }
-                    SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
-                    Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
+                    Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
+
+                    GameObject tempInstance = Object.Instantiate(uiPrefab);
+                    SetObjectRef2Property(tempInstance, uiPrefab.name, assembly);
+                    PrefabUtility.SaveAsPrefabAsset(tempInstance, prefabPath);
+                    Object.DestroyImmediate(tempInstance);
+
+                    /*SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
+                    EditorUtility.SetDirty(uiPrefab);
                     PrefabUtility.SavePrefabAsset(uiPrefab);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(uiPrefab);*/
+                    Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
                 }
 
                 AssetDatabase.SaveAssets();
@@ -64,14 +72,14 @@ namespace YokiFrame
         {
             var bindCodeInfo = new BindCodeInfo()
             {
-                TypeName = prefab.name,
+                TypeName = name,
                 Name = name,
                 Self = prefab,
             };
 
-            BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
+            BindCollector.SearchBinds(prefab.transform, name, bindCodeInfo);
 
-            var typeName = UIKitCreateConfig.Instance.ScriptNamespace + "." + prefab.name;
+            var typeName = UIKitCreateConfig.Instance.ScriptNamespace + "." + name;
             var type = assembly.GetType(typeName);
             var typeIns = prefab.GetComponent(type);
             if (typeIns == null)
@@ -80,8 +88,8 @@ namespace YokiFrame
             }
 
             var serialized = new SerializedObject(typeIns);
+            serialized.Update();
             SetObjectRef2Property(name, assembly, serialized, bindCodeInfo);
-
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -112,6 +120,7 @@ namespace YokiFrame
                             objectReference.objectReferenceValue = typeIns.gameObject;
                         }
                         var newSerialized = new SerializedObject(typeIns);
+                        newSerialized.Update();
                         SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
 
                         if (bindInfo.Self.TryGetComponent<AbstractBind>(out var markBind))

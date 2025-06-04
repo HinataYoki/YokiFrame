@@ -10,7 +10,7 @@ namespace YokiFrame
         /// <param name="curTrans">当前Trans</param>
         /// <param name="fullName">当前Trans全路径</param>
         /// <param name="bindCodeInfo">绑定信息</param>
-        public static void SearchBinds(Transform curTrans, string fullName, BindCodeInfo bindCodeInfo = null, int order = 0)
+        public static void SearchBinds(Transform curTrans, string fullName, BindCodeInfo bindCodeInfo = null)
         {
             foreach (Transform child in curTrans)
             {
@@ -44,16 +44,16 @@ namespace YokiFrame
                                 Self = child.gameObject,
                                 BindScript = bind,
                                 RepeatElement = repreat,
-                                order = order,
+                                order = bindCodeInfo.MemberDic.Count + 1,
                             };
-                            bindCodeInfo.MemberDic.Add(bind.Name, newBindInfo);
-                            SearchBinds(child, nextFullName, bind.Bind is BindType.Member ? bindCodeInfo : newBindInfo, order + 1);
+                            bindCodeInfo.MemberDic.Add(repreat ? $"{bind.Name}{bindCodeInfo.MemberDic.Count + 1}" : bind.Name, newBindInfo);
+                            SearchBinds(child, nextFullName, bind.Bind is BindType.Member ? bindCodeInfo : newBindInfo);
                         }
                     }
                 }
                 else
                 {
-                    SearchBinds(child, nextFullName, bindCodeInfo, order + 1);
+                    SearchBinds(child, nextFullName, bindCodeInfo);
                 }
             }
         }
