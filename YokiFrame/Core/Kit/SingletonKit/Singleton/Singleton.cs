@@ -22,7 +22,7 @@
             {
                 lock (mLock)
                 {
-                    mInstance ??= SingletonCreator.CreateSingleton<T>();
+                    mInstance ??= SingletonKit<T>.Instance;
                 }
 
                 return mInstance;

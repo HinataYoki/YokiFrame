@@ -18,7 +18,7 @@ namespace YokiFrame
             {
                 if (mInstance == null)
                 {
-                    mInstance = SingletonCreator.CreateMonoSingleton<T>();
+                    mInstance = SingletonKit<T>.Instance;
                 }
 
                 return mInstance;
