@@ -51,7 +51,6 @@ namespace YokiFrame
                 handler.Data = data;
                 CreateUI(handler);
             }
-            handler.Panel.Init(data);
             handler.Panel.Open();
             handler.Panel.Show();
 
@@ -74,6 +73,8 @@ namespace YokiFrame
             }
             else
             {
+                handler.Panel.Open();
+                handler.Panel.Show();
                 callbaack?.Invoke(handler.Panel);
             }
         }
@@ -252,6 +253,7 @@ namespace YokiFrame
 
                 PanelCacheDic.Add(handler.Type, handler);
                 handler.Hot += OpenHot;
+                panel.Init(handler.Data);
             }
 
             return panel;
@@ -269,6 +271,8 @@ namespace YokiFrame
                     handler.Hot += OpenHot;
 
                     panel.Init(handler.Data);
+                    panel.Open();
+                    panel.Show();
                     onPanelCreate?.Invoke(panel);
                 }
             });
