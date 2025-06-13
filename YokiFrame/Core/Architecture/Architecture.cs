@@ -69,7 +69,7 @@ namespace YokiFrame
 
         void ICanInit.Init() => OnInit();
 
-        protected virtual void OnInit() { }
+        protected abstract void OnInit();
 
         public K GetService<K>(bool force = false) where K : class, IService, new()
         {
@@ -125,7 +125,7 @@ namespace YokiFrame
 
         void ICanInit.Init() => OnInit();
 
-        protected virtual void OnInit() { }
+        protected abstract void OnInit();
 
         public T GetService<T>() where T : class, IService, new()
         {
