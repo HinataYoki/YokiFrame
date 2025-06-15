@@ -21,6 +21,11 @@ namespace YokiFrame
         protected MachineState machineState = MachineState.End;
         protected readonly Dictionary<TEnum, IState> mStateDic = new();
 
+        public void Get(TEnum id, out IState state)
+        {
+            mStateDic.TryGetValue(id, out state);
+        }
+
         public void Add(TEnum id, IState state)
         {
             if (mStateDic.ContainsKey(id))

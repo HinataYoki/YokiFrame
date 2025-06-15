@@ -10,6 +10,12 @@ namespace YokiFrame
         private MachineState machineState = MachineState.End;
         public MachineState MachineState => machineState;
 
+        public void Get(TEnum id, out IState state)
+        {
+            mStateDic.TryGetValue(id, out var statePair);
+            state = statePair.Item1;
+        }
+
         public void Add(TEnum id, IState state)
         {
             if (mStateDic.TryGetValue(id, out var statePair))

@@ -8,6 +8,7 @@ namespace YokiFrame
     }
     public interface IFSM<TEnum> : IFSM where TEnum : Enum
     {
+        void Get(TEnum id, out IState state);
         void Start(TEnum id);
         void Add(TEnum id, IState state);
         void Remove(TEnum id);
