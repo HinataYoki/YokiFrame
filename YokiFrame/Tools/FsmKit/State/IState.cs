@@ -9,6 +9,7 @@ namespace YokiFrame
         void FixedUpdate();
         void CustomUpdate();
         void End();
+        void SendMessage<TMsg>(TMsg message);
     }
 
     public interface IState<TArgs> : IState
