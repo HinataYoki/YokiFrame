@@ -10,24 +10,40 @@ using Object = UnityEngine.Object;
 
 namespace YokiFrame
 {
-    public static class LogKit
+    public static class LogKitLogger
     {
-        public enum LogLevel { None, Error, Warning, All }
-        public static LogLevel Level = LogLevel.All;
-        public static bool Encrypt = true;
-
-        // 日志文件路径
+        #region 日记记录和加密解密
+        /// <summary>
+        /// 日志文件路径
+        /// </summary>
         private static readonly string logFilePath;
-        // 日志队列
+        /// <summary>
+        /// 日志级别
+        /// </summary>
+        public enum LogLevel { None, Error, Warning, All }
+        /// <summary>
+        /// 输出日志的级别，默认为 All
+        /// </summary>
+        public static LogLevel Level = LogLevel.All;
+        /// <summary>
+        /// 日志队列
+        /// </summary>
         private static readonly BlockingCollection<LogEntry> _queue;
-        // 取消令牌源，用于应用退出时停止写盘任务
+        /// <summary>
+        /// 取消令牌源，用于应用退出时停止写盘任务
+        /// </summary>
         private static readonly CancellationTokenSource _cts;
-
-        // AES 加密密钥与 IV
+        /// <summary>
+        /// 是否对日志进行加密，默认为 true
+        /// </summary>
+        public static bool Encrypt = true;
+        /// <summary>
+        /// AES 加密密钥与 IV
+        /// </summary>
         private static readonly byte[] _key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
         private static readonly byte[] _iv = Encoding.UTF8.GetBytes("FEDCBA9876543210");
 
-        static LogKit()
+        static LogKitLogger()
         {
             // 设置日志文件路径
             if (Application.isEditor)
@@ -51,6 +67,7 @@ namespace YokiFrame
             Task.Run(() => ProcessQueueAsync(_cts.Token));
         }
 
+        #region 后台写盘日志
         /// <summary>
         /// Unity 日志回调处理，将日志条目推入队列
         /// </summary>
@@ -108,6 +125,9 @@ namespace YokiFrame
                 Debug.LogError($"[LogKit] 后台写盘出错: {ex}");
             }
         }
+        #endregion
+
+        #region 加密解密日志
         /// <summary>
         /// AES 加密并返回 Base64 字符串
         /// </summary>
@@ -142,8 +162,7 @@ namespace YokiFrame
             public string Message;
             public string StackTrace;
         }
-
-
+        #endregion
 
 #if UNITY_EDITOR
         private const string MenuPath = "Tools/解密log文件";
@@ -197,106 +216,90 @@ namespace YokiFrame
             }
         }
 #endif
-        public static void Log(object message, Object context = null)
-        {
-            if (Level >= LogLevel.None)
-            {
-                if (context != null)
-                {
-                    Debug.Log($"{message}", context);
-                }
-                else
-                {
-                    Debug.Log($"{message}");
-                }
-            }
-        }
+
+        #endregion
+
 
         public static void Log<T>(object message, Object context = null)
         {
-            if (Level >= LogLevel.None)
+            if (Level > LogLevel.None)
             {
-                if (context != null)
-                {
-                    Debug.Log($"[{typeof(T).Name}]: {message}", context);
-                }
-                else
-                {
-                    Debug.Log($"[{typeof(T).Name}]: {message}");
-                }
+                LogInfo(LogInfoLeve.log, $"{typeof(T).Name}: {message}", context);
             }
         }
 
-        public static void Warning(object message, Object context = null)
+        public static void Log(object message, Object context = null)
+        {
+            if (Level > LogLevel.None)
+            {
+                LogInfo(LogInfoLeve.log, message, context);
+            }
+        }
+
+
+        public static void LogWarning<T>(object message, Object context = null)
         {
             if (Level >= LogLevel.Warning)
             {
-                if (context != null)
-                {
-                    Debug.LogWarning($"{message}", context);
-                }
-                else
-                {
-                    Debug.LogWarning($"{message}");
-                }
+                LogInfo(LogInfoLeve.warning, $"{typeof(T).Name}: {message}", context);
             }
         }
 
-        public static void Warning<T>(object message, Object context = null)
+        public static void LogWarning(object message, Object context = null)
         {
             if (Level >= LogLevel.Warning)
             {
-                if (context != null)
-                {
-                    Debug.LogWarning($"[{typeof(T).Name}]: {message}", context);
-                }
-                else
-                {
-                    Debug.LogWarning($"[{typeof(T).Name}]: {message}");
-                }
+                LogInfo(LogInfoLeve.warning, message, context);
             }
         }
 
-        public static void Error(object message, Object context = null)
+        public static void LogError<T>(object message, Object context = null)
         {
-            if (Level >= LogLevel.Error)
-            {
-                if (context != null)
-                {
-                    Debug.LogError($"{message}", context);
-                }
-                else
-                {
-                    Debug.LogError($"{message}");
-                }
-            }
+            LogInfo(LogInfoLeve.error, $"{typeof(T).Name}: {message}", context);
         }
 
-        public static void Error<T>(object message, Object context = null)
+        public static void LogError(object message, Object context = null)
         {
-            if (Level >= LogLevel.Error)
-            {
-                if (context != null)
-                {
-                    Debug.LogError($"[{typeof(T).Name}]: {message}", context);
-                }
-                else
-                {
-                    Debug.LogError($"[{typeof(T).Name}]: {message}");
-                }
-            }
+            LogInfo(LogInfoLeve.error, message, context);
         }
 
-        public static void Exception(System.Exception message, Object context = null)
+        public static void LogException(Exception message, Object context = null)
         {
-            if (context != null)
+            LogInfo(LogInfoLeve.exception, message, context);
+        }
+
+        private static void LogInfo(LogInfoLeve logInfoLeve, object message, Object context = null)
+        {
+            switch (logInfoLeve)
             {
-                Debug.LogException(message, context);
-            }
-            else
-            {
-                Debug.LogException(message);
-            }
+                case LogInfoLeve.log:
+                    Debug.Log(message, context);
+                    break;
+                case LogInfoLeve.warning:
+                    Debug.LogWarning(message, context);
+                    break;
+                case LogInfoLeve.error:
+                    Debug.LogError(message, context);
+                    break;
+                case LogInfoLeve.exception:
+                    if (message is Exception exception)
+                    {
+                        Debug.LogException(exception, context);
+                    }
+                    else
+                    {
+                        Debug.LogError(message, context);
+                    }
+                    break;
+               }
+        }
+
+        private enum LogInfoLeve
+        {
+            log,
+            warning,
+            error,
+            exception
         }
     }
 }

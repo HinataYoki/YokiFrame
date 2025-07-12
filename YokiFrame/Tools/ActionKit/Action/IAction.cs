@@ -102,7 +102,7 @@ namespace YokiFrame
             }
             catch
             {
-                LogKit.Error<ActionKit>(self.LogError());
+                LogKitLogger.LogError<ActionKit>(self.LogError());
             }
             return false;
         }

@@ -99,7 +99,7 @@ namespace YokiFrame
                 Directory.CreateDirectory(PathUtils.GetDirectoryPath(scriptFilePath));
                 UICodeGenTemplate.WritePanel(name, scriptFilePath, scriptNamespace);
             }
-            LogKit.Log<UICodeGenerator>($">>>>>>>Success Create UIPrefab Code: {name}");
+            LogKitLogger.Log<UICodeGenerator>($">>>>>>>Success Create UIPrefab Code: {name}");
 
             CreateUIPanelDesignerCode(name, designerPath, scriptNamespace, bindCodeInfo);
         }

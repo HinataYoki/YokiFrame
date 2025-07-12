@@ -24,7 +24,7 @@ namespace YokiFrame
                 var prefab = loader.Load(handler);
                 if (prefab == null)
                 {
-                    LogKit.Error<UIKit>($"{handler}: 预制体加载失败");
+                    LogKitLogger.LogError<UIKit>($"{handler}: 预制体加载失败");
                 }
                 else
                 {
@@ -39,7 +39,7 @@ namespace YokiFrame
             }
             catch (Exception e)
             {
-                LogKit.Exception(e);
+                LogKitLogger.LogException(e);
                 throw;
             }
 
@@ -55,7 +55,7 @@ namespace YokiFrame
                 {
                     if (prefab == null)
                     {
-                        LogKit.Error<UIKit>($"{handler}: 预制体加载失败");
+                        LogKitLogger.LogError<UIKit>($"{handler}: 预制体加载失败");
                     }
                     else
                     {
@@ -88,7 +88,7 @@ namespace YokiFrame
             }
             catch (Exception e)
             {
-                LogKit.Exception(e);
+                LogKitLogger.LogException(e);
                 throw;
             }
         }
