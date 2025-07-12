@@ -25,7 +25,7 @@ namespace YokiFrame
 
                         if (mInstance == null)
                         {
-                            LogKitLogger.LogError<UIKitCreateConfig>("UIKit配置文件查询失败，请检查是否有同名或丢失文件");
+                            KitLogger.LogError<UIKitCreateConfig>("UIKit配置文件查询失败，请检查是否有同名或丢失文件");
                         }
                     }
                 }

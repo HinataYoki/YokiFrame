@@ -191,7 +191,7 @@ namespace YokiFrame
 
                 if (uiRoot == null)
                 {
-                    LogKitLogger.LogError<UIKitCreatePanelWindow>("UIKit预制体中不包含UIRoot组件!");
+                    KitLogger.LogError<UIKitCreatePanelWindow>("UIKit预制体中不包含UIRoot组件!");
                     return;
                 }
 

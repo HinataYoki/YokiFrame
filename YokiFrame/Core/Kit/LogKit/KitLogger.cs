@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace YokiFrame
 {
-    public static class LogKitLogger
+    public static class KitLogger
     {
         #region 日记记录和加密解密
         /// <summary>
@@ -43,7 +43,7 @@ namespace YokiFrame
         private static readonly byte[] _key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
         private static readonly byte[] _iv = Encoding.UTF8.GetBytes("FEDCBA9876543210");
 
-        static LogKitLogger()
+        static KitLogger()
         {
             // 设置日志文件路径
             if (Application.isEditor)
