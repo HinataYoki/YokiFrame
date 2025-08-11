@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -42,6 +43,14 @@ namespace YokiFrame
         /// </summary>
         private static readonly byte[] _key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
         private static readonly byte[] _iv = Encoding.UTF8.GetBytes("FEDCBA9876543210");
+        /// <summary>
+        /// 最大保存日志天数
+        /// </summary>
+        public static int MaxLogDays = 100;
+        /// <summary>
+        /// 最大保存日志文件大小，单位为字节
+        /// </summary>
+        public static long MaxLogFileSizeBytes = 100 * 1024 * 1024;
 
         static KitLogger()
         {
@@ -56,6 +65,67 @@ namespace YokiFrame
 
             // 确保目录存在
             Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
+
+            // **按第一条日志时间判断是否需要清空**
+            if (File.Exists(logFilePath))
+            {
+                bool shouldClear = false;
+                var info = new FileInfo(logFilePath);
+
+                // 1. 如果文件大小超限，直接标记清空
+                if (info.Length > MaxLogFileSizeBytes)
+                {
+                    shouldClear = true;
+                    Debug.Log($"[LogKit] 日志文件大小超限 ({info.Length} 字节) 准备清空");
+                }
+                else
+                {
+                    // 2. 文件未超限，尝试读取第一行来解析时间
+                    try
+                    {
+                        using var reader = new StreamReader(logFilePath, Encoding.UTF8);
+                        string firstLine = null;
+                        // 跳过可能的空行
+                        while (!reader.EndOfStream && string.IsNullOrWhiteSpace(firstLine = reader.ReadLine())) { }
+
+                        if (!string.IsNullOrWhiteSpace(firstLine))
+                        {
+                            // 如果加密，则先解密
+                            var raw = Encrypt ? DecryptString(firstLine) : firstLine;
+
+                            // 用正则提取 "[yyyy-MM-dd HH:mm:ss]"
+                            var m = Regex.Match(raw, @"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]");
+                            if (m.Success && DateTime.TryParse(m.Groups[1].Value, out var firstTime))
+                            {
+                                var ageDays = (DateTime.Now - firstTime).TotalDays;
+                                if (ageDays > MaxLogDays)
+                                {
+                                    shouldClear = true;
+                                    Debug.Log($"[LogKit] 日志首条已 {ageDays:F1} 天，超过阈值 {MaxLogDays} 天，准备清空");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[LogKit] 读取首条日志失败，跳过清空判断: {ex.Message}");
+                    }
+                }
+
+                if (shouldClear)
+                {
+                    try
+                    {
+                        File.Delete(logFilePath);
+                        Debug.Log("[LogKit] 旧日志文件已清除，重新开始记录");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[LogKit] 清除旧日志文件失败: {ex}");
+                    }
+                }
+            }
+
 
             // 订阅 Unity 的日志回调
             Application.logMessageReceived += HandleLog;
@@ -220,13 +290,7 @@ namespace YokiFrame
         #endregion
 
 
-        public static void Log<T>(object message, Object context = null)
-        {
-            if (Level > LogLevel.None)
-            {
-                LogInfo(LogInfoLeve.log, $"{typeof(T).Name}: {message}", context);
-            }
-        }
+        public static void Log<T>(object message, Object context = null) => Log($"[{typeof(T).Name}] {message}", context);
 
         public static void Log(object message, Object context = null)
         {
@@ -237,13 +301,7 @@ namespace YokiFrame
         }
 
 
-        public static void LogWarning<T>(object message, Object context = null)
-        {
-            if (Level >= LogLevel.Warning)
-            {
-                LogInfo(LogInfoLeve.warning, $"{typeof(T).Name}: {message}", context);
-            }
-        }
+        public static void LogWarning<T>(object message, Object context = null) => LogWarning($"[{typeof(T).Name}] {message}", context);
 
         public static void LogWarning(object message, Object context = null)
         {
@@ -253,10 +311,7 @@ namespace YokiFrame
             }
         }
 
-        public static void LogError<T>(object message, Object context = null)
-        {
-            LogInfo(LogInfoLeve.error, $"{typeof(T).Name}: {message}", context);
-        }
+        public static void LogError<T>(object message, Object context = null) => LogError($"[{typeof(T).Name}] {message}", context);
 
         public static void LogError(object message, Object context = null)
         {

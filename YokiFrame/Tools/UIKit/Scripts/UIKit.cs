@@ -7,11 +7,17 @@ namespace YokiFrame
     {
         static UIKit() => _ = UIRoot.Instance;
 
-        // 创建界面时赋予的热度值
+        /// <summary>
+        /// 创建界面时赋予的热度值
+        /// </summary>
         public static int OpenHot = 3;
-        // 获取界面时赋予的热度值
+        /// <summary>
+        /// 获取界面时赋予的热度值
+        /// </summary>
         public static int GetHot = 2;
-        // 每次行为造成的衰减热度值
+        /// <summary>
+        /// 每次行为造成的衰减热度值
+        /// </summary>
         public static int Weaken = 1;
 
         /// <summary>
