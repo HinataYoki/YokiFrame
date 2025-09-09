@@ -136,8 +136,8 @@ namespace YokiFrame
             if (panel.Handler.Hot <= 0)
             {
                 UnityEngine.Object.Destroy(panel.Transform.gameObject);
-                panel.Handler.Recycle();
                 PanelCacheDic.Remove(panel.Handler.Type);
+                panel.Handler.Recycle();
             }
             if (panel.Handler.OnStack != null)
             {

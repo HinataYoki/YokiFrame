@@ -106,6 +106,7 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
+                                if (bindInfo.RepeatElement) continue;
                                 if (bindInfo.BindType is BindType.Element or BindType.Component)
                                 {
                                     function.Custom($"{bindInfo.Name}.Clear();");
@@ -216,6 +217,7 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
+                                if (bindInfo.RepeatElement) continue;
                                 if (bindInfo.BindType is BindType.Element or BindType.Component)
                                 {
                                     property.Custom($"{bindInfo.Name}.Clear();");
@@ -323,6 +325,7 @@ namespace YokiFrame
                         {
                             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
                             {
+                                if (bindInfo.RepeatElement) continue;
                                 if (bindInfo.BindType is BindType.Element or BindType.Component)
                                 {
                                     property.Custom($"{bindInfo.Name}.Clear();");
