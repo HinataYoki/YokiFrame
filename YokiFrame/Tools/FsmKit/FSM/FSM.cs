@@ -60,6 +60,7 @@ namespace YokiFrame
 
         public void Change(TEnum id)
         {
+            if (machineState is not MachineState.Running) return;
             if (mStateDic.TryGetValue(id, out var state))
             {
                 if (state != CurState && state.Condition())
@@ -74,6 +75,7 @@ namespace YokiFrame
 
         public void Change<TArgs>(TEnum id, TArgs args)
         {
+            if (machineState is not MachineState.Running) return;
             if (mStateDic.TryGetValue(id, out var state))
             {
                 if (state != CurState && state.Condition())
