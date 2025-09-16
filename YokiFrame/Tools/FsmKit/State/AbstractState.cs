@@ -19,6 +19,7 @@ namespace YokiFrame
         protected virtual void OnCustomUpdate() { }
         protected virtual void OnExit() { }
         protected virtual void OnSuspend() { }
+        protected virtual void OnDispose() { }
         protected virtual void OnMessage<TMsg>(TMsg message) { }
 
 
@@ -29,8 +30,10 @@ namespace YokiFrame
         void IState.End() => OnExit();
         void IState.Suspend() => OnSuspend();
         void IState.CustomUpdate() => OnCustomUpdate();
+        void IState.Dispose() => OnDispose();
 
         public void SendMessage<TMsg>(TMsg message) => OnMessage(message);
+
     }
 
     public abstract class AbstractState<TEnum, TBlack, TArgs> : AbstractState<TEnum, TBlack>, IState<TArgs> where TEnum : Enum

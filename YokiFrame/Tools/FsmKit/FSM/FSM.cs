@@ -30,11 +30,8 @@ namespace YokiFrame
         {
             if (mStateDic.ContainsKey(id))
             {
-                if (CurState == state && machineState is MachineState.Running)
-                {
-                    CurState.End();
-                    CurState = null;
-                }
+                if (mStateDic[id] == state) return;
+                mStateDic[id].Dispose();
                 mStateDic.Remove(id);
             }
             mStateDic.Add(id, state);
@@ -56,6 +53,7 @@ namespace YokiFrame
                     CurState = null;
                     machineState = MachineState.End;
                 }
+                mStateDic[id].Dispose();
                 mStateDic.Remove(id);
             }
         }
@@ -97,12 +95,17 @@ namespace YokiFrame
 
         public void Clear()
         {
-            if (CurState != null)
+            if (MachineState is not MachineState.End && CurState != null)
             {
                 End();
                 CurState = null;
             }
+            foreach (var state in mStateDic.Values)
+            {
+                state.Dispose();
+            }
             mStateDic.Clear();
+            machineState = MachineState.End;
         }
 
         public void CustomUpdate()
@@ -166,6 +169,16 @@ namespace YokiFrame
                 CurState?.Update();
             }
         }
+
+        public void SendMessage<TMsg>(TMsg message)
+        {
+            if (MachineState is MachineState.Running)
+            {
+                CurState?.SendMessage(message);
+            }
+        }
+
+        void IState.Dispose() => Clear();
     }
 
     public class FSM<TEnum, TArgs> : FSM<TEnum>, IFSM<TEnum, TArgs> where TEnum : Enum

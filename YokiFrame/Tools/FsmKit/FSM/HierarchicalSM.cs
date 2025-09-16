@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// 层级状态机，可以包含多个状态机，每个状态机可以独立运行
+    /// </summary>
     public class HierarchicalSM<TEnum> : IFSM<TEnum> where TEnum : Enum
     {
         private readonly SortedDictionary<TEnum, (IState, MachineState)> mStateDic = new();
@@ -24,6 +27,7 @@ namespace YokiFrame
                 {
                     statePair.Item1.End();
                 }
+                statePair.Item1.Dispose();
                 mStateDic.Remove(id);
             }
             switch (state)
@@ -39,7 +43,14 @@ namespace YokiFrame
 
         public void Clear()
         {
-            End();
+            foreach (var state in mStateDic.Values)
+            {
+                if (state.Item2 is not MachineState.End)
+                {
+                    state.Item1.End();
+                }
+                state.Item1.Dispose();
+            }
             mStateDic.Clear();
         }
 
@@ -62,7 +73,7 @@ namespace YokiFrame
             machineState = MachineState.End;
             foreach (var state in mStateDic.Values)
             {
-                if (state.Item2 is MachineState.End)
+                if (state.Item2 is not MachineState.End)
                 {
                     state.Item1.End();
                 }
@@ -91,6 +102,7 @@ namespace YokiFrame
                 {
                     state.Item1.End();
                 }
+                state.Item1.Dispose();
                 mStateDic.Remove(id);
             }
         }
@@ -169,5 +181,9 @@ namespace YokiFrame
         void IFSM<TEnum>.Change<TArgs>(TEnum id, TArgs args) { }
 
         void IFSM<TEnum>.Start(TEnum id) { }
+
+        void IState.Dispose() => Clear();
+
+        void IState.SendMessage<TMsg>(TMsg message) { }
     }
 }

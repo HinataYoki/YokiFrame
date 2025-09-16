@@ -5,8 +5,6 @@ namespace YokiFrame
     public interface IFSM : IState
     {
         MachineState MachineState { get; }
-
-        void IState.SendMessage<TMsg>(TMsg message) { }
     }
 
     public interface IFSM<TEnum> : IFSM where TEnum : Enum
