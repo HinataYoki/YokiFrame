@@ -56,7 +56,6 @@ namespace YokiFrame
                 if (Condition())
                 {
                     mSequence.OnInit();
-                    Repeating(dt);
                 }
                 else
                 {
@@ -65,7 +64,7 @@ namespace YokiFrame
             }
         }
 
-        private bool Condition() => mCondition.Invoke() && (mMaxRepeatCount == 0 || mCurrentRepeatCount < mMaxRepeatCount);
+        private bool Condition() => mCondition.Invoke() && (mMaxRepeatCount <= 0 || mCurrentRepeatCount < mMaxRepeatCount);
 
         public ISequence Append(IAction action)
         {

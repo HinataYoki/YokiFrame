@@ -34,7 +34,7 @@ namespace YokiFrame
             ActionState = ActionStatus.NotStart;
         }
 
-        public void OnExecute(float dt)
+        public void OnStart()
         {
             mCallback?.Invoke();
             this.Finish();

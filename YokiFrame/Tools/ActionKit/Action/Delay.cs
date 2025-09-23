@@ -45,6 +45,8 @@ namespace YokiFrame
             CurrentSeconds = 0.0f;
         }
 
+        public void OnStart() => OnExecute(0);
+
         public void OnExecute(float dt)
         {
             CurrentSeconds += dt;
