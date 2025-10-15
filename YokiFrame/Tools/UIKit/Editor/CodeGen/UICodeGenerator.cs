@@ -67,7 +67,7 @@ namespace YokiFrame
 
                 var bindCodeInfo = new BindCodeInfo
                 {
-                    TypeName = prefab.name,
+                    Type = prefab.name,
                     Name = prefab.name,
                     Self = prefab,
                 };
@@ -98,8 +98,8 @@ namespace YokiFrame
             {
                 Directory.CreateDirectory(PathUtils.GetDirectoryPath(scriptFilePath));
                 UICodeGenTemplate.WritePanel(name, scriptFilePath, scriptNamespace);
+                Debug.Log($">>>>>>>Success Create UIPrefab Code: {name}");
             }
-            KitLogger.Log<UICodeGenerator>($">>>>>>>Success Create UIPrefab Code: {name}");
 
             CreateUIPanelDesignerCode(name, designerPath, scriptNamespace, bindCodeInfo);
         }

@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace YokiFrame
 {
     public interface IBind
@@ -15,12 +13,12 @@ namespace YokiFrame
         /// <summary>
         /// 类型名称 例如: UnityEngine.UI.Button
         /// </summary>
-        string TypeName { get; }
+        string Type { get; }
         /// <summary>
         /// 字段注释 例如: 按钮
         /// </summary>
         string Comment { get; }
 
-        Transform Transform { get; }
+        UnityEngine.Transform Transform { get; }
     }
 }

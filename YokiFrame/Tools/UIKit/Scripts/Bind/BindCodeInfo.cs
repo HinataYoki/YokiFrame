@@ -1,18 +1,15 @@
-using System.Collections.Generic;
-using UnityEngine;
-
 namespace YokiFrame
 {
     public class BindCodeInfo
     {
         /// <summary>
-        /// 类型名称 例如: UnityEngine.UI.Button
-        /// </summary>
-        public string TypeName;
-        /// <summary>
         ///  字段名称 例如: Btn
         /// </summary>
         public string Name;
+        /// <summary>
+        /// 类型名称 例如: UnityEngine.UI.Button
+        /// </summary>
+        public string Type;
         /// <summary>
         /// 字段注释 例如: 按钮
         /// </summary>
@@ -24,15 +21,15 @@ namespace YokiFrame
         /// <summary>
         /// 绑定类型
         /// </summary>
-        public BindType BindType;
+        public BindType Bind;
         /// <summary>
         /// 成员字典
         /// </summary>
-        public Dictionary<string, BindCodeInfo> MemberDic = new();
+        public System.Collections.Generic.Dictionary<string, BindCodeInfo> MemberDic = new();
         /// <summary>
         /// 自身引用
         /// </summary>
-        public GameObject Self;
+        public UnityEngine.GameObject Self;
         /// <summary>
         /// 绑定组件
         /// </summary>

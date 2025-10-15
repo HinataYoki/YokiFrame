@@ -26,9 +26,9 @@ namespace YokiFrame
                 .Select(component => component.GetType().FullName)
                 .ToArray();
 
-            if (!string.IsNullOrEmpty(Target.TypeName))
+            if (!string.IsNullOrEmpty(Target.Type))
             {
-                mComponentNameIndex = Array.FindIndex(mComponentNames, c => c.Contains(Target.TypeName));
+                mComponentNameIndex = Array.FindIndex(mComponentNames, c => c.Contains(Target.Type));
             }
 
             if (mComponentNameIndex <= 0 || mComponentNameIndex >= mComponentNames.Length)
@@ -48,7 +48,7 @@ namespace YokiFrame
                     GUILayout.Label("绑定类型", Label12.Value, GUILayout.Width(100));
 
                     EditorGUI.BeginChangeCheck();
-                    Target.customBind = (BindType)EditorGUILayout.EnumPopup(Target.Bind);
+                    Target.bind = (BindType)EditorGUILayout.EnumPopup(Target.Bind);
                     if (EditorGUI.EndChangeCheck())
                     {
                         EditorUtility.SetDirty(target);
@@ -67,18 +67,18 @@ namespace YokiFrame
                     {
                         GUILayout.Label("字段名称", Label12.Value, GUILayout.Width(100));
 
-                        if (string.IsNullOrEmpty(Target.customName))
+                        if (string.IsNullOrEmpty(Target.mName))
                         {
-                            Target.customName = Target.name;
+                            Target.mName = Target.name;
                         }
 
                         EditorGUI.BeginChangeCheck();
-                        Target.customName = EditorGUILayout.TextField(Target.customName);
+                        Target.mName = EditorGUILayout.TextField(Target.mName);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            if (string.IsNullOrEmpty(Target.customName))
+                            if (string.IsNullOrEmpty(Target.mName))
                             {
-                                Target.customName = Target.name;
+                                Target.mName = Target.name;
                             }
                             EditorUtility.SetDirty(target);
                         }
@@ -132,7 +132,7 @@ namespace YokiFrame
                     {
                         GUILayout.Label("注释", Label12.Value, GUILayout.Width(100));
                         EditorGUI.BeginChangeCheck();
-                        Target.customComment = EditorGUILayout.TextField(Target.Comment, GUILayout.ExpandWidth(true));
+                        Target.comment = EditorGUILayout.TextField(Target.Comment, GUILayout.ExpandWidth(true));
                         if (EditorGUI.EndChangeCheck())
                         {
                             EditorUtility.SetDirty(target);

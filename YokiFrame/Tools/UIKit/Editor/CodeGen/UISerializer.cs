@@ -11,7 +11,6 @@ namespace YokiFrame
         /// 把Bind关系序列化到Prefab中
         /// </summary>
         /// <param name="uiPrefab">需要生成bind关系的预制体</param>
-        /// <param name="bindCodeInfo">关系引用</param>
         public static void AddPrefabReferencesAfterCompoile(GameObject uiPrefab)
         {
             var path = AssetDatabase.GetAssetPath(uiPrefab);
@@ -49,10 +48,10 @@ namespace YokiFrame
                     }
                     Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
 
-                    GameObject tempInstance = Object.Instantiate(uiPrefab);
-                    SetObjectRef2Property(tempInstance, uiPrefab.name, assembly);
-                    PrefabUtility.SaveAsPrefabAsset(tempInstance, prefabPath);
-                    Object.DestroyImmediate(tempInstance);
+                    //GameObject tempInstance = Object.Instantiate(uiPrefab);
+                    SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
+                    //PrefabUtility.SaveAsPrefabAsset(tempInstance, prefabPath);
+                    //Object.DestroyImmediate(tempInstance);
 
                     /*SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
                     EditorUtility.SetDirty(uiPrefab);
@@ -72,7 +71,7 @@ namespace YokiFrame
         {
             var bindCodeInfo = new BindCodeInfo()
             {
-                TypeName = name,
+                Type = name,
                 Name = name,
                 Self = prefab,
             };
@@ -97,18 +96,18 @@ namespace YokiFrame
         {
             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
             {
-                //把对应的Bind添加到prefab引用中
+                // 把对应的Bind添加到prefab引用中
                 var objectReference = serialized.FindProperty($"{bindInfo.Name}");
                 if (objectReference == null)
                 {
-                    Debug.LogError($"未在类：{bindInfo.TypeName}中查询到对应序列化字段名{bindInfo.Name}", bindInfo.Self);
+                    Debug.LogError($"未在类：{bindInfo.Type}中查询到对应序列化字段名{bindInfo.Name}", bindInfo.Self);
                 }
                 else
                 {
-                    //如果不是成员或者叶子节点，则删除Mark标记替换成对应的组件
-                    if (bindInfo.BindType is not BindType.Member or BindType.Leaf)
+                    // 如果不是成员或者叶子节点，添加对应的组件
+                    if (bindInfo.Bind is not BindType.Member or BindType.Leaf)
                     {
-                        var typeName = bindInfo.BindType is BindType.Component ? bindInfo.TypeName : $"{name}{nameof(UIElement)}.{bindInfo.TypeName}";
+                        var typeName = bindInfo.Bind is BindType.Component ? bindInfo.Type : $"{name}{nameof(UIElement)}.{bindInfo.Type}";
                         var type = assembly.GetType($"{UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}");
                         var typeIns = bindInfo.Self.GetComponent(type);
                         if (typeIns == null)
@@ -123,10 +122,10 @@ namespace YokiFrame
                         newSerialized.Update();
                         SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
 
-                        if (bindInfo.Self.TryGetComponent<AbstractBind>(out var markBind))
+                        /*if (bindInfo.Self.TryGetComponent<Bind>(out var markBind))
                         {
                             Object.DestroyImmediate(markBind, true);
-                        }
+                        }*/
                         newSerialized.ApplyModifiedPropertiesWithoutUndo();
                     }
                     else
