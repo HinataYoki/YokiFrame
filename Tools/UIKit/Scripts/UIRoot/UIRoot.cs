@@ -25,6 +25,10 @@ namespace YokiFrame
                         uikit.name = nameof(UIKit);
                         DontDestroyOnLoad(uikit);
                         mInstance = uikit.GetComponentInChildren<UIRoot>();
+                        mInstance.EventSystem = uikit.GetComponentInChildren<EventSystem>();
+                        mInstance.Canvas = mInstance.GetComponent<Canvas>();
+                        mInstance.CanvasScaler = mInstance.GetComponent<CanvasScaler>();
+                        mInstance.GraphicRaycaster = mInstance.GetComponent<GraphicRaycaster>();
 
 
                         UILevelDic.Clear();
