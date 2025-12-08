@@ -1,37 +1,12 @@
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
 
 namespace YokiFrame
 {
-    public class UIKitCreateConfig : ScriptableObject
+    [FilePath("ProjectSettings/UIKitCreateConfig.asset", FilePathAttribute.Location.ProjectFolder)]
+    public class UIKitCreateConfig : ScriptableSingleton<UIKitCreateConfig>
     {
-        private static UIKitCreateConfig mInstance;
-        public static UIKitCreateConfig Instance
-        {
-            get
-            {
-                if (mInstance == null)
-                {
-                    var guids = AssetDatabase.FindAssets(nameof(UIKitCreateConfig));
-                    if (guids != null && guids.Length > 0)
-                    {
-                        var guid = guids[0];
-                        if (guid != null)
-                        {
-                            var path = AssetDatabase.GUIDToAssetPath(guid);
-                            mInstance = AssetDatabase.LoadAssetAtPath<UIKitCreateConfig>(path);
-                        }
-
-                        if (mInstance == null)
-                        {
-                            KitLogger.LogError<UIKitCreateConfig>("UIKit配置文件查询失败，请检查是否有同名或丢失文件");
-                        }
-                    }
-                }
-                return mInstance;
-            }
-        }
+        public static UIKitCreateConfig Instance => instance;
 
         public string PrefabGeneratePath = "Assets/Art/UIPrefab";
         public string ScriptGeneratePath = "Assets/Scripts/UI";
