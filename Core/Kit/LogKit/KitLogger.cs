@@ -13,348 +13,451 @@ namespace YokiFrame
 {
     public static class KitLogger
     {
-        #region 日记记录和加密解密
-        /// <summary>
-        /// 日志文件路径
-        /// </summary>
-        private static readonly string logFilePath;
-        /// <summary>
-        /// 日志级别
-        /// </summary>
-        public enum LogLevel { None, Error, Warning, All }
-        /// <summary>
-        /// 输出日志的级别，默认为 All
-        /// </summary>
-        public static LogLevel Level = LogLevel.All;
-        /// <summary>
-        /// 日志队列
-        /// </summary>
-        private static readonly BlockingCollection<LogEntry> _queue;
-        /// <summary>
-        /// 取消令牌源，用于应用退出时停止写盘任务
-        /// </summary>
-        private static readonly CancellationTokenSource _cts;
-        /// <summary>
-        /// 是否对日志进行加密，默认为 true
-        /// </summary>
-        public static bool Encrypt = true;
-        /// <summary>
-        /// AES 加密密钥与 IV
-        /// </summary>
-        private static readonly byte[] _key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
-        private static readonly byte[] _iv = Encoding.UTF8.GetBytes("FEDCBA9876543210");
-        /// <summary>
-        /// 最大保存日志天数
-        /// </summary>
-        public static int MaxLogDays = 100;
-        /// <summary>
-        /// 最大保存日志文件大小，单位为字节
-        /// </summary>
-        public static long MaxLogFileSizeBytes = 100 * 1024 * 1024;
+        #region 配置项
 
+        public enum LogLevel { None, Error, Warning, All }
+
+        public static LogLevel Level = LogLevel.All;
+        public static bool EnableEncryption = true;
+        public static bool AutoEnableWriteLogToFile = false;
+
+        // 限制队列最大数量，防止无限报错导致内存撑爆
+        public static int MaxQueueSize = 20000;
+
+        // 连续相同日志的忽略阈值，防止 Update 报错把 IO 也就是磁盘写死
+        public static int MaxSameLogCount = 50;
+
+        public static int MaxRetentionDays = 10;
+        public static long MaxFileBytes = 50 * 1024 * 1024;
+
+        private static string LogDirectory => Path.Combine(Application.persistentDataPath, "LogFiles");
+
+        private static bool _saveLogInEditor = false;
+
+        public static bool SaveLogInEditor
+        {
+            get => _saveLogInEditor;
+            set
+            {
+                if (_saveLogInEditor != value)
+                {
+                    _saveLogInEditor = value;
+                    if (Application.isEditor)
+                    {
+                        if (_saveLogInEditor) LogWriter.Initialize();
+                        else LogWriter.Shutdown();
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region 公开接口
+
+        [HideInCallstack]
+        public static void Log(object msg, Object context = null) => LogInternal(LogType.Log, msg, context);
+
+        [HideInCallstack]
+        public static void Warning(object msg, Object context = null) => LogInternal(LogType.Warning, msg, context);
+
+        [HideInCallstack]
+        public static void Error(object msg, Object context = null) => LogInternal(LogType.Error, msg, context);
+
+        [HideInCallstack]
+        public static void Exception(Exception ex, Object context = null) => LogInternal(LogType.Exception, ex, context);
+
+        [HideInCallstack]
+        private static void LogInternal(LogType type, object msg, Object context)
+        {
+            if (Level == LogLevel.None) return;
+            if (Level == LogLevel.Error && type != LogType.Error && type != LogType.Exception) return;
+            if (Level == LogLevel.Warning && type == LogType.Log) return;
+
+            switch (type)
+            {
+                case LogType.Log: Debug.Log(msg, context); break;
+                case LogType.Warning: Debug.LogWarning(msg, context); break;
+                case LogType.Error: Debug.LogError(msg, context); break;
+                case LogType.Assert: Debug.LogAssertion(msg, context); break;
+                case LogType.Exception:
+                    if (msg is Exception e) Debug.LogException(e, context);
+                    else Debug.LogError(msg, context);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region 系统初始化
         static KitLogger()
         {
-            // 设置日志文件路径
-            if (Application.isEditor)
+            LogWriter.Initialize();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void AutoInit()
+        {
+            if (AutoEnableWriteLogToFile)
             {
-                //编辑器下不需要记录日志
-                logFilePath = $"{Application.persistentDataPath}/LogFile/log.log";
-                return;
+                LogWriter.Initialize();
             }
-            else logFilePath = $"{Application.dataPath}/LogFile/log.log";
+        }
 
-            // 确保目录存在
-            Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
+        // 用于去重的临时变量
+        private static string _lastLogString;
+        private static int _sameLogCounter;
+        private static readonly object _filterLock = new object();
 
-            // **按第一条日志时间判断是否需要清空**
-            if (File.Exists(logFilePath))
+        private static void HandleUnityLog(string logString, string stackTrace, LogType type)
+        {
+            // 重复日志熔断机制
+            // 如果在 Update 中疯狂报错，IO 可能会成为瓶颈，这里直接丢弃过多的重复日志
+            bool skipLog = false;
+            lock (_filterLock) // 确保线程安全
             {
-                bool shouldClear = false;
-                var info = new FileInfo(logFilePath);
-
-                // 1. 如果文件大小超限，直接标记清空
-                if (info.Length > MaxLogFileSizeBytes)
+                if (logString == _lastLogString)
                 {
-                    shouldClear = true;
-                    Debug.Log($"[LogKit] 日志文件大小超限 ({info.Length} 字节) 准备清空");
+                    _sameLogCounter++;
+                    if (_sameLogCounter > MaxSameLogCount)
+                    {
+                        skipLog = true;
+                    }
                 }
                 else
                 {
-                    // 2. 文件未超限，尝试读取第一行来解析时间
-                    try
-                    {
-                        using var reader = new StreamReader(logFilePath, Encoding.UTF8);
-                        string firstLine = null;
-                        // 跳过可能的空行
-                        while (!reader.EndOfStream && string.IsNullOrWhiteSpace(firstLine = reader.ReadLine())) { }
-
-                        if (!string.IsNullOrWhiteSpace(firstLine))
-                        {
-                            // 如果加密，则先解密
-                            var raw = Encrypt ? DecryptString(firstLine) : firstLine;
-
-                            // 用正则提取 "[yyyy-MM-dd HH:mm:ss]"
-                            var m = Regex.Match(raw, @"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]");
-                            if (m.Success && DateTime.TryParse(m.Groups[1].Value, out var firstTime))
-                            {
-                                var ageDays = (DateTime.Now - firstTime).TotalDays;
-                                if (ageDays > MaxLogDays)
-                                {
-                                    shouldClear = true;
-                                    Debug.Log($"[LogKit] 日志首条已 {ageDays:F1} 天，超过阈值 {MaxLogDays} 天，准备清空");
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogWarning($"[LogKit] 读取首条日志失败，跳过清空判断: {ex.Message}");
-                    }
+                    _lastLogString = logString;
+                    _sameLogCounter = 0;
                 }
+            }
+            if (skipLog) return;
 
-                if (shouldClear)
+
+            // 主线程只做最轻量的判断和捕捉，不做正则，不做拼接
+            bool needStack = type == LogType.Error || type == LogType.Exception || type == LogType.Assert;
+            string capturedStack = null;
+
+            if (needStack)
+            {
+                if (string.IsNullOrEmpty(stackTrace))
                 {
-                    try
-                    {
-                        File.Delete(logFilePath);
-                        Debug.Log("[LogKit] 旧日志文件已清除，重新开始记录");
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[LogKit] 清除旧日志文件失败: {ex}");
-                    }
+                    capturedStack = Environment.StackTrace;
+                }
+                else
+                {
+                    capturedStack = stackTrace;
                 }
             }
 
-
-            // 订阅 Unity 的日志回调
-            Application.logMessageReceived += HandleLog;
-            Application.quitting += OnApplicationQuit;
-
-            _queue = new();
-            _cts = new();
-            // 启动后台写盘任务
-            Task.Run(() => ProcessQueueAsync(_cts.Token));
-        }
-
-        #region 后台写盘日志
-        /// <summary>
-        /// Unity 日志回调处理，将日志条目推入队列
-        /// </summary>
-        private static void HandleLog(string logText, string stackTrace, LogType type)
-        {
-            var entry = new LogEntry
+            // 投递结构体
+            LogWriter.Enqueue(new LogCommand
             {
                 Time = DateTime.Now,
                 Type = type,
-                Message = logText,
-                StackTrace = stackTrace
-            };
-            _queue.Add(entry);
+                Message = logString,
+                RawStack = capturedStack
+            });
         }
-        /// <summary>
-        /// 应用退出时触发，停止写盘循环并完成队列
-        /// </summary>
-        private static void OnApplicationQuit()
-        {
-            _cts.Cancel();
-            _queue.CompleteAdding();
-        }
-        /// <summary>
-        /// 后台处理队列并写入磁盘
-        /// </summary>
-        private static async Task ProcessQueueAsync(CancellationToken token)
-        {
-            try
-            {
-                foreach (var entry in _queue.GetConsumingEnumerable(token))
-                {
-                    // 构造日志文本
-                    var builder = new StringBuilder();
-                    builder.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] [{1}]\n{2}\n", entry.Time, entry.Type, entry.Message);
-                    if (!string.IsNullOrEmpty(entry.StackTrace) && entry.Type is not LogType.Log)
-                        builder.AppendLine(entry.StackTrace);
 
-                    var logLine = builder.ToString().TrimEnd();
-
-                    if (Encrypt)
-                    {
-                        logLine = EncryptString(logLine);
-                    }
-
-                    // 写入文件（每条日志单独一行）
-                    await File.AppendAllTextAsync(logFilePath, logLine + Environment.NewLine, token);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // 应用退出时正常取消
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[LogKit] 后台写盘出错: {ex}");
-            }
-        }
         #endregion
 
-        #region 加密解密日志
-        /// <summary>
-        /// AES 加密并返回 Base64 字符串
-        /// </summary>
-        public static string EncryptString(string plainText)
-        {
-            using var aes = Aes.Create();
-            aes.Key = _key;
-            aes.IV = _iv;
-            using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-            var plainBytes = Encoding.UTF8.GetBytes(plainText);
-            var encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-            return Convert.ToBase64String(encryptedBytes);
-        }
-        /// <summary>
-        /// AES 解密 Base64 字符串
-        /// </summary>
-        public static string DecryptString(string cipherText)
-        {
-            var cipherBytes = Convert.FromBase64String(cipherText);
-            using var aes = Aes.Create();
-            aes.Key = _key;
-            aes.IV = _iv;
-            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-            var decryptedBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
-            return Encoding.UTF8.GetString(decryptedBytes);
-        }
-        // 日志条目结构体
-        private struct LogEntry
+        #region 核心写入器
+
+        private struct LogCommand
         {
             public DateTime Time;
             public LogType Type;
             public string Message;
-            public string StackTrace;
+            public string RawStack;
         }
-        #endregion
 
-#if UNITY_EDITOR
-        private const string MenuPath = "Tools/解密log文件";
-
-        [UnityEditor.MenuItem(MenuPath)]
-        public static void DecryptLogFileMenu()
+        private static class LogWriter
         {
-            // 弹出文件选择对话框，过滤 .log/.txt 等日志文件
-            string path = UnityEditor.EditorUtility.OpenFilePanel("选择加密log文件", logFilePath, "log,txt");
-            if (string.IsNullOrEmpty(path))
-                return;
+            private static BlockingCollection<LogCommand> _queue;
+            private static CancellationTokenSource _cts;
+            private static Task _writeTask;
+            private static string _filePath;
+            private static volatile bool _initialized = false;
 
-            string directory = Path.GetDirectoryName(path);
-            string filenameWithoutExt = Path.GetFileNameWithoutExtension(path);
-            string extension = Path.GetExtension(path);
-            string outputPath = Path.Combine(directory, filenameWithoutExt + "Decrypt" + extension);
+            // 复用 Aes 对象，修复 IV 乱码问题，同时减少 new 的开销
+            private static Aes _cachedAes;
+            private static readonly byte[] Key = Encoding.UTF8.GetBytes("0123456789ABCDEF");
+            private static readonly byte[] IV = Encoding.UTF8.GetBytes("FEDCBA9876543210");
 
-            try
+            // 复用 byte 数组，减少 Encoding.UTF8.GetBytes 的 GC
+            private static byte[] _sharedBuffer;
+            private const int INITIAL_BUFFER_SIZE = 64 * 1024; // 64KB 初始 buffer
+
+            private static readonly Regex _stackCleanRegex = new(@"^\s*at\s+(.*?)(?=\s*\[|\s*in\s|<|$)", RegexOptions.Compiled);
+
+            public static void Initialize()
             {
-                var lines = File.ReadAllLines(path);
-                using (var writer = new StreamWriter(outputPath, false, System.Text.Encoding.UTF8))
-                {
-                    foreach (var line in lines)
-                    {
-                        if (string.IsNullOrWhiteSpace(line))
-                        {
-                            writer.WriteLine();
-                            continue;
-                        }
+                if (_initialized) return;
+                if (Application.isEditor && !KitLogger.SaveLogInEditor) return;
 
-                        try
+                _initialized = true;
+
+                _filePath = Path.Combine(KitLogger.LogDirectory, 
+                    Application.isEditor ? "editor.log" : "player.log");
+
+                RepairLastLine();
+
+                // 初始化加密组件
+                InitAes();
+
+                // 初始化缓冲区
+                _sharedBuffer = new byte[INITIAL_BUFFER_SIZE];
+
+                CleanUpOldLogs();
+
+                _queue = new BlockingCollection<LogCommand>(KitLogger.MaxQueueSize);
+                _cts = new CancellationTokenSource();
+
+                Application.logMessageReceivedThreaded += HandleUnityLog;
+                Application.quitting += Shutdown;
+
+                _writeTask = Task.Factory.StartNew(ProcessQueue, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }
+
+            private static void InitAes()
+            {
+                if (_cachedAes != null) return;
+                _cachedAes = Aes.Create();
+                _cachedAes.Key = Key;
+                _cachedAes.IV = IV;
+                _cachedAes.Padding = PaddingMode.PKCS7;
+                _cachedAes.Mode = CipherMode.CBC;
+            }
+
+            private static void RepairLastLine()
+            {
+                try
+                {
+                    if (!File.Exists(_filePath)) return;
+                    var info = new FileInfo(_filePath);
+                    if (info.Length > 0)
+                    {
+                        using (var fs = new FileStream(_filePath, FileMode.Append, FileAccess.Write))
                         {
-                            // 使用 LogKit 提供的解密方法
-                            string plain = DecryptString(line.Trim());
-                            writer.WriteLine(plain);
-                        }
-                        catch
-                        {
-                            // 解密失败，则原样写入
-                            writer.WriteLine(line);
+                            byte[] newline = Encoding.UTF8.GetBytes(Environment.NewLine);
+                            fs.Write(newline, 0, newline.Length);
+                            fs.Flush();
                         }
                     }
                 }
-
-                // 在编辑器中显示输出文件
-                UnityEditor.EditorUtility.RevealInFinder(outputPath);
+                catch { }
             }
-            catch (Exception e)
+
+            private static void CleanUpOldLogs()
             {
-                UnityEditor.EditorUtility.DisplayDialog("Decrypt Log File", $"解密失败:\n{e.Message}", "OK");
+                try
+                {
+                    if (File.Exists(_filePath))
+                    {
+                        var info = new FileInfo(_filePath);
+                        if (info.Length > MaxFileBytes || (DateTime.Now - info.LastWriteTime).TotalDays > MaxRetentionDays)
+                        {
+                            File.Delete(_filePath);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            public static void Enqueue(LogCommand cmd)
+            {
+                if (!_initialized || _queue == null || _queue.IsAddingCompleted) return;
+                _queue.TryAdd(cmd);
+            }
+
+            private static void ProcessQueue()
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
+
+                    // 【优化】加大初始容量，减少扩容 GC
+                    var sb = new StringBuilder(16 * 1024);
+
+                    while (!_cts.IsCancellationRequested)
+                    {
+                        if (_queue.TryTake(out LogCommand cmd, -1, _cts.Token))
+                        {
+                            using (var fs = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+                            using (var writer = new StreamWriter(fs, Encoding.UTF8))
+                            {
+                                ProcessSingleLog(writer, ref cmd, sb);
+
+                                int batchCount = 0;
+                                while (batchCount < 500 && _queue.TryTake(out LogCommand nextCmd))
+                                {
+                                    ProcessSingleLog(writer, ref nextCmd, sb);
+                                    batchCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception e)
+                {
+                    if (Application.isPlaying) Debug.LogWarning($"[KitLogger] Worker Error: {e.Message}");
+                }
+            }
+
+            private static void ProcessSingleLog(StreamWriter writer, ref LogCommand cmd, StringBuilder sb)
+            {
+                sb.Clear();
+                sb.Append($"[{cmd.Time:yyyy-MM-dd HH:mm:ss}] [{cmd.Type}] {cmd.Message}");
+
+                if (!string.IsNullOrEmpty(cmd.RawStack))
+                {
+                    sb.Append(Environment.NewLine);
+                    sb.Append(CleanStackTrace(cmd.RawStack));
+                }
+
+                string finalLine = sb.ToString();
+
+                if (EnableEncryption && _cachedAes != null)
+                {
+                    finalLine = EncryptStringInternal(finalLine);
+                }
+
+                writer.WriteLine(finalLine);
+            }
+
+            private static string CleanStackTrace(string rawStack)
+            {
+                if (string.IsNullOrEmpty(rawStack)) return "";
+
+                var cleanSb = new StringBuilder();
+                var lines = rawStack.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var line in lines)
+                {
+                    if (line.Contains("UnityEngine.Application") ||
+                        line.Contains("UnityEngine.Logger") ||
+                        line.Contains("UnityEngine.Debug") ||
+                        line.Contains("YokiFrame.KitLogger") ||
+                        line.Contains("System.Environment")) continue;
+
+                    var match = _stackCleanRegex.Match(line);
+                    if (match.Success) cleanSb.AppendLine(match.Groups[1].Value.Trim());
+                    else cleanSb.AppendLine(line.Trim());
+                }
+                return cleanSb.ToString();
+            }
+
+            private static string EncryptStringInternal(string text)
+            {
+                try
+                {
+                    // 计算需要的字节数，并检查缓冲区是否需要扩容
+                    int byteCount = Encoding.UTF8.GetByteCount(text);
+                    if (_sharedBuffer.Length < byteCount)
+                    {
+                        Array.Resize(ref _sharedBuffer, Math.Max(byteCount, _sharedBuffer.Length * 2));
+                    }
+
+                    // 直接写入复用的缓冲区，避免产生 new byte[]
+                    Encoding.UTF8.GetBytes(text, 0, text.Length, _sharedBuffer, 0);
+
+                    // 创建一次性 Encryptor (轻量级)
+                    // 使用 TransformFinalBlock 兼容性最好，虽然会返回新数组，但省去了 input 的分配
+                    using (var encryptor = _cachedAes.CreateEncryptor())
+                    {
+                        byte[] output = encryptor.TransformFinalBlock(_sharedBuffer, 0, byteCount);
+                        return Convert.ToBase64String(output);
+                    }
+                }
+                catch { return text; }
+            }
+
+            // 解密依然使用完全独立的对象，保证线程安全和状态隔离
+            public static string DecryptString(string text)
+            {
+                if (string.IsNullOrWhiteSpace(text)) return "";
+                try
+                {
+                    using var aes = Aes.Create();
+                    aes.Key = Key;
+                    aes.IV = IV;
+                    aes.Padding = PaddingMode.PKCS7;
+                    aes.Mode = CipherMode.CBC;
+
+                    using var decryptor = aes.CreateDecryptor();
+                    byte[] input = Convert.FromBase64String(text);
+                    byte[] output = decryptor.TransformFinalBlock(input, 0, input.Length);
+                    return Encoding.UTF8.GetString(output);
+                }
+                catch { return $"[DECRYPT_FAIL] {text}"; }
+            }
+
+            public static void Shutdown()
+            {
+                if (!_initialized) return;
+                _initialized = false;
+
+                Application.logMessageReceivedThreaded -= HandleUnityLog;
+                Application.quitting -= Shutdown;
+
+                _cts?.Cancel();
+                _queue?.CompleteAdding();
+                try { _writeTask?.Wait(500); } catch { }
+
+                _cts?.Dispose();
+                _cts = null;
+
+                _cachedAes?.Dispose();
+                _cachedAes = null;
+
+                _sharedBuffer = null;
             }
         }
-#endif
 
         #endregion
 
+        #region Unity 编辑器工具
 
-        public static void Log<T>(object message, Object context = null) => Log($"[{typeof(T).Name}] {message}", context);
-
-        public static void Log(object message, Object context = null)
+#if UNITY_EDITOR
+        public static class LogTools
         {
-            if (Level > LogLevel.None)
+            [UnityEditor.MenuItem("YokiFrame/KitLogger/打开日志目录", priority = 0)]
+            public static void OpenLogFolder()
             {
-                LogInfo(LogInfoLeve.log, message, context);
+                string dir = KitLogger.LogDirectory;
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                string filePath = Path.Combine(dir, "editor.log");
+                if (File.Exists(filePath)) UnityEditor.EditorUtility.RevealInFinder(filePath);
+                else UnityEditor.EditorUtility.RevealInFinder(dir);
+            }
+
+            [UnityEditor.MenuItem("YokiFrame/KitLogger/解密日志文件", priority = 1)]
+            public static void DecryptLog()
+            {
+                string dir = KitLogger.LogDirectory;
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+                string path = UnityEditor.EditorUtility.OpenFilePanel("选择日志", dir, "log,txt");
+                if (string.IsNullOrEmpty(path)) return;
+
+                var lines = File.ReadAllLines(path);
+                var sb = new StringBuilder();
+
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    string decoded = LogWriter.DecryptString(line);
+                    sb.AppendLine(decoded);
+                }
+
+                string outPath = path + ".decoded.log";
+                File.WriteAllText(outPath, sb.ToString());
+                UnityEditor.EditorUtility.RevealInFinder(outPath);
+                Debug.Log($"[KitLogger] 解密完成: {outPath}");
             }
         }
-
-
-        public static void LogWarning<T>(object message, Object context = null) => LogWarning($"[{typeof(T).Name}] {message}", context);
-
-        public static void LogWarning(object message, Object context = null)
-        {
-            if (Level >= LogLevel.Warning)
-            {
-                LogInfo(LogInfoLeve.warning, message, context);
-            }
-        }
-
-        public static void LogError<T>(object message, Object context = null) => LogError($"[{typeof(T).Name}] {message}", context);
-
-        public static void LogError(object message, Object context = null)
-        {
-            LogInfo(LogInfoLeve.error, message, context);
-        }
-
-        public static void LogException(Exception message, Object context = null)
-        {
-            LogInfo(LogInfoLeve.exception, message, context);
-        }
-
-        private static void LogInfo(LogInfoLeve logInfoLeve, object message, Object context = null)
-        {
-            switch (logInfoLeve)
-            {
-                case LogInfoLeve.log:
-                    Debug.Log(message, context);
-                    break;
-                case LogInfoLeve.warning:
-                    Debug.LogWarning(message, context);
-                    break;
-                case LogInfoLeve.error:
-                    Debug.LogError(message, context);
-                    break;
-                case LogInfoLeve.exception:
-                    if (message is Exception exception)
-                    {
-                        Debug.LogException(exception, context);
-                    }
-                    else
-                    {
-                        Debug.LogError(message, context);
-                    }
-                    break;
-               }
-        }
-
-        private enum LogInfoLeve
-        {
-            log,
-            warning,
-            error,
-            exception
-        }
+#endif
+        #endregion
     }
 }
