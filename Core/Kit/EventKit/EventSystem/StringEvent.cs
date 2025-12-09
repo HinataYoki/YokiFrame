@@ -3,6 +3,7 @@ using System;
 
 namespace YokiFrame
 {
+    [Obsolete("StringEvent 存在类型安全隐患且重构困难，建议优先使用 TypeEvent 或 EnumEvent。")]
     public class StringEvent
     {
         private readonly Dictionary<string, EasyEvents> mEventDic = new();
