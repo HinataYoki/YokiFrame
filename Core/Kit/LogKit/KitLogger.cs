@@ -308,14 +308,16 @@ namespace YokiFrame
             private static void ProcessSingleLog(StreamWriter writer, ref LogCommand cmd, StringBuilder sb)
             {
                 sb.Clear();
-                sb.Append($"[{cmd.Time:yyyy-MM-dd HH:mm:ss}] [{cmd.Type}] {cmd.Message}");
+                sb.Append('[').Append(cmd.Time.ToString("yyyy-MM-dd HH:mm:ss")).Append("] ")
+                  .Append('[').Append(cmd.Type.ToString()).Append("] ")
+                  .Append(cmd.Message);
 
                 if (!string.IsNullOrEmpty(cmd.RawStack))
                 {
-                    sb.Append(Environment.NewLine);
+                    sb.AppendLine();
                     sb.Append(CleanStackTrace(cmd.RawStack));
                 }
-
+                
                 string finalLine = sb.ToString();
 
                 if (EnableEncryption && _cachedAes != null)
