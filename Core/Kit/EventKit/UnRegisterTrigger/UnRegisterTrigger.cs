@@ -3,11 +3,12 @@ using UnityEngine;
 
 namespace YokiFrame
 {
+    // TODO：无法避免的装箱损耗
     public abstract class UnRegisterTrigger<T> : MonoBehaviour where T : IUnRegister
     {
         private readonly HashSet<T> mUnRegisters = new();
 
-        public T AddUnRegister(ref T unRegister)
+        public T AddUnRegister(T unRegister)
         {
             mUnRegisters.Add(unRegister);
             return unRegister;
@@ -27,17 +28,6 @@ namespace YokiFrame
         }
     }
 
-    public class UnRegisterOnDestroyTrigger<T> : UnRegisterTrigger<T> where T : IUnRegister
-    {
-        private void OnDestroy() => UnRegister();
-    }
-
-    public class UnRegisterOnDisableTrigger<T> : UnRegisterTrigger<T> where T : IUnRegister
-    {
-        private void OnDisable() => UnRegister();
-    }
-
-
     public static class UnRegisterExtension
     {
         static T GetOrAddComponent<T>(GameObject gameObject) where T : Component
@@ -55,12 +45,18 @@ namespace YokiFrame
 
         public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, Component component) where T : IUnRegister =>
             self.UnRegisterWhenGameObjectDestroyed(component.gameObject);
-        public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, GameObject gameObject) where T : IUnRegister =>
-            GetOrAddComponent<UnRegisterOnDestroyTrigger<T>>(gameObject).AddUnRegister(ref self);
+        public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, GameObject gameObject) where T : IUnRegister
+        {
+            GetOrAddComponent<UnRegisterOnDestroyTrigger>(gameObject).AddUnRegister(self);
+            return self;
+        }
 
         public static T UnRegisterWhenDisabled<T>(this T self, Component component) where T : IUnRegister =>
             self.UnRegisterWhenDisabled(component.gameObject);
-        public static T UnRegisterWhenDisabled<T>(this T self, GameObject gameObject) where T : IUnRegister =>
-            GetOrAddComponent<UnRegisterOnDestroyTrigger<T>>(gameObject).AddUnRegister(ref self);
+        public static T UnRegisterWhenDisabled<T>(this T self, GameObject gameObject) where T : IUnRegister
+        {
+            GetOrAddComponent<UnRegisterOnDisableTrigger>(gameObject).AddUnRegister(self);
+            return self;
+        }
     }
 }
