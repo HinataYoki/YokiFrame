@@ -21,7 +21,11 @@ namespace YokiFrame
                     int removeCount = mCacheStack.Count - mMaxCount;
                     while (removeCount > 0)
                     {
-                        mCacheStack.Pop();
+                        var item = mCacheStack.Pop();
+                        if (item is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
                         --removeCount;
                     }
                 }
