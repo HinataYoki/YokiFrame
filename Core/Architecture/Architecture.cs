@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 
 namespace YokiFrame
@@ -14,7 +13,7 @@ namespace YokiFrame
         static IArchitecture Interface { get; }
         void Register<T>(T service) where T : class, IService, new();
         T GetService<T>(bool force = false) where T : class, IService, new();
-        IEnumerable<T> GetServicesByType<T>() where T : class, IService, new();
+        void GetServicesByType<T>(ref List<T> services) where T : class, IService, new();
     }
     /// <summary>
     /// 服务
@@ -58,8 +57,13 @@ namespace YokiFrame
                 if (mArchitecture == null)
                 {
                     mArchitecture ??= new T();
-                    //初始化架构,用户自己的服务在这里面写入
+                    // 初始化架构,用户自己的服务在这里面写入
                     mArchitecture.OnInit();
+                    // 服务在注册结束后统一初始化，确保在OnInit中服务互相引用不会拿空
+                    foreach (var service in mServices.Values)
+                    {
+                        service.Init();
+                    }
                     mArchitecture.mInited = true;
                 }
                 return mArchitecture;
@@ -86,8 +90,16 @@ namespace YokiFrame
             return service as K;
         }
 
-        public IEnumerable<K> GetServicesByType<K>() where K : class, IService, new()
-            => mServices.Values.OfType<K>();
+        public void GetServicesByType<K>(ref List<K> list) where K : class, IService, new()
+        {
+            foreach (var service in mServices.Values)
+            {
+                if (service is K value)
+                {
+                    list.Add(value);
+                }
+            }
+        }
 
         public void Register<K>(K service) where K : class, IService, new()
         {
@@ -104,7 +116,6 @@ namespace YokiFrame
                 mServices.Add(key, service);
             }
             service.SetArchitecture(mArchitecture);
-            service.Init();
         }
     }
 
@@ -120,7 +131,7 @@ namespace YokiFrame
         void IService.SetArchitecture(IArchitecture architecture)
         {
             mArchitecture = architecture;
-            mInitialized = true;
+            mInitialized = architecture != default;
         }
 
         void ICanInit.Init() => OnInit();
@@ -129,7 +140,8 @@ namespace YokiFrame
 
         public T GetService<T>() where T : class, IService, new()
         {
-            return mArchitecture.GetService<T>() as T;
+            if (!mInitialized) return default;
+            return mArchitecture.GetService<T>();
         }
     }
 
