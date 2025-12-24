@@ -4,7 +4,6 @@ namespace YokiFrame
 {
     public class BindValue<T>
     {
-        public BindValue(T value = default) => mValue = value;
         protected T mValue;
         public virtual T Value
         {
@@ -17,6 +16,12 @@ namespace YokiFrame
                 onValueChanged?.Trigger((oldValue, mValue));
             }
         }
+
+        public BindValue(T value = default) => mValue = value;
+
+        public static implicit operator T(BindValue<T> bindValue) => bindValue.Value;
+        public static implicit operator BindValue<T>(T value) => new(value);
+
         public void SetValueWithoutEvent(T value) => mValue = value;
 
         private readonly EasyEvent<(T, T)> onValueChanged = new();
@@ -46,6 +51,6 @@ namespace YokiFrame
 
         private static Func<T, T, bool> mCompareFunc = (x, y) => x.Equals(y);
         public static void SetCompareFunc(Func<T, T, bool> func) => mCompareFunc = func;
-        public override string ToString() => Value.ToString();
+        public override string ToString() => mValue.ToString();
     }
 }
