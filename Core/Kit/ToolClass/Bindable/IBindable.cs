@@ -8,10 +8,15 @@ namespace YokiFrame
         LinkUnRegister<T> Bind(Action<T> callback);
         void UnBind(Action<T> value);
         void UnBindAll();
-        virtual LinkUnRegister<T> BindWithCallbvack(Action<T> callback)
+    }
+
+    public static class BindableExtensions
+    {
+        public static LinkUnRegister<T> BindWithCallback<T>(this IBindable<T> self, Action<T> callback)
         {
-            callback?.Invoke(Value);
-            return Bind(callback);
+            var unregister = self.Bind(callback);
+            callback?.Invoke(self.Value);
+            return unregister;
         }
     }
 }
