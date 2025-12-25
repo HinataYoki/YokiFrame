@@ -1,6 +1,6 @@
 {
     "name": "com.hinatayoki.yokiframe",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "displayName": "YokiFrame",
     "description": "A custom framework for Unity development.",
     "unity": "2021.3",
