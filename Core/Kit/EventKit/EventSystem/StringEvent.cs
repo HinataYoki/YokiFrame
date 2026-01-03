@@ -9,7 +9,7 @@ namespace YokiFrame
         private readonly Dictionary<string, EasyEvents> mEventDic = new();
         private void GetEvents(string key, out EasyEvents stringEvent)
         {
-            if (mEventDic.TryGetValue(key, out stringEvent))
+            if (!mEventDic.TryGetValue(key, out stringEvent))
             {
                 stringEvent = new();
                 mEventDic.Add(key, stringEvent);
