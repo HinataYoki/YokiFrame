@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace YokiFrame
@@ -40,7 +40,7 @@ namespace YokiFrame
                 handler.Hot += GetHot;
                 return handler.Panel as T;
             }
-            else return null;
+            return null;
         }
         /// <summary>
         /// 创建指定类型的Panel
@@ -49,14 +49,7 @@ namespace YokiFrame
         {
             WeakenHot();
             var type = typeof(T);
-            if (!PanelCacheDic.TryGetValue(type, out var handler))
-            {
-                handler = PanelHandler.Allocate();
-                handler.Type = type;
-                handler.Level = level;
-                handler.Data = data;
-                CreateUI(handler);
-            }
+            var handler = GetOrCreateHandler<T>(type, level, data);
             
             if (handler?.Panel == null)
             {
@@ -64,39 +57,36 @@ namespace YokiFrame
                 return null;
             }
             
-            handler.Panel.Open();
-            handler.Panel.Show();
-
+            OpenAndShowPanel(handler.Panel);
             return handler.Panel as T;
         }
         /// <summary>
         /// 异步创建指定类型的Panel
         /// </summary>
-        public static void OpenPanelAsync<T>(Action<IPanel> callbaack = null,
+        public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
             UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
             var type = typeof(T);
-            if (!PanelCacheDic.TryGetValue(type, out var handler))
+            if (PanelCacheDic.TryGetValue(type, out var handler))
+            {
+                if (handler?.Panel != null)
+                {
+                    OpenAndShowPanel(handler.Panel);
+                    callback?.Invoke(handler.Panel);
+                }
+                else
+                {
+                    KitLogger.Error($"OpenPanelAsync: {type.Name} 的handler.Panel为null");
+                    callback?.Invoke(null);
+                }
+            }
+            else
             {
                 handler = PanelHandler.Allocate();
                 handler.Type = type;
                 handler.Level = level;
                 handler.Data = data;
-                CreateUIAsync(handler, callbaack);
-            }
-            else
-            {
-                if (handler?.Panel != null)
-                {
-                    handler.Panel.Open();
-                    handler.Panel.Show();
-                    callbaack?.Invoke(handler.Panel);
-                }
-                else
-                {
-                    KitLogger.Error($"OpenPanelAsync: {type.Name} 的handler.Panel为null");
-                    callbaack?.Invoke(null);
-                }
+                CreateUIAsync(handler, callback);
             }
         }
         /// <summary>
@@ -105,21 +95,16 @@ namespace YokiFrame
         public static void ShowPanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            if (panel != null)
-            {
-                panel.Show();
-            }
+            panel?.Show();
         }
+        
         /// <summary>
         /// 隐藏一个指定类型的Panel
         /// </summary>
         public static void HidePanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            if (panel != null)
-            {
-                panel.Hide();
-            }
+            panel?.Hide();
         }
         /// <summary>
         /// 隐藏所有Panel
@@ -128,7 +113,7 @@ namespace YokiFrame
         {
             foreach (var handler in PanelCacheDic.Values)
             {
-                handler.Panel.Hide();
+                handler?.Panel?.Hide();
             }
         }
         /// <summary>
@@ -161,10 +146,7 @@ namespace YokiFrame
             
             if (panel.Handler.Hot <= 0)
             {
-                if (panel.Transform != null && panel.Transform.gameObject != null)
-                {
-                    UnityEngine.Object.Destroy(panel.Transform.gameObject);
-                }
+                DestroyPanel(panel);
                 PanelCacheDic.Remove(panel.Handler.Type);
                 panel.Handler.Recycle();
             }
@@ -221,14 +203,14 @@ namespace YokiFrame
         /// <summary>
         /// 异步打开并且压入指定类型的Panel到栈中
         /// </summary>
-        public static void PushOpenPanelAysnc<T>(Action<IPanel> callbaack = null, 
+        public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null, 
             UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
-            callbaack += panel =>
+            callback += panel =>
             {
                 PushPanel(panel, hidePreLevel);
             };
-            OpenPanelAsync<T>(callbaack, level, data);
+            OpenPanelAsync<T>(callback, level, data);
         }
         /// <summary>
         /// 弹出一个面板
@@ -262,17 +244,11 @@ namespace YokiFrame
         /// </summary>
         public static void CloseAllStackPanel()
         {
-            Pool.List<IPanel>(list =>
+            while (PanelStack.Count > 0)
             {
-                foreach (var panel in PanelStack)
-                {
-                    list.Add(panel);
-                }
-                foreach (var panel in list)
-                {
-                    ClosePanel(panel);
-                }
-            });
+                var panel = PanelStack.Last.Value;
+                ClosePanel(panel);
+            }
         }
         /// <summary>
         /// 设置自定义的Panel加载器池
@@ -287,19 +263,10 @@ namespace YokiFrame
             var panel = UIFactory.Instance.LoadPanel(handler);
             if (panel != null && panel.Transform != null)
             {
-                panel.Transform.gameObject.name = handler.Type.Name;
-
-                // 检查是否已存在，避免重复添加
-                if (!PanelCacheDic.ContainsKey(handler.Type))
-                {
-                    PanelCacheDic.Add(handler.Type, handler);
-                }
-                handler.Hot += OpenHot;
-                panel.Init(handler.Data);
+                SetupPanel(handler, panel);
             }
             else
             {
-                // 如果创建失败，回收handler
                 handler.Recycle();
             }
 
@@ -318,27 +285,68 @@ namespace YokiFrame
             {
                 if (panel != null && panel.Transform != null)
                 {
-                    panel.Transform.gameObject.name = handler.Type.Name;
-
-                    // 检查是否已存在，避免重复添加
-                    if (!PanelCacheDic.ContainsKey(handler.Type))
-                    {
-                        PanelCacheDic.Add(handler.Type, handler);
-                    }
-                    handler.Hot += OpenHot;
-
-                    panel.Init(handler.Data);
-                    panel.Open();
-                    panel.Show();
+                    SetupPanel(handler, panel);
+                    OpenAndShowPanel(panel);
                     onPanelCreate?.Invoke(panel);
                 }
                 else
                 {
-                    // 如果创建失败，回收handler
                     handler.Recycle();
                     onPanelCreate?.Invoke(null);
                 }
             });
+        }
+        
+        /// <summary>
+        /// 获取或创建Handler
+        /// </summary>
+        private static PanelHandler GetOrCreateHandler<T>(Type type, UILevel level, IUIData data) where T : UIPanel
+        {
+            if (!PanelCacheDic.TryGetValue(type, out var handler))
+            {
+                handler = PanelHandler.Allocate();
+                handler.Type = type;
+                handler.Level = level;
+                handler.Data = data;
+                CreateUI(handler);
+            }
+            return handler;
+        }
+        
+        /// <summary>
+        /// 打开并显示Panel
+        /// </summary>
+        private static void OpenAndShowPanel(IPanel panel)
+        {
+            if (panel == null) return;
+            panel.Open();
+            panel.Show();
+        }
+        
+        /// <summary>
+        /// 设置Panel的基本属性
+        /// </summary>
+        private static void SetupPanel(PanelHandler handler, IPanel panel)
+        {
+            panel.Transform.gameObject.name = handler.Type.Name;
+            
+            if (!PanelCacheDic.ContainsKey(handler.Type))
+            {
+                PanelCacheDic.Add(handler.Type, handler);
+            }
+            handler.Hot += OpenHot;
+            panel.Init(handler.Data);
+        }
+        
+        /// <summary>
+        /// 安全销毁Panel的GameObject
+        /// </summary>
+        private static void DestroyPanel(IPanel panel)
+        {
+            if (panel != null && panel.Transform != null && panel.Transform.gameObject != null)
+            {
+                UnityEngine.Object.Destroy(panel.Transform.gameObject);
+            }
         }
         /// <summary>
         /// 衰减UI热度
@@ -354,10 +362,7 @@ namespace YokiFrame
                     handler.Hot -= Weaken;
                     if (handler.Hot <= 0 && handler.Panel != null && handler.Panel.State is PanelState.Close)
                     {
-                        if (handler.Panel.Transform != null && handler.Panel.Transform.gameObject != null)
-                        {
-                            UnityEngine.Object.Destroy(handler.Panel.Transform.gameObject);
-                        }
+                        DestroyPanel(handler.Panel);
                         list.Add(handler.Type);
                         handler.Recycle();
                     }
