@@ -10,19 +10,19 @@ namespace YokiFrame
     public class PooledLinkedList<T> : IEnumerable<T>
     {
         private readonly LinkedList<T> mLinkedList = new();
-        private readonly static Stack<LinkedListNode<T>> nodePool = new();
+        private readonly Stack<LinkedListNode<T>> mNodePool = new();
         private const int DefaultPoolCapacity = 25;
-        private int maxPoolSize = DefaultPoolCapacity;
+        private int mMaxPoolSize = DefaultPoolCapacity;
 
         public int Count => mLinkedList.Count;
-        public int PoolSize => nodePool.Count;
+        public int PoolSize => mNodePool.Count;
         public LinkedListNode<T> First => mLinkedList.First;
         public LinkedListNode<T> Last => mLinkedList.Last;
 
         public int MaxPoolSize
         {
-            get => maxPoolSize;
-            set => maxPoolSize = value >= 0 ? value : DefaultPoolCapacity;
+            get => mMaxPoolSize;
+            set => mMaxPoolSize = value >= 0 ? value : DefaultPoolCapacity;
         }
 
         // 添加到链表尾部
@@ -153,7 +153,7 @@ namespace YokiFrame
         /// </summary>
         private LinkedListNode<T> GetNode(T value)
         {
-            var node = nodePool.Count > 0 ? nodePool.Pop() : new LinkedListNode<T>(default);
+            var node = mNodePool.Count > 0 ? mNodePool.Pop() : new LinkedListNode<T>(default);
             node.Value = value;
             return node;
         }
@@ -175,8 +175,8 @@ namespace YokiFrame
             if (node.List != null)
                 throw new InvalidOperationException("节点仍挂在链表上，无法回收");
             node.Value = default;
-            if (nodePool.Count < MaxPoolSize)
-                nodePool.Push(node);
+            if (mNodePool.Count < MaxPoolSize)
+                mNodePool.Push(node);
         }
 
         #endregion
@@ -188,9 +188,9 @@ namespace YokiFrame
         /// </summary>
         public void TrimPool()
         {
-            while (nodePool.Count > MaxPoolSize)
+            while (mNodePool.Count > MaxPoolSize)
             {
-                nodePool.Pop();
+                mNodePool.Pop();
             }
         }
 
@@ -199,7 +199,7 @@ namespace YokiFrame
         /// </summary>
         public void ClearPool()
         {
-            nodePool.Clear();
+            mNodePool.Clear();
         }
 
         #endregion
