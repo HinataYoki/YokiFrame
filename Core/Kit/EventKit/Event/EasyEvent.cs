@@ -45,9 +45,9 @@ namespace YokiFrame
                 {
                     node.Value?.Invoke();
                 }
-                catch
+                catch (Exception e)
                 {
-                    KitLogger.Error($"类 {node.Value.Method.DeclaringType} 方法 {node.Value.Method} 出错");
+                    KitLogger.Error($"[EasyEvent] 类 {node.Value?.Method?.DeclaringType} 方法 {node.Value?.Method?.Name} 执行出错: {e.Message}\n{e.StackTrace}");
                 }
                 node = nxt;
             }
@@ -93,9 +93,9 @@ namespace YokiFrame
                 {
                     node.Value?.Invoke(args);
                 }
-                catch
+                catch (Exception e)
                 {
-                    KitLogger.Error($"类 {node.Value.Method.DeclaringType} 方法 {node.Value.Method} 出错");
+                    KitLogger.Error($"[EasyEvent<{typeof(T).Name}>] 类 {node.Value?.Method?.DeclaringType} 方法 {node.Value?.Method?.Name} 执行出错: {e.Message}\n{e.StackTrace}");
                 }
                 node = nxt;
             }
