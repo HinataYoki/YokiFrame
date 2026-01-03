@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace YokiFrame
 {
@@ -12,11 +12,11 @@ namespace YokiFrame
             {
                 if (mCompareFunc(mValue, value)) return;
                 mValue = value;
-                onValueChanged?.Trigger(mValue);
+                mOnValueChanged?.Trigger(mValue);
             }
         }
 
-        private readonly EasyEvent<T> onValueChanged = new();
+        private readonly EasyEvent<T> mOnValueChanged = new();
         private static Func<T, T, bool> mCompareFunc = (x, y) => x.Equals(y);
 
         public BindValue(T value = default) => mValue = value;
@@ -26,19 +26,19 @@ namespace YokiFrame
         {
             if (callback != null)
             {
-                return onValueChanged.Register(callback);
+                return mOnValueChanged.Register(callback);
             }
             throw new ArgumentNullException(nameof(callback));
         }
 
         public void UnBind(Action<T> callback)
         {
-            if (callback != null) onValueChanged.UnRegister(callback);
+            if (callback != null) mOnValueChanged.UnRegister(callback);
         }
 
-        public void UnBindAll() => onValueChanged.UnRegisterAll();
+        public void UnBindAll() => mOnValueChanged.UnRegisterAll();
         public void SetValueWithoutEvent(T value) => mValue = value;
-        public static void SetCompareFunc(Func<T, T, bool> func) => mCompareFunc = func;
+        public void SetCompareFunc(Func<T, T, bool> func) => mCompareFunc = func;
         public override string ToString() => mValue.ToString();
     }
 }
