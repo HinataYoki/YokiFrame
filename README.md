@@ -523,6 +523,68 @@ public class GameLauncher : MonoBehaviour
 }
 ```
 
+### UIKit 独立设置
+
+UIKit 默认使用 ResKit 的加载池，但也可以单独设置自己的加载池，不走 ResKit：
+
+```csharp
+// 方式1：全局设置 ResKit，UIKit 自动跟随
+ResKit.SetLoaderPool(new YooAssetResLoaderPool());
+// UIKit.OpenPanel 会使用 YooAsset
+
+// 方式2：UIKit 单独设置，不走 ResKit
+UIKit.SetPanelLoader(new CustomPanelLoaderPool());
+// UIKit.OpenPanel 使用自定义加载池，ResKit.Load 仍使用默认或之前设置的加载池
+```
+
+UIKit 单独设置 YooAsset 示例（不影响 ResKit）：
+
+```csharp
+public class YooPanelLoaderPool : AbstractPanelLoaderPool
+{
+    protected override IPanelLoader CreatePanelLoader() => new YooPanelLoader(this);
+
+    public class YooPanelLoader : IPanelLoader
+    {
+        private readonly IPanelLoaderPool mLoaderPool;
+        private AssetHandle mHandle;
+
+        public YooPanelLoader(IPanelLoaderPool pool) => mLoaderPool = pool;
+
+        public GameObject Load(PanelHandler handler)
+        {
+            if (mHandle != null && mHandle.IsDone)
+            {
+                return mHandle.AssetObject as GameObject;
+            }
+            mHandle = YooAssets.LoadAssetSync<GameObject>(handler.Type.Name);
+            return mHandle.AssetObject as GameObject;
+        }
+
+        public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
+        {
+            if (mHandle != null && mHandle.IsDone)
+            {
+                onLoadComplete?.Invoke(mHandle.AssetObject as GameObject);
+                return;
+            }
+            mHandle = YooAssets.LoadAssetAsync<GameObject>(handler.Type.Name);
+            mHandle.Completed += handle => onLoadComplete?.Invoke(handle.AssetObject as GameObject);
+        }
+
+        public void UnLoadAndRecycle()
+        {
+            mHandle?.Release();
+            mHandle = null;
+            mLoaderPool.RecycleLoader(this);
+        }
+    }
+}
+
+// 使用
+UIKit.SetPanelLoader(new YooPanelLoaderPool());
+```
+
 ## 🏊 对象池 (PoolKit)
 
 高效的对象池管理。
