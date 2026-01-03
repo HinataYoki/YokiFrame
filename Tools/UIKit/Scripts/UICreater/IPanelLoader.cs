@@ -5,7 +5,7 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 加载器
+    /// 面板加载器接口
     /// </summary>
     public interface IPanelLoader
     {
@@ -15,7 +15,7 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// 加载池
+    /// 面板加载池接口
     /// </summary>
     public interface IPanelLoaderPool
     {
@@ -24,7 +24,7 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// 抽象加载池
+    /// 抽象面板加载池
     /// </summary>
     public abstract class AbstractPanelLoaderPool : IPanelLoaderPool
     {
@@ -35,7 +35,7 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// 默认加载池
+    /// 默认面板加载池（基于 ResKit）
     /// </summary>
     public class DefaultPanelLoaderPool : AbstractPanelLoaderPool
     {
@@ -43,34 +43,27 @@ namespace YokiFrame
 
         public class DefaultPanelLoader : IPanelLoader
         {
-            private IPanelLoaderPool mLoaderPool;
-            private GameObject mPanelPrefab;
+            private readonly IPanelLoaderPool mLoaderPool;
+            private IResLoader mResLoader;
 
             public DefaultPanelLoader(IPanelLoaderPool pool) => mLoaderPool = pool;
 
             public GameObject Load(PanelHandler handler)
             {
-                mPanelPrefab = Resources.Load<GameObject>(handler.Type.Name);
-                return mPanelPrefab;
+                mResLoader = ResKit.GetLoaderPool().Allocate();
+                return mResLoader.Load<GameObject>(handler.Type.Name);
             }
 
             public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
             {
-                var request = Resources.LoadAsync<GameObject>(handler.Type.Name);
-                request.completed += operation =>
-                {
-                    mPanelPrefab = request.asset as GameObject;
-                    onLoadComplete?.Invoke(mPanelPrefab);
-                };
+                mResLoader = ResKit.GetLoaderPool().Allocate();
+                mResLoader.LoadAsync<GameObject>(handler.Type.Name, onLoadComplete);
             }
 
             public void UnLoadAndRecycle()
             {
-                if (mPanelPrefab != null)
-                {
-                    Resources.UnloadAsset(mPanelPrefab);
-                    mPanelPrefab = null;
-                }
+                mResLoader?.UnloadAndRecycle();
+                mResLoader = null;
                 mLoaderPool.RecycleLoader(this);
             }
         }
