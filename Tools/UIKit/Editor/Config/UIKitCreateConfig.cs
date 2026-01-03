@@ -8,7 +8,7 @@ namespace YokiFrame
     {
         public static UIKitCreateConfig Instance => instance;
 
-        public string PrefabGeneratePath = "Assets/Art/UIPrefab";
+        public string PrefabGeneratePath = "Assets/Resources/Art/UIPrefab";
         public string ScriptGeneratePath = "Assets/Scripts/UI";
         public string ScriptNamespace = "GameUI";
         /// <summary>
