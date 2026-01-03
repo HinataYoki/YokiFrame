@@ -38,7 +38,7 @@ namespace YokiFrame
 
         public void UnBindAll() => mOnValueChanged.UnRegisterAll();
         public void SetValueWithoutEvent(T value) => mValue = value;
-        public void SetCompareFunc(Func<T, T, bool> func) => mCompareFunc = func;
+        public static void SetCompareFunc(Func<T, T, bool> func) => mCompareFunc = func;
         public override string ToString() => mValue.ToString();
     }
 }

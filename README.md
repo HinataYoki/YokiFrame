@@ -428,6 +428,36 @@ model.Health.Value -= 10;
 
 // 绑定并立即执行一次
 model.Health.BindWithCallback(value => UpdateUI(value));
+
+// 设置值但不触发事件
+model.Health.SetValueWithoutEvent(50);
+```
+
+对于值类型（int、float、bool 等），BindValue 可以直接判断值是否变化。对于引用类型或复杂类型，需要设置全局比较函数（同一类型共享）：
+
+```csharp
+// 引用类型需要设置全局比较函数（静态方法，同类型全局生效）
+public class ItemData
+{
+    public int Id;
+    public string Name;
+}
+
+// 在初始化时设置一次即可，所有 BindValue<ItemData> 共享此比较函数
+BindValue<ItemData>.SetCompareFunc((a, b) => 
+{
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.Id == b.Id && a.Name == b.Name;
+});
+
+// List 类型示例
+BindValue<List<int>>.SetCompareFunc((a, b) => 
+{
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.SequenceEqual(b);
+});
 ```
 
 ## 🛠️ 扩展方法 (FluentApi)
