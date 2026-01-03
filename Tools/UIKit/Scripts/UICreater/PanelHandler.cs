@@ -53,8 +53,12 @@ namespace YokiFrame
             Prefab = null;
             Panel = null;
             Data = null;
-            Loader.UnLoadAndRecycle();
-            Loader = null;
+            if (Loader != null)
+            {
+                Loader.UnLoadAndRecycle();
+                Loader = null;
+            }
+            Hot = 0;
         }
     }
 }

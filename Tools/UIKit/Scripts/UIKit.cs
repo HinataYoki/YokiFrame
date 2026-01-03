@@ -57,6 +57,13 @@ namespace YokiFrame
                 handler.Data = data;
                 CreateUI(handler);
             }
+            
+            if (handler?.Panel == null)
+            {
+                KitLogger.Error($"OpenPanel失败: {type.Name} 创建失败");
+                return null;
+            }
+            
             handler.Panel.Open();
             handler.Panel.Show();
 
@@ -79,9 +86,17 @@ namespace YokiFrame
             }
             else
             {
-                handler.Panel.Open();
-                handler.Panel.Show();
-                callbaack?.Invoke(handler.Panel);
+                if (handler?.Panel != null)
+                {
+                    handler.Panel.Open();
+                    handler.Panel.Show();
+                    callbaack?.Invoke(handler.Panel);
+                }
+                else
+                {
+                    KitLogger.Error($"OpenPanelAsync: {type.Name} 的handler.Panel为null");
+                    callbaack?.Invoke(null);
+                }
             }
         }
         /// <summary>
@@ -90,7 +105,7 @@ namespace YokiFrame
         public static void ShowPanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            if (panel == null)
+            if (panel != null)
             {
                 panel.Show();
             }
@@ -101,7 +116,7 @@ namespace YokiFrame
         public static void HidePanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            if (panel == null)
+            if (panel != null)
             {
                 panel.Hide();
             }
@@ -132,16 +147,26 @@ namespace YokiFrame
         /// <param name="panel"></param>
         public static void ClosePanel(IPanel panel)
         {
+            if (panel == null) return;
+            
             panel.Close();
-            if (panel.Handler.Hot <= 0)
-            {
-                UnityEngine.Object.Destroy(panel.Transform.gameObject);
-                PanelCacheDic.Remove(panel.Handler.Type);
-                panel.Handler.Recycle();
-            }
+            
+            if (panel.Handler == null) return;
+            
             if (panel.Handler.OnStack != null)
             {
                 PanelStack.Remove(panel.Handler.OnStack);
+                panel.Handler.OnStack = null;
+            }
+            
+            if (panel.Handler.Hot <= 0)
+            {
+                if (panel.Transform != null && panel.Transform.gameObject != null)
+                {
+                    UnityEngine.Object.Destroy(panel.Transform.gameObject);
+                }
+                PanelCacheDic.Remove(panel.Handler.Type);
+                panel.Handler.Recycle();
             }
         }
         /// <summary>
@@ -170,14 +195,19 @@ namespace YokiFrame
         /// <param name="hidePreLevel">隐藏栈中上一层UI</param>
         public static void PushPanel(IPanel panel, bool hidePreLevel = true)
         {
+            if (panel?.Handler == null) return;
+            
+            // 如果已经在栈上，先移除
             if (panel.Handler.OnStack != null)
             {
-                if (hidePreLevel && PanelStack.Count > 0)
-                {
-                    PanelStack.Last.Value.Hide();
-                }
-                panel.Handler.OnStack = PanelStack.AddLast(panel);
+                PanelStack.Remove(panel.Handler.OnStack);
             }
+            
+            if (hidePreLevel && PanelStack.Count > 0)
+            {
+                PanelStack.Last.Value.Hide();
+            }
+            panel.Handler.OnStack = PanelStack.AddLast(panel);
         }
         /// <summary>
         /// 打开并且压入指定类型的Panel到栈中
@@ -252,14 +282,25 @@ namespace YokiFrame
 
         private static IPanel CreateUI(PanelHandler handler)
         {
+            if (handler == null) return null;
+            
             var panel = UIFactory.Instance.LoadPanel(handler);
-            if (panel != null)
+            if (panel != null && panel.Transform != null)
             {
                 panel.Transform.gameObject.name = handler.Type.Name;
 
-                PanelCacheDic.Add(handler.Type, handler);
+                // 检查是否已存在，避免重复添加
+                if (!PanelCacheDic.ContainsKey(handler.Type))
+                {
+                    PanelCacheDic.Add(handler.Type, handler);
+                }
                 handler.Hot += OpenHot;
                 panel.Init(handler.Data);
+            }
+            else
+            {
+                // 如果创建失败，回收handler
+                handler.Recycle();
             }
 
             return panel;
@@ -267,19 +308,35 @@ namespace YokiFrame
 
         private static void CreateUIAsync(PanelHandler handler, Action<IPanel> onPanelCreate)
         {
+            if (handler == null)
+            {
+                onPanelCreate?.Invoke(null);
+                return;
+            }
+            
             UIFactory.Instance.LoadPanelAsync(handler, panel =>
             {
-                if (panel != null)
+                if (panel != null && panel.Transform != null)
                 {
                     panel.Transform.gameObject.name = handler.Type.Name;
 
-                    PanelCacheDic.Add(handler.Type, handler);
+                    // 检查是否已存在，避免重复添加
+                    if (!PanelCacheDic.ContainsKey(handler.Type))
+                    {
+                        PanelCacheDic.Add(handler.Type, handler);
+                    }
                     handler.Hot += OpenHot;
 
                     panel.Init(handler.Data);
                     panel.Open();
                     panel.Show();
                     onPanelCreate?.Invoke(panel);
+                }
+                else
+                {
+                    // 如果创建失败，回收handler
+                    handler.Recycle();
+                    onPanelCreate?.Invoke(null);
                 }
             });
         }
@@ -292,10 +349,15 @@ namespace YokiFrame
             {
                 foreach (var handler in PanelCacheDic.Values)
                 {
+                    if (handler == null) continue;
+                    
                     handler.Hot -= Weaken;
-                    if (handler.Hot <= 0 && handler.Panel.State is PanelState.Close)
+                    if (handler.Hot <= 0 && handler.Panel != null && handler.Panel.State is PanelState.Close)
                     {
-                        UnityEngine.Object.Destroy(handler.Panel.Transform.gameObject);
+                        if (handler.Panel.Transform != null && handler.Panel.Transform.gameObject != null)
+                        {
+                            UnityEngine.Object.Destroy(handler.Panel.Transform.gameObject);
+                        }
                         list.Add(handler.Type);
                         handler.Recycle();
                     }

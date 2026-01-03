@@ -18,29 +18,42 @@ namespace YokiFrame
 
         public IPanel LoadPanel(PanelHandler handler)
         {
+            if (handler == null)
+            {
+                KitLogger.Error("LoadPanel: handler为null");
+                return null;
+            }
+            
             try
             {
                 var loader = mLoaderPool.AllocateLoader();
                 var prefab = loader.Load(handler);
                 if (prefab == null)
                 {
-                    KitLogger.Error($"{handler}: 预制体加载失败");
+                    KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 预制体加载失败");
+                    mLoaderPool.RecycleLoader(loader);
+                    return null;
                 }
-                else
+                
+                var instance = Instantiate(prefab);
+                if (!instance.TryGetComponent<UIPanel>(out var panel))
                 {
-                    var panel = Instantiate(prefab).GetComponent<UIPanel>();
-
-                    handler.Prefab = prefab;
-                    handler.Loader = loader;
-                    handler.Panel = panel;
-                    panel.Handler = handler;
-                    UIRoot.Instance.SetLevelOfPanel(handler.Level, panel);
+                    KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 预制体上未找到UIPanel组件");
+                    Destroy(instance);
+                    mLoaderPool.RecycleLoader(loader);
+                    return null;
                 }
+
+                handler.Prefab = prefab;
+                handler.Loader = loader;
+                handler.Panel = panel;
+                panel.Handler = handler;
+                UIRoot.Instance.SetLevelOfPanel(handler.Level, panel);
             }
             catch (Exception e)
             {
                 KitLogger.Exception(e);
-                throw;
+                return null;
             }
 
             return handler.Panel;
@@ -48,6 +61,13 @@ namespace YokiFrame
 
         public void LoadPanelAsync(PanelHandler handler, Action<IPanel> onPanelComplete)
         {
+            if (handler == null)
+            {
+                KitLogger.Error("LoadPanelAsync: handler为null");
+                onPanelComplete?.Invoke(null);
+                return;
+            }
+            
             try
             {
                 var loader = mLoaderPool.AllocateLoader();
@@ -55,7 +75,9 @@ namespace YokiFrame
                 {
                     if (prefab == null)
                     {
-                        KitLogger.Error($"{handler}: 预制体加载失败");
+                        KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 预制体加载失败");
+                        mLoaderPool.RecycleLoader(loader);
+                        onPanelComplete?.Invoke(null);
                     }
                     else
                     {
@@ -67,21 +89,48 @@ namespace YokiFrame
                         {
                             var op = InstantiateAsync(prefab);
                             yield return op;
-                            if (op.isDone && op.Result.Length > 0)
+                            if (op.isDone && op.Result != null && op.Result.Length > 0)
                             {
                                 var panel = op.Result[0].GetComponent<UIPanel>();
-                                handler.Panel = panel;
-                                panel.Handler = handler;
-                                UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
-                                onPanelComplete?.Invoke(handler.Panel);
+                                if (panel == null)
+                                {
+                                    KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 预制体上未找到UIPanel组件");
+                                    Destroy(op.Result[0]);
+                                    mLoaderPool.RecycleLoader(loader);
+                                    onPanelComplete?.Invoke(null);
+                                }
+                                else
+                                {
+                                    handler.Panel = panel;
+                                    panel.Handler = handler;
+                                    UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
+                                    onPanelComplete?.Invoke(handler.Panel);
+                                }
+                            }
+                            else
+                            {
+                                KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 异步实例化失败");
+                                mLoaderPool.RecycleLoader(loader);
+                                onPanelComplete?.Invoke(null);
                             }
                         }
 #else
-                        var panel = Instantiate(prefab).GetComponent<UIPanel>();
-                        handler.Panel = panel;
-                        panel.Handler = handler;
-                        UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
-                        onPanelComplete?.Invoke(handler.Panel);
+                        var instance = Instantiate(prefab);
+                        var panel = instance.GetComponent<UIPanel>();
+                        if (panel == null)
+                        {
+                            KitLogger.Error($"{handler.Type?.Name ?? "Unknown"}: 预制体上未找到UIPanel组件");
+                            UnityEngine.Object.Destroy(instance);
+                            mLoaderPool.RecycleLoader(loader);
+                            onPanelComplete?.Invoke(null);
+                        }
+                        else
+                        {
+                            handler.Panel = panel;
+                            panel.Handler = handler;
+                            UIRoot.Instance.SetLevelOfPanel(handler.Level, handler.Panel);
+                            onPanelComplete?.Invoke(handler.Panel);
+                        }
 #endif
                     }
                 });
@@ -89,7 +138,7 @@ namespace YokiFrame
             catch (Exception e)
             {
                 KitLogger.Exception(e);
-                throw;
+                onPanelComplete?.Invoke(null);
             }
         }
 

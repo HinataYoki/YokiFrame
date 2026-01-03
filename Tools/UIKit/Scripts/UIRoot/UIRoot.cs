@@ -90,17 +90,33 @@ namespace YokiFrame
 
         public void SetLevelOfPanel(UILevel level, IPanel panel)
         {
-            if (panel == null) return;
+            if (panel == null || panel.Transform == null) return;
 
             var canvas = panel.Transform.GetComponent<Canvas>();
 
             if (canvas)
             {
-                panel.Transform.SetParent(UILevelDic[UILevel.CanvasPanel]);
+                if (UILevelDic.TryGetValue(UILevel.CanvasPanel, out var canvasParent))
+                {
+                    panel.Transform.SetParent(canvasParent);
+                }
+                else
+                {
+                    KitLogger.Error($"SetLevelOfPanel: UILevelDic中未找到CanvasPanel层级");
+                    return;
+                }
             }
             else
             {
-                panel.Transform.SetParent(UILevelDic[level]);
+                if (UILevelDic.TryGetValue(level, out var levelParent))
+                {
+                    panel.Transform.SetParent(levelParent);
+                }
+                else
+                {
+                    KitLogger.Error($"SetLevelOfPanel: UILevelDic中未找到{level}层级");
+                    return;
+                }
             }
             SetDefaultSizeOfPanel(panel);
         }
