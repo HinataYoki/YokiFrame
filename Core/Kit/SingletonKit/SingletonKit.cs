@@ -22,6 +22,27 @@ namespace YokiFrame
         private static readonly object mLock = new();
 
         /// <summary>
+        /// 创建策略委托（静态构造器中确定，避免每次运行时反射判断）
+        /// </summary>
+        private static readonly Func<T> mCreator;
+
+        /// <summary>
+        /// 静态构造器：一次性确定创建策略
+        /// </summary>
+        static SingletonKit()
+        {
+            var type = typeof(T);
+            if (typeof(MonoBehaviour).IsAssignableFrom(type))
+            {
+                mCreator = CreateMonoSingleton;
+            }
+            else
+            {
+                mCreator = CreateNormalSingleton;
+            }
+        }
+
+        /// <summary>
         /// 获取单例实例（线程安全，懒加载）
         /// </summary>
         public static T Instance
@@ -32,10 +53,7 @@ namespace YokiFrame
                 {
                     lock (mLock)
                     {
-                        if (mInstance == null)
-                        {
-                            mInstance = CreateSingleton();
-                        }
+                        mInstance ??= mCreator();
                     }
                 }
                 return mInstance;
@@ -55,23 +73,13 @@ namespace YokiFrame
         #region 创建逻辑
 
         /// <summary>
-        /// 创建单例的核心分发逻辑
+        /// 创建普通 C# 单例
         /// </summary>
-        private static T CreateSingleton()
+        private static T CreateNormalSingleton()
         {
-            var type = typeof(T);
-
-            // 判断是否继承自 MonoBehaviour
-            if (typeof(MonoBehaviour).IsAssignableFrom(type))
-            {
-                return CreateMonoSingleton();
-            }
-            else
-            {
-                var instance = CreateNonArgsConstructorObject();
-                instance.OnSingletonInit();
-                return instance;
-            }
+            var instance = CreateNonArgsConstructorObject();
+            instance.OnSingletonInit();
+            return instance;
         }
 
         /// <summary>

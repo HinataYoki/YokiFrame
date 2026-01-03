@@ -2,28 +2,20 @@ using UnityEngine;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// MonoBehaviour 单例基类
+    /// </summary>
     public abstract class MonoSingleton<T> : MonoBehaviour, ISingleton where T : MonoSingleton<T>
     {
         /// <summary>
-        /// 静态实例
+        /// 获取单例实例（委托给 SingletonKit 管理）
         /// </summary>
-        protected static T mInstance;
+        public static T Instance => SingletonKit<T>.Instance;
 
         /// <summary>
-        /// 静态属性：封装相关实例对象
+        /// 释放单例实例
         /// </summary>
-        public static T Instance
-        {
-            get
-            {
-                if (mInstance == null)
-                {
-                    mInstance = SingletonKit<T>.Instance;
-                }
-
-                return mInstance;
-            }
-        }
+        public static void Dispose() => SingletonKit<T>.Dispose();
 
         /// <summary>
         /// 实现接口的单例初始化
@@ -35,9 +27,10 @@ namespace YokiFrame
         /// </summary>
         protected virtual void OnApplicationQuit()
         {
-            if (mInstance == null) return;
-            Destroy(mInstance.gameObject);
-            mInstance = null;
+            var instance = SingletonKit<T>.Instance;
+            if (instance == null) return;
+            Destroy(instance.gameObject);
+            SingletonKit<T>.Dispose();
         }
 
         /// <summary>
@@ -45,7 +38,7 @@ namespace YokiFrame
         /// </summary>
         protected virtual void OnDestroy()
         {
-            mInstance = null;
+            SingletonKit<T>.Dispose();
         }
     }
 }
