@@ -44,7 +44,7 @@ namespace YokiFrame
     #region 抽象实现
     public abstract class Architecture<T> : IArchitecture where T : Architecture<T>, new()
     {
-        private static readonly Dictionary<Type, IService> mServices = new();
+        private readonly Dictionary<Type, IService> mServices = new();
 
         private bool mInited = false;
         public bool Initialized => mInited;
@@ -60,7 +60,7 @@ namespace YokiFrame
                     // 初始化架构,用户自己的服务在这里面写入
                     mArchitecture.OnInit();
                     // 服务在注册结束后统一初始化，确保在OnInit中服务互相引用不会拿空
-                    foreach (var service in mServices.Values)
+                    foreach (var service in mArchitecture.mServices.Values)
                     {
                         service.Init();
                     }
