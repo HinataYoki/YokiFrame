@@ -2,7 +2,7 @@
 
 namespace YokiFrame
 {
-    public class Delay : IAction
+    public class Delay : ActionBase
     {
         /// <summary>
         /// 延迟时间
@@ -19,11 +19,11 @@ namespace YokiFrame
         /// <summary>
         /// 延迟任务池
         /// </summary>
-        private static readonly SimplePoolKit<Delay> delayPool = new(() => new Delay());
+        private static readonly SimplePoolKit<Delay> mPool = new(() => new Delay());
 
         public static Delay Allocate(float delayTime, Action onDelayFinish = null)
         {
-            var delay = delayPool.Allocate();
+            var delay = mPool.Allocate();
             delay.ActionID = ActionKit.ID_GENERATOR++;
             delay.Deinited = false;
             delay.OnInit();
@@ -33,21 +33,15 @@ namespace YokiFrame
             return delay;
         }
 
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
+            base.OnInit();
             CurrentSeconds = 0.0f;
         }
 
-        public void OnStart() => OnExecute(0);
+        public override void OnStart() => OnExecute(0);
 
-        public void OnExecute(float dt)
+        public override void OnExecute(float dt)
         {
             CurrentSeconds += dt;
             if (CurrentSeconds >= DelayTime)
@@ -57,17 +51,18 @@ namespace YokiFrame
             }
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
                 OnDelayFinish = null;
                 Deinited = true;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Delay>(delayPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Delay>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {OnDelayFinish.Method.DeclaringType} 方法 {OnDelayFinish.Method} 出错";
+        public override string GetDebugInfo() => 
+            OnDelayFinish != null ? $"Delay -> {OnDelayFinish.Method.DeclaringType}.{OnDelayFinish.Method.Name}" : "Delay";
     }
 
     public static class DelayExtension

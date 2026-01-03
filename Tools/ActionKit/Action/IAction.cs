@@ -15,7 +15,7 @@ namespace YokiFrame
         /// <summary>
         /// 任务ID
         /// </summary>
-        ulong ActionID { get; set; }
+        ulong ActionID { get; }
         /// <summary>
         /// 任务状态
         /// </summary>
@@ -27,7 +27,7 @@ namespace YokiFrame
         /// <summary>
         /// 是否被回收
         /// </summary>
-        bool Deinited { get; set; }
+        bool Deinited { get; }
         /// <summary>
         /// 任务重置
         /// </summary>
@@ -39,20 +39,42 @@ namespace YokiFrame
         /// <summary>
         /// 任务开始
         /// </summary>
-        virtual void OnStart() { }
+        void OnStart();
         /// <summary>
         /// 任务执行
         /// </summary>
-        /// <param name="dt"></param>
-        virtual void OnExecute(float dt) { }
+        void OnExecute(float dt);
         /// <summary>
         /// 任务结束
         /// </summary>
-        virtual void OnFinish() { }
+        void OnFinish();
+    }
+
+    /// <summary>
+    /// Action 抽象基类，处理公共状态和初始化逻辑
+    /// </summary>
+    public abstract class ActionBase : IAction
+    {
+        public ulong ActionID { get; protected set; }
+        public ActionStatus ActionState { get; set; }
+        public bool Paused { get; set; }
+        public bool Deinited { get; protected set; }
+
+        public virtual void OnInit()
+        {
+            ActionState = ActionStatus.NotStart;
+            Paused = false;
+        }
+
+        public abstract void OnDeinit();
+        public virtual void OnStart() { }
+        public virtual void OnExecute(float dt) { }
+        public virtual void OnFinish() { }
+
         /// <summary>
-        /// 报错
+        /// 获取调试信息，子类可重写提供更详细的错误信息
         /// </summary>
-        string LogError();
+        public virtual string GetDebugInfo() => GetType().Name;
     }
 
     public static class IActionExtensions
@@ -100,9 +122,10 @@ namespace YokiFrame
                         return true;
                 }
             }
-            catch
+            catch (Exception e)
             {
-                KitLogger.Error(self.LogError());
+                var debugInfo = self is ActionBase actionBase ? actionBase.GetDebugInfo() : self.GetType().Name;
+                KitLogger.Error($"[ActionKit] {debugInfo} 执行出错: {e.Message}");
             }
             return false;
         }
@@ -110,7 +133,6 @@ namespace YokiFrame
         /// <summary>
         /// 任务完成
         /// </summary>
-        /// <param name="self"></param>
         public static void Finish(this IAction self) => self.ActionState = ActionStatus.Finished;
     }
 }

@@ -2,7 +2,7 @@
 
 namespace YokiFrame
 {
-    internal class Condition : IAction
+    internal class Condition : ActionBase
     {
         /// <summary>
         /// 条件
@@ -11,11 +11,11 @@ namespace YokiFrame
         /// <summary>
         /// 条件任务池
         /// </summary>
-        private static readonly SimplePoolKit<Condition> conditionPool = new(() => new Condition());
+        private static readonly SimplePoolKit<Condition> mPool = new(() => new Condition());
 
         public static Condition Allocate(Func<bool> callback)
         {
-            var condition = conditionPool.Allocate();
+            var condition = mPool.Allocate();
             condition.ActionID = ActionKit.ID_GENERATOR++;
             condition.Deinited = false;
             condition.OnInit();
@@ -23,19 +23,7 @@ namespace YokiFrame
             return condition;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-
-        public void OnInit()
-        {
-            Paused = false;
-            ActionState = ActionStatus.NotStart;
-        }
-
-        public void OnStart()
+        public override void OnStart()
         {
             if (mCondition.Invoke())
             {
@@ -43,7 +31,7 @@ namespace YokiFrame
             }
         }
 
-        public void OnExecute(float dt)
+        public override void OnExecute(float dt)
         {
             if (mCondition.Invoke())
             {
@@ -51,18 +39,19 @@ namespace YokiFrame
             }
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
                 Deinited = true;
                 mCondition = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Condition>(conditionPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Condition>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {mCondition.Method.DeclaringType} 方法 {mCondition.Method} 出错";
+        public override string GetDebugInfo() => 
+            mCondition != null ? $"Condition -> {mCondition.Method.DeclaringType}.{mCondition.Method.Name}" : "Condition";
     }
 
     public static class ConditionExtension

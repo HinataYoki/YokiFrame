@@ -8,7 +8,7 @@ namespace YokiFrame
         ISequence Append(IAction action);
     }
 
-    internal class Sequence : ISequence
+    internal class Sequence : ActionBase, ISequence
     {
         /// <summary>
         /// 需要顺序执行的任务
@@ -25,27 +25,21 @@ namespace YokiFrame
         /// <summary>
         /// 序列任务池
         /// </summary>
-        private static readonly SimplePoolKit<Sequence> sequencePool = new(() => new Sequence());
+        private static readonly SimplePoolKit<Sequence> mPool = new(() => new Sequence());
 
         public static Sequence Allocate()
         {
-            var sequence = sequencePool.Allocate();
+            var sequence = mPool.Allocate();
             sequence.ActionID = ActionKit.ID_GENERATOR++;
             sequence.OnInit();
             sequence.Deinited = false;
             return sequence;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
+            base.OnInit();
             mCurActionIndex = 0;
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
 
             foreach (var action in mActions)
             {
@@ -53,7 +47,7 @@ namespace YokiFrame
             }
         }
 
-        public void OnStart()
+        public override void OnStart()
         {
             if (mActions.Count > 0)
             {
@@ -66,7 +60,7 @@ namespace YokiFrame
             }
         }
 
-        public void OnExecute(float dt) => TryExecuteUntilNextNotFinished(dt);
+        public override void OnExecute(float dt) => TryExecuteUntilNextNotFinished(dt);
 
         private void TryExecuteUntilNextNotFinished(float dt)
         {
@@ -91,7 +85,7 @@ namespace YokiFrame
             return this;
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
@@ -103,11 +97,11 @@ namespace YokiFrame
 
                 Deinited = true;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Sequence>(sequencePool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Sequence>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"顺序队列出错";
+        public override string GetDebugInfo() => $"Sequence({mActions.Count} actions)";
     }
 
     public static class SequenceExtension

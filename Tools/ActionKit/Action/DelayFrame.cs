@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace YokiFrame
 {
-    internal class DelayFrame : IAction
+    internal class DelayFrame : ActionBase
     {
         /// <summary>
         /// 延迟开始帧
@@ -20,11 +20,11 @@ namespace YokiFrame
         /// <summary>
         /// 延迟帧任务池
         /// </summary>
-        private static readonly SimplePoolKit<DelayFrame> delayFramePool = new(() => new DelayFrame());
+        private static readonly SimplePoolKit<DelayFrame> mPool = new(() => new DelayFrame());
 
         public static DelayFrame Allocate(int frameCount, Action onDelayFinish = null)
         {
-            var delayFrame = delayFramePool.Allocate();
+            var delayFrame = mPool.Allocate();
             delayFrame.ActionID = ActionKit.ID_GENERATOR++;
             delayFrame.OnInit();
             delayFrame.Deinited = false;
@@ -34,25 +34,19 @@ namespace YokiFrame
             return delayFrame;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
+            base.OnInit();
             mStartFrameCount = 0;
         }
 
-        public void OnStart()
+        public override void OnStart()
         {
             mStartFrameCount = Time.frameCount;
             Delay();
         }
 
-        public void OnExecute(float dt) => Delay();
+        public override void OnExecute(float dt) => Delay();
 
         private void Delay()
         {
@@ -63,17 +57,18 @@ namespace YokiFrame
             }
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
                 Deinited = true;
                 mOnDelayFinish = null;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<DelayFrame>(delayFramePool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<DelayFrame>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {mOnDelayFinish.Method.DeclaringType} 方法 {mOnDelayFinish.Method} 出错";
+        public override string GetDebugInfo() => 
+            mOnDelayFinish != null ? $"DelayFrame -> {mOnDelayFinish.Method.DeclaringType}.{mOnDelayFinish.Method.Name}" : "DelayFrame";
     }
 
     public static class DelayFrameExtension

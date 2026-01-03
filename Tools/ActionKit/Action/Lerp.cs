@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace YokiFrame
 {
-    public class Lerp : IAction
+    public class Lerp : ActionBase
     {
         public float A;
         public float B;
@@ -12,11 +12,11 @@ namespace YokiFrame
         public Action OnLerpFinish;
         private float mCurrentTime = 0.0f;
 
-        private static readonly SimplePoolKit<Lerp> lerpPool = new(() => new Lerp());
+        private static readonly SimplePoolKit<Lerp> mPool = new(() => new Lerp());
 
         public static Lerp Allocate(float a, float b, float duration, Action<float> onLerp = null, Action onLerpFinish = null)
         {
-            var retNode = lerpPool.Allocate();
+            var retNode = mPool.Allocate();
             retNode.ActionID = ActionKit.ID_GENERATOR++;
             retNode.Deinited = false;
             retNode.OnInit();
@@ -28,25 +28,19 @@ namespace YokiFrame
             return retNode;
         }
 
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-        public bool Deinited { get; set; }
-        public bool Paused { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
+            base.OnInit();
             mCurrentTime = 0.0f;
         }
 
-        public void OnStart()
+        public override void OnStart()
         {
             mCurrentTime = 0.0f;
             OnLerp?.Invoke(Mathf.Lerp(A, B, 0));
         }
 
-        public void OnExecute(float dt)
+        public override void OnExecute(float dt)
         {
             mCurrentTime += dt;
             if (mCurrentTime < Duration)
@@ -59,13 +53,13 @@ namespace YokiFrame
             }
         }
 
-        public void OnFinish()
+        public override void OnFinish()
         {
             OnLerp?.Invoke(Mathf.Lerp(A, B, 1.0f));
             OnLerpFinish?.Invoke();
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
@@ -73,11 +67,15 @@ namespace YokiFrame
                 OnLerp = null;
                 OnLerpFinish = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Lerp>(lerpPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Lerp>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {OnLerp.Method.DeclaringType} 方法 {OnLerp.Method} 出错 或者 类 {OnLerpFinish.Method.DeclaringType} 方法 {OnLerpFinish.Method} 出错";
+        public override string GetDebugInfo()
+        {
+            var lerpInfo = OnLerp != null ? $"{OnLerp.Method.DeclaringType}.{OnLerp.Method.Name}" : "null";
+            return $"Lerp({A}->{B}) -> {lerpInfo}";
+        }
     }
 
     public static class LerpExtension

@@ -3,34 +3,23 @@ using System.Threading.Tasks;
 
 namespace YokiFrame
 {
-    internal class TaskAction : IAction
+    internal class TaskAction : ActionBase
     {
         private Func<Task> mTaskGetter = null;
         private Task mExecutingTask;
-        private static readonly SimplePoolKit<TaskAction> taskActionPool = new(() => new TaskAction());
+        private static readonly SimplePoolKit<TaskAction> mPool = new(() => new TaskAction());
 
         public static TaskAction Allocate(Func<Task> taskGetter)
         {
-            var coroutineAction = taskActionPool.Allocate();
-            coroutineAction.ActionID = ActionKit.ID_GENERATOR++;
-            coroutineAction.Deinited = false;
-            coroutineAction.OnInit();
-            coroutineAction.mTaskGetter = taskGetter;
-            return coroutineAction;
+            var taskAction = mPool.Allocate();
+            taskAction.ActionID = ActionKit.ID_GENERATOR++;
+            taskAction.Deinited = false;
+            taskAction.OnInit();
+            taskAction.mTaskGetter = taskGetter;
+            return taskAction;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
-        {
-            Paused = false;
-            ActionState = ActionStatus.NotStart;
-        }
-
-        public void OnStart() => StartTask();
+        public override void OnStart() => StartTask();
 
         async void StartTask()
         {
@@ -39,7 +28,7 @@ namespace YokiFrame
             this.Finish();
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
@@ -51,11 +40,16 @@ namespace YokiFrame
                     mExecutingTask = null;
                 }
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<TaskAction>(taskActionPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<TaskAction>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $" {mExecutingTask.Exception.InnerExceptions} 出错";
+        public override string GetDebugInfo()
+        {
+            if (mExecutingTask?.Exception != null)
+                return $"TaskAction Error: {mExecutingTask.Exception.InnerExceptions}";
+            return mTaskGetter != null ? $"TaskAction -> {mTaskGetter.Method.DeclaringType}.{mTaskGetter.Method.Name}" : "TaskAction";
+        }
     }
 
     public static class TaskExtension

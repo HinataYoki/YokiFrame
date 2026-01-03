@@ -5,7 +5,7 @@ namespace YokiFrame
 {
     public interface IParallel : ISequence { }
 
-    internal class Parallel : IParallel
+    internal class Parallel : ActionBase, IParallel
     {
         /// <summary>
         /// 需要完成的任务
@@ -18,32 +18,26 @@ namespace YokiFrame
         /// <summary>
         /// 并行任务池
         /// </summary>
-        private static readonly SimplePoolKit<Parallel> parallelPool = new(() => new Parallel());
+        private static readonly SimplePoolKit<Parallel> mPool = new(() => new Parallel());
         /// <summary>
         /// 等待所有任务完成
         /// </summary>
-        private bool WaitAll = true;
+        private bool mWaitAll = true;
 
         public static Parallel Allocate(bool waitAll)
         {
-            var parallel = parallelPool.Allocate();
+            var parallel = mPool.Allocate();
             parallel.ActionID = ActionKit.ID_GENERATOR++;
-            parallel.WaitAll = waitAll;
+            parallel.mWaitAll = waitAll;
             parallel.Deinited = false;
             parallel.OnInit();
             return parallel;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
+            base.OnInit();
             mFinishedCount = 0;
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
 
             foreach (var action in mActions)
             {
@@ -51,9 +45,9 @@ namespace YokiFrame
             }
         }
 
-        public void OnStart() => Paralleling(0);
+        public override void OnStart() => Paralleling(0);
 
-        public void OnExecute(float dt) => Paralleling(dt);
+        public override void OnExecute(float dt) => Paralleling(dt);
 
         private void Paralleling(float dt)
         {
@@ -62,7 +56,7 @@ namespace YokiFrame
                 if (!mActions[i].Update(dt)) continue;
                 ++mFinishedCount;
 
-                if (WaitAll && mFinishedCount < mActions.Count)
+                if (mWaitAll && mFinishedCount < mActions.Count)
                 {
                     //把每次完成的任务挪到前面
                     (mActions[i], mActions[mFinishedCount - 1]) = (mActions[mFinishedCount - 1], mActions[i]);
@@ -81,7 +75,7 @@ namespace YokiFrame
             return this;
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
@@ -93,11 +87,11 @@ namespace YokiFrame
                 }
                 mActions.Clear();
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Parallel>(parallelPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Parallel>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $" 并行队列出错";
+        public override string GetDebugInfo() => $"Parallel({mActions.Count} actions, waitAll={mWaitAll})";
     }
 
     public static class ParallelExtension

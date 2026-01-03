@@ -6,18 +6,18 @@ namespace YokiFrame
     {
     }
 
-    internal class Repeat : IRepeat
+    internal class Repeat : ActionBase, IRepeat
     {
         private Sequence mSequence = null;
         private int mMaxRepeatCount = 0;
         private int mCurrentRepeatCount = 0;
         private Func<bool> mCondition = () => true;
 
-        private static readonly SimplePoolKit<Repeat> repeatPool = new(() => new Repeat());
+        private static readonly SimplePoolKit<Repeat> mPool = new(() => new Repeat());
 
         public static Repeat Allocate(int repeatCount = 0, Func<bool> condition = null)
         {
-            var repeat = repeatPool.Allocate();
+            var repeat = mPool.Allocate();
             repeat.ActionID = ActionKit.ID_GENERATOR++;
             repeat.mSequence = Sequence.Allocate();
             if (condition != null)
@@ -30,23 +30,16 @@ namespace YokiFrame
             return repeat;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
+        public override void OnInit()
         {
+            base.OnInit();
             mCurrentRepeatCount = 0;
-            ActionState = ActionStatus.NotStart;
-            Paused = false;
-
             mSequence.OnInit();
         }
 
-        public void OnStart() => Repeating(0);
+        public override void OnStart() => Repeating(0);
 
-        public void OnExecute(float dt) => Repeating(dt);
+        public override void OnExecute(float dt) => Repeating(dt);
 
         private void Repeating(float dt)
         {
@@ -72,7 +65,7 @@ namespace YokiFrame
             return this;
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
@@ -80,11 +73,11 @@ namespace YokiFrame
                 mMaxRepeatCount = 0;
                 mCondition = () => true;
                 mSequence.OnDeinit();
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Repeat>(repeatPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Repeat>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"循环队列出错";
+        public override string GetDebugInfo() => $"Repeat(max={mMaxRepeatCount}, current={mCurrentRepeatCount})";
     }
 
     public static class RepeatExtension

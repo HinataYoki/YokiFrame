@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace YokiFrame
 {
-    internal class Coroutine : IAction
+    internal class Coroutine : ActionBase
     {
         /// <summary>
         /// 协程
@@ -12,30 +12,19 @@ namespace YokiFrame
         /// <summary>
         /// 协程任务池
         /// </summary>
-        private static readonly SimplePoolKit<Coroutine> coroutinePool = new(() => new Coroutine());
+        private static readonly SimplePoolKit<Coroutine> mPool = new(() => new Coroutine());
 
         public static Coroutine Allocate(Func<IEnumerator> coroutineGetter)
         {
-            var coroutine = coroutinePool.Allocate();
+            var coroutine = mPool.Allocate();
             coroutine.ActionID = ActionKit.ID_GENERATOR++;
             coroutine.Deinited = false;
             coroutine.OnInit();
             coroutine.mCoroutineGetter = coroutineGetter;
             return coroutine;
         }
-
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
-        {
-            Paused = false;
-            ActionState = ActionStatus.NotStart;
-        }
         
-        public void OnStart()
+        public override void OnStart()
         {
             MonoGlobalExecutor.ExecuteCoroutine(mCoroutineGetter(), () =>
             {
@@ -43,17 +32,18 @@ namespace YokiFrame
             });
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
                 Deinited = true;
                 mCoroutineGetter = null;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Coroutine>(coroutinePool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Coroutine>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {mCoroutineGetter.Method.DeclaringType} 方法 {mCoroutineGetter.Method} 出错";
+        public override string GetDebugInfo() => 
+            mCoroutineGetter != null ? $"Coroutine -> {mCoroutineGetter.Method.DeclaringType}.{mCoroutineGetter.Method.Name}" : "Coroutine";
     }
 
     public static class CoroutineExtension

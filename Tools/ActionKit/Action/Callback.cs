@@ -2,7 +2,7 @@
 
 namespace YokiFrame
 {
-    internal class Callback : IAction
+    internal class Callback : ActionBase
     {
         /// <summary>
         /// 回调任务
@@ -11,11 +11,11 @@ namespace YokiFrame
         /// <summary>
         /// 回调任务池
         /// </summary>
-        private static readonly SimplePoolKit<Callback> callbackPool = new(() => new Callback());
+        private static readonly SimplePoolKit<Callback> mPool = new(() => new Callback());
 
         public static Callback Allocate(Action callback)
         {
-            var callbackAction = callbackPool.Allocate();
+            var callbackAction = mPool.Allocate();
             callbackAction.ActionID = ActionKit.ID_GENERATOR++;
             callbackAction.OnInit();
             callbackAction.Deinited = false;
@@ -23,35 +23,25 @@ namespace YokiFrame
             return callbackAction;
         }
 
-        public bool Paused { get; set; }
-        public bool Deinited { get; set; }
-        public ulong ActionID { get; set; }
-        public ActionStatus ActionState { get; set; }
-
-        public void OnInit()
-        {
-            Paused = false;
-            ActionState = ActionStatus.NotStart;
-        }
-
-        public void OnStart()
+        public override void OnStart()
         {
             mCallback?.Invoke();
             this.Finish();
         }
 
-        public void OnDeinit()
+        public override void OnDeinit()
         {
             if (!Deinited)
             {
                 Deinited = true;
                 mCallback = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Callback>(callbackPool, this));
+                MonoRecycler.AddRecycleCallback(new ActionRecycler<Callback>(mPool, this));
             }
         }
 
-        string IAction.LogError() => $"类 {mCallback.Method.DeclaringType} 方法 {mCallback.Method} 出错";
+        public override string GetDebugInfo() => 
+            mCallback != null ? $"Callback -> {mCallback.Method.DeclaringType}.{mCallback.Method.Name}" : "Callback";
     }
 
     public static class CallbackExtension
