@@ -374,9 +374,159 @@ KitLogger.Level = KitLogger.LogLevel.Warning;  // 只显示Warning及以上
 KitLogger.AutoEnableWriteLogToFile = true;
 ```
 
+## 📦 资源管理 (ResKit)
+
+统一的资源加载接口，默认使用 Resources，支持扩展 YooAsset 等第三方加载方案。
+
+### 基础用法
+
+```csharp
+// 同步加载
+var prefab = ResKit.Load<GameObject>("Prefabs/Player");
+var sprite = ResKit.Load<Sprite>("Sprites/Icon");
+
+// 异步加载
+ResKit.LoadAsync<GameObject>("Prefabs/Enemy", prefab => 
+{
+    Instantiate(prefab);
+});
+
+// 实例化预制体
+var player = ResKit.Instantiate("Prefabs/Player");
+
+// 异步实例化
+ResKit.InstantiateAsync("Prefabs/Enemy", instance => 
+{
+    instance.transform.position = spawnPoint;
+});
+
+// 使用句柄管理引用计数
+var handler = ResKit.LoadAsset<GameObject>("Prefabs/Player");
+// 使用资源...
+handler.Release();  // 引用计数减少，归零时自动卸载
+
+// 清理所有缓存
+ResKit.ClearAll();
+```
+
+### 扩展机制
+
+ResKit 提供了统一的加载器接口，可以轻松扩展支持 YooAsset、Addressables 等第三方资源管理方案。
+
+核心接口：
+- `IResLoader` - 资源加载器接口，负责具体的加载/卸载逻辑
+- `IResLoaderPool` - 加载器池接口，负责加载器的分配和回收
+- `AbstractResLoaderPool` - 抽象加载池基类，提供池化复用逻辑
+
+设置自定义加载池后，ResKit 和 UIKit 都会自动使用新的加载方案：
+
+```csharp
+// 一行代码切换加载方案，全局生效
+ResKit.SetLoaderPool(new YooAssetResLoaderPool());
+
+// 之后所有加载都走 YooAsset
+ResKit.Load<GameObject>("Player");      // 使用 YooAsset
+UIKit.OpenPanel<MainMenuPanel>();       // 也使用 YooAsset
+```
+
+### 扩展 YooAsset 完整示例
+
+```csharp
+using System;
+using UnityEngine;
+using YooAsset;
+using YokiFrame;
+
+/// <summary>
+/// YooAsset 扩展
+/// </summary>
+public static class ResKitWithYooAsset
+{
+    /// <summary>
+    /// 初始化并设置 YooAsset 为默认加载器
+    /// </summary>
+    public static void Init()
+    {
+        ResKit.SetLoaderPool(new YooAssetResLoaderPool());
+    }
+
+    /// <summary>
+    /// YooAsset 加载池
+    /// </summary>
+    public class YooAssetResLoaderPool : AbstractResLoaderPool
+    {
+        protected override IResLoader CreateLoader() => new YooAssetResLoader(this);
+    }
+
+    /// <summary>
+    /// YooAsset 加载器
+    /// </summary>
+    public class YooAssetResLoader : IResLoader
+    {
+        private readonly IResLoaderPool mPool;
+        private AssetHandle mHandle;
+
+        public YooAssetResLoader(IResLoaderPool pool) => mPool = pool;
+
+        public T Load<T>(string path) where T : UnityEngine.Object
+        {
+            if (mHandle != null && mHandle.IsDone)
+            {
+                return mHandle.AssetObject as T;
+            }
+            mHandle = YooAssets.LoadAssetSync<T>(path);
+            return mHandle.AssetObject as T;
+        }
+
+        public void LoadAsync<T>(string path, Action<T> onComplete) where T : UnityEngine.Object
+        {
+            if (mHandle != null && mHandle.IsDone)
+            {
+                onComplete?.Invoke(mHandle.AssetObject as T);
+                return;
+            }
+            mHandle = YooAssets.LoadAssetAsync<T>(path);
+            mHandle.Completed += handle => onComplete?.Invoke(handle.AssetObject as T);
+        }
+
+        public void UnloadAndRecycle()
+        {
+            mHandle?.Release();
+            mHandle = null;
+            mPool.Recycle(this);
+        }
+    }
+}
+```
+
+使用方式：
+
+```csharp
+// 游戏启动时初始化
+public class GameLauncher : MonoBehaviour
+{
+    async void Start()
+    {
+        // 1. 初始化 YooAsset
+        YooAssets.Initialize();
+        var package = YooAssets.CreatePackage("DefaultPackage");
+        YooAssets.SetDefaultPackage(package);
+        // ... YooAsset 初始化流程
+        
+        // 2. 设置 ResKit 使用 YooAsset
+        ResKitWithYooAsset.Init();
+        
+        // 3. 正常使用，全部走 YooAsset
+        var player = ResKit.Load<GameObject>("Player");
+        UIKit.OpenPanel<MainMenuPanel>();
+    }
+}
+```
+
 ## 🏊 对象池 (PoolKit)
 
 高效的对象池管理。
+
 
 ```csharp
 // 使用临时List（自动回收）
