@@ -157,10 +157,21 @@ namespace YokiFrame
         /// </summary>
         public static void CloseAllPanel()
         {
-            foreach (var handler in PanelCacheDic.Values)
+            // 先收集所有需要关闭的面板，避免遍历时修改字典
+            Pool.List<IPanel>(panelsToClose =>
             {
-                ClosePanel(handler.Panel);
-            }
+                foreach (var handler in PanelCacheDic.Values)
+                {
+                    if (handler?.Panel != null)
+                    {
+                        panelsToClose.Add(handler.Panel);
+                    }
+                }
+                foreach (var panel in panelsToClose)
+                {
+                    ClosePanel(panel);
+                }
+            });
             PanelStack.Clear();
         }
         /// <summary>
