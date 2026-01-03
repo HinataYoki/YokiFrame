@@ -14,7 +14,7 @@ namespace YokiFrame
 
 
         void Init(IUIData data = null);
-        void Open();
+        void Open(IUIData data = null);
         void Show();
         void Hide();
         void Close();

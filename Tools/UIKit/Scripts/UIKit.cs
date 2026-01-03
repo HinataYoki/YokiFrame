@@ -57,7 +57,7 @@ namespace YokiFrame
                 return null;
             }
             
-            OpenAndShowPanel(handler.Panel);
+            OpenAndShowPanel(handler.Panel, data);
             return handler.Panel as T;
         }
         /// <summary>
@@ -71,7 +71,8 @@ namespace YokiFrame
             {
                 if (handler?.Panel != null)
                 {
-                    OpenAndShowPanel(handler.Panel);
+                    handler.Data = data;
+                    OpenAndShowPanel(handler.Panel, data);
                     callback?.Invoke(handler.Panel);
                 }
                 else
@@ -286,7 +287,7 @@ namespace YokiFrame
                 if (panel != null && panel.Transform != null)
                 {
                     SetupPanel(handler, panel);
-                    OpenAndShowPanel(panel);
+                    OpenAndShowPanel(panel, handler.Data);
                     onPanelCreate?.Invoke(panel);
                 }
                 else
@@ -310,16 +311,21 @@ namespace YokiFrame
                 handler.Data = data;
                 CreateUI(handler);
             }
+            else
+            {
+                // 面板已存在，更新Data
+                handler.Data = data;
+            }
             return handler;
         }
         
         /// <summary>
         /// 打开并显示Panel
         /// </summary>
-        private static void OpenAndShowPanel(IPanel panel)
+        private static void OpenAndShowPanel(IPanel panel, IUIData data = null)
         {
             if (panel == null) return;
-            panel.Open();
+            panel.Open(data);
             panel.Show();
         }
         

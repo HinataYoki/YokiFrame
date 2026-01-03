@@ -14,10 +14,10 @@ namespace YokiFrame
 
         public void Init(IUIData data = null) => OnInit(data);
 
-        public void Open()
+        public void Open(IUIData data = null)
         {
             State = PanelState.Open;
-            OnOpen();
+            OnOpen(data);
         }
 
         public void Show()
@@ -48,7 +48,7 @@ namespace YokiFrame
         public void OnClosed(Action onClosed) => mOnClosed.Add(onClosed);
 
         protected virtual void OnInit(IUIData data = null) { }
-        protected virtual void OnOpen() { }
+        protected virtual void OnOpen(IUIData data = null) { }
         protected virtual void OnShow() { }
         protected virtual void OnHide() { }
         protected virtual void OnClose() { }
