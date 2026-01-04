@@ -9,7 +9,8 @@ namespace YokiFrame
     {
         private readonly Action<T> mResetMethod;
 
-        public SimplePoolKit(Func<T> factoryMethod, Action<T> resetMethod = null, int initCount = 0)
+        public SimplePoolKit(Func<T> factoryMethod, Action<T> resetMethod = null, int initCount = 0) 
+            : base(initCount > 0 ? initCount : 16)
         {
             mFactory = new CustomObjectFactory<T>(factoryMethod);
             mResetMethod = resetMethod;

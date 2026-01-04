@@ -10,9 +10,9 @@ namespace YokiFrame
     public class PooledLinkedList<T> : IEnumerable<T>
     {
         private readonly LinkedList<T> mLinkedList = new();
-        private readonly Stack<LinkedListNode<T>> mNodePool = new();
-        private const int DefaultPoolCapacity = 25;
-        private int mMaxPoolSize = DefaultPoolCapacity;
+        private readonly Stack<LinkedListNode<T>> mNodePool;
+        private const int DEFAULT_POOL_CAPACITY = 64;
+        private int mMaxPoolSize;
 
         public int Count => mLinkedList.Count;
         public int PoolSize => mNodePool.Count;
@@ -22,7 +22,29 @@ namespace YokiFrame
         public int MaxPoolSize
         {
             get => mMaxPoolSize;
-            set => mMaxPoolSize = value >= 0 ? value : DefaultPoolCapacity;
+            set => mMaxPoolSize = value >= 0 ? value : DEFAULT_POOL_CAPACITY;
+        }
+
+        /// <summary>
+        /// 创建池化链表
+        /// </summary>
+        /// <param name="initialPoolCapacity">初始池容量，预分配节点避免运行时 GC</param>
+        public PooledLinkedList(int initialPoolCapacity = DEFAULT_POOL_CAPACITY)
+        {
+            mMaxPoolSize = initialPoolCapacity;
+            mNodePool = new Stack<LinkedListNode<T>>(initialPoolCapacity);
+        }
+
+        /// <summary>
+        /// 预分配节点到池中，避免运行时分配
+        /// </summary>
+        public void Prewarm(int count)
+        {
+            int toCreate = Math.Min(count, mMaxPoolSize) - mNodePool.Count;
+            for (int i = 0; i < toCreate; i++)
+            {
+                mNodePool.Push(new LinkedListNode<T>(default));
+            }
         }
 
         // 添加到链表尾部

@@ -5,6 +5,8 @@ namespace YokiFrame
 {
     public abstract class PoolKit<T> : IPool<T>
     {
+        private const int DEFAULT_CAPACITY = 16;
+        
         /// <summary>
         /// 当前池内对象数量
         /// </summary>
@@ -12,11 +14,16 @@ namespace YokiFrame
         /// <summary>
         /// 池缓存
         /// </summary>
-        protected readonly Stack<T> mCacheStack = new();
+        protected readonly Stack<T> mCacheStack;
         /// <summary>
         /// 池对象创建工厂
         /// </summary>
         protected IObjectFactory<T> mFactory;
+
+        protected PoolKit(int initialCapacity = DEFAULT_CAPACITY)
+        {
+            mCacheStack = new Stack<T>(initialCapacity);
+        }
 
         /// <summary>
         /// 设置工厂

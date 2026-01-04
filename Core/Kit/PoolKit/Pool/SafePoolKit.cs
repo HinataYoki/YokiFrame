@@ -32,7 +32,11 @@ namespace YokiFrame
             }
         }
 
-        protected SafePoolKit() => mFactory = new DefaultObjectFactory<T>();
+        protected SafePoolKit() : base(20)
+        {
+            mFactory = new DefaultObjectFactory<T>();
+        }
+        
         void ISingleton.OnSingletonInit() => Init();
 
 
