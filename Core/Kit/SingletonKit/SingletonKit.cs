@@ -71,19 +71,11 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取路径属性（缓存用）
+        /// 获取路径属性（缓存用）- 使用 Attribute.GetCustomAttribute 直接获取单个属性，避免数组分配
         /// </summary>
         private static MonoSingletonPathAttribute GetPathAttribute(Type type)
         {
-            var attributes = type.GetCustomAttributes(typeof(MonoSingletonPathAttribute), true);
-            for (int i = 0; i < attributes.Length; i++)
-            {
-                if (attributes[i] is MonoSingletonPathAttribute attr)
-                {
-                    return attr;
-                }
-            }
-            return null;
+            return Attribute.GetCustomAttribute(type, typeof(MonoSingletonPathAttribute), true) as MonoSingletonPathAttribute;
         }
 
         /// <summary>
