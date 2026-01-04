@@ -29,37 +29,93 @@ namespace YokiFrame
         /// </summary>
         private static readonly PooledLinkedList<IPanel> PanelStack = new();
 
+        #region Handler
+        
+        /// <summary>
+        /// 尝试获取已缓存的 Handler（不创建）
+        /// </summary>
+        private static bool TryGetHandler(Type type, out PanelHandler handler)
+        {
+            return PanelCacheDic.TryGetValue(type, out handler);
+        }
+        
+        /// <summary>
+        /// 获取或创建 Handler（同步，会触发 CreateUI）
+        /// </summary>
+        private static PanelHandler GetOrCreateHandler(Type type, UILevel level, IUIData data, out bool isNewCreated)
+        {
+            if (TryGetHandler(type, out var handler))
+            {
+                isNewCreated = false;
+                handler.Data = data;
+                return handler;
+            }
+            
+            isNewCreated = true;
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+            CreateUI(handler);
+            return handler;
+        }
+        
+        /// <summary>
+        /// 获取或创建 Handler（异步，会触发 CreateUIAsync）
+        /// </summary>
+        private static void GetOrCreateHandlerAsync(Type type, UILevel level, IUIData data, Action<PanelHandler, bool> onComplete)
+        {
+            if (TryGetHandler(type, out var handler))
+            {
+                handler.Data = data;
+                onComplete?.Invoke(handler, false);
+                return;
+            }
+            
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+            CreateUIAsync(handler, panel =>
+            {
+                onComplete?.Invoke(panel != null ? handler : null, true);
+            });
+        }
+        
+        #endregion
+
         /// <summary>
         /// 获取指定类型的Panel,如果不存在则返回null
         /// </summary>
         public static T GetPanel<T>() where T : UIPanel
         {
             WeakenHot();
-            if (PanelCacheDic.TryGetValue(typeof(T), out var handler))
+            if (TryGetHandler(typeof(T), out var handler))
             {
                 handler.Hot += GetHot;
                 return handler.Panel as T;
             }
             return null;
         }
+        
         /// <summary>
         /// 创建指定类型的Panel
         /// </summary>
         public static T OpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
             WeakenHot();
-            var type = typeof(T);
-            var handler = GetOrCreateHandler<T>(type, level, data);
+            var handler = GetOrCreateHandler(typeof(T), level, data, out _);
             
             if (handler?.Panel == null)
             {
-                KitLogger.Error($"OpenPanel失败: {type.Name} 创建失败");
+                KitLogger.Error($"OpenPanel失败: {typeof(T).Name} 创建失败");
                 return null;
             }
             
             OpenAndShowPanel(handler.Panel, data);
             return handler.Panel as T;
         }
+        
         /// <summary>
         /// 异步创建指定类型的Panel
         /// </summary>
@@ -67,29 +123,26 @@ namespace YokiFrame
             UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
             var type = typeof(T);
-            if (PanelCacheDic.TryGetValue(type, out var handler))
+            GetOrCreateHandlerAsync(type, level, data, (handler, isNew) =>
             {
                 if (handler?.Panel != null)
                 {
-                    handler.Data = data;
-                    OpenAndShowPanel(handler.Panel, data);
+                    if (!isNew)
+                    {
+                        // 已存在的面板，直接打开显示
+                        OpenAndShowPanel(handler.Panel, data);
+                    }
+                    // 新创建的面板在 CreateUIAsync 回调中已经调用了 OpenAndShowPanel
                     callback?.Invoke(handler.Panel);
                 }
                 else
                 {
-                    KitLogger.Error($"OpenPanelAsync: {type.Name} 的handler.Panel为null");
+                    KitLogger.Error($"OpenPanelAsync: {type.Name} 创建失败");
                     callback?.Invoke(null);
                 }
-            }
-            else
-            {
-                handler = PanelHandler.Allocate();
-                handler.Type = type;
-                handler.Level = level;
-                handler.Data = data;
-                CreateUIAsync(handler, callback);
-            }
+            });
         }
+        
         /// <summary>
         /// 显示一个指定类型的Panel
         /// </summary>
@@ -107,6 +160,7 @@ namespace YokiFrame
             var panel = GetPanel<T>();
             panel?.Hide();
         }
+        
         /// <summary>
         /// 隐藏所有Panel
         /// </summary>
@@ -117,20 +171,21 @@ namespace YokiFrame
                 handler?.Panel?.Hide();
             }
         }
+        
         /// <summary>
         /// 关闭指定类型的Panel
         /// </summary>
         public static void ClosePanel<T>() where T : UIPanel
         {
-            if (PanelCacheDic.TryGetValue(typeof(T), out var handler))
+            if (TryGetHandler(typeof(T), out var handler))
             {
                 ClosePanel(handler.Panel);
             }
         }
+        
         /// <summary>
         /// 关闭传入的Panel实例
         /// </summary>
-        /// <param name="panel"></param>
         public static void ClosePanel(IPanel panel)
         {
             if (panel == null) return;
@@ -152,12 +207,12 @@ namespace YokiFrame
                 panel.Handler.Recycle();
             }
         }
+        
         /// <summary>
         /// 关闭所有面板
         /// </summary>
         public static void CloseAllPanel()
         {
-            // 先收集所有需要关闭的面板，避免遍历时修改字典
             Pool.List<IPanel>(panelsToClose =>
             {
                 foreach (var handler in PanelCacheDic.Values)
@@ -167,13 +222,14 @@ namespace YokiFrame
                         panelsToClose.Add(handler.Panel);
                     }
                 }
-                foreach (var panel in panelsToClose)
+                for (int i = 0; i < panelsToClose.Count; i++)
                 {
-                    ClosePanel(panel);
+                    ClosePanel(panelsToClose[i]);
                 }
             });
             PanelStack.Clear();
         }
+        
         /// <summary>
         /// 压入一个Panel到栈中
         /// </summary>
@@ -183,6 +239,7 @@ namespace YokiFrame
             var panel = GetPanel<T>();
             if (panel != null) PushPanel(panel, hidePreLevel);
         }
+        
         /// <summary>
         /// 压入一个Panel到栈中
         /// </summary>
@@ -191,7 +248,6 @@ namespace YokiFrame
         {
             if (panel?.Handler == null) return;
             
-            // 如果已经在栈上，先移除
             if (panel.Handler.OnStack != null)
             {
                 PanelStack.Remove(panel.Handler.OnStack);
@@ -203,6 +259,7 @@ namespace YokiFrame
             }
             panel.Handler.OnStack = PanelStack.AddLast(panel);
         }
+        
         /// <summary>
         /// 打开并且压入指定类型的Panel到栈中
         /// </summary>
@@ -212,24 +269,25 @@ namespace YokiFrame
             var panel = OpenPanel<T>(level, data);
             PushPanel(panel, hidePreLevel);
         }
+        
         /// <summary>
         /// 异步打开并且压入指定类型的Panel到栈中
         /// </summary>
         public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null, 
             UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
-            callback += panel =>
+            OpenPanelAsync<T>(panel =>
             {
                 PushPanel(panel, hidePreLevel);
-            };
-            OpenPanelAsync<T>(callback, level, data);
+                callback?.Invoke(panel);
+            }, level, data);
         }
+        
         /// <summary>
         /// 弹出一个面板
         /// </summary>
         /// <param name="showPreLevel">自动显示上一层面板</param>
         /// <param name="autoClose">自动关闭弹出面板</param>
-        /// <returns></returns>
         public static IPanel PopPanel(bool showPreLevel = true, bool autoClose = true)
         {
             if (PanelStack.Count > 0)
@@ -251,6 +309,7 @@ namespace YokiFrame
 
             return null;
         }
+        
         /// <summary>
         /// 关闭所有栈上面板
         /// </summary>
@@ -262,12 +321,14 @@ namespace YokiFrame
                 ClosePanel(panel);
             }
         }
+        
         /// <summary>
         /// 设置自定义的Panel加载器池
         /// </summary>
-        /// <param name="loaderPool"></param>
         public static void SetPanelLoader(IPanelLoaderPool loaderPool) => UIFactory.Instance.SetPanelLoader(loaderPool);
 
+        #region 内部方法
+        
         private static IPanel CreateUI(PanelHandler handler)
         {
             if (handler == null) return null;
@@ -310,27 +371,6 @@ namespace YokiFrame
         }
         
         /// <summary>
-        /// 获取或创建Handler
-        /// </summary>
-        private static PanelHandler GetOrCreateHandler<T>(Type type, UILevel level, IUIData data) where T : UIPanel
-        {
-            if (!PanelCacheDic.TryGetValue(type, out var handler))
-            {
-                handler = PanelHandler.Allocate();
-                handler.Type = type;
-                handler.Level = level;
-                handler.Data = data;
-                CreateUI(handler);
-            }
-            else
-            {
-                // 面板已存在，更新Data
-                handler.Data = data;
-            }
-            return handler;
-        }
-        
-        /// <summary>
         /// 打开并显示Panel
         /// </summary>
         private static void OpenAndShowPanel(IPanel panel, IUIData data = null)
@@ -346,11 +386,7 @@ namespace YokiFrame
         private static void SetupPanel(PanelHandler handler, IPanel panel)
         {
             panel.Transform.gameObject.name = handler.Type.Name;
-            
-            if (!PanelCacheDic.ContainsKey(handler.Type))
-            {
-                PanelCacheDic.Add(handler.Type, handler);
-            }
+            PanelCacheDic.TryAdd(handler.Type, handler);
             handler.Hot += OpenHot;
             panel.Init(handler.Data);
         }
@@ -365,6 +401,7 @@ namespace YokiFrame
                 UnityEngine.Object.Destroy(panel.Transform.gameObject);
             }
         }
+        
         /// <summary>
         /// 衰减UI热度
         /// </summary>
@@ -384,11 +421,13 @@ namespace YokiFrame
                         handler.Recycle();
                     }
                 }
-                foreach (var type in list)
+                for (int i = 0; i < list.Count; i++)
                 {
-                    PanelCacheDic.Remove(type);
+                    PanelCacheDic.Remove(list[i]);
                 }
             });
         }
+        
+        #endregion
     }
 }
