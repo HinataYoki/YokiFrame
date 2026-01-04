@@ -1,13 +1,9 @@
 ﻿namespace YokiFrame
 {
-    internal interface IActionRecycler
-    {
-        void Recycle();
-    }
     /// <summary>
-    /// 任务回收
+    /// 任务回收器 - 结构体避免堆分配
     /// </summary>
-    internal struct ActionRecycler<T> : IActionRecycler
+    internal struct ActionRecycler<T>
     {
         public SimplePoolKit<T> Pool;
         public T Action;
@@ -20,7 +16,7 @@
 
         public void Recycle()
         {
-            Pool.Recycle(Action);
+            Pool?.Recycle(Action);
             Pool = null;
             Action = default;
         }
