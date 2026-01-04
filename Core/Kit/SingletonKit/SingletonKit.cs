@@ -17,6 +17,11 @@ namespace YokiFrame
         private static T mInstance;
 
         /// <summary>
+        /// 是否正在销毁（防止 OnDestroy 中重新创建）
+        /// </summary>
+        private static bool mIsQuitting;
+
+        /// <summary>
         /// 线程锁
         /// </summary>
         private static readonly object mLock = new();
@@ -27,19 +32,82 @@ namespace YokiFrame
         private static readonly Func<T> mCreator;
 
         /// <summary>
-        /// 静态构造器：一次性确定创建策略
+        /// 是否是 MonoBehaviour 类型（缓存）
+        /// </summary>
+        private static readonly bool mIsMonoBehaviour;
+
+        /// <summary>
+        /// 缓存的无参构造函数（避免重复反射）
+        /// </summary>
+        private static readonly ConstructorInfo mCachedCtor;
+
+        /// <summary>
+        /// 缓存的路径属性（避免重复反射）
+        /// </summary>
+        private static readonly MonoSingletonPathAttribute mCachedPathAttribute;
+
+        /// <summary>
+        /// 静态构造器：一次性确定创建策略并缓存反射结果
         /// </summary>
         static SingletonKit()
         {
             var type = typeof(T);
-            if (typeof(MonoBehaviour).IsAssignableFrom(type))
+            mIsMonoBehaviour = typeof(MonoBehaviour).IsAssignableFrom(type);
+
+            if (mIsMonoBehaviour)
             {
                 mCreator = CreateMonoSingleton;
+                // 缓存路径属性
+                mCachedPathAttribute = GetPathAttribute(type);
+                // 监听应用退出事件
+                Application.quitting += OnApplicationQuitting;
             }
             else
             {
                 mCreator = CreateNormalSingleton;
+                // 缓存构造函数
+                mCachedCtor = GetNonArgsConstructor(type);
             }
+        }
+
+        /// <summary>
+        /// 获取路径属性（缓存用）
+        /// </summary>
+        private static MonoSingletonPathAttribute GetPathAttribute(Type type)
+        {
+            var attributes = type.GetCustomAttributes(typeof(MonoSingletonPathAttribute), true);
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                if (attributes[i] is MonoSingletonPathAttribute attr)
+                {
+                    return attr;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 获取无参构造函数（缓存用）
+        /// </summary>
+        private static ConstructorInfo GetNonArgsConstructor(Type type)
+        {
+            var constructors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            for (int i = 0; i < constructors.Length; i++)
+            {
+                if (constructors[i].GetParameters().Length == 0)
+                {
+                    return constructors[i];
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 应用退出时标记
+        /// </summary>
+        private static void OnApplicationQuitting()
+        {
+            mIsQuitting = true;
         }
 
         /// <summary>
@@ -49,6 +117,12 @@ namespace YokiFrame
         {
             get
             {
+                // 如果正在退出，不再创建新实例
+                if (mIsQuitting && mIsMonoBehaviour)
+                {
+                    return null;
+                }
+
                 if (mInstance == null)
                 {
                     lock (mLock)
@@ -77,27 +151,14 @@ namespace YokiFrame
         /// </summary>
         private static T CreateNormalSingleton()
         {
-            var instance = CreateNonArgsConstructorObject();
+            if (mCachedCtor == null)
+            {
+                throw new Exception($"Non-Args Constructor() not found! in {typeof(T)}");
+            }
+
+            var instance = mCachedCtor.Invoke(null) as T;
             instance.OnSingletonInit();
             return instance;
-        }
-
-        /// <summary>
-        /// 创建普通 C# 对象单例
-        /// </summary>
-        private static T CreateNonArgsConstructorObject()
-        {
-            var type = typeof(T);
-            // 获取构造函数（包括私有构造）
-            var constructorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-            // 获取无参构造函数
-            var ctor = Array.Find(constructorInfos, c => c.GetParameters().Length == 0);
-
-            if (ctor == null)
-                throw new Exception($"Non-Args Constructor() not found! in {type}");
-
-            return ctor.Invoke(null) as T;
         }
 
         /// <summary>
@@ -105,39 +166,29 @@ namespace YokiFrame
         /// </summary>
         private static T CreateMonoSingleton()
         {
-            if (!Application.isPlaying) return null;
+            // 非运行时或正在退出时不创建
+            if (!Application.isPlaying || mIsQuitting) return null;
 
             var type = typeof(T);
 
             // 尝试查找场景中已存在的实例
-            if (UnityEngine.Object.FindFirstObjectByType(type) is not T instance)
+            if (UnityEngine.Object.FindFirstObjectByType(type) is T instance)
             {
-                // 如果没找到，检查是否有路径属性
-                MemberInfo info = typeof(T);
-                var attributes = info.GetCustomAttributes(true);
-                MonoSingletonPathAttribute pathAttribute = null;
+                instance.OnSingletonInit();
+                return instance;
+            }
 
-                foreach (var attribute in attributes)
-                {
-                    if (attribute is MonoSingletonPathAttribute defineAttri)
-                    {
-                        pathAttribute = defineAttri;
-                        break;
-                    }
-                }
-
-                // 根据属性或默认逻辑创建 GameObject
-                if (pathAttribute != null)
-                {
-                    instance = CreateComponentOnGameObject(pathAttribute);
-                }
-                else
-                {
-                    // 默认创建
-                    var obj = new GameObject(type.Name);
-                    UnityEngine.Object.DontDestroyOnLoad(obj);
-                    instance = obj.AddComponent(type) as T;
-                }
+            // 根据缓存的属性或默认逻辑创建 GameObject
+            if (mCachedPathAttribute != null)
+            {
+                instance = CreateComponentOnGameObject(mCachedPathAttribute);
+            }
+            else
+            {
+                // 默认创建
+                var obj = new GameObject(type.Name);
+                UnityEngine.Object.DontDestroyOnLoad(obj);
+                instance = obj.AddComponent(type) as T;
             }
 
             instance.OnSingletonInit();
@@ -147,96 +198,88 @@ namespace YokiFrame
         /// <summary>
         /// 根据路径属性创建组件
         /// </summary>
-        private static T CreateComponentOnGameObject(MonoSingletonPathAttribute defineAttri)
+        private static T CreateComponentOnGameObject(MonoSingletonPathAttribute pathAttr)
         {
-            var obj = FindAndCreateGameObjectPath(defineAttri.PathInHierarchy);
+            var obj = FindOrCreateGameObjectPath(pathAttr.PathInHierarchy);
             if (obj == null)
             {
-                // 如果路径创建失败（极其罕见），兜底创建
-                obj = defineAttri.IsRectTransform
+                // 兜底创建
+                obj = pathAttr.IsRectTransform
                     ? new GameObject(typeof(T).Name, typeof(RectTransform))
                     : new GameObject(typeof(T).Name);
                 UnityEngine.Object.DontDestroyOnLoad(obj);
             }
 
-            var instance = obj.GetComponent(typeof(T));
+            var instance = obj.GetComponent(typeof(T)) as T;
             if (instance == null)
             {
-                instance = obj.AddComponent(typeof(T));
+                instance = obj.AddComponent(typeof(T)) as T;
             }
-            return instance as T;
+            return instance;
         }
 
         /// <summary>
-        /// 递归查找并创建 GameObject 路径
+        /// 查找或创建 GameObject 路径（使用 Span 优化字符串分割）
         /// </summary>
-        private static GameObject FindAndCreateGameObjectPath(string path)
+        private static GameObject FindOrCreateGameObjectPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
 
-            var subPath = path.Split('/');
-            if (subPath.Length == 0) return null;
+            var pathSpan = path.AsSpan();
+            GameObject current = null;
+            int start = 0;
+            int depth = 0;
 
-            return FindGameObjectRecursive(null, subPath, 0);
+            for (int i = 0; i <= pathSpan.Length; i++)
+            {
+                if (i == pathSpan.Length || pathSpan[i] == '/')
+                {
+                    if (i > start)
+                    {
+                        var segment = pathSpan.Slice(start, i - start).ToString();
+                        current = FindOrCreateChild(current, segment, depth == 0);
+                        depth++;
+                    }
+                    start = i + 1;
+                }
+            }
+
+            return current;
         }
 
-        private static GameObject FindGameObjectRecursive(GameObject root, string[] subPath, int index)
+        /// <summary>
+        /// 查找或创建子物体
+        /// </summary>
+        private static GameObject FindOrCreateChild(GameObject parent, string name, bool isRoot)
         {
-            GameObject currentObj = null;
+            GameObject child;
 
-            // 查找当前层级
-            if (root == null)
+            if (parent == null)
             {
-                currentObj = GameObject.Find(subPath[index]);
+                child = GameObject.Find(name);
             }
             else
             {
-                var child = root.transform.Find(subPath[index]);
-                if (child != null) currentObj = child.gameObject;
+                var childTransform = parent.transform.Find(name);
+                child = childTransform != null ? childTransform.gameObject : null;
             }
 
-            // 如果不存在则创建
-            if (currentObj == null)
+            if (child == null)
             {
-                currentObj = new GameObject(subPath[index]);
-                if (root != null)
+                child = new GameObject(name);
+                if (parent != null)
                 {
-                    currentObj.transform.SetParent(root.transform);
+                    child.transform.SetParent(parent.transform);
                 }
-
-                // 根节点设置 DontDestroyOnLoad
-                if (index == 0)
+                if (isRoot)
                 {
-                    UnityEngine.Object.DontDestroyOnLoad(currentObj);
+                    UnityEngine.Object.DontDestroyOnLoad(child);
                 }
             }
 
-            // 递归结束条件
-            if (index == subPath.Length - 1)
-            {
-                return currentObj;
-            }
-
-            return FindGameObjectRecursive(currentObj, subPath, index + 1);
+            return child;
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// 用于定义生成的 Mono 单例所在的层级路径
-    /// 例如: [MonoSingletonPath("YokiFrame/ActionKit/Queue")]
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
-    public class MonoSingletonPathAttribute : Attribute
-    {
-        public string PathInHierarchy { get; private set; }
-        public bool IsRectTransform { get; private set; }
-
-        public MonoSingletonPathAttribute(string pathInHierarchy, bool isRectTransform = false)
-        {
-            PathInHierarchy = pathInHierarchy;
-            IsRectTransform = isRectTransform;
-        }
     }
 }
