@@ -585,6 +585,353 @@ public class YooPanelLoaderPool : AbstractPanelLoaderPool
 UIKit.SetPanelLoader(new YooPanelLoaderPool());
 ```
 
+## 💾 存档系统 (SaveKit)
+
+完整的游戏存档解决方案，支持多槽位、加密、版本迁移和 Architecture 集成。
+
+### 基础用法
+
+```csharp
+// 创建存档数据
+var saveData = SaveKit.CreateSaveData();
+
+// 定义可序列化的数据类
+[Serializable]
+public class PlayerData
+{
+    public int Level;
+    public int Gold;
+    public string Name;
+}
+
+[Serializable]
+public class InventoryData
+{
+    public List<int> ItemIds;
+}
+
+// 设置模块数据
+var playerData = new PlayerData { Level = 10, Gold = 1000, Name = "Hero" };
+var inventoryData = new InventoryData { ItemIds = new List<int> { 1, 2, 3 } };
+
+saveData.SetModule(playerData);
+saveData.SetModule(inventoryData);
+
+// 保存到槽位 0
+SaveKit.Save(0, saveData);
+
+// 从槽位 0 加载
+var loadedData = SaveKit.Load(0);
+var loadedPlayer = loadedData.GetModule<PlayerData>();
+Debug.Log($"玩家等级: {loadedPlayer.Level}");
+```
+
+### 槽位管理
+
+```csharp
+// 检查槽位是否存在
+if (SaveKit.Exists(0))
+{
+    Debug.Log("存档存在");
+}
+
+// 获取槽位元数据（不加载完整数据）
+var meta = SaveKit.GetMeta(0);
+Debug.Log($"最后保存时间: {meta.GetLastSavedDateTime()}");
+
+// 获取所有存档槽位
+var allSlots = SaveKit.GetAllSlots();
+foreach (var slot in allSlots)
+{
+    Debug.Log($"槽位 {slot.SlotId}: {slot.DisplayName}");
+}
+
+// 删除存档
+SaveKit.Delete(0);
+
+// 设置最大槽位数（默认10）
+SaveKit.SetMaxSlots(5);
+```
+
+### 加密存档
+
+```csharp
+// 启用 AES 加密（使用默认密钥）
+SaveKit.SetEncryptor(new AesSaveEncryptor());
+
+// 使用自定义密钥
+SaveKit.SetEncryptor(new AesSaveEncryptor("MySecretPassword123!"));
+
+// 禁用加密
+SaveKit.SetEncryptor(null);
+
+// 之后的 Save/Load 会自动加密/解密
+SaveKit.Save(0, saveData);
+var loadedData = SaveKit.Load(0);  // 自动解密
+```
+
+### 自动保存
+
+```csharp
+// 启用自动保存（每60秒保存一次）
+SaveKit.EnableAutoSave(0, saveData, 60f, () =>
+{
+    Debug.Log("即将自动保存...");
+    // 可以在这里更新 saveData 的内容
+});
+
+// 禁用自动保存
+SaveKit.DisableAutoSave();
+
+// 检查自动保存状态
+if (SaveKit.IsAutoSaveEnabled)
+{
+    Debug.Log("自动保存已启用");
+}
+```
+
+### 版本迁移
+
+当游戏更新导致存档结构变化时，使用迁移器升级旧存档：
+
+```csharp
+// 定义迁移器：从 v1 升级到 v2
+public class MigratorV1ToV2 : ISaveMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    public SaveData Migrate(SaveData oldData)
+    {
+        // 获取旧数据
+        var oldPlayer = oldData.GetModule<PlayerDataV1>();
+        
+        // 转换为新格式
+        var newPlayer = new PlayerDataV2
+        {
+            Level = oldPlayer.Level,
+            Gold = oldPlayer.Gold,
+            Name = oldPlayer.Name,
+            Experience = 0  // 新字段，设置默认值
+        };
+        
+        // 更新数据
+        oldData.SetModule(newPlayer);
+        return oldData;
+    }
+}
+
+// 注册迁移器
+SaveKit.RegisterMigrator(new MigratorV1ToV2());
+SaveKit.RegisterMigrator(new MigratorV2ToV3());
+
+// 设置当前版本
+SaveKit.SetCurrentVersion(3);
+
+// 加载时自动执行迁移链：v1 -> v2 -> v3
+var data = SaveKit.Load(0);
+```
+
+### 自定义存档路径
+
+```csharp
+// 设置自定义存档目录
+SaveKit.SetSavePath(Application.persistentDataPath + "/MySaves");
+
+// 获取当前存档路径
+var path = SaveKit.GetSavePath();
+```
+
+### 扩展：自定义序列化器
+
+默认使用 Unity JsonUtility，可以扩展支持 Nino、MessagePack 等高性能序列化库：
+
+```csharp
+/// <summary>
+/// Nino 序列化器示例
+/// </summary>
+public class NinoSaveSerializer : ISaveSerializer
+{
+    public byte[] Serialize<T>(T data)
+    {
+        // 使用 Nino 序列化
+        return Nino.Serialization.Serializer.Serialize(data);
+    }
+
+    public T Deserialize<T>(byte[] bytes)
+    {
+        // 使用 Nino 反序列化
+        return Nino.Serialization.Deserializer.Deserialize<T>(bytes);
+    }
+}
+
+// 设置自定义序列化器
+SaveKit.SetSerializer(new NinoSaveSerializer());
+```
+
+### 扩展：自定义加密器
+
+```csharp
+/// <summary>
+/// XOR 简单加密器示例
+/// </summary>
+public class XorSaveEncryptor : ISaveEncryptor
+{
+    private readonly byte mKey;
+
+    public XorSaveEncryptor(byte key = 0xAB)
+    {
+        mKey = key;
+    }
+
+    public byte[] Encrypt(byte[] data)
+    {
+        var result = new byte[data.Length];
+        for (int i = 0; i < data.Length; i++)
+        {
+            result[i] = (byte)(data[i] ^ mKey);
+        }
+        return result;
+    }
+
+    public byte[] Decrypt(byte[] data)
+    {
+        // XOR 加密是对称的，解密和加密相同
+        return Encrypt(data);
+    }
+}
+
+// 使用自定义加密器
+SaveKit.SetEncryptor(new XorSaveEncryptor(0x5A));
+```
+
+### Architecture 集成
+
+SaveKit 可以与 Architecture 的 IModel 无缝集成，自动收集和应用所有 Model 数据：
+
+```csharp
+// 定义 Model（需要 [Serializable] 特性）
+[Serializable]
+public class PlayerModel : AbstractModel
+{
+    public int Level;
+    public int Gold;
+    
+    protected override void OnInit() { }
+    
+    public override void GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        info.AddValue("Level", Level);
+        info.AddValue("Gold", Gold);
+    }
+}
+
+// 从 Architecture 收集所有 Model 数据
+var saveData = SaveKit.CreateSaveData();
+SaveKit.CollectFromArchitecture<GameArchitecture>(saveData);
+SaveKit.Save(0, saveData);
+
+// 加载并应用到 Architecture
+var loadedData = SaveKit.Load(0);
+SaveKit.ApplyToArchitecture<GameArchitecture>(loadedData);
+```
+
+### 完整示例：存档管理器
+
+```csharp
+/// <summary>
+/// 游戏存档管理器
+/// </summary>
+public class SaveManager : ISingleton
+{
+    public static SaveManager Instance => SingletonKit<SaveManager>.Instance;
+    
+    private SaveData mCurrentSave;
+    private int mCurrentSlot = -1;
+    
+    public void OnSingletonInit()
+    {
+        // 配置 SaveKit
+        SaveKit.SetMaxSlots(3);
+        SaveKit.SetCurrentVersion(1);
+        SaveKit.SetEncryptor(new AesSaveEncryptor("GameSecret2024"));
+    }
+    
+    /// <summary>
+    /// 创建新存档
+    /// </summary>
+    public void NewGame(int slotId, string playerName)
+    {
+        mCurrentSlot = slotId;
+        mCurrentSave = SaveKit.CreateSaveData();
+        
+        // 初始化玩家数据
+        mCurrentSave.SetModule(new PlayerData
+        {
+            Level = 1,
+            Gold = 100,
+            Name = playerName
+        });
+        
+        // 初始化背包
+        mCurrentSave.SetModule(new InventoryData
+        {
+            ItemIds = new List<int>()
+        });
+        
+        // 保存
+        SaveKit.Save(slotId, mCurrentSave);
+        
+        // 启用自动保存
+        SaveKit.EnableAutoSave(slotId, mCurrentSave, 300f);  // 5分钟
+    }
+    
+    /// <summary>
+    /// 加载存档
+    /// </summary>
+    public bool LoadGame(int slotId)
+    {
+        if (!SaveKit.Exists(slotId))
+            return false;
+            
+        mCurrentSave = SaveKit.Load(slotId);
+        if (mCurrentSave == null)
+            return false;
+            
+        mCurrentSlot = slotId;
+        
+        // 启用自动保存
+        SaveKit.EnableAutoSave(slotId, mCurrentSave, 300f);
+        
+        return true;
+    }
+    
+    /// <summary>
+    /// 手动保存
+    /// </summary>
+    public void SaveGame()
+    {
+        if (mCurrentSlot < 0 || mCurrentSave == null)
+            return;
+            
+        SaveKit.Save(mCurrentSlot, mCurrentSave);
+    }
+    
+    /// <summary>
+    /// 获取玩家数据
+    /// </summary>
+    public PlayerData GetPlayerData() => mCurrentSave?.GetModule<PlayerData>();
+    
+    /// <summary>
+    /// 更新玩家数据
+    /// </summary>
+    public void UpdatePlayerData(PlayerData data)
+    {
+        mCurrentSave?.SetModule(data);
+    }
+}
+```
+
 ## 🏊 对象池 (PoolKit)
 
 高效的对象池管理。
