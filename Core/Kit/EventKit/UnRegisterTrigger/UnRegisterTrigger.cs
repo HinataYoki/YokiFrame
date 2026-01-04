@@ -30,24 +30,11 @@ namespace YokiFrame
 
     public static class UnRegisterExtension
     {
-        static T GetOrAddComponent<T>(GameObject gameObject) where T : Component
-        {
-            var trigger = gameObject.GetComponent<T>();
-
-            if (!trigger)
-            {
-                trigger = gameObject.AddComponent<T>();
-            }
-
-            return trigger;
-        }
-
-
         public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, Component component) where T : IUnRegister =>
             self.UnRegisterWhenGameObjectDestroyed(component.gameObject);
         public static T UnRegisterWhenGameObjectDestroyed<T>(this T self, GameObject gameObject) where T : IUnRegister
         {
-            GetOrAddComponent<UnRegisterOnDestroyTrigger>(gameObject).AddUnRegister(self);
+            gameObject.GetOrAddComponent<UnRegisterOnDestroyTrigger>().AddUnRegister(self);
             return self;
         }
 
@@ -55,7 +42,7 @@ namespace YokiFrame
             self.UnRegisterWhenDisabled(component.gameObject);
         public static T UnRegisterWhenDisabled<T>(this T self, GameObject gameObject) where T : IUnRegister
         {
-            GetOrAddComponent<UnRegisterOnDisableTrigger>(gameObject).AddUnRegister(self);
+            gameObject.GetOrAddComponent<UnRegisterOnDisableTrigger>().AddUnRegister(self);
             return self;
         }
     }
