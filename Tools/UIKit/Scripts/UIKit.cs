@@ -190,6 +190,24 @@ namespace YokiFrame
         {
             if (panel == null) return;
             
+            // 检查面板是否已被销毁（Unity 对象需要用 == null 检查）
+            var unityObj = panel as UnityEngine.Object;
+            if (unityObj == null)
+            {
+                // 面板已销毁，只清理缓存
+                if (panel.Handler != null)
+                {
+                    if (panel.Handler.OnStack != null)
+                    {
+                        PanelStack.Remove(panel.Handler.OnStack);
+                        panel.Handler.OnStack = null;
+                    }
+                    PanelCacheDic.Remove(panel.Handler.Type);
+                    panel.Handler.Recycle();
+                }
+                return;
+            }
+            
             panel.Close();
             
             if (panel.Handler == null) return;
@@ -225,6 +243,42 @@ namespace YokiFrame
                 for (int i = 0; i < panelsToClose.Count; i++)
                 {
                     ClosePanel(panelsToClose[i]);
+                }
+            });
+            PanelStack.Clear();
+        }
+        
+        /// <summary>
+        /// 强制清理所有面板（用于测试或场景切换）
+        /// </summary>
+        public static void ForceCloseAllPanel()
+        {
+            Pool.List<PanelHandler>(handlersToRemove =>
+            {
+                foreach (var handler in PanelCacheDic.Values)
+                {
+                    if (handler == null) continue;
+                    
+                    // 强制设置 Hot 为 0，确保面板被销毁
+                    handler.Hot = 0;
+                    
+                    if (handler.Panel != null)
+                    {
+                        var unityObj = handler.Panel as UnityEngine.Object;
+                        if (unityObj != null)
+                        {
+                            handler.Panel.Close();
+                            DestroyPanel(handler.Panel);
+                        }
+                    }
+                    
+                    handlersToRemove.Add(handler);
+                }
+                
+                for (int i = 0; i < handlersToRemove.Count; i++)
+                {
+                    PanelCacheDic.Remove(handlersToRemove[i].Type);
+                    handlersToRemove[i].Recycle();
                 }
             });
             PanelStack.Clear();
@@ -325,7 +379,7 @@ namespace YokiFrame
         /// <summary>
         /// 设置自定义的Panel加载器池
         /// </summary>
-        public static void SetPanelLoader(IPanelLoaderPool loaderPool) => UIFactory.Instance.SetPanelLoader(loaderPool);
+        public static void SetPanelLoader(IPanelLoaderPool loaderPool) => UIRoot.Instance.SetPanelLoader(loaderPool);
 
         #region 内部方法
         
@@ -333,7 +387,7 @@ namespace YokiFrame
         {
             if (handler == null) return null;
             
-            var panel = UIFactory.Instance.LoadPanel(handler);
+            var panel = UIRoot.Instance.LoadPanel(handler);
             if (panel != null && panel.Transform != null)
             {
                 SetupPanel(handler, panel);
@@ -354,7 +408,7 @@ namespace YokiFrame
                 return;
             }
             
-            UIFactory.Instance.LoadPanelAsync(handler, panel =>
+            UIRoot.Instance.LoadPanelAsync(handler, panel =>
             {
                 if (panel != null && panel.Transform != null)
                 {
