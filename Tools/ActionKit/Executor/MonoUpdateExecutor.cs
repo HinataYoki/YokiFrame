@@ -33,15 +33,13 @@ namespace YokiFrame
             //从准备队列移入执行队列
             if (mPrepareExecutionActions.Count > 0)
             {
-                foreach (var prepareAction in mPrepareExecutionActions)
+                for (int i = 0; i < mPrepareExecutionActions.Count; i++)
                 {
-                    if (mExecutingActions.ContainsKey(prepareAction.Action))
+                    var prepareAction = mPrepareExecutionActions[i];
+                    // 使用 TryAdd 避免 ContainsKey + Add/索引器 的重复查询
+                    if (!mExecutingActions.TryAdd(prepareAction.Action, prepareAction))
                     {
                         mExecutingActions[prepareAction.Action] = prepareAction;
-                    }
-                    else
-                    {
-                        mExecutingActions.Add(prepareAction.Action, prepareAction);
                     }
                 }
                 mPrepareExecutionActions.Clear();
@@ -50,20 +48,24 @@ namespace YokiFrame
             var dt = Time.deltaTime;
             var unDt = Time.unscaledDeltaTime;
 
-            //执行队列
-            foreach (var exeute in mExecutingActions.Values)
+            // 使用结构体枚举器避免 foreach 对 Dictionary.Values 的装箱
+            var enumerator = mExecutingActions.GetEnumerator();
+            while (enumerator.MoveNext())
             {
-                if (this.UpdateAction(exeute, exeute.UpdateMode is ActionUpdateModes.ScaledDeltaTime ? dt : unDt))
+                var execute = enumerator.Current.Value;
+                if (this.UpdateAction(execute, execute.UpdateMode is ActionUpdateModes.ScaledDeltaTime ? dt : unDt))
                 {
-                    mToActionRemove.Add(exeute);
+                    mToActionRemove.Add(execute);
                 }
             }
+            enumerator.Dispose();
 
             //将完成的队列移出
             if (mToActionRemove.Count > 0)
             {
-                foreach (var controller in mToActionRemove)
+                for (int i = 0; i < mToActionRemove.Count; i++)
                 {
+                    var controller = mToActionRemove[i];
                     mExecutingActions.Remove(controller.Action);
                     controller.Recycle();
                 }
@@ -79,12 +81,6 @@ namespace YokiFrame
         {
             if (controller.Action.ActionState == ActionStatus.Finished) controller.Action.OnInit();
             self.gameObject.GetOrAddComponent<MonoUpdateExecutor>().Execute(controller);
-        }
-
-        public static T GetOrAddComponent<T>(this GameObject self) where T : Component
-        {
-            T comp = self.GetComponent<T>();
-            return comp ? comp : self.AddComponent<T>();
         }
     }
 }
