@@ -4,9 +4,28 @@ using Unity.Collections.LowLevel.Unsafe;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// EnumEvent 缓存 Key（避免元组哈希开销）
+    /// </summary>
+    public readonly struct EnumEventKey : IEquatable<EnumEventKey>
+    {
+        public readonly Type EnumType;
+        public readonly int EnumValue;
+
+        public EnumEventKey(Type enumType, int enumValue)
+        {
+            EnumType = enumType;
+            EnumValue = enumValue;
+        }
+
+        public bool Equals(EnumEventKey other) => EnumType == other.EnumType && EnumValue == other.EnumValue;
+        public override bool Equals(object obj) => obj is EnumEventKey other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(EnumType, EnumValue);
+    }
+
     public class EnumEvent
     {
-        private readonly Dictionary<(Type, int), EasyEvents> mEventDic = new();
+        private readonly Dictionary<EnumEventKey, EasyEvents> mEventDic = new();
 
         private void GetEvents<TEnum>(TEnum key, out EasyEvents enumEvent) where TEnum : Enum, IConvertible
         {
@@ -16,10 +35,11 @@ namespace YokiFrame
 #else
             var intKey = key.ToInt32(null);
 #endif
-            if (!mEventDic.TryGetValue((type, intKey), out enumEvent))
+            var cacheKey = new EnumEventKey(type, intKey);
+            if (!mEventDic.TryGetValue(cacheKey, out enumEvent))
             {
                 enumEvent = new();
-                mEventDic.Add((type, intKey), enumEvent);
+                mEventDic.Add(cacheKey, enumEvent);
             }
         }
         /// <summary>

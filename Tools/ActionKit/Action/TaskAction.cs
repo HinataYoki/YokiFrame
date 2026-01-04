@@ -19,13 +19,24 @@ namespace YokiFrame
             return taskAction;
         }
 
-        public override void OnStart() => StartTask();
+        public override void OnStart() => StartTaskSafe();
 
-        async void StartTask()
+        /// <summary>
+        /// 安全启动 Task，捕获异常避免 async void 崩溃
+        /// </summary>
+        private async void StartTaskSafe()
         {
-            mExecutingTask = mTaskGetter();
-            await mExecutingTask;
-            this.Finish();
+            try
+            {
+                mExecutingTask = mTaskGetter();
+                await mExecutingTask;
+                this.Finish();
+            }
+            catch (Exception e)
+            {
+                KitLogger.Error($"[TaskAction] 执行异常: {e.Message}\n{e.StackTrace}");
+                this.Finish();
+            }
         }
 
         public override void OnDeinit()
@@ -34,11 +45,7 @@ namespace YokiFrame
             {
                 Deinited = true;
                 mTaskGetter = null;
-                if (mExecutingTask != null)
-                {
-                    mExecutingTask.Dispose();
-                    mExecutingTask = null;
-                }
+                mExecutingTask = null;
 
                 MonoRecycler.AddRecycleCallback(new ActionRecycler<TaskAction>(mPool, this));
             }

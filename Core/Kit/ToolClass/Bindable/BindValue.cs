@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
@@ -17,7 +18,8 @@ namespace YokiFrame
         }
 
         private readonly EasyEvent<T> mOnValueChanged = new();
-        private static Func<T, T, bool> mCompareFunc = (x, y) => x.Equals(y);
+        // 使用 EqualityComparer<T>.Default 避免值类型装箱
+        private static Func<T, T, bool> mCompareFunc = EqualityComparer<T>.Default.Equals;
 
         public BindValue(T value = default) => mValue = value;
         public static implicit operator T(BindValue<T> bindValue) => bindValue.Value;

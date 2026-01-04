@@ -26,9 +26,9 @@ namespace YokiFrame
         {
             if (recycList.Count > 0)
             {
-                foreach (var recycle in recycList)
+                for (int i = 0; i < recycList.Count; i++)
                 {
-                    recycle.Recycle();
+                    recycList[i].Recycle();
                 }
                 recycList.Clear();
             }

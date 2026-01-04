@@ -6,9 +6,13 @@ namespace YokiFrame
     internal class Coroutine : ActionBase
     {
         /// <summary>
-        /// 协程
+        /// 协程获取器
         /// </summary>
         private Func<IEnumerator> mCoroutineGetter = null;
+        /// <summary>
+        /// 正在执行的协程引用（用于取消）
+        /// </summary>
+        private UnityEngine.Coroutine mRunningCoroutine = null;
         /// <summary>
         /// 协程任务池
         /// </summary>
@@ -23,13 +27,22 @@ namespace YokiFrame
             coroutine.mCoroutineGetter = coroutineGetter;
             return coroutine;
         }
+
+        public override void OnInit()
+        {
+            base.OnInit();
+            mRunningCoroutine = null;
+        }
         
         public override void OnStart()
         {
-            MonoGlobalExecutor.ExecuteCoroutine(mCoroutineGetter(), () =>
-            {
-                this.Finish();
-            });
+            mRunningCoroutine = MonoGlobalExecutor.Instance.StartCoroutine(ExecuteCoroutine());
+        }
+
+        private IEnumerator ExecuteCoroutine()
+        {
+            yield return mCoroutineGetter();
+            this.Finish();
         }
 
         public override void OnDeinit()
@@ -37,6 +50,14 @@ namespace YokiFrame
             if (!Deinited)
             {
                 Deinited = true;
+                
+                // 取消正在执行的协程
+                if (mRunningCoroutine != null && MonoGlobalExecutor.Instance != null)
+                {
+                    MonoGlobalExecutor.Instance.StopCoroutine(mRunningCoroutine);
+                    mRunningCoroutine = null;
+                }
+                
                 mCoroutineGetter = null;
                 MonoRecycler.AddRecycleCallback(new ActionRecycler<Coroutine>(mPool, this));
             }

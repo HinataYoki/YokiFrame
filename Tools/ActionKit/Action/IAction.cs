@@ -48,6 +48,10 @@ namespace YokiFrame
         /// 任务结束
         /// </summary>
         void OnFinish();
+        /// <summary>
+        /// 获取调试信息（用于错误日志）
+        /// </summary>
+        string GetDebugInfo() => GetType().Name;
     }
 
     /// <summary>
@@ -124,8 +128,8 @@ namespace YokiFrame
             }
             catch (Exception e)
             {
-                var debugInfo = self is ActionBase actionBase ? actionBase.GetDebugInfo() : self.GetType().Name;
-                KitLogger.Error($"[ActionKit] {debugInfo} 执行出错: {e.Message}");
+                // 直接调用接口方法，避免类型检查
+                KitLogger.Error($"[ActionKit] {self.GetDebugInfo()} 执行出错: {e.Message}");
             }
             return false;
         }

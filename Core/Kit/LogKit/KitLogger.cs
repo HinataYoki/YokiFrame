@@ -328,15 +328,22 @@ namespace YokiFrame
                 writer.WriteLine(finalLine);
             }
 
+            // 缓存 StringBuilder 用于 CleanStackTrace，避免频繁创建
+            [ThreadStatic]
+            private static StringBuilder _cachedStackSb;
+
             private static string CleanStackTrace(string rawStack)
             {
                 if (string.IsNullOrEmpty(rawStack)) return "";
 
-                var cleanSb = new StringBuilder();
+                _cachedStackSb ??= new StringBuilder(1024);
+                _cachedStackSb.Clear();
+                
                 var lines = rawStack.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-                foreach (var line in lines)
+                for (int i = 0; i < lines.Length; i++)
                 {
+                    var line = lines[i];
                     if (line.Contains("UnityEngine.Application") ||
                         line.Contains("UnityEngine.Logger") ||
                         line.Contains("UnityEngine.Debug") ||
@@ -344,10 +351,10 @@ namespace YokiFrame
                         line.Contains("System.Environment")) continue;
 
                     var match = _stackCleanRegex.Match(line);
-                    if (match.Success) cleanSb.AppendLine(match.Groups[1].Value.Trim());
-                    else cleanSb.AppendLine(line.Trim());
+                    if (match.Success) _cachedStackSb.AppendLine(match.Groups[1].Value.Trim());
+                    else _cachedStackSb.AppendLine(line.Trim());
                 }
-                return cleanSb.ToString();
+                return _cachedStackSb.ToString();
             }
 
             private static string EncryptStringInternal(string text)

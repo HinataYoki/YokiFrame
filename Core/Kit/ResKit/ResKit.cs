@@ -43,12 +43,31 @@ namespace YokiFrame
     }
 
     /// <summary>
+    /// 资源缓存 Key（避免字符串拼接 GC）
+    /// </summary>
+    public readonly struct ResCacheKey : IEquatable<ResCacheKey>
+    {
+        public readonly Type AssetType;
+        public readonly string Path;
+
+        public ResCacheKey(Type assetType, string path)
+        {
+            AssetType = assetType;
+            Path = path;
+        }
+
+        public bool Equals(ResCacheKey other) => AssetType == other.AssetType && Path == other.Path;
+        public override bool Equals(object obj) => obj is ResCacheKey other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(AssetType, Path);
+    }
+
+    /// <summary>
     /// 资源管理工具
     /// </summary>
     public static class ResKit
     {
         private static IResLoaderPool sLoaderPool = new DefaultResLoaderPool();
-        private static readonly Dictionary<string, ResHandler> sAssetCache = new();
+        private static readonly Dictionary<ResCacheKey, ResHandler> sAssetCache = new();
 
         /// <summary>
         /// 设置自定义加载池（用于 YooAsset 等扩展）
@@ -80,7 +99,7 @@ namespace YokiFrame
         /// </summary>
         public static ResHandler LoadAsset<T>(string path) where T : Object
         {
-            var key = GetCacheKey<T>(path);
+            var key = new ResCacheKey(typeof(T), path);
 
             if (sAssetCache.TryGetValue(key, out var handler))
             {
@@ -127,7 +146,7 @@ namespace YokiFrame
         /// </summary>
         public static void LoadAssetAsync<T>(string path, Action<ResHandler> onComplete) where T : Object
         {
-            var key = GetCacheKey<T>(path);
+            var key = new ResCacheKey(typeof(T), path);
 
             if (sAssetCache.TryGetValue(key, out var handler))
             {
@@ -194,7 +213,7 @@ namespace YokiFrame
         {
             if (handler == null) return;
 
-            var key = GetCacheKey(handler.AssetType, handler.Path);
+            var key = new ResCacheKey(handler.AssetType, handler.Path);
             sAssetCache.Remove(key);
             SafePoolKit<ResHandler>.Instance.Recycle(handler);
         }
@@ -212,8 +231,5 @@ namespace YokiFrame
         }
 
         #endregion
-
-        private static string GetCacheKey<T>(string path) => $"{typeof(T).FullName}:{path}";
-        private static string GetCacheKey(Type type, string path) => $"{type.FullName}:{path}";
     }
 }
