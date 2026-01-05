@@ -97,6 +97,16 @@ EventKit.Enum.Send(GameEvent.GameStart);
 EventKit.Enum.Send(GameEvent.ScoreChanged, 100);
 ```
 
+### 编辑器工具 - Event Viewer
+
+通过菜单 `YokiFrame > EventKit > Event Viewer` 打开事件查看器窗口。
+
+功能：
+- 实时查看所有已注册的事件（TypeEvent / EnumEvent / StringEvent）
+- 显示每个事件的监听器数量
+- 查看事件发送历史记录（可选开启）
+- 代码扫描：分析项目中事件的注册和发送位置
+
 ## 🔧 单例工具 (SingletonKit)
 
 支持普通类和 MonoBehaviour 的单例模式。
@@ -328,6 +338,16 @@ void Start()
 }
 void Update() => fsm.Update();
 ```
+
+### 编辑器工具 - FSM Viewer
+
+通过菜单 `YokiFrame > FsmKit > FSM Viewer` 打开状态机查看器窗口。
+
+功能：
+- 实时查看所有活跃的状态机实例
+- 显示每个状态机的当前状态和所有状态列表
+- 查看状态转换历史记录
+- 支持运行时状态监控
 
 ## 🖼️ UI管理 (UIKit)
 
