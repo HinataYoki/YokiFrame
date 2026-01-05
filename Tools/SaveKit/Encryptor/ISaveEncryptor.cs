@@ -1,4 +1,4 @@
-﻿namespace YokiFrame
+namespace YokiFrame
 {
     /// <summary>
     /// 存档加密器接口

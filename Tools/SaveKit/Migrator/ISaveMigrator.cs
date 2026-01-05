@@ -1,4 +1,4 @@
-﻿namespace YokiFrame
+namespace YokiFrame
 {
     /// <summary>
     /// 存档数据迁移器接口
