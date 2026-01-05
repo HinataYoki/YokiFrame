@@ -92,6 +92,9 @@ namespace YokiFrame
         }
 
         public override string GetDebugInfo() => $"Parallel({mActions.Count} actions, waitAll={mWaitAll})";
+        
+        // 编辑器监控接口（通过反射访问，运行时零开销）
+        internal IReadOnlyList<IAction> EditorGetActions() => mActions;
     }
 
     public static class ParallelExtension

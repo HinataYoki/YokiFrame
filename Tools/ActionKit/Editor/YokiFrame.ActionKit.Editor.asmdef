@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.ActionKit.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame.ActionKit",
+        "YokiFrame.Core.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

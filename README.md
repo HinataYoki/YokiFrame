@@ -24,6 +24,7 @@
 | **SingletonKit** | 普通类和 MonoBehaviour 单例支持 |
 | **PoolKit** | 高效对象池管理 |
 | **ResKit** | 统一资源加载接口，支持扩展 YooAsset |
+| **FsmKit** | 简洁的有限状态机 |
 | **KitLogger** | 支持加密和文件写入的日志系统 |
 | **Bindable** | 响应式数据绑定 |
 | **FluentApi** | 便捷的链式扩展方法 |
@@ -33,7 +34,6 @@
 | 模块 | 说明 |
 |------|------|
 | **ActionKit** | 链式动作序列系统（延时、回调、并行、循环、Lerp） |
-| **FsmKit** | 简洁的有限状态机 |
 | **UIKit** | 带热度管理的 UI 面板系统，支持编辑器快速创建和代码生成 |
 | **AudioKit** | 高扩展性音频管理，支持 Unity 原生和 FMOD 后端 |
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
@@ -78,6 +78,7 @@ SaveKit.Save(0, saveData);
 - **文档** - 完整 API 文档和使用示例
 - **EventKit** - 事件查看器，实时监控事件注册和发送
 - **FsmKit** - 状态机查看器，监控运行时状态
+- **ActionKit** - Action 监控器，追踪动作序列执行状态
 - **UIKit** - UI 面板创建和代码生成
 - **AudioKit** - 运行时音频监控和代码生成
 

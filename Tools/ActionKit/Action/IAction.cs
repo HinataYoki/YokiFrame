@@ -90,6 +90,13 @@ namespace YokiFrame
             controller.Action = self;
             controller.UpdateMode = ActionUpdateModes.ScaledDeltaTime;
             controller.Finish = onFinish;
+            
+#if UNITY_EDITOR
+            // 捕获调用堆栈（跳过当前方法和 Unity 内部调用）
+            var stackTrace = new System.Diagnostics.StackTrace(1, true);
+            ActionStackTraceService.Register(self.ActionID, stackTrace);
+#endif
+            
             monoBehaviour.ExecuteByUpdate(controller);
             return controller;
         }

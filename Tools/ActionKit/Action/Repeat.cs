@@ -78,6 +78,9 @@ namespace YokiFrame
         }
 
         public override string GetDebugInfo() => $"Repeat(max={mMaxRepeatCount}, current={mCurrentRepeatCount})";
+        
+        // 编辑器监控接口（通过反射访问，运行时零开销）
+        internal Sequence EditorGetSequence() => mSequence;
     }
 
     public static class RepeatExtension

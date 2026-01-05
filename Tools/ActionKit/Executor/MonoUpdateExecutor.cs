@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace YokiFrame
 {
-    internal class MonoUpdateExecutor : MonoBehaviour, IActionExecutor
+    public class MonoUpdateExecutor : MonoBehaviour, IActionExecutor
     {
         /// <summary>
         /// 准备执行的任务队列
@@ -73,6 +73,25 @@ namespace YokiFrame
                 mToActionRemove.Clear();
             }
         }
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// [编辑器专用] 获取当前执行中的 Action 数量
+        /// </summary>
+        public int ExecutingCount => mExecutingActions.Count;
+        
+        /// <summary>
+        /// [编辑器专用] 获取所有执行中的 Action
+        /// </summary>
+        public void GetExecutingActions(List<IAction> result)
+        {
+            result.Clear();
+            foreach (var kvp in mExecutingActions)
+            {
+                result.Add(kvp.Key);
+            }
+        }
+#endif
     }
 
     public static class MonoUpdateActionExecutorExtension

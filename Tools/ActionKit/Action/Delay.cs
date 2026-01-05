@@ -61,8 +61,7 @@ namespace YokiFrame
             }
         }
 
-        public override string GetDebugInfo() => 
-            OnDelayFinish != null ? $"Delay -> {OnDelayFinish.Method.DeclaringType}.{OnDelayFinish.Method.Name}" : "Delay";
+        public override string GetDebugInfo() => $"Delay({DelayTime:F1}s, {CurrentSeconds:F1}s elapsed)";
     }
 
     public static class DelayExtension

@@ -102,6 +102,10 @@ namespace YokiFrame
         }
 
         public override string GetDebugInfo() => $"Sequence({mActions.Count} actions)";
+        
+        // 编辑器监控接口（通过反射访问，运行时零开销）
+        internal IReadOnlyList<IAction> EditorGetActions() => mActions;
+        internal int EditorGetCurrentIndex() => mCurActionIndex;
     }
 
     public static class SequenceExtension
