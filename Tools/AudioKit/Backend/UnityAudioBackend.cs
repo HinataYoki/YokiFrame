@@ -9,7 +9,7 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// Unity 原生音频后端实现
+    /// Unity 原生音频后端实现（使用 ResKit 加载资源）
     /// </summary>
     public sealed class UnityAudioBackend : IAudioBackend
     {
@@ -21,16 +21,22 @@ namespace YokiFrame
         private float mGlobalVolume = 1f;
         private bool mIsDisposed;
 
-        // 通道音量缓存
-        private readonly float[] mChannelVolumes = new float[5];
-        private readonly bool[] mChannelMuted = new bool[5];
+        /// <summary>
+        /// 通道音量缓存（支持动态扩展）
+        /// </summary>
+        private readonly Dictionary<int, float> mChannelVolumes = new();
+
+        /// <summary>
+        /// 通道静音状态缓存（支持动态扩展）
+        /// </summary>
+        private readonly Dictionary<int, bool> mChannelMuted = new();
 
         public void Initialize(AudioKitConfig config)
         {
             mConfig = config ?? AudioKitConfig.Default;
             mGlobalVolume = mConfig.GlobalVolume;
 
-            // 初始化通道音量
+            // 初始化内置通道音量
             mChannelVolumes[(int)AudioChannel.Bgm] = mConfig.BgmVolume;
             mChannelVolumes[(int)AudioChannel.Sfx] = mConfig.SfxVolume;
             mChannelVolumes[(int)AudioChannel.Voice] = mConfig.VoiceVolume;
@@ -55,26 +61,33 @@ namespace YokiFrame
             SafePoolKit<UnityAudioHandle>.Instance.Init(mConfig.PoolInitialSize, mConfig.PoolMaxSize);
         }
 
-        public IAudioHandle Play(int audioId, string path, AudioPlayConfig config)
+        public IAudioHandle Play(string path, AudioPlayConfig config)
         {
             if (mIsDisposed) return null;
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error("[AudioKit] 播放路径为空");
+                return null;
+            }
 
             // 获取或加载音频剪辑
-            if (!mClipCache.TryGet(audioId, out var clip))
+            if (!mClipCache.TryGet(path, out var clip))
             {
-                clip = Resources.Load<AudioClip>(path);
-                if (clip == null)
+                var handler = ResKit.LoadAsset<AudioClip>(path);
+                if (handler?.Asset == null)
                 {
                     KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
                     return null;
                 }
-                mClipCache.Add(audioId, clip);
+                clip = handler.Asset as AudioClip;
+                mClipCache.Add(path, clip, handler);
             }
 
-            return PlayInternal(audioId, clip, config);
+            return PlayInternal(path, clip, config);
         }
 
-        public void PlayAsync(int audioId, string path, AudioPlayConfig config, Action<IAudioHandle> onComplete)
+
+        public void PlayAsync(string path, AudioPlayConfig config, Action<IAudioHandle> onComplete)
         {
             if (mIsDisposed)
             {
@@ -82,39 +95,46 @@ namespace YokiFrame
                 return;
             }
 
-            // 检查缓存
-            if (mClipCache.TryGet(audioId, out var clip))
+            if (string.IsNullOrEmpty(path))
             {
-                var handle = PlayInternal(audioId, clip, config);
+                KitLogger.Error("[AudioKit] 播放路径为空");
+                onComplete?.Invoke(null);
+                return;
+            }
+
+            // 检查缓存
+            if (mClipCache.TryGet(path, out var clip))
+            {
+                var handle = PlayInternal(path, clip, config);
                 onComplete?.Invoke(handle);
                 return;
             }
 
-            // 异步加载
-            var request = Resources.LoadAsync<AudioClip>(path);
-            request.completed += _ =>
+            // 使用 ResKit 异步加载
+            ResKit.LoadAssetAsync<AudioClip>(path, handler =>
             {
                 if (mIsDisposed)
                 {
+                    handler?.Release();
                     onComplete?.Invoke(null);
                     return;
                 }
 
-                clip = request.asset as AudioClip;
-                if (clip == null)
+                if (handler?.Asset == null)
                 {
                     KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
                     onComplete?.Invoke(null);
                     return;
                 }
 
-                mClipCache.Add(audioId, clip);
-                var handle = PlayInternal(audioId, clip, config);
-                onComplete?.Invoke(handle);
-            };
+                var loadedClip = handler.Asset as AudioClip;
+                mClipCache.Add(path, loadedClip, handler);
+                var audioHandle = PlayInternal(path, loadedClip, config);
+                onComplete?.Invoke(audioHandle);
+            });
         }
 
-        private IAudioHandle PlayInternal(int audioId, AudioClip clip, AudioPlayConfig config)
+        private IAudioHandle PlayInternal(string path, AudioClip clip, AudioPlayConfig config)
         {
             // 检查是否超出最大并发数
             if (mPlayingHandles.Count >= mConfig.MaxConcurrentSounds)
@@ -124,7 +144,7 @@ namespace YokiFrame
             }
 
             // 创建 AudioSource
-            var sourceGo = new GameObject($"Audio_{audioId}");
+            var sourceGo = new GameObject($"Audio_{path.GetHashCode():X8}");
             sourceGo.transform.SetParent(mAudioRoot.transform);
             var source = sourceGo.AddComponent<AudioSource>();
 
@@ -158,11 +178,11 @@ namespace YokiFrame
 
             // 获取句柄
             var handle = SafePoolKit<UnityAudioHandle>.Instance.Allocate();
-            var channelIndex = (int)config.Channel;
-            var channelVolume = GetChannelVolume(channelIndex);
+            var channelId = config.ChannelId;
+            var channelVolume = GetChannelVolume(channelId);
             var effectiveVolume = config.Volume * channelVolume * mGlobalVolume;
 
-            handle.Initialize(audioId, source, config.Channel, config.Volume, config.FollowTarget);
+            handle.Initialize(path, source, channelId, config.Volume, config.FollowTarget);
 
             // 淡入处理
             if (config.FadeInDuration > 0f)
@@ -181,15 +201,16 @@ namespace YokiFrame
             return handle;
         }
 
-        public void Preload(int audioId, string path)
+        public void Preload(string path)
         {
             if (mIsDisposed) return;
-            if (mClipCache.Contains(audioId)) return;
+            if (string.IsNullOrEmpty(path)) return;
+            if (mClipCache.Contains(path)) return;
 
-            var clip = Resources.Load<AudioClip>(path);
-            if (clip != null)
+            var handler = ResKit.LoadAsset<AudioClip>(path);
+            if (handler?.Asset != null)
             {
-                mClipCache.Add(audioId, clip);
+                mClipCache.Add(path, handler.Asset as AudioClip, handler);
             }
             else
             {
@@ -197,7 +218,7 @@ namespace YokiFrame
             }
         }
 
-        public void PreloadAsync(int audioId, string path, Action onComplete)
+        public void PreloadAsync(string path, Action onComplete)
         {
             if (mIsDisposed)
             {
@@ -205,40 +226,48 @@ namespace YokiFrame
                 return;
             }
 
-            if (mClipCache.Contains(audioId))
+            if (string.IsNullOrEmpty(path))
             {
                 onComplete?.Invoke();
                 return;
             }
 
-            var request = Resources.LoadAsync<AudioClip>(path);
-            request.completed += _ =>
+            if (mClipCache.Contains(path))
             {
-                if (!mIsDisposed)
+                onComplete?.Invoke();
+                return;
+            }
+
+            ResKit.LoadAssetAsync<AudioClip>(path, handler =>
+            {
+                if (!mIsDisposed && handler?.Asset != null)
                 {
-                    var clip = request.asset as AudioClip;
-                    if (clip != null)
-                    {
-                        mClipCache.Add(audioId, clip);
-                    }
-                    else
-                    {
-                        KitLogger.Error($"[AudioKit] 预加载失败: {path}");
-                    }
+                    mClipCache.Add(path, handler.Asset as AudioClip, handler);
+                }
+                else if (handler?.Asset == null)
+                {
+                    KitLogger.Error($"[AudioKit] 预加载失败: {path}");
                 }
                 onComplete?.Invoke();
-            };
+            });
         }
 
-        public void Unload(int audioId)
+        public void Unload(string path)
         {
-            mClipCache.Remove(audioId);
+            if (string.IsNullOrEmpty(path)) return;
+
+            if (mClipCache.TryGetEntry(path, out var entry))
+            {
+                entry.ResHandler?.Release();
+                mClipCache.Remove(path);
+            }
         }
 
         public void UnloadAll()
         {
             mClipCache.Clear();
         }
+
 
         public void StopAll()
         {
@@ -296,10 +325,15 @@ namespace YokiFrame
 
         public void GetPlayingHandles(AudioChannel channel, List<IAudioHandle> result)
         {
+            GetPlayingHandles((int)channel, result);
+        }
+
+        public void GetPlayingHandles(int channelId, List<IAudioHandle> result)
+        {
             result.Clear();
             foreach (var handle in mPlayingHandles)
             {
-                if (handle.Channel == channel)
+                if (handle.ChannelId == channelId)
                 {
                     result.Add(handle);
                 }
@@ -316,58 +350,73 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 设置通道音量
+        /// 设置通道音量（内置通道）
         /// </summary>
         internal void SetChannelVolume(AudioChannel channel, float volume)
         {
-            var index = (int)channel;
-            if (index >= 0 && index < mChannelVolumes.Length)
-            {
-                mChannelVolumes[index] = Mathf.Clamp01(volume);
-                UpdateChannelHandleVolumes(channel);
-            }
+            SetChannelVolume((int)channel, volume);
         }
 
         /// <summary>
-        /// 获取通道音量
+        /// 设置通道音量（支持自定义通道 ID）
+        /// </summary>
+        internal void SetChannelVolume(int channelId, float volume)
+        {
+            mChannelVolumes[channelId] = Mathf.Clamp01(volume);
+            UpdateChannelHandleVolumes(channelId);
+        }
+
+        /// <summary>
+        /// 获取通道音量（内置通道）
         /// </summary>
         internal float GetChannelVolume(AudioChannel channel)
         {
             return GetChannelVolume((int)channel);
         }
 
-        private float GetChannelVolume(int channelIndex)
+        /// <summary>
+        /// 获取通道音量（支持自定义通道 ID）
+        /// </summary>
+        internal float GetChannelVolume(int channelId)
         {
-            if (channelIndex >= 0 && channelIndex < mChannelVolumes.Length)
-            {
-                if (mChannelMuted[channelIndex]) return 0f;
-                return mChannelVolumes[channelIndex];
-            }
-            return 1f;
+            if (mChannelMuted.TryGetValue(channelId, out var muted) && muted) return 0f;
+            return mChannelVolumes.TryGetValue(channelId, out var volume) ? volume : 1f;
         }
 
         /// <summary>
-        /// 设置通道静音
+        /// 设置通道静音（内置通道）
         /// </summary>
         internal void SetChannelMuted(AudioChannel channel, bool muted)
         {
-            var index = (int)channel;
-            if (index >= 0 && index < mChannelMuted.Length)
-            {
-                mChannelMuted[index] = muted;
-                UpdateChannelHandleVolumes(channel);
-            }
+            SetChannelMuted((int)channel, muted);
         }
 
         /// <summary>
-        /// 停止指定通道的所有音频
+        /// 设置通道静音（支持自定义通道 ID）
+        /// </summary>
+        internal void SetChannelMuted(int channelId, bool muted)
+        {
+            mChannelMuted[channelId] = muted;
+            UpdateChannelHandleVolumes(channelId);
+        }
+
+        /// <summary>
+        /// 停止指定通道的所有音频（内置通道）
         /// </summary>
         internal void StopChannel(AudioChannel channel)
+        {
+            StopChannel((int)channel);
+        }
+
+        /// <summary>
+        /// 停止指定通道的所有音频（支持自定义通道 ID）
+        /// </summary>
+        internal void StopChannel(int channelId)
         {
             mHandlesToRemove.Clear();
             foreach (var handle in mPlayingHandles)
             {
-                if (handle.Channel == channel)
+                if (handle.ChannelId == channelId)
                 {
                     handle.Stop();
                     mHandlesToRemove.Add(handle);
@@ -385,17 +434,17 @@ namespace YokiFrame
         {
             foreach (var handle in mPlayingHandles)
             {
-                var channelVolume = GetChannelVolume(handle.Channel);
+                var channelVolume = GetChannelVolume(handle.ChannelId);
                 handle.UpdateEffectiveVolume(channelVolume, mGlobalVolume);
             }
         }
 
-        private void UpdateChannelHandleVolumes(AudioChannel channel)
+        private void UpdateChannelHandleVolumes(int channelId)
         {
-            var channelVolume = GetChannelVolume(channel);
+            var channelVolume = GetChannelVolume(channelId);
             foreach (var handle in mPlayingHandles)
             {
-                if (handle.Channel == channel)
+                if (handle.ChannelId == channelId)
                 {
                     handle.UpdateEffectiveVolume(channelVolume, mGlobalVolume);
                 }
@@ -448,51 +497,61 @@ namespace YokiFrame
             }
         }
 
+
 #if YOKIFRAME_UNITASK_SUPPORT
-        public async UniTask<IAudioHandle> PlayUniTaskAsync(int audioId, string path, AudioPlayConfig config, CancellationToken cancellationToken = default)
+        public async UniTask<IAudioHandle> PlayUniTaskAsync(string path, AudioPlayConfig config, CancellationToken cancellationToken = default)
         {
             if (mIsDisposed) return null;
 
-            // 检查缓存
-            if (mClipCache.TryGet(audioId, out var clip))
+            if (string.IsNullOrEmpty(path))
             {
-                return PlayInternal(audioId, clip, config);
-            }
-
-            // 异步加载
-            var request = Resources.LoadAsync<AudioClip>(path);
-            await request.ToUniTask(cancellationToken: cancellationToken);
-
-            if (mIsDisposed || cancellationToken.IsCancellationRequested)
-            {
+                KitLogger.Error("[AudioKit] 播放路径为空");
                 return null;
             }
 
-            clip = request.asset as AudioClip;
-            if (clip == null)
+            // 检查缓存
+            if (mClipCache.TryGet(path, out var clip))
+            {
+                return PlayInternal(path, clip, config);
+            }
+
+            // 使用 ResKit UniTask 异步加载
+            var handler = await ResKit.LoadAssetUniTaskAsync<AudioClip>(path, cancellationToken);
+
+            if (mIsDisposed || cancellationToken.IsCancellationRequested)
+            {
+                handler?.Release();
+                return null;
+            }
+
+            if (handler?.Asset == null)
             {
                 KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
                 return null;
             }
 
-            mClipCache.Add(audioId, clip);
-            return PlayInternal(audioId, clip, config);
+            clip = handler.Asset as AudioClip;
+            mClipCache.Add(path, clip, handler);
+            return PlayInternal(path, clip, config);
         }
 
-        public async UniTask PreloadUniTaskAsync(int audioId, string path, CancellationToken cancellationToken = default)
+        public async UniTask PreloadUniTaskAsync(string path, CancellationToken cancellationToken = default)
         {
             if (mIsDisposed) return;
-            if (mClipCache.Contains(audioId)) return;
+            if (string.IsNullOrEmpty(path)) return;
+            if (mClipCache.Contains(path)) return;
 
-            var request = Resources.LoadAsync<AudioClip>(path);
-            await request.ToUniTask(cancellationToken: cancellationToken);
+            var handler = await ResKit.LoadAssetUniTaskAsync<AudioClip>(path, cancellationToken);
 
-            if (mIsDisposed || cancellationToken.IsCancellationRequested) return;
-
-            var clip = request.asset as AudioClip;
-            if (clip != null)
+            if (mIsDisposed || cancellationToken.IsCancellationRequested)
             {
-                mClipCache.Add(audioId, clip);
+                handler?.Release();
+                return;
+            }
+
+            if (handler?.Asset != null)
+            {
+                mClipCache.Add(path, handler.Asset as AudioClip, handler);
             }
             else
             {

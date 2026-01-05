@@ -4,11 +4,11 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 音频剪辑缓存
+    /// 音频剪辑缓存（使用 string path 作为 key）
     /// </summary>
     internal sealed class AudioClipCache
     {
-        private readonly Dictionary<int, AudioClip> mCache = new();
+        private readonly Dictionary<string, AudioClipEntry> mCache = new();
 
         /// <summary>
         /// 缓存数量
@@ -18,60 +18,80 @@ namespace YokiFrame
         /// <summary>
         /// 尝试获取缓存的音频剪辑
         /// </summary>
-        public bool TryGet(int audioId, out AudioClip clip)
+        public bool TryGet(string path, out AudioClip clip)
         {
-            return mCache.TryGetValue(audioId, out clip);
+            if (mCache.TryGetValue(path, out var entry))
+            {
+                clip = entry.Clip;
+                return true;
+            }
+            clip = null;
+            return false;
+        }
+
+        /// <summary>
+        /// 尝试获取缓存条目（包含 ResHandler）
+        /// </summary>
+        public bool TryGetEntry(string path, out AudioClipEntry entry)
+        {
+            return mCache.TryGetValue(path, out entry);
         }
 
         /// <summary>
         /// 添加音频剪辑到缓存
         /// </summary>
-        public void Add(int audioId, AudioClip clip)
+        public void Add(string path, AudioClip clip, ResHandler resHandler = null)
         {
-            if (clip == null) return;
-            mCache[audioId] = clip;
+            if (string.IsNullOrEmpty(path) || clip == null) return;
+            mCache[path] = new AudioClipEntry(clip, resHandler);
         }
 
         /// <summary>
         /// 从缓存移除音频剪辑
         /// </summary>
-        public bool Remove(int audioId)
+        public bool Remove(string path)
         {
-            if (mCache.TryGetValue(audioId, out var clip))
-            {
-                mCache.Remove(audioId);
-                // 注意：不在这里卸载资源，由调用方决定是否卸载
-                return true;
-            }
-            return false;
+            return mCache.Remove(path);
         }
 
         /// <summary>
-        /// 检查是否包含指定音频
+        /// 检查是否包含指定路径的音频
         /// </summary>
-        public bool Contains(int audioId)
+        public bool Contains(string path)
         {
-            return mCache.ContainsKey(audioId);
+            return !string.IsNullOrEmpty(path) && mCache.ContainsKey(path);
         }
 
         /// <summary>
-        /// 清空缓存
+        /// 清空缓存（释放所有 ResHandler）
         /// </summary>
         public void Clear()
         {
+            foreach (var entry in mCache.Values)
+            {
+                entry.ResHandler?.Release();
+            }
             mCache.Clear();
         }
 
         /// <summary>
-        /// 获取所有缓存的音频 ID
+        /// 获取所有缓存的路径
         /// </summary>
-        public void GetAllIds(List<int> result)
+        public void GetAllPaths(List<string> result)
         {
             result.Clear();
-            foreach (var id in mCache.Keys)
+            foreach (var path in mCache.Keys)
             {
-                result.Add(id);
+                result.Add(path);
             }
+        }
+
+        /// <summary>
+        /// 获取所有缓存条目（用于遍历释放）
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, AudioClipEntry>> GetAllEntries()
+        {
+            return mCache;
         }
     }
 }

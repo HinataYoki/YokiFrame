@@ -13,16 +13,52 @@ namespace YokiFrame
     /// </summary>
     public static class AudioKit
     {
+        /// <summary>
+        /// 当前音频后端实例，负责实际的音频播放逻辑
+        /// </summary>
         private static IAudioBackend sBackend;
+
+        /// <summary>
+        /// 全局配置，包含最大并发数、对象池大小、各通道默认音量等
+        /// </summary>
         private static AudioKitConfig sConfig;
+
+        /// <summary>
+        /// 路径解析器，将 audioId 转换为资源路径
+        /// </summary>
         private static Func<int, string> sPathResolver;
-        private static readonly float[] sChannelVolumes = new float[5] { 1f, 1f, 1f, 1f, 1f };
-        private static readonly bool[] sChannelMuted = new bool[5];
+
+        /// <summary>
+        /// 各通道音量缓存，key 为通道 ID（0-4 内置，5+ 自定义）
+        /// </summary>
+        private static readonly Dictionary<int, float> sChannelVolumes = new()
+        {
+            { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
+        };
+
+        /// <summary>
+        /// 各通道静音状态缓存，key 为通道 ID
+        /// </summary>
+        private static readonly Dictionary<int, bool> sChannelMuted = new();
+
+        /// <summary>
+        /// 全局音量，影响所有通道的最终音量
+        /// </summary>
         private static float sGlobalVolume = 1f;
+
+        /// <summary>
+        /// 全局静音状态
+        /// </summary>
         private static bool sGlobalMuted;
+
+        /// <summary>
+        /// 是否已初始化后端
+        /// </summary>
         private static bool sIsInitialized;
 
-        // 缓存容器复用
+        /// <summary>
+        /// 缓存的句柄列表，用于通道操作时避免 GC
+        /// </summary>
         private static readonly List<IAudioHandle> sCachedHandleList = new(32);
 
         #region 配置
@@ -83,65 +119,61 @@ namespace YokiFrame
 
         #endregion
 
-        #region 播放
+        #region 播放 - String Path（主要 API）
 
         /// <summary>
-        /// 播放音频（简化调用）
+        /// 播放音频（简化调用，内置通道）
         /// </summary>
-        public static IAudioHandle Play(int audioId, AudioChannel channel = AudioChannel.Sfx)
+        public static IAudioHandle Play(string path, AudioChannel channel = AudioChannel.Sfx)
         {
             var config = AudioPlayConfig.Default.WithChannel(channel);
-            return Play(audioId, config);
+            return Play(path, config);
+        }
+
+        /// <summary>
+        /// 播放音频（简化调用，自定义通道 ID）
+        /// </summary>
+        public static IAudioHandle Play(string path, int channelId)
+        {
+            var config = AudioPlayConfig.Default.WithChannel(channelId);
+            return Play(path, config);
         }
 
         /// <summary>
         /// 播放音频（完整配置）
         /// </summary>
-        public static IAudioHandle Play(int audioId, AudioPlayConfig config)
+        public static IAudioHandle Play(string path, AudioPlayConfig config)
         {
-            EnsureInitialized();
-
-            var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
-                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                KitLogger.Error("[AudioKit] 播放路径为空");
                 return null;
             }
 
-            // 计算有效音量
-            var channelVolume = GetChannelVolume(config.Channel);
-            var effectiveVolume = config.Volume * channelVolume * GetEffectiveGlobalVolume();
-            var adjustedConfig = config.WithVolume(effectiveVolume);
-
-            return sBackend.Play(audioId, path, adjustedConfig);
+            EnsureInitialized();
+            return sBackend.Play(path, config);
         }
 
         /// <summary>
         /// 异步播放音频
         /// </summary>
-        public static void PlayAsync(int audioId, AudioPlayConfig config, Action<IAudioHandle> onComplete)
+        public static void PlayAsync(string path, AudioPlayConfig config, Action<IAudioHandle> onComplete)
         {
-            EnsureInitialized();
-
-            var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
-                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                KitLogger.Error("[AudioKit] 播放路径为空");
                 onComplete?.Invoke(null);
                 return;
             }
 
-            var channelVolume = GetChannelVolume(config.Channel);
-            var effectiveVolume = config.Volume * channelVolume * GetEffectiveGlobalVolume();
-            var adjustedConfig = config.WithVolume(effectiveVolume);
-
-            sBackend.PlayAsync(audioId, path, adjustedConfig, onComplete);
+            EnsureInitialized();
+            sBackend.PlayAsync(path, config, onComplete);
         }
 
         /// <summary>
         /// 播放 3D 音效（位置）
         /// </summary>
-        public static IAudioHandle Play3D(int audioId, Vector3 position, AudioPlayConfig config = default)
+        public static IAudioHandle Play3D(string path, Vector3 position, AudioPlayConfig config = default)
         {
             if (config.Equals(default(AudioPlayConfig)))
             {
@@ -152,18 +184,18 @@ namespace YokiFrame
                 config = config.With3DPosition(position);
             }
 
-            return Play(audioId, config);
+            return Play(path, config);
         }
 
         /// <summary>
         /// 播放 3D 音效（跟随目标）
         /// </summary>
-        public static IAudioHandle Play3D(int audioId, Transform followTarget, AudioPlayConfig config = default)
+        public static IAudioHandle Play3D(string path, Transform followTarget, AudioPlayConfig config = default)
         {
             if (followTarget == null)
             {
                 KitLogger.Warning("[AudioKit] 跟随目标为空，使用原点位置");
-                return Play3D(audioId, Vector3.zero, config);
+                return Play3D(path, Vector3.zero, config);
             }
 
             if (config.Equals(default(AudioPlayConfig)))
@@ -175,7 +207,91 @@ namespace YokiFrame
                 config = config.With3DFollow(followTarget);
             }
 
+            return Play(path, config);
+        }
+
+        #endregion
+
+
+        #region 播放 - Int AudioId（向后兼容）
+
+        /// <summary>
+        /// 播放音频（简化调用，内置通道）- 通过 PathResolver 解析路径
+        /// </summary>
+        public static IAudioHandle Play(int audioId, AudioChannel channel = AudioChannel.Sfx)
+        {
+            var config = AudioPlayConfig.Default.WithChannel(channel);
             return Play(audioId, config);
+        }
+
+        /// <summary>
+        /// 播放音频（简化调用，自定义通道 ID）- 通过 PathResolver 解析路径
+        /// </summary>
+        public static IAudioHandle Play(int audioId, int channelId)
+        {
+            var config = AudioPlayConfig.Default.WithChannel(channelId);
+            return Play(audioId, config);
+        }
+
+        /// <summary>
+        /// 播放音频（完整配置）- 通过 PathResolver 解析路径
+        /// </summary>
+        public static IAudioHandle Play(int audioId, AudioPlayConfig config)
+        {
+            var path = ResolvePath(audioId);
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                return null;
+            }
+
+            return Play(path, config);
+        }
+
+        /// <summary>
+        /// 异步播放音频 - 通过 PathResolver 解析路径
+        /// </summary>
+        public static void PlayAsync(int audioId, AudioPlayConfig config, Action<IAudioHandle> onComplete)
+        {
+            var path = ResolvePath(audioId);
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                onComplete?.Invoke(null);
+                return;
+            }
+
+            PlayAsync(path, config, onComplete);
+        }
+
+        /// <summary>
+        /// 播放 3D 音效（位置）- 通过 PathResolver 解析路径
+        /// </summary>
+        public static IAudioHandle Play3D(int audioId, Vector3 position, AudioPlayConfig config = default)
+        {
+            var path = ResolvePath(audioId);
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                return null;
+            }
+
+            return Play3D(path, position, config);
+        }
+
+        /// <summary>
+        /// 播放 3D 音效（跟随目标）- 通过 PathResolver 解析路径
+        /// </summary>
+        public static IAudioHandle Play3D(int audioId, Transform followTarget, AudioPlayConfig config = default)
+        {
+            var path = ResolvePath(audioId);
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                return null;
+            }
+
+            return Play3D(path, followTarget, config);
         }
 
         #endregion
@@ -183,62 +299,86 @@ namespace YokiFrame
         #region 通道控制
 
         /// <summary>
-        /// 设置通道音量
+        /// 设置通道音量（内置通道）
         /// </summary>
         public static void SetChannelVolume(AudioChannel channel, float volume)
         {
-            var index = (int)channel;
-            if (index < 0 || index >= sChannelVolumes.Length) return;
+            SetChannelVolume((int)channel, volume);
+        }
 
-            sChannelVolumes[index] = Mathf.Clamp01(volume);
+        /// <summary>
+        /// 设置通道音量（支持自定义通道 ID，5+ 为用户自定义）
+        /// </summary>
+        public static void SetChannelVolume(int channelId, float volume)
+        {
+            sChannelVolumes[channelId] = Mathf.Clamp01(volume);
 
             // 更新后端
             if (sBackend is UnityAudioBackend unityBackend)
             {
-                unityBackend.SetChannelVolume(channel, sChannelVolumes[index]);
+                unityBackend.SetChannelVolume(channelId, sChannelVolumes[channelId]);
             }
         }
 
         /// <summary>
-        /// 获取通道音量
+        /// 获取通道音量（内置通道）
         /// </summary>
         public static float GetChannelVolume(AudioChannel channel)
         {
-            var index = (int)channel;
-            if (index < 0 || index >= sChannelVolumes.Length) return 1f;
-            if (sChannelMuted[index]) return 0f;
-            return sChannelVolumes[index];
+            return GetChannelVolume((int)channel);
         }
 
         /// <summary>
-        /// 静音/取消静音通道
+        /// 获取通道音量（支持自定义通道 ID）
+        /// </summary>
+        public static float GetChannelVolume(int channelId)
+        {
+            if (sChannelMuted.TryGetValue(channelId, out var muted) && muted) return 0f;
+            return sChannelVolumes.TryGetValue(channelId, out var volume) ? volume : 1f;
+        }
+
+        /// <summary>
+        /// 静音/取消静音通道（内置通道）
         /// </summary>
         public static void MuteChannel(AudioChannel channel, bool mute)
         {
-            var index = (int)channel;
-            if (index < 0 || index >= sChannelMuted.Length) return;
+            MuteChannel((int)channel, mute);
+        }
 
-            sChannelMuted[index] = mute;
+        /// <summary>
+        /// 静音/取消静音通道（支持自定义通道 ID）
+        /// </summary>
+        public static void MuteChannel(int channelId, bool mute)
+        {
+            sChannelMuted[channelId] = mute;
 
             if (sBackend is UnityAudioBackend unityBackend)
             {
-                unityBackend.SetChannelMuted(channel, mute);
+                unityBackend.SetChannelMuted(channelId, mute);
             }
         }
 
         /// <summary>
-        /// 停止指定通道的所有音频
+        /// 停止指定通道的所有音频（内置通道）
         /// </summary>
         public static void StopChannel(AudioChannel channel)
         {
+            StopChannel((int)channel);
+        }
+
+        /// <summary>
+        /// 停止指定通道的所有音频（支持自定义通道 ID）
+        /// </summary>
+        public static void StopChannel(int channelId)
+        {
             if (sBackend is UnityAudioBackend unityBackend)
             {
-                unityBackend.StopChannel(channel);
+                unityBackend.StopChannel(channelId);
             }
             else if (sBackend != null)
             {
                 // 通用实现：获取通道音频并停止
-                sBackend.GetPlayingHandles(channel, sCachedHandleList);
+                sBackend.GetPlayingHandles(channelId, sCachedHandleList);
                 foreach (var handle in sCachedHandleList)
                 {
                     handle.Stop();
@@ -304,15 +444,58 @@ namespace YokiFrame
 
         #endregion
 
-        #region 资源管理
+
+        #region 资源管理 - String Path
 
         /// <summary>
         /// 预加载音频
         /// </summary>
+        public static void Preload(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error("[AudioKit] 预加载路径为空");
+                return;
+            }
+
+            EnsureInitialized();
+            sBackend.Preload(path);
+        }
+
+        /// <summary>
+        /// 异步预加载音频
+        /// </summary>
+        public static void PreloadAsync(string path, Action onComplete = null)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error("[AudioKit] 预加载路径为空");
+                onComplete?.Invoke();
+                return;
+            }
+
+            EnsureInitialized();
+            sBackend.PreloadAsync(path, onComplete);
+        }
+
+        /// <summary>
+        /// 卸载音频
+        /// </summary>
+        public static void Unload(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            sBackend?.Unload(path);
+        }
+
+        #endregion
+
+        #region 资源管理 - Int AudioId（向后兼容）
+
+        /// <summary>
+        /// 预加载音频 - 通过 PathResolver 解析路径
+        /// </summary>
         public static void Preload(int audioId)
         {
-            EnsureInitialized();
-
             var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
@@ -320,16 +503,14 @@ namespace YokiFrame
                 return;
             }
 
-            sBackend.Preload(audioId, path);
+            Preload(path);
         }
 
         /// <summary>
-        /// 异步预加载音频
+        /// 异步预加载音频 - 通过 PathResolver 解析路径
         /// </summary>
         public static void PreloadAsync(int audioId, Action onComplete = null)
         {
-            EnsureInitialized();
-
             var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
@@ -338,15 +519,19 @@ namespace YokiFrame
                 return;
             }
 
-            sBackend.PreloadAsync(audioId, path, onComplete);
+            PreloadAsync(path, onComplete);
         }
 
         /// <summary>
-        /// 卸载音频
+        /// 卸载音频 - 通过 PathResolver 解析路径
         /// </summary>
         public static void Unload(int audioId)
         {
-            sBackend?.Unload(audioId);
+            var path = ResolvePath(audioId);
+            if (!string.IsNullOrEmpty(path))
+            {
+                Unload(path);
+            }
         }
 
         /// <summary>
@@ -392,10 +577,12 @@ namespace YokiFrame
             sGlobalMuted = false;
             sIsInitialized = false;
 
-            for (var i = 0; i < sChannelVolumes.Length; i++)
+            // 重置通道状态
+            sChannelVolumes.Clear();
+            sChannelMuted.Clear();
+            for (var i = 0; i < 5; i++)
             {
                 sChannelVolumes[i] = 1f;
-                sChannelMuted[i] = false;
             }
         }
 
@@ -430,45 +617,72 @@ namespace YokiFrame
 
         #endregion
 
+
 #if YOKIFRAME_UNITASK_SUPPORT
-        #region UniTask 异步
+        #region UniTask 异步 - String Path
 
         /// <summary>
         /// [UniTask] 异步播放音频
         /// </summary>
-        public static async UniTask<IAudioHandle> PlayUniTaskAsync(int audioId, AudioPlayConfig config, CancellationToken cancellationToken = default)
+        public static UniTask<IAudioHandle> PlayUniTaskAsync(string path, AudioPlayConfig config, CancellationToken cancellationToken = default)
         {
-            EnsureInitialized();
-
-            var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
-                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
-                return null;
+                KitLogger.Error("[AudioKit] 播放路径为空");
+                return UniTask.FromResult<IAudioHandle>(null);
             }
 
-            var channelVolume = GetChannelVolume(config.Channel);
-            var effectiveVolume = config.Volume * channelVolume * GetEffectiveGlobalVolume();
-            var adjustedConfig = config.WithVolume(effectiveVolume);
-
-            return await sBackend.PlayUniTaskAsync(audioId, path, adjustedConfig, cancellationToken);
+            EnsureInitialized();
+            return sBackend.PlayUniTaskAsync(path, config, cancellationToken);
         }
 
         /// <summary>
         /// [UniTask] 异步预加载音频
         /// </summary>
-        public static async UniTask PreloadUniTaskAsync(int audioId, CancellationToken cancellationToken = default)
+        public static UniTask PreloadUniTaskAsync(string path, CancellationToken cancellationToken = default)
         {
-            EnsureInitialized();
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error("[AudioKit] 预加载路径为空");
+                return UniTask.CompletedTask;
+            }
 
+            EnsureInitialized();
+            return sBackend.PreloadUniTaskAsync(path, cancellationToken);
+        }
+
+        #endregion
+
+        #region UniTask 异步 - Int AudioId（向后兼容）
+
+        /// <summary>
+        /// [UniTask] 异步播放音频 - 通过 PathResolver 解析路径
+        /// </summary>
+        public static UniTask<IAudioHandle> PlayUniTaskAsync(int audioId, AudioPlayConfig config, CancellationToken cancellationToken = default)
+        {
             var path = ResolvePath(audioId);
             if (string.IsNullOrEmpty(path))
             {
                 KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
-                return;
+                return UniTask.FromResult<IAudioHandle>(null);
             }
 
-            await sBackend.PreloadUniTaskAsync(audioId, path, cancellationToken);
+            return PlayUniTaskAsync(path, config, cancellationToken);
+        }
+
+        /// <summary>
+        /// [UniTask] 异步预加载音频 - 通过 PathResolver 解析路径
+        /// </summary>
+        public static UniTask PreloadUniTaskAsync(int audioId, CancellationToken cancellationToken = default)
+        {
+            var path = ResolvePath(audioId);
+            if (string.IsNullOrEmpty(path))
+            {
+                KitLogger.Error($"[AudioKit] 无法解析音频路径: {audioId}");
+                return UniTask.CompletedTask;
+            }
+
+            return PreloadUniTaskAsync(path, cancellationToken);
         }
 
         #endregion

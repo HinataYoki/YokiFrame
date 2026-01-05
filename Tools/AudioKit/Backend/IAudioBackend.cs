@@ -19,35 +19,37 @@ namespace YokiFrame
         /// <summary>
         /// 同步播放音频
         /// </summary>
-        /// <param name="audioId">音频 ID</param>
         /// <param name="path">资源路径</param>
         /// <param name="config">播放配置</param>
         /// <returns>音频句柄，失败返回 null</returns>
-        IAudioHandle Play(int audioId, string path, AudioPlayConfig config);
+        IAudioHandle Play(string path, AudioPlayConfig config);
 
         /// <summary>
         /// 异步播放音频
         /// </summary>
-        /// <param name="audioId">音频 ID</param>
         /// <param name="path">资源路径</param>
         /// <param name="config">播放配置</param>
         /// <param name="onComplete">完成回调</param>
-        void PlayAsync(int audioId, string path, AudioPlayConfig config, Action<IAudioHandle> onComplete);
+        void PlayAsync(string path, AudioPlayConfig config, Action<IAudioHandle> onComplete);
 
         /// <summary>
         /// 同步预加载音频
         /// </summary>
-        void Preload(int audioId, string path);
+        /// <param name="path">资源路径</param>
+        void Preload(string path);
 
         /// <summary>
         /// 异步预加载音频
         /// </summary>
-        void PreloadAsync(int audioId, string path, Action onComplete);
+        /// <param name="path">资源路径</param>
+        /// <param name="onComplete">完成回调</param>
+        void PreloadAsync(string path, Action onComplete);
 
         /// <summary>
-        /// 卸载音频
+        /// 卸载指定路径的音频
         /// </summary>
-        void Unload(int audioId);
+        /// <param name="path">资源路径</param>
+        void Unload(string path);
 
         /// <summary>
         /// 卸载所有音频
@@ -80,9 +82,14 @@ namespace YokiFrame
         void Update(float deltaTime);
 
         /// <summary>
-        /// 获取指定通道的所有正在播放的音频句柄
+        /// 获取指定通道的所有正在播放的音频句柄（内置通道）
         /// </summary>
         void GetPlayingHandles(AudioChannel channel, System.Collections.Generic.List<IAudioHandle> result);
+
+        /// <summary>
+        /// 获取指定通道 ID 的所有正在播放的音频句柄（支持自定义通道）
+        /// </summary>
+        void GetPlayingHandles(int channelId, System.Collections.Generic.List<IAudioHandle> result);
 
         /// <summary>
         /// 获取所有正在播放的音频句柄
@@ -93,12 +100,17 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步播放音频
         /// </summary>
-        UniTask<IAudioHandle> PlayUniTaskAsync(int audioId, string path, AudioPlayConfig config, CancellationToken cancellationToken = default);
+        /// <param name="path">资源路径</param>
+        /// <param name="config">播放配置</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        UniTask<IAudioHandle> PlayUniTaskAsync(string path, AudioPlayConfig config, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// [UniTask] 异步预加载音频
         /// </summary>
-        UniTask PreloadUniTaskAsync(int audioId, string path, CancellationToken cancellationToken = default);
+        /// <param name="path">资源路径</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        UniTask PreloadUniTaskAsync(string path, CancellationToken cancellationToken = default);
 #endif
     }
 }

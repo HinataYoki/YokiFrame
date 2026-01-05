@@ -8,9 +8,14 @@ namespace YokiFrame
     public struct AudioPlayConfig
     {
         /// <summary>
-        /// 音频通道
+        /// 音频通道 ID（0-4 为内置通道，5+ 为用户自定义通道）
         /// </summary>
-        public AudioChannel Channel;
+        public int ChannelId;
+
+        /// <summary>
+        /// 音频通道（内置通道的便捷属性）
+        /// </summary>
+        public AudioChannel Channel => ChannelId < 5 ? (AudioChannel)ChannelId : AudioChannel.Sfx;
 
         /// <summary>
         /// 音量 (0-1)
@@ -72,7 +77,7 @@ namespace YokiFrame
         /// </summary>
         public static AudioPlayConfig Default => new()
         {
-            Channel = AudioChannel.Sfx,
+            ChannelId = (int)AudioChannel.Sfx,
             Volume = 1f,
             Pitch = 1f,
             Loop = false,
@@ -113,11 +118,20 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 设置通道
+        /// 设置通道（使用内置通道枚举）
         /// </summary>
         public AudioPlayConfig WithChannel(AudioChannel channel)
         {
-            Channel = channel;
+            ChannelId = (int)channel;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置通道（使用自定义通道 ID，5+ 为用户自定义）
+        /// </summary>
+        public AudioPlayConfig WithChannel(int channelId)
+        {
+            ChannelId = channelId;
             return this;
         }
 

@@ -8,8 +8,8 @@ namespace YokiFrame
     internal sealed class UnityAudioHandle : IAudioHandle, IPoolable
     {
         private AudioSource mSource;
-        private int mId;
-        private AudioChannel mChannel;
+        private string mPath;
+        private int mChannelId;
         private float mBaseVolume;
         private float mTargetVolume;
         private float mFadeSpeed;
@@ -17,9 +17,10 @@ namespace YokiFrame
         private bool mIsFadingOut;
         private Transform mFollowTarget;
 
-        public int Id => mId;
+        public string Path => mPath;
         public bool IsRecycled { get; set; }
-        public AudioChannel Channel => mChannel;
+        public int ChannelId => mChannelId;
+        public AudioChannel Channel => mChannelId < 5 ? (AudioChannel)mChannelId : AudioChannel.Sfx;
 
         public bool IsPlaying => mSource != null && mSource.isPlaying && !mIsFadingOut;
 
@@ -71,11 +72,11 @@ namespace YokiFrame
         /// <summary>
         /// 初始化句柄
         /// </summary>
-        internal void Initialize(int id, AudioSource source, AudioChannel channel, float baseVolume, Transform followTarget = null)
+        internal void Initialize(string path, AudioSource source, int channelId, float baseVolume, Transform followTarget = null)
         {
-            mId = id;
+            mPath = path;
             mSource = source;
-            mChannel = channel;
+            mChannelId = channelId;
             mBaseVolume = baseVolume;
             mTargetVolume = baseVolume;
             mFollowTarget = followTarget;
@@ -228,8 +229,8 @@ namespace YokiFrame
         public void OnRecycled()
         {
             mSource = null;
-            mId = 0;
-            mChannel = AudioChannel.Sfx;
+            mPath = null;
+            mChannelId = (int)AudioChannel.Sfx;
             mBaseVolume = 1f;
             mTargetVolume = 0f;
             mFadeSpeed = 0f;

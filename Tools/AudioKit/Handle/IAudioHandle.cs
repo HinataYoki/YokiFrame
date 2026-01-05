@@ -8,9 +8,9 @@ namespace YokiFrame
     public interface IAudioHandle
     {
         /// <summary>
-        /// 音频 ID
+        /// 音频资源路径
         /// </summary>
-        int Id { get; }
+        string Path { get; }
 
         /// <summary>
         /// 是否正在播放
@@ -43,9 +43,14 @@ namespace YokiFrame
         float Duration { get; }
 
         /// <summary>
-        /// 音频通道
+        /// 音频通道（内置通道的便捷属性）
         /// </summary>
         AudioChannel Channel { get; }
+
+        /// <summary>
+        /// 音频通道 ID（支持自定义通道，5+ 为用户自定义）
+        /// </summary>
+        int ChannelId { get; }
 
         /// <summary>
         /// 暂停播放
