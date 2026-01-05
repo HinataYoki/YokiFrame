@@ -3,7 +3,8 @@
     "rootNamespace": "YokiFrame",
     "references": [
         "YokiFrame.AudioKit",
-        "YokiFrame"
+        "YokiFrame",
+        "YokiFrame.Core.Editor"
     ],
     "includePlatforms": [
         "Editor"

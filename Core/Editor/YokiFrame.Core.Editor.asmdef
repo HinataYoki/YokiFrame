@@ -1,10 +1,8 @@
 {
-    "name": "YokiFrame.UIKit.Editor",
-    "rootNamespace": "",
+    "name": "YokiFrame.Core.Editor",
+    "rootNamespace": "YokiFrame.EditorTools",
     "references": [
-        "GUID:82a4173514ff3e94b91cd70d23177969",
-        "GUID:224151c835b786a4f8efadaa1799380d",
-        "YokiFrame.Core.Editor"
+        "YokiFrame"
     ],
     "includePlatforms": [
         "Editor"

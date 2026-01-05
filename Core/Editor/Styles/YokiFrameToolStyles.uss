@@ -1,0 +1,458 @@
+/* YokiFrame Tools 通用样式 */
+
+/* 根容器 */
+.root-container {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+/* 侧边栏 */
+.sidebar {
+    width: 160px;
+    min-width: 140px;
+    max-width: 200px;
+    background-color: rgb(40, 40, 40);
+    border-right-width: 1px;
+    border-right-color: rgb(30, 30, 30);
+}
+
+.sidebar-header {
+    padding: 12px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(60, 60, 60);
+}
+
+.sidebar-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(200, 200, 200);
+}
+
+.sidebar-list {
+    flex-grow: 1;
+    padding-top: 8px;
+}
+
+.sidebar-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 12px;
+    margin: 2px 4px;
+    border-radius: 4px;
+}
+
+.sidebar-item:hover {
+    background-color: rgb(60, 60, 60);
+}
+
+.sidebar-item.selected {
+    background-color: rgb(62, 95, 150);
+}
+
+.sidebar-item-label {
+    flex-grow: 1;
+    color: rgb(200, 200, 200);
+    font-size: 12px;
+}
+
+.sidebar-item.selected .sidebar-item-label {
+    -unity-font-style: bold;
+}
+
+/* 内容区域 */
+.content-container {
+    flex-grow: 1;
+    background-color: rgb(56, 56, 56);
+}
+
+.content-area {
+    flex-grow: 1;
+    padding: 8px;
+}
+
+/* 工具栏 */
+.toolbar {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    background-color: rgb(48, 48, 48);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(30, 30, 30);
+}
+
+.toolbar-button {
+    height: 20px;
+    padding: 0 8px;
+    margin-right: 4px;
+    border-radius: 3px;
+    background-color: transparent;
+    border-width: 0;
+    color: rgb(200, 200, 200);
+}
+
+.toolbar-button:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.toolbar-button.selected {
+    background-color: rgb(62, 95, 150);
+}
+
+.toolbar-spacer {
+    flex-grow: 1;
+}
+
+.toolbar-label {
+    color: rgb(180, 180, 180);
+    font-size: 11px;
+    margin-right: 8px;
+}
+
+/* 分割面板 */
+.split-view {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.left-panel {
+    width: 280px;
+    min-width: 200px;
+    background-color: rgb(50, 50, 50);
+    border-right-width: 1px;
+    border-right-color: rgb(30, 30, 30);
+}
+
+.right-panel {
+    flex-grow: 1;
+    background-color: rgb(56, 56, 56);
+}
+
+.panel-header {
+    padding: 8px;
+    background-color: rgb(45, 45, 45);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(30, 30, 30);
+}
+
+.panel-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(200, 200, 200);
+}
+
+/* 列表项 */
+.list-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(40, 40, 40);
+}
+
+.list-item:hover {
+    background-color: rgb(60, 60, 60);
+}
+
+.list-item.selected {
+    background-color: rgb(62, 95, 150);
+}
+
+.list-item-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+.list-item-indicator.active {
+    background-color: rgb(100, 200, 100);
+}
+
+.list-item-indicator.inactive {
+    background-color: rgb(100, 100, 100);
+}
+
+.list-item-label {
+    flex-grow: 1;
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+}
+
+.list-item-count {
+    color: rgb(150, 150, 150);
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+/* 历史记录项 */
+.history-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+    margin: 2px 4px;
+    background-color: rgb(50, 50, 50);
+    border-radius: 3px;
+}
+
+.history-time {
+    width: 50px;
+    color: rgb(150, 150, 150);
+    font-size: 10px;
+}
+
+.history-badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 4px;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.history-badge.register {
+    background-color: rgb(80, 160, 80);
+    color: white;
+}
+
+.history-badge.unregister {
+    background-color: rgb(180, 80, 80);
+    color: white;
+}
+
+.history-badge.send {
+    background-color: rgb(80, 130, 180);
+    color: white;
+}
+
+.history-badge.start {
+    background-color: rgb(80, 160, 80);
+    color: white;
+}
+
+.history-badge.change {
+    background-color: rgb(80, 130, 180);
+    color: white;
+}
+
+.history-badge.enum {
+    background-color: rgb(70, 120, 180);
+    color: white;
+}
+
+.history-badge.type {
+    background-color: rgb(80, 150, 80);
+    color: white;
+}
+
+.history-badge.string {
+    background-color: rgb(180, 140, 70);
+    color: white;
+}
+
+.history-key {
+    flex-grow: 1;
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-left: 8px;
+}
+
+.history-args {
+    color: rgb(150, 150, 150);
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+/* 帮助框 */
+.help-box {
+    padding: 12px;
+    margin: 8px;
+    background-color: rgb(60, 60, 60);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(80, 80, 80);
+}
+
+.help-box-text {
+    color: rgb(180, 180, 180);
+    font-size: 11px;
+    white-space: normal;
+}
+
+/* 表单 */
+.form-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.form-label {
+    width: 100px;
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+}
+
+.form-field {
+    flex-grow: 1;
+}
+
+/* 按钮 */
+.action-button {
+    height: 28px;
+    padding: 0 16px;
+    margin: 4px;
+    border-radius: 4px;
+    background-color: rgb(70, 70, 70);
+    border-width: 1px;
+    border-color: rgb(50, 50, 50);
+    color: rgb(200, 200, 200);
+}
+
+.action-button:hover {
+    background-color: rgb(80, 80, 80);
+}
+
+.action-button:active {
+    background-color: rgb(60, 60, 60);
+}
+
+.action-button.primary {
+    background-color: rgb(62, 95, 150);
+}
+
+.action-button.primary:hover {
+    background-color: rgb(72, 105, 160);
+}
+
+/* 滚动视图 */
+.scroll-view {
+    flex-grow: 1;
+}
+
+/* 空状态 */
+.empty-state {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+}
+
+.empty-state-text {
+    color: rgb(120, 120, 120);
+    font-size: 14px;
+}
+
+/* Toggle */
+.toolbar-toggle {
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+    height: 20px;
+    margin-right: 4px;
+    border-radius: 3px;
+    background-color: transparent;
+}
+
+.toolbar-toggle:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.toolbar-toggle.checked {
+    background-color: rgb(62, 95, 150);
+}
+
+.toolbar-toggle-label {
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+/* 状态详情 */
+.state-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 2px 4px;
+    background-color: rgb(50, 50, 50);
+    border-radius: 3px;
+}
+
+.state-item.current {
+    background-color: rgb(60, 100, 60);
+}
+
+.state-indicator {
+    width: 16px;
+    color: rgb(100, 200, 100);
+    font-size: 12px;
+}
+
+.state-name {
+    width: 120px;
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+}
+
+.state-item.current .state-name {
+    -unity-font-style: bold;
+}
+
+.state-type {
+    flex-grow: 1;
+    color: rgb(150, 150, 150);
+    font-size: 10px;
+}
+
+/* 信息框 */
+.info-box {
+    padding: 8px;
+    margin: 8px;
+    background-color: rgb(50, 50, 50);
+    border-radius: 4px;
+}
+
+.info-row {
+    flex-direction: row;
+    margin-bottom: 4px;
+}
+
+.info-label {
+    width: 80px;
+    color: rgb(150, 150, 150);
+    font-size: 11px;
+}
+
+.info-value {
+    flex-grow: 1;
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+}
+
+.info-value.highlight {
+    -unity-font-style: bold;
+    color: rgb(100, 200, 100);
+}
+
+
+/* 弹出按钮 */
+.sidebar-popout-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    border-radius: 3px;
+    background-color: transparent;
+    color: rgb(150, 150, 150);
+    font-size: 12px;
+    -unity-text-align: middle-center;
+}
+
+.sidebar-popout-btn:hover {
+    background-color: rgb(80, 80, 80);
+    color: rgb(200, 200, 200);
+}
+
+.sidebar-item:hover .sidebar-popout-btn {
+    color: rgb(180, 180, 180);
+}

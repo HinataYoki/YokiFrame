@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace YokiFrame
@@ -34,11 +35,22 @@ namespace YokiFrame
                 // 缓存预制路径以避免在循环中的资产数据库操作
                 var prefabPaths = new List<string>(UIKitCreateConfig.Instance.BindPrefabPathList);
                 UIKitCreateConfig.Instance.BindPrefabPathList.Clear();
+                
+                // 检查是否在 Prefab Stage 中，如果是则先退出
+                var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+                string currentStagePath = null;
+                if (prefabStage != null)
+                {
+                    currentStagePath = prefabStage.assetPath;
+                    // 保存并退出 Prefab Stage
+                    PrefabUtility.SaveAsPrefabAsset(prefabStage.prefabContentsRoot, currentStagePath);
+                    StageUtility.GoToMainStage();
+                }
 
                 for (int i = 0; i < prefabPaths.Count; i++)
                 {
                     string prefabPath = prefabPaths[i];
-                    EditorUtility.DisplayProgressBar("UIKit", $"Serialize UIPrefab...{prefabPath}", i);
+                    EditorUtility.DisplayProgressBar("UIKit", $"Serialize UIPrefab...{prefabPath}", (float)i / prefabPaths.Count);
 
                     var uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
                     if (uiPrefab == null)
@@ -48,15 +60,8 @@ namespace YokiFrame
                     }
                     Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
 
-                    //GameObject tempInstance = Object.Instantiate(uiPrefab);
                     SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
-                    //PrefabUtility.SaveAsPrefabAsset(tempInstance, prefabPath);
-                    //Object.DestroyImmediate(tempInstance);
-
-                    /*SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
-                    EditorUtility.SetDirty(uiPrefab);
-                    PrefabUtility.SavePrefabAsset(uiPrefab);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(uiPrefab);*/
+                    
                     Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
                 }
 
@@ -64,6 +69,16 @@ namespace YokiFrame
                 AssetDatabase.Refresh();
 
                 EditorUtility.ClearProgressBar();
+                
+                // 如果之前在 Prefab Stage 中，重新打开
+                if (!string.IsNullOrEmpty(currentStagePath))
+                {
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(currentStagePath);
+                    if (prefab != null)
+                    {
+                        AssetDatabase.OpenAsset(prefab);
+                    }
+                }
             }
         }
 
@@ -104,11 +119,17 @@ namespace YokiFrame
                 }
                 else
                 {
-                    // 如果不是成员或者叶子节点，添加对应的组件
-                    if (bindInfo.Bind is not BindType.Member or BindType.Leaf)
+                    // Element 和 Component 类型需要添加对应的组件
+                    if (bindInfo.Bind is BindType.Element or BindType.Component)
                     {
                         var typeName = bindInfo.Bind is BindType.Component ? bindInfo.Type : $"{name}{nameof(UIElement)}.{bindInfo.Type}";
                         var type = assembly.GetType($"{UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}");
+                        if (type == null)
+                        {
+                            Debug.LogError($"未找到类型: {UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}", bindInfo.Self);
+                            continue;
+                        }
+                        
                         var typeIns = bindInfo.Self.GetComponent(type);
                         if (typeIns == null)
                         {
@@ -116,20 +137,16 @@ namespace YokiFrame
                         }
                         if (!bindInfo.RepeatElement)
                         {
-                            objectReference.objectReferenceValue = typeIns.gameObject;
+                            objectReference.objectReferenceValue = typeIns;
                         }
                         var newSerialized = new SerializedObject(typeIns);
                         newSerialized.Update();
                         SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
-
-                        /*if (bindInfo.Self.TryGetComponent<Bind>(out var markBind))
-                        {
-                            Object.DestroyImmediate(markBind, true);
-                        }*/
                         newSerialized.ApplyModifiedPropertiesWithoutUndo();
                     }
-                    else
+                    else if (bindInfo.Bind is BindType.Member)
                     {
+                        // Member 类型直接绑定 GameObject 上的组件
                         objectReference.objectReferenceValue = bindInfo.Self;
                     }
                 }

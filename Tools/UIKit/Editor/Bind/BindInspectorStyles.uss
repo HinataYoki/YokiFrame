@@ -1,0 +1,98 @@
+/* AbstractBind Inspector 样式 */
+
+.bind-inspector {
+    padding: 4px;
+}
+
+.bind-container {
+    background-color: rgb(56, 56, 56);
+    border-radius: 4px;
+    padding: 8px;
+    border-width: 1px;
+    border-color: rgb(40, 40, 40);
+}
+
+.bind-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+    min-height: 22px;
+}
+
+.bind-label {
+    width: 80px;
+    min-width: 80px;
+    color: rgb(200, 200, 200);
+    font-size: 12px;
+    -unity-text-align: middle-left;
+}
+
+.bind-field {
+    flex-grow: 1;
+    min-height: 20px;
+}
+
+.bind-field > EnumField {
+    margin: 0;
+}
+
+.bind-field > TextField {
+    margin: 0;
+}
+
+.bind-type-field {
+    margin-bottom: 4px;
+}
+
+.bind-no-component {
+    color: rgb(180, 120, 80);
+    font-size: 11px;
+    -unity-font-style: italic;
+}
+
+/* 验证提示 */
+.validation-label {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    white-space: normal;
+}
+
+.validation-error {
+    background-color: rgb(120, 50, 50);
+    color: rgb(255, 200, 200);
+    border-width: 1px;
+    border-color: rgb(180, 80, 80);
+}
+
+.validation-success {
+    background-color: rgb(50, 100, 50);
+    color: rgb(200, 255, 200);
+    border-width: 1px;
+    border-color: rgb(80, 150, 80);
+}
+
+/* PopupField 样式调整 */
+.bind-field PopupField {
+    margin: 0;
+}
+
+/* TextField 输入框样式 */
+.bind-field TextField > TextInput {
+    background-color: rgb(42, 42, 42);
+    border-color: rgb(30, 30, 30);
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+.bind-field TextField > TextInput:focus {
+    border-color: rgb(62, 95, 150);
+}
+
+/* EnumField 样式 */
+.bind-field EnumField > VisualElement {
+    background-color: rgb(42, 42, 42);
+    border-color: rgb(30, 30, 30);
+    border-radius: 3px;
+}

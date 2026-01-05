@@ -2,7 +2,8 @@
     "name": "YokiFrame.EventKit.Editor",
     "rootNamespace": "YokiFrame",
     "references": [
-        "YokiFrame"
+        "YokiFrame",
+        "YokiFrame.Core.Editor"
     ],
     "includePlatforms": [
         "Editor"
