@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#endif
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -66,7 +70,11 @@ namespace YokiFrame
     /// </summary>
     public static class ResKit
     {
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static IResLoaderPool sLoaderPool = new DefaultResLoaderUniTaskPool();
+#else
         private static IResLoaderPool sLoaderPool = new DefaultResLoaderPool();
+#endif
         private static readonly Dictionary<ResCacheKey, ResHandler> sAssetCache = new();
 
         /// <summary>
@@ -231,5 +239,77 @@ namespace YokiFrame
         }
 
         #endregion
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        #region UniTask 异步加载
+
+        /// <summary>
+        /// [UniTask] 异步加载资源
+        /// </summary>
+        public static async UniTask<T> LoadUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
+        {
+            var handler = await LoadAssetUniTaskAsync<T>(path, cancellationToken);
+            return handler?.Asset as T;
+        }
+
+        /// <summary>
+        /// [UniTask] 异步加载并获取句柄
+        /// </summary>
+        public static UniTask<ResHandler> LoadAssetUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
+        {
+            var key = new ResCacheKey(typeof(T), path);
+
+            if (sAssetCache.TryGetValue(key, out var handler))
+            {
+                handler.Retain();
+                return UniTask.FromResult(handler);
+            }
+
+            return LoadAssetUniTaskAsyncInternal<T>(path, key, cancellationToken);
+        }
+
+        private static async UniTask<ResHandler> LoadAssetUniTaskAsyncInternal<T>(string path, ResCacheKey key, CancellationToken cancellationToken) where T : Object
+        {
+            var handler = SafePoolKit<ResHandler>.Instance.Allocate();
+            handler.Path = path;
+            handler.AssetType = typeof(T);
+            handler.Loader = sLoaderPool.Allocate();
+            handler.Retain();
+
+            sAssetCache.Add(key, handler);
+
+            // 使用 UniTaskCompletionSource 包装回调
+            var tcs = new UniTaskCompletionSource<Object>();
+            
+            handler.Loader.LoadAsync<T>(path, asset =>
+            {
+                tcs.TrySetResult(asset);
+            });
+
+            // 等待加载完成或取消
+            var asset = await tcs.Task.AttachExternalCancellation(cancellationToken);
+            
+            handler.Asset = asset;
+            handler.IsDone = true;
+
+            if (asset == null)
+            {
+                KitLogger.Error($"[ResKit] 资源加载失败: {path}");
+            }
+
+            return handler;
+        }
+
+        /// <summary>
+        /// [UniTask] 异步实例化预制体
+        /// </summary>
+        public static async UniTask<GameObject> InstantiateUniTaskAsync(string path, Transform parent = null, CancellationToken cancellationToken = default)
+        {
+            var prefab = await LoadUniTaskAsync<GameObject>(path, cancellationToken);
+            return prefab != null ? Object.Instantiate(prefab, parent) : null;
+        }
+
+        #endregion
+#endif
     }
 }

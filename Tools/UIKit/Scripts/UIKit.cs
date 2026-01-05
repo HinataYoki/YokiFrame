@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+#if YOKIFRAME_UNITASK_SUPPORT
+using System.Threading;
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace YokiFrame
 {
@@ -483,5 +487,78 @@ namespace YokiFrame
         }
         
         #endregion
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        #region UniTask 异步方法
+
+        /// <summary>
+        /// [UniTask] 异步打开指定类型的Panel
+        /// </summary>
+        public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common, IUIData data = null, CancellationToken cancellationToken = default) where T : UIPanel
+        {
+            WeakenHot();
+            var type = typeof(T);
+            
+            // 检查缓存
+            if (TryGetHandler(type, out var handler))
+            {
+                handler.Data = data;
+                OpenAndShowPanel(handler.Panel, data);
+                return handler.Panel as T;
+            }
+            
+            // 创建新 Handler
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+            
+            // 异步创建 UI
+            var panel = await CreateUIUniTaskAsync(handler, cancellationToken);
+            
+            if (panel != null && panel.Transform != null)
+            {
+                return panel as T;
+            }
+            
+            KitLogger.Error($"[UIKit] OpenPanelUniTaskAsync: {type.Name} 创建失败");
+            return null;
+        }
+
+        /// <summary>
+        /// [UniTask] 异步打开并压入Panel到栈中
+        /// </summary>
+        public static async UniTask<T> PushOpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true, CancellationToken cancellationToken = default) where T : UIPanel
+        {
+            var panel = await OpenPanelUniTaskAsync<T>(level, data, cancellationToken);
+            if (panel != null)
+            {
+                PushPanel(panel, hidePreLevel);
+            }
+            return panel;
+        }
+
+        /// <summary>
+        /// [UniTask] 异步创建 UI
+        /// </summary>
+        private static async UniTask<IPanel> CreateUIUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken)
+        {
+            if (handler == null) return null;
+            
+            var panel = await UIRoot.Instance.LoadPanelUniTaskAsync(handler, cancellationToken);
+            
+            if (panel != null && panel.Transform != null)
+            {
+                SetupPanel(handler, panel);
+                OpenAndShowPanel(panel, handler.Data);
+                return panel;
+            }
+            
+            handler.Recycle();
+            return null;
+        }
+
+        #endregion
+#endif
     }
 }

@@ -32,8 +32,10 @@ namespace YokiFrame
 
         /// <summary>
         /// 获取类型的哈希 key
+        /// 使用 FullName 确保同名类在不同命名空间下有不同的 key
+        /// 同一个类即使成员变化，key 也保持不变
         /// </summary>
-        private static int GetTypeKey<T>() => typeof(T).GetHashCode();
+        private static int GetTypeKey<T>() => typeof(T).FullName.GetHashCode();
 
         /// <summary>
         /// 设置模块数据
@@ -97,7 +99,7 @@ namespace YokiFrame
         /// <summary>
         /// 通过 key 直接设置原始字节数据（内部使用）
         /// </summary>
-        internal void SetRawModule(int key, byte[] data)
+        public void SetRawModule(int key, byte[] data)
         {
             mModuleData[key] = data;
         }
@@ -105,7 +107,7 @@ namespace YokiFrame
         /// <summary>
         /// 通过 key 直接获取原始字节数据（内部使用）
         /// </summary>
-        internal byte[] GetRawModule(int key)
+        public byte[] GetRawModule(int key)
         {
             return mModuleData.TryGetValue(key, out var data) ? data : null;
         }
@@ -113,7 +115,12 @@ namespace YokiFrame
         /// <summary>
         /// 检查是否存在指定 key 的模块（内部使用）
         /// </summary>
-        internal bool HasRawModule(int key) => mModuleData.ContainsKey(key);
+        public bool HasRawModule(int key) => mModuleData.ContainsKey(key);
+
+        /// <summary>
+        /// 通过 key 直接移除原始字节数据（内部使用）
+        /// </summary>
+        public bool RemoveRawModule(int key) => mModuleData.Remove(key);
 
         /// <summary>
         /// 清空所有模块数据

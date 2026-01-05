@@ -1,6 +1,10 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+#if YOKIFRAME_UNITASK_SUPPORT
+using System.Threading;
+using Cysharp.Threading.Tasks;
+#endif
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -93,7 +97,11 @@ namespace YokiFrame
 
         #region 面板加载
 
+#if YOKIFRAME_UNITASK_SUPPORT
+        private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderUniTaskPool();
+#else
         private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderPool();
+#endif
 
         public void SetPanelLoader(IPanelLoaderPool loaderPool)
         {
@@ -178,6 +186,52 @@ namespace YokiFrame
             handler.Panel = panel;
             panel.Handler = handler;
         }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        /// <summary>
+        /// [UniTask] 异步加载面板
+        /// </summary>
+        public async UniTask<IPanel> LoadPanelUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
+        {
+            var loader = mLoaderPool.AllocateLoader();
+            
+            // 使用 UniTaskCompletionSource 包装回调
+            var tcs = new UniTaskCompletionSource<GameObject>();
+            loader.LoadAsync(handler, prefab => tcs.TrySetResult(prefab));
+            
+            var prefab = await tcs.Task.AttachExternalCancellation(cancellationToken);
+            
+            if (prefab == null)
+            {
+                KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
+                return null;
+            }
+
+            handler.Prefab = prefab;
+            handler.Loader = loader;
+
+#if UNITY_2022_3_OR_NEWER
+            // 使用 Unity 2022.3+ 的异步实例化
+            var op = InstantiateAsync(prefab);
+            await op.ToUniTask(cancellationToken: cancellationToken);
+            
+            if (op.isDone && op.Result.Length > 0)
+            {
+                var panel = op.Result[0].GetComponent<UIPanel>();
+                handler.Panel = panel;
+                panel.Handler = handler;
+                SetLevelOfPanel(handler.Level, panel);
+                return panel;
+            }
+            return null;
+#else
+            var panel = Instantiate(prefab).GetComponent<UIPanel>();
+            SetupPanelHandler(handler, loader, prefab, panel);
+            SetLevelOfPanel(handler.Level, panel);
+            return panel;
+#endif
+        }
+#endif
 
         #endregion
 

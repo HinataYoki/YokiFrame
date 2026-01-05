@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#endif
 using UnityEngine;
 
 namespace YokiFrame
@@ -429,7 +433,15 @@ namespace YokiFrame
 
                 if (sMigrators.TryGetValue(key, out var migrator))
                 {
-                    data = migrator.Migrate(data);
+                    // 检查是否是原始字节迁移器
+                    if (migrator is IRawByteMigrator rawMigrator)
+                    {
+                        data = MigrateWithRawByteMigrator(data, rawMigrator);
+                    }
+                    else
+                    {
+                        data = migrator.Migrate(data);
+                    }
                     KitLogger.Log($"[SaveKit] 数据迁移: v{currentVersion} -> v{nextVersion}");
                 }
                 else
@@ -441,6 +453,52 @@ namespace YokiFrame
             }
 
             return data;
+        }
+
+        private static SaveData MigrateWithRawByteMigrator(SaveData data, IRawByteMigrator migrator)
+        {
+            // 复用 List 避免 GC
+            var keys = new List<int>(data.GetModuleKeys());
+            var keysToRemove = new List<int>();
+            var dataToAdd = new List<(int key, byte[] bytes)>();
+            
+            foreach (var oldTypeKey in keys)
+            {
+                var rawBytes = data.GetRawModule(oldTypeKey);
+                if (rawBytes == null) continue;
+
+                // 调用迁移器处理原始字节
+                var migratedBytes = migrator.MigrateBytes(oldTypeKey, rawBytes, out var newTypeKey);
+                
+                if (migratedBytes != null)
+                {
+                    // 如果 key 改变了，需要删除旧 key 并添加新 key
+                    if (newTypeKey != oldTypeKey)
+                    {
+                        keysToRemove.Add(oldTypeKey);
+                        dataToAdd.Add((newTypeKey, migratedBytes));
+                    }
+                    else
+                    {
+                        data.SetRawModule(oldTypeKey, migratedBytes);
+                    }
+                }
+            }
+
+            // 删除旧 key
+            foreach (var key in keysToRemove)
+            {
+                data.RemoveRawModule(key);
+            }
+
+            // 添加新 key
+            foreach (var (key, bytes) in dataToAdd)
+            {
+                data.SetRawModule(key, bytes);
+            }
+
+            // 也调用标准 Migrate 方法，允许添加/删除模块
+            return migrator.Migrate(data);
         }
 
         #endregion
@@ -484,7 +542,7 @@ namespace YokiFrame
             foreach (var model in models)
             {
                 var modelType = model.GetType();
-                var typeKey = modelType.GetHashCode();
+                var typeKey = modelType.FullName.GetHashCode();
 
                 // 使用 JsonUtility 序列化 Model
                 var jsonData = JsonUtility.ToJson(model);
@@ -520,7 +578,7 @@ namespace YokiFrame
             foreach (var model in models)
             {
                 var modelType = model.GetType();
-                var typeKey = modelType.GetHashCode();
+                var typeKey = modelType.FullName.GetHashCode();
 
                 if (!data.HasRawModule(typeKey))
                 {
@@ -588,12 +646,156 @@ namespace YokiFrame
 
         #endregion
 
+        #region 异步保存
+
+        /// <summary>
+        /// 异步保存数据到指定槽位（在后台线程执行文件IO）
+        /// </summary>
+        /// <param name="slotId">槽位ID</param>
+        /// <param name="data">要保存的数据</param>
+        /// <param name="onComplete">完成回调，参数为是否成功</param>
+        public static void SaveAsync(int slotId, SaveData data, Action<bool> onComplete = null)
+        {
+            ValidateSlotId(slotId);
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            try
+            {
+                // 准备元数据（主线程）
+                var meta = GetMeta(slotId);
+                if (meta.SlotId == 0 && meta.Version == 0)
+                {
+                    meta = SaveMeta.Create(slotId, sCurrentVersion);
+                }
+                else
+                {
+                    meta.UpdateSaveTime();
+                    meta.Version = sCurrentVersion;
+                }
+
+                // 序列化数据（主线程，因为可能涉及 Unity 对象）
+                var dataBytes = SerializeSaveData(data);
+                var metaBytes = sSerializer.Serialize(meta);
+
+                // 可选加密
+                if (sEncryptor != null)
+                {
+                    dataBytes = sEncryptor.Encrypt(dataBytes);
+                }
+
+                var dataPath = GetDataFilePath(slotId);
+                var metaPath = GetMetaFilePath(slotId);
+
+                // 在线程池执行文件写入
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        File.WriteAllBytes(dataPath, dataBytes);
+                        File.WriteAllBytes(metaPath, metaBytes);
+                        
+                        // 回调到主线程（如果需要）
+                        KitLogger.Log($"[SaveKit] 异步存档保存成功: 槽位 {slotId}");
+                        onComplete?.Invoke(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        KitLogger.Error($"[SaveKit] 异步存档保存失败: {ex.Message}");
+                        onComplete?.Invoke(false);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                KitLogger.Error($"[SaveKit] 异步存档准备失败: {ex.Message}");
+                onComplete?.Invoke(false);
+            }
+        }
+
+        /// <summary>
+        /// 异步加载数据
+        /// </summary>
+        /// <param name="slotId">槽位ID</param>
+        /// <param name="onComplete">完成回调，参数为加载的数据（失败时为null）</param>
+        public static void LoadAsync(int slotId, Action<SaveData> onComplete)
+        {
+            ValidateSlotId(slotId);
+            if (onComplete == null)
+                throw new ArgumentNullException(nameof(onComplete));
+
+            if (!Exists(slotId))
+            {
+                onComplete(null);
+                return;
+            }
+
+            var dataPath = GetDataFilePath(slotId);
+
+            // 在线程池执行文件读取
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    var dataBytes = File.ReadAllBytes(dataPath);
+
+                    // 可选解密
+                    if (sEncryptor != null)
+                    {
+                        try
+                        {
+                            dataBytes = sEncryptor.Decrypt(dataBytes);
+                        }
+                        catch (Exception ex)
+                        {
+                            KitLogger.Error($"[SaveKit] 解密失败: {ex.Message}");
+                            onComplete(null);
+                            return;
+                        }
+                    }
+
+                    // 反序列化
+                    var data = DeserializeSaveData(dataBytes);
+                    if (data == null)
+                    {
+                        KitLogger.Error("[SaveKit] 反序列化失败");
+                        onComplete(null);
+                        return;
+                    }
+
+                    // 检查版本迁移
+                    var meta = GetMeta(slotId);
+                    if (meta.Version < sCurrentVersion)
+                    {
+                        data = MigrateData(data, meta.Version, sCurrentVersion);
+                        if (data != null)
+                        {
+                            // 同步保存迁移后的数据
+                            Save(slotId, data);
+                        }
+                    }
+
+                    data.SetSerializer(sSerializer);
+                    KitLogger.Log($"[SaveKit] 异步存档加载成功: 槽位 {slotId}");
+                    onComplete(data);
+                }
+                catch (Exception ex)
+                {
+                    KitLogger.Error($"[SaveKit] 异步存档加载失败: {ex.Message}");
+                    onComplete(null);
+                }
+            });
+        }
+
+        #endregion
+
         #region 自动保存
 
-        private static System.Threading.CancellationTokenSource sAutoSaveCts;
+        private static CancellationTokenSource sAutoSaveCts;
         private static int sAutoSaveSlotId;
         private static SaveData sAutoSaveData;
         private static Action sOnBeforeAutoSave;
+        private static Timer sAutoSaveTimer;
 
         /// <summary>
         /// 启用自动保存
@@ -615,9 +817,13 @@ namespace YokiFrame
             sAutoSaveSlotId = slotId;
             sAutoSaveData = data;
             sOnBeforeAutoSave = onBeforeSave;
-            sAutoSaveCts = new System.Threading.CancellationTokenSource();
+            sAutoSaveCts = new CancellationTokenSource();
 
-            StartAutoSaveLoop(intervalSeconds, sAutoSaveCts.Token);
+            var intervalMs = (int)(intervalSeconds * 1000);
+            
+            // 使用 System.Threading.Timer 实现定时器，不依赖 Unity 生命周期
+            sAutoSaveTimer = new Timer(AutoSaveCallback, null, intervalMs, intervalMs);
+            
             KitLogger.Log($"[SaveKit] 自动保存已启用: 槽位 {slotId}, 间隔 {intervalSeconds}s");
         }
 
@@ -626,23 +832,203 @@ namespace YokiFrame
         /// </summary>
         public static void DisableAutoSave()
         {
+            if (sAutoSaveTimer != null)
+            {
+                sAutoSaveTimer.Dispose();
+                sAutoSaveTimer = null;
+            }
+            
             if (sAutoSaveCts != null)
             {
                 sAutoSaveCts.Cancel();
                 sAutoSaveCts.Dispose();
                 sAutoSaveCts = null;
-                sAutoSaveData = null;
-                sOnBeforeAutoSave = null;
-                KitLogger.Log("[SaveKit] 自动保存已禁用");
             }
+            
+            sAutoSaveData = null;
+            sOnBeforeAutoSave = null;
+            KitLogger.Log("[SaveKit] 自动保存已禁用");
         }
 
         /// <summary>
         /// 检查自动保存是否启用
         /// </summary>
-        public static bool IsAutoSaveEnabled => sAutoSaveCts != null && !sAutoSaveCts.IsCancellationRequested;
+        public static bool IsAutoSaveEnabled => sAutoSaveTimer != null;
 
-        private static async void StartAutoSaveLoop(float intervalSeconds, System.Threading.CancellationToken token)
+        private static void AutoSaveCallback(object state)
+        {
+            if (sAutoSaveCts == null || sAutoSaveCts.IsCancellationRequested)
+                return;
+
+            try
+            {
+                // 注意：回调在线程池线程执行
+                // 如果 onBeforeSave 需要访问 Unity API，用户需要自行处理线程同步
+                sOnBeforeAutoSave?.Invoke();
+
+                // 异步保存，不阻塞
+                SaveAsync(sAutoSaveSlotId, sAutoSaveData);
+            }
+            catch (Exception ex)
+            {
+                KitLogger.Error($"[SaveKit] 自动保存失败: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        #region UniTask 异步支持
+
+        /// <summary>
+        /// [UniTask] 异步保存数据到指定槽位
+        /// </summary>
+        public static async UniTask<bool> SaveUniTaskAsync(int slotId, SaveData data, CancellationToken cancellationToken = default)
+        {
+            ValidateSlotId(slotId);
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            try
+            {
+                // 准备元数据
+                var meta = GetMeta(slotId);
+                if (meta.SlotId == 0 && meta.Version == 0)
+                {
+                    meta = SaveMeta.Create(slotId, sCurrentVersion);
+                }
+                else
+                {
+                    meta.UpdateSaveTime();
+                    meta.Version = sCurrentVersion;
+                }
+
+                // 序列化数据（在主线程完成）
+                var dataBytes = SerializeSaveData(data);
+                var metaBytes = sSerializer.Serialize(meta);
+
+                // 可选加密
+                if (sEncryptor != null)
+                {
+                    dataBytes = sEncryptor.Encrypt(dataBytes);
+                }
+
+                var dataPath = GetDataFilePath(slotId);
+                var metaPath = GetMetaFilePath(slotId);
+
+                // 在线程池执行文件写入
+                await UniTask.RunOnThreadPool(() =>
+                {
+                    File.WriteAllBytes(dataPath, dataBytes);
+                    File.WriteAllBytes(metaPath, metaBytes);
+                }, cancellationToken: cancellationToken);
+
+                KitLogger.Log($"[SaveKit] UniTask 异步存档保存成功: 槽位 {slotId}");
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                KitLogger.Log($"[SaveKit] UniTask 异步存档保存已取消: 槽位 {slotId}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                KitLogger.Error($"[SaveKit] UniTask 异步存档保存失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// [UniTask] 异步加载数据
+        /// </summary>
+        public static async UniTask<SaveData> LoadUniTaskAsync(int slotId, CancellationToken cancellationToken = default)
+        {
+            ValidateSlotId(slotId);
+
+            if (!Exists(slotId))
+            {
+                return null;
+            }
+
+            try
+            {
+                var dataPath = GetDataFilePath(slotId);
+
+                // 在线程池执行文件读取
+                var dataBytes = await UniTask.RunOnThreadPool(() => File.ReadAllBytes(dataPath), cancellationToken: cancellationToken);
+
+                // 可选解密
+                if (sEncryptor != null)
+                {
+                    try
+                    {
+                        dataBytes = sEncryptor.Decrypt(dataBytes);
+                    }
+                    catch (Exception ex)
+                    {
+                        KitLogger.Error($"[SaveKit] 解密失败: {ex.Message}");
+                        return null;
+                    }
+                }
+
+                // 反序列化
+                var data = DeserializeSaveData(dataBytes);
+                if (data == null)
+                {
+                    KitLogger.Error("[SaveKit] 反序列化失败");
+                    return null;
+                }
+
+                // 检查版本迁移
+                var meta = GetMeta(slotId);
+                if (meta.Version < sCurrentVersion)
+                {
+                    data = MigrateData(data, meta.Version, sCurrentVersion);
+                    if (data != null)
+                    {
+                        await SaveUniTaskAsync(slotId, data, cancellationToken);
+                    }
+                }
+
+                data.SetSerializer(sSerializer);
+                KitLogger.Log($"[SaveKit] UniTask 异步存档加载成功: 槽位 {slotId}");
+                return data;
+            }
+            catch (OperationCanceledException)
+            {
+                KitLogger.Log($"[SaveKit] UniTask 异步存档加载已取消: 槽位 {slotId}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                KitLogger.Error($"[SaveKit] UniTask 异步存档加载失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// [UniTask] 启用基于 UniTask 的自动保存（推荐）
+        /// </summary>
+        public static void EnableAutoSaveUniTask(int slotId, SaveData data, float intervalSeconds, Action onBeforeSave = null)
+        {
+            ValidateSlotId(slotId);
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (intervalSeconds <= 0)
+                throw new ArgumentOutOfRangeException(nameof(intervalSeconds), "Interval must be > 0");
+
+            DisableAutoSave();
+
+            sAutoSaveSlotId = slotId;
+            sAutoSaveData = data;
+            sOnBeforeAutoSave = onBeforeSave;
+            sAutoSaveCts = new CancellationTokenSource();
+
+            StartAutoSaveLoopUniTask(intervalSeconds, sAutoSaveCts.Token).Forget();
+            KitLogger.Log($"[SaveKit] UniTask 自动保存已启用: 槽位 {slotId}, 间隔 {intervalSeconds}s");
+        }
+
+        private static async UniTaskVoid StartAutoSaveLoopUniTask(float intervalSeconds, CancellationToken token)
         {
             var intervalMs = (int)(intervalSeconds * 1000);
 
@@ -650,28 +1036,29 @@ namespace YokiFrame
             {
                 try
                 {
-                    await System.Threading.Tasks.Task.Delay(intervalMs, token);
+                    await UniTask.Delay(intervalMs, cancellationToken: token);
 
                     if (token.IsCancellationRequested)
                         break;
 
-                    // 调用保存前回调
+                    // 在主线程调用回调
                     sOnBeforeAutoSave?.Invoke();
 
-                    // 执行保存
-                    Save(sAutoSaveSlotId, sAutoSaveData);
+                    // 异步保存
+                    await SaveUniTaskAsync(sAutoSaveSlotId, sAutoSaveData, token);
                 }
-                catch (System.Threading.Tasks.TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     break;
                 }
                 catch (Exception ex)
                 {
-                    KitLogger.Error($"[SaveKit] 自动保存失败: {ex.Message}");
+                    KitLogger.Error($"[SaveKit] UniTask 自动保存失败: {ex.Message}");
                 }
             }
         }
 
         #endregion
+#endif
     }
 }

@@ -692,38 +692,354 @@ if (SaveKit.IsAutoSaveEnabled)
 
 ### 版本迁移
 
-当游戏更新导致存档结构变化时，使用迁移器升级旧存档：
+当游戏更新导致存档结构变化时，使用迁移器升级旧存档。
+
+#### 方式 1：原始字节迁移（推荐，支持任何序列化格式）
+
+直接操作原始字节数组，适用于 JSON、MessagePack 等任何序列化格式。迁移器自己负责反序列化旧格式和序列化新格式。
+
+**重要**：当数据类型改变时（如 `PlayerDataV1` → `PlayerDataV2`），类型哈希 key 也会改变。`MigrateBytes` 方法通过 `out int newTypeKey` 参数支持 key 的变更：
 
 ```csharp
-// 定义迁移器：从 v1 升级到 v2
-public class MigratorV1ToV2 : ISaveMigrator
+/// <summary>
+/// 原始字节迁移器：v1 -> v2
+/// 适用于二进制序列化（如 MessagePack、MemoryPack 等）
+/// </summary>
+public class PlayerMigratorV1ToV2 : IRawByteMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    // 缓存类型哈希 key
+    private static readonly int PlayerDataV1Key = typeof(PlayerDataV1).GetHashCode();
+    private static readonly int PlayerDataV2Key = typeof(PlayerDataV2).GetHashCode();
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        // 默认保持原 key
+        newTypeKey = oldTypeKey;
+
+        // 只处理 PlayerDataV1
+        if (oldTypeKey != PlayerDataV1Key)
+            return null;  // 返回 null 表示不修改此类型
+
+        // === 二进制序列化示例（以 MessagePack 为例）===
+        // 1. 用旧版本结构反序列化
+        var oldData = MessagePackSerializer.Deserialize<PlayerDataV1>(rawBytes);
+        
+        // 2. 转换为新版本结构
+        var newData = new PlayerDataV2
+        {
+            Level = oldData.Level,
+            Coins = oldData.Gold,      // 字段重命名
+            Name = oldData.Name,
+            Experience = 0             // 新字段默认值
+        };
+        
+        // 3. 输出新类型的 key（关键！）
+        newTypeKey = PlayerDataV2Key;
+        
+        // 4. 用新版本结构序列化
+        return MessagePackSerializer.Serialize(newData);
+    }
+
+    public SaveData Migrate(SaveData oldData)
+    {
+        // MigrateBytes 已处理字段修改和 key 变更
+        // 这里可以处理模块的添加/删除
+        return oldData;
+    }
+}
+
+/// <summary>
+/// JSON 序列化的迁移器示例
+/// </summary>
+public class JsonPlayerMigratorV1ToV2 : IRawByteMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    private static readonly int PlayerDataV1Key = typeof(PlayerDataV1).GetHashCode();
+    private static readonly int PlayerDataV2Key = typeof(PlayerDataV2).GetHashCode();
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        newTypeKey = oldTypeKey;
+
+        if (oldTypeKey != PlayerDataV1Key)
+            return null;
+
+        // JSON 格式：字节 -> 字符串 -> 修改 -> 字节
+        var json = System.Text.Encoding.UTF8.GetString(rawBytes);
+        
+        // 使用 Newtonsoft.Json 进行复杂操作
+        var jObject = Newtonsoft.Json.Linq.JObject.Parse(json);
+        
+        // 添加新字段
+        jObject["Experience"] = 0;
+        
+        // 重命名字段
+        if (jObject.ContainsKey("Gold"))
+        {
+            jObject["Coins"] = jObject["Gold"];
+            jObject.Remove("Gold");
+        }
+        
+        // 输出新类型的 key
+        newTypeKey = PlayerDataV2Key;
+        
+        var newJson = jObject.ToString();
+        return System.Text.Encoding.UTF8.GetBytes(newJson);
+    }
+
+    public SaveData Migrate(SaveData oldData) => oldData;
+}
+```
+
+#### 方式 2：类型迁移（需要保留旧类定义）
+
+如果你愿意保留旧版本的类定义，可以使用类型安全的迁移：
+
+```csharp
+// 保留旧版本类定义（可以放在单独的 LegacyData 文件夹）
+[Serializable]
+public class PlayerDataV1
+{
+    public int Level;
+    public int Gold;
+    public string Name;
+}
+
+// 当前版本
+[Serializable]
+public class PlayerData
+{
+    public int Level;
+    public int Coins;      // 重命名
+    public string Name;
+    public int Experience; // 新增
+}
+
+public class TypedMigratorV1ToV2 : ISaveMigrator
 {
     public int FromVersion => 1;
     public int ToVersion => 2;
 
     public SaveData Migrate(SaveData oldData)
     {
+        // 需要临时设置序列化器
+        oldData.SetSerializer(SaveKit.GetSerializer());
+        
         // 获取旧数据
         var oldPlayer = oldData.GetModule<PlayerDataV1>();
-        
-        // 转换为新格式
-        var newPlayer = new PlayerDataV2
+        if (oldPlayer != null)
         {
-            Level = oldPlayer.Level,
-            Gold = oldPlayer.Gold,
-            Name = oldPlayer.Name,
-            Experience = 0  // 新字段，设置默认值
-        };
+            // 转换为新格式
+            var newPlayer = new PlayerData
+            {
+                Level = oldPlayer.Level,
+                Coins = oldPlayer.Gold,
+                Name = oldPlayer.Name,
+                Experience = 0
+            };
+            
+            // 移除旧数据，设置新数据
+            oldData.RemoveModule<PlayerDataV1>();
+            oldData.SetModule(newPlayer);
+        }
         
-        // 更新数据
-        oldData.SetModule(newPlayer);
         return oldData;
     }
 }
+```
 
+#### 方式 3：同类型字段变化（最常见场景，推荐）
+
+实际开发中，团队协作时很难保留旧版本的类定义。最常见的情况是：**始终使用同一个类，只是字段发生变化**。
+
+这种情况下，`typeof(PlayerData).GetHashCode()` 始终相同，**key 不会变**，迁移器只需处理字段变化：
+
+```csharp
+// 当前版本的数据类（字段已经改过了）
+[Serializable]
+public class PlayerData
+{
+    public int Level;
+    public int Coins;      // 原来叫 Gold，v2 改名了
+    public string Name;
+    public int Experience; // v2 新增字段
+    public float PlayTime; // v3 新增字段
+}
+
+/// <summary>
+/// v1 -> v2 迁移器：处理 Gold->Coins 重命名 + 新增 Experience
+/// 直接操作 JSON，不依赖旧类定义
+/// </summary>
+public class PlayerMigratorV1ToV2 : IRawByteMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    private static readonly int PlayerDataKey = typeof(PlayerData).GetHashCode();
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        // key 不变！同一个类
+        newTypeKey = oldTypeKey;
+
+        if (oldTypeKey != PlayerDataKey)
+            return null;
+
+        // 直接操作 JSON 字符串，不需要旧类定义
+        var json = System.Text.Encoding.UTF8.GetString(rawBytes);
+        var jObject = Newtonsoft.Json.Linq.JObject.Parse(json);
+        
+        // 重命名字段：Gold -> Coins
+        if (jObject.ContainsKey("Gold"))
+        {
+            jObject["Coins"] = jObject["Gold"];
+            jObject.Remove("Gold");
+        }
+        
+        // 添加新字段（如果不存在）
+        if (!jObject.ContainsKey("Experience"))
+        {
+            jObject["Experience"] = 0;
+        }
+        
+        return System.Text.Encoding.UTF8.GetBytes(jObject.ToString());
+    }
+
+    public SaveData Migrate(SaveData oldData) => oldData;
+}
+
+/// <summary>
+/// v2 -> v3 迁移器：新增 PlayTime 字段
+/// </summary>
+public class PlayerMigratorV2ToV3 : IRawByteMigrator
+{
+    public int FromVersion => 2;
+    public int ToVersion => 3;
+
+    private static readonly int PlayerDataKey = typeof(PlayerData).GetHashCode();
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        newTypeKey = oldTypeKey;
+
+        if (oldTypeKey != PlayerDataKey)
+            return null;
+
+        var json = System.Text.Encoding.UTF8.GetString(rawBytes);
+        var jObject = Newtonsoft.Json.Linq.JObject.Parse(json);
+        
+        // 添加新字段
+        if (!jObject.ContainsKey("PlayTime"))
+        {
+            jObject["PlayTime"] = 0.0f;
+        }
+        
+        return System.Text.Encoding.UTF8.GetBytes(jObject.ToString());
+    }
+
+    public SaveData Migrate(SaveData oldData) => oldData;
+}
+```
+
+**Unity JsonUtility 版本**（不依赖 Newtonsoft.Json）：
+
+```csharp
+/// <summary>
+/// 使用 Unity JsonUtility 的迁移器
+/// 适用于简单的字段添加场景
+/// </summary>
+public class SimplePlayerMigratorV1ToV2 : IRawByteMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    private static readonly int PlayerDataKey = typeof(PlayerData).GetHashCode();
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        newTypeKey = oldTypeKey;
+
+        if (oldTypeKey != PlayerDataKey)
+            return null;
+
+        var json = System.Text.Encoding.UTF8.GetString(rawBytes);
+        
+        // 简单的字符串替换（适用于字段重命名）
+        json = json.Replace("\"Gold\":", "\"Coins\":");
+        
+        // JsonUtility 会自动为缺失字段使用默认值
+        // 所以新增字段不需要特殊处理
+        
+        return System.Text.Encoding.UTF8.GetBytes(json);
+    }
+
+    public SaveData Migrate(SaveData oldData) => oldData;
+}
+```
+
+**二进制序列化格式的迁移**（需要在迁移器内部定义旧结构）：
+
+```csharp
+/// <summary>
+/// 二进制序列化迁移器
+/// 在迁移器内部临时定义旧版本结构（仅用于反序列化）
+/// </summary>
+public class BinaryPlayerMigratorV1ToV2 : IRawByteMigrator
+{
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+
+    private static readonly int PlayerDataKey = typeof(PlayerData).GetHashCode();
+
+    // 在迁移器内部定义旧版本结构（仅用于反序列化旧数据）
+    // 这个结构不需要暴露给外部，只在迁移时使用
+    // 根据你使用的序列化库添加相应的特性
+    [Serializable]
+    private class OldPlayerData
+    {
+        public int Level;
+        public int Gold;  // 旧字段名
+        public string Name;
+    }
+
+    public byte[] MigrateBytes(int oldTypeKey, byte[] rawBytes, out int newTypeKey)
+    {
+        newTypeKey = oldTypeKey;
+
+        if (oldTypeKey != PlayerDataKey)
+            return null;
+
+        // 用旧结构反序列化（根据你的序列化库调整）
+        var oldData = YourSerializer.Deserialize<OldPlayerData>(rawBytes);
+        
+        // 转换为新结构
+        var newData = new PlayerData
+        {
+            Level = oldData.Level,
+            Coins = oldData.Gold,  // 字段重命名
+            Name = oldData.Name,
+            Experience = 0         // 新字段默认值
+        };
+        
+        // 用新结构序列化（key 不变）
+        return YourSerializer.Serialize(newData);
+    }
+
+    public SaveData Migrate(SaveData oldData) => oldData;
+}
+```
+
+#### 注册和使用迁移器
+
+```csharp
 // 注册迁移器
-SaveKit.RegisterMigrator(new MigratorV1ToV2());
-SaveKit.RegisterMigrator(new MigratorV2ToV3());
+SaveKit.RegisterMigrator(new PlayerMigratorV1ToV2());
+SaveKit.RegisterMigrator(new PlayerMigratorV2ToV3());
 
 // 设置当前版本
 SaveKit.SetCurrentVersion(3);
@@ -731,6 +1047,17 @@ SaveKit.SetCurrentVersion(3);
 // 加载时自动执行迁移链：v1 -> v2 -> v3
 var data = SaveKit.Load(0);
 ```
+
+#### 迁移最佳实践
+
+1. **优先使用方式 3（同类型字段变化）**：这是实际开发中最常见的场景，不需要保留旧类定义
+2. **推荐使用 IRawByteMigrator**：支持任何序列化格式，包括 JSON 和二进制
+3. **版本号只增不减**：每次数据结构变化都增加版本号
+4. **迁移器要幂等**：多次执行结果应该相同
+5. **测试迁移链**：确保从任意旧版本都能正确迁移到最新版本
+6. **备份重要存档**：迁移前建议备份原始存档文件
+7. **JSON 迁移最简单**：使用 JSON 序列化时，可以直接操作 JSON 字符串，不依赖任何旧类定义
+8. **二进制迁移需要旧结构**：使用二进制序列化格式时，需要在迁移器内部临时定义旧版本结构
 
 ### 自定义存档路径
 
@@ -744,29 +1071,29 @@ var path = SaveKit.GetSavePath();
 
 ### 扩展：自定义序列化器
 
-默认使用 Unity JsonUtility，可以扩展支持 Nino、MessagePack 等高性能序列化库：
+默认使用 Unity JsonUtility，可以扩展支持 MessagePack、MemoryPack 等高性能序列化库：
 
 ```csharp
 /// <summary>
-/// Nino 序列化器示例
+/// 自定义二进制序列化器示例
 /// </summary>
-public class NinoSaveSerializer : ISaveSerializer
+public class BinarySaveSerializer : ISaveSerializer
 {
     public byte[] Serialize<T>(T data)
     {
-        // 使用 Nino 序列化
-        return Nino.Serialization.Serializer.Serialize(data);
+        // 使用你选择的序列化库
+        return YourSerializer.Serialize(data);
     }
 
     public T Deserialize<T>(byte[] bytes)
     {
-        // 使用 Nino 反序列化
-        return Nino.Serialization.Deserializer.Deserialize<T>(bytes);
+        // 使用你选择的序列化库
+        return YourSerializer.Deserialize<T>(bytes);
     }
 }
 
 // 设置自定义序列化器
-SaveKit.SetSerializer(new NinoSaveSerializer());
+SaveKit.SetSerializer(new BinarySaveSerializer());
 ```
 
 ### 扩展：自定义加密器
