@@ -10,8 +10,6 @@ namespace YokiFrame.EditorTools
     /// </summary>
     public class YokiFrameToolPageWindow : EditorWindow
     {
-        private const string STYLE_PATH = "Assets/YokiFrame/Core/Editor/Styles/YokiFrameToolStyles.uss";
-        
         private IYokiFrameToolPage mPage;
         private VisualElement mPageElement;
         
@@ -56,9 +54,7 @@ namespace YokiFrame.EditorTools
             var root = rootVisualElement;
             
             // 加载样式
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(STYLE_PATH);
-            if (styleSheet != null)
-                root.styleSheets.Add(styleSheet);
+            YokiFrameEditorUtility.ApplyMainStyleSheet(root);
             
             // 创建页面 UI
             mPageElement = mPage.CreateUI();

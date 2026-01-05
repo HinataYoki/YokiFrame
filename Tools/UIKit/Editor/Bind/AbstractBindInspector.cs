@@ -7,13 +7,14 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+using YokiFrame.EditorTools;
+
 namespace YokiFrame
 {
     [CustomEditor(typeof(AbstractBind), true)]
     [CanEditMultipleObjects]
     public class AbstractBindInspector : Editor
     {
-        private const string STYLE_PATH = "Assets/YokiFrame/Tools/UIKit/Editor/Bind/BindInspectorStyles.uss";
         private static readonly Regex IDENTIFIER_REGEX = new(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled);
         
         // SerializedProperties
@@ -97,7 +98,7 @@ namespace YokiFrame
             mRoot.AddToClassList("bind-inspector");
             
             // 加载样式
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(STYLE_PATH);
+            var styleSheet = YokiFrameEditorUtility.LoadStyleSheetByName("BindInspectorStyles");
             if (styleSheet != null)
             {
                 mRoot.styleSheets.Add(styleSheet);
