@@ -198,6 +198,9 @@ namespace YokiFrame
             source.Play();
             mPlayingHandles.Add(handle);
 
+            // 报告播放事件（通过统一监控服务）
+            AudioMonitorService.ReportPlay(path, channelId, config.Volume, config.Pitch, clip.length);
+
             return handle;
         }
 

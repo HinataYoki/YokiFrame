@@ -588,11 +588,38 @@ namespace YokiFrame
 
         #endregion
 
+        #region 调试支持
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// [编辑器专用] 获取所有正在播放的音频句柄
+        /// </summary>
+        public static void GetAllPlayingHandles(List<IAudioHandle> result)
+        {
+            if (sBackend == null)
+            {
+                result.Clear();
+                return;
+            }
+            sBackend.GetAllPlayingHandles(result);
+        }
+#endif
+
+        #endregion
+
         #region 辅助方法
 
         private static void EnsureInitialized()
         {
             if (sIsInitialized) return;
+
+#if UNITY_EDITOR
+            // 编辑器模式下使用 EditorResLoaderPool，支持从 Assets 路径直接加载
+            if (!(ResKit.GetLoaderPool() is EditorResLoaderPool))
+            {
+                ResKit.SetLoaderPool(new EditorResLoaderPool());
+            }
+#endif
 
             // 自动初始化默认后端
             SetBackend(new UnityAudioBackend());
