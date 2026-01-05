@@ -12,6 +12,34 @@ namespace YokiFrame
 
         private MachineState machineState = MachineState.End;
         public MachineState MachineState => machineState;
+        public TEnum CurEnum { get; private set; }
+        
+#if UNITY_EDITOR
+        private Dictionary<int, IState> mStateIdCache;
+        // IFSM 接口实现
+        public string Name { get; set; }
+        public Type EnumType => typeof(TEnum);
+        IState IFSM.CurrentState => mStateDic.TryGetValue(CurEnum, out var s) ? s.Item1 : null;
+        int IFSM.CurrentStateId => CurEnum != null ? Convert.ToInt32(CurEnum) : -1;
+#endif
+
+        public HierarchicalSM(string name = null)
+        {
+#if UNITY_EDITOR
+            Name = name ?? $"HierarchicalSM<{typeof(TEnum).Name}>";
+#endif
+        }
+
+#if UNITY_EDITOR
+        public IReadOnlyDictionary<int, IState> GetAllStates()
+        {
+            mStateIdCache ??= new Dictionary<int, IState>();
+            mStateIdCache.Clear();
+            foreach (var kvp in mStateDic)
+                mStateIdCache[Convert.ToInt32(kvp.Key)] = kvp.Value.Item1;
+            return mStateIdCache;
+        }
+#endif
 
         public void Get(TEnum id, out IState state)
         {
