@@ -73,6 +73,7 @@ namespace YokiFrame
         public T Load<T>(string path) where T : Object
         {
             mAsset = Resources.Load<T>(path);
+            ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
             return mAsset as T;
         }
 
@@ -82,12 +83,14 @@ namespace YokiFrame
             request.completed += _ =>
             {
                 mAsset = request.asset;
+                ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
                 onComplete?.Invoke(mAsset as T);
             };
         }
 
         public void UnloadAndRecycle()
         {
+            ResLoadTracker.OnUnload(this);
             if (mAsset != null)
             {
                 Resources.UnloadAsset(mAsset);
@@ -122,6 +125,7 @@ namespace YokiFrame
         public T Load<T>(string path) where T : Object
         {
             mAsset = Resources.Load<T>(path);
+            ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
             return mAsset as T;
         }
 
@@ -131,6 +135,7 @@ namespace YokiFrame
             request.completed += _ =>
             {
                 mAsset = request.asset;
+                ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
                 onComplete?.Invoke(mAsset as T);
             };
         }
@@ -140,11 +145,13 @@ namespace YokiFrame
             var request = Resources.LoadAsync<T>(path);
             await request.ToUniTask(cancellationToken: cancellationToken);
             mAsset = request.asset;
+            ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
             return mAsset as T;
         }
 
         public void UnloadAndRecycle()
         {
+            ResLoadTracker.OnUnload(this);
             if (mAsset != null)
             {
                 Resources.UnloadAsset(mAsset);

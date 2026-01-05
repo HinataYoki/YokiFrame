@@ -49,15 +49,15 @@ namespace YokiFrame.EditorTools
             public static readonly Color Border = new(0.25f, 0.25f, 0.25f);
             public static readonly Color BorderDark = new(0.1f, 0.1f, 0.1f);
             
-            // 分类颜色（更鲜艳的主题色）
-            public static readonly Color CategoryCore = new(0.4f, 0.7f, 1f);
-            public static readonly Color CategoryKit = new(0.3f, 0.85f, 0.5f);
-            public static readonly Color CategoryTools = new(1f, 0.65f, 0.2f);
+            // 分类颜色（扁平化低饱和度）
+            public static readonly Color CategoryCore = new(0.55f, 0.7f, 0.85f);
+            public static readonly Color CategoryKit = new(0.55f, 0.75f, 0.6f);
+            public static readonly Color CategoryTools = new(0.85f, 0.7f, 0.55f);
             
-            // 分类背景渐变色
-            public static readonly Color CategoryCoreBg = new(0.15f, 0.25f, 0.35f);
-            public static readonly Color CategoryKitBg = new(0.15f, 0.3f, 0.2f);
-            public static readonly Color CategoryToolsBg = new(0.3f, 0.22f, 0.15f);
+            // 分类背景色（与整体灰色协调）
+            public static readonly Color CategoryCoreBg = new(0.14f, 0.15f, 0.17f);
+            public static readonly Color CategoryKitBg = new(0.14f, 0.16f, 0.15f);
+            public static readonly Color CategoryToolsBg = new(0.16f, 0.15f, 0.14f);
         }
         
         protected override void BuildUI(VisualElement root)
@@ -88,99 +88,6 @@ namespace YokiFrame.EditorTools
             panel.style.borderRightWidth = 1;
             panel.style.borderRightColor = new StyleColor(new Color(0.2f, 0.25f, 0.35f, 0.3f));
             
-            // 标题区域 - 渐变背景
-            var headerBox = new VisualElement();
-            headerBox.style.paddingLeft = 20;
-            headerBox.style.paddingRight = 20;
-            headerBox.style.paddingTop = 28;
-            headerBox.style.paddingBottom = 24;
-            headerBox.style.backgroundColor = new StyleColor(new Color(0.05f, 0.05f, 0.08f));
-            
-            // 添加顶部装饰线
-            var topAccent = new VisualElement();
-            topAccent.style.height = 3;
-            topAccent.style.backgroundColor = new StyleColor(new Color(0.4f, 0.7f, 1f, 0.8f));
-            headerBox.Add(topAccent);
-            
-            var logoRow = new VisualElement();
-            logoRow.style.flexDirection = FlexDirection.Row;
-            logoRow.style.alignItems = Align.Center;
-            logoRow.style.marginTop = 16;
-            
-            // Logo 容器带发光效果
-            var logoContainer = new VisualElement();
-            logoContainer.style.width = 42;
-            logoContainer.style.height = 42;
-            logoContainer.style.borderTopLeftRadius = 10;
-            logoContainer.style.borderTopRightRadius = 10;
-            logoContainer.style.borderBottomLeftRadius = 10;
-            logoContainer.style.borderBottomRightRadius = 10;
-            logoContainer.style.backgroundColor = new StyleColor(new Color(0.4f, 0.7f, 1f, 0.15f));
-            logoContainer.style.alignItems = Align.Center;
-            logoContainer.style.justifyContent = Justify.Center;
-            logoContainer.style.marginRight = 12;
-            logoContainer.style.borderLeftWidth = 2;
-            logoContainer.style.borderLeftColor = new StyleColor(new Color(0.4f, 0.7f, 1f, 0.6f));
-            
-            var logo = new Label("📚");
-            logo.style.fontSize = 24;
-            logoContainer.Add(logo);
-            logoRow.Add(logoContainer);
-            
-            var titleBox = new VisualElement();
-            var title = new Label("YokiFrame");
-            title.style.fontSize = 18;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.color = new StyleColor(new Color(0.95f, 0.97f, 1f));
-            titleBox.Add(title);
-            
-            var subtitle = new Label("Documentation");
-            subtitle.style.fontSize = 10;
-            subtitle.style.color = new StyleColor(new Color(0.5f, 0.75f, 1f, 0.8f));
-            subtitle.style.marginTop = 3;
-            subtitle.style.unityFontStyleAndWeight = FontStyle.Bold;
-            subtitle.style.letterSpacing = 1;
-            titleBox.Add(subtitle);
-            
-            logoRow.Add(titleBox);
-            headerBox.Add(logoRow);
-            
-            // 版本信息带徽章样式
-            var versionRow = new VisualElement();
-            versionRow.style.flexDirection = FlexDirection.Row;
-            versionRow.style.marginTop = 16;
-            versionRow.style.alignItems = Align.Center;
-            
-            var versionBadge = new Label("v1.0.0");
-            versionBadge.style.fontSize = 9;
-            versionBadge.style.color = new StyleColor(new Color(0.3f, 0.9f, 0.6f));
-            versionBadge.style.backgroundColor = new StyleColor(new Color(0.1f, 0.3f, 0.2f, 0.5f));
-            versionBadge.style.paddingLeft = 8;
-            versionBadge.style.paddingRight = 8;
-            versionBadge.style.paddingTop = 3;
-            versionBadge.style.paddingBottom = 3;
-            versionBadge.style.borderTopLeftRadius = 10;
-            versionBadge.style.borderTopRightRadius = 10;
-            versionBadge.style.borderBottomLeftRadius = 10;
-            versionBadge.style.borderBottomRightRadius = 10;
-            versionBadge.style.unityFontStyleAndWeight = FontStyle.Bold;
-            versionRow.Add(versionBadge);
-            
-            var separator = new Label("•");
-            separator.style.fontSize = 10;
-            separator.style.color = new StyleColor(new Color(0.3f, 0.3f, 0.4f));
-            separator.style.marginLeft = 8;
-            separator.style.marginRight = 8;
-            versionRow.Add(separator);
-            
-            var apiLabel = new Label("API Reference");
-            apiLabel.style.fontSize = 9;
-            apiLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.6f));
-            versionRow.Add(apiLabel);
-            
-            headerBox.Add(versionRow);
-            panel.Add(headerBox);
-            
             mTocScrollView = new ScrollView();
             mTocScrollView.style.flexGrow = 1;
             mTocScrollView.style.paddingTop = 16;
@@ -208,87 +115,65 @@ namespace YokiFrame.EditorTools
                 {
                     currentCategory = module.Category;
                     
-                    // 创建分类组容器（带炫酷渐变和发光效果）
+                    // 创建分类组容器（扁平化风格）
                     categoryGroup = new VisualElement();
-                    categoryGroup.style.marginTop = i == 0 ? 0 : 16;
+                    categoryGroup.style.marginTop = i == 0 ? 0 : 12;
                     categoryGroup.style.marginLeft = 10;
                     categoryGroup.style.marginRight = 10;
                     categoryGroup.style.marginBottom = 4;
-                    categoryGroup.style.borderTopLeftRadius = 12;
-                    categoryGroup.style.borderTopRightRadius = 12;
-                    categoryGroup.style.borderBottomLeftRadius = 12;
-                    categoryGroup.style.borderBottomRightRadius = 12;
+                    categoryGroup.style.borderTopLeftRadius = 8;
+                    categoryGroup.style.borderTopRightRadius = 8;
+                    categoryGroup.style.borderBottomLeftRadius = 8;
+                    categoryGroup.style.borderBottomRightRadius = 8;
                     categoryGroup.style.overflow = Overflow.Hidden;
                     
                     var categoryColor = GetCategoryColor(currentCategory);
                     var categoryBgColor = GetCategoryBgColor(currentCategory);
                     
-                    // 背景渐变层
+                    // 扁平背景
                     categoryGroup.style.backgroundColor = new StyleColor(categoryBgColor);
                     
-                    // 左侧发光边框
-                    categoryGroup.style.borderLeftWidth = 3;
-                    categoryGroup.style.borderLeftColor = new StyleColor(categoryColor);
-                    
-                    // 顶部装饰条
-                    var topBar = new VisualElement();
-                    topBar.style.height = 2;
-                    topBar.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.4f));
-                    categoryGroup.Add(topBar);
+                    // 细微左侧边框
+                    categoryGroup.style.borderLeftWidth = 2;
+                    categoryGroup.style.borderLeftColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.4f));
                     
                     // 分类标题栏
                     var categoryHeader = new VisualElement();
                     categoryHeader.style.flexDirection = FlexDirection.Row;
                     categoryHeader.style.alignItems = Align.Center;
-                    categoryHeader.style.paddingLeft = 14;
+                    categoryHeader.style.paddingLeft = 12;
                     categoryHeader.style.paddingRight = 12;
-                    categoryHeader.style.paddingTop = 12;
-                    categoryHeader.style.paddingBottom = 12;
-                    categoryHeader.style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.25f));
+                    categoryHeader.style.paddingTop = 10;
+                    categoryHeader.style.paddingBottom = 10;
                     
-                    // 分类图标容器（带发光背景）
-                    var iconBg = new VisualElement();
-                    iconBg.style.width = 32;
-                    iconBg.style.height = 32;
-                    iconBg.style.borderTopLeftRadius = 8;
-                    iconBg.style.borderTopRightRadius = 8;
-                    iconBg.style.borderBottomLeftRadius = 8;
-                    iconBg.style.borderBottomRightRadius = 8;
-                    iconBg.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.2f));
-                    iconBg.style.alignItems = Align.Center;
-                    iconBg.style.justifyContent = Justify.Center;
-                    iconBg.style.marginRight = 10;
-                    iconBg.style.borderLeftWidth = 2;
-                    iconBg.style.borderLeftColor = new StyleColor(categoryColor);
-                    
+                    // 分类图标
                     var categoryIcon = new Label(GetCategoryIcon(currentCategory));
-                    categoryIcon.style.fontSize = 16;
-                    iconBg.Add(categoryIcon);
-                    categoryHeader.Add(iconBg);
+                    categoryIcon.style.fontSize = 14;
+                    categoryIcon.style.marginRight = 8;
+                    categoryHeader.Add(categoryIcon);
                     
                     // 分类标签
                     var categoryLabel = new Label(currentCategory);
                     categoryLabel.style.fontSize = 11;
-                    categoryLabel.style.color = new StyleColor(categoryColor);
+                    categoryLabel.style.color = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.9f));
                     categoryLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
                     categoryLabel.style.flexGrow = 1;
                     categoryLabel.style.letterSpacing = 0.5f;
                     categoryHeader.Add(categoryLabel);
                     
-                    // 分类徽章（显示数量）- 更炫酷的设计
+                    // 分类徽章（显示数量）
                     var countBadge = new Label(GetCategoryModuleCount(currentCategory).ToString());
                     countBadge.style.fontSize = 10;
-                    countBadge.style.color = new StyleColor(new Color(0.05f, 0.05f, 0.08f));
-                    countBadge.style.backgroundColor = new StyleColor(categoryColor);
-                    countBadge.style.paddingLeft = 8;
-                    countBadge.style.paddingRight = 8;
-                    countBadge.style.paddingTop = 4;
-                    countBadge.style.paddingBottom = 4;
-                    countBadge.style.borderTopLeftRadius = 10;
-                    countBadge.style.borderTopRightRadius = 10;
-                    countBadge.style.borderBottomLeftRadius = 10;
-                    countBadge.style.borderBottomRightRadius = 10;
-                    countBadge.style.unityFontStyleAndWeight = FontStyle.Bold;
+                    countBadge.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.75f));
+                    countBadge.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.22f));
+                    countBadge.style.paddingLeft = 7;
+                    countBadge.style.paddingRight = 7;
+                    countBadge.style.paddingTop = 3;
+                    countBadge.style.paddingBottom = 3;
+                    countBadge.style.borderTopLeftRadius = 8;
+                    countBadge.style.borderTopRightRadius = 8;
+                    countBadge.style.borderBottomLeftRadius = 8;
+                    countBadge.style.borderBottomRightRadius = 8;
                     categoryHeader.Add(countBadge);
                     
                     categoryGroup.Add(categoryHeader);
@@ -309,64 +194,47 @@ namespace YokiFrame.EditorTools
             item.style.paddingRight = 10;
             item.style.paddingTop = 8;
             item.style.paddingBottom = 8;
-            item.style.marginLeft = 6;
-            item.style.marginRight = 6;
-            item.style.marginTop = 3;
-            item.style.marginBottom = 3;
-            item.style.borderTopLeftRadius = 8;
-            item.style.borderTopRightRadius = 8;
-            item.style.borderBottomLeftRadius = 8;
-            item.style.borderBottomRightRadius = 8;
-            item.style.borderLeftWidth = 0;
-            item.style.borderLeftColor = new StyleColor(Color.clear);
+            item.style.marginLeft = 4;
+            item.style.marginRight = 4;
+            item.style.marginTop = 2;
+            item.style.marginBottom = 2;
+            item.style.borderTopLeftRadius = 6;
+            item.style.borderTopRightRadius = 6;
+            item.style.borderBottomLeftRadius = 6;
+            item.style.borderBottomRightRadius = 6;
             
             var categoryColor = GetCategoryColor(module.Category);
             
-            // 图标容器（带发光背景和边框）
+            // 简化的图标容器
             var iconContainer = new VisualElement();
-            iconContainer.style.width = 32;
-            iconContainer.style.height = 32;
-            iconContainer.style.borderTopLeftRadius = 8;
-            iconContainer.style.borderTopRightRadius = 8;
-            iconContainer.style.borderBottomLeftRadius = 8;
-            iconContainer.style.borderBottomRightRadius = 8;
-            iconContainer.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.12f));
+            iconContainer.style.width = 28;
+            iconContainer.style.height = 28;
+            iconContainer.style.borderTopLeftRadius = 6;
+            iconContainer.style.borderTopRightRadius = 6;
+            iconContainer.style.borderBottomLeftRadius = 6;
+            iconContainer.style.borderBottomRightRadius = 6;
+            iconContainer.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.2f));
             iconContainer.style.alignItems = Align.Center;
             iconContainer.style.justifyContent = Justify.Center;
             iconContainer.style.marginRight = 10;
-            iconContainer.style.borderLeftWidth = 2;
-            iconContainer.style.borderLeftColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.4f));
             
             var icon = new Label(module.Icon);
-            icon.style.fontSize = 16;
+            icon.style.fontSize = 14;
             iconContainer.Add(icon);
             item.Add(iconContainer);
             
             var label = new Label(module.Name);
             label.style.fontSize = 12;
-            label.style.color = new StyleColor(new Color(0.85f, 0.85f, 0.9f));
+            label.style.color = new StyleColor(new Color(0.75f, 0.75f, 0.8f));
             label.style.flexGrow = 1;
-            label.style.unityFontStyleAndWeight = FontStyle.Bold;
             item.Add(label);
             
-            // 箭头指示器（更现代的设计）
-            var arrowContainer = new VisualElement();
-            arrowContainer.style.width = 20;
-            arrowContainer.style.height = 20;
-            arrowContainer.style.borderTopLeftRadius = 4;
-            arrowContainer.style.borderTopRightRadius = 4;
-            arrowContainer.style.borderBottomLeftRadius = 4;
-            arrowContainer.style.borderBottomRightRadius = 4;
-            arrowContainer.style.alignItems = Align.Center;
-            arrowContainer.style.justifyContent = Justify.Center;
-            arrowContainer.style.backgroundColor = new StyleColor(new Color(1f, 1f, 1f, 0.05f));
-            
-            var arrow = new Label("▸");
-            arrow.style.fontSize = 11;
-            arrow.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.6f));
+            // 简化的箭头指示器
+            var arrow = new Label("›");
+            arrow.style.fontSize = 14;
+            arrow.style.color = new StyleColor(new Color(0.4f, 0.4f, 0.45f));
             arrow.name = "arrow";
-            arrowContainer.Add(arrow);
-            item.Add(arrowContainer);
+            item.Add(arrow);
             
             mTocItemMap[item] = index;
             
@@ -374,16 +242,13 @@ namespace YokiFrame.EditorTools
             {
                 if (item != mSelectedTocItem)
                 {
-                    item.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.15f));
-                    item.style.borderLeftWidth = 3;
-                    item.style.borderLeftColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.6f));
+                    item.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.25f));
                     
                     var arrowLabel = item.Q<Label>("arrow");
-                    if (arrowLabel != null) arrowLabel.style.color = new StyleColor(categoryColor);
+                    if (arrowLabel != null) arrowLabel.style.color = new StyleColor(new Color(0.6f, 0.6f, 0.65f));
                     
                     var iconCont = item.ElementAt(0);
-                    iconCont.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.25f));
-                    iconCont.style.borderLeftColor = new StyleColor(categoryColor);
+                    iconCont.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.25f));
                 }
             });
             item.RegisterCallback<MouseLeaveEvent>(evt =>
@@ -391,15 +256,12 @@ namespace YokiFrame.EditorTools
                 if (item != mSelectedTocItem)
                 {
                     item.style.backgroundColor = StyleKeyword.Null;
-                    item.style.borderLeftWidth = 0;
-                    item.style.borderLeftColor = new StyleColor(Color.clear);
                     
                     var arrowLabel = item.Q<Label>("arrow");
-                    if (arrowLabel != null) arrowLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.6f));
+                    if (arrowLabel != null) arrowLabel.style.color = new StyleColor(new Color(0.4f, 0.4f, 0.45f));
                     
                     var iconCont = item.ElementAt(0);
-                    iconCont.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.12f));
-                    iconCont.style.borderLeftColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.4f));
+                    iconCont.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.2f));
                 }
             });
             item.RegisterCallback<ClickEvent>(evt => SelectModule(index));
@@ -461,45 +323,36 @@ namespace YokiFrame.EditorTools
             {
                 var item = kvp.Key;
                 var moduleIndex = kvp.Value;
-                var module = mModules[moduleIndex];
-                var itemCategoryColor = GetCategoryColor(module.Category);
                 var arrow = item.Q<Label>("arrow");
                 var iconCont = item.ElementAt(0);
                 
                 if (kvp.Value == index)
                 {
-                    // 选中状态 - 更鲜艳的发光效果
-                    item.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.3f));
-                    item.style.borderLeftWidth = 3;
-                    item.style.borderLeftColor = new StyleColor(categoryColor);
+                    // 选中状态 - 扁平化风格
+                    item.style.backgroundColor = new StyleColor(new Color(0.25f, 0.25f, 0.28f));
                     
-                    if (arrow != null) arrow.style.color = new StyleColor(new Color(0.05f, 0.05f, 0.08f));
+                    if (arrow != null) arrow.style.color = new StyleColor(new Color(0.85f, 0.85f, 0.9f));
                     
-                    // 箭头容器背景
-                    var arrowContainer = arrow.parent;
-                    arrowContainer.style.backgroundColor = new StyleColor(categoryColor);
+                    // 图标容器
+                    iconCont.style.backgroundColor = new StyleColor(new Color(0.28f, 0.28f, 0.32f));
                     
-                    // 图标容器发光
-                    iconCont.style.backgroundColor = new StyleColor(new Color(categoryColor.r, categoryColor.g, categoryColor.b, 0.4f));
-                    iconCont.style.borderLeftColor = new StyleColor(categoryColor);
+                    // 文字高亮
+                    var label = item.ElementAt(1) as Label;
+                    if (label != null) label.style.color = new StyleColor(new Color(0.95f, 0.95f, 0.98f));
                     
                     mSelectedTocItem = item;
                 }
                 else
                 {
                     item.style.backgroundColor = StyleKeyword.Null;
-                    item.style.borderLeftWidth = 0;
-                    item.style.borderLeftColor = new StyleColor(Color.clear);
                     
-                    if (arrow != null) arrow.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.6f));
+                    if (arrow != null) arrow.style.color = new StyleColor(new Color(0.4f, 0.4f, 0.45f));
                     
-                    var arrowContainer = arrow.parent;
-                    arrowContainer.style.backgroundColor = new StyleColor(new Color(1f, 1f, 1f, 0.05f));
+                    iconCont.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.2f));
                     
-                    iconCont.style.backgroundColor = new StyleColor(new Color(itemCategoryColor.r, itemCategoryColor.g, itemCategoryColor.b, 0.12f));
-                    iconCont.style.borderLeftColor = new StyleColor(new Color(itemCategoryColor.r, itemCategoryColor.g, itemCategoryColor.b, 0.4f));
-                    iconCont.style.borderLeftColor = new StyleColor(new Color(itemCategoryColor.r, itemCategoryColor.g, itemCategoryColor.b, 0.4f));
-                    if (arrow != null) arrow.style.color = new StyleColor(Theme.TextDim);
+                    // 文字恢复
+                    var label = item.ElementAt(1) as Label;
+                    if (label != null) label.style.color = new StyleColor(new Color(0.75f, 0.75f, 0.8f));
                 }
             }
             
