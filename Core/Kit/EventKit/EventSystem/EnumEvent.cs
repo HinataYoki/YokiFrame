@@ -47,6 +47,10 @@ namespace YokiFrame
         /// </summary>
         public void Send<TEnum>(TEnum key) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            if (EasyEventEditorHook.OnSend != null)
+                EasyEventEditorHook.OnSend.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", null);
+#endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent>()?.Trigger();
         }
@@ -55,6 +59,10 @@ namespace YokiFrame
         /// </summary>
         public void Send<TEnum, TArgs>(TEnum key, TArgs args) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            if (EasyEventEditorHook.OnSend != null)
+                EasyEventEditorHook.OnSend.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", args);
+#endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent<TArgs>>()?.Trigger(args);
         }
@@ -68,6 +76,9 @@ namespace YokiFrame
         /// </summary>
         public LinkUnRegister Register<TEnum>(TEnum key, Action onEvent) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var enumEvent);
             return enumEvent.GetOrAddEvent<EasyEvent>().Register(onEvent);
         }
@@ -76,6 +87,9 @@ namespace YokiFrame
         /// </summary>
         public LinkUnRegister<TArgs> Register<TEnum, TArgs>(TEnum key, Action<TArgs> onEvent) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var enumEvent);
             return enumEvent.GetOrAddEvent<EasyEvent<TArgs>>().Register(onEvent);
         }
@@ -94,16 +108,27 @@ namespace YokiFrame
         }
         public void UnRegister<TEnum>(TEnum key, Action onEvent) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnUnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent>()?.UnRegister(onEvent);
         }
         public void UnRegister<TEnum, TArgs>(TEnum key, Action<TArgs> onEvent) where TEnum : Enum
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnUnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent<TArgs>>()?.UnRegister(onEvent);
         }
         public void UnRegister<TEnum>(TEnum key, Action<object[]> onEvent) where TEnum : Enum => UnRegister<TEnum, object[]>(key, onEvent);
 
         public void Clear() => mEventDic.Clear();
+        
+        /// <summary>
+        /// 获取所有已注册的枚举事件（用于编辑器可视化）
+        /// </summary>
+        public IReadOnlyDictionary<EnumEventKey, EasyEvents> GetAllEvents() => mEventDic;
     }
 }

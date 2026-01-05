@@ -10,13 +10,14 @@ namespace YokiFrame
 
     public struct CustomUnRegister : IUnRegister
     {
-        private Action unRegisterAction;
-        public CustomUnRegister(Action unRegister) => unRegisterAction = unRegister;
+        private Action mUnRegisterAction;
+        
+        public CustomUnRegister(Action unRegister) => mUnRegisterAction = unRegister;
 
         public void UnRegister()
         {
-            unRegisterAction?.Invoke();
-            unRegisterAction = null;
+            mUnRegisterAction?.Invoke();
+            mUnRegisterAction = null;
         }
     }
 

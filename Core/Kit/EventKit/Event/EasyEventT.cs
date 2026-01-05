@@ -1,22 +1,22 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// 无参事件
+    /// 泛型事件（带参数）
     /// </summary>
-    public class EasyEvent : IEasyEvent
+    public class EasyEvent<T> : IEasyEvent
     {
-        private readonly PooledLinkedList<Action> mEventList = new();
+        private readonly PooledLinkedList<Action<T>> mEventList = new();
 
-        public LinkUnRegister Register(Action action)
+        public LinkUnRegister<T> Register(Action<T> action)
         {
             var node = mEventList.AddLast(action);
-            return new LinkUnRegister(mEventList, node);
+            return new LinkUnRegister<T>(mEventList, node);
         }
 
-        public void UnRegister(Action action)
+        public void UnRegister(Action<T> action)
         {
             var node = mEventList.Last;
             while (node != null)
@@ -30,7 +30,7 @@ namespace YokiFrame
             }
         }
 
-        public void Trigger()
+        public void Trigger(T args)
         {
             var node = mEventList.First;
             while (node != null)
@@ -38,11 +38,11 @@ namespace YokiFrame
                 var nxt = node.Next;
                 try
                 {
-                    node.Value?.Invoke();
+                    node.Value?.Invoke(args);
                 }
                 catch (Exception e)
                 {
-                    KitLogger.Error($"[EasyEvent] 类 {node.Value?.Method?.DeclaringType} 方法 {node.Value?.Method?.Name} 执行出错: {e.Message}\n{e.StackTrace}");
+                    KitLogger.Error($"[EasyEvent<{typeof(T).Name}>] 类 {node.Value?.Method?.DeclaringType} 方法 {node.Value?.Method?.Name} 执行出错: {e.Message}\n{e.StackTrace}");
                 }
                 node = nxt;
             }

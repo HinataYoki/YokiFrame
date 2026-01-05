@@ -20,6 +20,10 @@ namespace YokiFrame
         /// </summary>
         public void Send(string key)
         {
+#if UNITY_EDITOR
+            if (EasyEventEditorHook.OnSend != null)
+                EasyEventEditorHook.OnSend.Invoke("String", key, null);
+#endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent>()?.Trigger();
         }
@@ -28,6 +32,10 @@ namespace YokiFrame
         /// </summary>
         public void Send<T>(string key, T args)
         {
+#if UNITY_EDITOR
+            if (EasyEventEditorHook.OnSend != null)
+                EasyEventEditorHook.OnSend.Invoke("String", key, args);
+#endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent<T>>()?.Trigger(args);
         }
@@ -41,6 +49,9 @@ namespace YokiFrame
         /// </summary>
         public LinkUnRegister Register(string key, Action onEvent)
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var stringEvent);
             return stringEvent.GetOrAddEvent<EasyEvent>().Register(onEvent);
         }
@@ -49,6 +60,9 @@ namespace YokiFrame
         /// </summary>
         public LinkUnRegister<T> Register<T>(string key, Action<T> onEvent)
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var stringEvent);
             return stringEvent.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
         }
@@ -70,6 +84,9 @@ namespace YokiFrame
         /// </summary>
         public void UnRegister(string key, Action onEvent)
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnUnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent>()?.UnRegister(onEvent);
         }
@@ -78,6 +95,9 @@ namespace YokiFrame
         /// </summary>
         public void UnRegister<T>(string key, Action<T> onEvent)
         {
+#if UNITY_EDITOR
+            EasyEventEditorHook.OnUnRegister?.Invoke(onEvent);
+#endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent<T>>()?.UnRegister(onEvent);
         }
@@ -87,5 +107,10 @@ namespace YokiFrame
         public void UnRegister(string key, Action<object[]> onEvent) => UnRegister<object[]>(key, onEvent);
 
         public void Clear() => mEventDic.Clear();
+        
+        /// <summary>
+        /// 获取所有已注册的字符串事件（用于编辑器可视化）
+        /// </summary>
+        public IReadOnlyDictionary<string, EasyEvents> GetAllEvents() => mEventDic;
     }
 }
