@@ -17,12 +17,34 @@ namespace YokiFrame
     {
         #region 配置字段
 
+        /// <summary>
+        /// 序列化器，负责将数据对象转换为字节数组
+        /// </summary>
         private static ISaveSerializer sSerializer = new JsonSaveSerializer();
+
+        /// <summary>
+        /// 加密器，负责对存档数据进行加密/解密，为 null 时不加密
+        /// </summary>
         private static ISaveEncryptor sEncryptor;
+
+        /// <summary>
+        /// 存档文件保存路径
+        /// </summary>
         private static string sSavePath;
+
+        /// <summary>
+        /// 当前数据版本号，用于版本迁移判断
+        /// </summary>
         private static int sCurrentVersion = 1;
+
+        /// <summary>
+        /// 最大存档槽位数量
+        /// </summary>
         private static int sMaxSlots = 10;
 
+        /// <summary>
+        /// 版本迁移器字典，key 为 fromVersion * 10000 + toVersion
+        /// </summary>
         private static readonly Dictionary<int, ISaveMigrator> sMigrators = new();
 
         #endregion

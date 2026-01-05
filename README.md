@@ -376,12 +376,141 @@ var panel = UIKit.GetPanel<MainMenuPanel>();
 
 高扩展性的音频管理系统，支持 Unity 原生音频和 FMOD 等第三方方案。
 
-**特点**：策略模式后端扩展 | 零 MonoBehaviour | 对象池复用 | 5通道分离 | int 类型 AudioId
+**特点**：策略模式后端扩展 | 零 MonoBehaviour | 对象池复用 | 可扩展通道系统 | ResKit 资源集成 | 双 API 支持（string path / int audioId）
+
+### 初始化配置
 
 ```csharp
-// 播放音效
-AudioKit.Play(AudioIds.CLICK, AudioChannel.UI);
+// 1. 设置路径解析器（使用 int audioId 时必须）- 将 audioId 转换为资源路径
+AudioKit.SetPathResolver(id => AudioConfigTable.Get(id)?.Path);
+
+// 2. 设置全局配置（可选）
+AudioKit.SetConfig(new AudioKitConfig
+{
+    MaxConcurrentSounds = 32,  // 最大同时播放数
+    PoolInitialSize = 8,       // 对象池初始大小
+    PoolMaxSize = 32,          // 对象池最大大小
+    GlobalVolume = 1f,         // 全局音量
+    BgmVolume = 0.8f,          // BGM 通道音量
+    SfxVolume = 1f,            // 音效通道音量
+    VoiceVolume = 1f,          // 语音通道音量
+    AmbientVolume = 0.6f,      // 环境音通道音量
+    UIVolume = 1f              // UI 音效通道音量
+});
+
+// 3. 在游戏循环中调用更新（驱动淡入淡出和 3D 跟随）
+void Update() => AudioKit.Update(Time.deltaTime);
+```
+
+### 两种播放方式
+
+AudioKit 支持两种播放方式，可根据项目需求选择：
+
+#### 方式一：String Path（推荐用于 FMOD 或直接路径）
+
+直接使用资源路径播放，适合 FMOD EventPath 或已知路径的场景：
+
+```csharp
+// 直接使用路径播放
+AudioKit.Play("Audio/BGM/BattleTheme");
+AudioKit.Play("Audio/SFX/Explosion", AudioChannel.Sfx);
+
+// FMOD EventPath 示例
+AudioKit.Play("event:/Sound/Role/Attack");
+AudioKit.Play("event:/Music/Map/TownDayMusic", AudioChannel.Bgm);
+
+// 3D 音效
+AudioKit.Play3D("Audio/SFX/Footstep", position);
+AudioKit.Play3D("Audio/SFX/Engine", targetTransform);
+
+// 预加载和卸载
+AudioKit.Preload("Audio/BGM/BossTheme");
+AudioKit.Unload("Audio/BGM/BossTheme");
+```
+
+#### 方式二：Int AudioId（推荐用于配置表驱动）
+
+使用 int 类型的音频 ID，通过 PathResolver 解析为路径，适合配置表驱动的项目：
+
+```csharp
+// 定义音频 ID 常量（避免魔法数字）
+public static class AudioIds
+{
+    public const int BGM_MAIN = 1001;
+    public const int BGM_BATTLE = 1002;
+    public const int SFX_CLICK = 2001;
+}
+
+// 设置路径解析器
+AudioKit.SetPathResolver(id => AudioConfigTable.Get(id)?.Path);
+
+// 使用 ID 播放
 AudioKit.Play(AudioIds.BGM_MAIN, AudioChannel.Bgm);
+AudioKit.Play(AudioIds.SFX_CLICK);
+
+// 3D 音效
+AudioKit.Play3D(AudioIds.SFX_EXPLOSION, position);
+
+// 预加载和卸载
+AudioKit.Preload(AudioIds.BGM_BATTLE);
+AudioKit.Unload(AudioIds.BGM_BATTLE);
+```
+
+### 音频通道
+
+AudioKit 提供 5 个内置通道，每个通道可单独控制音量和静音：
+
+| 通道 | ID | 用途 | 典型场景 |
+|------|-----|------|----------|
+| `Bgm` | 0 | 背景音乐 | 主菜单音乐、战斗音乐 |
+| `Sfx` | 1 | 音效 | 攻击、爆炸、拾取 |
+| `Voice` | 2 | 语音 | 角色对话、旁白 |
+| `Ambient` | 3 | 环境音 | 风声、雨声、人群 |
+| `UI` | 4 | UI音效 | 按钮点击、界面切换 |
+
+### 自定义通道扩展
+
+如果 5 个内置通道不够用，可以使用 int 类型的通道 ID 扩展（5+ 为自定义通道）：
+
+```csharp
+// 定义自定义通道枚举
+public enum CustomAudioChannel
+{
+    // 内置通道（0-4）
+    Bgm = 0,
+    Sfx = 1,
+    Voice = 2,
+    Ambient = 3,
+    UI = 4,
+    
+    // 自定义通道（5+）
+    Cutscene = 5,      // 过场动画音频
+    Minigame = 6,      // 小游戏音效
+    Notification = 7   // 通知音效
+}
+
+// 使用自定义通道播放
+AudioKit.Play("Audio/Cutscene/Intro", (int)CustomAudioChannel.Cutscene);
+
+// 或使用配置
+var config = AudioPlayConfig.Default.WithChannel((int)CustomAudioChannel.Minigame);
+AudioKit.Play("Audio/Minigame/Win", config);
+
+// 控制自定义通道
+AudioKit.SetChannelVolume((int)CustomAudioChannel.Cutscene, 0.9f);
+AudioKit.MuteChannel((int)CustomAudioChannel.Notification, true);
+AudioKit.StopChannel((int)CustomAudioChannel.Minigame);
+```
+
+### 基础播放
+
+```csharp
+// 简单播放（默认 Sfx 通道）
+AudioKit.Play("Audio/SFX/Click");
+
+// 指定通道播放
+AudioKit.Play("Audio/BGM/MainTheme", AudioChannel.Bgm);
+AudioKit.Play("Audio/UI/ButtonClick", AudioChannel.UI);
 
 // 使用配置播放
 var config = AudioPlayConfig.Default
@@ -389,52 +518,199 @@ var config = AudioPlayConfig.Default
     .WithVolume(0.8f)
     .WithLoop(true)
     .WithFadeIn(1f);
-var handle = AudioKit.Play(AudioIds.BGM_BATTLE, config);
+var handle = AudioKit.Play("Audio/BGM/BattleTheme", config);
+```
 
-// 控制播放
+### 音频句柄控制
+
+播放返回的 `IAudioHandle` 可用于控制正在播放的音频：
+
+```csharp
+var handle = AudioKit.Play("Audio/BGM/BattleTheme", config);
+
+// 暂停/恢复
 handle.Pause();
 handle.Resume();
+
+// 停止
 handle.Stop();
-handle.StopWithFade(0.5f);
+handle.StopWithFade(0.5f);  // 淡出后停止
+
+// 属性控制
+handle.Volume = 0.5f;       // 调整音量
+handle.Pitch = 1.2f;        // 调整音调
+handle.Time = 10f;          // 跳转到指定时间
+
+// 状态查询
+if (handle.IsPlaying) { }
+if (handle.IsPaused) { }
+var duration = handle.Duration;  // 音频总时长
+var path = handle.Path;          // 音频资源路径
 ```
 
-### 3D 音效
+### 3D 空间音效
 
 ```csharp
-AudioKit.Play3D(AudioIds.EXPLOSION, new Vector3(10, 0, 5));
-AudioKit.Play3D(AudioIds.ENGINE, enemyTransform);  // 跟随目标
+// 固定位置播放
+AudioKit.Play3D("Audio/SFX/Explosion", new Vector3(10, 0, 5));
 
-var config = AudioPlayConfig.Create3D(position, minDistance: 2f, maxDistance: 50f);
-AudioKit.Play(AudioIds.FOOTSTEP, config);
+// 跟随目标播放（音源会持续跟随目标移动）
+AudioKit.Play3D("Audio/SFX/Engine", enemyTransform);
+
+// 完整 3D 配置
+var config = AudioPlayConfig.Default
+    .WithChannel(AudioChannel.Sfx)
+    .With3DPosition(position, minDistance: 2f, maxDistance: 50f)
+    .WithRolloffMode(AudioRolloffMode.Linear);
+AudioKit.Play("Audio/SFX/Footstep", config);
+
+// 或使用工厂方法
+var config3D = AudioPlayConfig.Create3D(position, minDistance: 2f, maxDistance: 50f);
+var configFollow = AudioPlayConfig.Create3DFollow(target, minDistance: 1f, maxDistance: 100f);
 ```
 
-### 通道与全局控制
+### 淡入淡出
 
 ```csharp
-// 通道控制
+// 播放时淡入
+var config = AudioPlayConfig.Default
+    .WithChannel(AudioChannel.Bgm)
+    .WithLoop(true)
+    .WithFadeIn(2f);  // 2秒淡入
+var handle = AudioKit.Play("Audio/BGM/BattleTheme", config);
+
+// 停止时淡出
+handle.StopWithFade(1f);  // 1秒淡出后停止
+```
+
+### 通道控制
+
+```csharp
+// 设置通道音量
 AudioKit.SetChannelVolume(AudioChannel.Bgm, 0.5f);
-AudioKit.MuteChannel(AudioChannel.Voice, true);
-AudioKit.StopChannel(AudioChannel.Bgm);
+AudioKit.SetChannelVolume(AudioChannel.Sfx, 0.8f);
 
-// 全局控制
+// 获取通道音量
+var bgmVolume = AudioKit.GetChannelVolume(AudioChannel.Bgm);
+
+// 静音/取消静音通道
+AudioKit.MuteChannel(AudioChannel.Voice, true);   // 静音语音
+AudioKit.MuteChannel(AudioChannel.Voice, false);  // 取消静音
+
+// 停止通道所有音频
+AudioKit.StopChannel(AudioChannel.Bgm);
+```
+
+### 全局控制
+
+```csharp
+// 全局音量
 AudioKit.SetGlobalVolume(0.7f);
+var volume = AudioKit.GetGlobalVolume();
+
+// 全局静音
+AudioKit.MuteAll(true);
+AudioKit.MuteAll(false);
+var isMuted = AudioKit.IsMuted();
+
+// 暂停/恢复所有音频
 AudioKit.PauseAll();
 AudioKit.ResumeAll();
-AudioKit.MuteAll(true);
+
+// 停止所有音频
+AudioKit.StopAll();
 ```
 
-### 配置与更新
+### 资源管理
 
 ```csharp
-// 路径解析器
-AudioKit.SetPathResolver(id => AudioConfigTable.Get(id)?.Path);
+// 预加载（避免首次播放卡顿）
+AudioKit.Preload("Audio/BGM/BattleTheme");
+AudioKit.PreloadAsync("Audio/SFX/Explosion", () => Debug.Log("预加载完成"));
 
-// 配置
-AudioKit.SetConfig(new AudioKitConfig { MaxConcurrentSounds = 32, BgmVolume = 0.8f });
-
-// 更新驱动（需要手动调用）
-void Update() => AudioKit.Update(Time.deltaTime);
+// 卸载
+AudioKit.Unload("Audio/BGM/BattleTheme");
+AudioKit.UnloadAll();
 ```
+
+### 异步播放
+
+```csharp
+// 回调方式
+AudioKit.PlayAsync("Audio/BGM/BattleTheme", config, handle =>
+{
+    if (handle != null) Debug.Log("播放成功");
+});
+
+// UniTask 方式（需要 UniTask 支持）
+var handle = await AudioKit.PlayUniTaskAsync("Audio/BGM/BattleTheme", config);
+await AudioKit.PreloadUniTaskAsync("Audio/SFX/Explosion");
+```
+
+<details>
+<summary>📖 完整使用示例</summary>
+
+```csharp
+// 定义音频 ID 常量（避免魔法数字）
+public static class AudioIds
+{
+    public const int BGM_MAIN = 1001;
+    public const int BGM_BATTLE = 1002;
+    public const int SFX_CLICK = 2001;
+    public const int SFX_EXPLOSION = 2002;
+    public const int VOICE_INTRO = 3001;
+}
+
+// 音频服务初始化
+public class AudioService : AbstractService
+{
+    private IAudioHandle mCurrentBgm;
+
+    protected override void OnInit()
+    {
+        // 配置路径解析器（用于 int audioId 方式）
+        AudioKit.SetPathResolver(id => $"Audio/{id}");
+        
+        // 配置音量
+        AudioKit.SetConfig(new AudioKitConfig
+        {
+            BgmVolume = 0.7f,
+            SfxVolume = 1f
+        });
+    }
+
+    // 使用 string path 方式
+    public void PlayBgm(string path)
+    {
+        mCurrentBgm?.StopWithFade(0.5f);
+        
+        var config = AudioPlayConfig.Default
+            .WithChannel(AudioChannel.Bgm)
+            .WithLoop(true)
+            .WithFadeIn(1f);
+        mCurrentBgm = AudioKit.Play(path, config);
+    }
+
+    // 使用 int audioId 方式
+    public void PlayBgm(int bgmId)
+    {
+        mCurrentBgm?.StopWithFade(0.5f);
+        
+        var config = AudioPlayConfig.Default
+            .WithChannel(AudioChannel.Bgm)
+            .WithLoop(true)
+            .WithFadeIn(1f);
+        mCurrentBgm = AudioKit.Play(bgmId, config);
+    }
+
+    public void PlaySfx(string path) => AudioKit.Play(path, AudioChannel.Sfx);
+    public void PlaySfx(int sfxId) => AudioKit.Play(sfxId, AudioChannel.Sfx);
+    
+    public void PlaySfx3D(string path, Vector3 position) => AudioKit.Play3D(path, position);
+}
+```
+
+</details>
 
 <details>
 <summary>📖 扩展 FMOD 后端</summary>
@@ -442,22 +718,22 @@ void Update() => AudioKit.Update(Time.deltaTime);
 ```csharp
 // 切换到 FMOD 后端
 AudioKit.SetBackend(new FmodAudioBackend());
-AudioKit.SetPathResolver(id => $"event:/{AudioConfigTable.Get(id).FmodPath}");
 
-// FMOD 后端实现
+// FMOD 后端实现（使用 string path 作为 EventPath）
 public sealed class FmodAudioBackend : IAudioBackend
 {
-    private readonly Dictionary<int, EventReference> mEventCache = new();
+    private readonly Dictionary<string, EventReference> mEventCache = new();
     private readonly List<FmodAudioHandle> mPlayingHandles = new();
     
     public void Initialize(AudioKitConfig config) { /* 初始化 FMOD Bus */ }
     
-    public IAudioHandle Play(int audioId, string path, AudioPlayConfig config)
+    public IAudioHandle Play(string path, AudioPlayConfig config)
     {
-        if (!mEventCache.TryGetValue(audioId, out var eventRef))
+        // path 直接作为 FMOD EventPath，如 "event:/Sound/Role/Attack"
+        if (!mEventCache.TryGetValue(path, out var eventRef))
         {
             eventRef = RuntimeManager.PathToEventReference(path);
-            mEventCache[audioId] = eventRef;
+            mEventCache[path] = eventRef;
         }
         var instance = RuntimeManager.CreateInstance(eventRef);
         // 配置并播放...
@@ -466,6 +742,95 @@ public sealed class FmodAudioBackend : IAudioBackend
     
     // 实现其他接口方法...
 }
+
+// 使用 FMOD
+AudioKit.Play("event:/Sound/Role/Attack");
+AudioKit.Play("event:/Music/Map/TownDayMusic", AudioChannel.Bgm);
+```
+
+</details>
+
+<details>
+<summary>📖 编辑器工具 - 音频 ID 生成器</summary>
+
+通过菜单 `YokiFrame > AudioKit > AudioId Generator` 打开音频 ID 生成器窗口。
+
+### 功能说明
+
+1. **扫描音频文件** - 扫描指定文件夹下的所有音频文件（.wav, .mp3, .ogg, .aiff, .flac）
+2. **生成常量代码** - 自动生成 `AudioIds` 常量类和 `AudioPaths` 路径映射字典
+3. **按文件夹分组** - 可选择按子文件夹分组生成 region
+
+### 配置选项
+
+| 选项 | 说明 |
+|------|------|
+| 扫描文件夹 | 音频文件所在的根目录 |
+| 输出路径 | 生成的 C# 代码文件路径 |
+| 命名空间 | 生成代码的命名空间 |
+| 类名 | 常量类的名称（默认 AudioIds） |
+| 起始 ID | 第一个音频的 ID 值 |
+| 生成路径映射字典 | 是否生成 AudioPaths 类 |
+| 按文件夹分组 | 是否按子文件夹生成 region |
+
+### 生成代码示例
+
+```csharp
+// 生成的 AudioIds.cs
+namespace Game
+{
+    public static class AudioIds
+    {
+        #region BGM
+        
+        /// <summary>
+        /// BattleTheme
+        /// </summary>
+        public const int BGM_BATTLETHEME = 1001;
+        
+        /// <summary>
+        /// MainMenu
+        /// </summary>
+        public const int BGM_MAINMENU = 1002;
+        
+        #endregion
+        
+        #region SFX
+        
+        /// <summary>
+        /// Click
+        /// </summary>
+        public const int SFX_CLICK = 1003;
+        
+        #endregion
+    }
+    
+    public static class AudioPaths
+    {
+        public static readonly Dictionary<int, string> Map = new()
+        {
+            { AudioIds.BGM_BATTLETHEME, "Assets/Audio/BGM/BattleTheme" },
+            { AudioIds.BGM_MAINMENU, "Assets/Audio/BGM/MainMenu" },
+            { AudioIds.SFX_CLICK, "Assets/Audio/SFX/Click" },
+        };
+        
+        public static string GetPath(int audioId)
+        {
+            return Map.TryGetValue(audioId, out var path) ? path : null;
+        }
+    }
+}
+```
+
+### 使用生成的代码
+
+```csharp
+// 设置路径解析器使用生成的映射
+AudioKit.SetPathResolver(AudioPaths.GetPath);
+
+// 使用常量播放
+AudioKit.Play(AudioIds.BGM_BATTLETHEME, AudioChannel.Bgm);
+AudioKit.Play(AudioIds.SFX_CLICK);
 ```
 
 </details>
