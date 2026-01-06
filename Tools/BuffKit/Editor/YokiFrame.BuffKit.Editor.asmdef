@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.BuffKit.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame.BuffKit",
+        "YokiFrame.Core.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

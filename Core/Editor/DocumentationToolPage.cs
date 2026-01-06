@@ -695,6 +695,7 @@ namespace YokiFrame.EditorTools
             mModules.Add(CreateAudioKitDoc());
             mModules.Add(CreateSaveKitDoc());
             mModules.Add(CreateTableKitDoc());
+            mModules.Add(CreateBuffKitDoc());
         }
         
         #endregion

@@ -38,6 +38,7 @@
 | **AudioKit** | 高扩展性音频管理，支持 Unity 原生和 FMOD 后端 |
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
 | **TableKit** | Luban 配置表集成工具，支持编辑器配置和代码生成 |
+| **BuffKit** | 通用 Buff 系统，支持堆叠、时间管理、属性修改、免疫、序列化 |
 
 ## ⚡ 快速开始
 
@@ -70,6 +71,13 @@ SaveKit.Save(0, saveData);
 TableKit.Init();
 var item = TableKit.Tables.TbItem.Get(1001);
 Debug.Log($"物品名称: {item.Name}");
+
+// Buff 系统
+var container = BuffKit.CreateContainer();
+BuffKit.RegisterBuffData(BuffData.Create(1001, 10f, 5, StackMode.Stack).WithTags(100));
+container.Add(1001);
+container.Update(Time.deltaTime); // 在游戏循环中调用
+container.Dispose(); // 使用完毕后释放
 ```
 
 ## 🛠️ 编辑器工具
@@ -77,7 +85,6 @@ Debug.Log($"物品名称: {item.Name}");
 | 快捷键 | 功能 |
 |--------|------|
 | `Ctrl+E` | 打开 YokiFrame 工具面板 |
-| `Shift+U` | 快速创建 UI 面板 |
 | `Alt+B` | 添加 UI 组件绑定 |
 
 工具面板包含：
@@ -88,6 +95,7 @@ Debug.Log($"物品名称: {item.Name}");
 - **UIKit** - UI 面板创建和代码生成
 - **AudioKit** - 运行时音频监控和代码生成
 - **TableKit** - Luban 配置表生成和管理（需安装 Luban 包）
+- **BuffKit** - Buff 监控器，实时查看活跃容器和 Buff 状态
 
 ## 📄 License
 
