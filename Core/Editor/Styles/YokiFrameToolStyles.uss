@@ -451,7 +451,8 @@
 }
 
 .form-label {
-    width: 110px;
+    width: 150px;
+    min-width: 150px;
     color: rgb(170, 175, 185);
     font-size: 13px;
 }

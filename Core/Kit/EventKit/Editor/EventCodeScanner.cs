@@ -22,15 +22,22 @@ namespace YokiFrame
             public string EventType;      // Enum/Type/String
             public string CallType;       // Register/Send/UnRegister
             public string EventKey;       // 事件键（枚举值、类型名、字符串）
+            public string ParamType;      // 参数类型（用于区分不同通道）
         }
 
-        // 正则表达式模式
+        // 正则表达式模式 - 捕获泛型参数
+        // Group 1: 完整泛型参数 (可选)
+        // Group 2: 事件键
         private static readonly Regex EnumRegisterPattern = new(
-            @"EventKit\.Enum\.Register\s*<\s*(\w+)\s*>\s*\(\s*(\w+\.\w+)",
+            @"EventKit\.Enum\.Register\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*(\w+\.\w+)",
             RegexOptions.Compiled);
         
         private static readonly Regex EnumSendPattern = new(
-            @"EventKit\.Enum\.Send\s*<?\s*\w*\s*>?\s*\(\s*(\w+\.\w+)",
+            @"EventKit\.Enum\.Send\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*(\w+\.\w+)",
+            RegexOptions.Compiled);
+        
+        private static readonly Regex EnumUnRegisterPattern = new(
+            @"EventKit\.Enum\.UnRegister\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*(\w+\.\w+)",
             RegexOptions.Compiled);
         
         private static readonly Regex TypeRegisterPattern = new(
@@ -41,12 +48,13 @@ namespace YokiFrame
             @"EventKit\.Type\.Send\s*<\s*(\w+)\s*>",
             RegexOptions.Compiled);
         
+        // String 事件也需要捕获参数类型
         private static readonly Regex StringRegisterPattern = new(
-            @"EventKit\.String\.Register\s*(?:<\s*\w+\s*>)?\s*\(\s*""([^""]+)""",
+            @"EventKit\.String\.Register\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*""([^""]+)""",
             RegexOptions.Compiled);
         
         private static readonly Regex StringSendPattern = new(
-            @"EventKit\.String\.Send\s*(?:<\s*\w+\s*>)?\s*\(\s*""([^""]+)""",
+            @"EventKit\.String\.Send\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*""([^""]+)""",
             RegexOptions.Compiled);
 
         private static readonly List<ScanResult> CachedResults = new();
@@ -100,17 +108,18 @@ namespace YokiFrame
                     var line = lines[i];
                     var lineNumber = i + 1;
 
-                    // Enum 事件
-                    ScanLine(line, EnumRegisterPattern, relativePath, lineNumber, "Enum", "Register", 2);
-                    ScanLine(line, EnumSendPattern, relativePath, lineNumber, "Enum", "Send", 1);
+                    // Enum 事件 - 带参数类型提取
+                    ScanEnumLine(line, EnumRegisterPattern, relativePath, lineNumber, "Register");
+                    ScanEnumLine(line, EnumSendPattern, relativePath, lineNumber, "Send");
+                    ScanEnumLine(line, EnumUnRegisterPattern, relativePath, lineNumber, "UnRegister");
                     
                     // Type 事件
-                    ScanLine(line, TypeRegisterPattern, relativePath, lineNumber, "Type", "Register", 1);
-                    ScanLine(line, TypeSendPattern, relativePath, lineNumber, "Type", "Send", 1);
+                    ScanTypeLine(line, TypeRegisterPattern, relativePath, lineNumber, "Register");
+                    ScanTypeLine(line, TypeSendPattern, relativePath, lineNumber, "Send");
                     
-                    // String 事件
-                    ScanLine(line, StringRegisterPattern, relativePath, lineNumber, "String", "Register", 1);
-                    ScanLine(line, StringSendPattern, relativePath, lineNumber, "String", "Send", 1);
+                    // String 事件 - 带参数类型提取
+                    ScanStringLine(line, StringRegisterPattern, relativePath, lineNumber, "Register");
+                    ScanStringLine(line, StringSendPattern, relativePath, lineNumber, "Send");
                 }
             }
             catch (Exception e)
@@ -119,8 +128,28 @@ namespace YokiFrame
             }
         }
 
-        private static void ScanLine(string line, Regex pattern, string filePath, int lineNumber, 
-            string eventType, string callType, int keyGroupIndex)
+        private static void ScanEnumLine(string line, Regex pattern, string filePath, int lineNumber, string callType)
+        {
+            var match = pattern.Match(line);
+            if (!match.Success) return;
+
+            var genericParams = match.Groups[1].Value.Trim();
+            var eventKey = match.Groups[2].Value;
+            var paramType = ExtractParamType(genericParams);
+
+            CachedResults.Add(new ScanResult
+            {
+                FilePath = filePath,
+                LineNumber = lineNumber,
+                LineContent = line.Trim(),
+                EventType = "Enum",
+                CallType = callType,
+                EventKey = eventKey,
+                ParamType = paramType
+            });
+        }
+
+        private static void ScanTypeLine(string line, Regex pattern, string filePath, int lineNumber, string callType)
         {
             var match = pattern.Match(line);
             if (!match.Success) return;
@@ -130,10 +159,50 @@ namespace YokiFrame
                 FilePath = filePath,
                 LineNumber = lineNumber,
                 LineContent = line.Trim(),
-                EventType = eventType,
+                EventType = "Type",
                 CallType = callType,
-                EventKey = match.Groups[keyGroupIndex].Value
+                EventKey = match.Groups[1].Value,
+                ParamType = match.Groups[1].Value // Type 事件的类型本身就是参数
             });
+        }
+
+        private static void ScanStringLine(string line, Regex pattern, string filePath, int lineNumber, string callType)
+        {
+            var match = pattern.Match(line);
+            if (!match.Success) return;
+
+            var genericParams = match.Groups[1].Value.Trim();
+            var eventKey = match.Groups[2].Value;
+
+            CachedResults.Add(new ScanResult
+            {
+                FilePath = filePath,
+                LineNumber = lineNumber,
+                LineContent = line.Trim(),
+                EventType = "String",
+                CallType = callType,
+                EventKey = eventKey,
+                ParamType = string.IsNullOrEmpty(genericParams) ? "void" : genericParams
+            });
+        }
+
+        /// <summary>
+        /// 从泛型参数中提取参数类型
+        /// 例如: "GameEvent, int" -> "int"
+        /// 例如: "GameEvent" -> "void"
+        /// 例如: "" -> "void"
+        /// </summary>
+        private static string ExtractParamType(string genericParams)
+        {
+            if (string.IsNullOrEmpty(genericParams))
+                return "void";
+
+            var commaIndex = genericParams.IndexOf(',');
+            if (commaIndex < 0)
+                return "void"; // 只有枚举类型，无参数
+
+            // 取逗号后面的部分作为参数类型
+            return genericParams[(commaIndex + 1)..].Trim();
         }
 
         private static string GetRelativePath(string fullPath)

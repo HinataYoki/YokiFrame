@@ -293,8 +293,9 @@ namespace YokiFrame.EditorTools
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
-            row.style.paddingTop = 2;
-            row.style.paddingBottom = 2;
+            row.style.paddingTop = 4;
+            row.style.paddingBottom = 4;
+            row.style.minHeight = 28;
             row.style.paddingLeft = depth * 16;
             
             // 选中高亮

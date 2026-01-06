@@ -16,18 +16,12 @@ namespace YokiFrame
 
         private const float REFRESH_INTERVAL = 0.2f;
 
-        private enum ViewMode { Runtime, History }
-
-        private ViewMode mViewMode = ViewMode.Runtime;
         private double mLastRefreshTime;
 
         // UI 元素引用
-        private VisualElement mRuntimeView;
-        private VisualElement mHistoryView;
-        private VisualElement mToolbarButtons;
         private ListView mFsmListView;
         private VisualElement mDetailPanel;
-        private ListView mHistoryListView;
+        private VisualElement mHistoryPanel;
         private Label mHistoryCountLabel;
 
         // 数据缓存
@@ -40,12 +34,9 @@ namespace YokiFrame
             var toolbar = CreateToolbar();
             root.Add(toolbar);
             
-            mToolbarButtons = new VisualElement();
-            mToolbarButtons.style.flexDirection = FlexDirection.Row;
-            toolbar.Add(mToolbarButtons);
-            
-            AddViewModeButton("运行时监控", ViewMode.Runtime);
-            AddViewModeButton("转换历史", ViewMode.History);
+            var helpLabel = new Label("运行时状态机监控（需要运行游戏）");
+            helpLabel.AddToClassList("toolbar-label");
+            toolbar.Add(helpLabel);
             
             toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
             
@@ -54,52 +45,9 @@ namespace YokiFrame
             content.AddToClassList("content-area");
             root.Add(content);
             
-            mRuntimeView = CreateRuntimeView();
-            mHistoryView = CreateHistoryView();
-            
-            content.Add(mRuntimeView);
-            content.Add(mHistoryView);
-            
-            SwitchView(ViewMode.Runtime);
-        }
-
-        private void AddViewModeButton(string text, ViewMode mode)
-        {
-            var button = CreateToolbarButton(text, () => SwitchView(mode));
-            button.name = $"btn_{mode}";
-            mToolbarButtons.Add(button);
-        }
-
-        private void SwitchView(ViewMode mode)
-        {
-            mViewMode = mode;
-            
-            mRuntimeView.style.display = mode == ViewMode.Runtime ? DisplayStyle.Flex : DisplayStyle.None;
-            mHistoryView.style.display = mode == ViewMode.History ? DisplayStyle.Flex : DisplayStyle.None;
-            
-            foreach (var child in mToolbarButtons.Children())
-            {
-                if (child is Button btn)
-                {
-                    var isSelected = btn.name == $"btn_{mode}";
-                    if (isSelected)
-                        btn.AddToClassList("selected");
-                    else
-                        btn.RemoveFromClassList("selected");
-                }
-            }
-        }
-
-        #region Runtime View
-
-        private VisualElement CreateRuntimeView()
-        {
-            var container = new VisualElement();
-            container.style.flexGrow = 1;
-            
             // 分割面板
             var splitView = CreateSplitView(250f);
-            container.Add(splitView);
+            content.Add(splitView);
             
             // 左侧：FSM 列表
             var leftPanel = new VisualElement();
@@ -110,10 +58,14 @@ namespace YokiFrame
             leftPanel.Add(leftHeader);
             
             mFsmListView = new ListView();
+            mFsmListView.fixedItemHeight = 32;
             mFsmListView.makeItem = () =>
             {
                 var item = new VisualElement();
                 item.AddToClassList("list-item");
+                item.style.height = 32;
+                item.style.paddingTop = 4;
+                item.style.paddingBottom = 4;
                 
                 var indicator = new VisualElement();
                 indicator.AddToClassList("list-item-indicator");
@@ -147,15 +99,23 @@ namespace YokiFrame
             mFsmListView.style.flexGrow = 1;
             leftPanel.Add(mFsmListView);
             
-            // 右侧：详情面板
+            // 右侧：详情面板 + 历史面板
             var rightPanel = new VisualElement();
             rightPanel.AddToClassList("right-panel");
+            rightPanel.style.flexDirection = FlexDirection.Column;
             splitView.Add(rightPanel);
             
-            mDetailPanel = rightPanel;
-            UpdateDetailPanel();
+            // 上半部分：状态机详情
+            mDetailPanel = new VisualElement();
+            mDetailPanel.style.flexGrow = 1;
+            mDetailPanel.style.minHeight = 200;
+            rightPanel.Add(mDetailPanel);
             
-            return container;
+            // 下半部分：转换历史
+            mHistoryPanel = CreateHistoryPanel();
+            rightPanel.Add(mHistoryPanel);
+            
+            UpdateDetailPanel();
         }
 
         private void OnFsmSelected(IEnumerable<object> selection)
@@ -261,26 +221,31 @@ namespace YokiFrame
             return item;
         }
 
-        #endregion
+        #region History Panel
 
-        #region History View
-
-        private VisualElement CreateHistoryView()
+        private VisualElement CreateHistoryPanel()
         {
             var container = new VisualElement();
-            container.style.flexGrow = 1;
+            container.style.minHeight = 280;
+            container.style.borderTopWidth = 1;
+            container.style.borderTopColor = new StyleColor(new UnityEngine.Color(0.3f, 0.3f, 0.3f));
             
             // 工具栏
             var toolbar = CreateToolbar();
             container.Add(toolbar);
             
-            var recordToggle = CreateToolbarToggle("记录转换", FsmDebugger.RecordTransitions,
+            var titleLabel = new Label("📜 转换历史");
+            titleLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+            titleLabel.AddToClassList("toolbar-label");
+            toolbar.Add(titleLabel);
+            
+            var recordToggle = CreateToolbarToggle("记录", FsmDebugger.RecordTransitions,
                 v => FsmDebugger.RecordTransitions = v);
             toolbar.Add(recordToggle);
             
             toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
             
-            mHistoryCountLabel = new Label("记录: 0/500");
+            mHistoryCountLabel = new Label("0/500");
             mHistoryCountLabel.AddToClassList("toolbar-label");
             toolbar.Add(mHistoryCountLabel);
             
@@ -292,74 +257,103 @@ namespace YokiFrame
             toolbar.Add(clearBtn);
             
             // 历史列表
-            mHistoryListView = new ListView();
-            mHistoryListView.makeItem = CreateHistoryItem;
-            mHistoryListView.bindItem = BindHistoryItem;
-            mHistoryListView.style.flexGrow = 1;
-            container.Add(mHistoryListView);
+            var scrollView = new ScrollView();
+            scrollView.style.flexGrow = 1;
+            container.Add(scrollView);
+            
+            var historyList = new VisualElement();
+            historyList.name = "history-list";
+            scrollView.Add(historyList);
             
             return container;
         }
 
-        private VisualElement CreateHistoryItem()
+        private void RefreshHistoryList()
+        {
+            var historyList = mHistoryPanel.Q<VisualElement>("history-list");
+            if (historyList == null) return;
+            
+            historyList.Clear();
+            
+            var history = FsmDebugger.TransitionHistory;
+            mHistoryCountLabel.text = $"{history.Count}/{FsmDebugger.MAX_HISTORY_COUNT}";
+            
+            // 只显示选中 FSM 的历史，或者全部（如果没有选中）
+            var filterName = mSelectedFsm?.Name;
+            
+            // 倒序显示最新的在上面
+            for (var i = history.Count - 1; i >= 0; i--)
+            {
+                var entry = history[i];
+                
+                // 如果选中了 FSM，只显示该 FSM 的历史
+                if (filterName != null && entry.FsmName != filterName)
+                    continue;
+                
+                var item = CreateHistoryItem(entry);
+                historyList.Add(item);
+            }
+            
+            if (historyList.childCount == 0)
+            {
+                var empty = new Label("  暂无转换记录");
+                empty.style.color = new StyleColor(new UnityEngine.Color(0.5f, 0.5f, 0.5f));
+                empty.style.fontSize = 11;
+                empty.style.marginTop = 8;
+                historyList.Add(empty);
+            }
+        }
+
+        private VisualElement CreateHistoryItem(FsmDebugger.TransitionEntry entry)
         {
             var item = new VisualElement();
-            item.AddToClassList("history-item");
+            item.style.flexDirection = FlexDirection.Row;
+            item.style.alignItems = Align.Center;
+            item.style.paddingLeft = 4;
+            item.style.paddingTop = 2;
+            item.style.paddingBottom = 2;
+            item.style.borderBottomWidth = 1;
+            item.style.borderBottomColor = new StyleColor(new UnityEngine.Color(0.2f, 0.2f, 0.2f));
             
-            var time = new Label();
-            time.AddToClassList("history-time");
+            // 时间
+            var time = new Label($"{entry.Time:F2}s");
+            time.style.width = 50;
+            time.style.fontSize = 10;
+            time.style.color = new StyleColor(new UnityEngine.Color(0.6f, 0.6f, 0.6f));
             item.Add(time);
             
-            var actionBadge = new Label();
-            actionBadge.AddToClassList("history-badge");
+            // 动作类型
+            var actionBadge = new Label(entry.Action);
+            actionBadge.style.width = 50;
+            actionBadge.style.fontSize = 10;
+            actionBadge.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+            
+            var actionColor = entry.Action switch
+            {
+                "Start" => new UnityEngine.Color(0.3f, 0.8f, 0.3f),
+                "Change" => new UnityEngine.Color(0.3f, 0.6f, 0.9f),
+                "Stop" => new UnityEngine.Color(0.9f, 0.4f, 0.4f),
+                _ => new UnityEngine.Color(0.7f, 0.7f, 0.7f)
+            };
+            actionBadge.style.color = new StyleColor(actionColor);
             item.Add(actionBadge);
             
-            var fsmName = new Label();
-            fsmName.AddToClassList("history-key");
-            fsmName.style.width = 150;
-            item.Add(fsmName);
-            
+            // 转换信息
             var transition = new Label();
             transition.style.flexGrow = 1;
+            transition.style.fontSize = 11;
             transition.style.color = new StyleColor(new UnityEngine.Color(0.8f, 0.8f, 0.8f));
+            
+            if (entry.Action == "Change")
+                transition.text = $"{entry.FromState} → {entry.ToState}";
+            else if (!string.IsNullOrEmpty(entry.ToState))
+                transition.text = entry.ToState;
+            else if (!string.IsNullOrEmpty(entry.FromState))
+                transition.text = entry.FromState;
+            
             item.Add(transition);
             
             return item;
-        }
-
-        private void BindHistoryItem(VisualElement element, int index)
-        {
-            var history = FsmDebugger.TransitionHistory;
-            var entry = history[history.Count - 1 - index];
-            
-            var labels = element.Query<Label>().ToList();
-            if (labels.Count < 4) return;
-            
-            labels[0].text = $"{entry.Time:F2}s";
-            
-            labels[1].text = entry.Action;
-            labels[1].RemoveFromClassList("start");
-            labels[1].RemoveFromClassList("change");
-            labels[1].AddToClassList(entry.Action.ToLower());
-            
-            labels[2].text = entry.FsmName;
-            
-            if (entry.Action == "Change")
-                labels[3].text = $"{entry.FromState} → {entry.ToState}";
-            else if (!string.IsNullOrEmpty(entry.ToState))
-                labels[3].text = entry.ToState;
-            else if (!string.IsNullOrEmpty(entry.FromState))
-                labels[3].text = entry.FromState;
-            else
-                labels[3].text = "";
-        }
-
-        private void RefreshHistoryList()
-        {
-            var history = FsmDebugger.TransitionHistory;
-            mHistoryListView.itemsSource = new int[history.Count];
-            mHistoryListView.RefreshItems();
-            mHistoryCountLabel.text = $"记录: {history.Count}/{FsmDebugger.MAX_HISTORY_COUNT}";
         }
 
         #endregion
@@ -372,19 +366,14 @@ namespace YokiFrame
             
             if (EditorApplication.timeSinceStartup - mLastRefreshTime > REFRESH_INTERVAL)
             {
-                if (mViewMode == ViewMode.Runtime)
-                {
-                    FsmDebugger.GetActiveFsms(mCachedFsms);
-                    mFsmListView.itemsSource = mCachedFsms;
-                    mFsmListView.RefreshItems();
-                    
-                    if (mSelectedFsm != null)
-                        UpdateDetailPanel();
-                }
-                else if (mViewMode == ViewMode.History)
-                {
-                    RefreshHistoryList();
-                }
+                FsmDebugger.GetActiveFsms(mCachedFsms);
+                mFsmListView.itemsSource = mCachedFsms;
+                mFsmListView.RefreshItems();
+                
+                if (mSelectedFsm != null)
+                    UpdateDetailPanel();
+                
+                RefreshHistoryList();
                 
                 mLastRefreshTime = EditorApplication.timeSinceStartup;
             }

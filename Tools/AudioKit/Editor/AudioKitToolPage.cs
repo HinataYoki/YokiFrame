@@ -671,7 +671,8 @@ namespace YokiFrame
             var panel = new Foldout();
             panel.text = $"  {channelName}";
             panel.value = channelId == 0; // BGM 默认展开
-            panel.style.marginBottom = 4;
+            panel.style.marginBottom = 8;
+            panel.style.minHeight = 36;
             panel.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
             panel.style.borderTopLeftRadius = 6;
             panel.style.borderTopRightRadius = 6;
@@ -679,6 +680,8 @@ namespace YokiFrame
             panel.style.borderBottomRightRadius = 6;
             panel.style.borderLeftWidth = 3;
             panel.style.borderLeftColor = new StyleColor(accentColor);
+            panel.style.paddingTop = 4;
+            panel.style.paddingBottom = 4;
 
             var content = new VisualElement();
             content.style.paddingLeft = 12;

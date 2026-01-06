@@ -251,7 +251,7 @@ namespace YokiFrame.Editor
             content.Add(assemblyRow);
             
             var assemblyLabel = new Label("使用独立程序集:");
-            assemblyLabel.style.width = 120;
+            assemblyLabel.style.width = 150;
             assemblyRow.Add(assemblyLabel);
             
             mUseAssemblyToggle = new Toggle();
@@ -274,7 +274,7 @@ namespace YokiFrame.Editor
             assemblyNameRow.style.flexDirection = FlexDirection.Row;
             assemblyNameRow.style.alignItems = Align.Center;
             assemblyNameRow.style.marginTop = 8;
-            assemblyNameRow.style.marginLeft = 120; // 与 toggle 对齐
+            assemblyNameRow.style.marginLeft = 150; // 与 toggle 对齐
             content.Add(assemblyNameRow);
             
             var assemblyNameLabel = new Label("程序集名称:");
@@ -306,7 +306,7 @@ namespace YokiFrame.Editor
             content.Add(externalTypeRow);
             
             var externalTypeLabel = new Label("生成 ExternalTypeUtil:");
-            externalTypeLabel.style.width = 120;
+            externalTypeLabel.style.width = 150;
             externalTypeRow.Add(externalTypeLabel);
             
             mGenerateExternalTypeUtilToggle = new Toggle();
@@ -536,7 +536,7 @@ namespace YokiFrame.Editor
             row.style.marginTop = 8;
             
             var label = new Label(labelText);
-            label.style.width = 120;
+            label.style.width = 150;
             row.Add(label);
             
             textField = new TextField();
@@ -556,7 +556,7 @@ namespace YokiFrame.Editor
             row.style.marginTop = 8;
             
             var label = new Label(labelText);
-            label.style.width = 120;
+            label.style.width = 150;
             row.Add(label);
             
             var pathContainer = new VisualElement();
@@ -596,7 +596,7 @@ namespace YokiFrame.Editor
             row.style.marginTop = 8;
             
             var label = new Label(labelText);
-            label.style.width = 120;
+            label.style.width = 150;
             row.Add(label);
             
             var pathContainer = new VisualElement();
@@ -634,7 +634,7 @@ namespace YokiFrame.Editor
             row.style.marginTop = 8;
             
             var label = new Label(labelText);
-            label.style.width = 120;
+            label.style.width = 150;
             row.Add(label);
             
             var pathContainer = new VisualElement();
@@ -672,7 +672,7 @@ namespace YokiFrame.Editor
             row.style.marginTop = 8;
             
             var label = new Label(labelText);
-            label.style.width = 120;
+            label.style.width = 150;
             row.Add(label);
             
             dropdown = new DropdownField(new System.Collections.Generic.List<string>(options), 0);
