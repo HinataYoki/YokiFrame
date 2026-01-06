@@ -1,0 +1,26 @@
+{
+    "name": "YokiFrame.TableKit.Editor",
+    "rootNamespace": "YokiFrame.Editor",
+    "references": [
+        "GUID:626e4c3d8fb7da144a01aa6d2652abe6",
+        "GUID:2a81c6962524d424a8ef5072bd3b0fa0",
+        "GUID:29152f77ade275d48bfabf09f083f361"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.code-philosophy.luban",
+            "expression": "",
+            "define": "YOKIFRAME_LUBAN_SUPPORT"
+        }
+    ],
+    "noEngineReferences": false
+}
