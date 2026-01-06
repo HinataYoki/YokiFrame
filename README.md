@@ -37,6 +37,7 @@
 | **UIKit** | 带热度管理的 UI 面板系统，支持编辑器快速创建和代码生成 |
 | **AudioKit** | 高扩展性音频管理，支持 Unity 原生和 FMOD 后端 |
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
+| **TableKit** | Luban 配置表集成工具，支持编辑器配置和代码生成 |
 
 ## ⚡ 快速开始
 
@@ -64,6 +65,11 @@ UIKit.ClosePanel<MainMenuPanel>();
 var saveData = SaveKit.CreateSaveData();
 saveData.SetModule(new PlayerData { Level = 10 });
 SaveKit.Save(0, saveData);
+
+// 配置表（需先通过 TableKit 工具生成代码）
+TableKit.Init();
+var item = TableKit.Tables.TbItem.Get(1001);
+Debug.Log($"物品名称: {item.Name}");
 ```
 
 ## 🛠️ 编辑器工具
@@ -81,6 +87,7 @@ SaveKit.Save(0, saveData);
 - **ActionKit** - Action 监控器，追踪动作序列执行状态
 - **UIKit** - UI 面板创建和代码生成
 - **AudioKit** - 运行时音频监控和代码生成
+- **TableKit** - Luban 配置表生成和管理（需安装 Luban 包）
 
 ## 📄 License
 

@@ -99,14 +99,403 @@ var player = await ResKit.InstantiateUniTaskAsync(""Prefabs/Player"", parent);
                             new()
                             {
                                 Title = "设置自定义加载池",
-                                Code = @"// 切换到自定义加载池（如 YooAsset）
-ResKit.SetLoaderPool(new YooAssetLoaderPool());
+                                Code = @"// 切换到自定义加载池
+ResKit.SetLoaderPool(new CustomLoaderPool());
 
 // 获取当前加载池
 var pool = ResKit.GetLoaderPool();
 
 // 清理所有缓存
 ResKit.ClearAll();"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "YooAsset 集成概述",
+                        Description = "YokiFrame 内置 YooAsset 支持，安装 YooAsset 包后自动启用 YOKIFRAME_YOOASSET_SUPPORT 宏。YooAsset 是一个功能强大的资源管理系统，支持资源热更新、分包下载等功能。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "架构说明",
+                                Code = @"// YokiFrame 提供的 YooAsset 加载器类型：
+// 
+// 1. YooAssetResLoader        - 基础加载器，实现 IResLoader 接口
+// 2. YooAssetResLoaderPool    - 基础加载池，管理 YooAssetResLoader
+// 3. YooAssetResLoaderUniTask - UniTask 加载器，实现 IResLoaderUniTask 接口
+// 4. YooAssetResLoaderUniTaskPool - UniTask 加载池（推荐）
+//
+// 使用流程：
+// 1. 初始化 YooAsset 资源包
+// 2. 创建对应的加载池
+// 3. 调用 ResKit.SetLoaderPool() 切换加载池
+// 4. 使用 ResKit API 加载资源（API 不变）",
+                                Explanation = "ResKit 通过策略模式支持多种资源加载方式，切换加载池后 API 保持一致。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "编辑器模式初始化",
+                        Description = "在编辑器中使用模拟模式，无需构建资源包即可测试。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "编辑器模拟模式",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+using YooAsset;
+
+public class GameLauncher
+{
+    public async UniTask InitializeAsync()
+    {
+        // 1. 创建资源包
+        var package = YooAssets.CreatePackage(""DefaultPackage"");
+        YooAssets.SetDefaultPackage(package);
+
+#if UNITY_EDITOR
+        // 2. 编辑器模式：使用模拟构建
+        var initParams = new EditorSimulateModeParameters();
+        initParams.SimulateManifestFilePath = EditorSimulateModeHelper
+            .SimulateBuild(EDefaultBuildPipeline.BuiltinBuildPipeline, ""DefaultPackage"");
+        
+        var initOp = package.InitializeAsync(initParams);
+        await initOp.ToUniTask();
+        
+        if (initOp.Status != EOperationStatus.Succeed)
+        {
+            Debug.LogError($""YooAsset 初始化失败: {initOp.Error}"");
+            return;
+        }
+#endif
+
+        // 3. 切换 ResKit 加载池
+        ResKit.SetLoaderPool(new YooAssetResLoaderUniTaskPool(package));
+        
+        Debug.Log(""YooAsset 初始化完成"");
+    }
+}
+#endif",
+                                Explanation = "编辑器模式下使用 EditorSimulateModeHelper.SimulateBuild 模拟资源包，无需实际构建。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "单机模式初始化",
+                        Description = "单机游戏使用内置资源包，资源打包在安装包内。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "单机模式（OfflinePlayMode）",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+public async UniTask InitializeOfflineModeAsync()
+{
+    var package = YooAssets.CreatePackage(""DefaultPackage"");
+    YooAssets.SetDefaultPackage(package);
+
+    // 单机模式参数
+    var initParams = new OfflinePlayModeParameters();
+    initParams.BuildinFileSystemParameters = FileSystemParameters
+        .CreateDefaultBuildinFileSystemParameters();
+
+    var initOp = package.InitializeAsync(initParams);
+    await initOp.ToUniTask();
+
+    if (initOp.Status == EOperationStatus.Succeed)
+    {
+        ResKit.SetLoaderPool(new YooAssetResLoaderUniTaskPool(package));
+        Debug.Log(""单机模式初始化成功"");
+    }
+}
+#endif",
+                                Explanation = "单机模式适合不需要热更新的游戏，资源全部打包在安装包内。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "联机模式初始化",
+                        Description = "支持热更新的联机模式，可从服务器下载更新资源。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "联机模式（HostPlayMode）",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+public async UniTask InitializeHostModeAsync()
+{
+    var package = YooAssets.CreatePackage(""DefaultPackage"");
+    YooAssets.SetDefaultPackage(package);
+
+    // 联机模式参数
+    var initParams = new HostPlayModeParameters();
+    
+    // 内置文件系统（StreamingAssets）
+    initParams.BuildinFileSystemParameters = FileSystemParameters
+        .CreateDefaultBuildinFileSystemParameters();
+    
+    // 缓存文件系统（下载的资源）
+    initParams.CacheFileSystemParameters = FileSystemParameters
+        .CreateDefaultCacheFileSystemParameters(new RemoteServices());
+
+    var initOp = package.InitializeAsync(initParams);
+    await initOp.ToUniTask();
+
+    if (initOp.Status == EOperationStatus.Succeed)
+    {
+        // 更新资源版本
+        await UpdatePackageVersionAsync(package);
+        // 下载资源
+        await DownloadPackageAsync(package);
+        
+        ResKit.SetLoaderPool(new YooAssetResLoaderUniTaskPool(package));
+    }
+}
+
+// 远程服务配置
+private class RemoteServices : IRemoteServices
+{
+    public string GetRemoteMainURL(string fileName)
+    {
+        return $""https://cdn.example.com/bundles/{fileName}"";
+    }
+    public string GetRemoteFallbackURL(string fileName)
+    {
+        return $""https://cdn-backup.example.com/bundles/{fileName}"";
+    }
+}
+#endif",
+                                Explanation = "联机模式支持资源热更新，需要配置远程服务器地址。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "资源更新流程",
+                        Description = "联机模式下的资源版本检查和下载流程。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "版本更新和下载",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+// 更新资源版本
+private async UniTask UpdatePackageVersionAsync(ResourcePackage package)
+{
+    var versionOp = package.RequestPackageVersionAsync();
+    await versionOp.ToUniTask();
+    
+    if (versionOp.Status != EOperationStatus.Succeed)
+    {
+        Debug.LogError($""获取版本失败: {versionOp.Error}"");
+        return;
+    }
+    
+    var manifestOp = package.UpdatePackageManifestAsync(versionOp.PackageVersion);
+    await manifestOp.ToUniTask();
+    
+    if (manifestOp.Status != EOperationStatus.Succeed)
+    {
+        Debug.LogError($""更新清单失败: {manifestOp.Error}"");
+    }
+}
+
+// 下载资源
+private async UniTask DownloadPackageAsync(ResourcePackage package)
+{
+    // 创建下载器
+    int downloadingMaxNum = 10;  // 最大并发数
+    int failedTryAgain = 3;      // 失败重试次数
+    var downloader = package.CreateResourceDownloader(downloadingMaxNum, failedTryAgain);
+    
+    if (downloader.TotalDownloadCount == 0)
+    {
+        Debug.Log(""没有需要下载的资源"");
+        return;
+    }
+    
+    // 显示下载信息
+    Debug.Log($""需要下载 {downloader.TotalDownloadCount} 个文件，"" +
+              $""总大小: {downloader.TotalDownloadBytes / 1024 / 1024:F2} MB"");
+    
+    // 开始下载
+    downloader.BeginDownload();
+    await downloader.ToUniTask();
+    
+    if (downloader.Status == EOperationStatus.Succeed)
+    {
+        Debug.Log(""资源下载完成"");
+    }
+    else
+    {
+        Debug.LogError($""资源下载失败: {downloader.Error}"");
+    }
+}
+#endif",
+                                Explanation = "热更新流程：请求版本 → 更新清单 → 下载资源 → 完成。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "使用 ResKit 加载资源",
+                        Description = "切换加载池后，使用 ResKit 的统一 API 加载资源。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "加载资源示例",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+// 同步加载（YooAsset 使用完整路径）
+var prefab = ResKit.Load<GameObject>(""Assets/GameRes/Prefabs/Player.prefab"");
+var sprite = ResKit.Load<Sprite>(""Assets/GameRes/Sprites/Icon.png"");
+var clip = ResKit.Load<AudioClip>(""Assets/GameRes/Audio/BGM.mp3"");
+
+// 同步实例化
+var player = ResKit.Instantiate(""Assets/GameRes/Prefabs/Player.prefab"", parent);
+
+// 异步加载（回调方式）
+ResKit.LoadAsync<GameObject>(""Assets/GameRes/Prefabs/Boss.prefab"", prefab =>
+{
+    if (prefab != null)
+    {
+        Object.Instantiate(prefab);
+    }
+});
+
+// 异步加载（UniTask 方式，推荐）
+var enemy = await ResKit.LoadUniTaskAsync<GameObject>(""Assets/GameRes/Prefabs/Enemy.prefab"");
+var instance = Object.Instantiate(enemy);
+
+// 异步实例化
+var effect = await ResKit.InstantiateUniTaskAsync(""Assets/GameRes/Prefabs/Effect.prefab"", parent);
+#endif",
+                                Explanation = "YooAsset 默认使用完整的资源路径（Assets/...），建议将游戏资源放在统一目录如 Assets/GameRes/。"
+                            },
+                            new()
+                            {
+                                Title = "可寻址资源定位（Addressable）",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+// 在 YooAsset 构建时开启「可寻址资源定位」后，可以直接使用资源名加载
+// 无需完整路径，YooAsset 会自动根据 Manifest 映射找到资源
+
+// 使用资源名加载（开启可寻址后）
+var prefab = ResKit.Load<GameObject>(""Player"");
+var sprite = ResKit.Load<Sprite>(""Icon"");
+var clip = ResKit.Load<AudioClip>(""BGM"");
+
+// 异步加载
+var boss = await ResKit.LoadUniTaskAsync<GameObject>(""Boss"");
+
+// 两种方式都可以（开启可寻址后）
+var player1 = ResKit.Load<GameObject>(""Player"");                        // 资源名
+var player2 = ResKit.Load<GameObject>(""Assets/Prefabs/Player.prefab""); // 完整路径
+#endif",
+                                Explanation = "开启可寻址后，资源名必须唯一。建议使用有意义的命名规范，如 UI_MainMenu、Prefab_Player 等。"
+                            },
+                            new()
+                            {
+                                Title = "资源句柄管理",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+// 获取资源句柄（需要手动管理引用计数）
+var handler = ResKit.LoadAsset<GameObject>(""Item"");
+
+// 使用资源
+var item = Object.Instantiate(handler.Asset as GameObject);
+
+// 增加引用（如果需要长期持有）
+handler.Retain();
+
+// 释放引用（引用为0时自动卸载）
+handler.Release();
+
+// 清理所有缓存
+ResKit.ClearAll();
+#endif",
+                                Explanation = "ResKit 使用引用计数管理资源生命周期，确保不再使用时调用 Release()。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "完整初始化示例",
+                        Description = "根据运行环境自动选择初始化模式的完整示例。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "GameResourceManager",
+                                Code = @"#if YOKIFRAME_YOOASSET_SUPPORT
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using YooAsset;
+using YokiFrame;
+
+/// <summary>
+/// 游戏资源管理器 - 封装 YooAsset 初始化和 ResKit 集成
+/// </summary>
+public class GameResourceManager
+{
+    private const string PACKAGE_NAME = ""DefaultPackage"";
+    private ResourcePackage mPackage;
+    
+    public bool IsInitialized { get; private set; }
+    
+    public async UniTask InitializeAsync()
+    {
+        if (IsInitialized) return;
+        
+        mPackage = YooAssets.CreatePackage(PACKAGE_NAME);
+        YooAssets.SetDefaultPackage(mPackage);
+        
+#if UNITY_EDITOR
+        await InitEditorModeAsync();
+#else
+        await InitRuntimeModeAsync();
+#endif
+        
+        // 切换 ResKit 加载池
+        ResKit.SetLoaderPool(new YooAssetResLoaderUniTaskPool(mPackage));
+        IsInitialized = true;
+        
+        Debug.Log(""[GameResourceManager] 初始化完成"");
+    }
+    
+#if UNITY_EDITOR
+    private async UniTask InitEditorModeAsync()
+    {
+        var initParams = new EditorSimulateModeParameters();
+        initParams.SimulateManifestFilePath = EditorSimulateModeHelper
+            .SimulateBuild(EDefaultBuildPipeline.BuiltinBuildPipeline, PACKAGE_NAME);
+        
+        var op = mPackage.InitializeAsync(initParams);
+        await op.ToUniTask();
+    }
+#endif
+    
+    private async UniTask InitRuntimeModeAsync()
+    {
+        // 根据需求选择单机或联机模式
+        var initParams = new OfflinePlayModeParameters();
+        initParams.BuildinFileSystemParameters = FileSystemParameters
+            .CreateDefaultBuildinFileSystemParameters();
+        
+        var op = mPackage.InitializeAsync(initParams);
+        await op.ToUniTask();
+    }
+    
+    public void Dispose()
+    {
+        ResKit.ClearAll();
+        IsInitialized = false;
+    }
+}
+#endif",
+                                Explanation = "建议封装一个资源管理器类，统一处理初始化逻辑，便于维护和扩展。"
                             }
                         }
                     }

@@ -110,6 +110,7 @@ namespace YokiFrame
         /// </summary>
         public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> self, TKey key, TValue defaultValue = default)
         {
+            if (self == null) return defaultValue;
             return self.TryGetValue(key, out var value) ? value : defaultValue;
         }
 

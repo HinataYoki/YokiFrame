@@ -72,8 +72,6 @@ namespace YokiFrame.EditorTools
             AudioMonitorService.OnAudioPlayed -= RecordPlay;
             AudioMonitorService.OnAudioPlayed += RecordPlay;
             sIsSubscribed = true;
-            
-            Debug.Log("[AudioDebugger] 已订阅音频播放事件");
         }
 
         /// <summary>
@@ -145,8 +143,6 @@ namespace YokiFrame.EditorTools
         private static void RecordPlay(string path, int channelId, float volume, float pitch, float duration)
         {
             if (!sIsRecording) return;
-
-            Debug.Log($"[AudioDebugger] 记录播放: {path}, Channel: {channelId}");
 
             var record = new AudioPlayRecord
             {
