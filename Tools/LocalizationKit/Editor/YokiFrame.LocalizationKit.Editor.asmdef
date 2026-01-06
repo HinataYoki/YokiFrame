@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.LocalizationKit.Editor",
+    "rootNamespace": "YokiFrame.EditorTools",
+    "references": [
+        "GUID:bcdb477476245ee448d8865cea3cea0c",
+        "GUID:29152f77ade275d48bfabf09f083f361"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

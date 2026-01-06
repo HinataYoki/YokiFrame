@@ -39,6 +39,7 @@
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
 | **TableKit** | Luban 配置表集成工具，支持编辑器配置和代码生成 |
 | **BuffKit** | 通用 Buff 系统，支持堆叠、时间管理、属性修改、免疫、序列化 |
+| **LocalizationKit** | 多语言本地化系统，支持参数化文本、复数形式、UI 绑定、异步加载 |
 
 ## ⚡ 快速开始
 
@@ -78,6 +79,13 @@ BuffKit.RegisterBuffData(BuffData.Create(1001, 10f, 5, StackMode.Stack).WithTags
 container.Add(1001);
 container.Update(Time.deltaTime); // 在游戏循环中调用
 container.Dispose(); // 使用完毕后释放
+
+// 本地化系统
+var provider = new JsonLocalizationProvider();
+provider.LoadFromResources();
+LocalizationKit.SetProvider(provider);
+string text = LocalizationKit.Get(1001); // 获取文本
+LocalizationKit.SetLanguage(LanguageId.English); // 切换语言
 ```
 
 ## 🛠️ 编辑器工具
@@ -96,6 +104,7 @@ container.Dispose(); // 使用完毕后释放
 - **AudioKit** - 运行时音频监控和代码生成
 - **TableKit** - Luban 配置表生成和管理（需安装 Luban 包）
 - **BuffKit** - Buff 监控器，实时查看活跃容器和 Buff 状态
+- **Localization** - 本地化文本预览和缺失翻译检测
 
 ## 📄 License
 
