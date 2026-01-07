@@ -26,7 +26,7 @@
 
 | 模块 | 说明 |
 |------|------|
-| **Architecture** | 基于 IAccessor 扩展方法的轻量级架构，服务间完全解耦 |
+| **Architecture** | 轻量级服务架构，支持依赖注入和模块化管理 |
 | **EventKit** | 类型安全的事件系统（TypeEvent / EnumEvent） |
 | **SingletonKit** | 普通类和 MonoBehaviour 单例支持 |
 | **PoolKit** | 高效对象池管理 |
