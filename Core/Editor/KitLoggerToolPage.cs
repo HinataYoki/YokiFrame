@@ -18,8 +18,14 @@ namespace YokiFrame.EditorTools
         private Label mLogDirLabel;
         private Label mEditorLogLabel;
         private Label mPlayerLogLabel;
-        private Toggle mSaveLogToggle;
+        private Toggle mSaveLogEditorToggle;
+        private Toggle mSaveLogPlayerToggle;
+        private Toggle mEnableIMGUIPlayerToggle;
         private Toggle mEncryptionToggle;
+        private IntegerField mMaxQueueSizeField;
+        private IntegerField mMaxSameLogCountField;
+        private IntegerField mMaxRetentionDaysField;
+        private IntegerField mMaxFileMBField;
 
         protected override void BuildUI(VisualElement root)
         {
@@ -102,21 +108,55 @@ namespace YokiFrame.EditorTools
             card.Add(body);
 
             // 编辑器保存日志开关
-            var saveLogRow = new VisualElement();
-            saveLogRow.AddToClassList("info-row");
-            saveLogRow.style.alignItems = Align.Center;
+            var saveLogEditorRow = new VisualElement();
+            saveLogEditorRow.AddToClassList("info-row");
+            saveLogEditorRow.style.alignItems = Align.Center;
 
-            var saveLogLabel = new Label("编辑器保存日志");
-            saveLogLabel.AddToClassList("info-label");
-            saveLogRow.Add(saveLogLabel);
+            var saveLogEditorLabel = new Label("编辑器保存日志");
+            saveLogEditorLabel.AddToClassList("info-label");
+            saveLogEditorRow.Add(saveLogEditorLabel);
 
-            mSaveLogToggle = new Toggle { value = KitLogger.SaveLogInEditor };
-            mSaveLogToggle.RegisterValueChangedCallback(evt =>
+            mSaveLogEditorToggle = new Toggle { value = KitLogger.SaveLogInEditor };
+            mSaveLogEditorToggle.RegisterValueChangedCallback(evt =>
             {
                 KitLogger.SaveLogInEditor = evt.newValue;
             });
-            saveLogRow.Add(mSaveLogToggle);
-            body.Add(saveLogRow);
+            saveLogEditorRow.Add(mSaveLogEditorToggle);
+            body.Add(saveLogEditorRow);
+
+            // 真机保存日志开关
+            var saveLogPlayerRow = new VisualElement();
+            saveLogPlayerRow.AddToClassList("info-row");
+            saveLogPlayerRow.style.alignItems = Align.Center;
+
+            var saveLogPlayerLabel = new Label("真机保存日志");
+            saveLogPlayerLabel.AddToClassList("info-label");
+            saveLogPlayerRow.Add(saveLogPlayerLabel);
+
+            mSaveLogPlayerToggle = new Toggle { value = KitLogger.SaveLogInPlayer };
+            mSaveLogPlayerToggle.RegisterValueChangedCallback(evt =>
+            {
+                KitLogger.SaveLogInPlayer = evt.newValue;
+            });
+            saveLogPlayerRow.Add(mSaveLogPlayerToggle);
+            body.Add(saveLogPlayerRow);
+
+            // 真机 IMGUI 开关
+            var imguiPlayerRow = new VisualElement();
+            imguiPlayerRow.AddToClassList("info-row");
+            imguiPlayerRow.style.alignItems = Align.Center;
+
+            var imguiPlayerLabel = new Label("真机启用 IMGUI");
+            imguiPlayerLabel.AddToClassList("info-label");
+            imguiPlayerRow.Add(imguiPlayerLabel);
+
+            mEnableIMGUIPlayerToggle = new Toggle { value = KitLogger.EnableIMGUIInPlayer };
+            mEnableIMGUIPlayerToggle.RegisterValueChangedCallback(evt =>
+            {
+                KitLogger.EnableIMGUIInPlayer = evt.newValue;
+            });
+            imguiPlayerRow.Add(mEnableIMGUIPlayerToggle);
+            body.Add(imguiPlayerRow);
 
             // 加密开关
             var encryptRow = new VisualElement();
@@ -135,41 +175,64 @@ namespace YokiFrame.EditorTools
             encryptRow.Add(mEncryptionToggle);
             body.Add(encryptRow);
 
-            // 配置说明
+            // 可配置项
             var configInfo = new VisualElement();
             configInfo.style.marginTop = 12;
             configInfo.style.paddingTop = 12;
             configInfo.style.borderTopWidth = 1;
             configInfo.style.borderTopColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
 
-            CreateConfigInfoRow(configInfo, "最大队列", KitLogger.MaxQueueSize.ToString());
-            CreateConfigInfoRow(configInfo, "重复日志阈值", KitLogger.MaxSameLogCount.ToString());
-            CreateConfigInfoRow(configInfo, "保留天数", $"{KitLogger.MaxRetentionDays} 天");
-            CreateConfigInfoRow(configInfo, "单文件上限", $"{KitLogger.MaxFileBytes / 1024 / 1024} MB");
+            // 最大队列
+            mMaxQueueSizeField = CreateIntConfigRow(configInfo, "最大队列", KitLogger.MaxQueueSize, value =>
+            {
+                KitLogger.MaxQueueSize = Mathf.Max(100, value);
+            });
+
+            // 重复日志阈值
+            mMaxSameLogCountField = CreateIntConfigRow(configInfo, "重复日志阈值", KitLogger.MaxSameLogCount, value =>
+            {
+                KitLogger.MaxSameLogCount = Mathf.Max(1, value);
+            });
+
+            // 保留天数
+            mMaxRetentionDaysField = CreateIntConfigRow(configInfo, "保留天数", KitLogger.MaxRetentionDays, value =>
+            {
+                KitLogger.MaxRetentionDays = Mathf.Max(1, value);
+            });
+
+            // 单文件上限 (MB)
+            mMaxFileMBField = CreateIntConfigRow(configInfo, "单文件上限 (MB)", (int)(KitLogger.MaxFileBytes / 1024 / 1024), value =>
+            {
+                KitLogger.MaxFileBytes = Mathf.Max(1, value) * 1024L * 1024L;
+            });
 
             body.Add(configInfo);
 
             return card;
         }
 
-        private void CreateConfigInfoRow(VisualElement parent, string label, string value)
+        private IntegerField CreateIntConfigRow(VisualElement parent, string label, int value, System.Action<int> onChanged)
         {
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.justifyContent = Justify.SpaceBetween;
-            row.style.marginBottom = 4;
+            row.style.alignItems = Align.Center;
+            row.style.marginBottom = 6;
 
             var labelElement = new Label(label);
-            labelElement.style.color = new StyleColor(new Color(0.6f, 0.6f, 0.6f));
-            labelElement.style.fontSize = 11;
+            labelElement.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
+            labelElement.style.fontSize = 12;
+            labelElement.style.flexGrow = 1;
             row.Add(labelElement);
 
-            var valueElement = new Label(value);
-            valueElement.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
-            valueElement.style.fontSize = 11;
-            row.Add(valueElement);
+            var field = new IntegerField();
+            field.value = value;
+            field.style.width = 80;
+            field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
+            row.Add(field);
 
             parent.Add(row);
+            return field;
         }
 
         private VisualElement CreateFileStatusCard()
@@ -218,8 +281,16 @@ namespace YokiFrame.EditorTools
             mLogDirLabel.text = logDir;
 
             // 更新 Toggle 状态
-            mSaveLogToggle.SetValueWithoutNotify(KitLogger.SaveLogInEditor);
+            mSaveLogEditorToggle.SetValueWithoutNotify(KitLogger.SaveLogInEditor);
+            mSaveLogPlayerToggle.SetValueWithoutNotify(KitLogger.SaveLogInPlayer);
+            mEnableIMGUIPlayerToggle.SetValueWithoutNotify(KitLogger.EnableIMGUIInPlayer);
             mEncryptionToggle.SetValueWithoutNotify(KitLogger.EnableEncryption);
+
+            // 更新配置字段
+            mMaxQueueSizeField.SetValueWithoutNotify(KitLogger.MaxQueueSize);
+            mMaxSameLogCountField.SetValueWithoutNotify(KitLogger.MaxSameLogCount);
+            mMaxRetentionDaysField.SetValueWithoutNotify(KitLogger.MaxRetentionDays);
+            mMaxFileMBField.SetValueWithoutNotify((int)(KitLogger.MaxFileBytes / 1024 / 1024));
 
             // 检查日志文件状态
             string editorLog = Path.Combine(logDir, "editor.log");

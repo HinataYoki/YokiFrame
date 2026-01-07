@@ -14,20 +14,57 @@ namespace YokiFrame
         public enum LogLevel { None, Error, Warning, All }
 
         public static LogLevel Level = LogLevel.All;
-        public static bool EnableEncryption = true;
-        public static bool AutoEnableWriteLogToFile = false;
 
-        /// <summary>限制队列最大数量，防止无限报错导致内存撑爆</summary>
-        public static int MaxQueueSize = 20000;
+        /// <summary>
+        /// 获取配置实例（内部使用）
+        /// </summary>
+        internal static KitLoggerSettings Settings => KitLoggerSettings.Instance;
 
-        /// <summary>连续相同日志的忽略阈值，防止 Update 报错把磁盘写死</summary>
-        public static int MaxSameLogCount = 50;
+        // 运行时配置缓存（从 Settings 初始化）
+        private static bool sEnableEncryption;
+        private static int sMaxQueueSize;
+        private static int sMaxSameLogCount;
+        private static int sMaxRetentionDays;
+        private static long sMaxFileBytes;
 
-        public static int MaxRetentionDays = 10;
-        public static long MaxFileBytes = 50 * 1024 * 1024;
+        public static bool EnableEncryption
+        {
+            get => sEnableEncryption;
+            set { sEnableEncryption = value; UpdateSettings(); }
+        }
+
+        public static int MaxQueueSize
+        {
+            get => sMaxQueueSize;
+            set { sMaxQueueSize = value; UpdateSettings(); }
+        }
+
+        public static int MaxSameLogCount
+        {
+            get => sMaxSameLogCount;
+            set { sMaxSameLogCount = value; UpdateSettings(); }
+        }
+
+        public static int MaxRetentionDays
+        {
+            get => sMaxRetentionDays;
+            set { sMaxRetentionDays = value; UpdateSettings(); }
+        }
+
+        public static long MaxFileBytes
+        {
+            get => sMaxFileBytes;
+            set { sMaxFileBytes = value; UpdateSettings(); }
+        }
 
         private static bool sSaveLogInEditor;
+        private static bool sSaveLogInPlayer;
+        private static bool sEnableIMGUIInPlayer;
+        private static bool sInitialized;
 
+        /// <summary>
+        /// 编辑器下是否保存日志到文件
+        /// </summary>
         public static bool SaveLogInEditor
         {
             get => sSaveLogInEditor;
@@ -41,8 +78,93 @@ namespace YokiFrame
                         if (sSaveLogInEditor) KitLoggerWriter.Initialize();
                         else KitLoggerWriter.Shutdown();
                     }
+                    UpdateSettings();
                 }
             }
+        }
+
+        /// <summary>
+        /// 真机下是否保存日志到文件
+        /// </summary>
+        public static bool SaveLogInPlayer
+        {
+            get => sSaveLogInPlayer;
+            set
+            {
+                if (sSaveLogInPlayer != value)
+                {
+                    sSaveLogInPlayer = value;
+                    if (!Application.isEditor)
+                    {
+                        if (sSaveLogInPlayer) KitLoggerWriter.Initialize();
+                        else KitLoggerWriter.Shutdown();
+                    }
+                    UpdateSettings();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 真机下是否启用 IMGUI 日志显示
+        /// </summary>
+        public static bool EnableIMGUIInPlayer
+        {
+            get => sEnableIMGUIInPlayer;
+            set
+            {
+                if (sEnableIMGUIInPlayer != value)
+                {
+                    sEnableIMGUIInPlayer = value;
+                    if (!Application.isEditor)
+                    {
+                        if (sEnableIMGUIInPlayer) EnableIMGUI();
+                        else DisableIMGUI();
+                    }
+                    UpdateSettings();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 从配置文件加载设置
+        /// </summary>
+        private static void LoadSettings()
+        {
+            if (sInitialized) return;
+            sInitialized = true;
+
+            var settings = Settings;
+            if (settings == null) return;
+
+            sSaveLogInEditor = settings.SaveLogInEditor;
+            sSaveLogInPlayer = settings.SaveLogInPlayer;
+            sEnableIMGUIInPlayer = settings.EnableIMGUIInPlayer;
+            sEnableEncryption = settings.EnableEncryption;
+            sMaxQueueSize = settings.MaxQueueSize;
+            sMaxSameLogCount = settings.MaxSameLogCount;
+            sMaxRetentionDays = settings.MaxRetentionDays;
+            sMaxFileBytes = settings.MaxFileBytes;
+        }
+
+        /// <summary>
+        /// 保存设置到配置文件（仅编辑器）
+        /// </summary>
+        private static void UpdateSettings()
+        {
+#if UNITY_EDITOR
+            var settings = Settings;
+            if (settings == null) return;
+
+            settings.SaveLogInEditor = sSaveLogInEditor;
+            settings.SaveLogInPlayer = sSaveLogInPlayer;
+            settings.EnableIMGUIInPlayer = sEnableIMGUIInPlayer;
+            settings.EnableEncryption = sEnableEncryption;
+            settings.MaxQueueSize = sMaxQueueSize;
+            settings.MaxSameLogCount = sMaxSameLogCount;
+            settings.MaxRetentionDays = sMaxRetentionDays;
+            settings.MaxFileSizeMB = (int)(sMaxFileBytes / 1024 / 1024);
+            settings.Save();
+#endif
         }
 
         #endregion
@@ -85,12 +207,21 @@ namespace YokiFrame
 
         #region 系统初始化
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void AutoInit()
         {
-            if (AutoEnableWriteLogToFile)
+            // 从配置文件加载设置
+            LoadSettings();
+
+            // 根据配置决定是否启用功能
+            if (Application.isEditor)
             {
-                KitLoggerWriter.Initialize();
+                if (sSaveLogInEditor) KitLoggerWriter.Initialize();
+            }
+            else
+            {
+                if (sSaveLogInPlayer) KitLoggerWriter.Initialize();
+                if (sEnableIMGUIInPlayer) EnableIMGUI();
             }
         }
 

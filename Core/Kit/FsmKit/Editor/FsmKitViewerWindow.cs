@@ -28,8 +28,7 @@ namespace YokiFrame
         private readonly List<IFSM> mCachedFsms = new(16);
         private IFSM mSelectedFsm;
 
-        [MenuItem("YokiFrame/FsmKit/FSM Viewer")]
-        private static void Open()
+        public static void Open()
         {
             var window = GetWindow<FsmKitViewerWindow>(false, WINDOW_TITLE);
             window.minSize = new Vector2(800, 450);

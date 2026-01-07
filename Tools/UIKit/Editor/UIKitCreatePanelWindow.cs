@@ -10,8 +10,7 @@ namespace YokiFrame
     {
         private readonly static string WindowName = "YokiFrame_UI创建窗口";
 
-        [MenuItem("YokiFrame/UIKit/CreatePanel #_U")]
-        private static void Open()
+        public static void Open()
         {
             Rect wr = new(0, 0, 800, 500);
             var window = GetWindowWithRect<UIKitCreatePanelWindow>(wr, true, WindowName);

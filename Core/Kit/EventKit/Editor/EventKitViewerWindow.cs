@@ -40,8 +40,7 @@ namespace YokiFrame
         private bool mHistoryAutoScroll = true;
         private bool mClearHistoryOnStop = true;
 
-        [MenuItem("YokiFrame/EventKit/Event Viewer")]
-        private static void Open()
+        public static void Open()
         {
             var window = GetWindow<EventKitViewerWindow>(false, WINDOW_TITLE);
             window.minSize = new Vector2(900, 500);

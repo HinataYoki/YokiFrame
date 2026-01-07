@@ -1,9 +1,8 @@
 {
-    "name": "YokiFrame.TableKit.Editor",
-    "rootNamespace": "YokiFrame.Editor",
+    "name": "YokiFrame.TableKit.Editor.TableKitWindow",
+    "rootNamespace": "YokiFrame.TableKit.Editor",
     "references": [
-        "YokiFrame.Core.Editor",
-        "YokiFrame.TableKit.Editor.TableKitWindow"
+        "Luban.Runtime"
     ],
     "includePlatforms": [
         "Editor"

@@ -25,7 +25,6 @@ namespace YokiFrame
         private readonly List<BuffContainer> mCachedContainers = new(16);
         private BuffContainer mSelectedContainer;
 
-        [MenuItem("YokiFrame/BuffKit Viewer")]
         public static void ShowWindow()
         {
             var window = GetWindow<BuffKitViewerWindow>();

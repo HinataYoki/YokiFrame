@@ -16,8 +16,7 @@ namespace YokiFrame
 
         private static readonly string[] AUDIO_EXTENSIONS = { ".wav", ".mp3", ".ogg", ".aiff", ".aif", ".flac" };
 
-        [MenuItem("YokiFrame/AudioKit/AudioId Generator")]
-        private static void Open()
+        public static void Open()
         {
             var window = GetWindow<AudioIdGeneratorWindow>(true, WINDOW_NAME);
             window.minSize = new Vector2(600, 400);
