@@ -29,32 +29,50 @@ namespace YokiFrame
 
         public static bool EnableEncryption
         {
-            get => sEnableEncryption;
+            get { EnsureInitialized(); return sEnableEncryption; }
             set { sEnableEncryption = value; UpdateSettings(); }
         }
 
         public static int MaxQueueSize
         {
-            get => sMaxQueueSize;
+            get { EnsureInitialized(); return sMaxQueueSize; }
             set { sMaxQueueSize = value; UpdateSettings(); }
         }
 
         public static int MaxSameLogCount
         {
-            get => sMaxSameLogCount;
+            get { EnsureInitialized(); return sMaxSameLogCount; }
             set { sMaxSameLogCount = value; UpdateSettings(); }
         }
 
         public static int MaxRetentionDays
         {
-            get => sMaxRetentionDays;
+            get { EnsureInitialized(); return sMaxRetentionDays; }
             set { sMaxRetentionDays = value; UpdateSettings(); }
         }
 
         public static long MaxFileBytes
         {
-            get => sMaxFileBytes;
+            get { EnsureInitialized(); return sMaxFileBytes; }
             set { sMaxFileBytes = value; UpdateSettings(); }
+        }
+
+        /// <summary>
+        /// 确保设置已加载（编辑器和运行时通用）
+        /// </summary>
+        private static void EnsureInitialized()
+        {
+            if (!sInitialized) LoadSettings();
+        }
+
+        /// <summary>
+        /// 重置所有配置为默认值
+        /// </summary>
+        public static void ResetToDefault()
+        {
+            Settings.ResetToDefault();
+            sInitialized = false;
+            LoadSettings();
         }
 
         private static bool sSaveLogInEditor;
@@ -67,7 +85,7 @@ namespace YokiFrame
         /// </summary>
         public static bool SaveLogInEditor
         {
-            get => sSaveLogInEditor;
+            get { EnsureInitialized(); return sSaveLogInEditor; }
             set
             {
                 if (sSaveLogInEditor != value)
@@ -88,7 +106,7 @@ namespace YokiFrame
         /// </summary>
         public static bool SaveLogInPlayer
         {
-            get => sSaveLogInPlayer;
+            get { EnsureInitialized(); return sSaveLogInPlayer; }
             set
             {
                 if (sSaveLogInPlayer != value)
@@ -109,7 +127,7 @@ namespace YokiFrame
         /// </summary>
         public static bool EnableIMGUIInPlayer
         {
-            get => sEnableIMGUIInPlayer;
+            get { EnsureInitialized(); return sEnableIMGUIInPlayer; }
             set
             {
                 if (sEnableIMGUIInPlayer != value)

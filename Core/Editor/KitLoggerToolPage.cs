@@ -46,6 +46,10 @@ namespace YokiFrame.EditorTools
             refreshBtn.AddToClassList("toolbar-button");
             toolbar.Add(refreshBtn);
 
+            var resetBtn = new Button(ResetToDefault) { text = "↩️ 重置默认" };
+            resetBtn.AddToClassList("toolbar-button");
+            toolbar.Add(resetBtn);
+
             // 主内容区
             var content = new ScrollView();
             content.style.flexGrow = 1;
@@ -353,6 +357,16 @@ namespace YokiFrame.EditorTools
             File.WriteAllText(outPath, sb.ToString());
             EditorUtility.RevealInFinder(outPath);
             Debug.Log($"[KitLogger] 解密完成: {outPath}");
+        }
+
+        private void ResetToDefault()
+        {
+            if (!EditorUtility.DisplayDialog("重置配置", "确定要将所有配置重置为默认值吗？", "确定", "取消"))
+                return;
+
+            KitLogger.ResetToDefault();
+            RefreshStatus();
+            Debug.Log("[KitLogger] 配置已重置为默认值");
         }
 
         public override void OnActivate()

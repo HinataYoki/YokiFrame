@@ -122,5 +122,21 @@ namespace YokiFrame
             }
 #endif
         }
+
+        /// <summary>
+        /// 重置为默认值
+        /// </summary>
+        internal void ResetToDefault()
+        {
+            mSaveLogInEditor = false;
+            mSaveLogInPlayer = true;
+            mEnableIMGUIInPlayer = false;
+            mEnableEncryption = true;
+            mMaxQueueSize = 20000;
+            mMaxSameLogCount = 50;
+            mMaxRetentionDays = 15;
+            mMaxFileSizeMB = 100;
+            Save();
+        }
     }
 }
