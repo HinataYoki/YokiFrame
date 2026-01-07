@@ -391,20 +391,27 @@ namespace YokiFrame.Editor
             content.style.paddingBottom = 12;
             container.Add(content);
             
-            // 初始化状态
+            // 运行时初始化状态
             var statusRow = new VisualElement();
             statusRow.style.flexDirection = FlexDirection.Row;
             statusRow.style.alignItems = Align.Center;
             statusRow.style.marginTop = 8;
             content.Add(statusRow);
             
-            var statusLabel = new Label("初始化状态:");
+            var statusLabel = new Label("运行时状态:");
             statusLabel.style.width = 100;
             statusRow.Add(statusLabel);
             
             mStatusLabel = new Label("未初始化");
             mStatusLabel.style.color = new StyleColor(new Color(0.8f, 0.4f, 0.4f));
             statusRow.Add(mStatusLabel);
+            
+            // 状态说明
+            var statusHint = new Label("(TableKit 在运行时是否已加载配置表数据)");
+            statusHint.style.fontSize = 10;
+            statusHint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+            statusHint.style.marginLeft = 8;
+            statusRow.Add(statusHint);
             
             // 加载模式
             var loadModeRow = new VisualElement();
@@ -446,7 +453,7 @@ namespace YokiFrame.Editor
             }));
             
             // 提示
-            var hint = new Label("提示: {0} 为文件名占位符\n• YooAsset 文件名定位: {0}\n• Addressables: Tables/{0}");
+            var hint = new Label("提示: {0} 为数据文件名占位符 (如 item、skill 等)\n• 可寻址模式 (YooAsset/Addressables/Resources): 填 {0}\n• 完整路径模式: 填 Assets/Art/Table/{0} → 加载 item 时得到 Assets/Art/Table/item");
             hint.style.fontSize = 10;
             hint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
             hint.style.marginTop = 8;
@@ -1022,8 +1029,53 @@ namespace YokiFrame.Editor
             dropdown.style.flexGrow = 1;
             selectRow.Add(dropdown);
             
+            // 搜索栏
+            var searchRow = new VisualElement();
+            searchRow.style.flexDirection = FlexDirection.Row;
+            searchRow.style.alignItems = Align.Center;
+            searchRow.style.marginTop = 8;
+            mDataPreviewContainer.Add(searchRow);
+            
+            var searchLabel = new Label("搜索:");
+            searchLabel.style.width = 80;
+            searchRow.Add(searchLabel);
+            
+            var searchField = new TextField();
+            searchField.style.flexGrow = 1;
+            searchField.RegisterValueChangedCallback(evt =>
+            {
+                var treeContainer = mDataPreviewContainer.Q<ScrollView>("tree-container");
+                if (treeContainer != null)
+                {
+                    FilterTreeBySearch(treeContainer, evt.newValue);
+                }
+            });
+            searchRow.Add(searchField);
+            
+            var clearSearchBtn = new Button(() =>
+            {
+                searchField.value = "";
+                var treeContainer = mDataPreviewContainer.Q<ScrollView>("tree-container");
+                if (treeContainer != null)
+                {
+                    FilterTreeBySearch(treeContainer, "");
+                }
+            }) { text = "清除" };
+            clearSearchBtn.style.width = 50;
+            clearSearchBtn.style.marginLeft = 4;
+            searchRow.Add(clearSearchBtn);
+            
+            // 搜索提示
+            var searchHint = new Label("支持搜索键名或值，匹配项会高亮显示");
+            searchHint.style.fontSize = 10;
+            searchHint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+            searchHint.style.marginLeft = 80;
+            searchHint.style.marginTop = 2;
+            mDataPreviewContainer.Add(searchHint);
+            
             // 创建树状视图容器
             var treeContainer = new ScrollView();
+            treeContainer.name = "tree-container";
             treeContainer.style.marginTop = 8;
             treeContainer.style.maxHeight = 400;
             treeContainer.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.12f));
@@ -1042,9 +1094,100 @@ namespace YokiFrame.Editor
                 var index = fileNames.IndexOf(evt.newValue);
                 if (index >= 0 && index < jsonFiles.Length)
                 {
+                    searchField.value = ""; // 切换文件时清空搜索
                     LoadJsonToTree(jsonFiles[index], treeContainer);
                 }
             });
+        }
+
+        /// <summary>
+        /// 根据搜索关键字过滤树状视图
+        /// </summary>
+        private void FilterTreeBySearch(VisualElement container, string searchText)
+        {
+            var isSearching = !string.IsNullOrEmpty(searchText);
+            var lowerSearch = searchText?.ToLowerInvariant() ?? "";
+            
+            // 递归处理所有元素
+            FilterElementRecursive(container, lowerSearch, isSearching);
+        }
+
+        /// <summary>
+        /// 递归过滤元素
+        /// </summary>
+        private bool FilterElementRecursive(VisualElement element, string searchText, bool isSearching)
+        {
+            var hasMatch = false;
+            
+            if (element is Foldout foldout)
+            {
+                // 检查 Foldout 标题是否匹配
+                var titleMatch = isSearching && foldout.text.ToLowerInvariant().Contains(searchText);
+                
+                // 递归检查子元素
+                foreach (var child in foldout.Children())
+                {
+                    if (FilterElementRecursive(child, searchText, isSearching))
+                    {
+                        hasMatch = true;
+                    }
+                }
+                
+                if (titleMatch) hasMatch = true;
+                
+                // 设置显示状态
+                foldout.style.display = (!isSearching || hasMatch) ? DisplayStyle.Flex : DisplayStyle.None;
+                
+                // 如果有匹配，展开 Foldout
+                if (isSearching && hasMatch)
+                {
+                    foldout.value = true;
+                }
+                
+                // 高亮标题
+                if (titleMatch)
+                {
+                    foldout.style.backgroundColor = new StyleColor(new Color(0.3f, 0.4f, 0.3f));
+                }
+                else
+                {
+                    foldout.style.backgroundColor = StyleKeyword.Null;
+                }
+            }
+            else if (element is VisualElement row && element.childCount > 0)
+            {
+                // 检查行内的 Label 是否匹配
+                var labels = element.Query<Label>().ToList();
+                foreach (var label in labels)
+                {
+                    if (isSearching && label.text.ToLowerInvariant().Contains(searchText))
+                    {
+                        hasMatch = true;
+                        label.style.backgroundColor = new StyleColor(new Color(0.4f, 0.5f, 0.3f));
+                    }
+                    else
+                    {
+                        label.style.backgroundColor = StyleKeyword.Null;
+                    }
+                }
+                
+                // 递归检查子元素
+                foreach (var child in element.Children())
+                {
+                    if (FilterElementRecursive(child, searchText, isSearching))
+                    {
+                        hasMatch = true;
+                    }
+                }
+                
+                // 非 Foldout 的普通行，根据匹配状态显示/隐藏
+                if (element.parent is Foldout)
+                {
+                    element.style.display = (!isSearching || hasMatch) ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+            }
+            
+            return hasMatch;
         }
 
         /// <summary>
