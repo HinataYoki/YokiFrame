@@ -79,3 +79,4 @@ crashlytics-build.properties
 AssemblyInfo.cs
 AssemblyInfo.cs.meta
 Tests
+/Tests.meta
