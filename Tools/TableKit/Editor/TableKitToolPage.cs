@@ -187,6 +187,13 @@ namespace YokiFrame.Editor
             content.style.paddingBottom = 12;
             container.Add(content);
             
+            // Luban 配置说明
+            var configHint = new Label("注意: Luban 工具不应放置在 Assets 内部，推荐放置在与 Assets 同级目录或其他位置");
+            configHint.style.fontSize = 11;
+            configHint.style.color = new StyleColor(new Color(0.9f, 0.7f, 0.4f));
+            configHint.style.marginBottom = 8;
+            content.Add(configHint);
+            
             // Luban 工作目录
             content.Add(CreatePathRowAbsolute("Luban 工作目录:", ref mLubanWorkDirField, mLubanWorkDir, path =>
             {
@@ -195,6 +202,14 @@ namespace YokiFrame.Editor
                 SavePrefs();
             }, "选择包含 luban.conf 的目录"));
             
+            // Luban 工作目录说明
+            var workDirHint = new Label("需包含: luban.conf、Defines/、Datas/ 目录 (相对于项目根目录)");
+            workDirHint.style.fontSize = 10;
+            workDirHint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+            workDirHint.style.marginLeft = 150;
+            workDirHint.style.marginTop = 2;
+            content.Add(workDirHint);
+            
             // Luban.dll 路径
             content.Add(CreateFileRow("Luban.dll 路径:", ref mLubanDllPathField, mLubanDllPath, path =>
             {
@@ -202,6 +217,14 @@ namespace YokiFrame.Editor
                 mLubanDllPathField.value = path;
                 SavePrefs();
             }, "dll", "选择 Luban.dll"));
+            
+            // Luban.dll 路径说明
+            var dllHint = new Label("Luban 命令行工具 DLL (相对于项目根目录)");
+            dllHint.style.fontSize = 10;
+            dllHint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+            dllHint.style.marginLeft = 150;
+            dllHint.style.marginTop = 2;
+            content.Add(dllHint);
             
             // Target 下拉
             var targetRow = CreateDropdownRow("Target (-t):", ref mTargetDropdown, TARGET_OPTIONS, mTarget, value =>
@@ -611,11 +634,16 @@ namespace YokiFrame.Editor
             
             var browseBtn = new Button(() =>
             {
-                var startPath = string.IsNullOrEmpty(initialValue) ? Application.dataPath : initialValue;
+                var projectRoot = Path.GetDirectoryName(Application.dataPath);
+                var startPath = string.IsNullOrEmpty(initialValue) 
+                    ? projectRoot 
+                    : (Path.IsPathRooted(initialValue) ? initialValue : Path.Combine(projectRoot, initialValue));
                 var path = EditorUtility.OpenFolderPanel(dialogTitle, startPath, "");
                 if (!string.IsNullOrEmpty(path))
                 {
-                    onPathChanged?.Invoke(path);
+                    // 尝试转换为相对路径
+                    var relativePath = GetRelativePath(projectRoot, path);
+                    onPathChanged?.Invoke(relativePath);
                 }
             }) { text = "..." };
             browseBtn.style.width = 30;
@@ -649,11 +677,16 @@ namespace YokiFrame.Editor
             
             var browseBtn = new Button(() =>
             {
-                var startPath = string.IsNullOrEmpty(initialValue) ? Application.dataPath : Path.GetDirectoryName(initialValue);
+                var projectRoot = Path.GetDirectoryName(Application.dataPath);
+                var startPath = string.IsNullOrEmpty(initialValue) 
+                    ? projectRoot 
+                    : Path.GetDirectoryName(Path.IsPathRooted(initialValue) ? initialValue : Path.Combine(projectRoot, initialValue));
                 var path = EditorUtility.OpenFilePanel(dialogTitle, startPath, extension);
                 if (!string.IsNullOrEmpty(path))
                 {
-                    onPathChanged?.Invoke(path);
+                    // 尝试转换为相对路径
+                    var relativePath = GetRelativePath(projectRoot, path);
+                    onPathChanged?.Invoke(relativePath);
                 }
             }) { text = "..." };
             browseBtn.style.width = 30;
@@ -662,6 +695,25 @@ namespace YokiFrame.Editor
             
             row.Add(pathContainer);
             return row;
+        }
+
+        /// <summary>
+        /// 将绝对路径转换为相对于项目根目录的相对路径
+        /// </summary>
+        private string GetRelativePath(string projectRoot, string absolutePath)
+        {
+            // 规范化路径分隔符
+            projectRoot = projectRoot.Replace('\\', '/').TrimEnd('/');
+            absolutePath = absolutePath.Replace('\\', '/');
+            
+            if (absolutePath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                var relative = absolutePath.Substring(projectRoot.Length).TrimStart('/');
+                return string.IsNullOrEmpty(relative) ? "." : relative;
+            }
+            
+            // 如果不在项目目录内，返回绝对路径
+            return absolutePath;
         }
 
         private VisualElement CreateDropdownRow(string labelText, ref DropdownField dropdown, string[] options, string initialValue, Action<string> onChanged)
@@ -713,21 +765,30 @@ namespace YokiFrame.Editor
             var logBuilder = new StringBuilder();
             logBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss}] 开始{(validateOnly ? "验证" : "生成")}...");
             
+            // 将相对路径转换为绝对路径
+            var projectRoot = Path.GetDirectoryName(Application.dataPath);
+            var workDir = Path.IsPathRooted(mLubanWorkDir) 
+                ? mLubanWorkDir 
+                : Path.Combine(projectRoot, mLubanWorkDir);
+            var dllPath = Path.IsPathRooted(mLubanDllPath) 
+                ? mLubanDllPath 
+                : Path.Combine(projectRoot, mLubanDllPath);
+            
             try
             {
                 // 构建命令行参数
                 var args = BuildLubanArgs(validateOnly);
-                logBuilder.AppendLine($"命令: dotnet {mLubanDllPath}");
+                logBuilder.AppendLine($"命令: dotnet {dllPath}");
                 logBuilder.AppendLine($"参数: {args}");
-                logBuilder.AppendLine($"工作目录: {mLubanWorkDir}");
+                logBuilder.AppendLine($"工作目录: {workDir}");
                 logBuilder.AppendLine("---");
                 
                 // 执行 dotnet 命令
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"\"{mLubanDllPath}\" {args}",
-                    WorkingDirectory = mLubanWorkDir,
+                    Arguments = $"\"{dllPath}\" {args}",
+                    WorkingDirectory = workDir,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -784,7 +845,6 @@ namespace YokiFrame.Editor
                     if (validateOnly)
                     {
                         // 验证成功后加载数据预览
-                        var projectRoot = Path.GetDirectoryName(Application.dataPath);
                         var tempDataDir = Path.Combine(projectRoot, "Temp/LubanValidate");
                         LoadDataPreview(tempDataDir, logBuilder);
                     }
@@ -863,22 +923,33 @@ namespace YokiFrame.Editor
 
         private bool ValidateLubanConfig()
         {
-            if (string.IsNullOrEmpty(mLubanWorkDir) || !Directory.Exists(mLubanWorkDir))
+            var projectRoot = Path.GetDirectoryName(Application.dataPath);
+            
+            // 将相对路径转换为绝对路径进行验证
+            var workDir = Path.IsPathRooted(mLubanWorkDir) 
+                ? mLubanWorkDir 
+                : Path.Combine(projectRoot, mLubanWorkDir);
+            
+            if (string.IsNullOrEmpty(mLubanWorkDir) || !Directory.Exists(workDir))
             {
-                EditorUtility.DisplayDialog("配置错误", "Luban 工作目录不存在", "确定");
+                EditorUtility.DisplayDialog("配置错误", $"Luban 工作目录不存在\n路径: {workDir}", "确定");
                 return false;
             }
             
-            var confPath = Path.Combine(mLubanWorkDir, "luban.conf");
+            var confPath = Path.Combine(workDir, "luban.conf");
             if (!File.Exists(confPath))
             {
                 EditorUtility.DisplayDialog("配置错误", $"找不到 luban.conf 文件\n路径: {confPath}", "确定");
                 return false;
             }
             
-            if (string.IsNullOrEmpty(mLubanDllPath) || !File.Exists(mLubanDllPath))
+            var dllPath = Path.IsPathRooted(mLubanDllPath) 
+                ? mLubanDllPath 
+                : Path.Combine(projectRoot, mLubanDllPath);
+            
+            if (string.IsNullOrEmpty(mLubanDllPath) || !File.Exists(dllPath))
             {
-                EditorUtility.DisplayDialog("配置错误", "Luban.dll 路径无效", "确定");
+                EditorUtility.DisplayDialog("配置错误", $"Luban.dll 路径无效\n路径: {dllPath}", "确定");
                 return false;
             }
             
@@ -887,13 +958,18 @@ namespace YokiFrame.Editor
 
         private void OpenLubanFolder()
         {
-            if (!string.IsNullOrEmpty(mLubanWorkDir) && Directory.Exists(mLubanWorkDir))
+            var projectRoot = Path.GetDirectoryName(Application.dataPath);
+            var workDir = Path.IsPathRooted(mLubanWorkDir) 
+                ? mLubanWorkDir 
+                : Path.Combine(projectRoot, mLubanWorkDir);
+            
+            if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir))
             {
-                EditorUtility.RevealInFinder(mLubanWorkDir);
+                EditorUtility.RevealInFinder(workDir);
             }
             else
             {
-                EditorUtility.DisplayDialog("提示", "Luban 工作目录未配置或不存在", "确定");
+                EditorUtility.DisplayDialog("提示", $"Luban 工作目录未配置或不存在\n路径: {workDir}", "确定");
             }
         }
 
@@ -1324,13 +1400,9 @@ namespace YokiFrame.Editor
             mEditorDataPath = EditorPrefs.GetString(PREF_EDITOR_DATA_PATH, "Assets/Art/Table/");
             mRuntimePathPattern = EditorPrefs.GetString(PREF_RUNTIME_PATH_PATTERN, "{0}");
             
-            // Luban 配置 - 使用项目相对路径作为默认值
-            var projectRoot = Path.GetDirectoryName(Application.dataPath);
-            var defaultLubanWorkDir = Path.Combine(projectRoot, "Luban/MiniTemplate");
-            var defaultLubanDll = Path.Combine(projectRoot, "Luban/Tools/Luban/Luban.dll");
-            
-            mLubanWorkDir = EditorPrefs.GetString(PREF_LUBAN_WORK_DIR, defaultLubanWorkDir);
-            mLubanDllPath = EditorPrefs.GetString(PREF_LUBAN_DLL_PATH, defaultLubanDll);
+            // Luban 配置 - 使用相对路径作为默认值（相对于项目根目录）
+            mLubanWorkDir = EditorPrefs.GetString(PREF_LUBAN_WORK_DIR, "Luban/MiniTemplate");
+            mLubanDllPath = EditorPrefs.GetString(PREF_LUBAN_DLL_PATH, "Luban/Tools/Luban/Luban.dll");
             mTarget = EditorPrefs.GetString(PREF_TARGET, "client");
             mCodeTarget = EditorPrefs.GetString(PREF_CODE_TARGET, "cs-bin");
             mDataTarget = EditorPrefs.GetString(PREF_DATA_TARGET, "bin");
