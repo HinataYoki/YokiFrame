@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "UIKit",
-                Icon = "🖼️",
+                Icon = KitIcons.UIKIT,
                 Category = "TOOLS",
                 Description = "UI 管理工具，提供面板的创建、缓存、堆栈管理等功能。支持同步/异步加载、热度缓存机制、面板堆栈导航。",
                 Sections = new List<DocSection>

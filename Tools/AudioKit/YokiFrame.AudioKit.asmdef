@@ -18,6 +18,21 @@
             "name": "com.cysharp.unitask",
             "expression": "",
             "define": "YOKIFRAME_UNITASK_SUPPORT"
+        },
+        {
+            "name": "UniTask",
+            "expression": "",
+            "define": "YOKIFRAME_UNITASK_SUPPORT"
+        },
+        {
+            "name": "com.unity.fmod",
+            "expression": "",
+            "define": "YOKIFRAME_FMOD_SUPPORT"
+        },
+        {
+            "name": "FMODUnity",
+            "expression": "",
+            "define": "YOKIFRAME_FMOD_SUPPORT"
         }
     ],
     "noEngineReferences": false

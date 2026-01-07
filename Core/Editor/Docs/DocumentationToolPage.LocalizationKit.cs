@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "LocalizationKit",
-                Icon = "🌐",
+                Icon = KitIcons.LOCALIZATIONKIT,
                 Category = "TOOLS",
                 Description = "本地化系统工具，提供多语言文本管理、参数化文本、复数形式、UI 绑定、异步加载等功能。支持 JSON 和 TableKit 数据源。",
                 Sections = new List<DocSection>

@@ -2,7 +2,8 @@
     "name": "YokiFrame.SaveKit",
     "rootNamespace": "",
     "references": [
-        "GUID:224151c835b786a4f8efadaa1799380d"
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

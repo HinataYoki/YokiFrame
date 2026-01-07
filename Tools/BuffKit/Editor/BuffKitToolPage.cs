@@ -12,6 +12,7 @@ namespace YokiFrame
     public class BuffKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "BuffKit";
+        public override string PageIcon => KitIcons.BUFFKIT;
         public override int Priority => 25;
 
         private const float REFRESH_INTERVAL = 0.2f;

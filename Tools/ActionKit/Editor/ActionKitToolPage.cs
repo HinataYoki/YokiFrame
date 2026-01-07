@@ -11,6 +11,7 @@ namespace YokiFrame.EditorTools
     public class ActionKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "ActionKit";
+        public override string PageIcon => KitIcons.ACTIONKIT;
         public override int Priority => 30;
 
         // UI 元素

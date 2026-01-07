@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.IO;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 namespace YokiFrame.TableKit.Editor
@@ -12,13 +13,31 @@ namespace YokiFrame.TableKit.Editor
     public static class TableKitCodeGenerator
     {
         /// <summary>
+        /// 检测 YokiFrame 是否存在（作为 Package 或 Assets 文件夹）
+        /// </summary>
+        private static bool DetectYokiFrame()
+        {
+            // 方式1：检测是否作为 Package 安装
+            var packagePath = "Packages/com.hinatayoki.yokiframe";
+            if (Directory.Exists(packagePath)) return true;
+            
+            // 方式2：检测 YokiFrame.asmdef 是否存在于项目中
+            var guids = AssetDatabase.FindAssets("t:AssemblyDefinitionAsset YokiFrame");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileNameWithoutExtension(path) == "YokiFrame")
+                {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        /// <summary>
         /// 生成所有 TableKit 运行时代码
         /// </summary>
-        /// <param name="outputDir">输出目录（与 Luban 代码相同目录）</param>
-        /// <param name="useAssemblyDefinition">是否生成独立程序集</param>
-        /// <param name="generateExternalTypeUtil">是否生成 ExternalTypeUtil</param>
-        /// <param name="assemblyName">程序集名称</param>
-        /// <param name="tablesNamespace">Tables 类的命名空间，默认 cfg</param>
         public static void Generate(
             string outputDir,
             bool useAssemblyDefinition,
@@ -32,18 +51,16 @@ namespace YokiFrame.TableKit.Editor
                 return;
             }
 
-            // 确保目录存在
             if (!Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
             }
 
-            // 生成文件
-            GenerateTableKit(outputDir, tablesNamespace);
+            var hasYokiFrame = DetectYokiFrame();
+            GenerateTableKit(outputDir, tablesNamespace, hasYokiFrame);
             
             if (generateExternalTypeUtil)
             {
-                // 只在文件不存在时生成，避免覆盖用户自定义的转换逻辑
                 var utilPath = Path.Combine(outputDir, "ExternalTypeUtil.cs");
                 if (!File.Exists(utilPath))
                 {
@@ -54,34 +71,21 @@ namespace YokiFrame.TableKit.Editor
 
             if (useAssemblyDefinition)
             {
-                // 先清理目录下所有旧的 asmdef 文件，避免改名后残留
                 CleanupOldAsmdef(outputDir, assemblyName);
-                GenerateAssemblyDefinition(outputDir, assemblyName);
+                GenerateAssemblyDefinition(outputDir, assemblyName, hasYokiFrame);
             }
             else
             {
-                // 如果不使用独立程序集，删除目录下所有 asmdef 文件
                 CleanupOldAsmdef(outputDir, null);
             }
             
-            // 清理旧文件
             CleanupOldFiles(outputDir);
-
             Debug.Log($"[TableKit] 代码生成完成: {outputDir}");
         }
 
-        /// <summary>
-        /// 清理旧版本生成的文件
-        /// </summary>
         private static void CleanupOldFiles(string outputDir)
         {
-            var oldFiles = new[]
-            {
-                "ITableLoader.cs",
-                "TableLoadMode.cs",
-                "TableExtensions.cs"
-            };
-
+            var oldFiles = new[] { "ITableLoader.cs", "TableLoadMode.cs", "TableExtensions.cs" };
             foreach (var file in oldFiles)
             {
                 var path = Path.Combine(outputDir, file);
@@ -93,7 +97,6 @@ namespace YokiFrame.TableKit.Editor
                 }
             }
 
-            // 删除旧的 Loaders 目录
             var loadersDir = Path.Combine(outputDir, "Loaders");
             if (Directory.Exists(loadersDir))
             {
@@ -103,22 +106,13 @@ namespace YokiFrame.TableKit.Editor
             }
         }
 
-        /// <summary>
-        /// 清理旧的 asmdef 文件
-        /// </summary>
-        /// <param name="outputDir">输出目录</param>
-        /// <param name="keepAssemblyName">要保留的程序集名称，null 表示删除所有</param>
         private static void CleanupOldAsmdef(string outputDir, string keepAssemblyName)
         {
             var asmdefFiles = Directory.GetFiles(outputDir, "*.asmdef", SearchOption.TopDirectoryOnly);
             foreach (var asmdefPath in asmdefFiles)
             {
                 var fileName = Path.GetFileNameWithoutExtension(asmdefPath);
-                // 如果指定了保留名称且当前文件就是要保留的，跳过
-                if (!string.IsNullOrEmpty(keepAssemblyName) && fileName == keepAssemblyName)
-                {
-                    continue;
-                }
+                if (!string.IsNullOrEmpty(keepAssemblyName) && fileName == keepAssemblyName) continue;
                 
                 File.Delete(asmdefPath);
                 var metaPath = asmdefPath + ".meta";
@@ -126,7 +120,8 @@ namespace YokiFrame.TableKit.Editor
             }
         }
 
-        private static void GenerateTableKit(string outputDir, string tablesNamespace)
+
+        private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame)
         {
             var sb = new StringBuilder();
             sb.AppendLine("using System;");
@@ -164,7 +159,6 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// 设置二进制数据加载器");
             sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    /// <param name=\"loader\">加载器委托，参数为文件名（不含扩展名），返回二进制数据</param>");
             sb.AppendLine("    public static void SetBinaryLoader(Func<string, byte[]> loader)");
             sb.AppendLine("    {");
             sb.AppendLine("        sBinaryLoader = loader ?? throw new ArgumentNullException(nameof(loader));");
@@ -173,7 +167,6 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// 设置 JSON 数据加载器");
             sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    /// <param name=\"loader\">加载器委托，参数为文件名（不含扩展名），返回 JSON 字符串</param>");
             sb.AppendLine("    public static void SetJsonLoader(Func<string, string> loader)");
             sb.AppendLine("    {");
             sb.AppendLine("        sJsonLoader = loader ?? throw new ArgumentNullException(nameof(loader));");
@@ -186,7 +179,6 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    {");
             sb.AppendLine("        if (Initialized) return;");
             sb.AppendLine();
-            sb.AppendLine("        // 如果未设置加载器，使用默认加载器");
             sb.AppendLine("        if (sBinaryLoader == null) sBinaryLoader = DefaultBinaryLoader;");
             sb.AppendLine("        if (sJsonLoader == null) sJsonLoader = DefaultJsonLoader;");
             sb.AppendLine();
@@ -225,9 +217,6 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("    #region 默认加载器");
             sb.AppendLine();
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 运行时路径模式，{0} 会被替换为文件名");
-            sb.AppendLine("    /// </summary>");
             sb.AppendLine("    private static string sRuntimePathPattern = \"{0}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
@@ -235,47 +224,55 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void SetRuntimePathPattern(string pattern) => sRuntimePathPattern = pattern ?? \"{0}\";");
             sb.AppendLine();
-            sb.AppendLine("#if YOKIFRAME");
-            sb.AppendLine("    // YokiFrame 环境：使用 ResKit 加载");
-            sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
-            sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
-            sb.AppendLine("        if (handler?.Asset == null)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
-            sb.AppendLine("            return null;");
-            sb.AppendLine("        }");
-            sb.AppendLine("        return handler.Asset.bytes;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-            sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
-            sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
-            sb.AppendLine("        if (handler?.Asset == null)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
-            sb.AppendLine("            return null;");
-            sb.AppendLine("        }");
-            sb.AppendLine("        return handler.Asset.text;");
-            sb.AppendLine("    }");
-            sb.AppendLine("#else");
-            sb.AppendLine("    // 非 YokiFrame 环境：使用 Resources 加载");
-            sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
-            sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
-            sb.AppendLine("        return asset != null ? asset.bytes : null;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-            sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
-            sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
-            sb.AppendLine("        return asset != null ? asset.text : null;");
-            sb.AppendLine("    }");
-            sb.AppendLine("#endif");
+
+            // 根据 YokiFrame 检测结果生成不同的默认加载器（生成时确定，无需条件编译）
+            if (hasYokiFrame)
+            {
+                sb.AppendLine("    // 默认加载器：使用 YokiFrame.ResKit");
+                sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
+                sb.AppendLine("    {");
+                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
+                sb.AppendLine("        if (handler == null)");
+                sb.AppendLine("        {");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
+                sb.AppendLine("            return null;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
+                sb.AppendLine("        return textAsset != null ? textAsset.bytes : null;");
+                sb.AppendLine("    }");
+                sb.AppendLine();
+                sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
+                sb.AppendLine("    {");
+                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
+                sb.AppendLine("        if (handler == null)");
+                sb.AppendLine("        {");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
+                sb.AppendLine("            return null;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
+                sb.AppendLine("        return textAsset != null ? textAsset.text : null;");
+                sb.AppendLine("    }");
+            }
+            else
+            {
+                sb.AppendLine("    // 默认加载器：使用 Resources");
+                sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
+                sb.AppendLine("    {");
+                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
+                sb.AppendLine("        return asset != null ? asset.bytes : null;");
+                sb.AppendLine("    }");
+                sb.AppendLine();
+                sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
+                sb.AppendLine("    {");
+                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
+                sb.AppendLine("        return asset != null ? asset.text : null;");
+                sb.AppendLine("    }");
+            }
+            
             sb.AppendLine();
             sb.AppendLine("    #endregion");
             sb.AppendLine();
@@ -378,6 +375,7 @@ namespace YokiFrame.TableKit.Editor
             File.WriteAllText(Path.Combine(outputDir, "TableKit.cs"), sb.ToString(), Encoding.UTF8);
         }
 
+
         private static void GenerateExternalTypeUtil(string outputDir)
         {
             var content = @"using UnityEngine;
@@ -386,49 +384,33 @@ namespace cfg
 {
     /// <summary>
     /// Luban 外部类型转换工具
-    /// 用于将 Luban 生成的 vector 类型转换为 Unity 的 Vector 类型
-    /// 由 TableKit 工具自动生成，请勿手动修改
+    /// 由 TableKit 工具自动生成
     /// </summary>
     public static class ExternalTypeUtil
     {
-        public static Vector2 NewVector2(vector2 v)
-        {
-            return new Vector2(v.X, v.Y);
-        }
-
-        public static Vector2Int NewVector2Int(vector2int v)
-        {
-            return new Vector2Int(v.X, v.Y);
-        }
-
-        public static Vector3 NewVector3(vector3 v)
-        {
-            return new Vector3(v.X, v.Y, v.Z);
-        }
-
-        public static Vector3Int NewVector3Int(vector3int v)
-        {
-            return new Vector3Int(v.X, v.Y, v.Z);
-        }
-
-        public static Vector4 NewVector4(vector4 v)
-        {
-            return new Vector4(v.X, v.Y, v.Z, v.W);
-        }
+        public static Vector2 NewVector2(vector2 v) => new(v.X, v.Y);
+        public static Vector2Int NewVector2Int(vector2int v) => new(v.X, v.Y);
+        public static Vector3 NewVector3(vector3 v) => new(v.X, v.Y, v.Z);
+        public static Vector3Int NewVector3Int(vector3int v) => new(v.X, v.Y, v.Z);
+        public static Vector4 NewVector4(vector4 v) => new(v.X, v.Y, v.Z, v.W);
     }
 }
 ";
             File.WriteAllText(Path.Combine(outputDir, "ExternalTypeUtil.cs"), content, Encoding.UTF8);
         }
 
-        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName)
+        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame)
         {
+            // 根据是否有 YokiFrame 决定引用
+            var references = hasYokiFrame
+                ? "\"Luban.Runtime\",\n        \"YokiFrame\""
+                : "\"Luban.Runtime\"";
+
             var content = $@"{{
     ""name"": ""{assemblyName}"",
     ""rootNamespace"": """",
     ""references"": [
-        ""Luban.Runtime"",
-        ""YokiFrame""
+        {references}
     ],
     ""includePlatforms"": [],
     ""excludePlatforms"": [],
@@ -437,13 +419,7 @@ namespace cfg
     ""precompiledReferences"": [],
     ""autoReferenced"": true,
     ""defineConstraints"": [],
-    ""versionDefines"": [
-        {{
-            ""name"": ""com.hinatayoki.yokiframe"",
-            ""expression"": """",
-            ""define"": ""YOKIFRAME""
-        }}
-    ],
+    ""versionDefines"": [],
     ""noEngineReferences"": false
 }}";
             File.WriteAllText(Path.Combine(outputDir, $"{assemblyName}.asmdef"), content, Encoding.UTF8);

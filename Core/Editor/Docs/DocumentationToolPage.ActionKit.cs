@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "ActionKit",
-                Icon = "⚡",
+                Icon = KitIcons.ACTIONKIT,
                 Category = "TOOLS",
                 Description = "动作序列工具，提供延时、回调、插值、序列、并行等动作的组合执行。支持对象池复用，避免 GC。",
                 Sections = new List<DocSection>

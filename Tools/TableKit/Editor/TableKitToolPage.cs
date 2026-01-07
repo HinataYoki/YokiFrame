@@ -12,6 +12,7 @@ namespace YokiFrame.Editor
     public class TableKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "TableKit";
+        public override string PageIcon => KitIcons.TABLEKIT;
         public override int Priority => 50;
 
         private TableKitEditorUI mEditorUI;

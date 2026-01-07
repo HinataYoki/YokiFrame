@@ -12,6 +12,7 @@ namespace YokiFrame
     public class EventKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "EventKit";
+        public override string PageIcon => KitIcons.EVENTKIT;
         public override int Priority => 10;
 
         private const float REFRESH_INTERVAL = 0.5f;

@@ -19,6 +19,11 @@
             "name": "com.cysharp.unitask",
             "expression": "",
             "define": "YOKIFRAME_UNITASK_SUPPORT"
+        },
+        {
+            "name": "UniTask",
+            "expression": "",
+            "define": "YOKIFRAME_UNITASK_SUPPORT"
         }
     ],
     "noEngineReferences": false

@@ -12,6 +12,7 @@ namespace YokiFrame.EditorTools
     public class LocalizationKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "Localization";
+        public override string PageIcon => KitIcons.LOCALIZATIONKIT;
         public override int Priority => 60;
 
         private ListView mTextListView;

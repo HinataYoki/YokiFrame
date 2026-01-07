@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "TableKit",
-                Icon = "📊",
+                Icon = KitIcons.TABLEKIT,
                 Category = "TOOLS",
                 Description = "Luban 配置表集成工具，提供编辑器配置界面和运行时代码生成。支持 Binary 和 JSON 两种数据格式，自动检测加载模式。",
                 Sections = new List<DocSection>

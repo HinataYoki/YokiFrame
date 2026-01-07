@@ -11,7 +11,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "Architecture",
-                Icon = "🏗️",
+                Icon = KitIcons.ARCHITECTURE,
                 Category = "CORE",
                 Description = "YokiFrame 的核心架构系统，提供服务注册、依赖注入和模块化管理。",
                 Sections = new List<DocSection>

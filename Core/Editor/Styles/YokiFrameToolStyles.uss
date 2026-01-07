@@ -1,4 +1,4 @@
-/* YokiFrame Tools 现代化扁平风格 */
+/* YokiFrame Tools 现代化扁平风格 - 带动画效果 */
 
 /* ========== 全局设置 ========== */
 :root {
@@ -10,25 +10,24 @@
     --font-size-lg: 16px;
     --font-size-xl: 18px;
     
-    /* 现代深色主题配色 - 高对比度护眼 */
-    /* 背景层级（带微蓝调） */
-    --bg-base: rgb(30, 31, 34);        /* 最深背景 */
-    --bg-surface: rgb(37, 38, 43);     /* 表面背景 */
-    --bg-elevated: rgb(43, 45, 51);    /* 悬浮/卡片背景 */
-    --bg-hover: rgb(50, 52, 60);       /* 悬停状态 */
-    --bg-selected: rgb(55, 70, 100);   /* 选中状态 */
+    /* 现代深色主题配色 */
+    --bg-base: rgb(30, 31, 34);
+    --bg-surface: rgb(37, 38, 43);
+    --bg-elevated: rgb(43, 45, 51);
+    --bg-hover: rgb(50, 52, 60);
+    --bg-selected: rgb(55, 70, 100);
     
-    /* 文字颜色（高对比度） */
-    --text-primary: rgb(220, 223, 228);    /* 主要文字 - 亮度86% */
-    --text-secondary: rgb(170, 175, 182);  /* 次要文字 - 亮度68% */
-    --text-tertiary: rgb(130, 135, 145);   /* 辅助文字 - 亮度53% */
-    --text-disabled: rgb(90, 95, 105);     /* 禁用文字 */
+    /* 文字颜色 */
+    --text-primary: rgb(220, 223, 228);
+    --text-secondary: rgb(170, 175, 182);
+    --text-tertiary: rgb(130, 135, 145);
+    --text-disabled: rgb(90, 95, 105);
     
     /* 强调色 */
-    --accent-blue: rgb(86, 156, 214);      /* 蓝色强调 */
-    --accent-green: rgb(78, 201, 176);     /* 绿色强调 */
-    --accent-orange: rgb(206, 145, 120);   /* 橙色强调 */
-    --accent-purple: rgb(180, 142, 210);   /* 紫色强调 */
+    --accent-blue: rgb(86, 156, 214);
+    --accent-green: rgb(78, 201, 176);
+    --accent-orange: rgb(206, 145, 120);
+    --accent-purple: rgb(180, 142, 210);
     
     /* 边框 */
     --border-subtle: rgb(50, 52, 58);
@@ -44,9 +43,9 @@
 
 /* ========== 侧边栏 ========== */
 .sidebar {
-    width: 180px;
-    min-width: 160px;
-    max-width: 220px;
+    width: 200px;
+    min-width: 180px;
+    max-width: 240px;
     background-color: rgb(28, 29, 33);
     padding-top: 0;
 }
@@ -131,18 +130,28 @@
     color: rgb(255, 180, 100);
 }
 
-/* 侧边栏项目 */
+/* 侧边栏项目 - 带动画 */
 .sidebar-item {
     flex-direction: row;
     align-items: center;
     padding: 10px 12px;
     margin: 2px 0;
     border-radius: 6px;
-    transition-duration: 0.15s;
+    border-left-width: 0;
+    border-left-color: transparent;
+    /* 动画过渡 */
+    transition-property: background-color, border-left-width, border-left-color, scale;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out;
 }
 
 .sidebar-item:hover {
     background-color: rgb(50, 52, 60);
+    scale: 1.02;
+}
+
+.sidebar-item:active {
+    scale: 0.98;
 }
 
 .sidebar-item.selected {
@@ -154,12 +163,22 @@
     width: 24px;
     -unity-text-align: middle-center;
     margin-right: 10px;
+    /* 图标动画 */
+    transition-property: scale;
+    transition-duration: 0.15s;
+}
+
+.sidebar-item:hover .sidebar-item-icon {
+    scale: 1.15;
 }
 
 .sidebar-item-label {
     flex-grow: 1;
     color: rgb(185, 190, 200);
     font-size: 13px;
+    /* 文字颜色动画 */
+    transition-property: color;
+    transition-duration: 0.15s;
 }
 
 .sidebar-item:hover .sidebar-item-label {
@@ -171,21 +190,21 @@
     -unity-font-style: bold;
 }
 
-/* 文档项目选中状态 */
+/* 文档项目选中状态 - 带动画边框 */
 .sidebar-group.docs .sidebar-item.selected {
     background-color: rgba(100, 160, 255, 0.2);
     border-left-width: 3px;
     border-left-color: rgb(100, 160, 255);
 }
 
-/* 工具项目选中状态 */
+/* 工具项目选中状态 - 带动画边框 */
 .sidebar-group.tools .sidebar-item.selected {
     background-color: rgba(255, 180, 100, 0.2);
     border-left-width: 3px;
     border-left-color: rgb(255, 180, 100);
 }
 
-/* 弹出按钮 */
+/* 弹出按钮 - 带动画 */
 .sidebar-popout-btn {
     width: 22px;
     height: 22px;
@@ -198,6 +217,8 @@
     font-size: 11px;
     -unity-text-align: middle-center;
     opacity: 0;
+    /* 动画过渡 */
+    transition-property: opacity, background-color, color, scale;
     transition-duration: 0.15s;
 }
 
@@ -208,19 +229,37 @@
 .sidebar-popout-btn:hover {
     background-color: rgb(60, 63, 72);
     color: rgb(200, 205, 215);
+    scale: 1.1;
 }
 
-/* ========== 内容区域 ========== */
+.sidebar-popout-btn:active {
+    scale: 0.9;
+}
+
+/* ========== 内容区域 - 带淡入动画 ========== */
 .content-container {
     flex-grow: 1;
     background-color: rgb(30, 31, 34);
+}
+
+/* 内容淡入动画类 */
+.content-fade-in {
+    opacity: 0;
+    translate: 0 10px;
+}
+
+.content-visible {
+    opacity: 1;
+    translate: 0 0;
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
 }
 
 .content-area {
     flex-grow: 1;
     padding: 16px;
 }
-
 
 /* ========== 工具栏 ========== */
 .toolbar {
@@ -242,12 +281,19 @@
     border-width: 0;
     color: rgb(185, 190, 200);
     font-size: 12px;
+    /* 动画过渡 */
+    transition-property: background-color, color, scale;
     transition-duration: 0.15s;
 }
 
 .toolbar-button:hover {
     background-color: rgb(60, 63, 72);
     color: rgb(220, 223, 228);
+    scale: 1.02;
+}
+
+.toolbar-button:active {
+    scale: 0.96;
 }
 
 .toolbar-button.selected {
@@ -297,18 +343,25 @@
     color: rgb(210, 213, 220);
 }
 
-/* ========== 列表项 ========== */
+/* ========== 列表项 - 带动画 ========== */
 .list-item {
     flex-direction: row;
     align-items: center;
     padding: 10px 16px;
     border-bottom-width: 1px;
     border-bottom-color: rgb(43, 45, 51);
-    transition-duration: 0.1s;
+    /* 动画过渡 */
+    transition-property: background-color, scale;
+    transition-duration: 0.15s;
 }
 
 .list-item:hover {
     background-color: rgb(45, 47, 54);
+    scale: 1.005;
+}
+
+.list-item:active {
+    scale: 0.995;
 }
 
 .list-item.selected {
@@ -320,10 +373,17 @@
     height: 8px;
     border-radius: 4px;
     margin-right: 12px;
+    /* 指示器动画 */
+    transition-property: background-color, scale;
+    transition-duration: 0.2s;
 }
 
 .list-item-indicator.active {
     background-color: rgb(78, 201, 176);
+}
+
+.list-item:hover .list-item-indicator.active {
+    scale: 1.3;
 }
 
 .list-item-indicator.inactive {
@@ -352,11 +412,14 @@
     margin: 4px 8px;
     background-color: rgb(40, 42, 48);
     border-radius: 6px;
-    transition-duration: 0.1s;
+    /* 动画过渡 */
+    transition-property: background-color, scale, translate;
+    transition-duration: 0.15s;
 }
 
 .history-item:hover {
     background-color: rgb(50, 52, 60);
+    scale: 1.01;
 }
 
 .history-time {
@@ -426,7 +489,6 @@
     font-size: 11px;
 }
 
-
 /* ========== 帮助框 ========== */
 .help-box {
     padding: 16px;
@@ -465,13 +527,17 @@
     border-color: rgb(60, 63, 70);
     padding: 6px 10px;
     color: rgb(220, 223, 228);
+    /* 聚焦动画 */
+    transition-property: border-color, background-color;
+    transition-duration: 0.2s;
 }
 
 .form-field:focus {
     border-color: rgb(86, 156, 214);
+    background-color: rgb(48, 50, 58);
 }
 
-/* ========== 按钮 ========== */
+/* ========== 按钮 - 带动画 ========== */
 .action-button {
     height: 32px;
     padding: 0 20px;
@@ -481,15 +547,22 @@
     border-width: 0;
     color: rgb(210, 213, 220);
     font-size: 13px;
+    /* 动画过渡 */
+    transition-property: background-color, scale, translate;
     transition-duration: 0.15s;
+    transition-timing-function: ease-out;
 }
 
 .action-button:hover {
     background-color: rgb(65, 68, 78);
+    scale: 1.02;
+    translate: 0 -1px;
 }
 
 .action-button:active {
     background-color: rgb(50, 52, 58);
+    scale: 0.98;
+    translate: 0 0;
 }
 
 .action-button.primary {
@@ -541,7 +614,7 @@
     -unity-text-align: middle-center;
 }
 
-/* ========== Toggle ========== */
+/* ========== Toggle - 带动画 ========== */
 .toolbar-toggle {
     flex-direction: row;
     align-items: center;
@@ -550,11 +623,18 @@
     margin-right: 6px;
     border-radius: 6px;
     background-color: rgb(50, 52, 58);
+    /* 动画过渡 */
+    transition-property: background-color, scale;
     transition-duration: 0.15s;
 }
 
 .toolbar-toggle:hover {
     background-color: rgb(60, 63, 72);
+    scale: 1.02;
+}
+
+.toolbar-toggle:active {
+    scale: 0.98;
 }
 
 .toolbar-toggle.checked {
@@ -565,6 +645,8 @@
     color: rgb(185, 190, 200);
     font-size: 12px;
     margin-left: 6px;
+    transition-property: color;
+    transition-duration: 0.15s;
 }
 
 .toolbar-toggle.checked .toolbar-toggle-label {
@@ -579,11 +661,16 @@
     margin: 4px 8px;
     background-color: rgb(40, 42, 48);
     border-radius: 6px;
-    transition-duration: 0.1s;
+    border-left-width: 0;
+    border-left-color: transparent;
+    /* 动画过渡 */
+    transition-property: background-color, border-left-width, border-left-color, scale;
+    transition-duration: 0.15s;
 }
 
 .state-item:hover {
     background-color: rgb(50, 52, 60);
+    scale: 1.01;
 }
 
 .state-item.current {
@@ -645,12 +732,20 @@
     color: rgb(78, 201, 176);
 }
 
-/* ========== 卡片 ========== */
+/* ========== 卡片 - 带动画 ========== */
 .card {
     background-color: rgb(40, 42, 48);
     border-radius: 8px;
     margin: 8px;
     overflow: hidden;
+    /* 动画过渡 */
+    transition-property: scale, translate;
+    transition-duration: 0.2s;
+}
+
+.card:hover {
+    scale: 1.005;
+    translate: 0 -2px;
 }
 
 .card-header {
@@ -670,7 +765,7 @@
     padding: 16px;
 }
 
-/* ========== 标签页 ========== */
+/* ========== 标签页 - 带动画 ========== */
 .tab-bar {
     flex-direction: row;
     background-color: rgb(33, 34, 38);
@@ -685,9 +780,13 @@
     border-radius: 6px 6px 0 0;
     background-color: transparent;
     border-width: 0;
+    border-bottom-width: 2px;
+    border-bottom-color: transparent;
     color: rgb(160, 165, 175);
     font-size: 13px;
-    transition-duration: 0.15s;
+    /* 动画过渡 */
+    transition-property: background-color, color, border-bottom-color, scale;
+    transition-duration: 0.2s;
 }
 
 .tab-button:hover {
@@ -695,9 +794,14 @@
     color: rgb(210, 213, 220);
 }
 
+.tab-button:active {
+    scale: 0.98;
+}
+
 .tab-button.selected {
     background-color: rgb(30, 31, 34);
     color: rgb(240, 242, 245);
+    border-bottom-color: rgb(86, 156, 214);
     -unity-font-style: bold;
 }
 
@@ -713,7 +817,9 @@
     height: 100%;
     background-color: rgb(86, 156, 214);
     border-radius: 2px;
-    transition-duration: 0.2s;
+    transition-property: width;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out;
 }
 
 /* ========== 分隔线 ========== */
@@ -727,4 +833,45 @@
     width: 1px;
     background-color: rgb(50, 52, 58);
     margin: 0 12px;
+}
+
+/* ========== 脉冲动画（用于提示） ========== */
+.pulse {
+    transition-property: scale, opacity;
+    transition-duration: 0.3s;
+}
+
+.pulse:hover {
+    scale: 1.05;
+}
+
+/* ========== 滑入动画类 ========== */
+.slide-in-left {
+    translate: -20px 0;
+    opacity: 0;
+}
+
+.slide-in-right {
+    translate: 20px 0;
+    opacity: 0;
+}
+
+.slide-in-up {
+    translate: 0 20px;
+    opacity: 0;
+}
+
+.slide-visible {
+    translate: 0 0;
+    opacity: 1;
+    transition-property: translate, opacity;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out;
+}
+
+/* ========== 高亮闪烁效果 ========== */
+.highlight-flash {
+    background-color: rgba(86, 156, 214, 0.3);
+    transition-property: background-color;
+    transition-duration: 0.5s;
 }

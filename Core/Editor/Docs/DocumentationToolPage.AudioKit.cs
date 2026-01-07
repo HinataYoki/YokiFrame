@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "AudioKit",
-                Icon = "🔊",
+                Icon = KitIcons.AUDIOKIT,
                 Category = "TOOLS",
                 Description = "音频管理工具，提供多通道音频播放、音量控制、3D 音效、预加载等功能。支持自定义后端和路径解析。",
                 Sections = new List<DocSection>

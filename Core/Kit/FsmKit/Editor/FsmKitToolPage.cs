@@ -12,6 +12,7 @@ namespace YokiFrame
     public class FsmKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "FsmKit";
+        public override string PageIcon => KitIcons.FSMKIT;
         public override int Priority => 20;
 
         private const float REFRESH_INTERVAL = 0.2f;

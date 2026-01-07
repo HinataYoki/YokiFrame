@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "SaveKit",
-                Icon = "💾",
+                Icon = KitIcons.SAVEKIT,
                 Category = "TOOLS",
                 Description = "存档系统工具，提供多槽位存档、版本迁移、加密、自动保存等功能。支持与 Architecture 集成。",
                 Sections = new List<DocSection>

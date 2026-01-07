@@ -11,7 +11,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "ResKit",
-                Icon = "📦",
+                Icon = KitIcons.RESKIT,
                 Category = "CORE KIT",
                 Description = "资源管理工具，提供同步/异步加载、引用计数、资源缓存等功能。支持 UniTask 异步和自定义加载器扩展。",
                 Sections = new List<DocSection>
@@ -508,7 +508,7 @@ public class GameResourceManager
             return new DocModule
             {
                 Name = "KitLogger",
-                Icon = "📝",
+                Icon = KitIcons.KITLOGGER,
                 Category = "CORE KIT",
                 Description = "高性能日志系统，支持日志级别控制、文件写入、加密存储、IMGUI 运行时显示。后台线程异步写入，不阻塞主线程。",
                 Sections = new List<DocSection>
@@ -698,7 +698,7 @@ KitLogger.MaxFileBytes = 50 * 1024 * 1024; // 单文件最大 50MB"
             return new DocModule
             {
                 Name = "CodeGenKit",
-                Icon = "⚙️",
+                Icon = KitIcons.CODEGEN,
                 Category = "CORE KIT",
                 Description = "代码生成工具，提供结构化的代码生成 API。支持命名空间、类、方法等代码结构的生成。UIKit 的代码生成基于此实现。",
                 Sections = new List<DocSection>

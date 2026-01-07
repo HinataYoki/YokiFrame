@@ -14,6 +14,7 @@ namespace YokiFrame
     public class UIKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "UIKit";
+        public override string PageIcon => KitIcons.UIKIT;
         public override int Priority => 30;
 
         private string PrefabGeneratePath

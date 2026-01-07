@@ -19,6 +19,11 @@
             "name": "com.code-philosophy.luban",
             "expression": "",
             "define": "YOKIFRAME_LUBAN_SUPPORT"
+        },
+        {
+            "name": "Luban.Runtime",
+            "expression": "",
+            "define": "YOKIFRAME_LUBAN_SUPPORT"
         }
     ],
     "noEngineReferences": false

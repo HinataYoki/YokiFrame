@@ -15,6 +15,7 @@ namespace YokiFrame
     public class AudioKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "AudioKit";
+        public override string PageIcon => KitIcons.AUDIOKIT;
         public override int Priority => 40;
 
         private enum TabType

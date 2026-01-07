@@ -11,7 +11,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "FluentApi",
-                Icon = "🔗",
+                Icon = KitIcons.FLUENTAPI,
                 Category = "CORE KIT",
                 Description = "流畅 API 扩展方法集合，提供链式调用支持。包含 Object、String、Transform、Vector、Color 等类型的扩展。",
                 Sections = new List<DocSection>
@@ -164,7 +164,7 @@ rectTransform.ResetRectTransform();"
             return new DocModule
             {
                 Name = "ToolClass",
-                Icon = "🧰",
+                Icon = KitIcons.TOOLCLASS,
                 Category = "CORE KIT",
                 Description = "工具类集合，包含 BindValue（数据绑定）、PooledLinkedList（池化链表）、SpanSplitter（零分配字符串分割）等高性能工具。",
                 Sections = new List<DocSection>

@@ -11,7 +11,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "PoolKit",
-                Icon = "♻️",
+                Icon = KitIcons.POOLKIT,
                 Category = "CORE KIT",
                 Description = "对象池系统，减少频繁创建销毁对象带来的 GC 压力。提供泛型对象池、安全对象池和容器池。",
                 Sections = new List<DocSection>
@@ -143,7 +143,7 @@ DictionaryPool<int, string>.Release(dict);",
             return new DocModule
             {
                 Name = "SingletonKit",
-                Icon = "🎯",
+                Icon = KitIcons.SINGLETON,
                 Category = "CORE KIT",
                 Description = "单例模式工具，提供普通单例和 MonoBehaviour 单例两种实现。推荐优先使用普通单例，避免依赖 Unity 生命周期。",
                 Sections = new List<DocSection>

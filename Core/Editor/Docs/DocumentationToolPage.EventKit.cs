@@ -11,7 +11,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "EventKit",
-                Icon = "📡",
+                Icon = KitIcons.EVENTKIT,
                 Category = "CORE KIT",
                 Description = "轻量级事件系统，支持枚举、类型和字符串三种事件键。零 GC 设计，适合高频事件场景。推荐使用枚举事件获得最佳性能和类型安全。",
                 Sections = new List<DocSection>

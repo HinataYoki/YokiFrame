@@ -10,7 +10,7 @@ namespace YokiFrame.EditorTools
             return new DocModule
             {
                 Name = "BuffKit",
-                Icon = "✨",
+                Icon = KitIcons.BUFFKIT,
                 Category = "TOOLS",
                 Description = "通用 Buff 系统，提供完整的 Buff 生命周期管理、堆叠模式、属性修改、免疫系统和序列化支持。",
                 Sections = new List<DocSection>
