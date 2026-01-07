@@ -23,7 +23,7 @@ namespace YokiFrame
 
 #if UNITY_EDITOR
         // 活跃容器列表（仅编辑器模式）
-        private static readonly List<BuffContainer> sActiveContainers = new();
+        private static readonly List<BuffContainer> sActiveContainers = new(16);
         
         /// <summary>
         /// 获取所有活跃的 BuffContainer（仅编辑器模式）

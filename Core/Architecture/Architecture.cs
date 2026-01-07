@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
@@ -8,17 +8,16 @@ namespace YokiFrame
     /// <summary>
     /// 架构
     /// </summary>
-    public interface IArchitecture : ICanDispose
+    public interface IArchitecture : ICanInit
     {
         static IArchitecture Interface { get; }
         void Register<T>(T service) where T : class, IService, new();
         T GetService<T>(bool force = false) where T : class, IService, new();
-        void GetServicesByType<T>(ref List<T> services) where T : class, IService, new();
     }
     /// <summary>
     /// 服务
     /// </summary>
-    public interface IService : ICanDispose
+    public interface IService : ICanInit
     {
         IArchitecture Architecture { get; }
         void SetArchitecture(IArchitecture architecture);
@@ -29,15 +28,10 @@ namespace YokiFrame
     /// </summary>
     public interface IModel : IService, ISerializable { }
 
-    public interface ICanInit
+    public interface ICanInit : IDisposable
     {
         abstract bool Initialized { get; }
         abstract void Init();
-    }
-
-    public interface ICanDispose : ICanInit
-    {
-        virtual void Dispose() { }
     }
     #endregion
 
@@ -72,8 +66,10 @@ namespace YokiFrame
 
 
         void ICanInit.Init() => OnInit();
+        void IDisposable.Dispose() => Dispose();
 
         protected abstract void OnInit();
+        protected virtual void Dispose() { }
 
         public K GetService<K>(bool force = false) where K : class, IService, new()
         {
@@ -88,17 +84,6 @@ namespace YokiFrame
                 }
             }
             return service as K;
-        }
-
-        public void GetServicesByType<K>(ref List<K> list) where K : class, IService, new()
-        {
-            foreach (var service in mServices.Values)
-            {
-                if (service is K value)
-                {
-                    list.Add(value);
-                }
-            }
         }
 
         public void Register<K>(K service) where K : class, IService, new()
@@ -135,8 +120,12 @@ namespace YokiFrame
         }
 
         void ICanInit.Init() => OnInit();
+        void IDisposable.Dispose() => Dispose();
 
         protected abstract void OnInit();
+
+        protected virtual void Dispose() { }
+
 
         public T GetService<T>() where T : class, IService, new()
         {

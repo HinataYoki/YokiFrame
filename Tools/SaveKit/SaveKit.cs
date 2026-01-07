@@ -349,7 +349,7 @@ namespace YokiFrame
         /// </summary>
         public static List<SaveMeta> GetAllSlots()
         {
-            var result = new List<SaveMeta>();
+            var result = new List<SaveMeta>(sMaxSlots);
             var savePath = GetSavePath();
 
             for (int i = 0; i < sMaxSlots; i++)

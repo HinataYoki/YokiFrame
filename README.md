@@ -1,6 +1,13 @@
 # YokiFrame
 
-一个轻量级的 Unity 开发框架，提供架构设计、事件系统、动作序列、状态机、UI管理、音频管理、存档系统等常用功能模块。
+<p align="center">
+  <img src="Core/Editor/Resources/yoki.png" alt="YokiFrame Logo" width="128" height="128">
+</p>
+
+<p align="center">
+  <b>一个轻量级的 Unity 开发框架</b><br>
+  提供架构设计、事件系统、动作序列、状态机、UI管理、音频管理、存档系统等常用功能模块。
+</p>
 
 ## 📦 安装
 
@@ -19,13 +26,13 @@
 
 | 模块 | 说明 |
 |------|------|
-| **Architecture** | 基于服务定位器的轻量级架构 |
+| **Architecture** | 基于 IAccessor 扩展方法的轻量级架构，服务间完全解耦 |
 | **EventKit** | 类型安全的事件系统（TypeEvent / EnumEvent） |
 | **SingletonKit** | 普通类和 MonoBehaviour 单例支持 |
 | **PoolKit** | 高效对象池管理 |
 | **ResKit** | 统一资源加载接口，支持扩展 YooAsset |
 | **FsmKit** | 简洁的有限状态机 |
-| **KitLogger** | 支持加密和文件写入的日志系统 |
+| **KitLogger** | 支持加密、文件写入和 IMGUI 运行时显示的日志系统 |
 | **Bindable** | 响应式数据绑定 |
 | **FluentApi** | 便捷的链式扩展方法 |
 
@@ -86,6 +93,10 @@ provider.LoadFromResources();
 LocalizationKit.SetProvider(provider);
 string text = LocalizationKit.Get(1001); // 获取文本
 LocalizationKit.SetLanguage(LanguageId.English); // 切换语言
+
+// KitLogger IMGUI 日志显示（打包后调试）
+KitLogger.EnableIMGUI(); // 启用 IMGUI 日志窗口
+// PC: 按 ` 键切换显示 | 移动端: 三指触摸切换
 ```
 
 ## 🛠️ 编辑器工具

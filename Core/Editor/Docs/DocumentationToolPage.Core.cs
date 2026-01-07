@@ -13,34 +13,43 @@ namespace YokiFrame.EditorTools
                 Name = "Architecture",
                 Icon = "🏗️",
                 Category = "CORE",
-                Description = "YokiFrame 的核心架构系统，提供服务注册、依赖注入和模块化管理。基于 IoC 容器设计，实现业务逻辑与 Unity 引擎解耦。",
+                Description = "YokiFrame 的核心架构系统，提供服务注册和模块化管理。基于 IAccessor 扩展方法模式实现服务间解耦调用。",
                 Sections = new List<DocSection>
                 {
                     new()
                     {
                         Title = "概述",
-                        Description = "Architecture 是整个框架的基础，负责管理所有服务（Service）和数据模型（Model）的生命周期。通过依赖注入实现模块间的松耦合。",
+                        Description = "Architecture 是整个框架的基础，负责管理所有服务（Service）和数据模型（Model）的生命周期。服务间通过 IAccessor 扩展方法实现松耦合调用。",
                         CodeExamples = new List<CodeExample>
                         {
                             new()
                             {
                                 Title = "核心接口",
-                                Code = @"// IArchitecture - 架构接口
-public interface IArchitecture : ICanDispose
-{
-    void Register<T>(T service) where T : class, IService, new();
-    T GetService<T>(bool force = false) where T : class, IService, new();
-}
-
-// IService - 服务接口
-public interface IService : ICanDispose
+                                Code = @"// IAccessor - 服务访问器，通过扩展方法提供跨服务调用
+public interface IAccessor
 {
     IArchitecture Architecture { get; }
+}
+
+// IArchitecture - 架构接口
+public interface IArchitecture
+{
+    bool Initialized { get; }
+    void Register<T>(T service) where T : class, IService, new();
     T GetService<T>() where T : class, IService, new();
 }
 
-// IModel - 数据模型接口（支持序列化）
-public interface IModel : IService, ISerializable { }"
+// IService - 服务接口
+public interface IService
+{
+    bool Initialized { get; }
+    IArchitecture Architecture { get; }
+    void SetArchitecture(IArchitecture architecture);
+    void Init();
+}
+
+// IModel - 数据模型标记接口
+public interface IModel : IService { }"
                             }
                         }
                     },
@@ -74,7 +83,7 @@ public interface IModel : IService, ISerializable { }"
                     new()
                     {
                         Title = "实现服务",
-                        Description = "继承 AbstractService 实现具体的业务服务，通过 GetService<T>() 获取其他服务。",
+                        Description = "继承 AbstractService 实现具体的业务服务。服务自动实现 IAccessor 接口，可通过扩展方法调用其他服务的功能。",
                         CodeExamples = new List<CodeExample>
                         {
                             new()
@@ -83,13 +92,11 @@ public interface IModel : IService, ISerializable { }"
                                 Code = @"public class PlayerService : AbstractService
 {
     private PlayerModel mPlayerModel;
-    private InventoryService mInventory;
     
     protected override void OnInit()
     {
-        // 在 OnInit 中获取依赖的服务
+        // 在 OnInit 中获取依赖的服务（仅用于初始化阶段）
         mPlayerModel = GetService<PlayerModel>();
-        mInventory = GetService<InventoryService>();
     }
     
     public void AddExp(int exp)
@@ -104,7 +111,65 @@ public interface IModel : IService, ISerializable { }"
     private void LevelUp()
     {
         mPlayerModel.Level++;
-        mInventory.AddReward(mPlayerModel.Level);
+        // 通过扩展方法调用其他服务（运行时推荐方式）
+        this.AddLevelUpReward(mPlayerModel.Level);
+        this.PlayAudio(""sfx/levelup"");
+    }
+}"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "IAccessor 扩展方法",
+                        Description = "服务通过扩展方法暴露功能，其他服务通过 this 调用，实现完全解耦。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "定义扩展方法",
+                                Code = @"// InventoryAccessorExtensions.cs
+public static class InventoryAccessorExtensions
+{
+    public static void AddLevelUpReward(this IAccessor self, int level)
+    {
+        // 内部实现可以访问具体服务或静态工具类
+        var inventory = self.Architecture.GetService<InventoryService>();
+        inventory.AddItem(1001, level * 10); // 金币奖励
+    }
+    
+    public static int GetItemCount(this IAccessor self, int itemId)
+    {
+        var inventory = self.Architecture.GetService<InventoryService>();
+        return inventory.GetCount(itemId);
+    }
+}
+
+// AudioAccessorExtensions.cs
+public static class AudioAccessorExtensions
+{
+    public static void PlayAudio(this IAccessor self, string path)
+    {
+        AudioKit.Play(path);
+    }
+}",
+                                Explanation = "扩展方法让服务间调用变得简洁，且调用方完全不知道具体实现者是谁。"
+                            },
+                            new()
+                            {
+                                Title = "在服务中使用",
+                                Code = @"public class BattleService : AbstractService
+{
+    protected override void OnInit() { }
+    
+    public void OnEnemyKilled(int enemyId)
+    {
+        // 通过 this 调用扩展方法，IDE 自动补全
+        this.AddExp(100);
+        this.PlayAudio(""sfx/kill"");
+        
+        int gold = this.GetItemCount(1001);
+        Debug.Log($""当前金币: {gold}"");
     }
 }"
                             }
@@ -113,7 +178,7 @@ public interface IModel : IService, ISerializable { }"
                     new()
                     {
                         Title = "实现数据模型",
-                        Description = "继承 AbstractModel 实现数据模型，支持序列化以便存档。",
+                        Description = "继承 AbstractModel 实现数据模型，用于存储游戏状态数据。",
                         CodeExamples = new List<CodeExample>
                         {
                             new()
@@ -129,13 +194,6 @@ public interface IModel : IService, ISerializable { }"
     protected override void OnInit()
     {
         // 可以在这里加载初始数据
-    }
-    
-    public override void GetObjectData(SerializationInfo info, StreamingContext context)
-    {
-        info.AddValue(""Level"", Level);
-        info.AddValue(""Exp"", Exp);
-        info.AddValue(""Gold"", Gold);
     }
 }",
                                 Explanation = "数据模型与业务逻辑分离，便于存档和测试。"
@@ -155,12 +213,12 @@ public interface IModel : IService, ISerializable { }"
 var playerService = GameArchitecture.Interface.GetService<PlayerService>();
 playerService.AddExp(100);
 
-// 强制获取（如果未注册则自动创建并注册）
-var battleService = GameArchitecture.Interface.GetService<BattleService>(force: true);
-
-// 获取所有指定类型的服务
-var models = new List<IModel>();
-GameArchitecture.Interface.GetServicesByType(ref models);"
+// 未注册的服务返回 null
+var service = GameArchitecture.Interface.GetService<SomeService>();
+if (service == null)
+{
+    Debug.LogWarning(""服务未注册"");
+}"
                             }
                         }
                     }

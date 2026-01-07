@@ -507,10 +507,10 @@ public class GameResourceManager
         {
             return new DocModule
             {
-                Name = "LogKit",
+                Name = "KitLogger",
                 Icon = "📝",
                 Category = "CORE KIT",
-                Description = "日志系统，支持日志级别控制、文件写入、加密存储。后台线程异步写入，不阻塞主线程。",
+                Description = "高性能日志系统，支持日志级别控制、文件写入、加密存储、IMGUI 运行时显示。后台线程异步写入，不阻塞主线程。",
                 Sections = new List<DocSection>
                 {
                     new()
@@ -541,6 +541,63 @@ catch (Exception ex)
 {
     KitLogger.Exception(ex);
 }"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "IMGUI 日志显示",
+                        Description = "在打包后启用 IMGUI 日志窗口，实时查看运行时日志。支持日志过滤、折叠、自动滚动等功能。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "启用 IMGUI",
+                                Code = @"// 启用 IMGUI 日志显示
+KitLogger.EnableIMGUI();
+
+// 指定最大日志条数
+KitLogger.EnableIMGUI(maxLogCount: 500);
+
+// 禁用 IMGUI
+KitLogger.DisableIMGUI();
+
+// 获取实例进行配置
+var imgui = KitLogger.EnableIMGUI();
+imgui.ShowTimestamp = true;    // 显示时间戳
+imgui.AutoScroll = true;       // 自动滚动
+imgui.WindowAlpha = 0.9f;      // 窗口透明度
+imgui.Filter = KitLoggerIMGUI.LogTypeFilter.All; // 日志过滤"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "IMGUI 操作方式",
+                        Description = "IMGUI 日志窗口支持多种交互方式，适配 PC 和移动端。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "交互操作",
+                                Code = @"// === PC 端 ===
+// 按 ` 键（数字1左边）切换窗口显示/隐藏
+
+// === 移动端 ===
+// 三指同时触摸切换窗口显示/隐藏
+
+// === 窗口内操作 ===
+// Clear      - 清空所有日志
+// Collapse   - 合并重复日志
+// AutoScroll - 自动滚动到最新日志
+// Time       - 显示/隐藏时间戳
+// Log/Warn/Error - 过滤日志类型
+// X          - 关闭窗口
+
+// === 自定义触发方式 ===
+var imgui = KitLoggerIMGUI.Instance;
+imgui.ToggleKey = KeyCode.F12;      // 修改触发按键
+imgui.ToggleTouchCount = 4;         // 修改触发手指数"
                             }
                         }
                     },
@@ -592,6 +649,43 @@ KitLogger.MaxFileBytes = 50 * 1024 * 1024; // 单文件最大 50MB"
 // 日志文件位置
 // Application.persistentDataPath/LogFiles/editor.log (编辑器)
 // Application.persistentDataPath/LogFiles/player.log (运行时)"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "最佳实践",
+                        Description = "推荐的 KitLogger 使用方式。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "初始化示例",
+                                Code = @"public class GameLauncher : MonoBehaviour
+{
+    void Awake()
+    {
+        // 配置日志系统
+        KitLogger.Level = KitLogger.LogLevel.All;
+        KitLogger.EnableEncryption = true;
+        
+        // 仅在开发/测试版本启用 IMGUI
+        #if DEVELOPMENT_BUILD || UNITY_EDITOR
+        KitLogger.EnableIMGUI(300);
+        #endif
+        
+        KitLogger.Log(""游戏启动"");
+    }
+}
+
+// 使用条件编译控制日志级别
+#if UNITY_EDITOR
+    KitLogger.Level = KitLogger.LogLevel.All;
+#elif DEVELOPMENT_BUILD
+    KitLogger.Level = KitLogger.LogLevel.Warning;
+#else
+    KitLogger.Level = KitLogger.LogLevel.Error;
+#endif"
                             }
                         }
                     }

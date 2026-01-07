@@ -13,6 +13,9 @@ namespace YokiFrame.EditorTools
     public class YokiFrameToolWindow : EditorWindow
     {
         private const string WINDOW_TITLE = "YokiFrame Tools";
+        private const string ICON_PATH = "yoki";
+        
+        private static Texture2D sIconTexture;
         
         private readonly List<IYokiFrameToolPage> mPages = new();
         private readonly Dictionary<IYokiFrameToolPage, VisualElement> mPageElements = new();
@@ -34,7 +37,17 @@ namespace YokiFrame.EditorTools
         {
             var window = GetWindow<YokiFrameToolWindow>(false, WINDOW_TITLE);
             window.minSize = new Vector2(1000, 600);
+            window.titleContent = new GUIContent(WINDOW_TITLE, LoadIcon());
             window.Show();
+        }
+        
+        private static Texture2D LoadIcon()
+        {
+            if (sIconTexture == null)
+            {
+                sIconTexture = Resources.Load<Texture2D>(ICON_PATH);
+            }
+            return sIconTexture;
         }
         
         private void OnEnable()
@@ -91,9 +104,23 @@ namespace YokiFrame.EditorTools
             // 标题
             var header = new VisualElement();
             header.AddToClassList("sidebar-header");
+            header.style.flexDirection = FlexDirection.Column;
+            header.style.alignItems = Align.Center;
+            
+            // 添加框架图标 - 居中突出显示
+            Texture2D iconTexture = LoadIcon();
+            if (iconTexture != null)
+            {
+                var iconImage = new Image { image = iconTexture };
+                iconImage.style.width = 64;
+                iconImage.style.height = 64;
+                iconImage.style.marginBottom = 8;
+                header.Add(iconImage);
+            }
             
             var title = new Label("YokiFrame");
             title.AddToClassList("sidebar-title");
+            title.style.unityTextAlign = TextAnchor.MiddleCenter;
             header.Add(title);
             sidebar.Add(header);
             

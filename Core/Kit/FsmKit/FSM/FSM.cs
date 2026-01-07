@@ -16,10 +16,10 @@ namespace YokiFrame
         /// <summary>
         /// 状态机状态
         /// </summary>
-        public MachineState MachineState => machineState;
+        public MachineState MachineState => mMachineState;
 
-        protected MachineState machineState = MachineState.End;
-        protected readonly Dictionary<TEnum, IState> mStateDic = new();
+        protected MachineState mMachineState = MachineState.End;
+        protected readonly Dictionary<TEnum, IState> mStateDic;
         
 #if UNITY_EDITOR
         /// <summary>
@@ -39,6 +39,10 @@ namespace YokiFrame
 
         public FSM(string name = null)
         {
+            // 根据枚举成员数量预估字典容量
+            int enumCount = Enum.GetValues(typeof(TEnum)).Length;
+            mStateDic = new Dictionary<TEnum, IState>(enumCount);
+            
 #if UNITY_EDITOR
             Name = name ?? $"FSM<{typeof(TEnum).Name}>";
             if (FsmEditorHook.OnFsmCreated != null)
@@ -87,11 +91,11 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                if (CurState == state && machineState is MachineState.Running)
+                if (CurState == state && mMachineState is MachineState.Running)
                 {
                     CurState.End(); 
                     CurState = null;
-                    machineState = MachineState.End;
+                    mMachineState = MachineState.End;
                 }
                 mStateDic[id].Dispose();
                 mStateDic.Remove(id);
@@ -104,7 +108,7 @@ namespace YokiFrame
 
         public void Change(TEnum id)
         {
-            if (machineState is not MachineState.Running) return;
+            if (mMachineState is not MachineState.Running) return;
             if (mStateDic.TryGetValue(id, out var state))
             {
                 if (state != CurState && state.Condition())
@@ -124,7 +128,7 @@ namespace YokiFrame
 
         public void Change<TArgs>(TEnum id, TArgs args)
         {
-            if (machineState is not MachineState.Running) return;
+            if (mMachineState is not MachineState.Running) return;
             if (mStateDic.TryGetValue(id, out var state))
             {
                 if (state != CurState && state.Condition())
@@ -161,7 +165,7 @@ namespace YokiFrame
                 state.Dispose();
             }
             mStateDic.Clear();
-            machineState = MachineState.End;
+            mMachineState = MachineState.End;
 #if UNITY_EDITOR
             FsmEditorHook.OnFsmCleared?.Invoke(this);
 #endif
@@ -169,7 +173,7 @@ namespace YokiFrame
 
         public void CustomUpdate()
         {
-            if (machineState is MachineState.Running)
+            if (mMachineState is MachineState.Running)
             {
                 CurState?.CustomUpdate();
             }
@@ -177,16 +181,16 @@ namespace YokiFrame
 
         public void End()
         {
-            if (machineState is not MachineState.End)
+            if (mMachineState is not MachineState.End)
             {
-                machineState = MachineState.End;
+                mMachineState = MachineState.End;
                 CurState?.End();
             }
         }
 
         public void FixedUpdate()
         {
-            if (machineState is MachineState.Running)
+            if (mMachineState is MachineState.Running)
             {
                 CurState?.FixedUpdate();
             }
@@ -194,9 +198,9 @@ namespace YokiFrame
 
         public void Start()
         {
-            if (CurState != null && machineState is not MachineState.Running)
+            if (CurState != null && mMachineState is not MachineState.Running)
             {
-                machineState = MachineState.Running;
+                mMachineState = MachineState.Running;
                 CurState.Start();
 #if UNITY_EDITOR
                 if (FsmEditorHook.OnFsmStarted != null)
@@ -207,9 +211,9 @@ namespace YokiFrame
 
         public void Start(TEnum id)
         {
-            if (mStateDic.TryGetValue(id, out var state) && machineState is not MachineState.Running)
+            if (mStateDic.TryGetValue(id, out var state) && mMachineState is not MachineState.Running)
             {
-                machineState = MachineState.Running;
+                mMachineState = MachineState.Running;
                 CurState = state;
                 CurEnum = id;
                 state.Start();
@@ -222,16 +226,16 @@ namespace YokiFrame
 
         public void Suspend()
         {
-            if (CurState != null && machineState is MachineState.Running)
+            if (CurState != null && mMachineState is MachineState.Running)
             {
-                machineState = MachineState.Suspend;
+                mMachineState = MachineState.Suspend;
                 CurState?.Suspend();
             }
         }
 
         public void Update()
         {
-            if (machineState is MachineState.Running)
+            if (mMachineState is MachineState.Running)
             {
                 CurState?.Update();
             }
@@ -258,9 +262,9 @@ namespace YokiFrame
     {
         public void Start(TArgs args)
         {
-            if (CurState != null && machineState is not MachineState.Running)
+            if (CurState != null && mMachineState is not MachineState.Running)
             {
-                machineState = MachineState.Running;
+                mMachineState = MachineState.Running;
                 if (CurState is IState<TArgs> stateWithArgs)
                 {
                     stateWithArgs.Start(args);
@@ -276,7 +280,7 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                machineState = MachineState.Running;
+                mMachineState = MachineState.Running;
                 CurState = state;
                 CurEnum = id;
                 if (state is IState<TArgs> stateWithArgs)
