@@ -633,21 +633,8 @@ namespace YokiFrame
 
         private static void CollectModelsFromArchitecture(IArchitecture architecture, List<IModel> models)
         {
-            // 使用反射获取私有字段 mServices
-            var archType = architecture.GetType();
-            var servicesField = archType.GetField("mServices",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (servicesField == null)
-            {
-                KitLogger.Warning("[SaveKit] 无法访问 Architecture 的服务列表");
-                return;
-            }
-
-            var services = servicesField.GetValue(architecture) as Dictionary<Type, IService>;
-            if (services == null) return;
-
-            foreach (var service in services.Values)
+            // 从所有服务中筛选出 IModel
+            foreach (var service in architecture.GetAllServices())
             {
                 if (service is IModel model)
                 {

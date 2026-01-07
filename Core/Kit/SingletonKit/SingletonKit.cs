@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Reflection;
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>
     /// 单例管理核心类：负责单例的持有、创建与生命周期管理
+    /// 统一管理普通 C# 单例和 MonoBehaviour 单例
     /// </summary>
     public static class SingletonKit<T> where T : class, ISingleton
     {
@@ -27,7 +27,7 @@ namespace YokiFrame
         private static readonly object mLock = new();
 
         /// <summary>
-        /// 创建策略委托（静态构造器中确定，避免每次运行时反射判断）
+        /// 创建策略委托（静态构造器中确定）
         /// </summary>
         private static readonly Func<T> mCreator;
 
@@ -37,17 +37,12 @@ namespace YokiFrame
         private static readonly bool mIsMonoBehaviour;
 
         /// <summary>
-        /// 缓存的无参构造函数（避免重复反射）
-        /// </summary>
-        private static readonly ConstructorInfo mCachedCtor;
-
-        /// <summary>
-        /// 缓存的路径属性（避免重复反射）
+        /// 缓存的路径属性
         /// </summary>
         private static readonly MonoSingletonPathAttribute mCachedPathAttribute;
 
         /// <summary>
-        /// 静态构造器：一次性确定创建策略并缓存反射结果
+        /// 静态构造器：一次性确定创建策略
         /// </summary>
         static SingletonKit()
         {
@@ -58,40 +53,14 @@ namespace YokiFrame
             {
                 mCreator = CreateMonoSingleton;
                 // 缓存路径属性
-                mCachedPathAttribute = GetPathAttribute(type);
+                mCachedPathAttribute = Attribute.GetCustomAttribute(type, typeof(MonoSingletonPathAttribute), true) as MonoSingletonPathAttribute;
                 // 监听应用退出事件
                 Application.quitting += OnApplicationQuitting;
             }
             else
             {
                 mCreator = CreateNormalSingleton;
-                // 缓存构造函数
-                mCachedCtor = GetNonArgsConstructor(type);
             }
-        }
-
-        /// <summary>
-        /// 获取路径属性（缓存用）- 使用 Attribute.GetCustomAttribute 直接获取单个属性，避免数组分配
-        /// </summary>
-        private static MonoSingletonPathAttribute GetPathAttribute(Type type)
-        {
-            return Attribute.GetCustomAttribute(type, typeof(MonoSingletonPathAttribute), true) as MonoSingletonPathAttribute;
-        }
-
-        /// <summary>
-        /// 获取无参构造函数（缓存用）
-        /// </summary>
-        private static ConstructorInfo GetNonArgsConstructor(Type type)
-        {
-            var constructors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            for (int i = 0; i < constructors.Length; i++)
-            {
-                if (constructors[i].GetParameters().Length == 0)
-                {
-                    return constructors[i];
-                }
-            }
-            return null;
         }
 
         /// <summary>
@@ -139,17 +108,26 @@ namespace YokiFrame
         #region 创建逻辑
 
         /// <summary>
-        /// 创建普通 C# 单例
+        /// 创建普通 C# 单例（使用 Activator，AOT 需要确保类型被引用）
         /// </summary>
         private static T CreateNormalSingleton()
         {
-            if (mCachedCtor == null)
+            var type = typeof(T);
+            
+            // 尝试使用 Activator.CreateInstance（AOT 兼容，前提是类型被显式引用）
+            T instance;
+            try
             {
-                throw new Exception($"Non-Args Constructor() not found! in {typeof(T)}");
+                instance = Activator.CreateInstance(type, true) as T;
+            }
+            catch (MissingMethodException)
+            {
+                throw new InvalidOperationException(
+                    $"[SingletonKit] 类型 {type.Name} 必须有无参构造函数。" +
+                    $"如果是 IL2CPP 构建，请确保该类型被显式引用或添加 [Preserve] 特性。");
             }
 
-            var instance = mCachedCtor.Invoke(null) as T;
-            instance.OnSingletonInit();
+            instance?.OnSingletonInit();
             return instance;
         }
 
@@ -183,7 +161,7 @@ namespace YokiFrame
                 instance = obj.AddComponent(type) as T;
             }
 
-            instance.OnSingletonInit();
+            instance?.OnSingletonInit();
             return instance;
         }
 

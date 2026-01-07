@@ -7,6 +7,27 @@ using Cysharp.Threading.Tasks;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// UI 热度配置常量
+    /// </summary>
+    public static class UIKitConfig
+    {
+        /// <summary>
+        /// 创建界面时赋予的热度值
+        /// </summary>
+        public const int OPEN_HOT = 3;
+        
+        /// <summary>
+        /// 获取界面时赋予的热度值
+        /// </summary>
+        public const int GET_HOT = 2;
+        
+        /// <summary>
+        /// 每次行为造成的衰减热度值
+        /// </summary>
+        public const int WEAKEN = 1;
+    }
+
     public class UIKit
     {
         static UIKit() => _ = UIRoot.Instance;
@@ -14,15 +35,15 @@ namespace YokiFrame
         /// <summary>
         /// 创建界面时赋予的热度值
         /// </summary>
-        public static int OpenHot = 3;
+        public static int OpenHot = UIKitConfig.OPEN_HOT;
         /// <summary>
         /// 获取界面时赋予的热度值
         /// </summary>
-        public static int GetHot = 2;
+        public static int GetHot = UIKitConfig.GET_HOT;
         /// <summary>
         /// 每次行为造成的衰减热度值
         /// </summary>
-        public static int Weaken = 1;
+        public static int Weaken = UIKitConfig.WEAKEN;
 
         /// <summary>
         /// 已经存在的Panel缓存

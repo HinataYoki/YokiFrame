@@ -571,9 +571,9 @@ namespace YokiFrame
                     break;
 
                 case EventCategory.String:
-#pragma warning disable CS0618
+#pragma warning disable CS0612, CS0618
                     foreach (var kvp in EventKit.String.GetAllEvents())
-#pragma warning restore CS0618
+#pragma warning restore CS0612, CS0618
                     {
                         mCachedNodes.Add(new EventNodeData
                         {

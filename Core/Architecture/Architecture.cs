@@ -13,6 +13,7 @@ namespace YokiFrame
         static IArchitecture Interface { get; }
         void Register<T>(T service) where T : class, IService, new();
         T GetService<T>(bool force = false) where T : class, IService, new();
+        IEnumerable<IService> GetAllServices();
     }
     /// <summary>
     /// 服务
@@ -21,13 +22,11 @@ namespace YokiFrame
     {
         IArchitecture Architecture { get; }
         void SetArchitecture(IArchitecture architecture);
-        T GetService<T>() where T : class, IService, new();
     }
     /// <summary>
     /// 数据服务
     /// </summary>
     public interface IModel : IService, ISerializable { }
-
     public interface ICanInit : IDisposable
     {
         abstract bool Initialized { get; }
@@ -64,11 +63,9 @@ namespace YokiFrame
             }
         }
 
-
         void ICanInit.Init() => OnInit();
-        void IDisposable.Dispose() => Dispose();
-
         protected abstract void OnInit();
+        void IDisposable.Dispose() => Dispose();
         protected virtual void Dispose() { }
 
         public K GetService<K>(bool force = false) where K : class, IService, new()
@@ -76,7 +73,7 @@ namespace YokiFrame
             var key = typeof(K);
             if (!mServices.TryGetValue(key, out var service))
             {
-                //如果没有注册到架构会尝试注册到架构
+                // 如果没有注册到架构会尝试注册到架构
                 if (force)
                 {
                     service = new K();
@@ -92,7 +89,7 @@ namespace YokiFrame
             var key = typeof(K);
             if (mServices.ContainsKey(key))
             {
-                //如果有新的，释放先前的
+                // 如果有新的，释放先前的
                 mServices[key].Dispose();
                 mServices[key] = service;
             }
@@ -102,6 +99,8 @@ namespace YokiFrame
             }
             service.SetArchitecture(mArchitecture);
         }
+
+        public IEnumerable<IService> GetAllServices() => mServices.Values;
     }
 
     public abstract class AbstractService : IService
@@ -120,12 +119,9 @@ namespace YokiFrame
         }
 
         void ICanInit.Init() => OnInit();
-        void IDisposable.Dispose() => Dispose();
-
         protected abstract void OnInit();
-
+        void IDisposable.Dispose() => Dispose();
         protected virtual void Dispose() { }
-
 
         public T GetService<T>() where T : class, IService, new()
         {

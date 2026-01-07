@@ -163,9 +163,9 @@ namespace YokiFrame
             }
             
             // String 事件
-#pragma warning disable CS0618
+#pragma warning disable CS0612, CS0618
             var stringEvents = EventKit.String.GetAllEvents();
-#pragma warning restore CS0618
+#pragma warning restore CS0612, CS0618
             if (stringEvents.Count > 0)
             {
                 var stringFoldout = CreateRuntimeStringFoldout(stringEvents, ref totalListeners);
