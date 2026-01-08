@@ -37,7 +37,8 @@ namespace YokiFrame
         #region 私有字段
 
         private ViewMode mViewMode = ViewMode.Runtime;
-        private EventTypeFilter mTypeFilter = EventTypeFilter.All;
+        // TODO: 后续实现类型过滤功能时启用
+        // private EventTypeFilter mTypeFilter = EventTypeFilter.All;
 
         // UI 元素引用
         private VisualElement mRuntimeView;

@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 namespace YokiFrame
@@ -82,21 +83,39 @@ namespace YokiFrame
         public static string Format(this string self, params object[] args) => string.Format(self, args);
 
         /// <summary>
-        /// 首字母大写
+        /// 首字母大写（零分配优化）
         /// </summary>
         public static string UpperFirst(this string self)
         {
             if (string.IsNullOrEmpty(self)) return self;
-            return char.ToUpper(self[0]) + self.Substring(1);
+            
+            char first = self[0];
+            if (char.IsUpper(first)) return self;
+            
+            // 使用 string.Create 避免额外分配
+            return string.Create(self.Length, self, static (span, str) =>
+            {
+                span[0] = char.ToUpper(str[0]);
+                str.AsSpan(1).CopyTo(span[1..]);
+            });
         }
 
         /// <summary>
-        /// 首字母小写
+        /// 首字母小写（零分配优化）
         /// </summary>
         public static string LowerFirst(this string self)
         {
             if (string.IsNullOrEmpty(self)) return self;
-            return char.ToLower(self[0]) + self.Substring(1);
+            
+            char first = self[0];
+            if (char.IsLower(first)) return self;
+            
+            // 使用 string.Create 避免额外分配
+            return string.Create(self.Length, self, static (span, str) =>
+            {
+                span[0] = char.ToLower(str[0]);
+                str.AsSpan(1).CopyTo(span[1..]);
+            });
         }
 
         #endregion

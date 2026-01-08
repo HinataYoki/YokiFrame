@@ -31,7 +31,7 @@ namespace YokiFrame
     {
         private readonly ISceneResLoaderPool mPool;
         private readonly ResourcePackage mPackage;
-        private SceneHandle mHandle;
+        private YooAsset.SceneHandle mHandle;
         private Action<Scene> mOnComplete;
         private Action<float> mOnProgress;
         private bool mIsSuspended;
@@ -54,7 +54,8 @@ namespace YokiFrame
             mIsSuspended = false;
 
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, suspendLoad);
+            // YooAsset 2.x API: activateOnLoad 参数控制是否自动激活场景（与 suspendLoad 逻辑相反）
+            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == null)
             {
@@ -147,7 +148,7 @@ namespace YokiFrame
             mOnProgress?.Invoke(1f);
         }
 
-        private void OnLoadCompleted(SceneHandle handle)
+        private void OnLoadCompleted(YooAsset.SceneHandle handle)
         {
             mOnComplete?.Invoke(handle.SceneObject);
         }
@@ -173,7 +174,7 @@ namespace YokiFrame
     {
         private readonly ISceneResLoaderPool mPool;
         private readonly ResourcePackage mPackage;
-        private SceneHandle mHandle;
+        private YooAsset.SceneHandle mHandle;
         private bool mIsSuspended;
 
         public bool IsSuspended => mIsSuspended;
@@ -198,7 +199,8 @@ namespace YokiFrame
         {
             mIsSuspended = false;
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, suspendLoad);
+            // YooAsset 2.x API: activateOnLoad 参数控制是否自动激活场景（与 suspendLoad 逻辑相反）
+            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == null)
             {

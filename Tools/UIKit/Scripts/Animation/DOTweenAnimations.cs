@@ -106,7 +106,9 @@ namespace YokiFrame
 
             try
             {
-                await mTweener.ToUniTask(cancellationToken: ct);
+                // 使用 UniTask.WaitUntil 等待 Tween 完成，支持取消
+                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
+                    cancellationToken: ct);
             }
             catch (OperationCanceledException)
             {
@@ -199,7 +201,8 @@ namespace YokiFrame
 
             try
             {
-                await mTweener.ToUniTask(cancellationToken: ct);
+                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
+                    cancellationToken: ct);
             }
             catch (OperationCanceledException)
             {
@@ -310,7 +313,8 @@ namespace YokiFrame
 
             try
             {
-                await mTweener.ToUniTask(cancellationToken: ct);
+                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
+                    cancellationToken: ct);
             }
             catch (OperationCanceledException)
             {

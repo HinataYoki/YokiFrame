@@ -46,6 +46,13 @@ namespace YokiFrame.TableKit.Editor
             public static readonly Color BorderLight = new(0.28f, 0.28f, 0.30f);
             public static readonly Color BorderValid = new(0.30f, 0.69f, 0.31f, 0.6f);
             public static readonly Color BorderInvalid = new(0.96f, 0.26f, 0.21f, 0.6f);
+
+            // 字体大小
+            public const int FontSizeTitle = 16;        // 主标题
+            public const int FontSizeSection = 14;      // 区块标题
+            public const int FontSizeBody = 13;         // 正文
+            public const int FontSizeSmall = 12;        // 小字/提示
+            public const int FontSizeCode = 11;         // 代码块
         }
 
         #endregion
@@ -115,6 +122,7 @@ namespace YokiFrame.TableKit.Editor
         private const string PREF_ASSEMBLY_NAME = "TableKit_AssemblyName";
         private const string PREF_GENERATE_EXTERNAL_TYPE_UTIL = "TableKit_GenerateExternalTypeUtil";
         private const string PREF_CONFIG_EXPANDED = "TableKit_ConfigExpanded";
+        private const string PREF_GUIDE_EXPANDED = "TableKit_GuideExpanded";
 
         #endregion
 
@@ -150,6 +158,7 @@ namespace YokiFrame.TableKit.Editor
             scrollView.Add(BuildConsole());
             scrollView.Add(BuildDataPreview());
             scrollView.Add(BuildTablesInfo());
+            scrollView.Add(BuildUsageGuide());
 
             RefreshConfigStatus();
 
@@ -165,15 +174,15 @@ namespace YokiFrame.TableKit.Editor
 
         private void LoadPrefs()
         {
-            mEditorDataPath = EditorPrefs.GetString(PREF_EDITOR_DATA_PATH, "Assets/Art/Table/");
-            mRuntimePathPattern = EditorPrefs.GetString(PREF_RUNTIME_PATH_PATTERN, "{0}");
+            mEditorDataPath = EditorPrefs.GetString(PREF_EDITOR_DATA_PATH, "Assets/Resources/Art/Table/");
+            mRuntimePathPattern = EditorPrefs.GetString(PREF_RUNTIME_PATH_PATTERN, "Art/Table/{0}");
             mLubanWorkDir = EditorPrefs.GetString(PREF_LUBAN_WORK_DIR, "Luban/MiniTemplate");
             mLubanDllPath = EditorPrefs.GetString(PREF_LUBAN_DLL_PATH, "Luban/Tools/Luban/Luban.dll");
             mTarget = EditorPrefs.GetString(PREF_TARGET, "client");
             mCodeTarget = EditorPrefs.GetString(PREF_CODE_TARGET, "cs-bin");
             mDataTarget = EditorPrefs.GetString(PREF_DATA_TARGET, "bin");
-            mOutputDataDir = EditorPrefs.GetString(PREF_OUTPUT_DATA_DIR, "Assets/Art/Table/");
-            mOutputCodeDir = EditorPrefs.GetString(PREF_OUTPUT_CODE_DIR, "Assets/Scripts/TabCode/");
+            mOutputDataDir = EditorPrefs.GetString(PREF_OUTPUT_DATA_DIR, "Assets/Resources/Art/Table/");
+            mOutputCodeDir = EditorPrefs.GetString(PREF_OUTPUT_CODE_DIR, "Assets/Scripts/TabKit/");
             mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
             mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.TableKit");
             mGenerateExternalTypeUtil = EditorPrefs.GetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, false);
@@ -193,6 +202,52 @@ namespace YokiFrame.TableKit.Editor
             EditorPrefs.SetBool(PREF_USE_ASSEMBLY, mUseAssemblyDefinition);
             EditorPrefs.SetString(PREF_ASSEMBLY_NAME, mAssemblyName);
             EditorPrefs.SetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, mGenerateExternalTypeUtil);
+        }
+
+        /// <summary>
+        /// 还原所有配置为默认值
+        /// </summary>
+        private void ResetToDefaults()
+        {
+            if (!EditorUtility.DisplayDialog("还原默认设置", "确定要将所有配置还原为默认值吗？", "确定", "取消"))
+                return;
+
+            // 设置默认值
+            mEditorDataPath = "Assets/Resources/Art/Table/";
+            mRuntimePathPattern = "Art/Table/{0}";
+            mLubanWorkDir = "Luban/MiniTemplate";
+            mLubanDllPath = "Luban/Tools/Luban/Luban.dll";
+            mTarget = "client";
+            mCodeTarget = "cs-bin";
+            mDataTarget = "bin";
+            mOutputDataDir = "Assets/Resources/Art/Table/";
+            mOutputCodeDir = "Assets/Scripts/TabKit/";
+            mUseAssemblyDefinition = false;
+            mAssemblyName = "YokiFrame.TableKit";
+            mGenerateExternalTypeUtil = false;
+
+            // 更新 UI - 文本框
+            mEditorDataPathField.value = mEditorDataPath;
+            mRuntimePathPatternField.value = mRuntimePathPattern;
+            mLubanWorkDirField.value = mLubanWorkDir;
+            mLubanDllPathField.value = mLubanDllPath;
+            mTargetDropdown.value = mTarget;
+            mCodeTargetDropdown.value = mCodeTarget;
+            mDataTargetDropdown.value = mDataTarget;
+            mOutputDataDirField.value = mOutputDataDir;
+            mOutputCodeDirField.value = mOutputCodeDir;
+            mAssemblyNameField.value = mAssemblyName;
+            mAssemblyNameField.SetEnabled(mUseAssemblyDefinition);
+
+            // 更新 UI - Toggle 开关
+            UpdateCapsuleToggle(mUseAssemblyToggle, mUseAssemblyDefinition);
+            UpdateCapsuleToggle(mGenerateExternalTypeUtilToggle, mGenerateExternalTypeUtil);
+
+            // 保存并刷新
+            SavePrefs();
+            RefreshConfigStatus();
+
+            mLogContent.text = $"[{System.DateTime.Now:HH:mm:ss}] 已还原为默认设置";
         }
 
         #endregion

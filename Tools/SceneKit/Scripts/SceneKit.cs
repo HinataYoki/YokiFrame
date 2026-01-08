@@ -379,22 +379,24 @@ namespace YokiFrame
         /// </summary>
         private static void ClearScenesForSingleMode(string newSceneName)
         {
-            var handlersToRemove = new List<SceneHandler>();
-            
-            foreach (var handler in sLoadedScenesList)
+            Pool.List<SceneHandler>(handlersToRemove =>
             {
-                if (handler.SceneName != newSceneName)
+                foreach (var handler in sLoadedScenesList)
                 {
-                    handlersToRemove.Add(handler);
+                    if (handler.SceneName != newSceneName)
+                    {
+                        handlersToRemove.Add(handler);
+                    }
                 }
-            }
 
-            foreach (var handler in handlersToRemove)
-            {
-                UnregisterHandler(handler);
-                handler.OnRecycled();
-                SafePoolKit<SceneHandler>.Instance.Recycle(handler);
-            }
+                for (int i = 0; i < handlersToRemove.Count; i++)
+                {
+                    var handler = handlersToRemove[i];
+                    UnregisterHandler(handler);
+                    handler.OnRecycled();
+                    SafePoolKit<SceneHandler>.Instance.Recycle(handler);
+                }
+            });
         }
 
         /// <summary>
@@ -797,29 +799,32 @@ namespace YokiFrame
                 return;
             }
 
-            var scenesToUnload = new List<SceneHandler>();
+            // 使用临时数组避免在回调中修改集合
+            var scenesToUnload = new SceneHandler[sLoadedScenesList.Count];
+            int count = 0;
             
-            foreach (var handler in sLoadedScenesList)
+            for (int i = 0; i < sLoadedScenesList.Count; i++)
             {
+                var handler = sLoadedScenesList[i];
                 if (preserveActive && handler == sActiveSceneHandler)
                 {
                     continue;
                 }
-                scenesToUnload.Add(handler);
+                scenesToUnload[count++] = handler;
             }
 
-            if (scenesToUnload.Count == 0)
+            if (count == 0)
             {
                 onComplete?.Invoke();
                 return;
             }
 
             int unloadedCount = 0;
-            int totalCount = scenesToUnload.Count;
+            int totalCount = count;
 
-            foreach (var handler in scenesToUnload)
+            for (int i = 0; i < count; i++)
             {
-                UnloadSceneAsync(handler, () =>
+                UnloadSceneAsync(scenesToUnload[i], () =>
                 {
                     unloadedCount++;
                     if (unloadedCount >= totalCount)

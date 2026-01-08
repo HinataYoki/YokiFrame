@@ -203,9 +203,13 @@ namespace YokiFrame.TableKit.Editor
 
         #region 数据预览
 
+        private string[] mCachedJsonFiles;
+
         private void LoadDataPreview(string dataDir, StringBuilder logBuilder)
         {
             mDataPreviewContainer.Clear();
+            mCurrentPreviewJsonPath = null;
+            mCachedJsonFiles = null;
 
             if (!Directory.Exists(dataDir))
             {
@@ -220,6 +224,7 @@ namespace YokiFrame.TableKit.Editor
                 return;
             }
 
+            mCachedJsonFiles = jsonFiles;
             logBuilder.AppendLine($"✓ 找到 {jsonFiles.Length} 个数据文件");
 
             var fileNames = new List<string>();
@@ -242,21 +247,35 @@ namespace YokiFrame.TableKit.Editor
             selectRow.Add(dropdown);
 
             // 树形容器
-            var treeContainer = new ScrollView { name = "tree-container" };
-            treeContainer.style.marginTop = 8;
-            treeContainer.style.maxHeight = 300;
-            treeContainer.style.backgroundColor = new StyleColor(Design.LayerConsole);
-            treeContainer.style.borderTopLeftRadius = treeContainer.style.borderTopRightRadius = 4;
-            treeContainer.style.borderBottomLeftRadius = treeContainer.style.borderBottomRightRadius = 4;
-            mDataPreviewContainer.Add(treeContainer);
+            mDataPreviewTreeContainer = new ScrollView { name = "tree-container" };
+            mDataPreviewTreeContainer.style.marginTop = 8;
+            mDataPreviewTreeContainer.style.maxHeight = 300;
+            mDataPreviewTreeContainer.style.backgroundColor = new StyleColor(Design.LayerConsole);
+            mDataPreviewTreeContainer.style.borderTopLeftRadius = mDataPreviewTreeContainer.style.borderTopRightRadius = 4;
+            mDataPreviewTreeContainer.style.borderBottomLeftRadius = mDataPreviewTreeContainer.style.borderBottomRightRadius = 4;
+            mDataPreviewContainer.Add(mDataPreviewTreeContainer);
 
-            LoadJsonToTree(jsonFiles[0], treeContainer);
+            mCurrentPreviewJsonPath = jsonFiles[0];
+            LoadJsonToTreeWithSearch(jsonFiles[0], mDataPreviewTreeContainer, mDataPreviewSearchText);
 
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 var idx = fileNames.IndexOf(evt.newValue);
-                if (idx >= 0 && idx < jsonFiles.Length) LoadJsonToTree(jsonFiles[idx], treeContainer);
+                if (idx >= 0 && idx < jsonFiles.Length)
+                {
+                    mCurrentPreviewJsonPath = jsonFiles[idx];
+                    LoadJsonToTreeWithSearch(jsonFiles[idx], mDataPreviewTreeContainer, mDataPreviewSearchText);
+                }
             });
+        }
+
+        /// <summary>
+        /// 刷新数据预览（带搜索）
+        /// </summary>
+        private void RefreshDataPreviewWithSearch()
+        {
+            if (mDataPreviewTreeContainer == null || string.IsNullOrEmpty(mCurrentPreviewJsonPath)) return;
+            LoadJsonToTreeWithSearch(mCurrentPreviewJsonPath, mDataPreviewTreeContainer, mDataPreviewSearchText);
         }
 
         private void AddPreviewHint(string message, Color color)
@@ -269,7 +288,14 @@ namespace YokiFrame.TableKit.Editor
 
         private void LoadJsonToTree(string jsonPath, ScrollView container)
         {
+            LoadJsonToTreeWithSearch(jsonPath, container, "");
+        }
+
+        private void LoadJsonToTreeWithSearch(string jsonPath, ScrollView container, string searchText)
+        {
             container.Clear();
+            mSearchMatchCount = 0;
+            mFirstMatchElement = null;
 
             try
             {
@@ -277,13 +303,50 @@ namespace YokiFrame.TableKit.Editor
                 if (json == null)
                 {
                     AddTreeError(container, "JSON 解析失败");
+                    UpdateMatchLabel(0);
                     return;
                 }
-                BuildJsonTree(json, container, 0, Path.GetFileNameWithoutExtension(jsonPath));
+
+                var lowerSearch = string.IsNullOrEmpty(searchText) ? "" : searchText.ToLowerInvariant();
+                BuildJsonTreeWithSearch(json, container, 0, Path.GetFileNameWithoutExtension(jsonPath), lowerSearch);
+
+                UpdateMatchLabel(mSearchMatchCount);
+
+                // 滚动到第一个匹配项
+                if (mFirstMatchElement != null && !string.IsNullOrEmpty(searchText))
+                {
+                    container.schedule.Execute(() =>
+                    {
+                        mFirstMatchElement.schedule.Execute(() =>
+                        {
+                            container.ScrollTo(mFirstMatchElement);
+                        });
+                    }).ExecuteLater(50);
+                }
             }
             catch (Exception ex)
             {
                 AddTreeError(container, $"加载失败: {ex.Message}");
+                UpdateMatchLabel(0);
+            }
+        }
+
+        private int mSearchMatchCount;
+        private VisualElement mFirstMatchElement;
+
+        private void UpdateMatchLabel(int count)
+        {
+            if (mDataPreviewMatchLabel == null) return;
+
+            if (string.IsNullOrEmpty(mDataPreviewSearchText))
+            {
+                mDataPreviewMatchLabel.style.display = DisplayStyle.None;
+            }
+            else
+            {
+                mDataPreviewMatchLabel.style.display = DisplayStyle.Flex;
+                mDataPreviewMatchLabel.text = count > 0 ? $"找到 {count} 处匹配" : "无匹配";
+                mDataPreviewMatchLabel.style.color = new StyleColor(count > 0 ? Design.BrandSuccess : Design.BrandWarning);
             }
         }
 
@@ -298,18 +361,38 @@ namespace YokiFrame.TableKit.Editor
 
         private void BuildJsonTree(JSONNode node, VisualElement parent, int depth, string key = null)
         {
+            BuildJsonTreeWithSearch(node, parent, depth, key, "");
+        }
+
+        private bool BuildJsonTreeWithSearch(JSONNode node, VisualElement parent, int depth, string key, string searchText)
+        {
             var indent = depth * 16;
+            var hasMatch = false;
 
             if (node.IsArray)
             {
                 var foldout = new Foldout { text = string.IsNullOrEmpty(key) ? $"Array [{node.Count}]" : $"{key} [{node.Count}]", value = depth < 1 };
                 foldout.style.marginLeft = indent;
+
+                // 检查 key 是否匹配
+                if (!string.IsNullOrEmpty(searchText) && !string.IsNullOrEmpty(key) && key.ToLowerInvariant().Contains(searchText))
+                {
+                    hasMatch = true;
+                    HighlightFoldout(foldout);
+                }
+
                 parent.Add(foldout);
 
                 int idx = 0;
                 foreach (var item in node.Children)
                 {
-                    BuildJsonTree(item, foldout, depth + 1, $"[{idx}]");
+                    var childMatch = BuildJsonTreeWithSearch(item, foldout, depth + 1, $"[{idx}]", searchText);
+                    if (childMatch)
+                    {
+                        hasMatch = true;
+                        foldout.value = true; // 展开包含匹配项的节点
+                    }
+
                     if (++idx >= 50)
                     {
                         var more = new Label($"... 还有 {node.Count - 50} 项");
@@ -324,9 +407,25 @@ namespace YokiFrame.TableKit.Editor
             {
                 var foldout = new Foldout { text = string.IsNullOrEmpty(key) ? "Object" : key, value = depth < 2 };
                 foldout.style.marginLeft = indent;
+
+                // 检查 key 是否匹配
+                if (!string.IsNullOrEmpty(searchText) && !string.IsNullOrEmpty(key) && key.ToLowerInvariant().Contains(searchText))
+                {
+                    hasMatch = true;
+                    HighlightFoldout(foldout);
+                }
+
                 parent.Add(foldout);
 
-                foreach (var kvp in node.AsObject) BuildJsonTree(kvp.Value, foldout, depth + 1, kvp.Key);
+                foreach (var kvp in node.AsObject)
+                {
+                    var childMatch = BuildJsonTreeWithSearch(kvp.Value, foldout, depth + 1, kvp.Key, searchText);
+                    if (childMatch)
+                    {
+                        hasMatch = true;
+                        foldout.value = true; // 展开包含匹配项的节点
+                    }
+                }
             }
             else
             {
@@ -337,16 +436,63 @@ namespace YokiFrame.TableKit.Editor
                 row.style.paddingBottom = 2;
                 parent.Add(row);
 
+                var keyMatched = !string.IsNullOrEmpty(searchText) && !string.IsNullOrEmpty(key) && key.ToLowerInvariant().Contains(searchText);
+                var valueMatched = !string.IsNullOrEmpty(searchText) && node.Value.ToLowerInvariant().Contains(searchText);
+
+                if (keyMatched || valueMatched)
+                {
+                    hasMatch = true;
+                    mSearchMatchCount++;
+
+                    // 高亮整行背景
+                    row.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0f, 0.15f));
+                    row.style.borderTopLeftRadius = row.style.borderTopRightRadius = 2;
+                    row.style.borderBottomLeftRadius = row.style.borderBottomRightRadius = 2;
+                    row.style.paddingLeft = 4;
+                    row.style.marginLeft = indent - 4;
+
+                    if (mFirstMatchElement == null)
+                    {
+                        mFirstMatchElement = row;
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(key))
                 {
                     var keyLabel = new Label($"{key}: ");
-                    keyLabel.style.color = new StyleColor(Design.BrandPrimary);
+                    keyLabel.style.color = keyMatched
+                        ? new StyleColor(new Color(1f, 0.6f, 0f)) // 高亮橙色
+                        : new StyleColor(Design.BrandPrimary);
+                    if (keyMatched) keyLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
                     row.Add(keyLabel);
                 }
 
                 var valueLabel = new Label(node.Value);
-                valueLabel.style.color = GetValueColor(node);
+                if (valueMatched)
+                {
+                    valueLabel.style.color = new StyleColor(new Color(1f, 0.6f, 0f)); // 高亮橙色
+                    valueLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                }
+                else
+                {
+                    valueLabel.style.color = GetValueColor(node);
+                }
                 row.Add(valueLabel);
+            }
+
+            return hasMatch;
+        }
+
+        private void HighlightFoldout(Foldout foldout)
+        {
+            mSearchMatchCount++;
+            foldout.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0f, 0.1f));
+            foldout.style.borderTopLeftRadius = foldout.style.borderTopRightRadius = 2;
+            foldout.style.borderBottomLeftRadius = foldout.style.borderBottomRightRadius = 2;
+
+            if (mFirstMatchElement == null)
+            {
+                mFirstMatchElement = foldout;
             }
         }
 
@@ -398,6 +544,12 @@ namespace YokiFrame.TableKit.Editor
 
         private void RefreshTablesInfo(object tables)
         {
+            mCachedTables = tables;
+            RefreshTablesInfoInternal(tables, mTablesSearchText);
+        }
+
+        private void RefreshTablesInfoInternal(object tables, string searchText)
+        {
             mTablesInfoContainer.Clear();
 
             if (tables == null)
@@ -409,15 +561,37 @@ namespace YokiFrame.TableKit.Editor
                 return;
             }
 
+            var scrollView = new ScrollView();
+            scrollView.style.flexGrow = 1;
+            scrollView.style.maxHeight = 250;
+            mTablesInfoContainer.Add(scrollView);
+
             var properties = tables.GetType().GetProperties();
+            var matchCount = 0;
+            var totalCount = 0;
+
             foreach (var prop in properties)
             {
                 if (prop.PropertyType.Namespace != "cfg") continue;
+                totalCount++;
+
+                // 搜索过滤：匹配属性名或类型名（不区分大小写）
+                if (!string.IsNullOrEmpty(searchText))
+                {
+                    var lowerSearch = searchText.ToLowerInvariant();
+                    var matchName = prop.Name.ToLowerInvariant().Contains(lowerSearch);
+                    var matchType = prop.PropertyType.Name.ToLowerInvariant().Contains(lowerSearch);
+                    if (!matchName && !matchType) continue;
+                }
+
+                matchCount++;
 
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
                 row.style.marginTop = 4;
+                row.style.paddingTop = 2;
+                row.style.paddingBottom = 2;
 
                 var nameLabel = new Label($"• {prop.Name}");
                 nameLabel.style.width = 150;
@@ -428,7 +602,31 @@ namespace YokiFrame.TableKit.Editor
                 typeLabel.style.color = new StyleColor(Design.BrandSuccess);
                 row.Add(typeLabel);
 
-                mTablesInfoContainer.Add(row);
+                scrollView.Add(row);
+            }
+
+            // 显示统计信息
+            var statsLabel = new Label();
+            statsLabel.style.marginTop = 8;
+            statsLabel.style.fontSize = Design.FontSizeSmall;
+            statsLabel.style.color = new StyleColor(Design.TextTertiary);
+            
+            if (string.IsNullOrEmpty(searchText))
+            {
+                statsLabel.text = $"共 {totalCount} 个配置表";
+            }
+            else
+            {
+                statsLabel.text = $"找到 {matchCount}/{totalCount} 个匹配项";
+            }
+            mTablesInfoContainer.Add(statsLabel);
+
+            if (matchCount == 0 && !string.IsNullOrEmpty(searchText))
+            {
+                var noResult = new Label("没有找到匹配的配置表");
+                noResult.style.color = new StyleColor(Design.BrandWarning);
+                noResult.style.marginTop = 8;
+                scrollView.Add(noResult);
             }
         }
 

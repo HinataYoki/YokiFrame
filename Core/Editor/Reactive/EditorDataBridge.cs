@@ -105,7 +105,6 @@ namespace YokiFrame.EditorTools
 
             string throttleKey = $"{channel}_throttle_{callback.GetHashCode()}";
             T latestData = default;
-            bool hasPendingData = false;
 
             return Subscribe<T>(channel, data =>
             {
@@ -118,7 +117,6 @@ namespace YokiFrame.EditorTools
                     {
                         // 在间隔内，缓存数据等待下次执行
                         latestData = data;
-                        hasPendingData = true;
                         return;
                     }
                 }
@@ -126,7 +124,7 @@ namespace YokiFrame.EditorTools
                 // 立即执行
                 sThrottleTimestamps[throttleKey] = now;
                 callback(data);
-                hasPendingData = false;
+                latestData = default;
             });
         }
 

@@ -235,7 +235,7 @@ namespace YokiFrame.EditorTools
             return item;
         }
 
-        private VisualElement CreateToolbar()
+        private new VisualElement CreateToolbar()
         {
             var toolbar = new VisualElement();
             toolbar.AddToClassList("toolbar");

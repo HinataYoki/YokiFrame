@@ -4,7 +4,8 @@
     "references": [
         "GUID:224151c835b786a4f8efadaa1799380d",
         "GUID:75469ad4d38634e559750d17036d5f7c",
-        "UniTask"
+        "UniTask",
+        "DOTween.Modules"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -26,6 +27,11 @@
         },
         {
             "name": "com.demigiant.dotween",
+            "expression": "",
+            "define": "YOKIFRAME_DOTWEEN_SUPPORT"
+        },
+        {
+            "name": "DOTween.Modules",
             "expression": "",
             "define": "YOKIFRAME_DOTWEEN_SUPPORT"
         }
