@@ -153,29 +153,6 @@ namespace YokiFrame.EditorTools
 
         #region 状态徽章
 
-        /// <summary>
-        /// 创建状态徽章（带背景色和文本色）
-        /// </summary>
-        /// <param name="text">徽章文本</param>
-        /// <param name="bgColor">背景色</param>
-        /// <param name="textColor">文本色</param>
-        public static Label CreateStatusBadge(string text, Color bgColor, Color textColor)
-        {
-            var label = new Label(text);
-            label.style.fontSize = 9;
-            label.style.paddingLeft = 6;
-            label.style.paddingRight = 6;
-            label.style.paddingTop = 2;
-            label.style.paddingBottom = 2;
-            label.style.borderTopLeftRadius = Radius.MD;
-            label.style.borderTopRightRadius = Radius.MD;
-            label.style.borderBottomLeftRadius = Radius.MD;
-            label.style.borderBottomRightRadius = Radius.MD;
-            label.style.backgroundColor = new StyleColor(bgColor);
-            label.style.color = new StyleColor(textColor);
-            return label;
-        }
-
         #endregion
     }
 }

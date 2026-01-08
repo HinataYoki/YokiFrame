@@ -31,6 +31,9 @@ namespace YokiFrame
                 {
                     var flowRow = CreateEventFlowRow(kvp.Value);
                     mScanResultsScrollView.Add(flowRow);
+                    
+                    // 注册导航映射（将导航项与内容元素关联）
+                    RegisterNavMapping(kvp.Key, flowRow);
                 }
 
                 var spacer = new VisualElement();
@@ -60,11 +63,23 @@ namespace YokiFrame
             senderHeader.style.alignItems = Align.FlexEnd;
             senderHeader.style.paddingRight = 10;
             
-            var senderLabel = new Label("📤 发送方 (Send)");
+            var senderRow = new VisualElement();
+            senderRow.style.flexDirection = FlexDirection.Row;
+            senderRow.style.alignItems = Align.Center;
+            
+            var senderIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.SEND) };
+            senderIcon.style.width = 14;
+            senderIcon.style.height = 14;
+            senderIcon.style.marginRight = 4;
+            senderIcon.tintColor = new Color(1f, 0.6f, 0.5f);
+            senderRow.Add(senderIcon);
+            
+            var senderLabel = new Label("发送方 (Send)");
             senderLabel.style.fontSize = 12;
             senderLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             senderLabel.style.color = new StyleColor(new Color(1f, 0.6f, 0.5f)); // 红色系
-            senderHeader.Add(senderLabel);
+            senderRow.Add(senderLabel);
+            senderHeader.Add(senderRow);
             row.Add(senderHeader);
 
             // 中栏标题：事件
@@ -72,11 +87,22 @@ namespace YokiFrame
             hubHeader.style.width = 240;
             hubHeader.style.alignItems = Align.Center;
             
-            var hubLabel = new Label("⚡ 事件");
+            var hubRow = new VisualElement();
+            hubRow.style.flexDirection = FlexDirection.Row;
+            hubRow.style.alignItems = Align.Center;
+            
+            var hubIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.EVENT) };
+            hubIcon.style.width = 14;
+            hubIcon.style.height = 14;
+            hubIcon.style.marginRight = 4;
+            hubRow.Add(hubIcon);
+            
+            var hubLabel = new Label("事件");
             hubLabel.style.fontSize = 12;
             hubLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             hubLabel.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
-            hubHeader.Add(hubLabel);
+            hubRow.Add(hubLabel);
+            hubHeader.Add(hubRow);
             row.Add(hubHeader);
 
             // 右栏标题：接收方（绿色系）
@@ -86,11 +112,23 @@ namespace YokiFrame
             receiverHeader.style.alignItems = Align.FlexStart;
             receiverHeader.style.paddingLeft = 10;
             
-            var receiverLabel = new Label("📥 接收方 (Register)");
+            var receiverRow = new VisualElement();
+            receiverRow.style.flexDirection = FlexDirection.Row;
+            receiverRow.style.alignItems = Align.Center;
+            
+            var receiverIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.RECEIVE) };
+            receiverIcon.style.width = 14;
+            receiverIcon.style.height = 14;
+            receiverIcon.style.marginRight = 4;
+            receiverIcon.tintColor = new Color(0.5f, 1f, 0.6f);
+            receiverRow.Add(receiverIcon);
+            
+            var receiverLabel = new Label("接收方 (Register)");
             receiverLabel.style.fontSize = 12;
             receiverLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             receiverLabel.style.color = new StyleColor(new Color(0.5f, 1f, 0.6f)); // 绿色系
-            receiverHeader.Add(receiverLabel);
+            receiverRow.Add(receiverLabel);
+            receiverHeader.Add(receiverRow);
             row.Add(receiverHeader);
 
             return row;
@@ -109,15 +147,21 @@ namespace YokiFrame
             var (_, borderColor, textColor) = GetEventTypeColors(eventType);
             header.style.borderBottomColor = new StyleColor(borderColor);
 
-            var icon = eventType switch
-            {
-                "Enum" => "🟢",
-                "Type" => "🔵",
-                "String" => "🟠",
-                _ => "⚪"
-            };
+            // 使用颜色点代替 emoji
+            var iconDot = new VisualElement();
+            iconDot.style.width = 10;
+            iconDot.style.height = 10;
+            iconDot.style.borderTopLeftRadius = 5;
+            iconDot.style.borderTopRightRadius = 5;
+            iconDot.style.borderBottomLeftRadius = 5;
+            iconDot.style.borderBottomRightRadius = 5;
+            iconDot.style.marginRight = 6;
+            
+            var (dotColor, _, _) = GetEventTypeColors(eventType);
+            iconDot.style.backgroundColor = new StyleColor(dotColor);
+            header.Add(iconDot);
 
-            var label = new Label($"{icon} {eventType} 事件 ({count})");
+            var label = new Label($"{eventType} 事件 ({count})");
             label.style.fontSize = 16;
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
             label.style.color = new StyleColor(textColor);
@@ -187,7 +231,7 @@ namespace YokiFrame
 
             if (flow.Senders.Count == 0)
             {
-                column.Add(CreateWarningBadge("⚠️ 无发送源"));
+                column.Add(CreateWarningBadgeWithIcon(EditorTools.KitIcons.WARNING, "无发送源"));
             }
             else
             {
@@ -225,21 +269,21 @@ namespace YokiFrame
         /// <summary>
         /// 创建箭头图标（连接器样式，带颜色区分）
         /// </summary>
-        private Label CreateArrowIcon(bool hasConnection, bool isSender)
+        private Image CreateArrowIcon(bool hasConnection, bool isSender)
         {
-            var arrow = new Label("→");
-            arrow.style.fontSize = 14;
-            arrow.style.unityFontStyleAndWeight = FontStyle.Bold;
+            var arrow = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.ARROW_RIGHT) };
+            arrow.style.width = 16;
+            arrow.style.height = 16;
             
             if (hasConnection)
             {
-                arrow.style.color = new StyleColor(isSender 
+                arrow.tintColor = isSender 
                     ? new Color(1f, 0.6f, 0.5f)   // 红色系
-                    : new Color(0.5f, 1f, 0.6f)); // 绿色系
+                    : new Color(0.5f, 1f, 0.6f); // 绿色系
             }
             else
             {
-                arrow.style.color = new StyleColor(new Color(0.25f, 0.25f, 0.25f));
+                arrow.tintColor = new Color(0.25f, 0.25f, 0.25f);
             }
             
             return arrow;
@@ -247,15 +291,15 @@ namespace YokiFrame
 
         private VisualElement CreateHealthStatusLabel(HealthStatus health)
         {
-            var (text, bgColor, textColor) = health switch
+            var (iconId, text, bgColor, textColor) = health switch
             {
-                HealthStatus.Healthy => ("✅ 完美闭环", new Color(0.2f, 0.4f, 0.2f), new Color(0.6f, 1f, 0.6f)),
-                HealthStatus.Orphan => ("⚠️ 孤儿事件", new Color(0.4f, 0.35f, 0.2f), new Color(1f, 0.9f, 0.5f)),
-                HealthStatus.LeakRisk => ("🛑 潜在泄露", new Color(0.4f, 0.2f, 0.2f), new Color(1f, 0.6f, 0.6f)),
-                HealthStatus.NoSender => ("⚠️ 无发送源", new Color(0.35f, 0.35f, 0.2f), new Color(0.9f, 0.9f, 0.5f)),
-                _ => ("", Color.clear, Color.white)
+                HealthStatus.Healthy => (EditorTools.KitIcons.SUCCESS, "完美闭环", new Color(0.2f, 0.4f, 0.2f), new Color(0.6f, 1f, 0.6f)),
+                HealthStatus.Orphan => (EditorTools.KitIcons.WARNING, "孤儿事件", new Color(0.4f, 0.35f, 0.2f), new Color(1f, 0.9f, 0.5f)),
+                HealthStatus.LeakRisk => (EditorTools.KitIcons.ERROR, "潜在泄露", new Color(0.4f, 0.2f, 0.2f), new Color(1f, 0.6f, 0.6f)),
+                HealthStatus.NoSender => (EditorTools.KitIcons.WARNING, "无发送源", new Color(0.35f, 0.35f, 0.2f), new Color(0.9f, 0.9f, 0.5f)),
+                _ => ("", "", Color.clear, Color.white)
             };
-            return EditorTools.YokiFrameUIComponents.CreateStatusBadge(text, bgColor, textColor);
+            return EditorTools.YokiFrameUIComponents.CreateStatusBadgeWithIcon(iconId, text, bgColor, textColor);
         }
 
         #endregion
@@ -275,7 +319,7 @@ namespace YokiFrame
 
             if (flow.Receivers.Count == 0)
             {
-                column.Add(CreateWarningBadge("⚠️ 无监听者"));
+                column.Add(CreateWarningBadgeWithIcon(EditorTools.KitIcons.WARNING, "无监听者"));
             }
             else
             {
@@ -311,7 +355,7 @@ namespace YokiFrame
         #region 通用组件
 
         /// <summary>
-        /// 创建警告徽章
+        /// 创建警告徽章（已废弃，使用 CreateWarningBadgeWithIcon）
         /// </summary>
         private VisualElement CreateWarningBadge(string text)
         {
@@ -325,6 +369,39 @@ namespace YokiFrame
             badge.style.paddingRight = 8;
             badge.style.paddingTop = 4;
             badge.style.paddingBottom = 4;
+
+            var label = new Label(text);
+            label.style.fontSize = 10;
+            label.style.color = new StyleColor(new Color(0.67f, 0.67f, 0.67f)); // #AAAAAA
+            badge.Add(label);
+
+            return badge;
+        }
+        
+        /// <summary>
+        /// 创建带图标的警告徽章
+        /// </summary>
+        private VisualElement CreateWarningBadgeWithIcon(string iconId, string text)
+        {
+            var badge = new VisualElement();
+            badge.style.flexDirection = FlexDirection.Row;
+            badge.style.alignItems = Align.Center;
+            badge.style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.2f));
+            badge.style.borderTopLeftRadius = 4;
+            badge.style.borderTopRightRadius = 4;
+            badge.style.borderBottomLeftRadius = 4;
+            badge.style.borderBottomRightRadius = 4;
+            badge.style.paddingLeft = 8;
+            badge.style.paddingRight = 8;
+            badge.style.paddingTop = 4;
+            badge.style.paddingBottom = 4;
+
+            var icon = new Image { image = EditorTools.KitIcons.GetTexture(iconId) };
+            icon.style.width = 12;
+            icon.style.height = 12;
+            icon.style.marginRight = 4;
+            icon.tintColor = new Color(0.67f, 0.67f, 0.67f);
+            badge.Add(icon);
 
             var label = new Label(text);
             label.style.fontSize = 10;

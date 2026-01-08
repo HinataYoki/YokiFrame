@@ -70,10 +70,10 @@ namespace YokiFrame
             var toolbar = CreateToolbar();
             root.Add(toolbar);
 
-            var refreshBtn = CreateToolbarButton("🔄 刷新", RefreshSlots);
+            var refreshBtn = CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshSlots);
             toolbar.Add(refreshBtn);
 
-            var openFolderBtn = CreateToolbarButton("📂 打开目录", OpenSaveFolder);
+            var openFolderBtn = CreateToolbarButtonWithIcon(KitIcons.FOLDER_DOCS, "打开目录", OpenSaveFolder);
             toolbar.Add(openFolderBtn);
 
             var spacer = new VisualElement();
@@ -233,7 +233,11 @@ namespace YokiFrame
             mSlotListView.bindItem = BindSlotItem;
             mSlotListView.fixedItemHeight = 60;
             mSlotListView.selectionType = SelectionType.Single;
+#if UNITY_2022_1_OR_NEWER
             mSlotListView.selectionChanged += OnSlotSelectionChanged;
+#else
+            mSlotListView.onSelectionChange += OnSlotSelectionChanged;
+#endif
             mSlotListView.style.flexGrow = 1;
             panel.Add(mSlotListView);
 
@@ -291,8 +295,9 @@ namespace YokiFrame
             iconBg.style.marginRight = 16;
             titleRow.Add(iconBg);
 
-            var icon = new Label(KitIcons.SAVEKIT);
-            icon.style.fontSize = 24;
+            var icon = new Image { image = KitIcons.GetTexture(KitIcons.SAVEKIT) };
+            icon.style.width = 24;
+            icon.style.height = 24;
             iconBg.Add(icon);
 
             var titleBox = new VisualElement();
@@ -327,13 +332,10 @@ namespace YokiFrame
             buttonRow.style.marginTop = 20;
             scrollView.Add(buttonRow);
 
-            var deleteBtn = new Button(DeleteSelectedSlot) { text = "🗑️ 删除存档" };
-            deleteBtn.AddToClassList("action-button");
-            deleteBtn.AddToClassList("danger");
+            var deleteBtn = CreateActionButtonWithIcon(KitIcons.DELETE, "删除存档", DeleteSelectedSlot, true);
             buttonRow.Add(deleteBtn);
 
-            var exportBtn = new Button(ExportSelectedSlot) { text = "📤 导出" };
-            exportBtn.AddToClassList("action-button");
+            var exportBtn = CreateActionButtonWithIcon(KitIcons.SEND, "导出", ExportSelectedSlot, false);
             exportBtn.style.marginLeft = 8;
             buttonRow.Add(exportBtn);
         }

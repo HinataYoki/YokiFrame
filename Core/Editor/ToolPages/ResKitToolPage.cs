@@ -1,7 +1,5 @@
 #if UNITY_EDITOR
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,7 +9,7 @@ namespace YokiFrame.EditorTools
     /// <summary>
     /// ResKit 工具页面 - 资源监控（按类型分类 + 搜索）
     /// </summary>
-    public class ResKitToolPage : YokiFrameToolPageBase
+    public partial class ResKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "ResKit";
         public override string PageIcon => KitIcons.RESKIT;
@@ -67,172 +65,25 @@ namespace YokiFrame.EditorTools
             public Label CountLabel;
             public VisualElement ItemsContainer;
             public Button ExpandBtn;
+            public Image ExpandIcon;
             public bool IsExpanded;
         }
 
         protected override void BuildUI(VisualElement root)
         {
-            // 顶部工具栏
-            var toolbar = CreateToolbar();
-            root.Add(toolbar);
-            
-            // 搜索栏
-            var searchBar = CreateSearchBar();
-            root.Add(searchBar);
+            root.Add(CreateToolbar());
+            root.Add(CreateSearchBar());
 
-            // 主内容区
             var splitView = new VisualElement();
             splitView.AddToClassList("split-view");
             splitView.style.flexGrow = 1;
             root.Add(splitView);
 
-            // 左侧分类列表
-            var leftPanel = CreateLeftPanel();
-            splitView.Add(leftPanel);
-
-            // 右侧详情 + 历史记录
-            var rightPanel = CreateRightPanel();
-            splitView.Add(rightPanel);
+            splitView.Add(CreateLeftPanel());
+            splitView.Add(CreateRightPanel());
 
             ShowEmptyState();
-            
-            // 默认显示历史记录面板
             RefreshHistoryDisplay();
-        }
-        
-        private void ClearHistory()
-        {
-            ResDebugger.ClearUnloadHistory();
-            RefreshHistoryDisplay();
-        }
-        
-        private void RefreshHistoryDisplay()
-        {
-            if (mHistoryContainer == null) return;
-            
-            // 清空并重建历史记录列表
-            mHistoryContainer.Clear();
-            
-            // 历史记录头部
-            var header = new VisualElement();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.alignItems = Align.Center;
-            header.style.paddingLeft = 12;
-            header.style.paddingRight = 12;
-            header.style.paddingTop = 8;
-            header.style.paddingBottom = 8;
-            header.style.borderBottomWidth = 1;
-            header.style.borderBottomColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
-            
-            var titleLabel = new Label("📜 卸载历史记录");
-            titleLabel.style.fontSize = 13;
-            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            titleLabel.style.color = new StyleColor(new Color(0.9f, 0.9f, 0.92f));
-            titleLabel.style.flexGrow = 1;
-            header.Add(titleLabel);
-            
-            var history = ResDebugger.GetUnloadHistory();
-            mHistoryCountLabel = new Label($"共 {history.Count} 条");
-            mHistoryCountLabel.style.fontSize = 11;
-            mHistoryCountLabel.style.color = new StyleColor(new Color(0.6f, 0.6f, 0.65f));
-            header.Add(mHistoryCountLabel);
-            
-            mHistoryContainer.Add(header);
-            
-            // 历史记录列表
-            var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
-            scrollView.style.maxHeight = 300;
-            mHistoryContainer.Add(scrollView);
-            
-            if (history.Count == 0)
-            {
-                var emptyLabel = new Label("暂无卸载记录");
-                emptyLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.55f));
-                emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-                emptyLabel.style.paddingTop = 20;
-                emptyLabel.style.paddingBottom = 20;
-                scrollView.Add(emptyLabel);
-                return;
-            }
-            
-            foreach (var record in history)
-            {
-                var item = CreateHistoryItem(record);
-                scrollView.Add(item);
-            }
-        }
-        
-        private VisualElement CreateHistoryItem(ResDebugger.UnloadRecord record)
-        {
-            var item = new VisualElement();
-            item.style.marginLeft = 8;
-            item.style.marginRight = 8;
-            item.style.marginTop = 4;
-            item.style.marginBottom = 4;
-            item.style.paddingLeft = 12;
-            item.style.paddingRight = 12;
-            item.style.paddingTop = 10;
-            item.style.paddingBottom = 10;
-            item.style.backgroundColor = new StyleColor(new Color(0.14f, 0.14f, 0.16f));
-            item.style.borderTopLeftRadius = item.style.borderTopRightRadius = 6;
-            item.style.borderBottomLeftRadius = item.style.borderBottomRightRadius = 6;
-            item.style.borderLeftWidth = 3;
-            item.style.borderLeftColor = new StyleColor(new Color(0.9f, 0.4f, 0.4f)); // 红色表示卸载
-            
-            // 第一行：时间 + 类型
-            var row1 = new VisualElement();
-            row1.style.flexDirection = FlexDirection.Row;
-            row1.style.alignItems = Align.Center;
-            row1.style.marginBottom = 4;
-            
-            var timeLabel = new Label(record.UnloadTime.ToString("HH:mm:ss.fff"));
-            timeLabel.style.fontSize = 10;
-            timeLabel.style.color = new StyleColor(new Color(0.55f, 0.55f, 0.6f));
-            timeLabel.style.marginRight = 8;
-            row1.Add(timeLabel);
-            
-            var typeColor = GetTypeColor(record.TypeName);
-            var typeLabel = new Label(record.TypeName);
-            typeLabel.style.fontSize = 10;
-            typeLabel.style.color = new StyleColor(typeColor);
-            typeLabel.style.backgroundColor = new StyleColor(new Color(typeColor.r, typeColor.g, typeColor.b, 0.15f));
-            typeLabel.style.paddingLeft = 6;
-            typeLabel.style.paddingRight = 6;
-            typeLabel.style.paddingTop = 2;
-            typeLabel.style.paddingBottom = 2;
-            typeLabel.style.borderTopLeftRadius = typeLabel.style.borderTopRightRadius = 4;
-            typeLabel.style.borderBottomLeftRadius = typeLabel.style.borderBottomRightRadius = 4;
-            row1.Add(typeLabel);
-            
-            item.Add(row1);
-            
-            // 第二行：路径
-            var pathLabel = new Label(GetAssetName(record.Path));
-            pathLabel.style.fontSize = 12;
-            pathLabel.style.color = new StyleColor(new Color(0.85f, 0.85f, 0.88f));
-            pathLabel.style.marginBottom = 4;
-            pathLabel.tooltip = record.Path;
-            item.Add(pathLabel);
-            
-            // 第三行：堆栈（可折叠）
-            if (!string.IsNullOrEmpty(record.StackTrace) && record.StackTrace != "无可用堆栈信息")
-            {
-                var stackFoldout = new Foldout { text = "调用堆栈", value = false };
-                stackFoldout.style.fontSize = 10;
-                stackFoldout.style.color = new StyleColor(new Color(0.6f, 0.6f, 0.65f));
-                
-                var stackLabel = new Label(record.StackTrace);
-                stackLabel.style.fontSize = 10;
-                stackLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.55f));
-                stackLabel.style.whiteSpace = WhiteSpace.PreWrap;
-                stackLabel.style.paddingLeft = 8;
-                stackFoldout.Add(stackLabel);
-                
-                item.Add(stackFoldout);
-            }
-            
-            return item;
         }
 
         private new VisualElement CreateToolbar()
@@ -240,11 +91,11 @@ namespace YokiFrame.EditorTools
             var toolbar = new VisualElement();
             toolbar.AddToClassList("toolbar");
 
-            var refreshBtn = new Button(RefreshData) { text = "🔄 刷新" };
+            var refreshBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshData);
             refreshBtn.AddToClassList("toolbar-button");
             toolbar.Add(refreshBtn);
 
-            var expandAllBtn = new Button(ExpandAllCategories) { text = "⬇ 全部展开" };
+            var expandAllBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.EXPAND, "全部展开", ExpandAllCategories);
             expandAllBtn.AddToClassList("toolbar-button");
             toolbar.Add(expandAllBtn);
             
@@ -252,7 +103,7 @@ namespace YokiFrame.EditorTools
             collapseAllBtn.AddToClassList("toolbar-button");
             toolbar.Add(collapseAllBtn);
             
-            var clearHistoryBtn = new Button(ClearHistory) { text = "🗑 清空历史" };
+            var clearHistoryBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.DELETE, "清空历史", ClearHistory);
             clearHistoryBtn.AddToClassList("toolbar-button");
             toolbar.Add(clearHistoryBtn);
 
@@ -289,9 +140,10 @@ namespace YokiFrame.EditorTools
             searchBar.style.borderBottomWidth = 1;
             searchBar.style.borderBottomColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
 
-            var searchIcon = new Label("🔍");
+            var searchIcon = new Image { image = KitIcons.GetTexture(KitIcons.TARGET) };
+            searchIcon.style.width = 12;
+            searchIcon.style.height = 12;
             searchIcon.style.marginRight = 8;
-            searchIcon.style.fontSize = 12;
             searchBar.Add(searchIcon);
 
             mSearchField = new TextField();
@@ -309,9 +161,15 @@ namespace YokiFrame.EditorTools
                 mSearchField.value = "";
                 mSearchFilter = "";
                 RefreshCategoryDisplay();
-            }) { text = "✕" };
+            });
             clearBtn.style.width = 24;
             clearBtn.style.height = 24;
+            clearBtn.style.paddingLeft = 4;
+            clearBtn.style.paddingRight = 4;
+            var clearIcon = new Image { image = KitIcons.GetTexture(KitIcons.DELETE) };
+            clearIcon.style.width = 14;
+            clearIcon.style.height = 14;
+            clearBtn.Add(clearIcon);
             searchBar.Add(clearBtn);
 
             return searchBar;
@@ -363,7 +221,6 @@ namespace YokiFrame.EditorTools
 
             BuildDetailPanel();
             
-            // 卸载历史记录容器（默认显示）
             mHistoryContainer = new VisualElement();
             mHistoryContainer.style.marginTop = 16;
             mHistoryContainer.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.14f));
@@ -428,213 +285,23 @@ namespace YokiFrame.EditorTools
             mDetailSource.text = "-";
         }
 
-        private Color GetTypeColor(string typeName)
-        {
-            if (sTypeColors.TryGetValue(typeName, out var color))
-                return color;
-            return new Color(0.50f, 0.50f, 0.55f);
-        }
+        private Color GetTypeColor(string typeName) =>
+            sTypeColors.TryGetValue(typeName, out var color) ? color : new Color(0.50f, 0.50f, 0.55f);
 
         private string GetTypeIcon(string typeName) => typeName switch
         {
-            "AudioClip" => "🔊",
-            "Texture2D" => "🖼",
-            "Sprite" => "🎨",
-            "Material" => "🎭",
-            "GameObject" => "📦",
-            "TextAsset" => "📄",
-            "ScriptableObject" => "⚙",
-            "Shader" => "✨",
-            "Font" => "🔤",
-            "AnimationClip" => "🎬",
-            _ => "📁"
+            "AudioClip" => "A",
+            "Texture2D" => "T",
+            "Sprite" => "S",
+            "Material" => "M",
+            "GameObject" => "G",
+            "TextAsset" => "X",
+            "ScriptableObject" => "O",
+            "Shader" => "H",
+            "Font" => "F",
+            "AnimationClip" => "C",
+            _ => "?"
         };
-
-        private void CreateOrUpdateCategoryPanel(string typeName, List<ResDebugger.ResInfo> assets)
-        {
-            if (!mCategoryPanels.TryGetValue(typeName, out var panel))
-            {
-                panel = CreateCategoryPanel(typeName);
-                mCategoryPanels[typeName] = panel;
-                mCategoryContainer.Add(panel.Root);
-            }
-
-            // 更新计数
-            panel.CountLabel.text = $"{assets.Count}";
-            
-            // 更新内容
-            panel.ItemsContainer.Clear();
-            foreach (var asset in assets)
-            {
-                var item = CreateAssetItem(asset);
-                panel.ItemsContainer.Add(item);
-            }
-        }
-
-        private CategoryPanel CreateCategoryPanel(string typeName)
-        {
-            var accentColor = GetTypeColor(typeName);
-            var icon = GetTypeIcon(typeName);
-
-            var root = new VisualElement();
-            root.style.marginBottom = 8;
-            root.style.backgroundColor = new StyleColor(new Color(0.16f, 0.16f, 0.18f));
-            root.style.borderTopLeftRadius = root.style.borderTopRightRadius = 6;
-            root.style.borderBottomLeftRadius = root.style.borderBottomRightRadius = 6;
-            root.style.borderLeftWidth = 4;
-            root.style.borderLeftColor = new StyleColor(accentColor);
-
-            // 头部
-            var header = new VisualElement();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.alignItems = Align.Center;
-            header.style.height = 40;
-            header.style.paddingLeft = 12;
-            header.style.paddingRight = 12;
-            root.Add(header);
-
-            // 展开按钮
-            var expandBtn = new Button(() => ToggleCategoryExpand(typeName)) { text = "▶" };
-            expandBtn.style.width = 24;
-            expandBtn.style.height = 24;
-            expandBtn.style.fontSize = 10;
-            expandBtn.style.backgroundColor = StyleKeyword.Null;
-            expandBtn.style.borderLeftWidth = expandBtn.style.borderRightWidth = 0;
-            expandBtn.style.borderTopWidth = expandBtn.style.borderBottomWidth = 0;
-            header.Add(expandBtn);
-
-            // 图标和名称
-            var nameLabel = new Label($"{icon} {typeName}");
-            nameLabel.style.fontSize = 13;
-            nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            nameLabel.style.color = new StyleColor(new Color(0.90f, 0.90f, 0.92f));
-            nameLabel.style.marginLeft = 8;
-            nameLabel.style.flexGrow = 1;
-            header.Add(nameLabel);
-
-            // 计数
-            var countLabel = new Label("0");
-            countLabel.style.fontSize = 11;
-            countLabel.style.color = new StyleColor(accentColor);
-            countLabel.style.backgroundColor = new StyleColor(new Color(accentColor.r, accentColor.g, accentColor.b, 0.15f));
-            countLabel.style.paddingLeft = 8;
-            countLabel.style.paddingRight = 8;
-            countLabel.style.paddingTop = 2;
-            countLabel.style.paddingBottom = 2;
-            countLabel.style.borderTopLeftRadius = countLabel.style.borderTopRightRadius = 10;
-            countLabel.style.borderBottomLeftRadius = countLabel.style.borderBottomRightRadius = 10;
-            header.Add(countLabel);
-
-            // 内容容器
-            var itemsContainer = new VisualElement();
-            itemsContainer.style.display = DisplayStyle.None;
-            itemsContainer.style.paddingLeft = 36;
-            itemsContainer.style.paddingRight = 12;
-            itemsContainer.style.paddingBottom = 8;
-            itemsContainer.style.borderTopWidth = 1;
-            itemsContainer.style.borderTopColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
-            root.Add(itemsContainer);
-
-            return new CategoryPanel
-            {
-                Root = root,
-                Header = header,
-                NameLabel = nameLabel,
-                CountLabel = countLabel,
-                ItemsContainer = itemsContainer,
-                ExpandBtn = expandBtn,
-                IsExpanded = false
-            };
-        }
-
-        private VisualElement CreateAssetItem(ResDebugger.ResInfo info)
-        {
-            var item = new VisualElement();
-            item.style.flexDirection = FlexDirection.Row;
-            item.style.alignItems = Align.Center;
-            item.style.height = 32;
-            item.style.marginTop = 4;
-            item.style.paddingLeft = 8;
-            item.style.paddingRight = 8;
-            item.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.14f));
-            item.style.borderTopLeftRadius = item.style.borderTopRightRadius = 4;
-            item.style.borderBottomLeftRadius = item.style.borderBottomRightRadius = 4;
-
-            // 状态指示器
-            var indicator = new VisualElement();
-            indicator.style.width = 6;
-            indicator.style.height = 6;
-            indicator.style.borderTopLeftRadius = indicator.style.borderTopRightRadius = 3;
-            indicator.style.borderBottomLeftRadius = indicator.style.borderBottomRightRadius = 3;
-            indicator.style.backgroundColor = new StyleColor(info.IsDone ? new Color(0.3f, 0.9f, 0.4f) : new Color(0.9f, 0.7f, 0.2f));
-            indicator.style.marginRight = 8;
-            item.Add(indicator);
-
-            // 文件名
-            var fileName = GetAssetName(info.Path);
-            var nameLabel = new Label(fileName);
-            nameLabel.style.flexGrow = 1;
-            nameLabel.style.fontSize = 11;
-            nameLabel.style.color = new StyleColor(new Color(0.85f, 0.85f, 0.87f));
-            nameLabel.style.overflow = Overflow.Hidden;
-            nameLabel.style.textOverflow = TextOverflow.Ellipsis;
-            item.Add(nameLabel);
-
-            // 来源标签
-            var sourceTag = info.Source == ResDebugger.ResSource.ResKit ? "ResKit" : "Loader";
-            var sourceLabel = new Label(sourceTag);
-            sourceLabel.style.fontSize = 9;
-            sourceLabel.style.color = new StyleColor(new Color(0.55f, 0.55f, 0.58f));
-            sourceLabel.style.marginRight = 8;
-            item.Add(sourceLabel);
-
-            // 引用计数
-            var refLabel = new Label($"×{info.RefCount}");
-            refLabel.style.fontSize = 10;
-            refLabel.style.width = 32;
-            refLabel.style.unityTextAlign = TextAnchor.MiddleRight;
-            refLabel.style.color = new StyleColor(info.RefCount > 1 ? new Color(0.9f, 0.7f, 0.3f) : new Color(0.55f, 0.55f, 0.58f));
-            item.Add(refLabel);
-
-            // 点击选中
-            item.RegisterCallback<ClickEvent>(_ => SelectAsset(info));
-
-            return item;
-        }
-
-        private void ToggleCategoryExpand(string typeName)
-        {
-            if (!mCategoryPanels.TryGetValue(typeName, out var panel)) return;
-
-            panel.IsExpanded = !panel.IsExpanded;
-            panel.ExpandBtn.text = panel.IsExpanded ? "▼" : "▶";
-            panel.ItemsContainer.style.display = panel.IsExpanded ? DisplayStyle.Flex : DisplayStyle.None;
-            mCategoryPanels[typeName] = panel;
-        }
-
-        private void ExpandAllCategories()
-        {
-            foreach (var typeName in mCategoryPanels.Keys.ToList())
-            {
-                var panel = mCategoryPanels[typeName];
-                panel.IsExpanded = true;
-                panel.ExpandBtn.text = "▼";
-                panel.ItemsContainer.style.display = DisplayStyle.Flex;
-                mCategoryPanels[typeName] = panel;
-            }
-        }
-
-        private void CollapseAllCategories()
-        {
-            foreach (var typeName in mCategoryPanels.Keys.ToList())
-            {
-                var panel = mCategoryPanels[typeName];
-                panel.IsExpanded = false;
-                panel.ExpandBtn.text = "▶";
-                panel.ItemsContainer.style.display = DisplayStyle.None;
-                mCategoryPanels[typeName] = panel;
-            }
-        }
 
         private void SelectAsset(ResDebugger.ResInfo info)
         {
@@ -672,45 +339,6 @@ namespace YokiFrame.EditorTools
             RefreshCategoryDisplay();
         }
 
-        private void RefreshCategoryDisplay()
-        {
-            // 按类型分组
-            var groupedAssets = new Dictionary<string, List<ResDebugger.ResInfo>>();
-            
-            foreach (var asset in mAllAssets)
-            {
-                // 搜索过滤
-                if (!string.IsNullOrEmpty(mSearchFilter))
-                {
-                    var matchPath = asset.Path?.ToLowerInvariant().Contains(mSearchFilter) ?? false;
-                    var matchType = asset.TypeName?.ToLowerInvariant().Contains(mSearchFilter) ?? false;
-                    if (!matchPath && !matchType) continue;
-                }
-
-                var typeName = asset.TypeName ?? "Unknown";
-                if (!groupedAssets.TryGetValue(typeName, out var list))
-                {
-                    list = new List<ResDebugger.ResInfo>();
-                    groupedAssets[typeName] = list;
-                }
-                list.Add(asset);
-            }
-
-            // 隐藏空分类
-            foreach (var kvp in mCategoryPanels)
-            {
-                kvp.Value.Root.style.display = groupedAssets.ContainsKey(kvp.Key) 
-                    ? DisplayStyle.Flex 
-                    : DisplayStyle.None;
-            }
-
-            // 更新或创建分类面板
-            foreach (var kvp in groupedAssets.OrderBy(x => x.Key))
-            {
-                CreateOrUpdateCategoryPanel(kvp.Key, kvp.Value);
-            }
-        }
-
         public override void OnUpdate()
         {
             if (!mAutoRefresh) return;
@@ -721,7 +349,6 @@ namespace YokiFrame.EditorTools
             
             mLastRefreshTime = now;
             
-            // 检测卸载的资源
             ResDebugger.DetectUnloadedAssets();
             
             RefreshData();

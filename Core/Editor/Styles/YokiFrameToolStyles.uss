@@ -121,9 +121,9 @@
 }
 
 .sidebar-group-icon {
-    font-size: var(--font-sm);
+    width: 14px;
+    height: 14px;
     margin-right: var(--spacing-sm);
-    color: var(--text-tertiary);
 }
 
 .sidebar-group-title {
@@ -143,9 +143,7 @@
 }
 
 /* 所有分组统一使用品牌蓝色 - 保持视觉一致性 */
-.sidebar-group.docs .sidebar-group-icon,
 .sidebar-group.docs .sidebar-group-title,
-.sidebar-group.tools .sidebar-group-icon,
 .sidebar-group.tools .sidebar-group-title {
     color: var(--brand-primary);
 }
@@ -182,23 +180,22 @@
 }
 
 .sidebar-item-icon {
-    font-size: var(--font-md);
-    width: 28px;
-    -unity-text-align: middle-center;
+    width: 20px;
+    height: 20px;
     margin-right: var(--spacing-md);
-    color: var(--text-tertiary);
     /* 图标动画 */
-    transition-property: color, scale;
+    transition-property: scale, -unity-background-image-tint-color;
     transition-duration: var(--duration-fast);
+    -unity-background-image-tint-color: var(--text-tertiary);
 }
 
 .sidebar-item:hover .sidebar-item-icon {
-    color: var(--text-secondary);
     scale: 1.1;
+    -unity-background-image-tint-color: var(--text-secondary);
 }
 
 .sidebar-item.selected .sidebar-item-icon {
-    color: var(--brand-primary);
+    -unity-background-image-tint-color: var(--brand-primary);
 }
 
 .sidebar-item-label {
@@ -226,8 +223,11 @@
 }
 
 .sidebar-group.docs .sidebar-item.selected .sidebar-item-icon,
+.sidebar-group.tools .sidebar-item.selected .sidebar-item-icon {
+    -unity-background-image-tint-color: var(--brand-primary);
+}
+
 .sidebar-group.docs .sidebar-item.selected .sidebar-item-label,
-.sidebar-group.tools .sidebar-item.selected .sidebar-item-icon,
 .sidebar-group.tools .sidebar-item.selected .sidebar-item-label {
     color: var(--brand-primary);
 }

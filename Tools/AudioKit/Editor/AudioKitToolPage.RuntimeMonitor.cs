@@ -109,18 +109,38 @@ namespace YokiFrame
             header.style.borderBottomColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
             
             // 标题和响应式提示
-            var titleLabel = new Label("🎵 运行时监控");
+            var titleRow = new VisualElement();
+            titleRow.style.flexDirection = FlexDirection.Row;
+            titleRow.style.alignItems = Align.Center;
+            
+            var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.MUSIC) };
+            titleIcon.style.width = 16;
+            titleIcon.style.height = 16;
+            titleIcon.style.marginRight = 4;
+            titleRow.Add(titleIcon);
+            
+            var titleLabel = new Label("运行时监控");
             titleLabel.style.fontSize = 13;
             titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            header.Add(titleLabel);
+            titleRow.Add(titleLabel);
+            header.Add(titleRow);
             
-            var reactiveHint = new Label("🔄") { style = { fontSize = 10, color = new StyleColor(new Color(0.3f, 0.9f, 0.4f)), marginLeft = 8 }, tooltip = "响应式更新" };
-            header.Add(reactiveHint);
+            var reactiveIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
+            reactiveIcon.style.width = 12;
+            reactiveIcon.style.height = 12;
+            reactiveIcon.style.marginLeft = 8;
+            reactiveIcon.tintColor = new Color(0.3f, 0.9f, 0.4f);
+            reactiveIcon.tooltip = "响应式更新";
+            header.Add(reactiveIcon);
             
             header.Add(new VisualElement { style = { flexGrow = 1 } });
             
             // 全局音量
-            header.Add(new Label("🔊") { style = { marginRight = 4 } });
+            var volumeIcon = new Image { image = KitIcons.GetTexture(KitIcons.VOLUME) };
+            volumeIcon.style.width = 14;
+            volumeIcon.style.height = 14;
+            volumeIcon.style.marginRight = 4;
+            header.Add(volumeIcon);
             
             mGlobalVolumeSlider = new Slider(0f, 1f) { style = { width = 100 } };
             mGlobalVolumeSlider.value = Application.isPlaying ? AudioKit.GetGlobalVolume() : 1f;
@@ -138,10 +158,10 @@ namespace YokiFrame
             header.Add(CreateVerticalDivider());
             
             // 控制按钮
-            header.Add(CreateHeaderButton("⏸", "暂停全部", () => { if (Application.isPlaying) AudioKit.PauseAll(); }));
-            header.Add(CreateHeaderButton("▶", "恢复全部", () => { if (Application.isPlaying) AudioKit.ResumeAll(); }));
+            header.Add(CreateHeaderButtonWithIcon(KitIcons.PAUSE, "暂停全部", () => { if (Application.isPlaying) AudioKit.PauseAll(); }));
+            header.Add(CreateHeaderButtonWithIcon(KitIcons.PLAY, "恢复全部", () => { if (Application.isPlaying) AudioKit.ResumeAll(); }));
             
-            var stopBtn = CreateHeaderButton("⏹", "停止全部", () => { if (Application.isPlaying) AudioKit.StopAll(); });
+            var stopBtn = CreateHeaderButtonWithIcon(KitIcons.STOP, "停止全部", () => { if (Application.isPlaying) AudioKit.StopAll(); });
             stopBtn.style.backgroundColor = new StyleColor(new Color(0.55f, 0.22f, 0.22f));
             header.Add(stopBtn);
             
@@ -149,7 +169,7 @@ namespace YokiFrame
             header.Add(CreateVerticalDivider());
             
             // 全部展开按钮
-            var expandAllBtn = CreateHeaderButton("⬇", "全部展开", ExpandAllChannels);
+            var expandAllBtn = CreateHeaderButtonWithIcon(KitIcons.EXPAND, "全部展开", ExpandAllChannels);
             expandAllBtn.style.width = 60;
             expandAllBtn.tooltip = "全部展开/折叠";
             header.Add(expandAllBtn);
@@ -163,7 +183,7 @@ namespace YokiFrame
             header.Add(autoRefreshToggle);
             
             // 手动刷新按钮
-            var refreshBtn = CreateHeaderButton("🔄", "手动刷新", RefreshMonitorData);
+            var refreshBtn = CreateHeaderButtonWithIcon(KitIcons.REFRESH, "手动刷新", RefreshMonitorData);
             refreshBtn.style.marginLeft = 8;
             header.Add(refreshBtn);
             
@@ -188,6 +208,26 @@ namespace YokiFrame
             btn.style.marginLeft = 4;
             return btn;
         }
+        
+        /// <summary>
+        /// 创建带图标的头部按钮
+        /// </summary>
+        private Button CreateHeaderButtonWithIcon(string iconId, string tooltip, System.Action onClick)
+        {
+            var btn = new Button(onClick) { tooltip = tooltip };
+            btn.style.width = 32;
+            btn.style.height = 28;
+            btn.style.marginLeft = 4;
+            btn.style.alignItems = Align.Center;
+            btn.style.justifyContent = Justify.Center;
+            
+            var icon = new Image { image = KitIcons.GetTexture(iconId) };
+            icon.style.width = 14;
+            icon.style.height = 14;
+            btn.Add(icon);
+            
+            return btn;
+        }
 
         private void ExpandAllChannels()
         {
@@ -208,7 +248,12 @@ namespace YokiFrame
             {
                 var panel = kvp.Value;
                 panel.IsExpanded = targetState;
-                panel.ExpandBtn.text = targetState ? "▼" : "▶";
+                // 更新展开图标
+                var expandIcon = panel.ExpandBtn.Q<Image>("expand-icon");
+                if (expandIcon != null)
+                {
+                    expandIcon.image = KitIcons.GetTexture(targetState ? KitIcons.ARROW_DOWN : KitIcons.ARROW_RIGHT);
+                }
                 panel.TracksContainer.style.display = targetState ? DisplayStyle.Flex : DisplayStyle.None;
                 mChannelPanels[kvp.Key] = panel;
             }
@@ -243,13 +288,20 @@ namespace YokiFrame
             panel.Add(header);
             
             // 展开按钮
-            var expandBtn = new Button(() => ToggleExpand(channelId)) { text = "▶" };
+            var expandBtn = new Button(() => ToggleExpand(channelId));
             expandBtn.style.width = 24;
             expandBtn.style.height = 24;
             expandBtn.style.fontSize = 10;
             expandBtn.style.backgroundColor = StyleKeyword.Null;
             expandBtn.style.borderLeftWidth = expandBtn.style.borderRightWidth = 0;
             expandBtn.style.borderTopWidth = expandBtn.style.borderBottomWidth = 0;
+            expandBtn.style.alignItems = Align.Center;
+            expandBtn.style.justifyContent = Justify.Center;
+            var expandIcon = new Image { image = KitIcons.GetTexture(KitIcons.ARROW_RIGHT) };
+            expandIcon.style.width = 12;
+            expandIcon.style.height = 12;
+            expandIcon.name = "expand-icon";
+            expandBtn.Add(expandIcon);
             header.Add(expandBtn);
             
             // 状态灯
@@ -296,18 +348,31 @@ namespace YokiFrame
             header.Add(volumeValueLabel);
 
             // 静音按钮
-            var muteBtn = new Button(() => ToggleMute(channelId)) { text = "🔊" };
+            var muteBtn = new Button(() => ToggleMute(channelId));
             muteBtn.style.width = 32;
             muteBtn.style.height = 28;
             muteBtn.style.marginLeft = 8;
+            muteBtn.style.alignItems = Align.Center;
+            muteBtn.style.justifyContent = Justify.Center;
+            var muteIcon = new Image { image = KitIcons.GetTexture(KitIcons.VOLUME) };
+            muteIcon.style.width = 14;
+            muteIcon.style.height = 14;
+            muteIcon.name = "mute-icon";
+            muteBtn.Add(muteIcon);
             header.Add(muteBtn);
             
             // 停止按钮
-            var stopBtn = new Button(() => { if (Application.isPlaying) AudioKit.StopChannel(channelId); }) { text = "⏹" };
+            var stopBtn = new Button(() => { if (Application.isPlaying) AudioKit.StopChannel(channelId); });
             stopBtn.style.width = 32;
             stopBtn.style.height = 28;
             stopBtn.style.marginLeft = 4;
             stopBtn.style.backgroundColor = new StyleColor(new Color(0.45f, 0.20f, 0.20f));
+            stopBtn.style.alignItems = Align.Center;
+            stopBtn.style.justifyContent = Justify.Center;
+            var stopIcon = new Image { image = KitIcons.GetTexture(KitIcons.STOP) };
+            stopIcon.style.width = 14;
+            stopIcon.style.height = 14;
+            stopBtn.Add(stopIcon);
             header.Add(stopBtn);
             
             // 子轨道容器（默认折叠）
@@ -345,7 +410,12 @@ namespace YokiFrame
             if (!mChannelPanels.TryGetValue(channelId, out var panel)) return;
             
             panel.IsExpanded = !panel.IsExpanded;
-            panel.ExpandBtn.text = panel.IsExpanded ? "▼" : "▶";
+            // 更新展开图标
+            var expandIcon = panel.ExpandBtn.Q<Image>("expand-icon");
+            if (expandIcon != null)
+            {
+                expandIcon.image = KitIcons.GetTexture(panel.IsExpanded ? KitIcons.ARROW_DOWN : KitIcons.ARROW_RIGHT);
+            }
             panel.TracksContainer.style.display = panel.IsExpanded ? DisplayStyle.Flex : DisplayStyle.None;
             mChannelPanels[channelId] = panel;
         }
@@ -357,7 +427,12 @@ namespace YokiFrame
             
             panel.IsMuted = !panel.IsMuted;
             AudioKit.MuteChannel(channelId, panel.IsMuted);
-            panel.MuteBtn.text = panel.IsMuted ? "🔇" : "🔊";
+            // 更新静音图标（使用 WARNING 图标表示静音状态）
+            var muteIcon = panel.MuteBtn.Q<Image>("mute-icon");
+            if (muteIcon != null)
+            {
+                muteIcon.image = KitIcons.GetTexture(panel.IsMuted ? KitIcons.WARNING : KitIcons.VOLUME);
+            }
             panel.MuteBtn.style.backgroundColor = new StyleColor(panel.IsMuted ? new Color(0.75f, 0.30f, 0.25f) : new Color(0.25f, 0.25f, 0.28f));
             mChannelPanels[channelId] = panel;
         }
@@ -391,12 +466,13 @@ namespace YokiFrame
             }
             
             // 播放状态图标
-            string statusIconText = isFinished ? "✓" : (record.IsPaused ? "⏸" : "▶");
+            string statusIconId = isFinished ? KitIcons.SUCCESS : (record.IsPaused ? KitIcons.PAUSE : KitIcons.PLAY);
             Color statusColor = isFinished ? new Color(0.5f, 0.5f, 0.52f) : (record.IsPaused ? new Color(0.8f, 0.6f, 0.2f) : new Color(0.3f, 0.8f, 0.4f));
-            var statusIcon = new Label(statusIconText);
-            statusIcon.style.width = 20;
-            statusIcon.style.fontSize = 10;
-            statusIcon.style.color = new StyleColor(statusColor);
+            var statusIcon = new Image { image = KitIcons.GetTexture(statusIconId) };
+            statusIcon.style.width = 14;
+            statusIcon.style.height = 14;
+            statusIcon.style.marginRight = 4;
+            statusIcon.tintColor = statusColor;
             item.Add(statusIcon);
             
             // 文件名

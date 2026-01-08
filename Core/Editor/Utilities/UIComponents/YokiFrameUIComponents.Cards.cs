@@ -63,16 +63,30 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 创建空状态提示
+        /// 创建空状态提示（支持图标 ID 或 emoji）
         /// </summary>
-        public static VisualElement CreateEmptyState(string icon, string message, string hint = null)
+        public static VisualElement CreateEmptyState(string iconOrId, string message, string hint = null)
         {
             var container = new VisualElement();
             container.AddToClassList("empty-state");
             
-            var iconLabel = new Label(icon);
-            iconLabel.AddToClassList("empty-state-icon");
-            container.Add(iconLabel);
+            // 检查是否是图标 ID（不包含 emoji 字符）
+            bool isIconId = !string.IsNullOrEmpty(iconOrId) && iconOrId.Length < 20 && !ContainsEmoji(iconOrId);
+            
+            if (isIconId)
+            {
+                var iconImage = new Image { image = KitIcons.GetTexture(iconOrId) };
+                iconImage.AddToClassList("empty-state-icon");
+                iconImage.style.width = 48;
+                iconImage.style.height = 48;
+                container.Add(iconImage);
+            }
+            else
+            {
+                var iconLabel = new Label(iconOrId);
+                iconLabel.AddToClassList("empty-state-icon");
+                container.Add(iconLabel);
+            }
             
             var text = new Label(message);
             text.AddToClassList("empty-state-text");
@@ -86,6 +100,19 @@ namespace YokiFrame.EditorTools
             }
             
             return container;
+        }
+        
+        /// <summary>
+        /// 检查字符串是否包含 emoji
+        /// </summary>
+        private static bool ContainsEmoji(string text)
+        {
+            foreach (char c in text)
+            {
+                // emoji 通常在高 Unicode 范围
+                if (c > 0x1F00) return true;
+            }
+            return false;
         }
 
         #endregion
@@ -126,6 +153,66 @@ namespace YokiFrame.EditorTools
             dot.style.borderBottomRightRadius = size / 2;
             dot.style.backgroundColor = new StyleColor(color);
             return dot;
+        }
+        
+        /// <summary>
+        /// 创建状态徽章（纯文本）
+        /// </summary>
+        public static VisualElement CreateStatusBadge(string text, Color bgColor, Color textColor)
+        {
+            var badge = new VisualElement();
+            badge.style.paddingLeft = 8;
+            badge.style.paddingRight = 8;
+            badge.style.paddingTop = 4;
+            badge.style.paddingBottom = 4;
+            badge.style.backgroundColor = new StyleColor(bgColor);
+            badge.style.borderTopLeftRadius = 4;
+            badge.style.borderTopRightRadius = 4;
+            badge.style.borderBottomLeftRadius = 4;
+            badge.style.borderBottomRightRadius = 4;
+            
+            var label = new Label(text);
+            label.style.fontSize = 10;
+            label.style.color = new StyleColor(textColor);
+            badge.Add(label);
+            
+            return badge;
+        }
+        
+        /// <summary>
+        /// 创建带图标的状态徽章
+        /// </summary>
+        public static VisualElement CreateStatusBadgeWithIcon(string iconId, string text, Color bgColor, Color textColor)
+        {
+            var badge = new VisualElement();
+            badge.style.flexDirection = FlexDirection.Row;
+            badge.style.alignItems = Align.Center;
+            badge.style.paddingLeft = 8;
+            badge.style.paddingRight = 8;
+            badge.style.paddingTop = 4;
+            badge.style.paddingBottom = 4;
+            badge.style.backgroundColor = new StyleColor(bgColor);
+            badge.style.borderTopLeftRadius = 4;
+            badge.style.borderTopRightRadius = 4;
+            badge.style.borderBottomLeftRadius = 4;
+            badge.style.borderBottomRightRadius = 4;
+            
+            if (!string.IsNullOrEmpty(iconId))
+            {
+                var icon = new Image { image = KitIcons.GetTexture(iconId) };
+                icon.style.width = 12;
+                icon.style.height = 12;
+                icon.style.marginRight = 4;
+                icon.tintColor = textColor;
+                badge.Add(icon);
+            }
+            
+            var label = new Label(text);
+            label.style.fontSize = 10;
+            label.style.color = new StyleColor(textColor);
+            badge.Add(label);
+            
+            return badge;
         }
 
         #endregion

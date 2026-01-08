@@ -96,7 +96,11 @@ namespace YokiFrame
             mFsmListView.fixedItemHeight = LIST_ITEM_HEIGHT;
             mFsmListView.makeItem = MakeListItem;
             mFsmListView.bindItem = BindListItem;
+#if UNITY_2022_1_OR_NEWER
             mFsmListView.selectionChanged += OnFsmSelected;
+#else
+            mFsmListView.onSelectionChange += OnFsmSelected;
+#endif
             mFsmListView.style.flexGrow = 1;
             leftPanel.Add(mFsmListView);
             

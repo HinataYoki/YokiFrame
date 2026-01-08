@@ -81,7 +81,11 @@ namespace YokiFrame
             mContainerListView.fixedItemHeight = 28;
             mContainerListView.makeItem = MakeContainerItem;
             mContainerListView.bindItem = BindContainerItem;
+#if UNITY_2022_1_OR_NEWER
             mContainerListView.selectionChanged += OnContainerSelected;
+#else
+            mContainerListView.onSelectionChange += OnContainerSelected;
+#endif
             mContainerListView.style.flexGrow = 1;
             leftPanel.Add(mContainerListView);
 

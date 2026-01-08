@@ -78,8 +78,9 @@ namespace YokiFrame.EditorTools
 
         /// <summary>
         /// 创建配置行（标签 + 整数输入框）
+        /// 使用 TextField 实现以兼容 Unity 2021.3+
         /// </summary>
-        public static (VisualElement row, IntegerField field) CreateIntConfigRow(
+        public static (VisualElement row, TextField field) CreateIntConfigRow(
             string label, 
             int initialValue, 
             Action<int> onValueChanged,
@@ -99,13 +100,22 @@ namespace YokiFrame.EditorTools
             labelElement.style.flexGrow = 1;
             row.Add(labelElement);
             
-            var field = new IntegerField { value = initialValue };
+            // 使用 TextField 替代 IntegerField 以兼容 Unity 2021.3
+            var field = new TextField { value = initialValue.ToString() };
             field.style.width = 90;
             field.style.minWidth = 90;
             field.RegisterValueChangedCallback(evt =>
             {
-                int newValue = minValue != int.MinValue ? Mathf.Max(minValue, evt.newValue) : evt.newValue;
-                onValueChanged?.Invoke(newValue);
+                if (int.TryParse(evt.newValue, out int parsed))
+                {
+                    int newValue = minValue != int.MinValue ? Mathf.Max(minValue, parsed) : parsed;
+                    onValueChanged?.Invoke(newValue);
+                }
+                else if (string.IsNullOrEmpty(evt.newValue))
+                {
+                    // 空值时使用最小值或 0
+                    onValueChanged?.Invoke(minValue != int.MinValue ? minValue : 0);
+                }
             });
             row.Add(field);
             

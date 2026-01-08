@@ -121,13 +121,34 @@ namespace YokiFrame.EditorTools
             textLabel.text = entry.Text ?? "[未找到]";
 
             var statusLabel = element.Q<Label>("status-label");
+            var statusIcon = element.Q<Image>("status-icon");
+            
+            // 确保状态图标存在
+            if (statusIcon == null)
+            {
+                statusIcon = new Image();
+                statusIcon.name = "status-icon";
+                statusIcon.style.width = 12;
+                statusIcon.style.height = 12;
+                statusIcon.style.marginRight = 4;
+                statusIcon.style.display = DisplayStyle.None;
+                // 插入到 statusLabel 之前
+                var parent = statusLabel.parent;
+                var idx = parent.IndexOf(statusLabel);
+                parent.Insert(idx, statusIcon);
+            }
+            
             if (entry.IsMissing)
             {
-                statusLabel.text = "⚠ 缺失翻译";
+                statusIcon.image = KitIcons.GetTexture(KitIcons.WARNING);
+                statusIcon.tintColor = new Color(1f, 0.5f, 0f);
+                statusIcon.style.display = DisplayStyle.Flex;
+                statusLabel.text = "缺失翻译";
                 statusLabel.style.color = new Color(1f, 0.5f, 0f);
             }
             else
             {
+                statusIcon.style.display = DisplayStyle.None;
                 statusLabel.text = $"语言: {entry.LanguageId}";
                 statusLabel.style.color = new Color(0.6f, 0.6f, 0.6f);
             }

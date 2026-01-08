@@ -251,7 +251,22 @@ namespace YokiFrame
 
             if (warningCount > 0)
             {
-                statsRow.Add(new Label($"⚠ {warningCount}") { style = { color = new StyleColor(new Color(1f, 0.7f, 0.3f)) } });
+                var warningBadge = new VisualElement();
+                warningBadge.style.flexDirection = FlexDirection.Row;
+                warningBadge.style.alignItems = Align.Center;
+                
+                var warningIcon = new Image { image = KitIcons.GetTexture(KitIcons.WARNING) };
+                warningIcon.style.width = 14;
+                warningIcon.style.height = 14;
+                warningIcon.style.marginRight = 4;
+                warningIcon.tintColor = new Color(1f, 0.7f, 0.3f);
+                warningBadge.Add(warningIcon);
+                
+                var warningLabel = new Label(warningCount.ToString());
+                warningLabel.style.color = new StyleColor(new Color(1f, 0.7f, 0.3f));
+                warningBadge.Add(warningLabel);
+                
+                statsRow.Add(warningBadge);
             }
 
             mBindContent.Add(statsRow);
@@ -276,7 +291,12 @@ namespace YokiFrame
             // 警告图标
             if (info.HasWarning)
             {
-                row.Add(new Label("⚠") { style = { width = 18, color = new StyleColor(new Color(1f, 0.7f, 0.3f)) } });
+                var warningIcon = new Image { image = KitIcons.GetTexture(KitIcons.WARNING) };
+                warningIcon.style.width = 14;
+                warningIcon.style.height = 14;
+                warningIcon.style.marginRight = 4;
+                warningIcon.tintColor = new Color(1f, 0.7f, 0.3f);
+                row.Add(warningIcon);
             }
 
             // 绑定类型标签

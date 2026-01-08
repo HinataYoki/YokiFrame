@@ -41,7 +41,7 @@ namespace YokiFrame
         private TextField mOutputPathField;
         private TextField mNamespaceField;
         private TextField mClassNameField;
-        private IntegerField mStartIdField;
+        private TextField mStartIdField;
         private VisualElement mGeneratePathMapToggle;
         private VisualElement mGroupByFolderToggle;
         private ListView mResultsListView;
@@ -138,16 +138,21 @@ namespace YokiFrame
             return row;
         }
 
-        private VisualElement CreateIntRow(string labelText, ref IntegerField intField, int initialValue, Action<int> onChanged)
+        private VisualElement CreateIntRow(string labelText, ref TextField intField, int initialValue, Action<int> onChanged)
         {
             var row = new VisualElement();
             row.AddToClassList("form-row");
             var label = new Label(labelText);
             label.AddToClassList("form-label");
             row.Add(label);
-            intField = new IntegerField { value = initialValue };
+            // 使用 TextField 替代 IntegerField 以兼容 Unity 2021.3
+            intField = new TextField { value = initialValue.ToString() };
             intField.AddToClassList("form-field");
-            intField.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
+            intField.RegisterValueChangedCallback(evt =>
+            {
+                if (int.TryParse(evt.newValue, out int parsed))
+                    onChanged?.Invoke(parsed);
+            });
             row.Add(intField);
             return row;
         }

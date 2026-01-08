@@ -70,10 +70,12 @@ namespace YokiFrame
             });
 
             // 箭头
-            column.Add(new Label("→")
-            {
-                style = { fontSize = 14, color = new StyleColor(YokiFrameUIComponents.PulseFire), marginTop = 2 }
-            });
+            var senderArrow = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.ARROW_RIGHT) };
+            senderArrow.style.width = 16;
+            senderArrow.style.height = 16;
+            senderArrow.style.marginTop = 2;
+            senderArrow.tintColor = YokiFrameUIComponents.PulseFire;
+            column.Add(senderArrow);
 
             return column;
         }
@@ -145,16 +147,32 @@ namespace YokiFrame
             };
 
             // 箭头
-            column.Add(new Label("→")
+            var receiverArrow = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.ARROW_RIGHT) };
+            receiverArrow.style.width = 16;
+            receiverArrow.style.height = 16;
+            receiverArrow.tintColor = YokiFrameUIComponents.PulseReceive;
+            column.Add(receiverArrow);
+
+            // 监听者数量容器
+            var listenerRow = new VisualElement
             {
-                style = { fontSize = 14, color = new StyleColor(YokiFrameUIComponents.PulseReceive) }
-            });
+                name = "listener-row",
+                style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 2 }
+            };
+            column.Add(listenerRow);
+
+            // 监听者图标
+            var listenerIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.LISTENER) };
+            listenerIcon.style.width = 12;
+            listenerIcon.style.height = 12;
+            listenerIcon.style.marginRight = 4;
+            listenerRow.Add(listenerIcon);
 
             // 监听者数量
-            column.Add(new Label($"👂 {info.ListenerCount}")
+            listenerRow.Add(new Label($"{info.ListenerCount}")
             {
                 name = "listener-count",
-                style = { fontSize = 11, color = new StyleColor(new Color(0.6f, 0.9f, 0.7f)), marginTop = 2 }
+                style = { fontSize = 11, color = new StyleColor(new Color(0.6f, 0.9f, 0.7f)) }
             });
 
             return column;
@@ -226,7 +244,7 @@ namespace YokiFrame
                 {
                     var listenerLabel = receiverColumn.Q<Label>("listener-count");
                     if (listenerLabel != null)
-                        listenerLabel.text = $"👂 {info.ListenerCount}";
+                        listenerLabel.text = $"{info.ListenerCount}";
                 }
             }
         }

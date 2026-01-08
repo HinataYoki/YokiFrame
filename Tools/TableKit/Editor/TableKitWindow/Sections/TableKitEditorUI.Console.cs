@@ -57,9 +57,11 @@ namespace YokiFrame.TableKit.Editor
             mStatusBanner.style.backgroundColor = new StyleColor(Design.LayerElevated);
             container.Add(mStatusBanner);
 
-            var statusIcon = new Label("●") { name = "status-icon" };
+            var statusIcon = new Image { name = "status-icon", image = TableKitIcons.GetIcon(TableKitIcons.DOT) };
+            statusIcon.style.width = 10;
+            statusIcon.style.height = 10;
             statusIcon.style.marginRight = 6;
-            statusIcon.style.color = new StyleColor(Design.BrandSuccess);
+            statusIcon.tintColor = Design.BrandSuccess;
             mStatusBanner.Add(statusIcon);
 
             mStatusBannerLabel = new Label("就绪");
@@ -102,29 +104,29 @@ namespace YokiFrame.TableKit.Editor
         private void UpdateStatusBanner(BuildStatus status)
         {
             mCurrentStatus = status;
-            var icon = mStatusBanner?.Q<Label>("status-icon");
+            var icon = mStatusBanner?.Q<Image>("status-icon");
 
             switch (status)
             {
                 case BuildStatus.Ready:
                     mStatusBannerLabel.text = "就绪";
                     mStatusBanner.style.backgroundColor = new StyleColor(Design.LayerElevated);
-                    if (icon != null) icon.style.color = new StyleColor(Design.BrandSuccess);
+                    if (icon != null) icon.tintColor = Design.BrandSuccess;
                     break;
                 case BuildStatus.Building:
                     mStatusBannerLabel.text = "生成中...";
                     mStatusBanner.style.backgroundColor = new StyleColor(new Color(0.2f, 0.25f, 0.3f));
-                    if (icon != null) icon.style.color = new StyleColor(Design.BrandPrimary);
+                    if (icon != null) icon.tintColor = Design.BrandPrimary;
                     break;
                 case BuildStatus.Success:
                     mStatusBannerLabel.text = "生成成功";
                     mStatusBanner.style.backgroundColor = new StyleColor(new Color(0.15f, 0.25f, 0.15f));
-                    if (icon != null) icon.style.color = new StyleColor(Design.BrandSuccess);
+                    if (icon != null) icon.tintColor = Design.BrandSuccess;
                     break;
                 case BuildStatus.Failed:
                     mStatusBannerLabel.text = "生成失败";
                     mStatusBanner.style.backgroundColor = new StyleColor(new Color(0.3f, 0.15f, 0.15f));
-                    if (icon != null) icon.style.color = new StyleColor(Design.BrandDanger);
+                    if (icon != null) icon.tintColor = Design.BrandDanger;
                     break;
             }
         }

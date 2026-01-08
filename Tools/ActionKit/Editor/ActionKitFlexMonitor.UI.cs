@@ -19,7 +19,14 @@ namespace YokiFrame.EditorTools
             row.Add(title);
 
             // 响应式模式提示
-            var hint = new Label("🔄 响应式") { style = { fontSize = 10, color = new StyleColor(COLOR_RUNNING), marginRight = 8 }, tooltip = "自动响应 Action 状态变化" };
+            var hintIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
+            hintIcon.style.width = 12;
+            hintIcon.style.height = 12;
+            hintIcon.style.marginRight = 4;
+            hintIcon.tintColor = COLOR_RUNNING;
+            row.Add(hintIcon);
+            
+            var hint = new Label("响应式") { style = { fontSize = 10, color = new StyleColor(COLOR_RUNNING), marginRight = 8 }, tooltip = "自动响应 Action 状态变化" };
             row.Add(hint);
             
             var refreshBtn = new Button(RefreshData) { text = "刷新", style = { marginLeft = 8 } };
@@ -88,8 +95,21 @@ namespace YokiFrame.EditorTools
             card.Add(content);
 
             // 提示信息
-            var hint = new Label("💡 启用后需重新运行游戏才能记录新 Action 的堆栈") { style = { fontSize = 10, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)), marginBottom = 8 } };
-            content.Add(hint);
+            var hintRow = new VisualElement();
+            hintRow.style.flexDirection = FlexDirection.Row;
+            hintRow.style.alignItems = Align.Center;
+            hintRow.style.marginBottom = 8;
+            
+            var hintIcon = new Image { image = KitIcons.GetTexture(KitIcons.TIP) };
+            hintIcon.style.width = 12;
+            hintIcon.style.height = 12;
+            hintIcon.style.marginRight = 4;
+            hintIcon.tintColor = new Color(0.6f, 0.6f, 0.6f);
+            hintRow.Add(hintIcon);
+            
+            var hint = new Label("启用后需重新运行游戏才能记录新 Action 的堆栈") { style = { fontSize = 10, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)) } };
+            hintRow.Add(hint);
+            content.Add(hintRow);
 
             var row1 = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginBottom = 8 } };
             content.Add(row1);

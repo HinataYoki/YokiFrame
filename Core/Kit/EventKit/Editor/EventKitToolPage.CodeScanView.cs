@@ -73,18 +73,38 @@ namespace YokiFrame
         {
             var container = new VisualElement();
             container.style.flexGrow = 1;
+            // 关键：设置 overflow 为 hidden，确保子元素不会撑开容器
+            container.style.overflow = Overflow.Hidden;
 
             // 工具栏
             var toolbar = CreateScanToolbar();
             container.Add(toolbar);
 
-            // 结果滚动视图
-            mScanResultsScrollView = new ScrollView();
-            mScanResultsScrollView.style.flexGrow = 1;
+            // 主内容区域：水平布局（左侧滚动视图 + 右侧快速导航）
+            var mainContent = new VisualElement();
+            mainContent.style.flexDirection = FlexDirection.Row;
+            mainContent.style.flexGrow = 1;
+            mainContent.style.flexShrink = 1;
+            mainContent.style.overflow = Overflow.Hidden;
+            // 注册响应式布局回调
+            mainContent.RegisterCallback<GeometryChangedEvent>(OnCodeScanViewGeometryChanged);
+            container.Add(mainContent);
+
+            // 结果滚动视图（约 66%，2:1 比例）
+            mScanResultsScrollView = new ScrollView(ScrollViewMode.Vertical);
+            mScanResultsScrollView.style.flexGrow = 2;
+            mScanResultsScrollView.style.flexBasis = 0;
+            mScanResultsScrollView.style.flexShrink = 1;
             mScanResultsScrollView.style.paddingLeft = 16;
             mScanResultsScrollView.style.paddingRight = 16;
             mScanResultsScrollView.style.paddingTop = 16;
-            container.Add(mScanResultsScrollView);
+            // 始终显示垂直滚动条
+            mScanResultsScrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+            mainContent.Add(mScanResultsScrollView);
+
+            // 右侧快速导航面板
+            var quickNavPanel = CreateQuickNavPanel();
+            mainContent.Add(quickNavPanel);
 
             return container;
         }
@@ -112,7 +132,7 @@ namespace YokiFrame
             mScanSummaryLabel.AddToClassList("toolbar-label");
             toolbar.Add(mScanSummaryLabel);
 
-            var scanBtn = CreateToolbarButton("🔍 扫描", PerformScan);
+            var scanBtn = CreateToolbarButtonWithIcon(EditorTools.KitIcons.TARGET, "扫描", PerformScan);
             toolbar.Add(scanBtn);
 
             return toolbar;
@@ -148,6 +168,8 @@ namespace YokiFrame
             {
                 mScanSummaryLabel.text = "无结果";
                 mScanResultsScrollView.Add(CreateEmptyState("点击「扫描」按钮开始扫描代码"));
+                // 清空快速导航
+                RefreshQuickNav(new Dictionary<string, Dictionary<string, EventFlowData>>());
                 return;
             }
 
@@ -168,6 +190,9 @@ namespace YokiFrame
 
             // 构建事件流数据
             var eventFlows = BuildEventFlows();
+
+            // 先刷新快速导航（需要在渲染前创建导航项）
+            RefreshQuickNav(eventFlows);
 
             // 按类型分组渲染
             RenderEventFlowsByType(eventFlows);

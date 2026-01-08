@@ -49,8 +49,13 @@ namespace YokiFrame
             toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
 
             // 响应式提示
-            var reactiveHint = new Label("🔄") { style = { fontSize = 10, color = new StyleColor(new Color(0.3f, 0.9f, 0.4f)), marginRight = 8 }, tooltip = "响应式更新" };
-            toolbar.Add(reactiveHint);
+            var reactiveIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
+            reactiveIcon.style.width = 14;
+            reactiveIcon.style.height = 14;
+            reactiveIcon.style.marginRight = 8;
+            reactiveIcon.tintColor = new Color(0.3f, 0.9f, 0.4f);
+            reactiveIcon.tooltip = "响应式更新";
+            toolbar.Add(reactiveIcon);
 
             // 自动刷新
             var autoRefreshToggle = YokiFrameUIComponents.CreateModernToggle("自动刷新", mDebugAutoRefresh, v => mDebugAutoRefresh = v);
@@ -122,7 +127,7 @@ namespace YokiFrame
 
         private void DrawDebugActivePanels()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("活动面板", "📋");
+            var (card, body) = YokiFrameUIComponents.CreateCard("活动面板", KitIcons.CLIPBOARD);
             mDebugContent.Add(card);
 
             var panels = GetActivePanels();
@@ -185,7 +190,7 @@ namespace YokiFrame
 
         private void DrawDebugStackInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("面板堆栈", "📚");
+            var (card, body) = YokiFrameUIComponents.CreateCard("面板堆栈", KitIcons.STACK);
             mDebugContent.Add(card);
 
             var stackNames = UIKit.GetAllStackNames();
@@ -223,7 +228,7 @@ namespace YokiFrame
 
         private void DrawDebugFocusInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("焦点信息", "🎯");
+            var (card, body) = YokiFrameUIComponents.CreateCard("焦点信息", KitIcons.TARGET);
             mDebugContent.Add(card);
 
             var focusSystem = UIFocusSystem.Instance;
@@ -262,7 +267,7 @@ namespace YokiFrame
 
         private void DrawDebugCacheInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("缓存信息", "💾");
+            var (card, body) = YokiFrameUIComponents.CreateCard("缓存信息", KitIcons.CACHE);
             mDebugContent.Add(card);
 
             var cachedPanels = UIKit.GetCachedPanels();

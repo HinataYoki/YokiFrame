@@ -211,7 +211,7 @@ namespace YokiFrame
 
             if (result.Issues.Count == 0)
             {
-                var successBox = YokiFrameUIComponents.CreateHelpBox("未发现问题 ✓");
+                var successBox = YokiFrameUIComponents.CreateHelpBox("未发现问题");
                 mValidatorContent.Add(successBox);
                 return;
             }
@@ -249,22 +249,29 @@ namespace YokiFrame
 
             if (errorCount > 0)
             {
-                summaryRow.Add(new Label($"✗ {errorCount}") { style = { marginRight = 12, color = new StyleColor(new Color(1f, 0.5f, 0.5f)) } });
+                var errorRow = CreateStatusBadge(KitIcons.ERROR, errorCount.ToString(), new Color(1f, 0.5f, 0.5f));
+                errorRow.style.marginRight = 12;
+                summaryRow.Add(errorRow);
             }
 
             if (warningCount > 0)
             {
-                summaryRow.Add(new Label($"⚠ {warningCount}") { style = { marginRight = 12, color = new StyleColor(new Color(1f, 0.8f, 0.3f)) } });
+                var warningRow = CreateStatusBadge(KitIcons.WARNING, warningCount.ToString(), new Color(1f, 0.8f, 0.3f));
+                warningRow.style.marginRight = 12;
+                summaryRow.Add(warningRow);
             }
 
             if (infoCount > 0)
             {
-                summaryRow.Add(new Label($"ℹ {infoCount}") { style = { marginRight = 12, color = new StyleColor(new Color(0.5f, 0.8f, 1f)) } });
+                var infoRow = CreateStatusBadge(KitIcons.INFO, infoCount.ToString(), new Color(0.5f, 0.8f, 1f));
+                infoRow.style.marginRight = 12;
+                summaryRow.Add(infoRow);
             }
 
             if (errorCount == 0 && warningCount == 0 && infoCount == 0)
             {
-                summaryRow.Add(new Label("✓ 通过") { style = { color = new StyleColor(new Color(0.5f, 1f, 0.5f)) } });
+                var successRow = CreateStatusBadge(KitIcons.SUCCESS, "通过", new Color(0.5f, 1f, 0.5f));
+                summaryRow.Add(successRow);
             }
 
             mValidatorContent.Add(summaryRow);
@@ -289,9 +296,14 @@ namespace YokiFrame
             headerRow.style.flexDirection = FlexDirection.Row;
             headerRow.style.alignItems = Align.FlexStart;
 
-            var icon = GetIssueSeverityIcon(issue.Severity);
+            var iconId = GetIssueSeverityIconId(issue.Severity);
             var iconColor = GetIssueSeverityTextColor(issue.Severity);
-            headerRow.Add(new Label(icon) { style = { width = 20, color = new StyleColor(iconColor) } });
+            var iconImage = new Image { image = KitIcons.GetTexture(iconId) };
+            iconImage.style.width = 16;
+            iconImage.style.height = 16;
+            iconImage.style.marginRight = 4;
+            iconImage.tintColor = iconColor;
+            headerRow.Add(iconImage);
 
             var categoryLabel = GetIssueCategoryLabel(issue.Category);
             headerRow.Add(new Label($"[{categoryLabel}]") { style = { width = 50, fontSize = 11, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)) } });
@@ -304,9 +316,19 @@ namespace YokiFrame
             if (!string.IsNullOrEmpty(issue.FixSuggestion))
             {
                 var suggestionRow = new VisualElement();
+                suggestionRow.style.flexDirection = FlexDirection.Row;
+                suggestionRow.style.alignItems = Align.Center;
                 suggestionRow.style.paddingLeft = 20;
                 suggestionRow.style.marginTop = 4;
-                suggestionRow.Add(new Label($"→ {issue.FixSuggestion}") { style = { fontSize = 11, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)) } });
+                
+                var arrowIcon = new Image { image = KitIcons.GetTexture(KitIcons.ARROW_RIGHT) };
+                arrowIcon.style.width = 12;
+                arrowIcon.style.height = 12;
+                arrowIcon.style.marginRight = 4;
+                arrowIcon.tintColor = new Color(0.6f, 0.6f, 0.6f);
+                suggestionRow.Add(arrowIcon);
+                
+                suggestionRow.Add(new Label(issue.FixSuggestion) { style = { fontSize = 11, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)) } });
                 card.Add(suggestionRow);
             }
 
@@ -425,13 +447,36 @@ namespace YokiFrame
             _ => Color.white
         };
 
-        private static string GetIssueSeverityIcon(UIPanelValidator.IssueSeverity severity) => severity switch
+        private static string GetIssueSeverityIconId(UIPanelValidator.IssueSeverity severity) => severity switch
         {
-            UIPanelValidator.IssueSeverity.Error => "✗",
-            UIPanelValidator.IssueSeverity.Warning => "⚠",
-            UIPanelValidator.IssueSeverity.Info => "ℹ",
-            _ => "?"
+            UIPanelValidator.IssueSeverity.Error => KitIcons.ERROR,
+            UIPanelValidator.IssueSeverity.Warning => KitIcons.WARNING,
+            UIPanelValidator.IssueSeverity.Info => KitIcons.INFO,
+            _ => KitIcons.INFO
         };
+        
+        /// <summary>
+        /// 创建状态徽章（图标 + 文本）
+        /// </summary>
+        private static VisualElement CreateStatusBadge(string iconId, string text, Color color)
+        {
+            var container = new VisualElement();
+            container.style.flexDirection = FlexDirection.Row;
+            container.style.alignItems = Align.Center;
+            
+            var icon = new Image { image = KitIcons.GetTexture(iconId) };
+            icon.style.width = 14;
+            icon.style.height = 14;
+            icon.style.marginRight = 4;
+            icon.tintColor = color;
+            container.Add(icon);
+            
+            var label = new Label(text);
+            label.style.color = new StyleColor(color);
+            container.Add(label);
+            
+            return container;
+        }
 
         private static string GetIssueCategoryLabel(UIPanelValidator.IssueCategory category) => category switch
         {

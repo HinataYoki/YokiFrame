@@ -1,5 +1,4 @@
 #if UNITY_EDITOR && YOKIFRAME_LUBAN_SUPPORT
-using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -8,109 +7,13 @@ using UnityEngine.UIElements;
 namespace YokiFrame.TableKit.Editor
 {
     /// <summary>
-    /// TableKitEditorUI - 多目标输出配置
+    /// TableKitEditorUI - 多目标输出 UI 构建
     /// </summary>
     public partial class TableKitEditorUI
     {
-        #region 输出目标数据结构
+        #region 多目标输出 UI 字段
 
-        /// <summary>
-        /// 额外输出目标配置
-        /// </summary>
-        [Serializable]
-        private class ExtraOutputTarget
-        {
-            /// <summary>目标名称</summary>
-            public string name = "服务端";
-            /// <summary>导出目标（client/server/all），决定导出哪些字段分组</summary>
-            public string target = "server";
-            /// <summary>数据格式（bin/json/lua）</summary>
-            public string dataTarget = "json";
-            /// <summary>数据输出目录</summary>
-            public string dataDir = "";
-            /// <summary>代码生成器类型</summary>
-            public string codeTarget = "java-json";
-            /// <summary>代码输出目录</summary>
-            public string codeDir = "";
-            /// <summary>是否启用</summary>
-            public bool enabled = true;
-        }
-
-        #endregion
-
-        #region 多目标输出字段
-
-        private List<ExtraOutputTarget> mExtraOutputTargets = new();
         private VisualElement mExtraOutputContainer;
-        private const string PREF_EXTRA_OUTPUT_TARGETS = "TableKit_ExtraOutputTargets";
-
-        // 所有可用的代码生成器选项（包含客户端和服务端）
-        private static readonly string[] ALL_CODE_TARGET_OPTIONS =
-        {
-            // Unity 客户端
-            "cs-bin",
-            "cs-simple-json",
-            "cs-newtonsoft-json",
-            // .NET 服务端
-            "cs-dotnet-json",
-            // Java
-            "java-bin",
-            "java-json",
-            // Go
-            "go-bin",
-            "go-json",
-            // Python
-            "python-json",
-            // C++
-            "cpp-bin",
-            // Rust
-            "rust-bin",
-            "rust-json",
-            // Lua
-            "lua-lua",
-            "lua-bin",
-            // TypeScript
-            "typescript-bin",
-            "typescript-json"
-        };
-
-        #endregion
-
-        #region 多目标输出持久化
-
-        private void LoadExtraOutputTargets()
-        {
-            var json = EditorPrefs.GetString(PREF_EXTRA_OUTPUT_TARGETS, "");
-            if (!string.IsNullOrEmpty(json))
-            {
-                try
-                {
-                    var wrapper = JsonUtility.FromJson<ExtraOutputTargetListWrapper>(json);
-                    mExtraOutputTargets = wrapper?.targets ?? new List<ExtraOutputTarget>();
-                }
-                catch
-                {
-                    mExtraOutputTargets = new List<ExtraOutputTarget>();
-                }
-            }
-            else
-            {
-                mExtraOutputTargets = new List<ExtraOutputTarget>();
-            }
-        }
-
-        private void SaveExtraOutputTargets()
-        {
-            var wrapper = new ExtraOutputTargetListWrapper { targets = mExtraOutputTargets };
-            var json = JsonUtility.ToJson(wrapper);
-            EditorPrefs.SetString(PREF_EXTRA_OUTPUT_TARGETS, json);
-        }
-
-        [Serializable]
-        private class ExtraOutputTargetListWrapper
-        {
-            public List<ExtraOutputTarget> targets = new();
-        }
 
         #endregion
 
@@ -124,33 +27,28 @@ namespace YokiFrame.TableKit.Editor
             var section = CreateSubSection("额外输出目标");
             container.Add(section);
 
-            // 说明
             var hint = new Label("可添加多个输出目标，每个目标可独立选择导出字段分组");
             hint.style.fontSize = Design.FontSizeSmall;
             hint.style.color = new StyleColor(Design.TextTertiary);
             hint.style.marginTop = 4;
             section.Add(hint);
 
-            // 分组运行提示
             var groupHint = new Label("提示: 不同导出目标会分批运行 Luban，确保字段正确导出");
             groupHint.style.fontSize = Design.FontSizeSmall;
             groupHint.style.color = new StyleColor(Design.BrandWarning);
             groupHint.style.marginTop = 2;
             section.Add(groupHint);
 
-            // 输出目标列表容器
             mExtraOutputContainer = new VisualElement();
             mExtraOutputContainer.style.marginTop = 8;
             section.Add(mExtraOutputContainer);
 
-            // 添加按钮
             var addBtn = new Button(AddExtraOutputTarget) { text = "+ 添加输出目标" };
             addBtn.style.marginTop = 8;
             addBtn.style.alignSelf = Align.FlexStart;
             ApplySmallButtonStyle(addBtn);
             section.Add(addBtn);
 
-            // 刷新列表
             RefreshExtraOutputList();
 
             return section;
@@ -188,7 +86,15 @@ namespace YokiFrame.TableKit.Editor
             item.style.marginRight = 8;
             item.style.marginBottom = 8;
 
-            // 标题行：名称 + 导出目标 + 启用开关 + 删除按钮
+            BuildTargetHeader(item, target, index);
+            BuildTargetDataRow(item, target);
+            BuildTargetCodeRow(item, target);
+
+            return item;
+        }
+
+        private void BuildTargetHeader(VisualElement item, ExtraOutputTarget target, int index)
+        {
             var headerRow = new VisualElement();
             headerRow.style.flexDirection = FlexDirection.Row;
             headerRow.style.alignItems = Align.Center;
@@ -198,7 +104,9 @@ namespace YokiFrame.TableKit.Editor
             var leftHeader = new VisualElement();
             leftHeader.style.flexDirection = FlexDirection.Row;
             leftHeader.style.alignItems = Align.Center;
-            headerRow.Add(leftHeader);            // 名称输入
+            headerRow.Add(leftHeader);
+
+            // 名称输入
             var nameField = new TextField();
             nameField.style.width = 80;
             nameField.value = target.name;
@@ -209,7 +117,7 @@ namespace YokiFrame.TableKit.Editor
             });
             leftHeader.Add(nameField);
 
-            // 导出目标下拉（决定字段分组）
+            // 导出目标下拉
             var targetDropdown = new DropdownField(new List<string>(TARGET_OPTIONS), 0);
             targetDropdown.style.width = 70;
             targetDropdown.style.marginLeft = 8;
@@ -237,11 +145,16 @@ namespace YokiFrame.TableKit.Editor
                 mExtraOutputTargets.RemoveAt(index);
                 SaveExtraOutputTargets();
                 RefreshExtraOutputList();
-            }) { text = "×" };
+            });
             deleteBtn.style.width = 24;
             deleteBtn.style.height = 24;
             deleteBtn.style.backgroundColor = new StyleColor(Color.clear);
-            deleteBtn.style.color = new StyleColor(Design.TextTertiary);
+            deleteBtn.style.paddingLeft = 4;
+            deleteBtn.style.paddingRight = 4;
+            var deleteIcon = new Image { image = TableKitIcons.GetIcon(TableKitIcons.DELETE) };
+            deleteIcon.style.width = 14;
+            deleteIcon.style.height = 14;
+            deleteBtn.Add(deleteIcon);
             headerRow.Add(deleteBtn);
 
             // 单独生成按钮
@@ -256,8 +169,10 @@ namespace YokiFrame.TableKit.Editor
             generateBtn.style.borderBottomLeftRadius = generateBtn.style.borderBottomRightRadius = 3;
             generateBtn.tooltip = "仅生成此目标的数据和代码";
             headerRow.Add(generateBtn);
+        }
 
-            // 数据配置行
+        private void BuildTargetDataRow(VisualElement item, ExtraOutputTarget target)
+        {
             var dataRow = new VisualElement();
             dataRow.style.flexDirection = FlexDirection.Row;
             dataRow.style.alignItems = Align.Center;
@@ -274,16 +189,25 @@ namespace YokiFrame.TableKit.Editor
             dataTargetDropdown.value = target.dataTarget;
             dataRow.Add(dataTargetDropdown);
 
+            var dataFieldContainer = new VisualElement();
+            dataFieldContainer.style.flexDirection = FlexDirection.Row;
+            dataFieldContainer.style.flexGrow = 1;
+            dataFieldContainer.style.marginLeft = 8;
+            dataRow.Add(dataFieldContainer);
+
             var dataDirField = new TextField();
             dataDirField.style.flexGrow = 1;
-            dataDirField.style.marginLeft = 8;
             dataDirField.value = target.dataDir;
             dataDirField.RegisterValueChangedCallback(evt =>
             {
                 target.dataDir = evt.newValue;
                 SaveExtraOutputTargets();
             });
-            dataRow.Add(dataDirField);
+            dataFieldContainer.Add(dataDirField);
+
+            var dataBtnContainer = new VisualElement();
+            dataBtnContainer.style.flexDirection = FlexDirection.Row;
+            dataRow.Add(dataBtnContainer);
 
             var dataBrowseBtn = new Button(() =>
             {
@@ -297,13 +221,17 @@ namespace YokiFrame.TableKit.Editor
             }) { text = "..." };
             dataBrowseBtn.style.width = 24;
             dataBrowseBtn.style.marginLeft = 4;
-            dataRow.Add(dataBrowseBtn);
+            dataBtnContainer.Add(dataBrowseBtn);
 
-            // 快速打开数据目录按钮
             var dataOpenBtn = CreateOpenFolderButton(() => dataDirField.value);
-            dataRow.Add(dataOpenBtn);
+            dataBtnContainer.Add(dataOpenBtn);
 
-            // 代码配置行
+            // 存储引用以便代码行使用
+            item.userData = (dataTargetDropdown, dataDirField);
+        }
+
+        private void BuildTargetCodeRow(VisualElement item, ExtraOutputTarget target)
+        {
             var codeRow = new VisualElement();
             codeRow.style.flexDirection = FlexDirection.Row;
             codeRow.style.alignItems = Align.Center;
@@ -320,11 +248,13 @@ namespace YokiFrame.TableKit.Editor
             codeTargetDropdown.value = target.codeTarget;
             codeRow.Add(codeTargetDropdown);
 
+            // 获取数据行的引用
+            var (dataTargetDropdown, _) = ((DropdownField, TextField))item.userData;
+
             // 数据格式改变时，自动同步代码类型
             dataTargetDropdown.RegisterValueChangedCallback(evt =>
             {
                 target.dataTarget = evt.newValue;
-                // bin -> 匹配 -bin 后缀的代码类型，json -> 匹配 -json/-lua 后缀
                 var newCodeTarget = GetMatchingCodeTarget(target.codeTarget, evt.newValue);
                 if (newCodeTarget != target.codeTarget)
                 {
@@ -338,7 +268,6 @@ namespace YokiFrame.TableKit.Editor
             codeTargetDropdown.RegisterValueChangedCallback(evt =>
             {
                 target.codeTarget = evt.newValue;
-                // -bin 后缀 -> bin，其他 -> json
                 var newDataTarget = GetMatchingDataTarget(evt.newValue);
                 if (newDataTarget != target.dataTarget)
                 {
@@ -348,16 +277,25 @@ namespace YokiFrame.TableKit.Editor
                 SaveExtraOutputTargets();
             });
 
+            var codeFieldContainer = new VisualElement();
+            codeFieldContainer.style.flexDirection = FlexDirection.Row;
+            codeFieldContainer.style.flexGrow = 1;
+            codeFieldContainer.style.marginLeft = 8;
+            codeRow.Add(codeFieldContainer);
+
             var codeDirField = new TextField();
             codeDirField.style.flexGrow = 1;
-            codeDirField.style.marginLeft = 8;
             codeDirField.value = target.codeDir;
             codeDirField.RegisterValueChangedCallback(evt =>
             {
                 target.codeDir = evt.newValue;
                 SaveExtraOutputTargets();
             });
-            codeRow.Add(codeDirField);
+            codeFieldContainer.Add(codeDirField);
+
+            var codeBtnContainer = new VisualElement();
+            codeBtnContainer.style.flexDirection = FlexDirection.Row;
+            codeRow.Add(codeBtnContainer);
 
             var codeBrowseBtn = new Button(() =>
             {
@@ -371,13 +309,10 @@ namespace YokiFrame.TableKit.Editor
             }) { text = "..." };
             codeBrowseBtn.style.width = 24;
             codeBrowseBtn.style.marginLeft = 4;
-            codeRow.Add(codeBrowseBtn);
+            codeBtnContainer.Add(codeBrowseBtn);
 
-            // 快速打开代码目录按钮
             var codeOpenBtn = CreateOpenFolderButton(() => codeDirField.value);
-            codeRow.Add(codeOpenBtn);
-
-            return item;
+            codeBtnContainer.Add(codeOpenBtn);
         }
 
         /// <summary>
@@ -397,87 +332,6 @@ namespace YokiFrame.TableKit.Editor
             });
             SaveExtraOutputTargets();
             RefreshExtraOutputList();
-        }
-
-        #endregion
-
-        #region 数据格式与代码类型同步
-
-        /// <summary>
-        /// 根据数据格式获取匹配的代码类型
-        /// </summary>
-        /// <param name="currentCodeTarget">当前代码类型</param>
-        /// <param name="dataTarget">目标数据格式</param>
-        /// <returns>匹配的代码类型</returns>
-        private static string GetMatchingCodeTarget(string currentCodeTarget, string dataTarget)
-        {
-            if (string.IsNullOrEmpty(currentCodeTarget))
-            {
-                return dataTarget switch
-                {
-                    "bin" => "java-bin",
-                    "lua" => "lua-lua",
-                    _ => "java-json"
-                };
-            }
-
-            // 获取代码类型的前缀（如 java-json -> java）
-            var dashIndex = currentCodeTarget.LastIndexOf('-');
-            if (dashIndex <= 0) return currentCodeTarget;
-
-            var prefix = currentCodeTarget.Substring(0, dashIndex);
-            
-            // 根据数据格式确定目标后缀
-            string targetSuffix;
-            if (dataTarget == "bin")
-            {
-                targetSuffix = "-bin";
-            }
-            else if (dataTarget == "lua")
-            {
-                // lua 数据格式只能用 lua-lua 或 lua-bin
-                if (prefix == "lua")
-                    targetSuffix = "-lua";
-                else
-                    return "lua-lua"; // 切换到 lua 数据时，直接切换到 lua-lua
-            }
-            else // json
-            {
-                // lua 代码生成器特殊处理
-                targetSuffix = prefix == "lua" ? "-lua" : "-json";
-            }
-
-            var newCodeTarget = prefix + targetSuffix;
-
-            // 检查新代码类型是否在可用选项中
-            foreach (var option in ALL_CODE_TARGET_OPTIONS)
-            {
-                if (option == newCodeTarget) return newCodeTarget;
-            }
-
-            // 如果没有匹配的，返回原值
-            return currentCodeTarget;
-        }
-
-        /// <summary>
-        /// 根据代码类型获取匹配的数据格式
-        /// </summary>
-        /// <param name="codeTarget">代码类型</param>
-        /// <returns>匹配的数据格式</returns>
-        private static string GetMatchingDataTarget(string codeTarget)
-        {
-            if (string.IsNullOrEmpty(codeTarget)) return "json";
-
-            // -bin 后缀对应 bin 数据格式
-            if (codeTarget.EndsWith("-bin"))
-                return "bin";
-            
-            // lua-lua 对应 lua 数据格式
-            if (codeTarget == "lua-lua")
-                return "lua";
-
-            // 其他对应 json
-            return "json";
         }
 
         #endregion

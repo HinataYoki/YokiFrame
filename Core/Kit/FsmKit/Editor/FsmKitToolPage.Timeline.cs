@@ -39,7 +39,13 @@ namespace YokiFrame
             var toolbar = CreateToolbar();
             section.Add(toolbar);
 
-            var titleLabel = new Label("📜 转换历史");
+            var titleIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.TIMELINE) };
+            titleIcon.style.width = 14;
+            titleIcon.style.height = 14;
+            titleIcon.style.marginRight = 4;
+            toolbar.Add(titleIcon);
+            
+            var titleLabel = new Label("转换历史");
             titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             titleLabel.AddToClassList("toolbar-label");
             toolbar.Add(titleLabel);

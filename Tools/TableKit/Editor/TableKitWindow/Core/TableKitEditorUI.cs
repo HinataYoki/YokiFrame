@@ -145,6 +145,13 @@ namespace YokiFrame.TableKit.Editor
             root.style.flexGrow = 1;
             root.style.backgroundColor = new StyleColor(Design.LayerBackground);
 
+            // 命令中心固定在顶部，不随滚动
+            var commandCenter = BuildCommandCenter();
+            commandCenter.style.marginLeft = 16;
+            commandCenter.style.marginRight = 16;
+            commandCenter.style.marginTop = 12;
+            root.Add(commandCenter);
+
             var scrollView = new ScrollView();
             scrollView.style.flexGrow = 1;
             scrollView.style.paddingLeft = 16;
@@ -152,7 +159,6 @@ namespace YokiFrame.TableKit.Editor
             scrollView.style.paddingTop = 12;
             root.Add(scrollView);
 
-            scrollView.Add(BuildCommandCenter());
             scrollView.Add(BuildConfigFoldout());
             scrollView.Add(BuildBuildOptions());
             scrollView.Add(BuildConsole());

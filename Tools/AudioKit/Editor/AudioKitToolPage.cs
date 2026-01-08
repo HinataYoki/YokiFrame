@@ -157,28 +157,74 @@ namespace YokiFrame
             mTabContent.Clear();
             mChannelPanels.Clear();
             
+            // 清理混音台资源
+            if (tabType != TabType.RuntimeMonitor)
+                CleanupConsole();
+            
             UpdateTabButtonStyles();
             
             if (tabType == TabType.CodeGenerator)
                 BuildCodeGeneratorUI(mTabContent);
             else
-                BuildRuntimeMonitorUI(mTabContent);
+                BuildConsoleUI(mTabContent); // 使用新的混音台布局
         }
 
         #endregion
 
         #region 生命周期
 
+        /// <summary>
+        /// 上次刷新时间
+        /// </summary>
+        private double mLastRefreshTime;
+        
+        /// <summary>
+        /// 刷新间隔（秒）
+        /// </summary>
+        private const double REFRESH_INTERVAL = 0.1;
+
         public override void OnUpdate()
         {
-            // 响应式模式下不再需要轮询
-            // 保留此方法以便将来扩展
+            // 运行时监控模式下定期刷新活跃音频数据
+            if (!Application.isPlaying) return;
+            if (mCurrentTab != TabType.RuntimeMonitor) return;
+            if (!mAutoRefresh) return;
+            
+            // 节流：每 100ms 刷新一次
+            double currentTime = EditorApplication.timeSinceStartup;
+            if (currentTime - mLastRefreshTime < REFRESH_INTERVAL) return;
+            mLastRefreshTime = currentTime;
+            
+            RefreshConsoleData();
         }
 
         public override void OnDeactivate()
         {
             SavePrefs();
+            CleanupConsole();
             base.OnDeactivate();
+        }
+
+        /// <summary>
+        /// PlayMode 状态变化时重建 UI
+        /// </summary>
+        protected override void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            base.OnPlayModeStateChanged(state);
+            
+            // 进入或退出 PlayMode 后重建当前 Tab 的 UI
+            if (state == PlayModeStateChange.EnteredPlayMode || 
+                state == PlayModeStateChange.EnteredEditMode)
+            {
+                // 延迟一帧执行，确保 Unity 状态已完全切换
+                EditorApplication.delayCall += () =>
+                {
+                    if (mTabContent == null) return;
+                    
+                    // 重建当前 Tab
+                    SwitchTab(mCurrentTab);
+                };
+            }
         }
 
         #endregion

@@ -147,7 +147,14 @@ namespace YokiFrame
             titleRow.style.marginBottom = 12;
             section.Add(titleRow);
 
-            var title = new Label("📜 时间轴日志");
+            // 时间轴图标
+            var titleIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.SCROLL) };
+            titleIcon.style.width = 16;
+            titleIcon.style.height = 16;
+            titleIcon.style.marginRight = 6;
+            titleRow.Add(titleIcon);
+
+            var title = new Label("时间轴日志");
             title.style.fontSize = 14;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.flexGrow = 1;
@@ -247,18 +254,20 @@ namespace YokiFrame
             entry.style.borderBottomLeftRadius = 4;
             entry.style.borderBottomRightRadius = 4;
 
-            var (bgColor, icon) = action.ToLower() switch
+            var (bgColor, iconId) = action.ToLower() switch
             {
-                "send" => (new Color(0.2f, 0.35f, 0.2f, 0.6f), "🟩"),
-                "register" => (new Color(0.2f, 0.25f, 0.35f, 0.6f), "🟦"),
-                "unregister" => (new Color(0.35f, 0.3f, 0.2f, 0.6f), "🟨"),
-                _ => (new Color(0.25f, 0.25f, 0.25f, 0.6f), "⬜")
+                "send" => (new Color(0.2f, 0.35f, 0.2f, 0.6f), EditorTools.KitIcons.SEND),
+                "register" => (new Color(0.2f, 0.25f, 0.35f, 0.6f), EditorTools.KitIcons.RECEIVE),
+                "unregister" => (new Color(0.35f, 0.3f, 0.2f, 0.6f), EditorTools.KitIcons.WARNING),
+                _ => (new Color(0.25f, 0.25f, 0.25f, 0.6f), EditorTools.KitIcons.INFO)
             };
             entry.style.backgroundColor = new StyleColor(bgColor);
 
-            var iconLabel = new Label(icon);
-            iconLabel.style.marginRight = 8;
-            entry.Add(iconLabel);
+            var icon = new Image { image = EditorTools.KitIcons.GetTexture(iconId) };
+            icon.style.width = 14;
+            icon.style.height = 14;
+            icon.style.marginRight = 8;
+            entry.Add(icon);
 
             var timeLabel = new Label(time);
             timeLabel.style.fontSize = 10;

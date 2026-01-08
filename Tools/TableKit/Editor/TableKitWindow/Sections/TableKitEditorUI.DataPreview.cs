@@ -15,9 +15,84 @@ namespace YokiFrame.TableKit.Editor
     {
         #region 数据预览字段
 
+        private string mCurrentPreviewJsonPath;
+        private string mDataPreviewSearchText;
+        private ScrollView mDataPreviewTreeContainer;
+        private Label mDataPreviewMatchLabel;
         private string[] mCachedJsonFiles;
         private int mSearchMatchCount;
         private VisualElement mFirstMatchElement;
+
+        #endregion
+
+        #region E. 数据预览区块
+
+        /// <summary>
+        /// 构建数据预览区块
+        /// </summary>
+        private VisualElement BuildDataPreview()
+        {
+            var container = new VisualElement();
+            container.style.backgroundColor = new StyleColor(Design.LayerCard);
+            container.style.borderTopLeftRadius = container.style.borderTopRightRadius = 8;
+            container.style.borderBottomLeftRadius = container.style.borderBottomRightRadius = 8;
+            container.style.borderLeftWidth = container.style.borderRightWidth = 1;
+            container.style.borderTopWidth = container.style.borderBottomWidth = 1;
+            container.style.borderLeftColor = container.style.borderRightColor = new StyleColor(Design.BorderDefault);
+            container.style.borderTopColor = container.style.borderBottomColor = new StyleColor(Design.BorderDefault);
+            container.style.marginBottom = 12;
+            container.style.paddingLeft = 12;
+            container.style.paddingRight = 12;
+            container.style.paddingTop = 10;
+            container.style.paddingBottom = 12;
+
+            // 标题行
+            var headerRow = new VisualElement();
+            headerRow.style.flexDirection = FlexDirection.Row;
+            headerRow.style.alignItems = Align.Center;
+            headerRow.style.justifyContent = Justify.SpaceBetween;
+            headerRow.style.marginBottom = 8;
+            container.Add(headerRow);
+
+            var title = new Label("数据预览");
+            title.style.fontSize = Design.FontSizeSection;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.color = new StyleColor(Design.TextPrimary);
+            headerRow.Add(title);
+
+            // 搜索行
+            var searchRow = new VisualElement();
+            searchRow.style.flexDirection = FlexDirection.Row;
+            searchRow.style.alignItems = Align.Center;
+            headerRow.Add(searchRow);
+
+            var searchField = new TextField();
+            searchField.style.width = 150;
+            searchField.value = "";
+            searchField.RegisterValueChangedCallback(evt =>
+            {
+                mDataPreviewSearchText = evt.newValue;
+                RefreshDataPreviewWithSearch();
+            });
+            searchRow.Add(searchField);
+
+            mDataPreviewMatchLabel = new Label();
+            mDataPreviewMatchLabel.style.marginLeft = 8;
+            mDataPreviewMatchLabel.style.fontSize = Design.FontSizeSmall;
+            mDataPreviewMatchLabel.style.display = DisplayStyle.None;
+            searchRow.Add(mDataPreviewMatchLabel);
+
+            // 内容容器
+            mDataPreviewContainer = new VisualElement();
+            container.Add(mDataPreviewContainer);
+
+            var hint = new Label("点击「验证配置」后显示数据预览");
+            hint.style.color = new StyleColor(Design.TextTertiary);
+            hint.style.marginTop = 8;
+            mDataPreviewContainer.Add(hint);
+
+            return container;
+        }
 
         #endregion
 

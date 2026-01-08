@@ -64,10 +64,10 @@ namespace YokiFrame
             var toolbar = CreateToolbar();
             root.Add(toolbar);
 
-            var refreshBtn = CreateToolbarButton("🔄 刷新", RefreshScenes);
+            var refreshBtn = CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshScenes);
             toolbar.Add(refreshBtn);
 
-            var unloadAllBtn = CreateToolbarButton("🗑️ 卸载全部", UnloadAllScenes);
+            var unloadAllBtn = CreateToolbarButtonWithIcon(KitIcons.DELETE, "卸载全部", UnloadAllScenes);
             toolbar.Add(unloadAllBtn);
 
             var spacer = CreateToolbarSpacer();
@@ -119,7 +119,11 @@ namespace YokiFrame
             mSceneListView.bindItem = BindSceneItem;
             mSceneListView.fixedItemHeight = 56;
             mSceneListView.selectionType = SelectionType.Single;
+#if UNITY_2022_1_OR_NEWER
             mSceneListView.selectionChanged += OnSceneSelectionChanged;
+#else
+            mSceneListView.onSelectionChange += OnSceneSelectionChanged;
+#endif
             mSceneListView.style.flexGrow = 1;
             panel.Add(mSceneListView);
 
@@ -133,7 +137,7 @@ namespace YokiFrame
             panel.style.flexGrow = 1;
 
             // 空状态
-            mEmptyState = CreateEmptyState("🎬", "选择一个场景查看详情", "在左侧列表中选择场景");
+            mEmptyState = CreateEmptyState(KitIcons.SCENEKIT, "选择一个场景查看详情", "在左侧列表中选择场景");
             mEmptyState.style.display = DisplayStyle.Flex;
             panel.Add(mEmptyState);
 
@@ -177,8 +181,9 @@ namespace YokiFrame
             iconBg.style.marginRight = 16;
             titleRow.Add(iconBg);
 
-            var icon = new Label(KitIcons.SCENEKIT);
-            icon.style.fontSize = 24;
+            var icon = new Image { image = KitIcons.GetTexture(KitIcons.SCENEKIT) };
+            icon.style.width = 24;
+            icon.style.height = 24;
             iconBg.Add(icon);
 
             var titleBox = new VisualElement();
@@ -197,7 +202,7 @@ namespace YokiFrame
             titleBox.Add(mDetailBuildIndex);
 
             // 状态信息卡片
-            var (stateCard, stateContent) = CreateCard("状态信息", "📊");
+            var (stateCard, stateContent) = CreateCard("状态信息", KitIcons.CHART);
             scrollView.Add(stateCard);
 
             var (stateRow, stateValue) = CreateInfoRow("状态");
@@ -230,10 +235,10 @@ namespace YokiFrame
             buttonRow.style.marginTop = 20;
             scrollView.Add(buttonRow);
 
-            var unloadBtn = CreateDangerButton("🗑️ 卸载场景", UnloadSelectedScene);
+            var unloadBtn = CreateActionButtonWithIcon(KitIcons.DELETE, "卸载场景", UnloadSelectedScene, true);
             buttonRow.Add(unloadBtn);
 
-            var activateBtn = CreateSecondaryButton("✅ 设为活动场景", SetSelectedSceneActive);
+            var activateBtn = CreateActionButtonWithIcon(KitIcons.SUCCESS, "设为活动场景", SetSelectedSceneActive, false);
             activateBtn.style.marginLeft = 8;
             buttonRow.Add(activateBtn);
         }
@@ -328,7 +333,7 @@ namespace YokiFrame
             infoLabel.text = infoText;
 
             // 活动场景标记
-            activeLabel.text = scene.IsActive ? "⭐ 活动" : "";
+            activeLabel.text = scene.IsActive ? "活动" : "";
             activeLabel.style.display = scene.IsActive ? DisplayStyle.Flex : DisplayStyle.None;
         }
 

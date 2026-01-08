@@ -154,6 +154,55 @@ namespace YokiFrame.EditorTools
         }
 
         #endregion
+
+        #region 带图标按钮
+
+        /// <summary>
+        /// 创建带图标的工具栏按钮
+        /// </summary>
+        public static Button CreateToolbarButtonWithIcon(string iconId, string text, Action onClick)
+        {
+            var button = new Button(onClick);
+            button.AddToClassList("toolbar-button");
+            button.style.flexDirection = FlexDirection.Row;
+            button.style.alignItems = Align.Center;
+            
+            var icon = new Image { image = KitIcons.GetTexture(iconId) };
+            icon.style.width = 14;
+            icon.style.height = 14;
+            icon.style.marginRight = 4;
+            button.Add(icon);
+            
+            var label = new Label(text);
+            button.Add(label);
+            
+            return button;
+        }
+
+        /// <summary>
+        /// 创建带图标的操作按钮
+        /// </summary>
+        public static Button CreateActionButtonWithIcon(string iconId, string text, Action onClick, bool isDanger = false)
+        {
+            var button = new Button(onClick);
+            button.AddToClassList("action-button");
+            if (isDanger) button.AddToClassList("danger");
+            button.style.flexDirection = FlexDirection.Row;
+            button.style.alignItems = Align.Center;
+            
+            var icon = new Image { image = KitIcons.GetTexture(iconId) };
+            icon.style.width = 14;
+            icon.style.height = 14;
+            icon.style.marginRight = 4;
+            button.Add(icon);
+            
+            var label = new Label(text);
+            button.Add(label);
+            
+            return button;
+        }
+
+        #endregion
     }
 }
 #endif

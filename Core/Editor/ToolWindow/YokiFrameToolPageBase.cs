@@ -12,7 +12,7 @@ namespace YokiFrame.EditorTools
     public abstract class YokiFrameToolPageBase : IYokiFrameToolPage
     {
         public abstract string PageName { get; }
-        public virtual string PageIcon => "📄";
+        public virtual string PageIcon => KitIcons.DOCUMENT;
         public virtual int Priority => 100;
         
         protected bool IsPlaying => EditorApplication.isPlaying;
@@ -218,7 +218,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 创建整数配置行
         /// </summary>
-        protected (VisualElement row, IntegerField field) CreateIntConfigRow(
+        protected (VisualElement row, TextField field) CreateIntConfigRow(
             string label, int value, Action<int> onChanged, int minValue = int.MinValue) 
             => YokiFrameUIComponents.CreateIntConfigRow(label, value, onChanged, minValue);
 
@@ -243,6 +243,18 @@ namespace YokiFrame.EditorTools
         /// </summary>
         protected Button CreateDangerButton(string text, Action onClick) 
             => YokiFrameUIComponents.CreateDangerButton(text, onClick);
+        
+        /// <summary>
+        /// 创建带图标的工具栏按钮
+        /// </summary>
+        protected Button CreateToolbarButtonWithIcon(string iconId, string text, Action onClick)
+            => YokiFrameUIComponents.CreateToolbarButtonWithIcon(iconId, text, onClick);
+        
+        /// <summary>
+        /// 创建带图标的操作按钮
+        /// </summary>
+        protected Button CreateActionButtonWithIcon(string iconId, string text, Action onClick, bool isDanger = false)
+            => YokiFrameUIComponents.CreateActionButtonWithIcon(iconId, text, onClick, isDanger);
 
         #endregion
 
@@ -258,7 +270,7 @@ namespace YokiFrame.EditorTools
         /// 创建空状态提示
         /// </summary>
         protected VisualElement CreateEmptyState(string message) 
-            => YokiFrameUIComponents.CreateEmptyState("📭", message);
+            => YokiFrameUIComponents.CreateEmptyState(KitIcons.INFO, message);
         
         /// <summary>
         /// 创建空状态提示（带图标和提示）

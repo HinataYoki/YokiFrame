@@ -29,10 +29,10 @@ namespace YokiFrame.EditorTools
         private VisualElement mEncryptionToggle;
         
         // 配置字段引用
-        private IntegerField mMaxQueueSizeField;
-        private IntegerField mMaxSameLogCountField;
-        private IntegerField mMaxRetentionDaysField;
-        private IntegerField mMaxFileMBField;
+        private TextField mMaxQueueSizeField;
+        private TextField mMaxSameLogCountField;
+        private TextField mMaxRetentionDaysField;
+        private TextField mMaxFileMBField;
 
         protected override void BuildUI(VisualElement root)
         {
@@ -66,14 +66,15 @@ namespace YokiFrame.EditorTools
             toolbar.AddToClassList("toolbar");
 
             // 主按钮 - 品牌色填充
-            var openDirBtn = YokiFrameUIComponents.CreateToolbarPrimaryButton("📂 打开日志目录", OpenLogFolder);
+            var openDirBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.FOLDER_DOCS, "打开日志目录", OpenLogFolder);
+            openDirBtn.AddToClassList("primary");
             toolbar.Add(openDirBtn);
 
             // 次要按钮
-            var decryptBtn = YokiFrameUIComponents.CreateToolbarButton("🔓 解密日志", DecryptLogFile);
+            var decryptBtn = YokiFrameUIComponents.CreateToolbarButton("解密日志", DecryptLogFile);
             toolbar.Add(decryptBtn);
 
-            var refreshBtn = YokiFrameUIComponents.CreateToolbarButton("🔄 刷新", RefreshStatus);
+            var refreshBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshStatus);
             toolbar.Add(refreshBtn);
 
             // 弹性空间
@@ -90,7 +91,7 @@ namespace YokiFrame.EditorTools
 
         private VisualElement CreateDirectoryCard()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("日志目录", "📁");
+            var (card, body) = YokiFrameUIComponents.CreateCard("日志目录", KitIcons.FOLDER_DOCS);
             card.style.marginBottom = 16;
 
             var (row, valueLabel) = YokiFrameUIComponents.CreateInfoRow("路径");
@@ -206,7 +207,7 @@ namespace YokiFrame.EditorTools
 
         private VisualElement CreateFileStatusCard()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("日志文件", "📄");
+            var (card, body) = YokiFrameUIComponents.CreateCard("日志文件", KitIcons.DOCUMENTATION);
             card.style.marginBottom = 16;
 
             var (editorRow, editorValue) = YokiFrameUIComponents.CreateInfoRow("editor.log");
@@ -232,10 +233,10 @@ namespace YokiFrame.EditorTools
             UpdateToggleState(mEncryptionToggle, KitLogger.EnableEncryption);
 
             // 更新配置字段
-            mMaxQueueSizeField?.SetValueWithoutNotify(KitLogger.MaxQueueSize);
-            mMaxSameLogCountField?.SetValueWithoutNotify(KitLogger.MaxSameLogCount);
-            mMaxRetentionDaysField?.SetValueWithoutNotify(KitLogger.MaxRetentionDays);
-            mMaxFileMBField?.SetValueWithoutNotify((int)(KitLogger.MaxFileBytes / 1024 / 1024));
+            mMaxQueueSizeField?.SetValueWithoutNotify(KitLogger.MaxQueueSize.ToString());
+            mMaxSameLogCountField?.SetValueWithoutNotify(KitLogger.MaxSameLogCount.ToString());
+            mMaxRetentionDaysField?.SetValueWithoutNotify(KitLogger.MaxRetentionDays.ToString());
+            mMaxFileMBField?.SetValueWithoutNotify(((int)(KitLogger.MaxFileBytes / 1024 / 1024)).ToString());
 
             // 检查日志文件状态
             string editorLog = Path.Combine(logDir, "editor.log");

@@ -60,14 +60,45 @@ namespace YokiFrame.EditorTools
                 mSelectedPageIndex = 0;
             
             EditorApplication.update += OnEditorUpdate;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
         
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorPrefs.SetInt("YokiFrameTools_SelectedPage", mSelectedPageIndex);
             
             mActivePage?.OnDeactivate();
+        }
+        
+        /// <summary>
+        /// PlayMode 状态变化时清理缓存并重建当前页面
+        /// </summary>
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            // 进入或退出 PlayMode 后重建当前页面
+            if (state == PlayModeStateChange.EnteredPlayMode || 
+                state == PlayModeStateChange.EnteredEditMode)
+            {
+                // 延迟执行，确保 Unity 状态已完全切换
+                EditorApplication.delayCall += () =>
+                {
+                    if (this == null || mContentContainer == null) return;
+                    
+                    // 清理页面元素缓存，强制重建
+                    mPageElements.Clear();
+                    
+                    // 重新选择当前页面
+                    if (mActivePage != null && mSelectedPageIndex >= 0 && mSelectedPageIndex < mPages.Count)
+                    {
+                        // 先停用再重新激活
+                        mActivePage.OnDeactivate();
+                        mActivePage = null;
+                        SelectPage(mSelectedPageIndex);
+                    }
+                };
+            }
         }
         
         private void CreateGUI()
@@ -192,7 +223,7 @@ namespace YokiFrame.EditorTools
             // 文档分组
             if (docPages.Count > 0)
             {
-                var docsGroup = CreateSidebarGroup("📖", "文档", docPages.Count, "docs");
+                var docsGroup = CreateSidebarGroup(KitIcons.FOLDER_DOCS, "文档", docPages.Count, "docs");
                 foreach (var (index, page) in docPages)
                 {
                     var item = CreateSidebarItem(page, index, "docs");
@@ -204,7 +235,7 @@ namespace YokiFrame.EditorTools
             // 工具分组
             if (toolPages.Count > 0)
             {
-                var toolsGroup = CreateSidebarGroup("🔧", "工具", toolPages.Count, "tools");
+                var toolsGroup = CreateSidebarGroup(KitIcons.FOLDER_TOOLS, "工具", toolPages.Count, "tools");
                 foreach (var (index, page) in toolPages)
                 {
                     var item = CreateSidebarItem(page, index, "tools");
@@ -244,8 +275,9 @@ namespace YokiFrame.EditorTools
             versionRow.style.alignItems = Align.Center;
             versionRow.style.marginBottom = 8;
             
-            var versionIcon = new Label("📦");
-            versionIcon.style.fontSize = 12;
+            var versionIcon = new Image { image = KitIcons.GetTexture(KitIcons.PACKAGE) };
+            versionIcon.style.width = 12;
+            versionIcon.style.height = 12;
             versionIcon.style.marginRight = 8;
             versionRow.Add(versionIcon);
             
@@ -285,8 +317,9 @@ namespace YokiFrame.EditorTools
             linkRow.style.transitionProperty = new List<StylePropertyName> { new("background-color") };
             linkRow.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
             
-            var linkIcon = new Label("🔗");
-            linkIcon.style.fontSize = 11;
+            var linkIcon = new Image { image = KitIcons.GetTexture(KitIcons.GITHUB) };
+            linkIcon.style.width = 11;
+            linkIcon.style.height = 11;
             linkIcon.style.marginRight = 8;
             linkRow.Add(linkIcon);
             
@@ -350,7 +383,7 @@ namespace YokiFrame.EditorTools
             return DEFAULT_VERSION;
         }
         
-        private VisualElement CreateSidebarGroup(string icon, string title, int count, string groupClass)
+        private VisualElement CreateSidebarGroup(string iconId, string title, int count, string groupClass)
         {
             var group = new VisualElement();
             group.AddToClassList("sidebar-group");
@@ -359,9 +392,9 @@ namespace YokiFrame.EditorTools
             var header = new VisualElement();
             header.AddToClassList("sidebar-group-header");
             
-            var iconLabel = new Label(icon);
-            iconLabel.AddToClassList("sidebar-group-icon");
-            header.Add(iconLabel);
+            var iconImage = new Image { image = KitIcons.GetTexture(iconId) };
+            iconImage.AddToClassList("sidebar-group-icon");
+            header.Add(iconImage);
             
             var titleLabel = new Label(title.ToUpper());
             titleLabel.AddToClassList("sidebar-group-title");
@@ -380,8 +413,9 @@ namespace YokiFrame.EditorTools
             var item = new VisualElement();
             item.AddToClassList("sidebar-item");
             
-            // 图标
-            var icon = new Label(page.PageIcon);
+            // 图标 - 使用生成的纹理图标
+            var iconTexture = KitIcons.GetTexture(page.PageIcon);
+            var icon = new Image { image = iconTexture };
             icon.AddToClassList("sidebar-item-icon");
             item.Add(icon);
             
@@ -390,9 +424,13 @@ namespace YokiFrame.EditorTools
             item.Add(label);
             
             // 弹出按钮
-            var popoutBtn = new Button(() => PopoutPage(page)) { text = "⧉" };
+            var popoutBtn = new Button(() => PopoutPage(page));
             popoutBtn.AddToClassList("sidebar-popout-btn");
             popoutBtn.tooltip = "在独立窗口中打开";
+            var popoutIcon = new Image { image = KitIcons.GetTexture(KitIcons.POPOUT) };
+            popoutIcon.style.width = 12;
+            popoutIcon.style.height = 12;
+            popoutBtn.Add(popoutIcon);
             item.Add(popoutBtn);
             
             // 点击选择页面

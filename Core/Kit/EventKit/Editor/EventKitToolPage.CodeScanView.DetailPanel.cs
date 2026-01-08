@@ -67,23 +67,37 @@ namespace YokiFrame
                 "U", flow.Unregisters.Count, new Color(0.5f, 0.7f, 1f));
             statsRow.Add(unregBadge);
 
-            // 展开提示
-            var expandHint = new Label("▼ 点击展开");
+            // 展开提示容器
+            var expandHintRow = new VisualElement();
+            expandHintRow.style.flexDirection = FlexDirection.Row;
+            expandHintRow.style.alignItems = Align.Center;
+            expandHintRow.style.marginTop = 4;
+            card.Add(expandHintRow);
+
+            var expandIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.CHEVRON_DOWN) };
+            expandIcon.style.width = 10;
+            expandIcon.style.height = 10;
+            expandIcon.style.marginRight = 4;
+            expandIcon.tintColor = new Color(0.4f, 0.4f, 0.4f);
+            expandHintRow.Add(expandIcon);
+
+            var expandHint = new Label("点击展开");
             expandHint.style.fontSize = 9;
             expandHint.style.color = new StyleColor(new Color(0.4f, 0.4f, 0.4f));
-            expandHint.style.marginTop = 4;
-            card.Add(expandHint);
+            expandHintRow.Add(expandHint);
 
             // 悬停效果
             card.RegisterCallback<MouseEnterEvent>(_ =>
             {
                 card.style.backgroundColor = new StyleColor(new Color(0.28f, 0.28f, 0.32f));
                 expandHint.style.color = new StyleColor(new Color(0.6f, 0.6f, 0.6f));
+                expandIcon.tintColor = new Color(0.6f, 0.6f, 0.6f);
             });
             card.RegisterCallback<MouseLeaveEvent>(_ =>
             {
                 card.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.25f));
                 expandHint.style.color = new StyleColor(new Color(0.4f, 0.4f, 0.4f));
+                expandIcon.tintColor = new Color(0.4f, 0.4f, 0.4f);
             });
 
             // 点击展开/折叠详情（方案 C）
@@ -92,7 +106,8 @@ namespace YokiFrame
                 evt.StopPropagation();
                 var isExpanded = detailPanel.style.display == DisplayStyle.Flex;
                 detailPanel.style.display = isExpanded ? DisplayStyle.None : DisplayStyle.Flex;
-                expandHint.text = isExpanded ? "▼ 点击展开" : "▲ 点击收起";
+                expandIcon.image = EditorTools.KitIcons.GetTexture(isExpanded ? EditorTools.KitIcons.CHEVRON_DOWN : EditorTools.KitIcons.EXPAND);
+                expandHint.text = isExpanded ? "点击展开" : "点击收起";
             });
 
             return card;
@@ -161,7 +176,7 @@ namespace YokiFrame
             if (flow.Receivers.Count > 0)
             {
                 var regColumn = CreateDetailColumn(
-                    $"📥 Register ({flow.Receivers.Count})",
+                    $"Register ({flow.Receivers.Count})",
                     new Color(0.5f, 1f, 0.6f),
                     flow.Receivers,
                     new Color(0.6f, 0.9f, 0.7f));
@@ -172,7 +187,7 @@ namespace YokiFrame
             if (flow.Unregisters.Count > 0)
             {
                 var unregColumn = CreateDetailColumn(
-                    $"🔓 UnRegister ({flow.Unregisters.Count})",
+                    $"UnRegister ({flow.Unregisters.Count})",
                     new Color(0.5f, 0.7f, 1f),
                     flow.Unregisters,
                     new Color(0.6f, 0.8f, 1f));
@@ -235,28 +250,65 @@ namespace YokiFrame
         /// </summary>
         private void BuildLeakWarning(VisualElement content, EventFlowData flow)
         {
-            Label warningLabel = null;
+            VisualElement warningRow = null;
+            string warningText = null;
+            Color warningColor = default;
+            bool withBackground = false;
             
             if (flow.Receivers.Count > flow.Unregisters.Count && flow.Unregisters.Count > 0)
             {
                 var diff = flow.Receivers.Count - flow.Unregisters.Count;
-                warningLabel = new Label($"⚠️ 可能存在 {diff} 处未注销的监听器");
-                ApplyWarningStyle(warningLabel, new Color(1f, 0.8f, 0.4f), true);
+                warningText = $"可能存在 {diff} 处未注销的监听器";
+                warningColor = new Color(1f, 0.8f, 0.4f);
+                withBackground = true;
             }
             else if (flow.Receivers.Count > 0 && flow.Unregisters.Count == 0)
             {
-                warningLabel = new Label("⚠️ 未找到任何 UnRegister 调用");
-                ApplyWarningStyle(warningLabel, new Color(1f, 0.7f, 0.4f), false);
+                warningText = "未找到任何 UnRegister 调用";
+                warningColor = new Color(1f, 0.7f, 0.4f);
+                withBackground = false;
             }
 
-            if (warningLabel != null)
+            if (warningText != null)
             {
                 // 居中容器
                 var warningContainer = new VisualElement();
                 warningContainer.style.flexDirection = FlexDirection.Row;
                 warningContainer.style.justifyContent = Justify.Center;
                 warningContainer.style.marginTop = 8;
-                warningContainer.Add(warningLabel);
+                
+                // 创建带图标的警告行
+                warningRow = new VisualElement();
+                warningRow.style.flexDirection = FlexDirection.Row;
+                warningRow.style.alignItems = Align.Center;
+                
+                // 警告图标
+                var warningIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.WARNING) };
+                warningIcon.style.width = 14;
+                warningIcon.style.height = 14;
+                warningIcon.style.marginRight = 4;
+                warningIcon.tintColor = warningColor;
+                warningRow.Add(warningIcon);
+                
+                // 警告文本
+                var warningLabel = new Label(warningText);
+                ApplyWarningStyle(warningLabel, warningColor, withBackground);
+                warningRow.Add(warningLabel);
+                
+                if (withBackground)
+                {
+                    warningRow.style.paddingLeft = 8;
+                    warningRow.style.paddingRight = 8;
+                    warningRow.style.paddingTop = 4;
+                    warningRow.style.paddingBottom = 4;
+                    warningRow.style.backgroundColor = new StyleColor(new Color(0.4f, 0.3f, 0.1f, 0.3f));
+                    warningRow.style.borderTopLeftRadius = 4;
+                    warningRow.style.borderTopRightRadius = 4;
+                    warningRow.style.borderBottomLeftRadius = 4;
+                    warningRow.style.borderBottomRightRadius = 4;
+                }
+                
+                warningContainer.Add(warningRow);
                 content.Add(warningContainer);
             }
         }
@@ -268,19 +320,7 @@ namespace YokiFrame
         {
             label.style.fontSize = 10;
             label.style.color = new StyleColor(color);
-            
-            if (withBackground)
-            {
-                label.style.paddingLeft = 8;
-                label.style.paddingRight = 8;
-                label.style.paddingTop = 4;
-                label.style.paddingBottom = 4;
-                label.style.backgroundColor = new StyleColor(new Color(0.4f, 0.3f, 0.1f, 0.3f));
-                label.style.borderTopLeftRadius = 4;
-                label.style.borderTopRightRadius = 4;
-                label.style.borderBottomLeftRadius = 4;
-                label.style.borderBottomRightRadius = 4;
-            }
+            // 背景样式已移至 warningRow 容器
         }
 
         #endregion

@@ -120,7 +120,11 @@ namespace YokiFrame
                 label.text = $"Container #{index}";
                 countLabel.text = $"[{container.Count}]";
             };
+#if UNITY_2022_1_OR_NEWER
             mContainerListView.selectionChanged += OnContainerSelected;
+#else
+            mContainerListView.onSelectionChange += OnContainerSelected;
+#endif
         }
 
         private void SubscribeBuffEvents()

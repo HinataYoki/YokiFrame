@@ -103,9 +103,10 @@ namespace YokiFrame
             container.style.flexGrow = 1;
             container.style.flexDirection = FlexDirection.Row;
 
-            // 左侧：动态泳道面板（70%）
+            // 左侧：动态泳道面板（约 66%）
             var swimlanePanel = CreateSwimlanePanel();
-            swimlanePanel.style.width = Length.Percent(70);
+            swimlanePanel.style.flexGrow = 2;
+            swimlanePanel.style.flexBasis = 0;
             swimlanePanel.style.minWidth = 400;
             container.Add(swimlanePanel);
 
@@ -115,10 +116,11 @@ namespace YokiFrame
             divider.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.25f));
             container.Add(divider);
 
-            // 右侧：详情面板（30%）
+            // 右侧：详情面板（约 33%，2:1 比例）
             mDetailPanel = CreateDetailPanel();
-            mDetailPanel.style.width = Length.Percent(30);
-            mDetailPanel.style.minWidth = 280;
+            mDetailPanel.style.flexGrow = 1;
+            mDetailPanel.style.flexBasis = 0;
+            mDetailPanel.style.minWidth = 300;
             container.Add(mDetailPanel);
 
             return container;

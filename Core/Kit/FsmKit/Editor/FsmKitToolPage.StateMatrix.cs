@@ -42,7 +42,13 @@ namespace YokiFrame
             header.style.marginBottom = YokiFrameUIComponents.Spacing.SM;
             section.Add(header);
 
-            var titleLabel = new Label("📊 状态矩阵");
+            var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.CHART) };
+            titleIcon.style.width = 14;
+            titleIcon.style.height = 14;
+            titleIcon.style.marginRight = 4;
+            header.Add(titleIcon);
+            
+            var titleLabel = new Label("状态矩阵");
             titleLabel.style.fontSize = 12;
             titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             titleLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary);
