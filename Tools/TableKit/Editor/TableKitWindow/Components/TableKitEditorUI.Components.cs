@@ -163,6 +163,7 @@ namespace YokiFrame.TableKit.Editor
             pathContainer.Add(field);
             textField = field;
 
+            // 浏览按钮
             var browseBtn = new Button(() =>
             {
                 var projectRoot = Path.GetDirectoryName(Application.dataPath);
@@ -189,6 +190,10 @@ namespace YokiFrame.TableKit.Editor
             ApplyBrowseButtonStyle(browseBtn);
             browseBtn.tooltip = "浏览文件夹";
             pathContainer.Add(browseBtn);
+
+            // 快速打开目录按钮
+            var openBtn = CreateOpenFolderButton(() => field.value);
+            pathContainer.Add(openBtn);
 
             row.Add(pathContainer);
             return row;
@@ -224,6 +229,7 @@ namespace YokiFrame.TableKit.Editor
             pathContainer.Add(field);
             textField = field;
 
+            // 浏览按钮
             var browseBtn = new Button(() =>
             {
                 var projectRoot = Path.GetDirectoryName(Application.dataPath);
@@ -240,6 +246,10 @@ namespace YokiFrame.TableKit.Editor
             ApplyBrowseButtonStyle(browseBtn);
             browseBtn.tooltip = "浏览文件";
             pathContainer.Add(browseBtn);
+
+            // 快速打开所在目录按钮
+            var openBtn = CreateOpenFolderButton(() => Path.GetDirectoryName(field.value));
+            pathContainer.Add(openBtn);
 
             row.Add(pathContainer);
             return row;
@@ -372,6 +382,37 @@ namespace YokiFrame.TableKit.Editor
             btn.style.backgroundColor = new StyleColor(Design.LayerElevated);
             btn.style.borderTopLeftRadius = btn.style.borderTopRightRadius = 4;
             btn.style.borderBottomLeftRadius = btn.style.borderBottomRightRadius = 4;
+        }
+
+        /// <summary>
+        /// 创建快速打开目录按钮
+        /// </summary>
+        /// <param name="getPath">获取路径的委托，支持动态获取当前输入框的值</param>
+        private Button CreateOpenFolderButton(Func<string> getPath)
+        {
+            var btn = new Button(() =>
+            {
+                var path = getPath?.Invoke();
+                if (string.IsNullOrEmpty(path)) return;
+
+                var projectRoot = Path.GetDirectoryName(Application.dataPath);
+                var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(projectRoot, path);
+
+                if (Directory.Exists(fullPath))
+                    EditorUtility.RevealInFinder(fullPath);
+                else
+                    EditorUtility.DisplayDialog("提示", $"目录不存在:\n{fullPath}", "确定");
+            }) { text = "↗" };
+
+            btn.style.width = 24;
+            btn.style.height = 20;
+            btn.style.marginLeft = 2;
+            btn.style.backgroundColor = new StyleColor(Design.LayerElevated);
+            btn.style.borderTopLeftRadius = btn.style.borderTopRightRadius = 4;
+            btn.style.borderBottomLeftRadius = btn.style.borderBottomRightRadius = 4;
+            btn.tooltip = "在资源管理器中打开";
+
+            return btn;
         }
 
         #endregion

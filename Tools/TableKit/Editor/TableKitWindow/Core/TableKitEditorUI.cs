@@ -99,7 +99,7 @@ namespace YokiFrame.TableKit.Editor
         private VisualElement mStatusBanner;
         private Label mStatusBannerLabel;
         private VisualElement mLogContainer;
-        private Label mLogContent;
+        private TextField mLogContent;
         private VisualElement mDataPreviewContainer;
         private VisualElement mTablesInfoContainer;
         private Button mGenerateBtn;
@@ -130,7 +130,7 @@ namespace YokiFrame.TableKit.Editor
 
         private static readonly string[] TARGET_OPTIONS = { "client", "server", "all" };
         private static readonly string[] CODE_TARGET_OPTIONS = { "cs-bin", "cs-simple-json", "cs-newtonsoft-json" };
-        private static readonly string[] DATA_TARGET_OPTIONS = { "bin", "json" };
+        private static readonly string[] DATA_TARGET_OPTIONS = { "bin", "json", "lua" };
 
         #endregion
 
@@ -186,6 +186,9 @@ namespace YokiFrame.TableKit.Editor
             mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
             mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.TableKit");
             mGenerateExternalTypeUtil = EditorPrefs.GetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, false);
+            
+            // 加载多目标输出配置
+            LoadExtraOutputTargets();
         }
 
         public void SavePrefs()
@@ -225,6 +228,11 @@ namespace YokiFrame.TableKit.Editor
             mUseAssemblyDefinition = false;
             mAssemblyName = "YokiFrame.TableKit";
             mGenerateExternalTypeUtil = false;
+            
+            // 清空多目标输出列表
+            mExtraOutputTargets.Clear();
+            SaveExtraOutputTargets();
+            RefreshExtraOutputList();
 
             // 更新 UI - 文本框
             mEditorDataPathField.value = mEditorDataPath;
@@ -247,7 +255,7 @@ namespace YokiFrame.TableKit.Editor
             SavePrefs();
             RefreshConfigStatus();
 
-            mLogContent.text = $"[{System.DateTime.Now:HH:mm:ss}] 已还原为默认设置";
+            mLogContent.value = $"[{System.DateTime.Now:HH:mm:ss}] 已还原为默认设置";
         }
 
         #endregion
