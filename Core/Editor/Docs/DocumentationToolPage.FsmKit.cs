@@ -14,6 +14,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.FSMKIT,
                 Category = "CORE KIT",
                 Description = "轻量级有限状态机，支持普通状态机和层级状态机。提供状态进入、更新、退出的完整生命周期管理，不依赖 MonoBehaviour。",
+                Keywords = new List<string> { "状态机", "FSM", "状态切换", "层级状态" },
                 Sections = new List<DocSection>
                 {
                     new()

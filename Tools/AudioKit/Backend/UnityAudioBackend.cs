@@ -73,14 +73,15 @@ namespace YokiFrame
             // 获取或加载音频剪辑
             if (!mClipCache.TryGet(path, out var clip))
             {
-                var handler = ResKit.LoadAsset<AudioClip>(path);
-                if (handler?.Asset == null)
+                var loader = AudioKit.GetLoaderPool().AllocateLoader();
+                clip = loader.Load(path);
+                if (clip == null)
                 {
                     KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
+                    loader.UnloadAndRecycle();
                     return null;
                 }
-                clip = handler.Asset as AudioClip;
-                mClipCache.Add(path, clip, handler);
+                mClipCache.Add(path, clip, loader);
             }
 
             return PlayInternal(path, clip, config);
@@ -110,25 +111,26 @@ namespace YokiFrame
                 return;
             }
 
-            // 使用 ResKit 异步加载
-            ResKit.LoadAssetAsync<AudioClip>(path, handler =>
+            // 使用加载池异步加载
+            var loader = AudioKit.GetLoaderPool().AllocateLoader();
+            loader.LoadAsync(path, loadedClip =>
             {
                 if (mIsDisposed)
                 {
-                    handler?.Release();
+                    loader.UnloadAndRecycle();
                     onComplete?.Invoke(null);
                     return;
                 }
 
-                if (handler?.Asset == null)
+                if (loadedClip == null)
                 {
                     KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
+                    loader.UnloadAndRecycle();
                     onComplete?.Invoke(null);
                     return;
                 }
 
-                var loadedClip = handler.Asset as AudioClip;
-                mClipCache.Add(path, loadedClip, handler);
+                mClipCache.Add(path, loadedClip, loader);
                 var audioHandle = PlayInternal(path, loadedClip, config);
                 onComplete?.Invoke(audioHandle);
             });
@@ -210,14 +212,16 @@ namespace YokiFrame
             if (string.IsNullOrEmpty(path)) return;
             if (mClipCache.Contains(path)) return;
 
-            var handler = ResKit.LoadAsset<AudioClip>(path);
-            if (handler?.Asset != null)
+            var loader = AudioKit.GetLoaderPool().AllocateLoader();
+            var clip = loader.Load(path);
+            if (clip != null)
             {
-                mClipCache.Add(path, handler.Asset as AudioClip, handler);
+                mClipCache.Add(path, clip, loader);
             }
             else
             {
                 KitLogger.Error($"[AudioKit] 预加载失败: {path}");
+                loader.UnloadAndRecycle();
             }
         }
 
@@ -241,15 +245,20 @@ namespace YokiFrame
                 return;
             }
 
-            ResKit.LoadAssetAsync<AudioClip>(path, handler =>
+            var loader = AudioKit.GetLoaderPool().AllocateLoader();
+            loader.LoadAsync(path, clip =>
             {
-                if (!mIsDisposed && handler?.Asset != null)
+                if (!mIsDisposed && clip != null)
                 {
-                    mClipCache.Add(path, handler.Asset as AudioClip, handler);
+                    mClipCache.Add(path, clip, loader);
                 }
-                else if (handler?.Asset == null)
+                else
                 {
-                    KitLogger.Error($"[AudioKit] 预加载失败: {path}");
+                    if (clip == null)
+                    {
+                        KitLogger.Error($"[AudioKit] 预加载失败: {path}");
+                    }
+                    loader.UnloadAndRecycle();
                 }
                 onComplete?.Invoke();
             });
@@ -261,7 +270,7 @@ namespace YokiFrame
 
             if (mClipCache.TryGetEntry(path, out var entry))
             {
-                entry.ResHandler?.Release();
+                entry.AudioLoader?.UnloadAndRecycle();
                 mClipCache.Remove(path);
             }
         }
@@ -518,23 +527,32 @@ namespace YokiFrame
                 return PlayInternal(path, clip, config);
             }
 
-            // 使用 ResKit UniTask 异步加载
-            var handler = await ResKit.LoadAssetUniTaskAsync<AudioClip>(path, cancellationToken);
+            // 使用加载池 UniTask 异步加载
+            var loader = AudioKit.GetLoaderPool().AllocateLoader();
+            if (loader is IAudioLoaderUniTask uniTaskLoader)
+            {
+                clip = await uniTaskLoader.LoadUniTaskAsync(path, cancellationToken);
+            }
+            else
+            {
+                // 回退到同步加载
+                clip = loader.Load(path);
+            }
 
             if (mIsDisposed || cancellationToken.IsCancellationRequested)
             {
-                handler?.Release();
+                loader.UnloadAndRecycle();
                 return null;
             }
 
-            if (handler?.Asset == null)
+            if (clip == null)
             {
                 KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
+                loader.UnloadAndRecycle();
                 return null;
             }
 
-            clip = handler.Asset as AudioClip;
-            mClipCache.Add(path, clip, handler);
+            mClipCache.Add(path, clip, loader);
             return PlayInternal(path, clip, config);
         }
 
@@ -544,21 +562,31 @@ namespace YokiFrame
             if (string.IsNullOrEmpty(path)) return;
             if (mClipCache.Contains(path)) return;
 
-            var handler = await ResKit.LoadAssetUniTaskAsync<AudioClip>(path, cancellationToken);
+            var loader = AudioKit.GetLoaderPool().AllocateLoader();
+            AudioClip clip;
+            if (loader is IAudioLoaderUniTask uniTaskLoader)
+            {
+                clip = await uniTaskLoader.LoadUniTaskAsync(path, cancellationToken);
+            }
+            else
+            {
+                clip = loader.Load(path);
+            }
 
             if (mIsDisposed || cancellationToken.IsCancellationRequested)
             {
-                handler?.Release();
+                loader.UnloadAndRecycle();
                 return;
             }
 
-            if (handler?.Asset != null)
+            if (clip != null)
             {
-                mClipCache.Add(path, handler.Asset as AudioClip, handler);
+                mClipCache.Add(path, clip, loader);
             }
             else
             {
                 KitLogger.Error($"[AudioKit] 预加载失败: {path}");
+                loader.UnloadAndRecycle();
             }
         }
 #endif

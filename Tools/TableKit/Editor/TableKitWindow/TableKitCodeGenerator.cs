@@ -9,6 +9,7 @@ namespace YokiFrame.TableKit.Editor
     /// <summary>
     /// TableKit 代码生成器
     /// 在 Luban 生成代码后，生成配套的 TableKit 运行时代码
+    /// 生成的代码完全独立，不依赖任何外部配置文件
     /// </summary>
     public static class TableKitCodeGenerator
     {
@@ -17,11 +18,9 @@ namespace YokiFrame.TableKit.Editor
         /// </summary>
         private static bool DetectYokiFrame()
         {
-            // 方式1：检测是否作为 Package 安装
             var packagePath = "Packages/com.hinatayoki.yokiframe";
             if (Directory.Exists(packagePath)) return true;
             
-            // 方式2：检测 YokiFrame.asmdef 是否存在于项目中
             var guids = AssetDatabase.FindAssets("t:AssemblyDefinitionAsset YokiFrame");
             foreach (var guid in guids)
             {
@@ -38,12 +37,21 @@ namespace YokiFrame.TableKit.Editor
         /// <summary>
         /// 生成所有 TableKit 运行时代码
         /// </summary>
+        /// <param name="outputDir">输出目录</param>
+        /// <param name="useAssemblyDefinition">是否生成 asmdef</param>
+        /// <param name="generateExternalTypeUtil">是否生成外部类型工具</param>
+        /// <param name="assemblyName">程序集名称</param>
+        /// <param name="tablesNamespace">Tables 命名空间</param>
+        /// <param name="runtimePathPattern">运行时路径模式，将嵌入生成代码</param>
+        /// <param name="editorDataPath">编辑器数据路径，将嵌入生成代码</param>
         public static void Generate(
             string outputDir,
             bool useAssemblyDefinition,
             bool generateExternalTypeUtil,
             string assemblyName = "YokiFrame.TableKit",
-            string tablesNamespace = "cfg")
+            string tablesNamespace = "cfg",
+            string runtimePathPattern = "{0}",
+            string editorDataPath = "Assets/Art/Table/")
         {
             if (string.IsNullOrEmpty(outputDir))
             {
@@ -56,8 +64,12 @@ namespace YokiFrame.TableKit.Editor
                 Directory.CreateDirectory(outputDir);
             }
 
+            // 使用默认值
+            if (string.IsNullOrEmpty(runtimePathPattern)) runtimePathPattern = "{0}";
+            if (string.IsNullOrEmpty(editorDataPath)) editorDataPath = "Assets/Art/Table/";
+
             var hasYokiFrame = DetectYokiFrame();
-            GenerateTableKit(outputDir, tablesNamespace, hasYokiFrame);
+            GenerateTableKit(outputDir, tablesNamespace, hasYokiFrame, runtimePathPattern, editorDataPath);
             
             if (generateExternalTypeUtil)
             {
@@ -120,9 +132,12 @@ namespace YokiFrame.TableKit.Editor
             }
         }
 
-
-        private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame)
+        private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame, string runtimePathPattern, string editorDataPath)
         {
+            // 转义路径中的特殊字符
+            var escapedRuntimePath = runtimePathPattern.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var escapedEditorPath = editorDataPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            
             var sb = new StringBuilder();
             sb.AppendLine("using System;");
             sb.AppendLine("using Luban;");
@@ -131,7 +146,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("/// <summary>");
             sb.AppendLine("/// 配置表系统入口类");
-            sb.AppendLine("/// 由 TableKit 工具自动生成");
+            sb.AppendLine("/// 由 TableKit 工具自动生成，路径配置已嵌入代码");
             sb.AppendLine("/// </summary>");
             sb.AppendLine("public static class TableKit");
             sb.AppendLine("{");
@@ -143,6 +158,11 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    /// 是否已初始化");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static bool Initialized { get; private set; }");
+            sb.AppendLine();
+            sb.AppendLine("    /// <summary>");
+            sb.AppendLine("    /// 运行时路径模式（生成时嵌入）");
+            sb.AppendLine("    /// </summary>");
+            sb.AppendLine($"    public static string RuntimePathPattern {{ get; set; }} = \"{escapedRuntimePath}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// 获取配置表实例");
@@ -217,21 +237,14 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("    #region 默认加载器");
             sb.AppendLine();
-            sb.AppendLine("    private static string sRuntimePathPattern = \"{0}\";");
-            sb.AppendLine();
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置运行时路径模式");
-            sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static void SetRuntimePathPattern(string pattern) => sRuntimePathPattern = pattern ?? \"{0}\";");
-            sb.AppendLine();
 
-            // 根据 YokiFrame 检测结果生成不同的默认加载器（生成时确定，无需条件编译）
+            // 根据 YokiFrame 检测结果生成不同的默认加载器
             if (hasYokiFrame)
             {
                 sb.AppendLine("    // 默认加载器：使用 YokiFrame.ResKit");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
@@ -244,7 +257,7 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine();
                 sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
                 sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
@@ -260,14 +273,14 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("    // 默认加载器：使用 Resources");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
                 sb.AppendLine("        return asset != null ? asset.bytes : null;");
                 sb.AppendLine("    }");
                 sb.AppendLine();
                 sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
                 sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(sRuntimePathPattern, fileName);");
+                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
                 sb.AppendLine("        return asset != null ? asset.text : null;");
                 sb.AppendLine("    }");
@@ -308,12 +321,11 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("#if UNITY_EDITOR");
             sb.AppendLine($"    private static {tablesNamespace}.Tables sTablesEditor;");
-            sb.AppendLine("    private static string sEditorDataPath = \"Assets/Art/Table/\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置编辑器数据路径");
+            sb.AppendLine("    /// 编辑器数据路径（生成时嵌入）");
             sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static void SetEditorDataPath(string path) => sEditorDataPath = path;");
+            sb.AppendLine($"    public static string EditorDataPath {{ get; set; }} = \"{escapedEditorPath}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// 获取编辑器模式下的配置表实例");
@@ -343,7 +355,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("    private static JSONNode LoadJsonEditor(string fileName)");
             sb.AppendLine("    {");
-            sb.AppendLine("        var path = $\"{sEditorDataPath}{fileName}.json\";");
+            sb.AppendLine("        var path = $\"{EditorDataPath}{fileName}.json\";");
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
@@ -355,7 +367,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
             sb.AppendLine("    private static ByteBuf LoadBinaryEditor(string fileName)");
             sb.AppendLine("    {");
-            sb.AppendLine("        var path = $\"{sEditorDataPath}{fileName}.bytes\";");
+            sb.AppendLine("        var path = $\"{EditorDataPath}{fileName}.bytes\";");
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
@@ -374,7 +386,6 @@ namespace YokiFrame.TableKit.Editor
 
             File.WriteAllText(Path.Combine(outputDir, "TableKit.cs"), sb.ToString(), Encoding.UTF8);
         }
-
 
         private static void GenerateExternalTypeUtil(string outputDir)
         {
@@ -401,7 +412,6 @@ namespace cfg
 
         private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame)
         {
-            // 根据是否有 YokiFrame 决定引用
             var references = hasYokiFrame
                 ? "\"Luban.Runtime\",\n        \"YokiFrame\""
                 : "\"Luban.Runtime\"";

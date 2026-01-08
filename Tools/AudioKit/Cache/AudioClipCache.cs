@@ -30,7 +30,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 尝试获取缓存条目（包含 ResHandler）
+        /// 尝试获取缓存条目（包含 AudioLoader）
         /// </summary>
         public bool TryGetEntry(string path, out AudioClipEntry entry)
         {
@@ -40,10 +40,10 @@ namespace YokiFrame
         /// <summary>
         /// 添加音频剪辑到缓存
         /// </summary>
-        public void Add(string path, AudioClip clip, ResHandler resHandler = null)
+        public void Add(string path, AudioClip clip, IAudioLoader audioLoader = null)
         {
             if (string.IsNullOrEmpty(path) || clip == null) return;
-            mCache[path] = new AudioClipEntry(clip, resHandler);
+            mCache[path] = new AudioClipEntry(clip, audioLoader);
         }
 
         /// <summary>
@@ -63,13 +63,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 清空缓存（释放所有 ResHandler）
+        /// 清空缓存（释放所有 AudioLoader）
         /// </summary>
         public void Clear()
         {
             foreach (var entry in mCache.Values)
             {
-                entry.ResHandler?.Release();
+                entry.AudioLoader?.UnloadAndRecycle();
             }
             mCache.Clear();
         }

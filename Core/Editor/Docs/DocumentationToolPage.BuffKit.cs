@@ -13,6 +13,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.BUFFKIT,
                 Category = "TOOLS",
                 Description = "通用 Buff 系统，提供完整的 Buff 生命周期管理、堆叠模式、属性修改、免疫系统和序列化支持。",
+                Keywords = new List<string> { "Buff", "增益减益", "属性修改", "堆叠" },
                 Sections = new List<DocSection>
                 {
                     CreateBuffKitQuickStartSection(),

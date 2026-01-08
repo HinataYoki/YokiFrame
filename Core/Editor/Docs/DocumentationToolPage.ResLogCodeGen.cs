@@ -14,6 +14,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.RESKIT,
                 Category = "CORE KIT",
                 Description = "资源管理工具，提供同步/异步加载、引用计数、资源缓存等功能。支持 UniTask 异步和自定义加载器扩展。",
+                Keywords = new List<string> { "资源加载", "引用计数", "异步", "缓存" },
                 Sections = new List<DocSection>
                 {
                     new()
@@ -107,6 +108,122 @@ var pool = ResKit.GetLoaderPool();
 
 // 清理所有缓存
 ResKit.ClearAll();"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "原始文件加载",
+                        Description = "加载非 Unity 资源的原始文件（如 JSON、XML、二进制数据等）。默认使用 Resources/TextAsset 实现，支持 YooAsset 扩展。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "同步加载原始文件",
+                                Code = @"// 加载文本文件（Resources 方式需放在 Resources 文件夹下）
+string jsonText = ResKit.LoadRawFileText(""Config/settings"");
+string xmlText = ResKit.LoadRawFileText(""Data/items"");
+
+// 加载二进制数据
+byte[] data = ResKit.LoadRawFileData(""Binary/model"");
+
+// 获取原始文件路径（YooAsset 支持，Resources 返回 null）
+string filePath = ResKit.GetRawFilePath(""Config/settings"");
+if (filePath != null)
+{
+    // 可以直接使用文件路径进行 IO 操作
+    using var stream = File.OpenRead(filePath);
+}",
+                                Explanation = "Resources 方式要求文件以 .txt/.bytes 等扩展名存储在 Resources 文件夹下。"
+                            },
+                            new()
+                            {
+                                Title = "异步加载原始文件",
+                                Code = @"// 回调方式
+ResKit.LoadRawFileTextAsync(""Config/settings"", text =>
+{
+    if (text != null)
+    {
+        var config = JsonUtility.FromJson<GameConfig>(text);
+    }
+});
+
+ResKit.LoadRawFileDataAsync(""Binary/model"", data =>
+{
+    if (data != null)
+    {
+        ProcessBinaryData(data);
+    }
+});
+
+#if YOKIFRAME_UNITASK_SUPPORT
+// UniTask 方式（推荐）
+var jsonText = await ResKit.LoadRawFileTextUniTaskAsync(""Config/settings"");
+var config = JsonUtility.FromJson<GameConfig>(jsonText);
+
+// 支持取消
+var cts = new CancellationTokenSource();
+var data = await ResKit.LoadRawFileDataUniTaskAsync(""Binary/model"", cts.Token);
+#endif"
+                            },
+                            new()
+                            {
+                                Title = "自定义原始文件加载池",
+                                Code = @"// 切换到自定义原始文件加载池
+ResKit.SetRawFileLoaderPool(new CustomRawFileLoaderPool());
+
+// 获取当前原始文件加载池
+var pool = ResKit.GetRawFileLoaderPool();
+
+#if YOKIFRAME_YOOASSET_SUPPORT
+// 使用 YooAsset 原始文件加载池
+var package = YooAssets.GetPackage(""DefaultPackage"");
+ResKit.SetRawFileLoaderPool(new YooAssetRawFileLoaderUniTaskPool(package));
+
+// YooAsset 方式加载原始文件
+var jsonText = ResKit.LoadRawFileText(""Assets/GameRes/Config/settings.json"");
+var filePath = ResKit.GetRawFilePath(""Assets/GameRes/Config/settings.json"");
+#endif",
+                                Explanation = "YooAsset 的原始文件加载支持获取实际文件路径，适合需要直接文件访问的场景。"
+                            }
+                        }
+                    },
+                    new()
+                    {
+                        Title = "原始文件加载器接口",
+                        Description = "实现 IRawFileLoader 和 IRawFileLoaderPool 接口可自定义原始文件加载方式。",
+                        CodeExamples = new List<CodeExample>
+                        {
+                            new()
+                            {
+                                Title = "接口定义",
+                                Code = @"// 原始文件加载器接口
+public interface IRawFileLoader
+{
+    string LoadRawFileText(string path);
+    byte[] LoadRawFileData(string path);
+    void LoadRawFileTextAsync(string path, Action<string> onComplete);
+    void LoadRawFileDataAsync(string path, Action<byte[]> onComplete);
+    string GetRawFilePath(string path);
+    void UnloadAndRecycle();
+}
+
+// 原始文件加载池接口
+public interface IRawFileLoaderPool
+{
+    IRawFileLoader Allocate();
+    void Recycle(IRawFileLoader loader);
+}
+
+#if YOKIFRAME_UNITASK_SUPPORT
+// UniTask 扩展接口
+public interface IRawFileLoaderUniTask : IRawFileLoader
+{
+    UniTask<string> LoadRawFileTextUniTaskAsync(string path, CancellationToken ct = default);
+    UniTask<byte[]> LoadRawFileDataUniTaskAsync(string path, CancellationToken ct = default);
+}
+#endif",
+                                Explanation = "通过实现这些接口，可以支持 Addressables、自定义文件系统等加载方式。"
                             }
                         }
                     },
@@ -511,6 +628,7 @@ public class GameResourceManager
                 Icon = KitIcons.KITLOGGER,
                 Category = "CORE KIT",
                 Description = "高性能日志系统，支持日志级别控制、文件写入、加密存储、IMGUI 运行时显示。后台线程异步写入，不阻塞主线程。",
+                Keywords = new List<string> { "日志", "调试", "文件写入", "异步" },
                 Sections = new List<DocSection>
                 {
                     new()
@@ -701,6 +819,7 @@ KitLogger.MaxFileBytes = 50 * 1024 * 1024; // 单文件最大 50MB"
                 Icon = KitIcons.CODEGEN,
                 Category = "CORE KIT",
                 Description = "代码生成工具，提供结构化的代码生成 API。支持命名空间、类、方法等代码结构的生成。UIKit 的代码生成基于此实现。",
+                Keywords = new List<string> { "代码生成", "自动化", "模板" },
                 Sections = new List<DocSection>
                 {
                     new()

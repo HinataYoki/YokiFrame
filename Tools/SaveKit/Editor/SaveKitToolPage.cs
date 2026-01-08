@@ -10,13 +10,20 @@ using YokiFrame.EditorTools;
 namespace YokiFrame
 {
     /// <summary>
-    /// SaveKit 工具页面 - 存档管理器
+    /// SaveKit 工具页面 - 存档管理器（响应式）
+    /// 使用 FileSystemWatcher 监控存档目录变化
     /// </summary>
     public class SaveKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "SaveKit";
         public override string PageIcon => KitIcons.SAVEKIT;
         public override int Priority => 50;
+
+        #region 常量
+
+        private const float FILE_WATCH_DEBOUNCE = 0.5f;
+
+        #endregion
 
         #region 私有字段
 
@@ -38,6 +45,10 @@ namespace YokiFrame
         private Label mDetailCreatedTime;
         private Label mDetailLastSavedTime;
         private Label mDetailFileSize;
+
+        // 文件监控
+        private FileSystemWatcher mFileWatcher;
+        private bool mNeedsRefresh;
 
         #endregion
 
@@ -87,7 +98,116 @@ namespace YokiFrame
 
             // 初始加载
             RefreshSlots();
+
+            // 启动文件监控
+            SetupFileWatcher();
         }
+
+        public override void OnActivate()
+        {
+            base.OnActivate();
+            
+            // 重新启动文件监控
+            SetupFileWatcher();
+        }
+
+        public override void OnDeactivate()
+        {
+            base.OnDeactivate();
+            
+            // 停止文件监控
+            DisposeFileWatcher();
+        }
+
+        public override void OnUpdate()
+        {
+            // 检查是否需要刷新（从文件监控线程触发）
+            if (mNeedsRefresh)
+            {
+                mNeedsRefresh = false;
+                
+                // 使用简单的时间检查实现防抖
+                var now = EditorApplication.timeSinceStartup;
+                if (now - mLastRefreshTime > FILE_WATCH_DEBOUNCE)
+                {
+                    mLastRefreshTime = now;
+                    RefreshSlots();
+                }
+            }
+        }
+
+        #region 文件监控
+
+        private double mLastRefreshTime;
+
+        private void SetupFileWatcher()
+        {
+            DisposeFileWatcher();
+
+            mSavePath = SaveKit.GetSavePath();
+            
+            // 确保目录存在
+            if (!Directory.Exists(mSavePath))
+            {
+                try
+                {
+                    Directory.CreateDirectory(mSavePath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[SaveKit] 无法创建存档目录: {ex.Message}");
+                    return;
+                }
+            }
+
+            try
+            {
+                mFileWatcher = new FileSystemWatcher(mSavePath)
+                {
+                    NotifyFilter = NotifyFilters.FileName 
+                                 | NotifyFilters.LastWrite 
+                                 | NotifyFilters.Size,
+                    Filter = "save_*.*",
+                    EnableRaisingEvents = true
+                };
+
+                mFileWatcher.Created += OnFileChanged;
+                mFileWatcher.Deleted += OnFileChanged;
+                mFileWatcher.Changed += OnFileChanged;
+                mFileWatcher.Renamed += OnFileRenamed;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SaveKit] 无法启动文件监控: {ex.Message}");
+            }
+        }
+
+        private void DisposeFileWatcher()
+        {
+            if (mFileWatcher != null)
+            {
+                mFileWatcher.EnableRaisingEvents = false;
+                mFileWatcher.Created -= OnFileChanged;
+                mFileWatcher.Deleted -= OnFileChanged;
+                mFileWatcher.Changed -= OnFileChanged;
+                mFileWatcher.Renamed -= OnFileRenamed;
+                mFileWatcher.Dispose();
+                mFileWatcher = null;
+            }
+        }
+
+        private void OnFileChanged(object sender, FileSystemEventArgs e)
+        {
+            // 标记需要刷新（在主线程处理）
+            mNeedsRefresh = true;
+        }
+
+        private void OnFileRenamed(object sender, RenamedEventArgs e)
+        {
+            mNeedsRefresh = true;
+        }
+
+        #endregion
 
         #region UI 构建
 

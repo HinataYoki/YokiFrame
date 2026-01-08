@@ -14,6 +14,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.ARCHITECTURE,
                 Category = "CORE",
                 Description = "YokiFrame 的核心架构系统，提供服务注册、依赖注入和模块化管理。",
+                Keywords = new List<string> { "DI", "IoC", "服务注册", "模块化" },
                 Sections = new List<DocSection>
                 {
                     new()

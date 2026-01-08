@@ -126,9 +126,11 @@ namespace YokiFrame.EditorTools
             header.Add(title);
             sidebar.Add(header);
             
-            // 页面列表（带分组）
-            var list = new ScrollView();
+            // 页面列表（带分组）- 隐藏水平滚动条
+            var list = new ScrollView(ScrollViewMode.Vertical);
             list.AddToClassList("sidebar-list");
+            list.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            list.verticalScrollerVisibility = ScrollerVisibility.Auto;
             
             // 创建列表内容容器（用于放置高亮指示器）
             mSidebarListContainer = new VisualElement();
@@ -212,7 +214,140 @@ namespace YokiFrame.EditorTools
             }
             
             sidebar.Add(list);
+            
+            // 底部版本信息区域
+            sidebar.Add(CreateVersionInfoPanel());
+            
             return sidebar;
+        }
+        
+        /// <summary>
+        /// 创建版本信息面板
+        /// </summary>
+        private VisualElement CreateVersionInfoPanel()
+        {
+            var versionPanel = new VisualElement();
+            versionPanel.style.paddingLeft = 16;
+            versionPanel.style.paddingRight = 16;
+            versionPanel.style.paddingTop = 12;
+            versionPanel.style.paddingBottom = 16;
+            versionPanel.style.borderTopWidth = 1;
+            versionPanel.style.borderTopColor = new StyleColor(new Color(1f, 1f, 1f, 0.06f));
+            versionPanel.style.backgroundColor = new StyleColor(new Color(0.08f, 0.08f, 0.09f));
+            
+            // 读取 package.json 获取版本
+            string version = GetPackageVersion();
+            
+            // 版本行
+            var versionRow = new VisualElement();
+            versionRow.style.flexDirection = FlexDirection.Row;
+            versionRow.style.alignItems = Align.Center;
+            versionRow.style.marginBottom = 8;
+            
+            var versionIcon = new Label("📦");
+            versionIcon.style.fontSize = 12;
+            versionIcon.style.marginRight = 8;
+            versionRow.Add(versionIcon);
+            
+            var versionLabel = new Label("YokiFrame");
+            versionLabel.style.fontSize = 12;
+            versionLabel.style.color = new StyleColor(new Color(0.75f, 0.75f, 0.78f));
+            versionLabel.style.flexGrow = 1;
+            versionRow.Add(versionLabel);
+            
+            var versionBadge = new Label($"v{version}");
+            versionBadge.style.fontSize = 10;
+            versionBadge.style.color = new StyleColor(new Color(0.34f, 0.61f, 0.84f));
+            versionBadge.style.backgroundColor = new StyleColor(new Color(0.2f, 0.3f, 0.45f, 0.35f));
+            versionBadge.style.paddingLeft = 6;
+            versionBadge.style.paddingRight = 6;
+            versionBadge.style.paddingTop = 2;
+            versionBadge.style.paddingBottom = 2;
+            versionBadge.style.borderTopLeftRadius = 4;
+            versionBadge.style.borderTopRightRadius = 4;
+            versionBadge.style.borderBottomLeftRadius = 4;
+            versionBadge.style.borderBottomRightRadius = 4;
+            versionRow.Add(versionBadge);
+            
+            versionPanel.Add(versionRow);
+            
+            // GitHub 链接
+            var linkRow = new VisualElement();
+            linkRow.style.flexDirection = FlexDirection.Row;
+            linkRow.style.alignItems = Align.Center;
+            linkRow.style.paddingTop = 6;
+            linkRow.style.paddingBottom = 6;
+            linkRow.style.paddingLeft = 4;
+            linkRow.style.borderTopLeftRadius = 4;
+            linkRow.style.borderTopRightRadius = 4;
+            linkRow.style.borderBottomLeftRadius = 4;
+            linkRow.style.borderBottomRightRadius = 4;
+            linkRow.style.transitionProperty = new List<StylePropertyName> { new("background-color") };
+            linkRow.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
+            
+            var linkIcon = new Label("🔗");
+            linkIcon.style.fontSize = 11;
+            linkIcon.style.marginRight = 8;
+            linkRow.Add(linkIcon);
+            
+            var linkLabel = new Label("GitHub");
+            linkLabel.style.fontSize = 11;
+            linkLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.55f));
+            linkLabel.style.transitionProperty = new List<StylePropertyName> { new("color") };
+            linkLabel.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
+            linkRow.Add(linkLabel);
+            
+            linkRow.RegisterCallback<MouseEnterEvent>(evt =>
+            {
+                linkRow.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.2f));
+                linkLabel.style.color = new StyleColor(new Color(0.34f, 0.61f, 0.84f));
+            });
+            linkRow.RegisterCallback<MouseLeaveEvent>(evt =>
+            {
+                linkRow.style.backgroundColor = new StyleColor(Color.clear);
+                linkLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.55f));
+            });
+            linkRow.RegisterCallback<ClickEvent>(evt =>
+            {
+                Application.OpenURL("https://github.com/HinataYoki/YokiFrame");
+            });
+            
+            versionPanel.Add(linkRow);
+            
+            return versionPanel;
+        }
+        
+        /// <summary>
+        /// 从 package.json 读取版本号
+        /// </summary>
+        private string GetPackageVersion()
+        {
+            const string DEFAULT_VERSION = "1.0.0";
+            string packagePath = "Assets/YokiFrame/package.json";
+            
+            if (!System.IO.File.Exists(packagePath)) return DEFAULT_VERSION;
+            
+            try
+            {
+                string json = System.IO.File.ReadAllText(packagePath);
+                int versionIndex = json.IndexOf("\"version\"");
+                if (versionIndex < 0) return DEFAULT_VERSION;
+                
+                int colonIndex = json.IndexOf(':', versionIndex);
+                int startQuote = json.IndexOf('"', colonIndex);
+                int endQuote = json.IndexOf('"', startQuote + 1);
+                
+                if (startQuote >= 0 && endQuote > startQuote)
+                {
+                    return json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                }
+            }
+            catch
+            {
+                // 忽略解析错误
+            }
+            
+            return DEFAULT_VERSION;
         }
         
         private VisualElement CreateSidebarGroup(string icon, string title, int count, string groupClass)
@@ -300,10 +435,8 @@ namespace YokiFrame.EditorTools
                 newItem.AddToClassList("selected");
                 
                 // 判断是文档还是工具页面，设置对应的高亮颜色
-                bool isDocPage = page is DocumentationToolPage;
-                var highlightColor = isDocPage 
-                    ? new Color(0.39f, 0.63f, 1f, 0.2f)  // 文档蓝色
-                    : new Color(1f, 0.71f, 0.39f, 0.2f); // 工具橙色
+                // 统一使用品牌蓝色作为高亮色
+                var highlightColor = new Color(0.13f, 0.59f, 0.95f, 0.12f);  // 品牌蓝 #2196F3
                 mSidebarHighlight.style.backgroundColor = new StyleColor(highlightColor);
                 
                 // 延迟一帧获取正确的布局位置

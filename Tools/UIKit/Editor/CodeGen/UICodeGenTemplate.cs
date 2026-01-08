@@ -35,9 +35,12 @@ namespace YokiFrame
         /// <param name="name">面板名称</param>
         /// <param name="scriptFilePath">代码路径</param>
         /// <param name="scriptNamespace">命名空间</param>
-        public static void WritePanel(string name, string scriptFilePath, string scriptNamespace)
+        /// <param name="options">代码生成选项</param>
+        public static void WritePanel(string name, string scriptFilePath, string scriptNamespace, PanelCodeGenOptions options = null)
         {
             if (File.Exists(scriptFilePath)) return;
+
+            options ??= new PanelCodeGenOptions();
 
             var writer = File.CreateText(scriptFilePath);
             var codeWriter = new FileCodeWriteKit(writer);
@@ -53,25 +56,122 @@ namespace YokiFrame
                     .Class(DataName, nameof(IUIData), false, false, classScope => { })
                     .Class(name, nameof(UIPanel), true, false, classScope =>
                     {
+                        // OnInit
                         classScope
                         .CustomScope($"protected override void OnInit({nameof(IUIData)} uiData = null)", false, function =>
                         {
                             function
                             .Custom($"mData = uiData as {DataName} ?? new {DataName}();")
-                            .Custom("// please add init code here");
+                            .Custom("// 在此添加初始化代码");
                         })
-                        .EmptyLine()
+                        .EmptyLine();
+
+                        // OnOpen
+                        classScope
                         .CustomScope($"protected override void OnOpen({nameof(IUIData)} uiData = null)", false, function =>
                         {
                             function
                             .Custom($"mData = uiData as {DataName} ?? mData;");
                         })
-                        .EmptyLine()
+                        .EmptyLine();
+
+                        // OnShow
+                        classScope
                         .CustomScope("protected override void OnShow()", false, function => { })
-                        .EmptyLine()
+                        .EmptyLine();
+
+                        // OnHide
+                        classScope
                         .CustomScope("protected override void OnHide()", false, function => { })
-                        .EmptyLine()
+                        .EmptyLine();
+
+                        // OnClose
+                        classScope
                         .CustomScope("protected override void OnClose()", false, function => { });
+
+                        // 生成新的生命周期钩子
+                        if (options.GenerateLifecycleHooks)
+                        {
+                            classScope.EmptyLine();
+                            classScope.Custom("#region 生命周期钩子");
+                            classScope.EmptyLine();
+
+                            // OnWillShow
+                            classScope
+                            .CustomScope("protected override void OnWillShow()", false, function =>
+                            {
+                                function.Custom("// 面板即将显示时调用");
+                            })
+                            .EmptyLine();
+
+                            // OnDidShow
+                            classScope
+                            .CustomScope("protected override void OnDidShow()", false, function =>
+                            {
+                                function.Custom("// 面板显示完成后调用");
+                            })
+                            .EmptyLine();
+
+                            // OnWillHide
+                            classScope
+                            .CustomScope("protected override void OnWillHide()", false, function =>
+                            {
+                                function.Custom("// 面板即将隐藏时调用");
+                            })
+                            .EmptyLine();
+
+                            // OnDidHide
+                            classScope
+                            .CustomScope("protected override void OnDidHide()", false, function =>
+                            {
+                                function.Custom("// 面板隐藏完成后调用");
+                            })
+                            .EmptyLine();
+
+                            // OnFocus
+                            classScope
+                            .CustomScope("protected override void OnFocus()", false, function =>
+                            {
+                                function.Custom("// 面板获得焦点时调用");
+                            })
+                            .EmptyLine();
+
+                            // OnBlur
+                            classScope
+                            .CustomScope("protected override void OnBlur()", false, function =>
+                            {
+                                function.Custom("// 面板失去焦点时调用");
+                            })
+                            .EmptyLine();
+
+                            // OnResume
+                            classScope
+                            .CustomScope("protected override void OnResume()", false, function =>
+                            {
+                                function.Custom("// 面板从栈中恢复时调用");
+                            });
+
+                            classScope.EmptyLine();
+                            classScope.Custom("#endregion");
+                        }
+
+                        // 生成焦点支持
+                        if (options.GenerateFocusSupport)
+                        {
+                            classScope.EmptyLine();
+                            classScope.Custom("#region 焦点导航");
+                            classScope.EmptyLine();
+
+                            classScope
+                            .CustomScope("protected override GameObject GetDefaultFocusTarget()", false, function =>
+                            {
+                                function.Custom("// 返回默认焦点目标，返回 null 则不自动设置焦点");
+                                function.Custom("return null;");
+                            });
+
+                            classScope.EmptyLine();
+                            classScope.Custom("#endregion");
+                        }
                     });
                 });
             rootCode.Gen(codeWriter);

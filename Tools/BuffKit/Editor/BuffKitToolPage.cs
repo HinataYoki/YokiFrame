@@ -7,7 +7,7 @@ using YokiFrame.EditorTools;
 namespace YokiFrame
 {
     /// <summary>
-    /// BuffKit 工具页面 - 运行时 Buff 监控
+    /// BuffKit 工具页面 - 运行时 Buff 监控（响应式）
     /// </summary>
     public class BuffKitToolPage : YokiFrameToolPageBase
     {
@@ -15,9 +15,7 @@ namespace YokiFrame
         public override string PageIcon => KitIcons.BUFFKIT;
         public override int Priority => 25;
 
-        private const float REFRESH_INTERVAL = 0.2f;
-
-        private double mLastRefreshTime;
+        private const float THROTTLE_INTERVAL = 0.1f;
 
         // UI 元素引用
         private ListView mContainerListView;
@@ -28,13 +26,16 @@ namespace YokiFrame
         private readonly List<BuffContainer> mCachedContainers = new(16);
         private BuffContainer mSelectedContainer;
 
+        // 节流器
+        private Throttle mRefreshThrottle;
+
         protected override void BuildUI(VisualElement root)
         {
             // 工具栏
             var toolbar = CreateToolbar();
             root.Add(toolbar);
 
-            var helpLabel = new Label("运行时 Buff 监控（需要运行游戏）");
+            var helpLabel = new Label("运行时 Buff 监控（响应式）");
             helpLabel.AddToClassList("toolbar-label");
             toolbar.Add(helpLabel);
 
@@ -61,6 +62,26 @@ namespace YokiFrame
             var leftHeader = CreatePanelHeader("活跃容器");
             leftPanel.Add(leftHeader);
 
+            BuildContainerListView();
+            mContainerListView.style.flexGrow = 1;
+            leftPanel.Add(mContainerListView);
+
+            // 右侧：详情面板
+            mDetailPanel = new VisualElement();
+            mDetailPanel.AddToClassList("right-panel");
+            splitView.Add(mDetailPanel);
+
+            UpdateDetailPanel();
+
+            // 初始化节流器
+            mRefreshThrottle = new Throttle(THROTTLE_INTERVAL);
+
+            // 订阅 Buff 变化事件
+            SubscribeBuffEvents();
+        }
+
+        private void BuildContainerListView()
+        {
             mContainerListView = new ListView();
             mContainerListView.fixedItemHeight = 32;
             mContainerListView.makeItem = () =>
@@ -100,15 +121,26 @@ namespace YokiFrame
                 countLabel.text = $"[{container.Count}]";
             };
             mContainerListView.selectionChanged += OnContainerSelected;
-            mContainerListView.style.flexGrow = 1;
-            leftPanel.Add(mContainerListView);
+        }
 
-            // 右侧：详情面板
-            mDetailPanel = new VisualElement();
-            mDetailPanel.AddToClassList("right-panel");
-            splitView.Add(mDetailPanel);
+        private void SubscribeBuffEvents()
+        {
+            // 订阅 Buff 添加事件
+            Subscriptions.Add(EditorDataBridge.Subscribe<BuffAddedEvent>(
+                DataChannels.BUFF_ADDED,
+                _ => RequestRefresh()));
 
-            UpdateDetailPanel();
+            // 订阅 Buff 移除事件
+            Subscriptions.Add(EditorDataBridge.Subscribe<BuffRemovedEvent>(
+                DataChannels.BUFF_REMOVED,
+                _ => RequestRefresh()));
+        }
+
+        private void RequestRefresh()
+        {
+            if (!IsPlaying) return;
+            
+            mRefreshThrottle.Execute(RefreshContainerList);
         }
 
         private void OnContainerSelected(IEnumerable<object> selection)
@@ -218,14 +250,14 @@ namespace YokiFrame
             return item;
         }
 
-        public override void OnUpdate()
+        public override void OnActivate()
         {
-            if (!IsPlaying) return;
-
-            if (EditorApplication.timeSinceStartup - mLastRefreshTime > REFRESH_INTERVAL)
+            base.OnActivate();
+            
+            // 进入 PlayMode 时刷新一次
+            if (IsPlaying)
             {
                 RefreshContainerList();
-                mLastRefreshTime = EditorApplication.timeSinceStartup;
             }
         }
 

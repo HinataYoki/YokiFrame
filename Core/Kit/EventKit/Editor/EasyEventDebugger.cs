@@ -54,6 +54,25 @@ namespace YokiFrame
         /// </summary>
         public static bool RecordSendStackTrace { get; set; } = false;
 
+        #region 编辑器回调（用于响应式更新）
+
+        /// <summary>
+        /// 事件触发回调（eventType, eventKey, args）
+        /// </summary>
+        public static Action<string, string, string> OnEventTriggered;
+
+        /// <summary>
+        /// 事件注册回调（eventType, eventKey）
+        /// </summary>
+        public static Action<string, string> OnEventRegistered;
+
+        /// <summary>
+        /// 事件注销回调（eventType, eventKey）
+        /// </summary>
+        public static Action<string, string> OnEventUnregistered;
+
+        #endregion
+
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
@@ -118,7 +137,12 @@ namespace YokiFrame
             }
 
             sDebugInfoMap[key] = info;
-            AddHistory("Register", "Listener", GetCachedString($"{info.TargetType}.{info.MethodName}"), null, callerInfo);
+            
+            var eventKey = GetCachedString($"{info.TargetType}.{info.MethodName}");
+            AddHistory("Register", "Listener", eventKey, null, callerInfo);
+            
+            // 触发编辑器回调
+            OnEventRegistered?.Invoke("Listener", eventKey);
         }
 
         private static void OnUnRegister(Delegate del)
@@ -127,13 +151,20 @@ namespace YokiFrame
 
             var targetType = del.Target?.GetType().Name ?? del.Method?.DeclaringType?.Name ?? "Unknown";
             var methodName = del.Method?.Name ?? "Unknown";
+            var eventKey = GetCachedString($"{targetType}.{methodName}");
 
             sDebugInfoMap.Remove(del.GetHashCode());
-            AddHistory("UnRegister", "Listener", GetCachedString($"{targetType}.{methodName}"), null, GetCallerInfo());
+            AddHistory("UnRegister", "Listener", eventKey, null, GetCallerInfo());
+            
+            // 触发编辑器回调
+            OnEventUnregistered?.Invoke("Listener", eventKey);
         }
 
         private static void OnSend(string eventType, string eventKey, object args)
         {
+            // 触发编辑器回调（用于响应式更新）
+            OnEventTriggered?.Invoke(eventType, eventKey, args?.ToString());
+            
             if (!RecordSendEvents) return;
             
             // eventType 和 eventKey 已经是调用方传入的字符串，直接缓存

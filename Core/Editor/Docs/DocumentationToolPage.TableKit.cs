@@ -13,6 +13,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.TABLEKIT,
                 Category = "TOOLS",
                 Description = "Luban 配置表集成工具，提供编辑器配置界面和运行时代码生成。支持 Binary 和 JSON 两种数据格式，自动检测加载模式。",
+                Keywords = new List<string> { "配置表", "Luban", "Excel", "数据驱动" },
                 Sections = new List<DocSection>
                 {
                     new()

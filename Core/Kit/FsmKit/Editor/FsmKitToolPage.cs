@@ -7,27 +7,46 @@ using YokiFrame.EditorTools;
 namespace YokiFrame
 {
     /// <summary>
-    /// FsmKit 工具页面 - UI Toolkit 版本
+    /// FsmKit 工具页面 - 现代化 FSM 仪表盘
+    /// 采用 HUD + 状态矩阵 + 时间轴 的三段式布局
     /// </summary>
-    public class FsmKitToolPage : YokiFrameToolPageBase
+    public partial class FsmKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "FsmKit";
         public override string PageIcon => KitIcons.FSMKIT;
         public override int Priority => 20;
 
-        private const float REFRESH_INTERVAL = 0.2f;
+        #region 常量
+
+        private const float REFRESH_INTERVAL = 0.1f;    // 刷新间隔（秒）
+        private const float LIST_ITEM_HEIGHT = 48f;     // 列表项高度
+
+        #endregion
+
+        #region 字段
 
         private double mLastRefreshTime;
 
         // UI 元素引用
         private ListView mFsmListView;
-        private VisualElement mDetailPanel;
-        private VisualElement mHistoryPanel;
-        private Label mHistoryCountLabel;
+        private VisualElement mRightPanel;
+        private VisualElement mHudSection;
+        private VisualElement mMatrixSection;
+        private VisualElement mTimelineSection;
+
+        // HUD 元素
+        private Label mCurrentStateLabel;
+        private Label mDurationLabel;
+        private Label mPrevStateLabel;
 
         // 数据缓存
         private readonly List<IFSM> mCachedFsms = new(16);
         private IFSM mSelectedFsm;
+        private string mLastCurrentState;
+
+        #endregion
+
+        #region BuildUI
 
         protected override void BuildUI(VisualElement root)
         {
@@ -47,77 +66,157 @@ namespace YokiFrame
             root.Add(content);
             
             // 分割面板
-            var splitView = CreateSplitView(250f);
+            var splitView = CreateSplitView(280f);
             content.Add(splitView);
             
-            // 左侧：FSM 列表
+            // 左侧：FSM 实例列表（带摘要信息）
+            var leftPanel = BuildLeftPanel();
+            splitView.Add(leftPanel);
+            
+            // 右侧：详情面板（HUD + 状态矩阵 + 时间轴）
+            mRightPanel = BuildRightPanel();
+            splitView.Add(mRightPanel);
+            
+            // 初始状态
+            UpdateRightPanel();
+        }
+
+        /// <summary>
+        /// 构建左侧面板（FSM 实例列表）
+        /// </summary>
+        private VisualElement BuildLeftPanel()
+        {
             var leftPanel = new VisualElement();
             leftPanel.AddToClassList("left-panel");
-            splitView.Add(leftPanel);
             
             var leftHeader = CreatePanelHeader("活跃状态机");
             leftPanel.Add(leftHeader);
             
             mFsmListView = new ListView();
-            mFsmListView.fixedItemHeight = 32;
-            mFsmListView.makeItem = () =>
-            {
-                var item = new VisualElement();
-                item.AddToClassList("list-item");
-                item.style.height = 32;
-                item.style.paddingTop = 4;
-                item.style.paddingBottom = 4;
-                
-                var indicator = new VisualElement();
-                indicator.AddToClassList("list-item-indicator");
-                item.Add(indicator);
-                
-                var label = new Label();
-                label.AddToClassList("list-item-label");
-                item.Add(label);
-                
-                var count = new Label();
-                count.AddToClassList("list-item-count");
-                item.Add(count);
-                
-                return item;
-            };
-            mFsmListView.bindItem = (element, index) =>
-            {
-                var fsm = mCachedFsms[index];
-                var indicator = element.Q<VisualElement>(className: "list-item-indicator");
-                var label = element.Q<Label>(className: "list-item-label");
-                var count = element.Q<Label>(className: "list-item-count");
-                
-                indicator.RemoveFromClassList("active");
-                indicator.RemoveFromClassList("inactive");
-                indicator.AddToClassList(fsm.MachineState == MachineState.Running ? "active" : "inactive");
-                
-                label.text = fsm.Name;
-                count.text = $"[{fsm.GetAllStates().Count}]";
-            };
+            mFsmListView.fixedItemHeight = LIST_ITEM_HEIGHT;
+            mFsmListView.makeItem = MakeListItem;
+            mFsmListView.bindItem = BindListItem;
             mFsmListView.selectionChanged += OnFsmSelected;
             mFsmListView.style.flexGrow = 1;
             leftPanel.Add(mFsmListView);
             
-            // 右侧：详情面板 + 历史面板
+            return leftPanel;
+        }
+
+        /// <summary>
+        /// 构建右侧面板（三段式布局）
+        /// </summary>
+        private VisualElement BuildRightPanel()
+        {
             var rightPanel = new VisualElement();
             rightPanel.AddToClassList("right-panel");
             rightPanel.style.flexDirection = FlexDirection.Column;
-            splitView.Add(rightPanel);
             
-            // 上半部分：状态机详情
-            mDetailPanel = new VisualElement();
-            mDetailPanel.style.flexGrow = 1;
-            mDetailPanel.style.minHeight = 200;
-            rightPanel.Add(mDetailPanel);
+            // 区域 A: 当前状态 HUD（顶部，固定高度）
+            mHudSection = BuildHudSection();
+            rightPanel.Add(mHudSection);
             
-            // 下半部分：转换历史
-            mHistoryPanel = CreateHistoryPanel();
-            rightPanel.Add(mHistoryPanel);
+            // 区域 B: 状态矩阵（中部，弹性高度）
+            mMatrixSection = BuildMatrixSection();
+            rightPanel.Add(mMatrixSection);
             
-            UpdateDetailPanel();
+            // 区域 C: 转换时间轴（底部，固定高度）
+            mTimelineSection = BuildTimelineSection();
+            rightPanel.Add(mTimelineSection);
+            
+            return rightPanel;
         }
+
+        #endregion
+
+        #region 列表项
+
+        /// <summary>
+        /// 创建列表项模板
+        /// </summary>
+        private VisualElement MakeListItem()
+        {
+            var item = new VisualElement();
+            item.AddToClassList("list-item");
+            item.style.height = LIST_ITEM_HEIGHT;
+            item.style.paddingTop = item.style.paddingBottom = 6;
+            item.style.paddingLeft = item.style.paddingRight = 8;
+            item.style.flexDirection = FlexDirection.Row;
+            item.style.alignItems = Align.Center;
+            
+            // 状态指示器
+            var indicator = new VisualElement { name = "indicator" };
+            indicator.style.width = indicator.style.height = 8;
+            indicator.style.borderTopLeftRadius = indicator.style.borderTopRightRadius = 
+                indicator.style.borderBottomLeftRadius = indicator.style.borderBottomRightRadius = 4;
+            indicator.style.marginRight = 8;
+            item.Add(indicator);
+            
+            // 信息区域
+            var infoArea = new VisualElement { style = { flexGrow = 1 } };
+            item.Add(infoArea);
+            
+            // FSM 名称
+            var nameLabel = new Label { name = "fsm-name" };
+            nameLabel.style.fontSize = 12;
+            nameLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+            nameLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary);
+            infoArea.Add(nameLabel);
+            
+            // 当前状态 + 时间
+            var stateRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 2 } };
+            stateRow.style.alignItems = Align.Center;
+            infoArea.Add(stateRow);
+            
+            stateRow.Add(new Label { name = "current-state", style = { fontSize = 11 } });
+            stateRow.Add(new Label { name = "timer", style = { fontSize = 10, marginLeft = 8, color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary) } });
+            
+            // 状态数量徽章
+            var countBadge = new Label { name = "state-count" };
+            countBadge.style.fontSize = 10;
+            countBadge.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
+            countBadge.style.paddingLeft = countBadge.style.paddingRight = 6;
+            countBadge.style.paddingTop = countBadge.style.paddingBottom = 2;
+            countBadge.style.backgroundColor = new StyleColor(new UnityEngine.Color(0.15f, 0.15f, 0.17f));
+            countBadge.style.borderTopLeftRadius = countBadge.style.borderTopRightRadius = 
+                countBadge.style.borderBottomLeftRadius = countBadge.style.borderBottomRightRadius = 4;
+            item.Add(countBadge);
+            
+            return item;
+        }
+
+        /// <summary>
+        /// 绑定列表项数据
+        /// </summary>
+        private void BindListItem(VisualElement element, int index)
+        {
+            if (index >= mCachedFsms.Count) return;
+            
+            var fsm = mCachedFsms[index];
+            var isRunning = fsm.MachineState == MachineState.Running;
+            var stateColor = isRunning ? YokiFrameUIComponents.Colors.BrandSuccess : YokiFrameUIComponents.Colors.TextTertiary;
+            
+            element.Q<VisualElement>("indicator").style.backgroundColor = new StyleColor(stateColor);
+            element.Q<Label>("fsm-name").text = fsm.Name;
+            
+            var currentStateName = GetCurrentStateName(fsm);
+            var stateLabel = element.Q<Label>("current-state");
+            stateLabel.text = currentStateName;
+            stateLabel.style.color = new StyleColor(stateColor);
+            
+            element.Q<Label>("timer").text = isRunning ? $"{FsmDebugger.GetStateDuration(fsm.Name):F1}s" : "—";
+            element.Q<Label>("state-count").text = $"{fsm.GetAllStates().Count}";
+        }
+
+        /// <summary>
+        /// 获取当前状态名称
+        /// </summary>
+        private string GetCurrentStateName(IFSM fsm) => 
+            fsm.CurrentStateId < 0 ? "None" : Enum.GetName(fsm.EnumType, fsm.CurrentStateId) ?? fsm.CurrentStateId.ToString();
+
+        #endregion
+
+        #region 选择与更新
 
         private void OnFsmSelected(IEnumerable<object> selection)
         {
@@ -126,258 +225,100 @@ namespace YokiFrame
                 if (item is IFSM fsm)
                 {
                     mSelectedFsm = fsm;
-                    UpdateDetailPanel();
+                    mLastCurrentState = null; // 强制刷新
+                    UpdateRightPanel();
                     return;
                 }
             }
         }
 
-        private void UpdateDetailPanel()
+        /// <summary>
+        /// 更新右侧面板
+        /// </summary>
+        private void UpdateRightPanel()
         {
-            mDetailPanel.Clear();
-            
             if (mSelectedFsm == null)
             {
-                var header = CreatePanelHeader("状态机详情");
-                mDetailPanel.Add(header);
-                mDetailPanel.Add(CreateHelpBox("选择左侧状态机查看详情"));
+                ShowEmptyState();
                 return;
             }
             
-            var fsm = mSelectedFsm;
-            
-            var headerWithName = CreatePanelHeader($"状态机: {fsm.Name}");
-            mDetailPanel.Add(headerWithName);
-            
-            // 基本信息
-            var infoBox = new VisualElement();
-            infoBox.AddToClassList("info-box");
-            mDetailPanel.Add(infoBox);
-            
-            AddInfoRow(infoBox, "枚举类型:", fsm.EnumType.Name);
-            AddInfoRow(infoBox, "机器状态:", fsm.MachineState.ToString());
-            
-            var currentStateName = fsm.CurrentStateId >= 0 
-                ? Enum.GetName(fsm.EnumType, fsm.CurrentStateId) ?? fsm.CurrentStateId.ToString()
-                : "None";
-            AddInfoRow(infoBox, "当前状态:", currentStateName, true);
-            
-            // 状态列表
-            var statesHeader = CreatePanelHeader("注册状态");
-            mDetailPanel.Add(statesHeader);
-            
-            var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
-            mDetailPanel.Add(scrollView);
-            
-            var states = fsm.GetAllStates();
-            var currentId = fsm.CurrentStateId;
-            
-            foreach (var kvp in states)
+            // 确保 HUD 结构存在（可能被 ShowEmptyState 清空）
+            if (mCurrentStateLabel == null || mCurrentStateLabel.parent == null)
             {
-                var isCurrent = kvp.Key == currentId;
-                var stateItem = CreateStateItem(fsm.EnumType, kvp.Key, kvp.Value, isCurrent);
-                scrollView.Add(stateItem);
-            }
-        }
-
-        private void AddInfoRow(VisualElement parent, string label, string value, bool highlight = false)
-        {
-            var row = new VisualElement();
-            row.AddToClassList("info-row");
-            
-            var labelElement = new Label(label);
-            labelElement.AddToClassList("info-label");
-            row.Add(labelElement);
-            
-            var valueElement = new Label(value);
-            valueElement.AddToClassList("info-value");
-            if (highlight)
-                valueElement.AddToClassList("highlight");
-            row.Add(valueElement);
-            
-            parent.Add(row);
-        }
-
-        private VisualElement CreateStateItem(Type enumType, int stateId, IState state, bool isCurrent)
-        {
-            var item = new VisualElement();
-            item.AddToClassList("state-item");
-            if (isCurrent)
-                item.AddToClassList("current");
-            
-            var indicator = new Label(isCurrent ? "▶" : "");
-            indicator.AddToClassList("state-indicator");
-            item.Add(indicator);
-            
-            var stateName = Enum.GetName(enumType, stateId) ?? stateId.ToString();
-            var nameLabel = new Label(stateName);
-            nameLabel.AddToClassList("state-name");
-            item.Add(nameLabel);
-            
-            var typeLabel = new Label(state.GetType().Name);
-            typeLabel.AddToClassList("state-type");
-            item.Add(typeLabel);
-            
-            return item;
-        }
-
-        #region History Panel
-
-        private VisualElement CreateHistoryPanel()
-        {
-            var container = new VisualElement();
-            container.style.minHeight = 280;
-            container.style.borderTopWidth = 1;
-            container.style.borderTopColor = new StyleColor(new UnityEngine.Color(0.3f, 0.3f, 0.3f));
-            
-            // 工具栏
-            var toolbar = CreateToolbar();
-            container.Add(toolbar);
-            
-            var titleLabel = new Label("📜 转换历史");
-            titleLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
-            titleLabel.AddToClassList("toolbar-label");
-            toolbar.Add(titleLabel);
-            
-            var recordToggle = CreateToolbarToggle("记录", FsmDebugger.RecordTransitions,
-                v => FsmDebugger.RecordTransitions = v);
-            toolbar.Add(recordToggle);
-            
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
-            
-            mHistoryCountLabel = new Label("0/500");
-            mHistoryCountLabel.AddToClassList("toolbar-label");
-            toolbar.Add(mHistoryCountLabel);
-            
-            var clearBtn = CreateToolbarButton("清空", () =>
-            {
-                FsmDebugger.ClearHistory();
-                RefreshHistoryList();
-            });
-            toolbar.Add(clearBtn);
-            
-            // 历史列表
-            var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
-            container.Add(scrollView);
-            
-            var historyList = new VisualElement();
-            historyList.name = "history-list";
-            scrollView.Add(historyList);
-            
-            return container;
-        }
-
-        private void RefreshHistoryList()
-        {
-            var historyList = mHistoryPanel.Q<VisualElement>("history-list");
-            if (historyList == null) return;
-            
-            historyList.Clear();
-            
-            var history = FsmDebugger.TransitionHistory;
-            mHistoryCountLabel.text = $"{history.Count}/{FsmDebugger.MAX_HISTORY_COUNT}";
-            
-            // 只显示选中 FSM 的历史，或者全部（如果没有选中）
-            var filterName = mSelectedFsm?.Name;
-            
-            // 倒序显示最新的在上面
-            for (var i = history.Count - 1; i >= 0; i--)
-            {
-                var entry = history[i];
-                
-                // 如果选中了 FSM，只显示该 FSM 的历史
-                if (filterName != null && entry.FsmName != filterName)
-                    continue;
-                
-                var item = CreateHistoryItem(entry);
-                historyList.Add(item);
+                RebuildHudSection();
             }
             
-            if (historyList.childCount == 0)
-            {
-                var empty = new Label("  暂无转换记录");
-                empty.style.color = new StyleColor(new UnityEngine.Color(0.5f, 0.5f, 0.5f));
-                empty.style.fontSize = 11;
-                empty.style.marginTop = 8;
-                historyList.Add(empty);
-            }
+            UpdateHudSection();
+            UpdateMatrixSection();
+            UpdateTimelineSection();
         }
 
-        private VisualElement CreateHistoryItem(FsmDebugger.TransitionEntry entry)
+        /// <summary>
+        /// 重建 HUD 区域结构
+        /// </summary>
+        private void RebuildHudSection()
         {
-            var item = new VisualElement();
-            item.style.flexDirection = FlexDirection.Row;
-            item.style.alignItems = Align.Center;
-            item.style.paddingLeft = 4;
-            item.style.paddingTop = 2;
-            item.style.paddingBottom = 2;
-            item.style.borderBottomWidth = 1;
-            item.style.borderBottomColor = new StyleColor(new UnityEngine.Color(0.2f, 0.2f, 0.2f));
+            mHudSection.Clear();
             
-            // 时间
-            var time = new Label($"{entry.Time:F2}s");
-            time.style.width = 50;
-            time.style.fontSize = 10;
-            time.style.color = new StyleColor(new UnityEngine.Color(0.6f, 0.6f, 0.6f));
-            item.Add(time);
-            
-            // 动作类型
-            var actionBadge = new Label(entry.Action);
-            actionBadge.style.width = 50;
-            actionBadge.style.fontSize = 10;
-            actionBadge.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
-            
-            var actionColor = entry.Action switch
-            {
-                "Start" => new UnityEngine.Color(0.3f, 0.8f, 0.3f),
-                "Change" => new UnityEngine.Color(0.3f, 0.6f, 0.9f),
-                "Stop" => new UnityEngine.Color(0.9f, 0.4f, 0.4f),
-                _ => new UnityEngine.Color(0.7f, 0.7f, 0.7f)
-            };
-            actionBadge.style.color = new StyleColor(actionColor);
-            item.Add(actionBadge);
-            
-            // 转换信息
-            var transition = new Label();
-            transition.style.flexGrow = 1;
-            transition.style.fontSize = 11;
-            transition.style.color = new StyleColor(new UnityEngine.Color(0.8f, 0.8f, 0.8f));
-            
-            if (entry.Action == "Change")
-                transition.text = $"{entry.FromState} → {entry.ToState}";
-            else if (!string.IsNullOrEmpty(entry.ToState))
-                transition.text = entry.ToState;
-            else if (!string.IsNullOrEmpty(entry.FromState))
-                transition.text = entry.FromState;
-            
-            item.Add(transition);
-            
-            return item;
+            // 重新构建 HUD 内容
+            var hudContent = BuildHudContent();
+            mHudSection.Add(hudContent);
         }
 
-        #endregion
-
-        #region Update
+        /// <summary>
+        /// 显示空状态
+        /// </summary>
+        private void ShowEmptyState()
+        {
+            // 清除引用
+            mCurrentStateLabel = null;
+            mDurationLabel = null;
+            mPrevStateLabel = null;
+            
+            // 重建空状态 HUD
+            mHudSection.Clear();
+            var emptyHint = CreateHelpBox("选择左侧状态机查看详情");
+            mHudSection.Add(emptyHint);
+            
+            // 清空矩阵
+            if (mMatrixContainer != null)
+                mMatrixContainer.Clear();
+        }
 
         public override void OnUpdate()
         {
             if (!IsPlaying) return;
             
-            if (EditorApplication.timeSinceStartup - mLastRefreshTime > REFRESH_INTERVAL)
+            var now = EditorApplication.timeSinceStartup;
+            if (now - mLastRefreshTime < REFRESH_INTERVAL) return;
+            mLastRefreshTime = now;
+            
+            // 刷新 FSM 列表
+            FsmDebugger.GetActiveFsms(mCachedFsms);
+            mFsmListView.itemsSource = mCachedFsms;
+            mFsmListView.RefreshItems();
+            
+            // 刷新右侧面板
+            if (mSelectedFsm != null)
             {
-                FsmDebugger.GetActiveFsms(mCachedFsms);
-                mFsmListView.itemsSource = mCachedFsms;
-                mFsmListView.RefreshItems();
+                // 检查状态是否变化
+                var currentState = GetCurrentStateName(mSelectedFsm);
+                if (currentState != mLastCurrentState)
+                {
+                    mLastCurrentState = currentState;
+                    UpdateMatrixSection(); // 状态变化时重建矩阵
+                }
+                else
+                {
+                    UpdateHudSection(); // 只更新 HUD（计时器）
+                }
                 
-                if (mSelectedFsm != null)
-                    UpdateDetailPanel();
-                
-                RefreshHistoryList();
-                
-                mLastRefreshTime = EditorApplication.timeSinceStartup;
+                UpdateTimelineSection();
             }
+            
+            // 更新呼吸动画
+            YokiFrameUIComponents.UpdateAllBreathing();
         }
 
         #endregion

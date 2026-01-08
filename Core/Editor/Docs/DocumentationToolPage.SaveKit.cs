@@ -13,6 +13,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.SAVEKIT,
                 Category = "TOOLS",
                 Description = "存档系统工具，提供多槽位存档、版本迁移、加密、自动保存等功能。支持与 Architecture 集成。",
+                Keywords = new List<string> { "存档", "持久化", "加密", "版本迁移" },
                 Sections = new List<DocSection>
                 {
                     new()

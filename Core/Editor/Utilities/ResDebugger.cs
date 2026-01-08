@@ -40,9 +40,127 @@ namespace YokiFrame.EditorTools
                 Source = source;
             }
         }
+        
+        /// <summary>
+        /// 资源卸载历史记录
+        /// </summary>
+        public readonly struct UnloadRecord
+        {
+            public readonly string Path;
+            public readonly string TypeName;
+            public readonly DateTime UnloadTime;
+            public readonly string StackTrace;
+
+            public UnloadRecord(string path, string typeName, DateTime unloadTime, string stackTrace)
+            {
+                Path = path;
+                TypeName = typeName;
+                UnloadTime = unloadTime;
+                StackTrace = stackTrace;
+            }
+        }
 
         private static FieldInfo sCacheField;
         private static bool sFieldCached;
+        
+        // 卸载历史记录
+        private static readonly List<UnloadRecord> sUnloadHistory = new(128);
+        private static readonly HashSet<string> sPreviousLoadedPaths = new();
+        private const int MAX_HISTORY_COUNT = 100;
+
+        /// <summary>
+        /// 获取卸载历史记录
+        /// </summary>
+        public static IReadOnlyList<UnloadRecord> GetUnloadHistory() => sUnloadHistory;
+        
+        /// <summary>
+        /// 清空卸载历史记录
+        /// </summary>
+        public static void ClearUnloadHistory()
+        {
+            sUnloadHistory.Clear();
+            sPreviousLoadedPaths.Clear();
+        }
+        
+        /// <summary>
+        /// 检测并记录卸载的资源（在 Update 中调用）
+        /// </summary>
+        public static void DetectUnloadedAssets()
+        {
+            if (!EditorApplication.isPlaying) return;
+            
+            var currentLoaded = GetLoadedAssets();
+            var currentPaths = new HashSet<string>();
+            
+            foreach (var asset in currentLoaded)
+            {
+                currentPaths.Add(GetAssetKey(asset.Path, asset.TypeName));
+            }
+            
+            // 检测哪些资源被卸载了
+            foreach (var prevPath in sPreviousLoadedPaths)
+            {
+                if (!currentPaths.Contains(prevPath))
+                {
+                    // 资源被卸载了，记录历史
+                    var parts = prevPath.Split('|');
+                    var path = parts.Length > 0 ? parts[0] : prevPath;
+                    var typeName = parts.Length > 1 ? parts[1] : "Unknown";
+                    
+                    var stackTrace = GetSimplifiedStackTrace();
+                    
+                    sUnloadHistory.Insert(0, new UnloadRecord(
+                        path,
+                        typeName,
+                        DateTime.Now,
+                        stackTrace
+                    ));
+                    
+                    // 限制历史记录数量
+                    if (sUnloadHistory.Count > MAX_HISTORY_COUNT)
+                    {
+                        sUnloadHistory.RemoveAt(sUnloadHistory.Count - 1);
+                    }
+                }
+            }
+            
+            // 更新当前加载的资源集合
+            sPreviousLoadedPaths.Clear();
+            foreach (var path in currentPaths)
+            {
+                sPreviousLoadedPaths.Add(path);
+            }
+        }
+        
+        private static string GetAssetKey(string path, string typeName) => $"{path}|{typeName}";
+        
+        private static string GetSimplifiedStackTrace()
+        {
+            var fullTrace = Environment.StackTrace;
+            var lines = fullTrace.Split('\n');
+            var result = new System.Text.StringBuilder();
+            int count = 0;
+            
+            foreach (var line in lines)
+            {
+                // 跳过系统调用和编辑器调用
+                if (line.Contains("ResDebugger") || 
+                    line.Contains("EditorApplication") ||
+                    line.Contains("UnityEditor") ||
+                    line.Contains("System.Environment"))
+                    continue;
+                
+                // 只保留用户代码相关的堆栈
+                if (line.Contains("YokiFrame") || line.Contains("Assets/"))
+                {
+                    result.AppendLine(line.Trim());
+                    count++;
+                    if (count >= 5) break; // 最多保留5行
+                }
+            }
+            
+            return result.Length > 0 ? result.ToString() : "无可用堆栈信息";
+        }
 
         /// <summary>
         /// 获取当前已加载的资源列表（包括 ResKit 缓存和底层 Loader 追踪）

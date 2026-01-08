@@ -26,6 +26,7 @@ namespace YokiFrame.EditorTools
         public const string BUFFKIT = "✨";
         public const string LOCALIZATIONKIT = "🌐";
         public const string SAVEKIT = "💾";
+        public const string SCENEKIT = "🎬";
         public const string TABLEKIT = "📊";
         public const string UIKIT = "🖼️";
         

@@ -41,12 +41,13 @@
 | 模块 | 说明 |
 |------|------|
 | **ActionKit** | 链式动作序列系统（延时、回调、并行、循环、Lerp） |
-| **UIKit** | 带热度管理的 UI 面板系统，支持编辑器快速创建和代码生成 |
+| **UIKit** | 现代化 UI 面板系统，支持动画、生命周期钩子、多命名栈、预加载缓存、LRU 淘汰 |
 | **AudioKit** | 高扩展性音频管理，支持 Unity 原生和 FMOD 后端 |
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
 | **TableKit** | Luban 配置表集成工具，支持编辑器配置和代码生成 |
 | **BuffKit** | 通用 Buff 系统，支持堆叠、时间管理、属性修改、免疫、序列化 |
 | **LocalizationKit** | 多语言本地化系统，支持参数化文本、复数形式、UI 绑定、异步加载 |
+| **SceneKit** | 场景管理工具，支持异步加载、预加载、过渡效果、YooAsset 扩展 |
 
 ## ⚡ 快速开始
 
@@ -69,6 +70,19 @@ AudioKit.Play("Audio/SFX/Click");
 // UI 管理
 UIKit.OpenPanel<MainMenuPanel>();
 UIKit.ClosePanel<MainMenuPanel>();
+
+// UI 面板动画
+panel.SetShowAnimation(UIAnimationFactory.CreateFadeIn(0.3f));
+panel.SetHideAnimation(UIAnimationFactory.CreateFadeOut(0.3f));
+
+// UI 堆栈导航（支持多命名栈）
+UIKit.PushOpenPanel<SettingsPanel>();
+UIKit.PopPanel(); // 返回上一级
+UIKit.PushPanel(panel, "dialog"); // 压入指定栈
+
+// UI 预加载
+UIKit.PreloadPanelAsync<HeavyPanel>(onComplete: success => Debug.Log($"预加载: {success}"));
+await UIKit.PreloadPanelUniTaskAsync<HeavyPanel>(); // UniTask 版本
 
 // 存档系统
 var saveData = SaveKit.CreateSaveData();
@@ -94,6 +108,19 @@ LocalizationKit.SetProvider(provider);
 string text = LocalizationKit.Get(1001); // 获取文本
 LocalizationKit.SetLanguage(LanguageId.English); // 切换语言
 
+// 场景管理
+SceneKit.LoadSceneAsync("GameScene", SceneLoadMode.Single,
+    onComplete: handler => Debug.Log($"场景加载完成: {handler.SceneName}"),
+    onProgress: progress => Debug.Log($"加载进度: {progress:P0}"));
+
+// 带过渡效果的场景切换
+SceneKit.SwitchSceneAsync("GameScene", new FadeTransition(0.5f));
+
+// 预加载场景
+var handler = SceneKit.PreloadSceneAsync("NextLevel");
+// 稍后激活
+SceneKit.ActivatePreloadedScene(handler);
+
 // KitLogger IMGUI 日志显示（打包后调试）
 KitLogger.EnableIMGUI(); // 启用 IMGUI 日志窗口
 // PC: 按 ` 键切换显示 | 移动端: 三指触摸切换
@@ -116,6 +143,7 @@ KitLogger.EnableIMGUI(); // 启用 IMGUI 日志窗口
 - **TableKit** - Luban 配置表生成和管理（需安装 Luban 包）
 - **BuffKit** - Buff 监控器，实时查看活跃容器和 Buff 状态
 - **Localization** - 本地化文本预览和缺失翻译检测
+- **SceneKit** - 场景管理器，查看已加载场景和状态
 
 ## 📄 License
 

@@ -23,6 +23,11 @@
             "name": "UniTask",
             "expression": "",
             "define": "YOKIFRAME_UNITASK_SUPPORT"
+        },
+        {
+            "name": "com.demigiant.dotween",
+            "expression": "",
+            "define": "YOKIFRAME_DOTWEEN_SUPPORT"
         }
     ],
     "noEngineReferences": false

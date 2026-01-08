@@ -40,12 +40,26 @@ namespace YokiFrame
             @"EventKit\.Enum\.UnRegister\s*(?:<\s*([^>]+)\s*>)?\s*\(\s*(\w+\.\w+)",
             RegexOptions.Compiled);
         
+        // Type 事件 - 支持多种调用模式
+        // 模式1: EventKit.Type.Send<DamageEvent>(...)
+        // 模式2: EventKit.Type.Send(new DamageEvent(...))
         private static readonly Regex TypeRegisterPattern = new(
             @"EventKit\.Type\.Register\s*<\s*(\w+)\s*>",
             RegexOptions.Compiled);
         
-        private static readonly Regex TypeSendPattern = new(
+        private static readonly Regex TypeSendGenericPattern = new(
             @"EventKit\.Type\.Send\s*<\s*(\w+)\s*>",
+            RegexOptions.Compiled);
+        
+        // 匹配 Send(new TypeName(...)) 模式
+        private static readonly Regex TypeSendNewPattern = new(
+            @"EventKit\.Type\.Send\s*\(\s*new\s+(\w+)\s*[({]",
+            RegexOptions.Compiled);
+        
+        // 匹配 Send(变量) 模式 - 需要从上下文推断类型，暂不支持
+        
+        private static readonly Regex TypeUnRegisterPattern = new(
+            @"EventKit\.Type\.UnRegister\s*<\s*(\w+)\s*>",
             RegexOptions.Compiled);
         
         // String 事件也需要捕获参数类型
@@ -113,9 +127,11 @@ namespace YokiFrame
                     ScanEnumLine(line, EnumSendPattern, relativePath, lineNumber, "Send");
                     ScanEnumLine(line, EnumUnRegisterPattern, relativePath, lineNumber, "UnRegister");
                     
-                    // Type 事件
+                    // Type 事件 - 多种模式
                     ScanTypeLine(line, TypeRegisterPattern, relativePath, lineNumber, "Register");
-                    ScanTypeLine(line, TypeSendPattern, relativePath, lineNumber, "Send");
+                    ScanTypeLine(line, TypeSendGenericPattern, relativePath, lineNumber, "Send");
+                    ScanTypeLine(line, TypeSendNewPattern, relativePath, lineNumber, "Send");
+                    ScanTypeLine(line, TypeUnRegisterPattern, relativePath, lineNumber, "UnRegister");
                     
                     // String 事件 - 带参数类型提取
                     ScanStringLine(line, StringRegisterPattern, relativePath, lineNumber, "Register");

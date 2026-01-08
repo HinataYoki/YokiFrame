@@ -38,6 +38,31 @@ namespace YokiFrame
         /// 热度
         /// </summary>
         public int Hot = 0;
+        
+        /// <summary>
+        /// 所在栈名称
+        /// </summary>
+        public string StackName = "main";
+        
+        /// <summary>
+        /// 子层级（用于同层级内的排序）
+        /// </summary>
+        public int SubLevel = 0;
+        
+        /// <summary>
+        /// 是否为模态面板
+        /// </summary>
+        public bool IsModal = false;
+        
+        /// <summary>
+        /// 打开时间戳
+        /// </summary>
+        public long OpenTimestamp = 0;
+        
+        /// <summary>
+        /// 缓存模式
+        /// </summary>
+        public PanelCacheMode CacheMode = PanelCacheMode.Hot;
 
         public bool IsRecycled { get; set; }
 
@@ -55,6 +80,11 @@ namespace YokiFrame
             Data = null;
             Loader.UnLoadAndRecycle();
             Loader = null;
+            StackName = "main";
+            SubLevel = 0;
+            IsModal = false;
+            OpenTimestamp = 0;
+            CacheMode = PanelCacheMode.Hot;
         }
     }
 }

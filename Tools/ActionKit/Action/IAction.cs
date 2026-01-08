@@ -10,6 +10,32 @@ namespace YokiFrame
         Finished,
     }
 
+    /// <summary>
+    /// Action 编辑器钩子 - 用于运行时向编辑器发送通知
+    /// 编辑器代码通过注册这些委托来接收事件，运行时无需引用编辑器程序集
+    /// </summary>
+    public static class ActionEditorHooks
+    {
+        /// <summary>
+        /// Action 开始时的回调，编辑器注册
+        /// </summary>
+        public static Action<IAction> OnActionStarted;
+        
+        /// <summary>
+        /// Action 结束时的回调，编辑器注册
+        /// </summary>
+        public static Action<IAction> OnActionFinished;
+        
+        /// <summary>
+        /// 清理所有钩子（PlayMode 退出时调用）
+        /// </summary>
+        public static void Clear()
+        {
+            OnActionStarted = null;
+            OnActionFinished = null;
+        }
+    }
+
     public interface IAction
     {
         /// <summary>
@@ -116,20 +142,24 @@ namespace YokiFrame
                         if (self.ActionState == ActionStatus.Finished)
                         {
                             self.OnFinish();
+                            ActionEditorHooks.OnActionFinished?.Invoke(self);
                             return true;
                         }
                         self.ActionState = ActionStatus.Started;
+                        ActionEditorHooks.OnActionStarted?.Invoke(self);
                         break;
                     case ActionStatus.Started:
                         self.OnExecute(dt);
                         if (self.ActionState == ActionStatus.Finished)
                         {
                             self.OnFinish();
+                            ActionEditorHooks.OnActionFinished?.Invoke(self);
                             return true;
                         }
                         break;
                     case ActionStatus.Finished:
                         self.OnFinish();
+                        ActionEditorHooks.OnActionFinished?.Invoke(self);
                         return true;
                 }
             }

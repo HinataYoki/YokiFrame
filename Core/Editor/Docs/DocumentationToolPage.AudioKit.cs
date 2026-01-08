@@ -13,6 +13,7 @@ namespace YokiFrame.EditorTools
                 Icon = KitIcons.AUDIOKIT,
                 Category = "TOOLS",
                 Description = "音频管理工具，提供多通道音频播放、音量控制、3D 音效、预加载等功能。支持自定义后端和路径解析。",
+                Keywords = new List<string> { "音频", "BGM", "音效", "3D音频" },
                 Sections = new List<DocSection>
                 {
                     new()
@@ -205,7 +206,7 @@ AudioKit.UnloadAll();"
                     new()
                     {
                         Title = "配置与初始化",
-                        Description = "自定义后端、配置和路径解析。",
+                        Description = "自定义后端、配置、加载池和路径解析。",
                         CodeExamples = new List<CodeExample>
                         {
                             new()
@@ -231,6 +232,92 @@ AudioKit.SetPathResolver(audioId =>
 // 使用 int ID 播放
 AudioKit.Play(1001, AudioChannel.Sfx);",
                                 Explanation = "推荐使用 int ID + PathResolver 方式，避免魔法字符串。"
+                            },
+                            new()
+                            {
+                                Title = "自定义加载池",
+                                Code = @"// 默认使用 ResKit 加载，无需配置
+AudioKit.Play(""Audio/Click"");
+
+// 自定义加载池（如 YooAsset）
+public class YooAssetAudioLoaderPool : AbstractAudioLoaderPool
+{
+    protected override IAudioLoader CreateAudioLoader() 
+        => new YooAssetAudioLoader(this);
+}
+
+public class YooAssetAudioLoader : IAudioLoader
+{
+    private readonly IAudioLoaderPool mPool;
+    private AssetHandle mHandle;
+
+    public YooAssetAudioLoader(IAudioLoaderPool pool) => mPool = pool;
+
+    public AudioClip Load(string path)
+    {
+        mHandle = YooAssets.LoadAssetSync<AudioClip>(path);
+        return mHandle.AssetObject as AudioClip;
+    }
+
+    public void LoadAsync(string path, Action<AudioClip> onComplete)
+    {
+        mHandle = YooAssets.LoadAssetAsync<AudioClip>(path);
+        mHandle.Completed += h => onComplete?.Invoke(h.AssetObject as AudioClip);
+    }
+
+    public void UnloadAndRecycle()
+    {
+        mHandle?.Release();
+        mHandle = null;
+        mPool.RecycleLoader(this);
+    }
+}
+
+// 设置自定义加载池
+AudioKit.SetLoaderPool(new YooAssetAudioLoaderPool());",
+                                Explanation = "通过实现 IAudioLoaderPool 接口扩展加载方式，支持 YooAsset、Addressables 等。"
+                            },
+                            new()
+                            {
+                                Title = "UniTask 加载池",
+                                Code = @"// 支持 UniTask 的加载池
+public class YooAssetAudioLoaderUniTaskPool : AbstractAudioLoaderPool
+{
+    protected override IAudioLoader CreateAudioLoader() 
+        => new YooAssetAudioLoaderUniTask(this);
+}
+
+public class YooAssetAudioLoaderUniTask : IAudioLoaderUniTask
+{
+    private readonly IAudioLoaderPool mPool;
+    private AssetHandle mHandle;
+
+    public YooAssetAudioLoaderUniTask(IAudioLoaderPool pool) => mPool = pool;
+
+    public AudioClip Load(string path) { /* 同步加载 */ }
+    public void LoadAsync(string path, Action<AudioClip> onComplete) { /* 回调加载 */ }
+
+    public async UniTask<AudioClip> LoadUniTaskAsync(string path, CancellationToken ct = default)
+    {
+        mHandle = YooAssets.LoadAssetAsync<AudioClip>(path);
+        await mHandle.ToUniTask(cancellationToken: ct);
+        return mHandle.AssetObject as AudioClip;
+    }
+
+    public void UnloadAndRecycle()
+    {
+        mHandle?.Release();
+        mHandle = null;
+        mPool.RecycleLoader(this);
+    }
+}
+
+// 设置 UniTask 加载池
+AudioKit.SetLoaderPool(new YooAssetAudioLoaderUniTaskPool());
+
+// 使用 UniTask 异步播放
+var handle = await AudioKit.PlayUniTaskAsync(""Audio/BGM"", config);",
+                                Explanation = "实现 IAudioLoaderUniTask 接口以支持 UniTask 异步加载。"
                             },
                             new()
                             {

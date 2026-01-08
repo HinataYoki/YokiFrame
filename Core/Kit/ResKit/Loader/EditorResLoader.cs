@@ -46,6 +46,9 @@ namespace YokiFrame
                 }
             }
             
+            // 追踪资源加载
+            ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
+            
             return mAsset as T;
         }
 
@@ -58,6 +61,8 @@ namespace YokiFrame
 
         public void UnloadAndRecycle()
         {
+            // 追踪资源卸载
+            ResLoadTracker.OnUnload(this);
             mAsset = null;
             mPool.Recycle(this);
         }

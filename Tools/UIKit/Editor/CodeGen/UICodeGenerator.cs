@@ -74,9 +74,9 @@ namespace YokiFrame
             }
         }
 
-        public static void DoCreateCode(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace)
+        public static void DoCreateCode(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace, PanelCodeGenOptions options = null)
         {
-            mInstance.CreateCodePipeline(prefab, scriptPath, designerPath, scriptNamespace);
+            mInstance.CreateCodePipeline(prefab, scriptPath, designerPath, scriptNamespace, options);
         }
 
         /// <summary>
@@ -86,7 +86,8 @@ namespace YokiFrame
         /// <param name="scriptPath">代码路径</param>
         /// <param name="designerPath">定义代码路径</param>
         /// <param name="scriptNamespace">命名空间</param>
-        private void CreateCodePipeline(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace)
+        /// <param name="options">代码生成选项</param>
+        private void CreateCodePipeline(GameObject prefab, string scriptPath, string designerPath, string scriptNamespace, PanelCodeGenOptions options = null)
         {
             if (prefab != null)
             {
@@ -107,7 +108,7 @@ namespace YokiFrame
 
                 BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
 
-                CreateUIPanelCode(prefab, scriptPath, designerPath, scriptNamespace, bindCodeInfo);
+                CreateUIPanelCode(prefab, scriptPath, designerPath, scriptNamespace, bindCodeInfo, options);
 
                 UISerializer.AddPrefabReferencesAfterCompoile(prefab);
 
@@ -123,14 +124,15 @@ namespace YokiFrame
         /// <param name="designerPath">成员定义代码路径</param>
         /// <param name="scriptNamespace">代码命名空间</param>
         /// <param name="bindCodeInfo">成员绑定信息</param>
-        private void CreateUIPanelCode(GameObject prefab, string scriptFilePath, string designerPath, string scriptNamespace, BindCodeInfo bindCodeInfo)
+        /// <param name="options">代码生成选项</param>
+        private void CreateUIPanelCode(GameObject prefab, string scriptFilePath, string designerPath, string scriptNamespace, BindCodeInfo bindCodeInfo, PanelCodeGenOptions options = null)
         {
             var name = prefab.name;
 
             if (!File.Exists(scriptFilePath))
             {
                 Directory.CreateDirectory(PathUtils.GetDirectoryPath(scriptFilePath));
-                UICodeGenTemplate.WritePanel(name, scriptFilePath, scriptNamespace);
+                UICodeGenTemplate.WritePanel(name, scriptFilePath, scriptNamespace, options);
                 Debug.Log($">>>>>>>Success Create UIPrefab Code: {name}");
             }
 

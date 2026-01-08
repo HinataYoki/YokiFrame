@@ -1,309 +1,221 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// UIKit 工具页面 - UI Toolkit 版本
+    /// UIKit 工具页面 - 集成创建面板、调试、绑定检查、验证器功能
+    /// 采用响应式数据绑定，通过订阅面板事件实现自动更新
     /// </summary>
-    public class UIKitToolPage : YokiFrameToolPageBase
+    public partial class UIKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "UIKit";
         public override string PageIcon => KitIcons.UIKIT;
         public override int Priority => 30;
 
-        private string PrefabGeneratePath
+        #region 常量
+
+        private const float THROTTLE_INTERVAL = 0.2f;  // 节流间隔 200ms
+
+        #endregion
+
+        #region 标签页枚举
+
+        private enum TabType
         {
-            get => UIKitCreateConfig.Instance.PrefabGeneratePath;
-            set => UIKitCreateConfig.Instance.PrefabGeneratePath = value;
-        }
-        private string ScriptGeneratePath
-        {
-            get => UIKitCreateConfig.Instance.ScriptGeneratePath;
-            set => UIKitCreateConfig.Instance.ScriptGeneratePath = value;
-        }
-        private string ScriptNamespace
-        {
-            get => UIKitCreateConfig.Instance.ScriptNamespace;
-            set => UIKitCreateConfig.Instance.ScriptNamespace = value;
-        }
-        private string AssemblyName
-        {
-            get => UIKitCreateConfig.Instance.AssemblyName;
-            set => UIKitCreateConfig.Instance.AssemblyName = value;
+            CreatePanel,    // 创建面板
+            Debug,          // 调试
+            BindInspector,  // 绑定检查
+            Validator       // 验证器
         }
 
-        private string mPanelCreateName = string.Empty;
-        private const string ASSETS = "Assets";
+        #endregion
 
-        // UI 元素引用
-        private TextField mAssemblyField;
-        private TextField mNamespaceField;
-        private TextField mScriptPathField;
-        private TextField mPrefabPathField;
-        private TextField mPanelNameField;
-        private VisualElement mPreviewContainer;
-        private UnityEngine.UIElements.Button mCreateButton;
+        #region 字段 - 通用
 
-        private string PrefabName => $"{mPanelCreateName}.prefab";
-        private string ScriptName => $"{mPanelCreateName}.cs";
-        private string DesignerName => $"{mPanelCreateName}.Designer.cs";
-        private string PrefabPath => $"{PrefabGeneratePath}/{PrefabName}";
-        private string ScriptPath => $"{ScriptGeneratePath}/{mPanelCreateName}/{ScriptName}";
-        private string DesignerPath => $"{ScriptGeneratePath}/{mPanelCreateName}/{DesignerName}";
+        private TabType mCurrentTab = TabType.CreatePanel;
+        private VisualElement mTabContent;
+        private Button mCreatePanelTabBtn;
+        private Button mDebugTabBtn;
+        private Button mBindInspectorTabBtn;
+        private Button mValidatorTabBtn;
+        
+        // 响应式更新
+        private Throttle mRefreshThrottle;
+
+        #endregion
+
+        #region 构建 UI
 
         protected override void BuildUI(VisualElement root)
         {
-            var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
-            scrollView.style.paddingLeft = 16;
-            scrollView.style.paddingRight = 16;
-            scrollView.style.paddingTop = 16;
-            root.Add(scrollView);
-            
-            var title = new Label("UI Panel 创建工具");
-            title.style.fontSize = 16;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.marginBottom = 16;
-            scrollView.Add(title);
-            
-            // 程序集
-            scrollView.Add(CreateFormRow("UI脚本所在的程序集:", out mAssemblyField, AssemblyName));
-            mAssemblyField.RegisterValueChangedCallback(evt => AssemblyName = evt.newValue);
-            
-            // 命名空间
-            scrollView.Add(CreateFormRow("Scripts命名空间:", out mNamespaceField, ScriptNamespace));
-            mNamespaceField.RegisterValueChangedCallback(evt => ScriptNamespace = evt.newValue);
-            
-            // Scripts 目录
-            scrollView.Add(CreatePathRow("Scripts目录:", out mScriptPathField, ScriptGeneratePath, path =>
-            {
-                ScriptGeneratePath = path;
-                mScriptPathField.value = path;
-            }));
-            
-            // Prefab 目录
-            scrollView.Add(CreatePathRow("Prefab目录:", out mPrefabPathField, PrefabGeneratePath, path =>
-            {
-                PrefabGeneratePath = path;
-                mPrefabPathField.value = path;
-            }));
-            
-            // Panel 名字
-            var panelNameRow = new VisualElement();
-            panelNameRow.AddToClassList("form-row");
-            panelNameRow.style.marginTop = 16;
-            
-            var panelLabel = new Label("Panel名字:");
-            panelLabel.AddToClassList("form-label");
-            panelNameRow.Add(panelLabel);
-            
-            mPanelNameField = new TextField();
-            mPanelNameField.AddToClassList("form-field");
-            mPanelNameField.RegisterValueChangedCallback(evt =>
-            {
-                mPanelCreateName = evt.newValue;
-                UpdatePreview();
-            });
-            panelNameRow.Add(mPanelNameField);
-            
-            scrollView.Add(panelNameRow);
-            
-            // 预览区域
-            mPreviewContainer = new VisualElement();
-            mPreviewContainer.style.marginTop = 16;
-            mPreviewContainer.style.display = DisplayStyle.None;
-            scrollView.Add(mPreviewContainer);
-            
-            // 创建按钮
-            mCreateButton = new UnityEngine.UIElements.Button(OnCreateUIPanelClick) { text = "创建 UI Panel" };
-            mCreateButton.AddToClassList("action-button");
-            mCreateButton.AddToClassList("primary");
-            mCreateButton.style.marginTop = 16;
-            mCreateButton.style.height = 32;
-            mCreateButton.style.display = DisplayStyle.None;
-            scrollView.Add(mCreateButton);
+            // 标签栏
+            var tabBar = new VisualElement();
+            tabBar.style.flexDirection = FlexDirection.Row;
+            tabBar.style.borderBottomWidth = 1;
+            tabBar.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
+            tabBar.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.12f));
+            root.Add(tabBar);
+
+            mCreatePanelTabBtn = CreateTabButton("创建面板", TabType.CreatePanel);
+            mDebugTabBtn = CreateTabButton("调试", TabType.Debug);
+            mBindInspectorTabBtn = CreateTabButton("绑定检查", TabType.BindInspector);
+            mValidatorTabBtn = CreateTabButton("验证器", TabType.Validator);
+
+            tabBar.Add(mCreatePanelTabBtn);
+            tabBar.Add(mDebugTabBtn);
+            tabBar.Add(mBindInspectorTabBtn);
+            tabBar.Add(mValidatorTabBtn);
+
+            // 内容区域
+            mTabContent = new VisualElement { style = { flexGrow = 1 } };
+            root.Add(mTabContent);
+
+            // 初始化响应式订阅
+            SetupReactiveSubscriptions();
+
+            SwitchTab(TabType.CreatePanel);
         }
 
-        private VisualElement CreateFormRow(string labelText, out TextField textField, string initialValue)
+        #endregion
+
+        #region 响应式订阅
+
+        /// <summary>
+        /// 设置响应式订阅 - 监听面板状态变化事件
+        /// </summary>
+        private void SetupReactiveSubscriptions()
         {
-            var row = new VisualElement();
-            row.AddToClassList("form-row");
+            // 创建节流器
+            mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
             
-            var label = new Label(labelText);
-            label.AddToClassList("form-label");
-            row.Add(label);
+            // 订阅面板打开事件
+            SubscribeChannel<IPanel>(DataChannels.PANEL_OPENED, OnPanelOpened);
             
-            textField = new TextField();
-            textField.AddToClassList("form-field");
-            textField.value = initialValue;
-            row.Add(textField);
+            // 订阅面板关闭事件
+            SubscribeChannel<IPanel>(DataChannels.PANEL_CLOSED, OnPanelClosed);
             
-            return row;
+            // 订阅焦点变化事件
+            SubscribeChannel<GameObject>(DataChannels.FOCUS_CHANGED, OnFocusChanged);
+        }
+        
+        private void OnPanelOpened(IPanel panel)
+        {
+            if (mCurrentTab != TabType.Debug) return;
+            if (!mDebugAutoRefresh) return;
+            mRefreshThrottle.Execute(RefreshDebugContent);
+        }
+        
+        private void OnPanelClosed(IPanel panel)
+        {
+            if (mCurrentTab != TabType.Debug) return;
+            if (!mDebugAutoRefresh) return;
+            mRefreshThrottle.Execute(RefreshDebugContent);
+        }
+        
+        private void OnFocusChanged(GameObject focusObj)
+        {
+            if (mCurrentTab != TabType.Debug) return;
+            if (!mDebugAutoRefresh || !mShowFocusInfo) return;
+            mRefreshThrottle.Execute(RefreshDebugContent);
         }
 
-        private VisualElement CreatePathRow(string labelText, out TextField textField, string initialValue, Action<string> onPathChanged)
+        #endregion
+
+        #region 标签页切换
+
+        private Button CreateTabButton(string text, TabType tabType)
         {
-            var row = new VisualElement();
-            row.AddToClassList("form-row");
-            
-            var label = new Label(labelText);
-            label.AddToClassList("form-label");
-            row.Add(label);
-            
-            var pathContainer = new VisualElement();
-            pathContainer.style.flexDirection = FlexDirection.Row;
-            pathContainer.style.flexGrow = 1;
-            
-            textField = new TextField();
-            textField.style.flexGrow = 1;
-            textField.value = initialValue;
-            textField.SetEnabled(false);
-            pathContainer.Add(textField);
-            
-            var browseBtn = new UnityEngine.UIElements.Button(() =>
-            {
-                var folderPath = EditorUtility.OpenFolderPanel(labelText, initialValue, string.Empty);
-                if (!string.IsNullOrEmpty(folderPath))
-                {
-                    var idx = folderPath.IndexOf(ASSETS, StringComparison.Ordinal);
-                    var newPath = idx >= 0 ? folderPath[idx..] : folderPath;
-                    onPathChanged?.Invoke(newPath);
-                }
-            }) { text = "..." };
-            browseBtn.style.width = 30;
-            browseBtn.style.marginLeft = 4;
-            pathContainer.Add(browseBtn);
-            
-            row.Add(pathContainer);
-            
-            return row;
+            var btn = new Button(() => SwitchTab(tabType)) { text = text };
+            btn.style.paddingLeft = 16;
+            btn.style.paddingRight = 16;
+            btn.style.paddingTop = 10;
+            btn.style.paddingBottom = 10;
+            btn.style.borderLeftWidth = btn.style.borderRightWidth = btn.style.borderTopWidth = 0;
+            btn.style.borderBottomWidth = 2;
+            btn.style.borderBottomColor = new StyleColor(Color.clear);
+            btn.style.backgroundColor = StyleKeyword.Null;
+            btn.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+            return btn;
         }
 
-        private void UpdatePreview()
+        private void UpdateTabButtonStyles()
         {
-            mPreviewContainer.Clear();
-            
-            if (string.IsNullOrEmpty(mPanelCreateName))
+            UpdateSingleTabStyle(mCreatePanelTabBtn, mCurrentTab == TabType.CreatePanel);
+            UpdateSingleTabStyle(mDebugTabBtn, mCurrentTab == TabType.Debug);
+            UpdateSingleTabStyle(mBindInspectorTabBtn, mCurrentTab == TabType.BindInspector);
+            UpdateSingleTabStyle(mValidatorTabBtn, mCurrentTab == TabType.Validator);
+        }
+
+        private void UpdateSingleTabStyle(Button btn, bool isActive)
+        {
+            btn.style.borderBottomColor = new StyleColor(isActive ? new Color(0.25f, 0.55f, 0.90f) : Color.clear);
+            btn.style.color = new StyleColor(isActive ? new Color(0.95f, 0.95f, 0.97f) : new Color(0.55f, 0.55f, 0.57f));
+            btn.style.backgroundColor = new StyleColor(isActive ? new Color(0.18f, 0.18f, 0.20f) : Color.clear);
+        }
+
+        private void SwitchTab(TabType tabType)
+        {
+            mCurrentTab = tabType;
+            mTabContent.Clear();
+            UpdateTabButtonStyles();
+
+            switch (tabType)
             {
-                mPreviewContainer.style.display = DisplayStyle.None;
-                mCreateButton.style.display = DisplayStyle.None;
-                return;
+                case TabType.CreatePanel:
+                    BuildCreatePanelUI(mTabContent);
+                    break;
+                case TabType.Debug:
+                    BuildDebugUI(mTabContent);
+                    break;
+                case TabType.BindInspector:
+                    BuildBindInspectorUI(mTabContent);
+                    break;
+                case TabType.Validator:
+                    BuildValidatorUI(mTabContent);
+                    break;
             }
-            
-            mPreviewContainer.style.display = DisplayStyle.Flex;
-            
-            var previewTitle = new Label("生成文件预览");
-            previewTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
-            previewTitle.style.marginBottom = 8;
-            mPreviewContainer.Add(previewTitle);
-            
-            var previewBox = new VisualElement();
-            previewBox.AddToClassList("info-box");
-            mPreviewContainer.Add(previewBox);
-            
-            AddPreviewItem(previewBox, PrefabPath, File.Exists(PrefabPath));
-            AddPreviewItem(previewBox, ScriptPath, File.Exists(ScriptPath));
-            AddPreviewItem(previewBox, DesignerPath, File.Exists(DesignerPath));
-            
-            // 只有当 Prefab 不存在时才显示创建按钮
-            var canCreate = !File.Exists(PrefabPath);
-            mCreateButton.style.display = canCreate ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
-        private void AddPreviewItem(VisualElement parent, string path, bool exists)
+        #endregion
+
+        #region 通用辅助方法
+
+        private Button CreateSmallButton(string text, Action onClick)
         {
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.marginBottom = 4;
-            
-            var pathLabel = new Label(path);
-            pathLabel.style.flexGrow = 1;
-            pathLabel.style.fontSize = 11;
-            pathLabel.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
-            row.Add(pathLabel);
-            
-            if (exists)
-            {
-                var existsLabel = new Label("[已存在]");
-                existsLabel.style.color = new StyleColor(new Color(1f, 0.4f, 0.4f));
-                existsLabel.style.fontSize = 11;
-                row.Add(existsLabel);
-            }
-            
-            parent.Add(row);
+            var btn = new Button(onClick) { text = text };
+            btn.style.height = 20;
+            btn.style.paddingLeft = 8;
+            btn.style.paddingRight = 8;
+            btn.style.marginLeft = 4;
+            btn.style.fontSize = 11;
+            return btn;
         }
 
-        private void OnCreateUIPanelClick()
+        #endregion
+
+        #region 更新
+
+        public override void OnUpdate()
         {
-            var panelName = mPanelCreateName;
-
-            if (string.IsNullOrEmpty(panelName)) return;
-
-            // 确保 Prefab 目录存在
-            var prefabDir = Path.GetDirectoryName(PrefabPath);
-            if (!string.IsNullOrEmpty(prefabDir) && !Directory.Exists(prefabDir))
+            // 响应式模式下，调试标签页不再需要轮询
+            // 绑定检查标签页仍使用轮询（因为绑定数据没有事件通知）
+            if (mCurrentTab == TabType.BindInspector && mBindAutoRefresh && mBindTargetRoot != null)
             {
-                Directory.CreateDirectory(prefabDir);
-                AssetDatabase.Refresh();
-            }
-
-            var uiKitPrefab = Resources.Load<GameObject>(nameof(UIKit));
-            var uikit = UnityEngine.Object.Instantiate(uiKitPrefab);
-            
-            try
-            {
-                var uiRoot = uikit.GetComponentInChildren<UIRoot>();
-
-                if (uiRoot == null)
+                if (EditorApplication.timeSinceStartup - mBindLastRefreshTime > BIND_REFRESH_INTERVAL)
                 {
-                    KitLogger.Error("UIKit预制体中不包含UIRoot组件!");
-                    return;
-                }
-
-                var gameObj = new GameObject(Path.GetFileNameWithoutExtension(panelName))
-                {
-                    transform =
-                    {
-                        parent = uiRoot.transform,
-                        localScale = Vector3.one
-                    }
-                };
-
-                var rect = gameObj.AddComponent<RectTransform>();
-
-                rect.anchoredPosition3D = Vector3.zero;
-                rect.localEulerAngles = Vector3.zero;
-                rect.localScale = Vector3.one;
-                rect.anchorMin = Vector2.zero;
-                rect.anchorMax = Vector2.one;
-                rect.sizeDelta = Vector2.zero;
-
-                var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(gameObj, PrefabPath, InteractionMode.AutomatedAction);
-
-                UICodeGenerator.DoCreateCode(prefab, ScriptPath, DesignerPath, ScriptNamespace);
-
-                mPanelCreateName = string.Empty;
-                mPanelNameField.value = string.Empty;
-                UpdatePreview();
-                
-                AssetDatabase.Refresh();
-                
-                EditorUtility.DisplayDialog("成功", $"UI Panel 已创建:\n{PrefabPath}", "确定");
-            }
-            finally
-            {
-                // 确保 UIKit 克隆物体被销毁（gameObj 是其子物体，会一起被销毁）
-                if (uikit != null)
-                {
-                    UnityEngine.Object.DestroyImmediate(uikit);
+                    mBindLastRefreshTime = EditorApplication.timeSinceStartup;
+                    RefreshBindings();
+                    RefreshBindContent();
                 }
             }
         }
+
+        #endregion
     }
 }

@@ -29,6 +29,15 @@ namespace YokiFrame
         private static Func<int, string> sPathResolver;
 
         /// <summary>
+        /// 音频加载池，用于自定义资源加载方式
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static IAudioLoaderPool sLoaderPool = new DefaultAudioLoaderUniTaskPool();
+#else
+        private static IAudioLoaderPool sLoaderPool = new DefaultAudioLoaderPool();
+#endif
+
+        /// <summary>
         /// 各通道音量缓存，key 为通道 ID（0-4 内置，5+ 自定义）
         /// </summary>
         private static readonly Dictionary<int, float> sChannelVolumes = new()
@@ -116,6 +125,20 @@ namespace YokiFrame
         {
             sPathResolver = resolver;
         }
+
+        /// <summary>
+        /// 设置自定义音频加载池（用于 YooAsset、Addressables 等扩展）
+        /// </summary>
+        public static void SetLoaderPool(IAudioLoaderPool loaderPool)
+        {
+            sLoaderPool = loaderPool ?? throw new ArgumentNullException(nameof(loaderPool));
+            KitLogger.Log($"[AudioKit] 加载池已切换为: {loaderPool.GetType().Name}");
+        }
+
+        /// <summary>
+        /// 获取当前音频加载池
+        /// </summary>
+        public static IAudioLoaderPool GetLoaderPool() => sLoaderPool;
 
         #endregion
 
@@ -576,6 +599,13 @@ namespace YokiFrame
             sGlobalVolume = 1f;
             sGlobalMuted = false;
             sIsInitialized = false;
+
+            // 重置加载池为默认实现
+#if YOKIFRAME_UNITASK_SUPPORT
+            sLoaderPool = new DefaultAudioLoaderUniTaskPool();
+#else
+            sLoaderPool = new DefaultAudioLoaderPool();
+#endif
 
             // 重置通道状态
             sChannelVolumes.Clear();

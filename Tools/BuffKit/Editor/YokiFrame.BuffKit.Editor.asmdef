@@ -2,6 +2,7 @@
     "name": "YokiFrame.BuffKit.Editor",
     "rootNamespace": "YokiFrame",
     "references": [
+        "YokiFrame",
         "YokiFrame.BuffKit",
         "YokiFrame.Core.Editor"
     ],
