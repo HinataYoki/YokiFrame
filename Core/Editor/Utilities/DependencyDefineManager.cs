@@ -102,35 +102,26 @@ namespace YokiFrame.Core.Editor
         {
             var currentDefines = GetCurrentDefines();
             var newDefines = new HashSet<string>(currentDefines);
-            var changed = false;
 
             foreach (var dep in sDependencies)
             {
                 var exists = DetectDependency(dep);
-                Debug.Log($"[YokiFrame] 检测依赖 {dep.Define}: {(exists ? "存在" : "不存在")} (Package: {dep.PackageName}, Asmdef: {dep.AsmdefName})");
                 
                 if (exists && !newDefines.Contains(dep.Define))
                 {
                     newDefines.Add(dep.Define);
-                    changed = true;
                     Debug.Log($"[YokiFrame] 添加宏定义: {dep.Define}");
                 }
                 else if (!exists && newDefines.Contains(dep.Define))
                 {
                     newDefines.Remove(dep.Define);
-                    changed = true;
                     Debug.Log($"[YokiFrame] 移除宏定义: {dep.Define}");
                 }
             }
 
-            if (changed)
+            if (newDefines.Count != currentDefines.Count || !newDefines.SetEquals(currentDefines))
             {
                 SetDefines(newDefines);
-                Debug.Log("[YokiFrame] 依赖宏定义已更新");
-            }
-            else
-            {
-                Debug.Log("[YokiFrame] 依赖宏定义无需更新");
             }
         }
 
