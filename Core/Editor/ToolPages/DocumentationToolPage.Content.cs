@@ -441,7 +441,7 @@ namespace YokiFrame.EditorTools
             }
             
             codeTextField.style.fontSize = 13;
-#if UNITY_2022_1_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
             codeTextField.style.whiteSpace = WhiteSpace.Pre;
 #else
             codeTextField.style.whiteSpace = WhiteSpace.NoWrap;
@@ -456,7 +456,7 @@ namespace YokiFrame.EditorTools
             codeLabel.enableRichText = true;
             codeLabel.text = highlightedCode;
             codeLabel.style.fontSize = 13;
-#if UNITY_2022_1_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
             codeLabel.style.whiteSpace = WhiteSpace.Pre;
 #else
             codeLabel.style.whiteSpace = WhiteSpace.NoWrap;
