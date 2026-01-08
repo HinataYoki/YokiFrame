@@ -356,28 +356,37 @@ namespace YokiFrame.EditorTools
         private string GetPackageVersion()
         {
             const string DEFAULT_VERSION = "1.0.0";
-            string packagePath = "Assets/YokiFrame/package.json";
             
-            if (!System.IO.File.Exists(packagePath)) return DEFAULT_VERSION;
-            
-            try
+            // 尝试多个可能的路径
+            string[] possiblePaths = 
             {
-                string json = System.IO.File.ReadAllText(packagePath);
-                int versionIndex = json.IndexOf("\"version\"");
-                if (versionIndex < 0) return DEFAULT_VERSION;
+                "Packages/com.hinatayoki.yokiframe/package.json",  // Package 安装路径
+                "Assets/YokiFrame/package.json"                    // Assets 文件夹路径
+            };
+            
+            foreach (var packagePath in possiblePaths)
+            {
+                if (!System.IO.File.Exists(packagePath)) continue;
                 
-                int colonIndex = json.IndexOf(':', versionIndex);
-                int startQuote = json.IndexOf('"', colonIndex);
-                int endQuote = json.IndexOf('"', startQuote + 1);
-                
-                if (startQuote >= 0 && endQuote > startQuote)
+                try
                 {
-                    return json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                    string json = System.IO.File.ReadAllText(packagePath);
+                    int versionIndex = json.IndexOf("\"version\"");
+                    if (versionIndex < 0) continue;
+                    
+                    int colonIndex = json.IndexOf(':', versionIndex);
+                    int startQuote = json.IndexOf('"', colonIndex);
+                    int endQuote = json.IndexOf('"', startQuote + 1);
+                    
+                    if (startQuote >= 0 && endQuote > startQuote)
+                    {
+                        return json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                    }
                 }
-            }
-            catch
-            {
-                // 忽略解析错误
+                catch
+                {
+                    // 忽略解析错误，尝试下一个路径
+                }
             }
             
             return DEFAULT_VERSION;

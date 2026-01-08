@@ -16,7 +16,6 @@ namespace YokiFrame
         private VisualElement mQuickNavContainer;
         private readonly List<(VisualElement navItem, VisualElement targetElement)> mNavItemMap = new(32);
         private VisualElement mSelectedNavItem;
-        private bool mIsNavScrolling;
 
         // 响应式布局阈值
         private const float QUICK_NAV_MIN_WIDTH = 900f;
@@ -219,10 +218,8 @@ namespace YokiFrame
                 var targetElement = FindEventFlowElement(eventKey);
                 if (targetElement != null)
                 {
-                    mIsNavScrolling = true;
                     UpdateNavHighlight(item);
                     mScanResultsScrollView.ScrollTo(targetElement);
-                    item.schedule.Execute(() => mIsNavScrolling = false).ExecuteLater(300);
                 }
             });
 
