@@ -193,7 +193,7 @@ namespace YokiFrame.TableKit.Editor
             if (!Directory.Exists(lubanCodeDir)) Directory.CreateDirectory(lubanCodeDir);
 
             logBuilder.AppendLine("正在生成 TableKit 运行时代码...");
-            TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil, mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath);
+            TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil, mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath, mCodeTarget);
             logBuilder.AppendLine("✓ TableKit 运行时代码生成完成");
 
             if (mGenerateExternalTypeUtil) logBuilder.AppendLine("✓ 已生成 ExternalTypeUtil.cs");

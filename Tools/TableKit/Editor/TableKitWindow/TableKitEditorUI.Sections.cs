@@ -90,7 +90,18 @@ namespace YokiFrame.TableKit.Editor
             mCodeTargetDropdown = new DropdownField(new List<string>(CODE_TARGET_OPTIONS), 0);
             mCodeTargetDropdown.style.width = 140;
             mCodeTargetDropdown.value = string.IsNullOrEmpty(mCodeTarget) ? CODE_TARGET_OPTIONS[0] : mCodeTarget;
-            mCodeTargetDropdown.RegisterValueChangedCallback(evt => { mCodeTarget = evt.newValue; SavePrefs(); });
+            mCodeTargetDropdown.RegisterValueChangedCallback(evt =>
+            {
+                mCodeTarget = evt.newValue;
+                // 自动同步数据格式：cs-bin 对应 bin，其他 JSON 代码生成器对应 json
+                var newDataTarget = evt.newValue == "cs-bin" ? "bin" : "json";
+                if (mDataTarget != newDataTarget)
+                {
+                    mDataTarget = newDataTarget;
+                    mDataTargetDropdown?.SetValueWithoutNotify(newDataTarget);
+                }
+                SavePrefs();
+            });
             container.Add(mCodeTargetDropdown);
 
             return container;
@@ -274,7 +285,18 @@ namespace YokiFrame.TableKit.Editor
             mDataTargetDropdown = new DropdownField(new List<string>(DATA_TARGET_OPTIONS), 0);
             mDataTargetDropdown.style.flexGrow = 1;
             mDataTargetDropdown.value = string.IsNullOrEmpty(mDataTarget) ? DATA_TARGET_OPTIONS[0] : mDataTarget;
-            mDataTargetDropdown.RegisterValueChangedCallback(evt => { mDataTarget = evt.newValue; SavePrefs(); });
+            mDataTargetDropdown.RegisterValueChangedCallback(evt =>
+            {
+                mDataTarget = evt.newValue;
+                // 自动同步代码生成器：bin 对应 cs-bin，json 对应 cs-simple-json
+                var newCodeTarget = evt.newValue == "bin" ? "cs-bin" : "cs-simple-json";
+                if (mCodeTarget != newCodeTarget)
+                {
+                    mCodeTarget = newCodeTarget;
+                    mCodeTargetDropdown?.SetValueWithoutNotify(newCodeTarget);
+                }
+                SavePrefs();
+            });
             dataRow.Add(mDataTargetDropdown);
 
             outputSection.Add(CreateValidatedPathRow("数据输出:", ref mOutputDataDirField, mOutputDataDir, path =>

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEditor;
@@ -44,6 +45,7 @@ namespace YokiFrame.TableKit.Editor
         /// <param name="tablesNamespace">Tables 命名空间</param>
         /// <param name="runtimePathPattern">运行时路径模式，将嵌入生成代码</param>
         /// <param name="editorDataPath">编辑器数据路径，将嵌入生成代码</param>
+        /// <param name="codeTarget">代码生成器类型，用于确定程序集引用</param>
         public static void Generate(
             string outputDir,
             bool useAssemblyDefinition,
@@ -51,7 +53,8 @@ namespace YokiFrame.TableKit.Editor
             string assemblyName = "YokiFrame.TableKit",
             string tablesNamespace = "cfg",
             string runtimePathPattern = "{0}",
-            string editorDataPath = "Assets/Art/Table/")
+            string editorDataPath = "Assets/Art/Table/",
+            string codeTarget = "cs-bin")
         {
             if (string.IsNullOrEmpty(outputDir))
             {
@@ -84,7 +87,7 @@ namespace YokiFrame.TableKit.Editor
             if (useAssemblyDefinition)
             {
                 CleanupOldAsmdef(outputDir, assemblyName);
-                GenerateAssemblyDefinition(outputDir, assemblyName, hasYokiFrame);
+                GenerateAssemblyDefinition(outputDir, assemblyName, hasYokiFrame, codeTarget);
             }
             else
             {
@@ -410,11 +413,21 @@ namespace cfg
             File.WriteAllText(Path.Combine(outputDir, "ExternalTypeUtil.cs"), content, Encoding.UTF8);
         }
 
-        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame)
+        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame, string codeTarget)
         {
-            var references = hasYokiFrame
-                ? "\"Luban.Runtime\",\n        \"YokiFrame\""
-                : "\"Luban.Runtime\"";
+            // 基础引用
+            var referencesList = new List<string> { "\"Luban.Runtime\"" };
+            
+            if (hasYokiFrame)
+                referencesList.Add("\"YokiFrame\"");
+            
+            // 根据代码生成器类型添加对应的 JSON 库引用
+            if (codeTarget == "cs-newtonsoft-json")
+                referencesList.Add("\"Newtonsoft.Json\"");
+            // cs-simple-json 使用 Luban.Runtime 内置的 SimpleJSON，无需额外引用
+            // cs-bin 不需要 JSON 库
+
+            var references = string.Join(",\n        ", referencesList);
 
             var content = $@"{{
     ""name"": ""{assemblyName}"",

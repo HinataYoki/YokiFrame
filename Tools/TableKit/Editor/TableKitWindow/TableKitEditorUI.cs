@@ -129,7 +129,7 @@ namespace YokiFrame.TableKit.Editor
         #region 下拉选项
 
         private static readonly string[] TARGET_OPTIONS = { "client", "server", "all" };
-        private static readonly string[] CODE_TARGET_OPTIONS = { "cs-bin", "cs-simple-json", "cs-newtonsoft-json", "cs-dotnet-json" };
+        private static readonly string[] CODE_TARGET_OPTIONS = { "cs-bin", "cs-simple-json", "cs-newtonsoft-json" };
         private static readonly string[] DATA_TARGET_OPTIONS = { "bin", "json" };
 
         #endregion
@@ -182,7 +182,7 @@ namespace YokiFrame.TableKit.Editor
             mCodeTarget = EditorPrefs.GetString(PREF_CODE_TARGET, "cs-bin");
             mDataTarget = EditorPrefs.GetString(PREF_DATA_TARGET, "bin");
             mOutputDataDir = EditorPrefs.GetString(PREF_OUTPUT_DATA_DIR, "Assets/Resources/Art/Table/");
-            mOutputCodeDir = EditorPrefs.GetString(PREF_OUTPUT_CODE_DIR, "Assets/Scripts/TabKit/");
+            mOutputCodeDir = EditorPrefs.GetString(PREF_OUTPUT_CODE_DIR, "Assets/Scripts/TableKit/");
             mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
             mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.TableKit");
             mGenerateExternalTypeUtil = EditorPrefs.GetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, false);
@@ -221,7 +221,7 @@ namespace YokiFrame.TableKit.Editor
             mCodeTarget = "cs-bin";
             mDataTarget = "bin";
             mOutputDataDir = "Assets/Resources/Art/Table/";
-            mOutputCodeDir = "Assets/Scripts/TabKit/";
+            mOutputCodeDir = "Assets/Scripts/TableKit/";
             mUseAssemblyDefinition = false;
             mAssemblyName = "YokiFrame.TableKit";
             mGenerateExternalTypeUtil = false;
