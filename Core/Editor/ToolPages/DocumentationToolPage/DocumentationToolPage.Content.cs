@@ -20,9 +20,8 @@ namespace YokiFrame.EditorTools
             mContentScrollView.Clear();
             mCurrentHeadings.Clear();
 
-            // 居中内容容器
+            // 居中内容容器（不设置 flexGrow，让高度由内容决定）
             var centerWrapper = new VisualElement();
-            centerWrapper.style.flexGrow = 1;
             centerWrapper.style.alignItems = Align.Center;
             centerWrapper.style.paddingTop = 32;
             centerWrapper.style.paddingBottom = 48;

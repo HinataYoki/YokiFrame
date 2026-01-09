@@ -96,6 +96,9 @@ namespace YokiFrame.EditorTools
             mContentScrollView.style.backgroundColor = new StyleColor(Theme.BgPrimary);
             mContentScrollView.verticalScrollerVisibility = ScrollerVisibility.Auto;
             
+            // 确保滚动条可正常拖动
+            YokiFrameUIComponents.FixScrollViewDragger(mContentScrollView);
+            
             // 监听滚动事件，同步更新右侧导航高亮
             mContentScrollView.verticalScroller.valueChanged += OnContentScrollChanged;
             

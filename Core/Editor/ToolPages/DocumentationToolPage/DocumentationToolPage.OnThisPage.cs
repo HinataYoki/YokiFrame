@@ -10,6 +10,9 @@ namespace YokiFrame.EditorTools
     /// </summary>
     public partial class DocumentationToolPage
     {
+        // 右侧导航高亮指示器
+        private HighlightIndicator mOnThisPageHighlight;
+        
         /// <summary>
         /// 响应式布局：根据窗口宽度显示/隐藏右侧导航
         /// </summary>
@@ -19,6 +22,13 @@ namespace YokiFrame.EditorTools
             
             bool shouldShow = evt.newRect.width >= ON_THIS_PAGE_MIN_WIDTH;
             mOnThisPagePanel.style.display = shouldShow ? DisplayStyle.Flex : DisplayStyle.None;
+            
+            // 窗口大小改变后，延迟重新计算高亮位置
+            if (mSelectedTocItem != null && mHighlightIndicator != null)
+            {
+                mSelectedTocItem.schedule.Execute(() => MoveHighlightToItem(mSelectedTocItem)).ExecuteLater(50);
+            }
+            mOnThisPageHighlight?.RefreshDelayed(50);
         }
         
         /// <summary>
@@ -27,7 +37,6 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateOnThisPagePanel()
         {
             mOnThisPagePanel = new VisualElement();
-            // 使用自适应宽度，设置最小和最大宽度限制
             mOnThisPagePanel.style.minWidth = 180;
             mOnThisPagePanel.style.maxWidth = 280;
             mOnThisPagePanel.style.flexShrink = 0;
@@ -49,9 +58,17 @@ namespace YokiFrame.EditorTools
             title.style.whiteSpace = WhiteSpace.NoWrap;
             mOnThisPagePanel.Add(title);
             
-            // 导航项容器
+            // 导航项容器（相对定位，用于放置高亮指示器）
             mOnThisPageContainer = new VisualElement();
+            mOnThisPageContainer.style.position = Position.Relative;
             mOnThisPagePanel.Add(mOnThisPageContainer);
+            
+            // 创建高亮指示器
+            mOnThisPageHighlight = new HighlightIndicator(
+                mOnThisPageContainer,
+                new Color(0.24f, 0.37f, 0.58f, 0.35f),
+                4f
+            );
             
             return mOnThisPagePanel;
         }
@@ -63,21 +80,30 @@ namespace YokiFrame.EditorTools
         {
             if (mOnThisPageContainer == null) return;
             
+            // 保留高亮指示器，只清除导航项
+            var highlightElement = mOnThisPageHighlight?.Element;
             mOnThisPageContainer.Clear();
+            if (highlightElement != null)
+            {
+                mOnThisPageContainer.Add(highlightElement);
+            }
+            
             mSelectedHeadingItem = null;
             mHeadingNavMap.Clear();
+            mOnThisPageHighlight?.Clear();
             
             bool isFirst = true;
             foreach (var (headingTitle, element, level) in mCurrentHeadings)
             {
-                var item = CreateOnThisPageItem(headingTitle, element, level, isFirst);
+                var item = CreateOnThisPageItem(headingTitle, element, level);
                 mOnThisPageContainer.Add(item);
-                
                 mHeadingNavMap.Add((item, element));
                 
                 if (isFirst)
                 {
                     mSelectedHeadingItem = item;
+                    mOnThisPageHighlight?.MoveToDelayed(item, 50);
+                    UpdateHeadingItemStyle(item, true);
                     isFirst = false;
                 }
             }
@@ -124,25 +150,33 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void UpdateHeadingHighlight(VisualElement newActiveItem)
         {
-            if (mSelectedHeadingItem != null)
+            // 清除所有项的样式
+            foreach (var (navItem, _) in mHeadingNavMap)
             {
-                mSelectedHeadingItem.style.borderLeftColor = new StyleColor(Color.clear);
-                mSelectedHeadingItem.style.backgroundColor = new StyleColor(Color.clear);
-                var prevLabel = mSelectedHeadingItem.Q<Label>();
-                if (prevLabel != null) prevLabel.style.color = new StyleColor(Theme.TextMuted);
+                UpdateHeadingItemStyle(navItem, navItem == newActiveItem);
             }
             
             mSelectedHeadingItem = newActiveItem;
-            newActiveItem.style.borderLeftColor = new StyleColor(Theme.AccentBlue);
-            newActiveItem.style.backgroundColor = new StyleColor(new Color(0.24f, 0.37f, 0.58f, 0.35f));
-            var newLabel = newActiveItem.Q<Label>();
-            if (newLabel != null) newLabel.style.color = new StyleColor(Theme.TextPrimary);
+            mOnThisPageHighlight?.MoveTo(newActiveItem);
+        }
+        
+        /// <summary>
+        /// 更新导航项样式
+        /// </summary>
+        private void UpdateHeadingItemStyle(VisualElement item, bool isActive)
+        {
+            item.style.borderLeftColor = isActive ? new StyleColor(Theme.AccentBlue) : new StyleColor(Color.clear);
+            var label = item.Q<Label>();
+            if (label != null)
+            {
+                label.style.color = isActive ? new StyleColor(Theme.TextPrimary) : new StyleColor(Theme.TextMuted);
+            }
         }
         
         /// <summary>
         /// 创建本页导航项
         /// </summary>
-        private VisualElement CreateOnThisPageItem(string title, VisualElement targetElement, int level, bool isActive = false)
+        private VisualElement CreateOnThisPageItem(string title, VisualElement targetElement, int level)
         {
             var item = new VisualElement();
             item.style.flexDirection = FlexDirection.Row;
@@ -158,17 +192,15 @@ namespace YokiFrame.EditorTools
             item.style.borderBottomLeftRadius = 4;
             item.style.borderBottomRightRadius = 4;
             item.style.borderLeftWidth = 2;
-            item.style.borderLeftColor = isActive ? new StyleColor(Theme.AccentBlue) : new StyleColor(Color.clear);
-            item.style.backgroundColor = isActive ? new StyleColor(new Color(0.24f, 0.37f, 0.58f, 0.35f)) : new StyleColor(Color.clear);
-            item.style.transitionProperty = new List<StylePropertyName> { new("border-left-color"), new("background-color") };
-            item.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond), new(150, TimeUnit.Millisecond) };
+            item.style.borderLeftColor = new StyleColor(Color.clear);
+            item.style.transitionProperty = new List<StylePropertyName> { new("border-left-color") };
+            item.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
             
             var label = new Label(title);
             label.style.fontSize = level == 1 ? 14 : 13;
-            label.style.color = isActive ? new StyleColor(Theme.TextPrimary) : new StyleColor(Theme.TextMuted);
+            label.style.color = new StyleColor(Theme.TextMuted);
             label.style.transitionProperty = new List<StylePropertyName> { new("color") };
             label.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
-            // 确保文字不被截断，允许自然换行
             label.style.whiteSpace = WhiteSpace.NoWrap;
             label.style.overflow = Overflow.Visible;
             item.Add(label);
@@ -179,7 +211,6 @@ namespace YokiFrame.EditorTools
                 if (item != mSelectedHeadingItem)
                 {
                     label.style.color = new StyleColor(Theme.TextSecondary);
-                    item.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.25f, 0.6f));
                 }
             });
             item.RegisterCallback<MouseLeaveEvent>(evt =>
@@ -187,7 +218,6 @@ namespace YokiFrame.EditorTools
                 if (item != mSelectedHeadingItem)
                 {
                     label.style.color = new StyleColor(Theme.TextMuted);
-                    item.style.backgroundColor = new StyleColor(Color.clear);
                 }
             });
             
@@ -204,17 +234,15 @@ namespace YokiFrame.EditorTools
         }
         
         /// <summary>
-        /// 精确滚动到目标元素（解决 ScrollTo 在长文档中失准的问题）
+        /// 精确滚动到目标元素
         /// </summary>
         private void ScrollToElement(VisualElement targetElement)
         {
             if (targetElement == null || mContentScrollView == null) return;
             
-            // 计算目标元素相对于 contentContainer 的位置
             var contentContainer = mContentScrollView.contentContainer;
             float targetY = 0f;
             
-            // 向上遍历计算累计偏移
             var current = targetElement;
             while (current != null && current != contentContainer)
             {
@@ -222,11 +250,9 @@ namespace YokiFrame.EditorTools
                 current = current.parent;
             }
             
-            // 减去顶部边距，让标题显示在视口顶部稍下的位置
             const float TOP_OFFSET = 20f;
             targetY = Mathf.Max(0f, targetY - TOP_OFFSET);
             
-            // 直接设置滚动位置
             mContentScrollView.scrollOffset = new Vector2(0, targetY);
         }
     }

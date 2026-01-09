@@ -23,6 +23,19 @@ namespace YokiFrame.EditorTools
             mTocScrollView.style.flexGrow = 1;
             mTocScrollView.style.paddingTop = 16;
             mTocScrollView.style.paddingBottom = 16;
+            
+            // 确保滚动条可正常拖动
+            YokiFrameUIComponents.FixScrollViewDragger(mTocScrollView);
+            
+            // 滚动时更新高亮位置
+            mTocScrollView.verticalScroller.valueChanged += _ =>
+            {
+                if (mSelectedTocItem != null)
+                {
+                    MoveHighlightToItem(mSelectedTocItem);
+                }
+            };
+            
             panel.Add(mTocScrollView);
             
             // 创建高亮指示器（独立元素，用于平滑移动动画）
@@ -296,12 +309,15 @@ namespace YokiFrame.EditorTools
         {
             if (targetItem == null || mHighlightIndicator == null || mTocItemsContainer == null) return;
             
+            // 获取目标项相对于容器的位置（与 YokiFrameToolWindow 保持一致）
             var targetRect = targetItem.worldBound;
             var containerRect = mTocItemsContainer.worldBound;
             
-            float relativeTop = targetRect.y - containerRect.y + mTocScrollView.scrollOffset.y;
+            // 计算相对位置（不需要加 scrollOffset，worldBound 已经是屏幕坐标）
+            float relativeTop = targetRect.y - containerRect.y;
             float relativeLeft = targetRect.x - containerRect.x;
             
+            // 设置高亮指示器位置和大小
             mHighlightIndicator.style.top = relativeTop;
             mHighlightIndicator.style.left = relativeLeft;
             mHighlightIndicator.style.width = targetRect.width;

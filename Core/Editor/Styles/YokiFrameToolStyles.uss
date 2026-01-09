@@ -93,6 +93,7 @@
     border-bottom-width: 1px;
     border-bottom-color: var(--border-subtle);
     margin-bottom: var(--spacing-md);
+    flex-shrink: 0;
 }
 
 .sidebar-title {
@@ -1049,26 +1050,55 @@
 }
 
 /* ========== 滚动条美化 ========== */
+/* 修复 ScrollView 滚动条 bug：drag-container 尺寸异常 */
+.unity-scroller--vertical .unity-base-slider__drag-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+}
+
+.unity-scroller--horizontal .unity-base-slider__drag-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+}
+
+/* 滚动条视觉样式 */
 .unity-scroller--vertical {
-    width: 8px;
+    width: 12px;
 }
 
 .unity-scroller--vertical .unity-base-slider__tracker {
-    background-color: transparent;
+    background-color: rgba(255, 255, 255, 0.05);
     border-width: 0;
+    border-radius: 6px;
 }
 
 .unity-scroller--vertical .unity-base-slider__dragger {
-    background-color: var(--layer-elevated);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
     border-width: 0;
-    margin: 0 1px;
     transition-property: background-color;
     transition-duration: var(--duration-fast);
 }
 
 .unity-scroller--vertical .unity-base-slider__dragger:hover {
-    background-color: var(--border-strong);
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+.unity-scroller--vertical .unity-base-slider__dragger:active {
+    background-color: var(--brand-primary);
+}
+
+/* 隐藏滚动条上下箭头按钮 */
+.unity-scroller .unity-repeat-button {
+    display: none;
 }
 
 /* ========== 工具提示 ========== */

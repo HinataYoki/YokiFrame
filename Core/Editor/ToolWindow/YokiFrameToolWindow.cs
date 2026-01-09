@@ -134,6 +134,25 @@ namespace YokiFrame.EditorTools
         private void CreateGUI()
         {
             var root = rootVisualElement;
+            
+            // 确保根元素填充整个窗口
+            root.style.flexGrow = 1;
+            
+            // 注册 ESC 键关闭窗口（使用 TrickleDown 确保优先捕获）
+            root.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode == KeyCode.Escape)
+                {
+                    Close();
+                    evt.StopPropagation();
+                }
+            }, TrickleDown.TrickleDown);
+            
+            // 确保窗口可以接收键盘焦点
+            root.focusable = true;
+            
+            // 点击窗口任意位置时获取焦点
+            root.RegisterCallback<MouseDownEvent>(evt => root.Focus());
 
             // 加载样式
             YokiFrameEditorUtility.ApplyMainStyleSheet(root);
@@ -157,6 +176,9 @@ namespace YokiFrame.EditorTools
             {
                 SelectPage(mSelectedPageIndex);
             }
+            
+            // 延迟获取焦点，确保 UI 完全构建
+            root.schedule.Execute(() => root.Focus()).ExecuteLater(100);
         }
 
         #endregion

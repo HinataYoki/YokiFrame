@@ -19,12 +19,14 @@ namespace YokiFrame.EditorTools
         {
             var sidebar = new VisualElement();
             sidebar.AddToClassList("sidebar");
+            sidebar.style.overflow = Overflow.Hidden;
 
-            // 标题
+            // 标题区域（固定在顶部，不参与滚动）
             var header = new VisualElement();
             header.AddToClassList("sidebar-header");
             header.style.flexDirection = FlexDirection.Column;
             header.style.alignItems = Align.Center;
+            header.style.flexShrink = 0; // 防止被压缩
 
             // 添加框架图标 - 居中突出显示
             Texture2D iconTexture = LoadIcon();
@@ -43,11 +45,16 @@ namespace YokiFrame.EditorTools
             header.Add(title);
             sidebar.Add(header);
 
-            // 页面列表（带分组）- 隐藏水平滚动条
+            // 页面列表（带分组）- 可滚动区域
             var list = new ScrollView(ScrollViewMode.Vertical);
             list.AddToClassList("sidebar-list");
             list.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             list.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            list.style.flexGrow = 1;
+            list.style.flexShrink = 1;
+            
+            // 确保滚动条可正常拖动
+            YokiFrameUIComponents.FixScrollViewDragger(list);
 
             // 创建列表内容容器（用于放置高亮指示器）
             mSidebarListContainer = new VisualElement();
@@ -248,6 +255,7 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateVersionInfoPanel()
         {
             var versionPanel = new VisualElement();
+            versionPanel.style.flexShrink = 0; // 防止被压缩
             versionPanel.style.paddingLeft = 16;
             versionPanel.style.paddingRight = 16;
             versionPanel.style.paddingTop = 12;

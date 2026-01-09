@@ -20,16 +20,16 @@ namespace YokiFrame.EditorTools
                     {
                         Title = "启用 IMGUI",
                         Code = @"// 启用 IMGUI 日志显示
-KitLogger.EnableIMGUI();
+KitLoggerIMGUI.Enable();
 
 // 指定最大日志条数
-KitLogger.EnableIMGUI(maxLogCount: 500);
+KitLoggerIMGUI.Enable(maxLogCount: 500);
 
 // 禁用 IMGUI
-KitLogger.DisableIMGUI();
+KitLoggerIMGUI.Disable();
 
 // 获取实例进行配置
-var imgui = KitLogger.EnableIMGUI();
+var imgui = KitLoggerIMGUI.Enable();
 imgui.ShowTimestamp = true;    // 显示时间戳
 imgui.AutoScroll = true;       // 自动滚动
 imgui.WindowAlpha = 0.9f;      // 窗口透明度
