@@ -9,7 +9,7 @@ using Cysharp.Threading.Tasks;
 
 namespace YokiFrame
 {
-    public abstract class UIPanel : MonoBehaviour, IPanel
+    public abstract partial class UIPanel : MonoBehaviour, IPanel
     {
         public Transform Transform => transform;
         public PanelState State { get; set; }
@@ -18,14 +18,14 @@ namespace YokiFrame
         #region 动画配置
         
         /// <summary>
-        /// 显示动画配置
+        /// 显示动画配置（支持多态序列化）
         /// </summary>
-        [SerializeField] protected UIAnimationConfig mShowAnimationConfig;
+        [SerializeReference] protected UIAnimationConfig mShowAnimationConfig;
         
         /// <summary>
-        /// 隐藏动画配置
+        /// 隐藏动画配置（支持多态序列化）
         /// </summary>
-        [SerializeField] protected UIAnimationConfig mHideAnimationConfig;
+        [SerializeReference] protected UIAnimationConfig mHideAnimationConfig;
         
         /// <summary>
         /// 当前显示动画实例
@@ -58,105 +58,7 @@ namespace YokiFrame
         
         #endregion
 
-        #region Canvas 分离配置
 
-        /// <summary>
-        /// 动态元素列表
-        /// </summary>
-        protected readonly List<UIDynamicElement> mDynamicElements = new();
-
-        /// <summary>
-        /// 静态元素列表
-        /// </summary>
-        protected readonly List<UIStaticElement> mStaticElements = new();
-
-        /// <summary>
-        /// 动态 Canvas 引用
-        /// </summary>
-        [SerializeField] protected Canvas mDynamicCanvas;
-
-        /// <summary>
-        /// 静态 Canvas 引用
-        /// </summary>
-        [SerializeField] protected Canvas mStaticCanvas;
-
-        /// <summary>
-        /// 动态 Canvas
-        /// </summary>
-        public Canvas DynamicCanvas
-        {
-            get => mDynamicCanvas;
-            set => mDynamicCanvas = value;
-        }
-
-        /// <summary>
-        /// 静态 Canvas
-        /// </summary>
-        public Canvas StaticCanvas
-        {
-            get => mStaticCanvas;
-            set => mStaticCanvas = value;
-        }
-
-        /// <summary>
-        /// 注册动态元素
-        /// </summary>
-        internal void RegisterDynamicElement(UIDynamicElement element)
-        {
-            if (element == null || mDynamicElements.Contains(element)) return;
-            mDynamicElements.Add(element);
-            
-            // 如果有动态 Canvas，移动元素
-            if (mDynamicCanvas != null && element.AutoMoveToCanvas)
-            {
-                element.transform.SetParent(mDynamicCanvas.transform, true);
-            }
-        }
-
-        /// <summary>
-        /// 注销动态元素
-        /// </summary>
-        internal void UnregisterDynamicElement(UIDynamicElement element)
-        {
-            if (element == null) return;
-            mDynamicElements.Remove(element);
-        }
-
-        /// <summary>
-        /// 注册静态元素
-        /// </summary>
-        internal void RegisterStaticElement(UIStaticElement element)
-        {
-            if (element == null || mStaticElements.Contains(element)) return;
-            mStaticElements.Add(element);
-            
-            // 如果有静态 Canvas，移动元素
-            if (mStaticCanvas != null && element.AutoMoveToCanvas)
-            {
-                element.transform.SetParent(mStaticCanvas.transform, true);
-            }
-        }
-
-        /// <summary>
-        /// 注销静态元素
-        /// </summary>
-        internal void UnregisterStaticElement(UIStaticElement element)
-        {
-            if (element == null) return;
-            mStaticElements.Remove(element);
-        }
-
-        /// <summary>
-        /// 获取所有动态元素
-        /// </summary>
-        public IReadOnlyList<UIDynamicElement> GetDynamicElements() => mDynamicElements;
-
-        /// <summary>
-        /// 获取所有静态元素
-        /// </summary>
-        public IReadOnlyList<UIStaticElement> GetStaticElements() => mStaticElements;
-
-        #endregion
 
         private List<Action> mOnClosed = new();
 
@@ -226,6 +128,9 @@ namespace YokiFrame
             // 触发 OnDidShow
             SafeInvokeHook(OnDidShow, nameof(OnDidShow));
             EventKit.Type.Send(new PanelDidShowEvent { Panel = this });
+
+            // 通知焦点系统
+            UIFocusSystem.Instance?.OnPanelShow(this);
         }
 
         public void Hide()
@@ -267,6 +172,9 @@ namespace YokiFrame
 
         private void CompleteHide(bool deactivate)
         {
+            // 通知焦点系统
+            UIFocusSystem.Instance?.OnPanelHide(this);
+
             // 触发 OnHide
             SafeInvokeHook(OnHide, nameof(OnHide));
             
@@ -284,6 +192,10 @@ namespace YokiFrame
         {
             Hide();
             State = PanelState.Close;
+
+            // 通知焦点系统
+            UIFocusSystem.Instance?.OnPanelClose(this);
+
             foreach (var action in mOnClosed)
             {
                 action?.Invoke();
@@ -375,104 +287,6 @@ namespace YokiFrame
         }
 
         #endregion
-
-        #region Animation Control
-
-        /// <summary>
-        /// 设置显示动画
-        /// </summary>
-        public void SetShowAnimation(IUIAnimation animation)
-        {
-            mShowAnimation?.Stop();
-            mShowAnimation = animation;
-        }
-
-        /// <summary>
-        /// 设置隐藏动画
-        /// </summary>
-        public void SetHideAnimation(IUIAnimation animation)
-        {
-            mHideAnimation?.Stop();
-            mHideAnimation = animation;
-        }
-
-        /// <summary>
-        /// 停止当前动画
-        /// </summary>
-        public void StopAnimations()
-        {
-            mShowAnimation?.Stop();
-            mHideAnimation?.Stop();
-        }
-
-        #endregion
-
-#if YOKIFRAME_UNITASK_SUPPORT
-        #region UniTask Async Methods
-
-        /// <summary>
-        /// [UniTask] 异步显示面板
-        /// </summary>
-        public async UniTask ShowUniTaskAsync(CancellationToken ct = default)
-        {
-            gameObject.SetActive(true);
-            
-            // 触发 OnWillShow
-            SafeInvokeHook(OnWillShow, nameof(OnWillShow));
-            EventKit.Type.Send(new PanelWillShowEvent { Panel = this });
-
-            if (mShowAnimation is IUIAnimationUniTask uniTaskAnim)
-            {
-                var rectTransform = transform as RectTransform;
-                await uniTaskAnim.PlayUniTaskAsync(rectTransform, ct);
-            }
-            else if (mShowAnimation != null)
-            {
-                var tcs = new UniTaskCompletionSource();
-                var rectTransform = transform as RectTransform;
-                mShowAnimation.Play(rectTransform, () => tcs.TrySetResult());
-                await tcs.Task;
-            }
-
-            // 触发 OnShow 和 OnDidShow
-            SafeInvokeHook(OnShow, nameof(OnShow));
-            SafeInvokeHook(OnDidShow, nameof(OnDidShow));
-            EventKit.Type.Send(new PanelDidShowEvent { Panel = this });
-        }
-
-        /// <summary>
-        /// [UniTask] 异步隐藏面板
-        /// </summary>
-        public async UniTask HideUniTaskAsync(CancellationToken ct = default)
-        {
-            State = PanelState.Hide;
-            
-            // 触发 OnWillHide
-            SafeInvokeHook(OnWillHide, nameof(OnWillHide));
-            EventKit.Type.Send(new PanelWillHideEvent { Panel = this });
-
-            if (mHideAnimation is IUIAnimationUniTask uniTaskAnim && gameObject.activeInHierarchy)
-            {
-                var rectTransform = transform as RectTransform;
-                await uniTaskAnim.PlayUniTaskAsync(rectTransform, ct);
-            }
-            else if (mHideAnimation != null && gameObject.activeInHierarchy)
-            {
-                var tcs = new UniTaskCompletionSource();
-                var rectTransform = transform as RectTransform;
-                mHideAnimation.Play(rectTransform, () => tcs.TrySetResult());
-                await tcs.Task;
-            }
-
-            // 触发 OnHide 和 OnDidHide
-            SafeInvokeHook(OnHide, nameof(OnHide));
-            gameObject.SetActive(false);
-            SafeInvokeHook(OnDidHide, nameof(OnDidHide));
-            EventKit.Type.Send(new PanelDidHideEvent { Panel = this });
-        }
-
-        #endregion
-#endif
 
         protected virtual void OnBeforeDestroy()
         {

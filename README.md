@@ -41,7 +41,7 @@
 | 模块 | 说明 |
 |------|------|
 | **ActionKit** | 链式动作序列系统（延时、回调、并行、循环、Lerp） |
-| **UIKit** | 现代化 UI 面板系统，支持动画、生命周期钩子、多命名栈、预加载缓存、LRU 淘汰 |
+| **UIKit** | 现代化 UI 面板系统，支持动画、生命周期钩子、多命名栈、预加载缓存、LRU 淘汰、手柄/键盘导航、[绑定系统](Tools/UIKit/Documentation~/UIKit-Bind-System.md) |
 | **AudioKit** | 高扩展性音频管理，支持 Unity 原生和 FMOD 后端 |
 | **SaveKit** | 完整存档方案，支持多槽位、加密、版本迁移 |
 | **TableKit** | Luban 配置表集成工具，支持编辑器配置和代码生成 |

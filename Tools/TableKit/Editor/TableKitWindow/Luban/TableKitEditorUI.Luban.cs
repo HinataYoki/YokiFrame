@@ -80,7 +80,7 @@ namespace YokiFrame.TableKit.Editor
                     {
                         EnsureRequiredFiles(logBuilder);
                         AssetDatabase.Refresh();
-                        logBuilder.AppendLine("\n✓ 已刷新 Unity 资源数据库");
+                        logBuilder.AppendLine("\n[OK] 已刷新 Unity 资源数据库");
                     }
                 }
 
@@ -205,7 +205,7 @@ namespace YokiFrame.TableKit.Editor
                 if (success)
                 {
                     AssetDatabase.Refresh();
-                    logBuilder.AppendLine("\n✓ 已刷新 Unity 资源数据库");
+                    logBuilder.AppendLine("\n[OK] 已刷新 Unity 资源数据库");
                 }
 
                 UpdateStatusBanner(success ? BuildStatus.Success : BuildStatus.Failed);
@@ -279,9 +279,9 @@ namespace YokiFrame.TableKit.Editor
             logBuilder.AppendLine("正在生成 TableKit 运行时代码...");
             TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil, 
                 mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath, mCodeTarget);
-            logBuilder.AppendLine("✓ TableKit 运行时代码生成完成");
+            logBuilder.AppendLine("[OK] TableKit 运行时代码生成完成");
 
-            if (mGenerateExternalTypeUtil) logBuilder.AppendLine("✓ 已生成 ExternalTypeUtil.cs");
+            if (mGenerateExternalTypeUtil) logBuilder.AppendLine("[OK] 已生成 ExternalTypeUtil.cs");
         }
 
         #endregion

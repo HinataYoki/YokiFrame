@@ -40,12 +40,12 @@ namespace YokiFrame.TableKit.Editor
                 var tables = tableKitType.GetProperty("TablesEditor")?.GetValue(null);
                 RefreshTablesInfo(tables);
 
-                mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] ✓ 编辑器缓存已刷新";
+                mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] [OK] 编辑器缓存已刷新";
                 UpdateStatusBanner(BuildStatus.Success);
             }
             catch (Exception ex)
             {
-                mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] ✗ 加载配置表失败:\n{ex.Message}";
+                mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] [FAIL] 加载配置表失败:\n{ex.Message}";
                 UpdateStatusBanner(BuildStatus.Failed);
             }
         }

@@ -1,11 +1,24 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// 动态 UI 元素标记 - 标记频繁更新的 UI 元素
-    /// 用于 Canvas 动静分离优化
+    /// 动态 UI 元素标记 - 自动创建嵌套 Canvas 实现动静分离
+    /// 添加此组件后，该元素及其子元素的更新不会触发父 Canvas 重建
     /// </summary>
+    /// <remarks>
+    /// 适用场景：
+    /// - 血条、蓝条等实时更新的数值显示
+    /// - 计时器、倒计时文本
+    /// - 动画进度条
+    /// - 频繁变化的列表项内容
+    /// 
+    /// 不需要使用的场景：
+    /// - 静态背景、边框（不会触发 rebuild）
+    /// - 按钮点击（不会触发 rebuild）
+    /// - 偶尔更新的文本
+    /// </remarks>
     [DisallowMultipleComponent]
     [AddComponentMenu("YokiFrame/UI/Dynamic Element")]
     public class UIDynamicElement : MonoBehaviour
@@ -13,39 +26,50 @@ namespace YokiFrame
         #region 配置
 
         [SerializeField]
-        [Tooltip("更新频率提示（用于批处理优化）")]
-        private UpdateFrequency mUpdateFrequency = UpdateFrequency.EveryFrame;
+        [Tooltip("是否需要接收射线检测（有交互元素时启用）")]
+        private bool mEnableRaycast = true;
 
         [SerializeField]
-        [Tooltip("是否自动移动到动态 Canvas")]
-        private bool mAutoMoveToCanvas = true;
+        [Tooltip("是否在 Awake 时自动初始化（禁用后需手动调用 Initialize）")]
+        private bool mAutoInitialize = true;
+
+        #endregion
+
+        #region 缓存
+
+        private Canvas mCanvas;
+        private GraphicRaycaster mRaycaster;
+        private bool mIsInitialized;
 
         #endregion
 
         #region 属性
 
         /// <summary>
-        /// 更新频率
+        /// 嵌套 Canvas 引用
         /// </summary>
-        public UpdateFrequency Frequency
-        {
-            get => mUpdateFrequency;
-            set => mUpdateFrequency = value;
-        }
+        public Canvas Canvas => mCanvas;
 
         /// <summary>
-        /// 是否自动移动到动态 Canvas
+        /// 是否已初始化
         /// </summary>
-        public bool AutoMoveToCanvas
-        {
-            get => mAutoMoveToCanvas;
-            set => mAutoMoveToCanvas = value;
-        }
+        public bool IsInitialized => mIsInitialized;
 
         /// <summary>
-        /// 所属面板
+        /// 是否启用射线检测
         /// </summary>
-        public UIPanel Panel { get; private set; }
+        public bool EnableRaycast
+        {
+            get => mEnableRaycast;
+            set
+            {
+                mEnableRaycast = value;
+                if (mRaycaster != null)
+                {
+                    mRaycaster.enabled = value;
+                }
+            }
+        }
 
         #endregion
 
@@ -53,57 +77,97 @@ namespace YokiFrame
 
         private void Awake()
         {
-            Panel = GetComponentInParent<UIPanel>();
-        }
-
-        private void OnEnable()
-        {
-            if (mAutoMoveToCanvas && Panel != null)
+            if (mAutoInitialize)
             {
-                // 通知面板此元素需要放置到动态 Canvas
-                Panel.RegisterDynamicElement(this);
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (Panel != null)
-            {
-                Panel.UnregisterDynamicElement(this);
+                Initialize();
             }
         }
 
         #endregion
-    }
 
-    /// <summary>
-    /// 更新频率枚举
-    /// </summary>
-    public enum UpdateFrequency
-    {
-        /// <summary>
-        /// 每帧更新
-        /// </summary>
-        EveryFrame,
+        #region 公共方法
 
         /// <summary>
-        /// 高频更新（每秒 30+ 次）
+        /// 初始化嵌套 Canvas
         /// </summary>
-        High,
+        public void Initialize()
+        {
+            if (mIsInitialized) return;
+
+            SetupNestedCanvas();
+            SetupRaycaster();
+            mIsInitialized = true;
+        }
 
         /// <summary>
-        /// 中频更新（每秒 10-30 次）
+        /// 强制刷新 Canvas
         /// </summary>
-        Medium,
+        public void ForceRebuild()
+        {
+            if (mCanvas != null)
+            {
+                Canvas.ForceUpdateCanvases();
+            }
+        }
+
+        #endregion
+
+        #region 内部方法
 
         /// <summary>
-        /// 低频更新（每秒 1-10 次）
+        /// 设置嵌套 Canvas
         /// </summary>
-        Low,
+        private void SetupNestedCanvas()
+        {
+            // 检查是否已有 Canvas
+            mCanvas = GetComponent<Canvas>();
+            if (mCanvas == null)
+            {
+                mCanvas = gameObject.AddComponent<Canvas>();
+            }
+
+            // 嵌套 Canvas 配置：
+            // - overrideSorting = false：继承父 Canvas 的排序设置
+            // - 不需要设置 renderMode，嵌套 Canvas 自动继承
+            mCanvas.overrideSorting = false;
+        }
 
         /// <summary>
-        /// 偶尔更新（每秒少于 1 次）
+        /// 设置射线检测器
         /// </summary>
-        Occasional
+        private void SetupRaycaster()
+        {
+            if (!mEnableRaycast) return;
+
+            // 检查子元素是否有可交互组件
+            bool hasInteractable = GetComponentInChildren<Selectable>(true) != null;
+            if (!hasInteractable) return;
+
+            mRaycaster = GetComponent<GraphicRaycaster>();
+            if (mRaycaster == null)
+            {
+                mRaycaster = gameObject.AddComponent<GraphicRaycaster>();
+            }
+        }
+
+        #endregion
+
+#if UNITY_EDITOR
+        private void Reset()
+        {
+            // 默认配置
+            mEnableRaycast = true;
+            mAutoInitialize = true;
+        }
+
+        private void OnValidate()
+        {
+            // 编辑器中实时更新 Raycaster 状态
+            if (mRaycaster != null)
+            {
+                mRaycaster.enabled = mEnableRaycast;
+            }
+        }
+#endif
     }
 }

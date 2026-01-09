@@ -412,6 +412,138 @@ namespace YokiFrame.EditorTools
             DrawFilledRect(tex, 14, 4, 4, 6, color);
         }
 
+        /// <summary>
+        /// 位置图标 - 地图标记
+        /// </summary>
+        private static void DrawLocationIcon(Texture2D tex, Color32 color)
+        {
+            // 绘制水滴形状的位置标记
+            DrawFilledCircle(tex, 16, 18, 8, color);
+            DrawFilledTriangle(tex, 10, 14, 22, 14, 16, 4, color);
+            // 内部白点
+            var white = new Color32(255, 255, 255, 200);
+            DrawFilledCircle(tex, 16, 18, 3, white);
+        }
+
+        /// <summary>
+        /// 代码图标 - 尖括号
+        /// </summary>
+        private static void DrawCodeIcon(Texture2D tex, Color32 color)
+        {
+            // 左尖括号 <
+            DrawLine(tex, 12, 16, 6, 10, 2, color);
+            DrawLine(tex, 6, 10, 12, 4, 2, color);
+            // 右尖括号 >
+            DrawLine(tex, 20, 16, 26, 10, 2, color);
+            DrawLine(tex, 26, 10, 20, 4, 2, color);
+            // 斜杠 /
+            DrawLine(tex, 18, 22, 14, 6, 2, color);
+        }
+
+        /// <summary>
+        /// 文件夹图标
+        /// </summary>
+        private static void DrawFolderIcon(Texture2D tex, Color32 color)
+        {
+            // 文件夹主体
+            DrawFilledRect(tex, 4, 8, 24, 16, color);
+            // 文件夹标签
+            var darker = new Color32((byte)(color.r * 0.8f), (byte)(color.g * 0.8f), (byte)(color.b * 0.8f), 255);
+            DrawFilledRect(tex, 4, 24, 10, 4, darker);
+        }
+
+        /// <summary>
+        /// 时钟图标 - 等待/进行中
+        /// </summary>
+        private static void DrawClockIcon(Texture2D tex, Color32 color)
+        {
+            // 圆形表盘
+            DrawCircleOutline(tex, 16, 16, 10, 2, color);
+            // 时针
+            DrawLine(tex, 16, 16, 16, 10, 2, color);
+            // 分针
+            DrawLine(tex, 16, 16, 22, 16, 2, color);
+            // 中心点
+            DrawFilledCircle(tex, 16, 16, 2, color);
+        }
+
+        /// <summary>
+        /// 勾选图标 - 简单对勾
+        /// </summary>
+        private static void DrawCheckIcon(Texture2D tex, Color32 color)
+        {
+            DrawLine(tex, 8, 16, 14, 10, 3, color);
+            DrawLine(tex, 14, 10, 24, 22, 3, color);
+        }
+
+        /// <summary>
+        /// 实心圆点图标
+        /// </summary>
+        private static void DrawDotFilledIcon(Texture2D tex, Color32 color)
+        {
+            DrawFilledCircle(tex, 16, 16, 8, color);
+        }
+
+        /// <summary>
+        /// 空心圆点图标
+        /// </summary>
+        private static void DrawDotEmptyIcon(Texture2D tex, Color32 color)
+        {
+            DrawCircleOutline(tex, 16, 16, 8, 2, color);
+        }
+
+        /// <summary>
+        /// 半圆图标（暂停状态）
+        /// </summary>
+        private static void DrawDotHalfIcon(Texture2D tex, Color32 color)
+        {
+            // 左半圆实心
+            for (int y = 0; y < ICON_SIZE; y++)
+            {
+                for (int x = 0; x < ICON_SIZE; x++)
+                {
+                    int dx = x - 16;
+                    int dy = y - 16;
+                    int d2 = dx * dx + dy * dy;
+                    if (d2 <= 64) // 半径 8
+                    {
+                        if (dx <= 0)
+                            tex.SetPixel(x, y, color);
+                    }
+                }
+            }
+            // 右半圆空心
+            DrawCircleOutline(tex, 16, 16, 8, 2, color);
+        }
+
+        /// <summary>
+        /// 菱形图标
+        /// </summary>
+        private static void DrawDiamondIcon(Texture2D tex, Color32 color)
+        {
+            // 绘制菱形轮廓
+            DrawLine(tex, 16, 6, 26, 16, 2, color);
+            DrawLine(tex, 26, 16, 16, 26, 2, color);
+            DrawLine(tex, 16, 26, 6, 16, 2, color);
+            DrawLine(tex, 6, 16, 16, 6, 2, color);
+        }
+
+        /// <summary>
+        /// 向上三角形图标
+        /// </summary>
+        private static void DrawTriangleUpIcon(Texture2D tex, Color32 color)
+        {
+            DrawFilledTriangle(tex, 16, 24, 6, 8, 26, 8, color);
+        }
+
+        /// <summary>
+        /// 向下三角形图标
+        /// </summary>
+        private static void DrawTriangleDownIcon(Texture2D tex, Color32 color)
+        {
+            DrawFilledTriangle(tex, 16, 8, 6, 24, 26, 24, color);
+        }
+
         #endregion
     }
 }

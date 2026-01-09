@@ -80,11 +80,11 @@ namespace YokiFrame
             legend.style.alignItems = Align.Center;
 
             // 当前状态
-            legend.Add(CreateLegendItem("●", YokiFrameUIComponents.Colors.BrandSuccess, "当前"));
+            legend.Add(CreateLegendItem(KitIcons.DOT_FILLED, YokiFrameUIComponents.Colors.BrandSuccess, "当前"));
             // 已访问
-            legend.Add(CreateLegendItem("○", YokiFrameUIComponents.Colors.TextSecondary, "已访问"));
+            legend.Add(CreateLegendItem(KitIcons.DOT_EMPTY, YokiFrameUIComponents.Colors.TextSecondary, "已访问"));
             // 未触达
-            legend.Add(CreateLegendItem("○", YokiFrameUIComponents.Colors.TextTertiary, "未触达"));
+            legend.Add(CreateLegendItem(KitIcons.DOT_EMPTY, YokiFrameUIComponents.Colors.TextTertiary, "未触达"));
 
             return legend;
         }
@@ -92,18 +92,19 @@ namespace YokiFrame
         /// <summary>
         /// 创建图例项
         /// </summary>
-        private VisualElement CreateLegendItem(string icon, Color color, string text)
+        private VisualElement CreateLegendItem(string iconId, Color color, string text)
         {
             var item = new VisualElement();
             item.style.flexDirection = FlexDirection.Row;
             item.style.alignItems = Align.Center;
             item.style.marginRight = YokiFrameUIComponents.Spacing.MD;
 
-            var iconLabel = new Label(icon);
-            iconLabel.style.fontSize = 10;
-            iconLabel.style.color = new StyleColor(color);
-            iconLabel.style.marginRight = 2;
-            item.Add(iconLabel);
+            var iconImg = new Image { image = KitIcons.GetTexture(iconId) };
+            iconImg.style.width = 10;
+            iconImg.style.height = 10;
+            iconImg.tintColor = color;
+            iconImg.style.marginRight = 2;
+            item.Add(iconImg);
 
             var textLabel = new Label(text);
             textLabel.style.fontSize = 9;

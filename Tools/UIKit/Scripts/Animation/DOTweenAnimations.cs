@@ -57,7 +57,6 @@ namespace YokiFrame
 
             mTweener = mCanvasGroup.DOFade(mToAlpha, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true)
                 .OnComplete(() => onComplete?.Invoke());
         }
 
@@ -100,20 +99,21 @@ namespace YokiFrame
             mCanvasGroup = GetOrAddCanvasGroup(target);
             mCanvasGroup.alpha = mFromAlpha;
 
+            var tcs = new UniTaskCompletionSource();
+            
             mTweener = mCanvasGroup.DOFade(mToAlpha, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true);
+                .OnComplete(() => tcs.TrySetResult())
+                .OnKill(() => tcs.TrySetResult());
 
-            try
+            await using (ct.Register(() =>
             {
-                // 使用 UniTask.WaitUntil 等待 Tween 完成，支持取消
-                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
-                    cancellationToken: ct);
-            }
-            catch (OperationCanceledException)
-            {
+                Stop();
                 SetToEndState(target);
-                throw;
+                tcs.TrySetCanceled(ct);
+            }))
+            {
+                await tcs.Task;
             }
         }
 #endif
@@ -165,7 +165,6 @@ namespace YokiFrame
 
             mTweener = target.DOScale(mToScale, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true)
                 .OnComplete(() => onComplete?.Invoke());
         }
 
@@ -195,19 +194,21 @@ namespace YokiFrame
             Stop();
             target.localScale = mFromScale;
 
+            var tcs = new UniTaskCompletionSource();
+            
             mTweener = target.DOScale(mToScale, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true);
+                .OnComplete(() => tcs.TrySetResult())
+                .OnKill(() => tcs.TrySetResult());
 
-            try
+            await using (ct.Register(() =>
             {
-                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
-                    cancellationToken: ct);
-            }
-            catch (OperationCanceledException)
-            {
+                Stop();
                 SetToEndState(target);
-                throw;
+                tcs.TrySetCanceled(ct);
+            }))
+            {
+                await tcs.Task;
             }
         }
 #endif
@@ -262,7 +263,6 @@ namespace YokiFrame
 
             mTweener = target.DOAnchorPos(mToPosition, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true)
                 .OnComplete(() => onComplete?.Invoke());
         }
 
@@ -307,19 +307,21 @@ namespace YokiFrame
             var fromPosition = CalculateStartPosition(mToPosition);
             target.anchoredPosition = fromPosition;
 
+            var tcs = new UniTaskCompletionSource();
+            
             mTweener = target.DOAnchorPos(mToPosition, mDuration)
                 .SetEase(mEase)
-                .SetUpdate(true);
+                .OnComplete(() => tcs.TrySetResult())
+                .OnKill(() => tcs.TrySetResult());
 
-            try
+            await using (ct.Register(() =>
             {
-                await UniTask.WaitUntil(() => mTweener == null || !mTweener.IsPlaying(), 
-                    cancellationToken: ct);
-            }
-            catch (OperationCanceledException)
-            {
+                Stop();
                 SetToEndState(target);
-                throw;
+                tcs.TrySetCanceled(ct);
+            }))
+            {
+                await tcs.Task;
             }
         }
 #endif

@@ -121,7 +121,7 @@ namespace YokiFrame.TableKit.Editor
             }
 
             mCachedJsonFiles = jsonFiles;
-            logBuilder.AppendLine($"✓ 找到 {jsonFiles.Length} 个数据文件");
+            logBuilder.AppendLine($"[OK] 找到 {jsonFiles.Length} 个数据文件");
 
             var fileNames = new List<string>();
             foreach (var file in jsonFiles) fileNames.Add(Path.GetFileNameWithoutExtension(file));

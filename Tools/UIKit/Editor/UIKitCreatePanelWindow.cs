@@ -1,19 +1,27 @@
-using System;
+#if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 namespace YokiFrame
 {
     /// <summary>
     /// UIKit 面板创建窗口
+    /// 使用 UI Toolkit 实现，支持 Unity 2021.3+
     /// </summary>
-    public class UIKitCreatePanelWindow : EditorWindow
+    public partial class UIKitCreatePanelWindow : EditorWindow
     {
-        private static readonly string WINDOW_NAME = "YokiFrame_UI创建窗口";
-        private static readonly string ASSETS_PREFIX = "Assets";
-        private static readonly string ALREADY_EXIST_LABEL = "<color=red>[已存在]</color>";
+        #region 常量
+
+        private const string WINDOW_NAME = "YokiFrame_UI创建窗口";
+        private const string ASSETS_PREFIX = "Assets";
+        private const int WINDOW_WIDTH = 500;
+        private const int WINDOW_HEIGHT = 600;
+        private const int LABEL_WIDTH = 100;
+
+        #endregion
 
         #region 配置属性
 
@@ -22,19 +30,19 @@ namespace YokiFrame
             get => UIKitCreateConfig.Instance.PrefabGeneratePath;
             set => UIKitCreateConfig.Instance.PrefabGeneratePath = value;
         }
-        
+
         private string ScriptGeneratePath
         {
             get => UIKitCreateConfig.Instance.ScriptGeneratePath;
             set => UIKitCreateConfig.Instance.ScriptGeneratePath = value;
         }
-        
+
         private string ScriptNamespace
         {
             get => UIKitCreateConfig.Instance.ScriptNamespace;
             set => UIKitCreateConfig.Instance.ScriptNamespace = value;
         }
-        
+
         private string AssemblyName
         {
             get => UIKitCreateConfig.Instance.AssemblyName;
@@ -43,7 +51,7 @@ namespace YokiFrame
 
         #endregion
 
-        #region 面板配置
+        #region 面板配置字段
 
         private string mPanelCreateName = string.Empty;
         private UILevel mSelectedLevel = UILevel.Common;
@@ -53,9 +61,8 @@ namespace YokiFrame
 
         #endregion
 
-        #region 动画配置
+        #region 动画配置字段
 
-        private bool mShowAnimationSettings;
         private AnimationType mShowAnimationType = AnimationType.None;
         private AnimationType mHideAnimationType = AnimationType.None;
         private float mAnimationDuration = 0.3f;
@@ -76,25 +83,24 @@ namespace YokiFrame
 
         #endregion
 
-        #region GUI 样式
+        #region UI 元素引用
 
-        private readonly Lazy<GUIStyle> mLabelStyle = new(() =>
-        {
-            var labelStyle = new GUIStyle(GUI.skin.GetStyle("label"))
-            {
-                richText = true
-            };
-            return labelStyle;
-        });
-
-        private readonly Lazy<GUIStyle> mFoldoutStyle = new(() =>
-        {
-            var style = new GUIStyle(EditorStyles.foldout)
-            {
-                fontStyle = FontStyle.Bold
-            };
-            return style;
-        });
+        private TextField mAssemblyField;
+        private TextField mNamespaceField;
+        private TextField mScriptPathField;
+        private TextField mPrefabPathField;
+        private TextField mPanelNameField;
+        private EnumField mLevelField;
+        private Toggle mModalToggle;
+        private Toggle mLifecycleToggle;
+        private Toggle mFocusToggle;
+        private Foldout mAnimationFoldout;
+        private EnumField mShowAnimField;
+        private EnumField mHideAnimField;
+        private Slider mDurationSlider;
+        private VisualElement mDurationRow;
+        private VisualElement mPreviewContainer;
+        private Button mCreateButton;
 
         #endregion
 
@@ -103,237 +109,48 @@ namespace YokiFrame
         private string PrefabName => $"{mPanelCreateName}.prefab";
         private string ScriptName => $"{mPanelCreateName}.cs";
         private string DesignerName => $"{mPanelCreateName}.Designer.cs";
-
         private string PrefabPath => $"{PrefabGeneratePath}/{PrefabName}";
         private string ScriptPath => $"{ScriptGeneratePath}/{mPanelCreateName}/{ScriptName}";
         private string DesignerPath => $"{ScriptGeneratePath}/{mPanelCreateName}/{DesignerName}";
 
         #endregion
 
+        #region 窗口入口
+
+        [MenuItem("YokiFrame/UIKit/创建 UI Panel", false, 10)]
         public static void Open()
         {
-            Rect wr = new(0, 0, 800, 600);
-            var window = GetWindowWithRect<UIKitCreatePanelWindow>(wr, true, WINDOW_NAME);
+            var window = GetWindow<UIKitCreatePanelWindow>(true, WINDOW_NAME);
+            window.minSize = new Vector2(WINDOW_WIDTH, WINDOW_HEIGHT);
+            window.maxSize = new Vector2(WINDOW_WIDTH + 100, WINDOW_HEIGHT + 200);
             window.Show();
         }
 
-        private void OnGUI()
+        #endregion
+
+        #region UI Toolkit 入口
+
+        private void CreateGUI()
         {
-            EditorGUILayout.Space(5);
-            
-            DrawAssemblySection();
-            DrawNamespaceSection();
-            DrawPathsSection();
-            DrawPanelConfigSection();
-            DrawAnimationSection();
-            DrawPreviewSection();
-            DrawCreateButton();
-        }
+            var root = rootVisualElement;
+            root.style.paddingTop = 12;
+            root.style.paddingBottom = 12;
+            root.style.paddingLeft = 16;
+            root.style.paddingRight = 16;
+            root.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
 
-        #region GUI 绘制方法
+            var scrollView = new ScrollView(ScrollViewMode.Vertical);
+            scrollView.style.flexGrow = 1;
+            root.Add(scrollView);
 
-        /// <summary>
-        /// 绘制程序集配置
-        /// </summary>
-        private void DrawAssemblySection()
-        {
-            EditorGUILayout.LabelField("UI脚本所在的程序集：");
-            GUILayout.BeginHorizontal("box");
-            {
-                AssemblyName = EditorGUILayout.TextField(AssemblyName);
-                GUILayout.FlexibleSpace();
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        /// <summary>
-        /// 绘制命名空间配置
-        /// </summary>
-        private void DrawNamespaceSection()
-        {
-            EditorGUILayout.LabelField("Scripts命名空间：");
-            GUILayout.BeginHorizontal("box");
-            {
-                ScriptNamespace = EditorGUILayout.TextField(ScriptNamespace);
-                GUILayout.FlexibleSpace();
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        /// <summary>
-        /// 绘制路径配置
-        /// </summary>
-        private void DrawPathsSection()
-        {
-            // Scripts 目录
-            EditorGUILayout.LabelField("Scripts目录：");
-            GUILayout.BeginHorizontal("box");
-            {
-                EditorGUILayout.LabelField(ScriptGeneratePath);
-                if (GUILayout.Button("...", GUILayout.Width(30)))
-                {
-                    var folderPath = EditorUtility.OpenFolderPanel("Scripts目录", ScriptGeneratePath, string.Empty);
-                    if (!string.IsNullOrEmpty(folderPath))
-                    {
-                        var assetsIndex = folderPath.IndexOf(ASSETS_PREFIX, StringComparison.Ordinal);
-                        if (assetsIndex >= 0)
-                        {
-                            ScriptGeneratePath = folderPath[assetsIndex..];
-                        }
-                    }
-                }
-                GUILayout.FlexibleSpace();
-            }
-            GUILayout.EndHorizontal();
-
-            // Prefab 目录
-            EditorGUILayout.LabelField("Prefab目录：");
-            GUILayout.BeginHorizontal("box");
-            {
-                EditorGUILayout.LabelField(PrefabGeneratePath);
-                if (GUILayout.Button("...", GUILayout.Width(30)))
-                {
-                    var folderPath = EditorUtility.OpenFolderPanel("Prefab目录", PrefabGeneratePath, string.Empty);
-                    if (!string.IsNullOrEmpty(folderPath))
-                    {
-                        var assetsIndex = folderPath.IndexOf(ASSETS_PREFIX, StringComparison.Ordinal);
-                        if (assetsIndex >= 0)
-                        {
-                            PrefabGeneratePath = folderPath[assetsIndex..];
-                        }
-                    }
-                }
-                GUILayout.FlexibleSpace();
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        /// <summary>
-        /// 绘制面板配置
-        /// </summary>
-        private void DrawPanelConfigSection()
-        {
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("面板配置", EditorStyles.boldLabel);
-            
-            GUILayout.BeginVertical("box");
-            {
-                // 面板名称
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("Panel名字：", GUILayout.Width(80));
-                mPanelCreateName = EditorGUILayout.TextField(mPanelCreateName);
-                EditorGUILayout.EndHorizontal();
-
-                // UI 层级
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("UI层级：", GUILayout.Width(80));
-                mSelectedLevel = (UILevel)EditorGUILayout.EnumPopup(mSelectedLevel);
-                EditorGUILayout.EndHorizontal();
-
-                // 模态选项
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("模态面板：", GUILayout.Width(80));
-                mIsModal = EditorGUILayout.Toggle(mIsModal);
-                EditorGUILayout.EndHorizontal();
-
-                // 生命周期钩子
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("生命周期钩子：", GUILayout.Width(80));
-                mGenerateLifecycleHooks = EditorGUILayout.Toggle(mGenerateLifecycleHooks);
-                EditorGUILayout.EndHorizontal();
-
-                // 焦点支持
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("焦点导航支持：", GUILayout.Width(80));
-                mGenerateFocusSupport = EditorGUILayout.Toggle(mGenerateFocusSupport);
-                EditorGUILayout.EndHorizontal();
-            }
-            GUILayout.EndVertical();
-        }
-
-        /// <summary>
-        /// 绘制动画配置
-        /// </summary>
-        private void DrawAnimationSection()
-        {
-            EditorGUILayout.Space(10);
-            mShowAnimationSettings = EditorGUILayout.Foldout(mShowAnimationSettings, "动画配置", true, mFoldoutStyle.Value);
-            
-            if (mShowAnimationSettings)
-            {
-                GUILayout.BeginVertical("box");
-                {
-                    // 显示动画
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("显示动画：", GUILayout.Width(80));
-                    mShowAnimationType = (AnimationType)EditorGUILayout.EnumPopup(mShowAnimationType);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 隐藏动画
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("隐藏动画：", GUILayout.Width(80));
-                    mHideAnimationType = (AnimationType)EditorGUILayout.EnumPopup(mHideAnimationType);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 动画时长
-                    if (mShowAnimationType != AnimationType.None || mHideAnimationType != AnimationType.None)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-                        EditorGUILayout.LabelField("动画时长：", GUILayout.Width(80));
-                        mAnimationDuration = EditorGUILayout.Slider(mAnimationDuration, 0.1f, 2f);
-                        EditorGUILayout.EndHorizontal();
-                    }
-                }
-                GUILayout.EndVertical();
-            }
-        }
-
-        /// <summary>
-        /// 绘制文件预览
-        /// </summary>
-        private void DrawPreviewSection()
-        {
-            if (string.IsNullOrEmpty(mPanelCreateName)) return;
-
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("生成文件预览", EditorStyles.boldLabel);
-            
-            GUILayout.BeginVertical("box");
-            {
-                EditorGUILayout.LabelField(
-                    File.Exists(PrefabPath)
-                        ? $"{PrefabName}{ALREADY_EXIST_LABEL}"
-                        : $"{PrefabGeneratePath}/{PrefabName}", mLabelStyle.Value);
-
-                EditorGUILayout.LabelField(
-                    File.Exists(ScriptPath)
-                        ? $"{ScriptName}{ALREADY_EXIST_LABEL}"
-                        : $"{ScriptGeneratePath}/{mPanelCreateName}/{ScriptName}", mLabelStyle.Value);
-
-                EditorGUILayout.LabelField(
-                    File.Exists(DesignerPath)
-                        ? $"{DesignerName}{ALREADY_EXIST_LABEL}"
-                        : $"{ScriptGeneratePath}/{mPanelCreateName}/{DesignerName}", mLabelStyle.Value);
-            }
-            GUILayout.EndVertical();
-        }
-
-        /// <summary>
-        /// 绘制创建按钮
-        /// </summary>
-        private void DrawCreateButton()
-        {
-            EditorGUILayout.Space(10);
-            
-            EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mPanelCreateName) || File.Exists(PrefabPath));
-            {
-                if (GUILayout.Button("创建 UI Panel", GUILayout.Height(30)))
-                {
-                    OnCreateUIPanelClick();
-                    GUIUtility.ExitGUI();
-                }
-            }
-            EditorGUI.EndDisabledGroup();
+            // 构建各区块
+            BuildAssemblySection(scrollView);
+            BuildNamespaceSection(scrollView);
+            BuildPathsSection(scrollView);
+            BuildPanelConfigSection(scrollView);
+            BuildAnimationSection(scrollView);
+            BuildPreviewSection(scrollView);
+            BuildCreateButton(scrollView);
         }
 
         #endregion
@@ -346,7 +163,6 @@ namespace YokiFrame
         private void OnCreateUIPanelClick()
         {
             var panelName = mPanelCreateName;
-
             if (string.IsNullOrEmpty(panelName)) return;
 
             var uiKitPrefab = Resources.Load<GameObject>(nameof(UIKit));
@@ -391,20 +207,19 @@ namespace YokiFrame
                 AnimationDuration = mAnimationDuration
             };
 
-            UICodeGenerator.DoCreateCode(prefab, ScriptPath, DesignerPath, ScriptNamespace, options);
+            UICodeGenerator.DoCreateCode(prefab, ScriptNamespace, options);
 
             DestroyImmediate(gameObj);
             DestroyImmediate(uikit);
 
-            var window = GetWindow<UIKitCreatePanelWindow>();
-            window.Close();
+            Close();
             AssetDatabase.Refresh();
         }
 
         /// <summary>
         /// 获取动画类型名称
         /// </summary>
-        private string GetAnimationTypeName(AnimationType type) => type switch
+        private static string GetAnimationTypeName(AnimationType type) => type switch
         {
             AnimationType.Fade => "Fade",
             AnimationType.Scale => "Scale",
@@ -427,35 +242,36 @@ namespace YokiFrame
         /// UI 层级
         /// </summary>
         public UILevel Level { get; set; } = UILevel.Common;
-        
+
         /// <summary>
         /// 是否为模态面板
         /// </summary>
         public bool IsModal { get; set; }
-        
+
         /// <summary>
         /// 是否生成生命周期钩子
         /// </summary>
         public bool GenerateLifecycleHooks { get; set; } = true;
-        
+
         /// <summary>
         /// 是否生成焦点支持
         /// </summary>
         public bool GenerateFocusSupport { get; set; }
-        
+
         /// <summary>
         /// 显示动画类型
         /// </summary>
         public string ShowAnimationType { get; set; }
-        
+
         /// <summary>
         /// 隐藏动画类型
         /// </summary>
         public string HideAnimationType { get; set; }
-        
+
         /// <summary>
         /// 动画时长
         /// </summary>
         public float AnimationDuration { get; set; } = 0.3f;
     }
 }
+#endif

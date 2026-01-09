@@ -31,7 +31,7 @@ namespace YokiFrame.EditorTools
         private static readonly Color COLOR_LEAF_DELAY = new(0.3f, 0.6f, 0.9f);
         private static readonly Color COLOR_LEAF_CALLBACK = new(0.4f, 0.8f, 0.5f);
         private static readonly Color COLOR_LEAF_LERP = new(0.9f, 0.5f, 0.7f);
-        private static readonly Color COLOR_LEAF_REPEAT = new(0.7f, 0.5f, 0.9f);
+        private static readonly Color COLOR_LEAF_REPEAT = new(0.9f, 0.4f, 0.4f);
         private static readonly Color COLOR_RUNNING = new(0.3f, 0.9f, 0.4f);
         private static readonly Color COLOR_FINISHED = new(0.5f, 0.5f, 0.5f);
         private static readonly Color CARD_BG = new(0.22f, 0.22f, 0.22f);

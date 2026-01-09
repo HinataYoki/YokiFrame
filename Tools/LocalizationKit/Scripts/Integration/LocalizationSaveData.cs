@@ -7,7 +7,7 @@ namespace YokiFrame
     /// 用于持久化语言偏好设置
     /// </summary>
     [Serializable]
-    public struct LocalizationSaveData
+    public class LocalizationSaveData
     {
         /// <summary>
         /// 当前语言ID

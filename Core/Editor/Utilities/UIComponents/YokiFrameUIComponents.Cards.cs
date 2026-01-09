@@ -12,11 +12,11 @@ namespace YokiFrame.EditorTools
         #region 卡片
 
         /// <summary>
-        /// 创建现代化卡片容器
+        /// 创建现代化卡片容器（支持图标 ID 或 emoji）
         /// </summary>
         /// <param name="title">卡片标题（可选）</param>
-        /// <param name="icon">标题图标（可选，如 "📁"）</param>
-        public static (VisualElement card, VisualElement body) CreateCard(string title = null, string icon = null)
+        /// <param name="iconOrId">标题图标 ID 或 emoji（可选）</param>
+        public static (VisualElement card, VisualElement body) CreateCard(string title = null, string iconOrId = null)
         {
             var card = new VisualElement();
             card.AddToClassList("card");
@@ -27,9 +27,31 @@ namespace YokiFrame.EditorTools
             {
                 var header = new VisualElement();
                 header.AddToClassList("card-header");
+                header.style.flexDirection = FlexDirection.Row;
+                header.style.alignItems = Align.Center;
                 
-                string titleText = string.IsNullOrEmpty(icon) ? title : $"{icon} {title}";
-                var titleLabel = new Label(titleText);
+                // 检查是否是图标 ID（不包含 emoji 字符）
+                if (!string.IsNullOrEmpty(iconOrId))
+                {
+                    bool isIconId = iconOrId.Length < 20 && !ContainsEmoji(iconOrId);
+                    if (isIconId)
+                    {
+                        var iconImage = new Image { image = KitIcons.GetTexture(iconOrId) };
+                        iconImage.style.width = 16;
+                        iconImage.style.height = 16;
+                        iconImage.style.marginRight = 6;
+                        header.Add(iconImage);
+                    }
+                    else
+                    {
+                        // emoji 方式（兼容旧代码）
+                        var emojiLabel = new Label(iconOrId);
+                        emojiLabel.style.marginRight = 6;
+                        header.Add(emojiLabel);
+                    }
+                }
+                
+                var titleLabel = new Label(title);
                 titleLabel.AddToClassList("card-title");
                 header.Add(titleLabel);
                 

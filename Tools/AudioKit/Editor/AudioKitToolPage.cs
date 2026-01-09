@@ -49,15 +49,12 @@ namespace YokiFrame
         {
             LoadPrefs();
             
-            var tabBar = new VisualElement();
-            tabBar.style.flexDirection = FlexDirection.Row;
-            tabBar.style.borderBottomWidth = 1;
-            tabBar.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
-            tabBar.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.12f));
+            // 使用公共组件创建标签栏
+            var tabBar = YokiFrameUIComponents.CreateTabBar();
             root.Add(tabBar);
             
-            mRuntimeMonitorTabBtn = CreateTabButton("运行时监控", TabType.RuntimeMonitor);
-            mCodeGeneratorTabBtn = CreateTabButton("代码生成器", TabType.CodeGenerator);
+            mRuntimeMonitorTabBtn = YokiFrameUIComponents.CreateTabButton("运行时监控", mCurrentTab == TabType.RuntimeMonitor, () => SwitchTab(TabType.RuntimeMonitor));
+            mCodeGeneratorTabBtn = YokiFrameUIComponents.CreateTabButton("代码生成器", mCurrentTab == TabType.CodeGenerator, () => SwitchTab(TabType.CodeGenerator));
             tabBar.Add(mRuntimeMonitorTabBtn);
             tabBar.Add(mCodeGeneratorTabBtn);
             
@@ -121,34 +118,11 @@ namespace YokiFrame
 
         #region Tab 切换
 
-        private Button CreateTabButton(string text, TabType tabType)
-        {
-            var btn = new Button(() => SwitchTab(tabType)) { text = text };
-            btn.style.paddingLeft = 20;
-            btn.style.paddingRight = 20;
-            btn.style.paddingTop = 10;
-            btn.style.paddingBottom = 10;
-            btn.style.borderLeftWidth = btn.style.borderRightWidth = btn.style.borderTopWidth = 0;
-            btn.style.borderBottomWidth = 2;
-            btn.style.borderBottomColor = new StyleColor(Color.clear);
-            btn.style.backgroundColor = StyleKeyword.Null;
-            btn.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
-            return btn;
-        }
-
         private void UpdateTabButtonStyles()
         {
-            // 运行时监控 Tab
-            bool isRuntimeActive = mCurrentTab == TabType.RuntimeMonitor;
-            mRuntimeMonitorTabBtn.style.borderBottomColor = new StyleColor(isRuntimeActive ? new Color(0.25f, 0.55f, 0.90f) : Color.clear);
-            mRuntimeMonitorTabBtn.style.color = new StyleColor(isRuntimeActive ? new Color(0.95f, 0.95f, 0.97f) : new Color(0.55f, 0.55f, 0.57f));
-            mRuntimeMonitorTabBtn.style.backgroundColor = new StyleColor(isRuntimeActive ? new Color(0.18f, 0.18f, 0.20f) : Color.clear);
-            
-            // 代码生成器 Tab
-            bool isCodeGenActive = mCurrentTab == TabType.CodeGenerator;
-            mCodeGeneratorTabBtn.style.borderBottomColor = new StyleColor(isCodeGenActive ? new Color(0.25f, 0.55f, 0.90f) : Color.clear);
-            mCodeGeneratorTabBtn.style.color = new StyleColor(isCodeGenActive ? new Color(0.95f, 0.95f, 0.97f) : new Color(0.55f, 0.55f, 0.57f));
-            mCodeGeneratorTabBtn.style.backgroundColor = new StyleColor(isCodeGenActive ? new Color(0.18f, 0.18f, 0.20f) : Color.clear);
+            // 使用公共组件更新标签按钮样式
+            YokiFrameUIComponents.UpdateTabButtonStyle(mRuntimeMonitorTabBtn, mCurrentTab == TabType.RuntimeMonitor);
+            YokiFrameUIComponents.UpdateTabButtonStyle(mCodeGeneratorTabBtn, mCurrentTab == TabType.CodeGenerator);
         }
 
         private void SwitchTab(TabType tabType)

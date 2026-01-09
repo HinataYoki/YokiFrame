@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
+using static YokiFrame.EditorTools.YokiFrameUIComponents;
 
 namespace YokiFrame
 {
@@ -58,8 +59,8 @@ namespace YokiFrame
             var tabBar = new VisualElement();
             tabBar.style.flexDirection = FlexDirection.Row;
             tabBar.style.borderBottomWidth = 1;
-            tabBar.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
-            tabBar.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.12f));
+            tabBar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            tabBar.style.backgroundColor = new StyleColor(Colors.LayerTabBar);
             root.Add(tabBar);
 
             mCreatePanelTabBtn = CreateTabButton("创建面板", TabType.CreatePanel);
@@ -132,15 +133,15 @@ namespace YokiFrame
         private Button CreateTabButton(string text, TabType tabType)
         {
             var btn = new Button(() => SwitchTab(tabType)) { text = text };
-            btn.style.paddingLeft = 16;
-            btn.style.paddingRight = 16;
-            btn.style.paddingTop = 10;
-            btn.style.paddingBottom = 10;
+            btn.style.paddingLeft = Spacing.LG;
+            btn.style.paddingRight = Spacing.LG;
+            btn.style.paddingTop = Spacing.SM + 2;
+            btn.style.paddingBottom = Spacing.SM + 2;
             btn.style.borderLeftWidth = btn.style.borderRightWidth = btn.style.borderTopWidth = 0;
             btn.style.borderBottomWidth = 2;
             btn.style.borderBottomColor = new StyleColor(Color.clear);
             btn.style.backgroundColor = StyleKeyword.Null;
-            btn.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+            btn.style.color = new StyleColor(Colors.TextSecondary);
             return btn;
         }
 
@@ -154,9 +155,9 @@ namespace YokiFrame
 
         private void UpdateSingleTabStyle(Button btn, bool isActive)
         {
-            btn.style.borderBottomColor = new StyleColor(isActive ? new Color(0.25f, 0.55f, 0.90f) : Color.clear);
-            btn.style.color = new StyleColor(isActive ? new Color(0.95f, 0.95f, 0.97f) : new Color(0.55f, 0.55f, 0.57f));
-            btn.style.backgroundColor = new StyleColor(isActive ? new Color(0.18f, 0.18f, 0.20f) : Color.clear);
+            btn.style.borderBottomColor = new StyleColor(isActive ? Colors.BrandPrimary : Color.clear);
+            btn.style.color = new StyleColor(isActive ? Colors.TextPrimary : Colors.TextTertiary);
+            btn.style.backgroundColor = new StyleColor(isActive ? Colors.LayerSection : Color.clear);
         }
 
         private void SwitchTab(TabType tabType)
@@ -190,9 +191,9 @@ namespace YokiFrame
         {
             var btn = new Button(onClick) { text = text };
             btn.style.height = 20;
-            btn.style.paddingLeft = 8;
-            btn.style.paddingRight = 8;
-            btn.style.marginLeft = 4;
+            btn.style.paddingLeft = Spacing.SM;
+            btn.style.paddingRight = Spacing.SM;
+            btn.style.marginLeft = Spacing.XS;
             btn.style.fontSize = 11;
             return btn;
         }

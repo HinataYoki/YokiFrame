@@ -7,11 +7,6 @@ namespace YokiFrame
     public static class LocalizationKitSaveIntegration
     {
         /// <summary>
-        /// 模块 Key（用于 SaveData）
-        /// </summary>
-        public const int MODULE_KEY = 0x4C4F4341; // "LOCA" in hex
-
-        /// <summary>
         /// 保存当前语言设置到 SaveData
         /// </summary>
         /// <param name="saveData">存档数据</param>
@@ -20,9 +15,7 @@ namespace YokiFrame
             if (saveData == null) return;
 
             var data = LocalizationSaveData.FromCurrentSettings();
-            var serializer = SaveKit.GetSerializer();
-            var bytes = serializer.Serialize(data);
-            saveData.SetRawModule(MODULE_KEY, bytes);
+            saveData.RegisterModule(data);
         }
 
         /// <summary>
@@ -34,11 +27,9 @@ namespace YokiFrame
         {
             if (saveData == null) return false;
 
-            var bytes = saveData.GetRawModule(MODULE_KEY);
-            if (bytes == null) return false;
+            var data = saveData.GetModule<LocalizationSaveData>();
+            if (data == null) return false;
 
-            var serializer = SaveKit.GetSerializer();
-            var data = serializer.Deserialize<LocalizationSaveData>(bytes);
             data.Apply();
             return true;
         }
@@ -48,7 +39,7 @@ namespace YokiFrame
         /// </summary>
         public static bool HasLanguagePreference(SaveData saveData)
         {
-            return saveData?.HasRawModule(MODULE_KEY) ?? false;
+            return saveData?.HasModule<LocalizationSaveData>() ?? false;
         }
 
         /// <summary>
@@ -56,7 +47,7 @@ namespace YokiFrame
         /// </summary>
         public static void ClearLanguagePreference(SaveData saveData)
         {
-            saveData?.RemoveRawModule(MODULE_KEY);
+            saveData?.RemoveModule<LocalizationSaveData>();
         }
     }
 }

@@ -1,0 +1,194 @@
+/* 批量绑定工具窗口样式 */
+
+.bind-tools-window {
+    padding: 12px;
+    background-color: rgb(56, 56, 56);
+}
+
+.window-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(80, 80, 80);
+}
+
+/* 区块样式 */
+.section {
+    margin-bottom: 12px;
+    padding: 10px;
+    background-color: rgb(48, 48, 48);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(40, 40, 40);
+}
+
+.section-header {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(180, 180, 180);
+    margin-bottom: 8px;
+}
+
+/* 选中数量 */
+.selection-count {
+    font-size: 13px;
+    color: rgb(200, 200, 200);
+}
+
+/* 选项区域 */
+.options-section {
+    padding: 12px;
+}
+
+.option-toggle {
+    margin-bottom: 8px;
+}
+
+.option-toggle > Label {
+    color: rgb(200, 200, 200);
+}
+
+.option-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.option-label {
+    width: 80px;
+    color: rgb(200, 200, 200);
+    font-size: 12px;
+}
+
+.option-field {
+    flex-grow: 1;
+}
+
+/* 预览区域 */
+.preview-section {
+    flex-grow: 1;
+    min-height: 200px;
+}
+
+.preview-container {
+    background-color: rgb(35, 35, 35);
+    border-radius: 4px;
+    padding: 8px;
+    flex-grow: 1;
+    max-height: 250px;
+}
+
+.preview-empty {
+    color: rgb(150, 150, 150);
+    font-size: 11px;
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+    padding: 20px;
+}
+
+/* 预览行 */
+.preview-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 6px;
+    margin-bottom: 2px;
+    border-radius: 3px;
+}
+
+.preview-row:hover {
+    background-color: rgb(50, 50, 50);
+}
+
+.preview-row-skipped {
+    opacity: 0.5;
+}
+
+.preview-original {
+    font-size: 11px;
+    color: rgb(180, 180, 180);
+    min-width: 100px;
+}
+
+.preview-arrow {
+    font-size: 11px;
+    color: rgb(120, 120, 120);
+    margin: 0 8px;
+}
+
+.preview-suggested {
+    font-size: 11px;
+    color: rgb(150, 200, 150);
+    -unity-font-style: bold;
+}
+
+.preview-type {
+    font-size: 10px;
+    color: rgb(120, 150, 180);
+    margin-left: 8px;
+}
+
+.preview-skip {
+    font-size: 10px;
+    color: rgb(180, 150, 100);
+    margin-left: 8px;
+    -unity-font-style: italic;
+}
+
+/* 按钮行 */
+.button-row {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.cancel-btn {
+    padding: 6px 16px;
+    margin-right: 8px;
+    background-color: rgb(60, 60, 60);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(80, 80, 80);
+}
+
+.cancel-btn:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.execute-btn {
+    padding: 6px 20px;
+    background-color: rgb(60, 100, 140);
+    border-radius: 4px;
+    border-width: 0;
+    color: rgb(255, 255, 255);
+}
+
+.execute-btn:hover {
+    background-color: rgb(70, 120, 160);
+}
+
+.execute-btn:disabled {
+    background-color: rgb(50, 50, 50);
+    color: rgb(120, 120, 120);
+}
+
+/* 结果标签 */
+.result-label {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: none;
+}
+
+.result-success {
+    background-color: rgb(50, 80, 50);
+    color: rgb(180, 220, 180);
+}
+
+.result-error {
+    background-color: rgb(80, 50, 50);
+    color: rgb(220, 180, 180);
+}

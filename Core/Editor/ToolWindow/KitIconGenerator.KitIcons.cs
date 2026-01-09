@@ -244,6 +244,34 @@ namespace YokiFrame.EditorTools
             DrawFilledRect(tex, 6, 6, 20, 20, color);
         }
 
+        /// <summary>
+        /// 设置图标 - 齿轮（与 CODEGEN 相同形状，不同颜色）
+        /// </summary>
+        private static void DrawSettingsIcon(Texture2D tex, Color32 color)
+        {
+            int cx = 16, cy = 16;
+            DrawFilledCircle(tex, cx, cy, 12, color);
+            DrawFilledCircle(tex, cx, cy, 5, new Color32(0, 0, 0, 0));
+            DrawFilledRect(tex, 14, 2, 4, 6, color);
+            DrawFilledRect(tex, 14, 24, 4, 6, color);
+            DrawFilledRect(tex, 2, 14, 6, 4, color);
+            DrawFilledRect(tex, 24, 14, 6, 4, color);
+        }
+
+        /// <summary>
+        /// 重置图标 - 逆时针箭头
+        /// </summary>
+        private static void DrawResetIcon(Texture2D tex, Color32 color)
+        {
+            int cx = 16, cy = 16;
+            // 绘制圆弧（用圆环模拟）
+            DrawCircleOutline(tex, cx, cy, 10, 3, color);
+            // 清除右上角部分形成缺口
+            DrawFilledRect(tex, 16, 4, 12, 12, new Color32(0, 0, 0, 0));
+            // 绘制箭头
+            DrawFilledTriangle(tex, 20, 4, 26, 10, 20, 16, color);
+        }
+
         #endregion
     }
 }

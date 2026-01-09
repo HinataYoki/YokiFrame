@@ -55,7 +55,7 @@ namespace YokiFrame
         protected override void BuildUI(VisualElement root)
         {
             // 工具栏
-            var toolbar = CreateToolbar();
+            var toolbar = YokiFrameUIComponents.CreateToolbar();
             root.Add(toolbar);
 
             mToolbarButtons = new VisualElement();
@@ -65,7 +65,7 @@ namespace YokiFrame
             AddViewModeButton(KitIcons.DOT, "运行时监控", ViewMode.Runtime);
             AddViewModeButton(KitIcons.TARGET, "代码扫描", ViewMode.CodeScan);
 
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             // 内容区域 - 需要设置 overflow 确保子视图的 ScrollView 能正确工作
             var content = new VisualElement();
@@ -168,7 +168,7 @@ namespace YokiFrame
 
         private void AddViewModeButton(string iconId, string text, ViewMode mode)
         {
-            var button = CreateToolbarButtonWithIcon(iconId, text, () => SwitchView(mode));
+            var button = YokiFrameUIComponents.CreateToolbarButtonWithIcon(iconId, text, () => SwitchView(mode));
             button.name = $"btn_{mode}";
             mToolbarButtons.Add(button);
         }

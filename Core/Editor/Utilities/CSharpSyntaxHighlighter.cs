@@ -55,29 +55,58 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 将代码转换为带颜色标签的富文本
         /// </summary>
-        public static string Highlight(string code)
+        /// <param name="code">源代码</param>
+        /// <param name="fontSize">字体大小，用于 size 标签确保行高一致</param>
+        public static string Highlight(string code, int fontSize = 0)
         {
             if (string.IsNullOrEmpty(code)) return code;
             
             var result = new StringBuilder(code.Length * 2);
             var lines = code.Split('\n');
             
+            // 是否使用 size 标签包裹每行
+            bool useSize = fontSize > 0;
+            string sizeOpen = useSize ? $"<size={fontSize}>" : "";
+            string sizeClose = useSize ? "</size>" : "";
+            
             for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
             {
                 var line = lines[lineIdx];
                 if (lineIdx > 0) result.Append('\n');
+                
+                // 空行直接保留
+                if (string.IsNullOrEmpty(line) || string.IsNullOrWhiteSpace(line))
+                {
+                    if (useSize)
+                    {
+                        // 空行也需要 size 标签保持行高一致
+                        result.Append(sizeOpen);
+                        result.Append(line);
+                        result.Append(sizeClose);
+                    }
+                    else
+                    {
+                        result.Append(line);
+                    }
+                    continue;
+                }
                 
                 // 检查是否是注释行
                 var trimmed = line.TrimStart();
                 if (trimmed.StartsWith("//"))
                 {
                     var leadingSpaces = line.Length - line.TrimStart().Length;
+                    result.Append(sizeOpen);
                     result.Append(new string(' ', leadingSpaces));
                     result.Append(ColorTag(line.TrimStart(), CommentColor));
+                    result.Append(sizeClose);
                     continue;
                 }
                 
+                // 对于非注释行，用 size 标签包裹整行
+                result.Append(sizeOpen);
                 HighlightLine(line, result);
+                result.Append(sizeClose);
             }
             
             return result.ToString();
@@ -155,12 +184,12 @@ namespace YokiFrame.EditorTools
                     else if (isMethod)
                         result.Append(ColorTag(word, MethodColor));
                     else
-                        result.Append(ColorTag(word, DefaultColor));
+                        result.Append(EscapeRichText(word)); // 默认颜色不添加标签
                     continue;
                 }
                 
-                // 其他字符
-                result.Append(ColorTag(line[i].ToString(), DefaultColor));
+                // 其他字符 - 不添加颜色标签
+                result.Append(EscapeRichText(line[i].ToString()));
                 i++;
             }
         }

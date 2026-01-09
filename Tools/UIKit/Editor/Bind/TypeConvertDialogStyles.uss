@@ -1,0 +1,155 @@
+/* 类型转换对话框样式 */
+
+.type-convert-dialog {
+    padding: 16px;
+    background-color: rgb(56, 56, 56);
+}
+
+.dialog-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(80, 80, 80);
+}
+
+.description-label {
+    font-size: 13px;
+    color: rgb(200, 200, 200);
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: rgb(48, 48, 48);
+    border-radius: 4px;
+}
+
+/* 影响分析区域 */
+.impact-section {
+    flex-grow: 1;
+    margin-bottom: 12px;
+}
+
+.section-header {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(180, 180, 180);
+    margin-bottom: 8px;
+}
+
+.files-container {
+    background-color: rgb(40, 40, 40);
+    border-radius: 4px;
+    padding: 12px;
+    min-height: 150px;
+    max-height: 200px;
+}
+
+/* 文件区块 */
+.file-section {
+    margin-bottom: 12px;
+}
+
+.file-section-header {
+    font-size: 12px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.file-create .file-section-header {
+    color: rgb(150, 200, 150);
+}
+
+.file-modify .file-section-header {
+    color: rgb(200, 180, 100);
+}
+
+.file-delete .file-section-header {
+    color: rgb(200, 150, 150);
+}
+
+.file-path {
+    font-size: 11px;
+    color: rgb(160, 160, 160);
+    margin-bottom: 2px;
+    padding-left: 8px;
+}
+
+.no-change-label {
+    font-size: 11px;
+    color: rgb(150, 150, 150);
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+    padding: 20px;
+}
+
+/* 警告信息 */
+.warning-label {
+    font-size: 11px;
+    color: rgb(220, 180, 100);
+    padding: 8px 12px;
+    background-color: rgb(60, 55, 45);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.warning-conflict {
+    background-color: rgb(70, 50, 50);
+    color: rgb(220, 150, 150);
+}
+
+/* 按钮行 */
+.button-row {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.cancel-btn {
+    padding: 6px 16px;
+    margin-right: 8px;
+    background-color: rgb(60, 60, 60);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(80, 80, 80);
+}
+
+.cancel-btn:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.execute-btn {
+    padding: 6px 20px;
+    background-color: rgb(100, 80, 60);
+    border-radius: 4px;
+    border-width: 0;
+    color: rgb(255, 255, 255);
+}
+
+.execute-btn:hover {
+    background-color: rgb(120, 100, 70);
+}
+
+.execute-btn:disabled {
+    background-color: rgb(50, 50, 50);
+    color: rgb(120, 120, 120);
+}
+
+/* 结果标签 */
+.result-label {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: none;
+}
+
+.result-success {
+    background-color: rgb(50, 80, 50);
+    color: rgb(180, 220, 180);
+}
+
+.result-error {
+    background-color: rgb(80, 50, 50);
+    color: rgb(220, 180, 180);
+}

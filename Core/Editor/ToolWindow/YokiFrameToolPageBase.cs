@@ -267,6 +267,12 @@ namespace YokiFrame.EditorTools
             => YokiFrameUIComponents.CreateHelpBox(message);
         
         /// <summary>
+        /// 创建帮助框（带类型）
+        /// </summary>
+        protected VisualElement CreateHelpBox(string message, YokiFrameUIComponents.HelpBoxType type) 
+            => YokiFrameUIComponents.CreateHelpBox(message, type);
+        
+        /// <summary>
         /// 创建空状态提示
         /// </summary>
         protected VisualElement CreateEmptyState(string message) 

@@ -111,6 +111,19 @@ namespace YokiFrame.EditorTools
             GenerateIcon(KitIcons.SCROLL);
             GenerateIcon(KitIcons.LISTENER);
             GenerateIcon(KitIcons.DOCUMENT);
+            GenerateIcon(KitIcons.SETTINGS);
+            GenerateIcon(KitIcons.RESET);
+            GenerateIcon(KitIcons.LOCATION);
+            GenerateIcon(KitIcons.CODE);
+            GenerateIcon(KitIcons.FOLDER);
+            GenerateIcon(KitIcons.CLOCK);
+            GenerateIcon(KitIcons.CHECK);
+            GenerateIcon(KitIcons.DOT_FILLED);
+            GenerateIcon(KitIcons.DOT_EMPTY);
+            GenerateIcon(KitIcons.DOT_HALF);
+            GenerateIcon(KitIcons.DIAMOND);
+            GenerateIcon(KitIcons.TRIANGLE_UP);
+            GenerateIcon(KitIcons.TRIANGLE_DOWN);
         }
 
         private static Texture2D GenerateIcon(string iconId)
@@ -350,6 +363,45 @@ namespace YokiFrame.EditorTools
                     break;
                 case KitIcons.DOCUMENT:
                     DrawDocumentIcon(tex, blue);
+                    break;
+                case KitIcons.SETTINGS:
+                    DrawSettingsIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.RESET:
+                    DrawResetIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.LOCATION:
+                    DrawLocationIcon(tex, new Color32(220, 80, 80, 255));
+                    break;
+                case KitIcons.CODE:
+                    DrawCodeIcon(tex, new Color32(100, 150, 220, 255));
+                    break;
+                case KitIcons.FOLDER:
+                    DrawFolderIcon(tex, new Color32(255, 200, 80, 255));
+                    break;
+                case KitIcons.CLOCK:
+                    DrawClockIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.CHECK:
+                    DrawCheckIcon(tex, new Color32(100, 200, 100, 255));
+                    break;
+                case KitIcons.DOT_FILLED:
+                    DrawDotFilledIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.DOT_EMPTY:
+                    DrawDotEmptyIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.DOT_HALF:
+                    DrawDotHalfIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.DIAMOND:
+                    DrawDiamondIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.TRIANGLE_UP:
+                    DrawTriangleUpIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.TRIANGLE_DOWN:
+                    DrawTriangleDownIcon(tex, new Color32(150, 150, 160, 255));
                     break;
 
                 default:

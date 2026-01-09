@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
+using static YokiFrame.EditorTools.YokiFrameUIComponents;
 
 namespace YokiFrame
 {
@@ -31,13 +32,13 @@ namespace YokiFrame
             // 工具栏
             var toolbar = new VisualElement();
             toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.paddingLeft = 8;
-            toolbar.style.paddingRight = 8;
-            toolbar.style.paddingTop = 4;
-            toolbar.style.paddingBottom = 4;
-            toolbar.style.backgroundColor = new StyleColor(new Color(0.15f, 0.15f, 0.15f));
+            toolbar.style.paddingLeft = Spacing.SM;
+            toolbar.style.paddingRight = Spacing.SM;
+            toolbar.style.paddingTop = Spacing.XS;
+            toolbar.style.paddingBottom = Spacing.XS;
+            toolbar.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
             toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
+            toolbar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
             container.Add(toolbar);
 
             // 过滤按钮
@@ -52,14 +53,14 @@ namespace YokiFrame
             var reactiveIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
             reactiveIcon.style.width = 14;
             reactiveIcon.style.height = 14;
-            reactiveIcon.style.marginRight = 8;
-            reactiveIcon.tintColor = new Color(0.3f, 0.9f, 0.4f);
+            reactiveIcon.style.marginRight = Spacing.SM;
+            reactiveIcon.tintColor = Colors.StatusSuccess;
             reactiveIcon.tooltip = "响应式更新";
             toolbar.Add(reactiveIcon);
 
             // 自动刷新
-            var autoRefreshToggle = YokiFrameUIComponents.CreateModernToggle("自动刷新", mDebugAutoRefresh, v => mDebugAutoRefresh = v);
-            autoRefreshToggle.style.marginRight = 8;
+            var autoRefreshToggle = CreateModernToggle("自动刷新", mDebugAutoRefresh, v => mDebugAutoRefresh = v);
+            autoRefreshToggle.style.marginRight = Spacing.SM;
             toolbar.Add(autoRefreshToggle);
 
             var refreshBtn = new Button(RefreshDebugContent) { text = "刷新" };
@@ -69,9 +70,9 @@ namespace YokiFrame
             // 内容区域
             mDebugContent = new ScrollView();
             mDebugContent.style.flexGrow = 1;
-            mDebugContent.style.paddingLeft = 12;
-            mDebugContent.style.paddingRight = 12;
-            mDebugContent.style.paddingTop = 12;
+            mDebugContent.style.paddingLeft = Spacing.MD;
+            mDebugContent.style.paddingRight = Spacing.MD;
+            mDebugContent.style.paddingTop = Spacing.MD;
             container.Add(mDebugContent);
 
             RefreshDebugContent();
@@ -82,12 +83,12 @@ namespace YokiFrame
             var btn = new Button();
             btn.text = text;
             btn.style.height = 24;
-            btn.style.marginRight = 4;
+            btn.style.marginRight = Spacing.XS;
 
             void UpdateStyle(bool isActive)
             {
-                btn.style.backgroundColor = new StyleColor(isActive ? new Color(0.25f, 0.55f, 0.90f) : new Color(0.2f, 0.2f, 0.2f));
-                btn.style.color = new StyleColor(isActive ? Color.white : new Color(0.7f, 0.7f, 0.7f));
+                btn.style.backgroundColor = new StyleColor(isActive ? Colors.BrandPrimary : Colors.LayerCard);
+                btn.style.color = new StyleColor(isActive ? Color.white : Colors.TextSecondary);
             }
 
             UpdateStyle(initialValue);
@@ -110,7 +111,7 @@ namespace YokiFrame
 
             if (!EditorApplication.isPlaying)
             {
-                var helpBox = YokiFrameUIComponents.CreateHelpBox("请在播放模式下使用调试功能");
+                var helpBox = CreateHelpBox("请在播放模式下使用调试功能");
                 mDebugContent.Add(helpBox);
                 return;
             }
@@ -127,13 +128,13 @@ namespace YokiFrame
 
         private void DrawDebugActivePanels()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("活动面板", KitIcons.CLIPBOARD);
+            var (card, body) = CreateCard("活动面板", KitIcons.CLIPBOARD);
             mDebugContent.Add(card);
 
             var panels = GetActivePanels();
             if (panels.Count == 0)
             {
-                body.Add(new Label("无活动面板") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) } });
+                body.Add(new Label("无活动面板") { style = { color = new StyleColor(Colors.TextTertiary) } });
                 return;
             }
 
@@ -149,10 +150,10 @@ namespace YokiFrame
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
-            row.style.paddingTop = 4;
-            row.style.paddingBottom = 4;
+            row.style.paddingTop = Spacing.XS;
+            row.style.paddingBottom = Spacing.XS;
             row.style.borderBottomWidth = 1;
-            row.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
+            row.style.borderBottomColor = new StyleColor(Colors.BorderLight);
 
             var panelName = panel.GetType().Name;
             var state = panel.State.ToString();
@@ -190,13 +191,13 @@ namespace YokiFrame
 
         private void DrawDebugStackInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("面板堆栈", KitIcons.STACK);
+            var (card, body) = CreateCard("面板堆栈", KitIcons.STACK);
             mDebugContent.Add(card);
 
             var stackNames = UIKit.GetAllStackNames();
             if (stackNames.Count == 0)
             {
-                body.Add(new Label("无堆栈") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) } });
+                body.Add(new Label("无堆栈") { style = { color = new StyleColor(Colors.TextTertiary) } });
                 return;
             }
 
@@ -209,8 +210,8 @@ namespace YokiFrame
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
-                row.style.paddingTop = 4;
-                row.style.paddingBottom = 4;
+                row.style.paddingTop = Spacing.XS;
+                row.style.paddingBottom = Spacing.XS;
 
                 row.Add(new Label($"栈 [{stackName}]") { style = { width = 100 } });
                 row.Add(new Label($"深度: {depth}") { style = { width = 60 } });
@@ -228,13 +229,13 @@ namespace YokiFrame
 
         private void DrawDebugFocusInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("焦点信息", KitIcons.TARGET);
+            var (card, body) = CreateCard("焦点信息", KitIcons.TARGET);
             mDebugContent.Add(card);
 
             var focusSystem = UIFocusSystem.Instance;
             if (focusSystem == null)
             {
-                body.Add(new Label("焦点系统未初始化") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) } });
+                body.Add(new Label("焦点系统未初始化") { style = { color = new StyleColor(Colors.TextTertiary) } });
                 return;
             }
 
@@ -242,10 +243,10 @@ namespace YokiFrame
             var focusName = currentFocus != null ? currentFocus.name : "无";
             var inputMode = focusSystem.CurrentInputMode.ToString();
 
-            var (focusRow, _) = YokiFrameUIComponents.CreateInfoRow("当前焦点:", focusName);
+            var (focusRow, _) = CreateInfoRow("当前焦点:", focusName);
             body.Add(focusRow);
 
-            var (modeRow, _) = YokiFrameUIComponents.CreateInfoRow("输入模式:", inputMode);
+            var (modeRow, _) = CreateInfoRow("输入模式:", inputMode);
             body.Add(modeRow);
 
             if (currentFocus != null)
@@ -253,7 +254,7 @@ namespace YokiFrame
                 var btnRow = new VisualElement();
                 btnRow.style.flexDirection = FlexDirection.Row;
                 btnRow.style.justifyContent = Justify.FlexEnd;
-                btnRow.style.marginTop = 8;
+                btnRow.style.marginTop = Spacing.SM;
 
                 btnRow.Add(CreateSmallButton("选择焦点对象", () =>
                 {
@@ -267,19 +268,19 @@ namespace YokiFrame
 
         private void DrawDebugCacheInfo()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("缓存信息", KitIcons.CACHE);
+            var (card, body) = CreateCard("缓存信息", KitIcons.CACHE);
             mDebugContent.Add(card);
 
             var cachedPanels = UIKit.GetCachedPanels();
             var cacheCount = cachedPanels.Count;
             var maxCapacity = UIKit.GetCacheCapacity();
 
-            var (countRow, _) = YokiFrameUIComponents.CreateInfoRow("缓存数量:", $"{cacheCount} / {maxCapacity}");
+            var (countRow, _) = CreateInfoRow("缓存数量:", $"{cacheCount} / {maxCapacity}");
             body.Add(countRow);
 
             if (cacheCount == 0)
             {
-                body.Add(new Label("无缓存面板") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)), marginTop = 8 } });
+                body.Add(new Label("无缓存面板") { style = { color = new StyleColor(Colors.TextTertiary), marginTop = Spacing.SM } });
                 return;
             }
 
@@ -301,8 +302,8 @@ namespace YokiFrame
                 body.Add(row);
             }
 
-            var clearBtn = YokiFrameUIComponents.CreateDangerButton("清空缓存", () => UIKit.ClearAllPreloadedCache());
-            clearBtn.style.marginTop = 8;
+            var clearBtn = CreateDangerButton("清空缓存", () => UIKit.ClearAllPreloadedCache());
+            clearBtn.style.marginTop = Spacing.SM;
             body.Add(clearBtn);
         }
 
@@ -330,9 +331,9 @@ namespace YokiFrame
 
         private static Color GetStateColor(PanelState state) => state switch
         {
-            PanelState.Open => new Color(0.3f, 0.8f, 0.4f),
-            PanelState.Hide => new Color(0.8f, 0.6f, 0.2f),
-            PanelState.Close => new Color(0.5f, 0.5f, 0.5f),
+            PanelState.Open => Colors.StatusSuccess,
+            PanelState.Hide => Colors.StatusWarning,
+            PanelState.Close => Colors.TextTertiary,
             _ => Color.white
         };
 

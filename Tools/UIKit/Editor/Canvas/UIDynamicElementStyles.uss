@@ -1,0 +1,116 @@
+/* UIDynamicElement Inspector 样式 */
+
+.dynamic-element-inspector {
+    padding: 4px;
+}
+
+/* 区块样式 */
+.dynamic-section {
+    margin-bottom: 8px;
+    background-color: rgb(56, 56, 56);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(40, 40, 40);
+    overflow: hidden;
+}
+
+.dynamic-section-header {
+    background-color: rgb(50, 60, 55);
+    padding: 8px 12px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(40, 50, 45);
+}
+
+.dynamic-section-content {
+    padding: 10px 12px;
+}
+
+/* 状态区块特定颜色 */
+.dynamic-section-status .dynamic-section-header {
+    background-color: rgb(55, 55, 65);
+    border-bottom-color: rgb(45, 45, 55);
+}
+
+/* 帮助提示框 */
+.dynamic-helpbox {
+    flex-direction: row;
+    background-color: rgb(62, 72, 82);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border-width: 1px;
+    border-color: rgb(70, 85, 100);
+}
+
+.dynamic-helpbox-icon {
+    width: 18px;
+    min-width: 18px;
+    font-size: 14px;
+    color: rgb(120, 180, 220);
+    -unity-text-align: upper-center;
+    margin-right: 8px;
+}
+
+.dynamic-helpbox-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 11px;
+    color: rgb(180, 200, 220);
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+/* 字段行 */
+.dynamic-field-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+    min-height: 22px;
+}
+
+.dynamic-field-label {
+    width: 110px;
+    min-width: 110px;
+    font-size: 12px;
+    color: rgb(200, 200, 200);
+    -unity-text-align: middle-left;
+    padding-right: 8px;
+}
+
+.dynamic-field {
+    flex-grow: 1;
+    margin: 0;
+}
+
+/* Toggle 样式调整 */
+.dynamic-field Toggle {
+    margin: 0;
+}
+
+/* 状态标签 */
+.dynamic-status-label {
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+}
+
+.dynamic-status-label.status-initialized {
+    background-color: rgb(50, 80, 50);
+    color: rgb(180, 220, 180);
+}
+
+.dynamic-status-label.status-pending {
+    background-color: rgb(60, 60, 50);
+    color: rgb(200, 200, 160);
+}
+
+/* Canvas 信息 */
+.dynamic-canvas-info {
+    font-size: 11px;
+    color: rgb(160, 160, 160);
+    padding: 4px 0;
+}

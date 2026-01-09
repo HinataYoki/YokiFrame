@@ -4,9 +4,14 @@ using UnityEngine.UI;
 namespace YokiFrame
 {
     /// <summary>
-    /// Canvas 批处理优化提示组件
-    /// 用于标记和优化 Canvas 的批处理行为
+    /// Canvas 优化提示组件 - 用于配置 Canvas 的渲染优化选项
     /// </summary>
+    /// <remarks>
+    /// 主要用于：
+    /// - 配置像素对齐（减少模糊但可能影响性能）
+    /// - 配置排序顺序
+    /// - 控制 Raycaster 启用状态
+    /// </remarks>
     [RequireComponent(typeof(Canvas))]
     [DisallowMultipleComponent]
     [AddComponentMenu("YokiFrame/UI/Canvas Batch Hint")]
@@ -15,27 +20,26 @@ namespace YokiFrame
         #region 配置
 
         [SerializeField]
-        [Tooltip("Canvas 类型")]
-        private CanvasType mCanvasType = CanvasType.Mixed;
-
-        [SerializeField]
         [Tooltip("是否启用像素对齐（减少模糊但可能影响性能）")]
-        private bool mPixelPerfect = false;
-
-        [SerializeField]
-        [Tooltip("排序顺序偏移")]
-        private int mSortingOrderOffset;
+        private bool mPixelPerfect;
 
         [SerializeField]
         [Tooltip("是否覆盖排序层")]
         private bool mOverrideSorting;
+
+        [SerializeField]
+        [Tooltip("排序顺序（仅在覆盖排序时生效）")]
+        private int mSortingOrder;
+
+        [SerializeField]
+        [Tooltip("是否禁用 Raycaster（无交互的 Canvas 可禁用以提升性能）")]
+        private bool mDisableRaycaster;
 
         #endregion
 
         #region 缓存
 
         private Canvas mCanvas;
-        private CanvasScaler mCanvasScaler;
         private GraphicRaycaster mRaycaster;
 
         #endregion
@@ -43,18 +47,14 @@ namespace YokiFrame
         #region 属性
 
         /// <summary>
-        /// Canvas 类型
+        /// 关联的 Canvas
         /// </summary>
-        public CanvasType Type
+        public Canvas Canvas
         {
-            get => mCanvasType;
-            set
+            get
             {
-                if (mCanvasType != value)
-                {
-                    mCanvasType = value;
-                    ApplySettings();
-                }
+                EnsureInitialized();
+                return mCanvas;
             }
         }
 
@@ -66,18 +66,14 @@ namespace YokiFrame
             get => mPixelPerfect;
             set
             {
-                if (mPixelPerfect != value)
+                mPixelPerfect = value;
+                EnsureInitialized();
+                if (mCanvas != null)
                 {
-                    mPixelPerfect = value;
-                    ApplySettings();
+                    mCanvas.pixelPerfect = value;
                 }
             }
         }
-
-        /// <summary>
-        /// 关联的 Canvas
-        /// </summary>
-        public Canvas Canvas => mCanvas;
 
         #endregion
 
@@ -86,12 +82,7 @@ namespace YokiFrame
         private void Awake()
         {
             mCanvas = GetComponent<Canvas>();
-            mCanvasScaler = GetComponent<CanvasScaler>();
             mRaycaster = GetComponent<GraphicRaycaster>();
-        }
-
-        private void OnEnable()
-        {
             ApplySettings();
         }
 
@@ -113,40 +104,14 @@ namespace YokiFrame
             if (mOverrideSorting)
             {
                 mCanvas.overrideSorting = true;
-                mCanvas.sortingOrder += mSortingOrderOffset;
+                mCanvas.sortingOrder = mSortingOrder;
             }
 
-            // 根据类型优化
-            switch (mCanvasType)
+            // Raycaster 控制
+            if (mRaycaster != null && mDisableRaycaster)
             {
-                case CanvasType.Static:
-                    OptimizeForStatic();
-                    break;
-                case CanvasType.Dynamic:
-                    OptimizeForDynamic();
-                    break;
-                case CanvasType.Mixed:
-                    // 默认设置，不做特殊优化
-                    break;
+                mRaycaster.enabled = false;
             }
-        }
-
-        /// <summary>
-        /// 静态 Canvas 优化
-        /// </summary>
-        private void OptimizeForStatic()
-        {
-            // 静态 Canvas 通常不需要 Raycaster（除非有交互）
-            // 这里只是提示，实际是否禁用由用户决定
-        }
-
-        /// <summary>
-        /// 动态 Canvas 优化
-        /// </summary>
-        private void OptimizeForDynamic()
-        {
-            // 动态 Canvas 可能需要更频繁的重建
-            // 确保 Canvas 是独立的以避免影响其他元素
         }
 
         #endregion
@@ -154,23 +119,15 @@ namespace YokiFrame
         #region 公共方法
 
         /// <summary>
-        /// 强制重建 Canvas
-        /// </summary>
-        public void ForceRebuild()
-        {
-            if (mCanvas != null)
-            {
-                Canvas.ForceUpdateCanvases();
-            }
-        }
-
-        /// <summary>
         /// 设置排序顺序
         /// </summary>
         public void SetSortingOrder(int order)
         {
+            EnsureInitialized();
+            mSortingOrder = order;
             if (mCanvas != null)
             {
+                mCanvas.overrideSorting = true;
                 mCanvas.sortingOrder = order;
             }
         }
@@ -180,9 +137,26 @@ namespace YokiFrame
         /// </summary>
         public void SetRaycasterEnabled(bool enabled)
         {
+            EnsureInitialized();
+            mDisableRaycaster = !enabled;
             if (mRaycaster != null)
             {
                 mRaycaster.enabled = enabled;
+            }
+        }
+
+        /// <summary>
+        /// 确保组件已初始化
+        /// </summary>
+        private void EnsureInitialized()
+        {
+            if (mCanvas == null)
+            {
+                mCanvas = GetComponent<Canvas>();
+            }
+            if (mRaycaster == null)
+            {
+                mRaycaster = GetComponent<GraphicRaycaster>();
             }
         }
 
@@ -195,7 +169,11 @@ namespace YokiFrame
             {
                 mCanvas = GetComponent<Canvas>();
             }
-            
+            if (mRaycaster == null)
+            {
+                mRaycaster = GetComponent<GraphicRaycaster>();
+            }
+
             if (Application.isPlaying)
             {
                 ApplySettings();
@@ -204,30 +182,11 @@ namespace YokiFrame
 
         private void Reset()
         {
-            mCanvasType = CanvasType.Mixed;
             mPixelPerfect = false;
+            mOverrideSorting = false;
+            mSortingOrder = 0;
+            mDisableRaycaster = false;
         }
 #endif
-    }
-
-    /// <summary>
-    /// Canvas 类型枚举
-    /// </summary>
-    public enum CanvasType
-    {
-        /// <summary>
-        /// 静态 Canvas - 内容很少变化
-        /// </summary>
-        Static,
-
-        /// <summary>
-        /// 动态 Canvas - 内容频繁变化
-        /// </summary>
-        Dynamic,
-
-        /// <summary>
-        /// 混合 Canvas - 包含静态和动态内容
-        /// </summary>
-        Mixed
     }
 }

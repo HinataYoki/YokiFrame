@@ -98,6 +98,21 @@ namespace YokiFrame.EditorTools
         public const string SCROLL = "scroll";
         public const string LISTENER = "listener";
         public const string DOCUMENT = "document";
+        public const string SETTINGS = "settings";
+        public const string RESET = "reset";
+        public const string LOCATION = "location";
+        public const string CODE = "code";
+        public const string FOLDER = "folder";
+        public const string CLOCK = "clock";
+        public const string CHECK = "check";
+        
+        // 状态点图标
+        public const string DOT_FILLED = "dot_filled";
+        public const string DOT_EMPTY = "dot_empty";
+        public const string DOT_HALF = "dot_half";
+        public const string DIAMOND = "diamond";
+        public const string TRIANGLE_UP = "triangle_up";
+        public const string TRIANGLE_DOWN = "triangle_down";
 
         #endregion
 

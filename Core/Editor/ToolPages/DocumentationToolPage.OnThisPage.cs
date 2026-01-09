@@ -27,14 +27,16 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateOnThisPagePanel()
         {
             mOnThisPagePanel = new VisualElement();
-            mOnThisPagePanel.style.width = 200;
+            // 使用自适应宽度，设置最小和最大宽度限制
             mOnThisPagePanel.style.minWidth = 180;
+            mOnThisPagePanel.style.maxWidth = 280;
+            mOnThisPagePanel.style.flexShrink = 0;
             mOnThisPagePanel.style.backgroundColor = new StyleColor(new Color(0.1f, 0.1f, 0.12f));
             mOnThisPagePanel.style.borderLeftWidth = 1;
             mOnThisPagePanel.style.borderLeftColor = new StyleColor(new Color(1f, 1f, 1f, 0.05f));
             mOnThisPagePanel.style.paddingTop = 24;
             mOnThisPagePanel.style.paddingLeft = 20;
-            mOnThisPagePanel.style.paddingRight = 16;
+            mOnThisPagePanel.style.paddingRight = 20;
             mOnThisPagePanel.style.display = DisplayStyle.None;
             
             // 标题
@@ -44,6 +46,7 @@ namespace YokiFrame.EditorTools
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.letterSpacing = 1f;
             title.style.marginBottom = 20;
+            title.style.whiteSpace = WhiteSpace.NoWrap;
             mOnThisPagePanel.Add(title);
             
             // 导航项容器
@@ -165,6 +168,9 @@ namespace YokiFrame.EditorTools
             label.style.color = isActive ? new StyleColor(Theme.TextPrimary) : new StyleColor(Theme.TextMuted);
             label.style.transitionProperty = new List<StylePropertyName> { new("color") };
             label.style.transitionDuration = new List<TimeValue> { new(150, TimeUnit.Millisecond) };
+            // 确保文字不被截断，允许自然换行
+            label.style.whiteSpace = WhiteSpace.NoWrap;
+            label.style.overflow = Overflow.Visible;
             item.Add(label);
             
             // 悬停效果
@@ -190,11 +196,38 @@ namespace YokiFrame.EditorTools
             {
                 mIsScrollingByClick = true;
                 UpdateHeadingHighlight(item);
-                mContentScrollView.ScrollTo(targetElement);
+                ScrollToElement(targetElement);
                 item.schedule.Execute(() => mIsScrollingByClick = false).ExecuteLater(300);
             });
             
             return item;
+        }
+        
+        /// <summary>
+        /// 精确滚动到目标元素（解决 ScrollTo 在长文档中失准的问题）
+        /// </summary>
+        private void ScrollToElement(VisualElement targetElement)
+        {
+            if (targetElement == null || mContentScrollView == null) return;
+            
+            // 计算目标元素相对于 contentContainer 的位置
+            var contentContainer = mContentScrollView.contentContainer;
+            float targetY = 0f;
+            
+            // 向上遍历计算累计偏移
+            var current = targetElement;
+            while (current != null && current != contentContainer)
+            {
+                targetY += current.layout.y;
+                current = current.parent;
+            }
+            
+            // 减去顶部边距，让标题显示在视口顶部稍下的位置
+            const float TOP_OFFSET = 20f;
+            targetY = Mathf.Max(0f, targetY - TOP_OFFSET);
+            
+            // 直接设置滚动位置
+            mContentScrollView.scrollOffset = new Vector2(0, targetY);
         }
     }
 }

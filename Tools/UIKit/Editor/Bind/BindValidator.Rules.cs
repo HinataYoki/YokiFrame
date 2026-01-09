@@ -1,0 +1,275 @@
+#if UNITY_EDITOR
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace YokiFrame
+{
+    /// <summary>
+    /// BindValidator - 验证规则
+    /// </summary>
+    public static partial class BindValidator
+    {
+        #region 命名冲突检测
+
+        /// <summary>
+        /// 检查命名冲突
+        /// </summary>
+        /// <param name="name">要检查的名称</param>
+        /// <param name="existingNames">已存在的名称集合</param>
+        /// <param name="target">关联的 GameObject</param>
+        /// <returns>验证结果，如果无冲突则返回 null</returns>
+        public static BindValidationResult? CheckNameConflict(
+            string name,
+            HashSet<string> existingNames,
+            GameObject target = null)
+        {
+            if (string.IsNullOrEmpty(name) || existingNames == null)
+                return null;
+
+            if (existingNames.Contains(name))
+            {
+                return BindValidationResult.Error(
+                    $"字段名 '{name}' 与同层级其他绑定冲突",
+                    target,
+                    "请修改字段名以避免冲突",
+                    RuleIds.NAME_CONFLICT);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 在绑定树中检测命名冲突
+        /// </summary>
+        /// <param name="rootNode">绑定树根节点</param>
+        /// <param name="results">验证结果列表（输出）</param>
+        public static void DetectNameConflicts(BindTreeNode rootNode, List<BindValidationResult> results)
+        {
+            if (rootNode == null || results == null)
+                return;
+
+            // 收集同层级的名称
+            var nameToNodes = new Dictionary<string, List<BindTreeNode>>(16);
+            CollectNamesAtSameLevel(rootNode, nameToNodes);
+
+            // 检测冲突
+            foreach (var kvp in nameToNodes)
+            {
+                if (kvp.Value.Count > 1)
+                {
+                    // 存在冲突
+                    foreach (var node in kvp.Value)
+                    {
+                        var result = BindValidationResult.Error(
+                            $"字段名 '{kvp.Key}' 存在 {kvp.Value.Count} 处重复定义",
+                            node.GameObject,
+                            "请修改字段名以避免冲突",
+                            RuleIds.NAME_CONFLICT);
+                        results.Add(result);
+                        // 将验证结果关联到节点
+                        node.AddValidationResult(result);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 收集同层级的名称（递归）
+        /// </summary>
+        private static void CollectNamesAtSameLevel(
+            BindTreeNode node,
+            Dictionary<string, List<BindTreeNode>> nameToNodes)
+        {
+            if (node == null)
+                return;
+
+            // 只收集 Member 类型的名称（Element/Component 有独立命名空间）
+            if (node.Type == BindType.Member && !string.IsNullOrEmpty(node.Name))
+            {
+                if (!nameToNodes.TryGetValue(node.Name, out var list))
+                {
+                    list = new List<BindTreeNode>(2);
+                    nameToNodes[node.Name] = list;
+                }
+                list.Add(node);
+            }
+
+            // 递归处理子节点
+            if (node.Children != null)
+            {
+                foreach (var child in node.Children)
+                {
+                    CollectNamesAtSameLevel(child, nameToNodes);
+                }
+            }
+        }
+
+        #endregion
+
+        #region 层级规则验证
+
+        /// <summary>
+        /// 验证层级规则（Element 不能在 Component 下）
+        /// </summary>
+        /// <param name="node">要验证的节点</param>
+        /// <returns>验证结果，如果合法则返回 null</returns>
+        public static BindValidationResult? ValidateHierarchyRule(BindTreeNode node)
+        {
+            if (node == null)
+                return null;
+
+            // Element 不能在 Component 下
+            if (node.Type == BindType.Element)
+            {
+                var parent = node.Parent;
+                while (parent != null)
+                {
+                    if (parent.Type == BindType.Component)
+                    {
+                        return BindValidationResult.Error(
+                            $"Element '{node.Name}' 不能定义在 Component '{parent.Name}' 下",
+                            node.GameObject,
+                            "Element 是面板内部结构，Component 是跨面板复用组件。建议将此绑定改为 Member 类型",
+                            RuleIds.ELEMENT_UNDER_COMPONENT);
+                    }
+                    parent = parent.Parent;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 递归验证整个绑定树的层级规则
+        /// </summary>
+        /// <param name="rootNode">绑定树根节点</param>
+        /// <param name="results">验证结果列表（输出）</param>
+        public static void ValidateHierarchyRules(BindTreeNode rootNode, List<BindValidationResult> results)
+        {
+            if (rootNode == null || results == null)
+                return;
+
+            // 验证当前节点
+            var result = ValidateHierarchyRule(rootNode);
+            if (result.HasValue)
+            {
+                results.Add(result.Value);
+                // 将验证结果关联到节点
+                rootNode.AddValidationResult(result.Value);
+            }
+
+            // 递归验证子节点
+            if (rootNode.Children != null)
+            {
+                foreach (var child in rootNode.Children)
+                {
+                    ValidateHierarchyRules(child, results);
+                }
+            }
+        }
+
+        #endregion
+
+        #region 完整验证
+
+        /// <summary>
+        /// 验证单个 Bind 组件
+        /// </summary>
+        /// <param name="bind">要验证的 Bind 组件</param>
+        /// <param name="existingNames">已存在的名称集合（用于冲突检测）</param>
+        /// <returns>验证结果列表</returns>
+        public static List<BindValidationResult> Validate(
+            AbstractBind bind,
+            HashSet<string> existingNames = null)
+        {
+            List<BindValidationResult> results = new(4);
+
+            if (bind == null)
+                return results;
+
+            var target = bind.gameObject;
+
+            // 1. 验证字段名
+            var identifierResult = ValidateIdentifier(bind.Name, target);
+            if (identifierResult.HasValue)
+            {
+                results.Add(identifierResult.Value);
+            }
+
+            // 2. 检查命名冲突
+            if (existingNames != null)
+            {
+                var conflictResult = CheckNameConflict(bind.Name, existingNames, target);
+                if (conflictResult.HasValue)
+                {
+                    results.Add(conflictResult.Value);
+                }
+            }
+
+            // 3. 检查类型是否缺失
+            if (string.IsNullOrEmpty(bind.Type))
+            {
+                results.Add(BindValidationResult.Warning(
+                    "未指定组件类型，将使用 GameObject 作为默认类型",
+                    target,
+                    "建议选择具体的组件类型",
+                    RuleIds.MISSING_TYPE));
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// 验证绑定树
+        /// </summary>
+        /// <param name="rootNode">绑定树根节点</param>
+        /// <returns>验证结果列表</returns>
+        public static List<BindValidationResult> ValidateTree(BindTreeNode rootNode)
+        {
+            List<BindValidationResult> results = new(16);
+
+            if (rootNode == null)
+                return results;
+
+            // 1. 验证所有节点的标识符
+            ValidateAllIdentifiers(rootNode, results);
+
+            // 2. 检测命名冲突
+            DetectNameConflicts(rootNode, results);
+
+            // 3. 验证层级规则
+            ValidateHierarchyRules(rootNode, results);
+
+            return results;
+        }
+
+        /// <summary>
+        /// 递归验证所有节点的标识符
+        /// </summary>
+        private static void ValidateAllIdentifiers(BindTreeNode node, List<BindValidationResult> results)
+        {
+            if (node == null)
+                return;
+
+            // 验证当前节点
+            var result = ValidateIdentifier(node.Name, node.GameObject);
+            if (result.HasValue)
+            {
+                results.Add(result.Value);
+                node.AddValidationResult(result.Value);
+            }
+
+            // 递归验证子节点
+            if (node.Children != null)
+            {
+                foreach (var child in node.Children)
+                {
+                    ValidateAllIdentifiers(child, results);
+                }
+            }
+        }
+
+        #endregion
+    }
+}
+#endif

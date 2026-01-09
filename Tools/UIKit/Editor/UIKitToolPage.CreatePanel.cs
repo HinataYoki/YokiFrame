@@ -1,16 +1,31 @@
-using System;
+#if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using YokiFrame.EditorTools;
+using static YokiFrame.EditorTools.YokiFrameUIComponents;
 
 namespace YokiFrame
 {
     /// <summary>
     /// UIKitToolPage - 创建面板功能
+    /// 采用主次分离布局：折叠式配置舱 + 核心创作区 + 底部信息栏
     /// </summary>
     public partial class UIKitToolPage
     {
+        #region 常量 - 样式
+
+        private const int INPUT_HEIGHT = 30;
+        private const int HERO_INPUT_HEIGHT = 40;
+        private const int HERO_INPUT_FONT_SIZE = 16;
+        private const int BUTTON_HEIGHT = 38;
+        private const int ICON_SIZE = 14;
+        private const int SMALL_ICON_SIZE = 12;
+
+        #endregion
+
         #region 字段 - 创建面板
 
         private string PrefabGeneratePath
@@ -37,11 +52,18 @@ namespace YokiFrame
         private string mPanelCreateName = string.Empty;
         private const string ASSETS = "Assets";
 
-        private TextField mAssemblyField;
+        // UI 元素引用
+        private Foldout mSettingsFoldout;
+        private DropdownField mAssemblyDropdown;
+        private List<string> mAssemblyNames;
+        private DropdownField mTemplateDropdown;
+        private List<string> mTemplateNames;
         private TextField mNamespaceField;
         private TextField mScriptPathField;
         private TextField mPrefabPathField;
         private TextField mPanelNameField;
+        private Label mPreviewLabel;
+        private Label mValidationLabel;
         private VisualElement mPreviewContainer;
         private Button mCreateButton;
 
@@ -54,199 +76,265 @@ namespace YokiFrame
 
         #endregion
 
-        #region 创建面板 UI
+        #region 创建面板 UI - 主入口
 
         private void BuildCreatePanelUI(VisualElement container)
         {
             var scrollView = new ScrollView();
             scrollView.style.flexGrow = 1;
-            scrollView.style.paddingLeft = 16;
-            scrollView.style.paddingRight = 16;
-            scrollView.style.paddingTop = 16;
+            scrollView.style.paddingLeft = Spacing.LG;
+            scrollView.style.paddingRight = Spacing.LG;
+            scrollView.style.paddingTop = Spacing.MD;
+            scrollView.style.paddingBottom = Spacing.MD;
             container.Add(scrollView);
 
-            var title = new Label("UI Panel 创建工具");
-            title.style.fontSize = 16;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.marginBottom = 16;
-            scrollView.Add(title);
+            // 区域 1: 折叠式配置舱
+            scrollView.Add(BuildSettingsDeck());
 
-            // 程序集
-            scrollView.Add(CreateFormRow("UI脚本所在的程序集:", out mAssemblyField, AssemblyName));
-            mAssemblyField.RegisterValueChangedCallback(evt => AssemblyName = evt.newValue);
+            // 区域 2: 核心创作区
+            scrollView.Add(BuildCreationZone());
 
-            // 命名空间
-            scrollView.Add(CreateFormRow("Scripts命名空间:", out mNamespaceField, ScriptNamespace));
-            mNamespaceField.RegisterValueChangedCallback(evt => ScriptNamespace = evt.newValue);
-
-            // Scripts 目录
-            scrollView.Add(CreatePathRow("Scripts目录:", out mScriptPathField, ScriptGeneratePath, path =>
-            {
-                ScriptGeneratePath = path;
-                mScriptPathField.value = path;
-            }));
-
-            // Prefab 目录
-            scrollView.Add(CreatePathRow("Prefab目录:", out mPrefabPathField, PrefabGeneratePath, path =>
-            {
-                PrefabGeneratePath = path;
-                mPrefabPathField.value = path;
-            }));
-
-            // Panel 名字
-            var panelNameRow = new VisualElement();
-            panelNameRow.AddToClassList("form-row");
-            panelNameRow.style.marginTop = 16;
-
-            var panelLabel = new Label("Panel名字:");
-            panelLabel.AddToClassList("form-label");
-            panelNameRow.Add(panelLabel);
-
-            mPanelNameField = new TextField();
-            mPanelNameField.AddToClassList("form-field");
-            mPanelNameField.RegisterValueChangedCallback(evt =>
-            {
-                mPanelCreateName = evt.newValue;
-                UpdatePreview();
-            });
-            panelNameRow.Add(mPanelNameField);
-
-            scrollView.Add(panelNameRow);
-
-            // 预览区域
-            mPreviewContainer = new VisualElement();
-            mPreviewContainer.style.marginTop = 16;
-            mPreviewContainer.style.display = DisplayStyle.None;
-            scrollView.Add(mPreviewContainer);
-
-            // 创建按钮
-            mCreateButton = new Button(OnCreateUIPanelClick) { text = "创建 UI Panel" };
-            mCreateButton.AddToClassList("action-button");
-            mCreateButton.AddToClassList("primary");
-            mCreateButton.style.marginTop = 16;
-            mCreateButton.style.height = 32;
-            mCreateButton.style.display = DisplayStyle.None;
-            scrollView.Add(mCreateButton);
-        }
-
-        private VisualElement CreateFormRow(string labelText, out TextField textField, string initialValue)
-        {
-            var row = new VisualElement();
-            row.AddToClassList("form-row");
-
-            var label = new Label(labelText);
-            label.AddToClassList("form-label");
-            row.Add(label);
-
-            textField = new TextField();
-            textField.AddToClassList("form-field");
-            textField.value = initialValue;
-            row.Add(textField);
-
-            return row;
-        }
-
-        private VisualElement CreatePathRow(string labelText, out TextField textField, string initialValue, Action<string> onPathChanged)
-        {
-            var row = new VisualElement();
-            row.AddToClassList("form-row");
-
-            var label = new Label(labelText);
-            label.AddToClassList("form-label");
-            row.Add(label);
-
-            var pathContainer = new VisualElement();
-            pathContainer.style.flexDirection = FlexDirection.Row;
-            pathContainer.style.flexGrow = 1;
-
-            textField = new TextField();
-            textField.style.flexGrow = 1;
-            textField.value = initialValue;
-            textField.SetEnabled(false);
-            pathContainer.Add(textField);
-
-            var browseBtn = new Button(() =>
-            {
-                var folderPath = EditorUtility.OpenFolderPanel(labelText, initialValue, string.Empty);
-                if (!string.IsNullOrEmpty(folderPath))
-                {
-                    var idx = folderPath.IndexOf(ASSETS, StringComparison.Ordinal);
-                    var newPath = idx >= 0 ? folderPath[idx..] : folderPath;
-                    onPathChanged?.Invoke(newPath);
-                }
-            }) { text = "..." };
-            browseBtn.style.width = 30;
-            browseBtn.style.marginLeft = 4;
-            pathContainer.Add(browseBtn);
-
-            row.Add(pathContainer);
-
-            return row;
+            // 区域 3: 底部信息栏
+            scrollView.Add(BuildInfoFooter());
         }
 
         #endregion
 
-        #region 预览和创建
+        #region 区域 2: 核心创作区
 
-        private void UpdatePreview()
+        /// <summary>
+        /// 构建核心创作区
+        /// </summary>
+        private VisualElement BuildCreationZone()
         {
-            mPreviewContainer.Clear();
+            var zone = new VisualElement();
+            zone.style.backgroundColor = new StyleColor(Colors.LayerSection);
+            zone.style.borderTopLeftRadius = Radius.LG;
+            zone.style.borderTopRightRadius = Radius.LG;
+            zone.style.borderBottomLeftRadius = Radius.LG;
+            zone.style.borderBottomRightRadius = Radius.LG;
+            zone.style.paddingTop = Spacing.XL;
+            zone.style.paddingBottom = Spacing.XL;
+            zone.style.paddingLeft = Spacing.LG;
+            zone.style.paddingRight = Spacing.LG;
+            zone.style.marginBottom = Spacing.LG;
 
+            // 标题
+            var titleRow = new VisualElement();
+            titleRow.style.flexDirection = FlexDirection.Row;
+            titleRow.style.alignItems = Align.Center;
+            titleRow.style.marginBottom = Spacing.LG;
+
+            var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.UIKIT) };
+            titleIcon.style.width = 20;
+            titleIcon.style.height = 20;
+            titleIcon.style.marginRight = Spacing.SM;
+            titleRow.Add(titleIcon);
+
+            var title = new Label("创建 UI 面板");
+            title.style.fontSize = 15;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.color = new StyleColor(Colors.TextPrimary);
+            titleRow.Add(title);
+
+            zone.Add(titleRow);
+
+            // Panel 名称输入框
+            var inputLabel = new Label("Panel 名称");
+            inputLabel.style.fontSize = 12;
+            inputLabel.style.color = new StyleColor(Colors.TextSecondary);
+            inputLabel.style.marginBottom = Spacing.XS;
+            zone.Add(inputLabel);
+
+            mPanelNameField = new TextField();
+            mPanelNameField.style.height = HERO_INPUT_HEIGHT;
+            mPanelNameField.style.fontSize = HERO_INPUT_FONT_SIZE;
+            mPanelNameField.style.marginBottom = Spacing.SM;
+            ApplyHeroInputStyle(mPanelNameField);
+
+            // 设置 placeholder
+            var textInput = mPanelNameField.Q<TextElement>();
+            if (textInput != null)
+            {
+                textInput.style.unityTextAlign = TextAnchor.MiddleLeft;
+            }
+
+            mPanelNameField.RegisterValueChangedCallback(evt =>
+            {
+                mPanelCreateName = evt.newValue;
+                ValidatePanelName();
+                UpdateLivePreview();
+            });
+            zone.Add(mPanelNameField);
+
+            // 验证提示标签
+            mValidationLabel = new Label();
+            mValidationLabel.style.fontSize = 11;
+            mValidationLabel.style.marginBottom = Spacing.SM;
+            mValidationLabel.style.display = DisplayStyle.None;
+            zone.Add(mValidationLabel);
+
+            // 实时预览标签
+            mPreviewLabel = new Label("输入 Panel 名称开始创建...");
+            mPreviewLabel.style.fontSize = 12;
+            mPreviewLabel.style.color = new StyleColor(Colors.TextTertiary);
+            mPreviewLabel.style.marginBottom = Spacing.LG;
+            zone.Add(mPreviewLabel);
+
+            // 文件预览容器
+            mPreviewContainer = new VisualElement();
+            mPreviewContainer.style.display = DisplayStyle.None;
+            mPreviewContainer.style.marginBottom = Spacing.LG;
+            zone.Add(mPreviewContainer);
+
+            // 创建按钮
+            mCreateButton = new Button(OnCreateUIPanelClick);
+            mCreateButton.style.height = BUTTON_HEIGHT;
+            mCreateButton.style.display = DisplayStyle.None;
+            ApplyPrimaryButtonStyle(mCreateButton);
+
+            var btnContent = new VisualElement();
+            btnContent.style.flexDirection = FlexDirection.Row;
+            btnContent.style.alignItems = Align.Center;
+            btnContent.style.justifyContent = Justify.Center;
+
+            var btnIcon = new Image { image = KitIcons.GetTexture(KitIcons.CODEGEN) };
+            btnIcon.style.width = 16;
+            btnIcon.style.height = 16;
+            btnIcon.style.marginRight = Spacing.XS;
+            btnContent.Add(btnIcon);
+
+            var btnLabel = new Label("创建 UI 面板");
+            btnLabel.style.fontSize = 13;
+            btnLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            btnContent.Add(btnLabel);
+
+            mCreateButton.Add(btnContent);
+            zone.Add(mCreateButton);
+
+            return zone;
+        }
+
+        /// <summary>
+        /// 更新实时预览
+        /// </summary>
+        private void UpdateLivePreview()
+        {
             if (string.IsNullOrEmpty(mPanelCreateName))
             {
+                mPreviewLabel.text = "输入 Panel 名称开始创建...";
+                mPreviewLabel.style.color = new StyleColor(Colors.TextTertiary);
                 mPreviewContainer.style.display = DisplayStyle.None;
                 mCreateButton.style.display = DisplayStyle.None;
                 return;
             }
 
-            mPreviewContainer.style.display = DisplayStyle.Flex;
-
-            var previewTitle = new Label("生成文件预览");
-            previewTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
-            previewTitle.style.marginBottom = 8;
-            mPreviewContainer.Add(previewTitle);
-
-            var previewBox = new VisualElement();
-            previewBox.AddToClassList("info-box");
-            mPreviewContainer.Add(previewBox);
-
-            AddPreviewItem(previewBox, PrefabPath, File.Exists(PrefabPath));
-            AddPreviewItem(previewBox, ScriptPath, File.Exists(ScriptPath));
-            AddPreviewItem(previewBox, DesignerPath, File.Exists(DesignerPath));
-
-            // 只有当 Prefab 不存在时才显示创建按钮
-            var canCreate = !File.Exists(PrefabPath);
-            mCreateButton.style.display = canCreate ? DisplayStyle.Flex : DisplayStyle.None;
-        }
-
-        private void AddPreviewItem(VisualElement parent, string path, bool exists)
-        {
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.marginBottom = 4;
-
-            var pathLabel = new Label(path);
-            pathLabel.style.flexGrow = 1;
-            pathLabel.style.fontSize = 11;
-            pathLabel.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
-            row.Add(pathLabel);
-
-            if (exists)
+            // 验证失败时不显示预览
+            if (!YokiFrameEditorUtility.IsValidCSharpIdentifier(mPanelCreateName) || 
+                YokiFrameEditorUtility.IsCSharpKeyword(mPanelCreateName))
             {
-                var existsLabel = new Label("[已存在]");
-                existsLabel.style.color = new StyleColor(new Color(1f, 0.4f, 0.4f));
-                existsLabel.style.fontSize = 11;
-                row.Add(existsLabel);
+                mPreviewLabel.text = "请修正名称后继续...";
+                mPreviewLabel.style.color = new StyleColor(Colors.StatusWarning);
+                mPreviewContainer.style.display = DisplayStyle.None;
+                mCreateButton.style.display = DisplayStyle.None;
+                return;
             }
 
-            parent.Add(row);
+            // 更新预览文本
+            mPreviewLabel.text = $"将生成: {ScriptNamespace}.{mPanelCreateName} : UIPanel";
+            mPreviewLabel.style.color = new StyleColor(Colors.StatusInfo);
+
+            // 更新文件预览
+            UpdateFilePreview();
         }
 
+        /// <summary>
+        /// 更新文件预览
+        /// </summary>
+        private void UpdateFilePreview()
+        {
+            mPreviewContainer.Clear();
+            mPreviewContainer.style.display = DisplayStyle.Flex;
+
+            var prefabExists = File.Exists(PrefabPath);
+            var scriptExists = File.Exists(ScriptPath);
+            var designerExists = File.Exists(DesignerPath);
+
+            // 使用公共组件创建文件预览行
+            mPreviewContainer.Add(CreateFilePreviewRow(PrefabPath, prefabExists));
+            mPreviewContainer.Add(CreateFilePreviewRow(ScriptPath, scriptExists));
+            mPreviewContainer.Add(CreateFilePreviewRow(DesignerPath, designerExists));
+
+            // 只有当 Prefab 不存在时才显示创建按钮
+            mCreateButton.style.display = prefabExists ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        #endregion
+
+        #region 区域 3: 底部信息栏
+
+        /// <summary>
+        /// 构建底部信息栏 - 使用公共组件
+        /// </summary>
+        private VisualElement BuildInfoFooter()
+        {
+            return CreateInfoFooter(
+                "默认加载路径",
+                "默认从 Resources/Art/UIPrefab/ 加载  |  " +
+                "修改路径: DefaultPanelLoaderPool.PathPrefix  |  " +
+                "自定义加载: 继承 IPanelLoaderPool",
+                Colors.BrandPrimary
+            );
+        }
+
+        #endregion
+
+        #region 创建逻辑
+
+        /// <summary>
+        /// 兼容旧方法名
+        /// </summary>
+        private void UpdatePreview() => UpdateLivePreview();
+
+        /// <summary>
+        /// 验证面板名称
+        /// </summary>
+        /// <returns>是否有效</returns>
+        private bool ValidatePanelName()
+        {
+            if (string.IsNullOrEmpty(mPanelCreateName))
+            {
+                mValidationLabel.style.display = DisplayStyle.None;
+                return false;
+            }
+
+            if (!YokiFrameEditorUtility.ValidateCSharpIdentifier(mPanelCreateName, out var errorMessage, out var suggestion))
+            {
+                mValidationLabel.text = errorMessage;
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    mValidationLabel.text += $"\n    {suggestion}";
+                }
+                mValidationLabel.style.color = new StyleColor(Colors.StatusError);
+                mValidationLabel.style.display = DisplayStyle.Flex;
+                return false;
+            }
+
+            mValidationLabel.style.display = DisplayStyle.None;
+            return true;
+        }
+
+        /// <summary>
+        /// 创建 UI 面板
+        /// </summary>
         private void OnCreateUIPanelClick()
         {
             var panelName = mPanelCreateName;
 
             if (string.IsNullOrEmpty(panelName)) return;
+
+            // 验证面板名称
+            if (!ValidatePanelName()) return;
 
             // 确保 Prefab 目录存在
             var prefabDir = Path.GetDirectoryName(PrefabPath);
@@ -257,7 +345,7 @@ namespace YokiFrame
             }
 
             var uiKitPrefab = Resources.Load<GameObject>(nameof(UIKit));
-            var uikit = UnityEngine.Object.Instantiate(uiKitPrefab);
+            var uikit = Object.Instantiate(uiKitPrefab);
 
             try
             {
@@ -289,11 +377,11 @@ namespace YokiFrame
 
                 var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(gameObj, PrefabPath, InteractionMode.AutomatedAction);
 
-                UICodeGenerator.DoCreateCode(prefab, ScriptPath, DesignerPath, ScriptNamespace);
+                UICodeGenerator.DoCreateCode(prefab, ScriptNamespace);
 
                 mPanelCreateName = string.Empty;
                 mPanelNameField.value = string.Empty;
-                UpdatePreview();
+                UpdateLivePreview();
 
                 AssetDatabase.Refresh();
 
@@ -303,7 +391,7 @@ namespace YokiFrame
             {
                 if (uikit != null)
                 {
-                    UnityEngine.Object.DestroyImmediate(uikit);
+                    Object.DestroyImmediate(uikit);
                 }
             }
         }
@@ -311,3 +399,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

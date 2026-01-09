@@ -6,71 +6,112 @@ using UnityEngine;
 
 namespace YokiFrame
 {
-    public class UISerializer
+    /// <summary>
+    /// UI 序列化器 - 负责将 Bind 关系序列化到 Prefab 中
+    /// </summary>
+    public static class UISerializer
     {
+        #region 序列化上下文
+
         /// <summary>
-        /// 把Bind关系序列化到Prefab中
+        /// 序列化上下文 - 避免重复传递参数
         /// </summary>
-        /// <param name="uiPrefab">需要生成bind关系的预制体</param>
-        public static void AddPrefabReferencesAfterCompoile(GameObject uiPrefab)
+        private class SerializeContext
+        {
+            public System.Reflection.Assembly Assembly { get; set; }
+            public string Namespace { get; set; }
+            public string PanelName { get; set; }
+        }
+
+        #endregion
+
+        #region 公共方法
+
+        /// <summary>
+        /// 添加预制体到编译后序列化队列
+        /// </summary>
+        /// <param name="uiPrefab">需要生成 bind 关系的预制体</param>
+        public static void AddPrefabReferencesAfterCompile(GameObject uiPrefab)
         {
             var path = AssetDatabase.GetAssetPath(uiPrefab);
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("Prefab path is null or empty.");
+                Debug.LogError("[UISerializer] Prefab 路径为空");
                 return;
             }
 
             UIKitCreateConfig.Instance.BindPrefabPathList.Add(path);
         }
 
+        #endregion
+
+        #region 编辑器回调
+
         [DidReloadScripts]
-        private static void DoAddComponent2Prefab()
+        private static void OnScriptsReloaded()
         {
-            if (UIKitCreateConfig.Instance.BindPrefabPathList.Count > 0)
+            var pathList = UIKitCreateConfig.Instance.BindPrefabPathList;
+            if (pathList.Count == 0) return;
+
+            // 复制列表，保留原始数据以便失败时重试
+            var prefabPaths = new List<string>(pathList);
+
+            var assembly = LoadAssembly();
+            if (assembly == null) return;
+
+            // 成功加载程序集后才清空列表
+            pathList.Clear();
+
+            try
             {
-                var assembly = GetAssembly();
-                if (assembly == null) return;
+                ProcessPrefabs(prefabPaths, assembly);
+            }
+            catch (System.Exception e)
+            {
+                // 失败时恢复列表，允许下次重试
+                pathList.AddRange(prefabPaths);
+                Debug.LogError($"[UISerializer] 序列化失败: {e.Message}\n{e.StackTrace}");
+            }
+        }
 
-                // 缓存预制路径以避免在循环中的资产数据库操作
-                var prefabPaths = new List<string>(UIKitCreateConfig.Instance.BindPrefabPathList);
-                UIKitCreateConfig.Instance.BindPrefabPathList.Clear();
-                
-                // 检查是否在 Prefab Stage 中，如果是则先退出
-                var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
-                string currentStagePath = null;
-                if (prefabStage != null)
-                {
-                    currentStagePath = prefabStage.assetPath;
-                    // 保存并退出 Prefab Stage
-                    PrefabUtility.SaveAsPrefabAsset(prefabStage.prefabContentsRoot, currentStagePath);
-                    StageUtility.GoToMainStage();
-                }
+        #endregion
 
+        #region 私有方法 - 批量处理
+
+        /// <summary>
+        /// 批量处理预制体
+        /// </summary>
+        private static void ProcessPrefabs(List<string> prefabPaths, System.Reflection.Assembly assembly)
+        {
+            // 处理 Prefab Stage
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            string currentStagePath = prefabStage?.assetPath;
+
+            if (prefabStage != null)
+            {
+                PrefabUtility.SaveAsPrefabAsset(prefabStage.prefabContentsRoot, currentStagePath);
+                StageUtility.GoToMainStage();
+            }
+
+            try
+            {
                 for (int i = 0; i < prefabPaths.Count; i++)
                 {
                     string prefabPath = prefabPaths[i];
-                    EditorUtility.DisplayProgressBar("UIKit", $"Serialize UIPrefab...{prefabPath}", (float)i / prefabPaths.Count);
+                    float progress = (float)i / prefabPaths.Count;
+                    EditorUtility.DisplayProgressBar("UIKit", $"序列化 UIPrefab: {prefabPath}", progress);
 
-                    var uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-                    if (uiPrefab == null)
-                    {
-                        Debug.LogError($"Prefab at path {prefabPath} not found.");
-                        continue;
-                    }
-                    Debug.Log(">>>>>>>SerializeUIPrefab: " + uiPrefab);
-
-                    SetObjectRef2Property(uiPrefab, uiPrefab.name, assembly);
-                    
-                    Debug.Log(">>>>>>>Success Serialize UIPrefab: " + uiPrefab.name);
+                    ProcessSinglePrefab(prefabPath, assembly);
                 }
 
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-
+            }
+            finally
+            {
                 EditorUtility.ClearProgressBar();
-                
-                // 如果之前在 Prefab Stage 中，重新打开
+
+                // 恢复 Prefab Stage
                 if (!string.IsNullOrEmpty(currentStagePath))
                 {
                     var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(currentStagePath);
@@ -82,86 +123,165 @@ namespace YokiFrame
             }
         }
 
-        private static void SetObjectRef2Property(GameObject prefab, string name, System.Reflection.Assembly assembly)
+        /// <summary>
+        /// 处理单个预制体
+        /// </summary>
+        private static void ProcessSinglePrefab(string prefabPath, System.Reflection.Assembly assembly)
         {
-            var bindCodeInfo = new BindCodeInfo()
+            var uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (uiPrefab == null)
             {
-                Type = name,
-                Name = name,
-                Self = prefab,
-            };
-
-            BindCollector.SearchBinds(prefab.transform, name, bindCodeInfo);
-
-            var typeName = UIKitCreateConfig.Instance.ScriptNamespace + "." + name;
-            var type = assembly.GetType(typeName);
-            var typeIns = prefab.GetComponent(type);
-            if (typeIns == null)
-            {
-                typeIns = prefab.AddComponent(type);
+                Debug.LogError($"[UISerializer] 预制体未找到: {prefabPath}");
+                return;
             }
 
-            var serialized = new SerializedObject(typeIns);
+            var context = new SerializeContext
+            {
+                Assembly = assembly,
+                Namespace = UIKitCreateConfig.Instance.ScriptNamespace,
+                PanelName = uiPrefab.name
+            };
+
+            SerializePrefab(uiPrefab, context);
+            Debug.Log($"[UISerializer] 成功序列化: {uiPrefab.name}");
+        }
+
+        #endregion
+
+        #region 私有方法 - 序列化
+
+        /// <summary>
+        /// 序列化预制体
+        /// </summary>
+        private static void SerializePrefab(GameObject prefab, SerializeContext context)
+        {
+            // 收集绑定信息
+            var bindCodeInfo = new BindCodeInfo
+            {
+                Type = prefab.name,
+                Name = prefab.name,
+                Self = prefab,
+            };
+            BindCollector.SearchBinds(prefab.transform, prefab.name, bindCodeInfo);
+
+            // 获取或添加 Panel 组件
+            var typeName = $"{context.Namespace}.{prefab.name}";
+            var type = context.Assembly.GetType(typeName);
+            if (type == null)
+            {
+                Debug.LogError($"[UISerializer] 未找到类型: {typeName}", prefab);
+                return;
+            }
+
+            var component = prefab.GetComponent(type);
+            if (component == null)
+            {
+                component = prefab.AddComponent(type);
+            }
+
+            // 序列化绑定关系
+            var serialized = new SerializedObject(component);
             serialized.Update();
-            SetObjectRef2Property(name, assembly, serialized, bindCodeInfo);
+            SerializeBindings(serialized, bindCodeInfo, context);
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void SetObjectRef2Property(string name, System.Reflection.Assembly assembly, SerializedObject serialized, BindCodeInfo bindCodeInfo)
+        /// <summary>
+        /// 序列化绑定关系
+        /// </summary>
+        private static void SerializeBindings(SerializedObject serialized, BindCodeInfo bindCodeInfo, SerializeContext context)
         {
             foreach (var bindInfo in bindCodeInfo.MemberDic.Values)
             {
-                // 把对应的Bind添加到prefab引用中
-                var objectReference = serialized.FindProperty($"{bindInfo.Name}");
-                if (objectReference == null)
+                var property = serialized.FindProperty(bindInfo.Name);
+                if (property == null)
                 {
-                    Debug.LogError($"未在类：{bindInfo.Type}中查询到对应序列化字段名{bindInfo.Name}", bindInfo.Self);
+                    Debug.LogError($"[UISerializer] 未找到序列化字段: {bindInfo.Name} (类型: {bindInfo.Type})", bindInfo.Self);
+                    continue;
                 }
-                else
+
+                // Element 和 Component 类型需要添加对应的组件
+                if (bindInfo.Bind is BindType.Element or BindType.Component)
                 {
-                    // Element 和 Component 类型需要添加对应的组件
-                    if (bindInfo.Bind is BindType.Element or BindType.Component)
-                    {
-                        var typeName = bindInfo.Bind is BindType.Component ? bindInfo.Type : $"{name}{nameof(UIElement)}.{bindInfo.Type}";
-                        var type = assembly.GetType($"{UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}");
-                        if (type == null)
-                        {
-                            Debug.LogError($"未找到类型: {UIKitCreateConfig.Instance.ScriptNamespace}.{typeName}", bindInfo.Self);
-                            continue;
-                        }
-                        
-                        var typeIns = bindInfo.Self.GetComponent(type);
-                        if (typeIns == null)
-                        {
-                            typeIns = bindInfo.Self.AddComponent(type);
-                        }
-                        if (!bindInfo.RepeatElement)
-                        {
-                            objectReference.objectReferenceValue = typeIns;
-                        }
-                        var newSerialized = new SerializedObject(typeIns);
-                        newSerialized.Update();
-                        SetObjectRef2Property(name, assembly, newSerialized, bindInfo);
-                        newSerialized.ApplyModifiedPropertiesWithoutUndo();
-                    }
-                    else if (bindInfo.Bind is BindType.Member)
-                    {
-                        // Member 类型直接绑定 GameObject 上的组件
-                        objectReference.objectReferenceValue = bindInfo.Self;
-                    }
+                    SerializeComplexBinding(property, bindInfo, context);
+                }
+                else if (bindInfo.Bind is BindType.Member)
+                {
+                    // Member 类型直接绑定 GameObject 上的组件
+                    property.objectReferenceValue = bindInfo.Self;
                 }
             }
         }
 
-        private static System.Reflection.Assembly GetAssembly()
+        /// <summary>
+        /// 序列化复杂绑定（Element/Component）
+        /// </summary>
+        private static void SerializeComplexBinding(SerializedProperty property, BindCodeInfo bindInfo, SerializeContext context)
         {
-            var assembly = System.Reflection.Assembly.Load(UIKitCreateConfig.Instance.AssemblyName);
-            if (assembly == null)
+            // 构建类型名
+            string typeName;
+            if (bindInfo.Bind is BindType.Component)
             {
-                Debug.LogError($"Assembly: {UIKitCreateConfig.Instance.AssemblyName} not found.");
+                typeName = $"{context.Namespace}.{bindInfo.Type}";
+            }
+            else
+            {
+                typeName = $"{context.Namespace}.{context.PanelName}{nameof(UIElement)}.{bindInfo.Type}";
+            }
+
+            var type = context.Assembly.GetType(typeName);
+            if (type == null)
+            {
+                Debug.LogError($"[UISerializer] 未找到类型: {typeName}", bindInfo.Self);
+                return;
+            }
+
+            // 获取或添加组件
+            var component = bindInfo.Self.GetComponent(type);
+            if (component == null)
+            {
+                component = bindInfo.Self.AddComponent(type);
+            }
+
+            // 设置引用（非重复元素）
+            if (!bindInfo.RepeatElement)
+            {
+                property.objectReferenceValue = component;
+            }
+
+            // 递归序列化子绑定
+            var childSerialized = new SerializedObject(component);
+            childSerialized.Update();
+            SerializeBindings(childSerialized, bindInfo, context);
+            childSerialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        #endregion
+
+        #region 私有方法 - 工具
+
+        /// <summary>
+        /// 加载程序集
+        /// </summary>
+        private static System.Reflection.Assembly LoadAssembly()
+        {
+            var assemblyName = UIKitCreateConfig.Instance.AssemblyName;
+            try
+            {
+                var assembly = System.Reflection.Assembly.Load(assemblyName);
+                if (assembly == null)
+                {
+                    Debug.LogError($"[UISerializer] 程序集未找到: {assemblyName}");
+                }
+                return assembly;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[UISerializer] 加载程序集失败: {assemblyName}\n{e.Message}");
                 return null;
             }
-            return assembly;
         }
+
+        #endregion
     }
 }

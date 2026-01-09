@@ -247,7 +247,7 @@ namespace YokiFrame.EditorTools
             // 检查是否启用了堆栈追踪
             if (!ActionStackTraceService.Enabled)
             {
-                mStackTraceLabel.text = "⚠ 请先启用「堆栈追踪」功能，然后重新运行游戏";
+                mStackTraceLabel.text = "请先启用「堆栈追踪」功能，然后重新运行游戏";
                 mStackTraceLabel.style.color = new StyleColor(new Color(1f, 0.7f, 0.3f));
                 return;
             }

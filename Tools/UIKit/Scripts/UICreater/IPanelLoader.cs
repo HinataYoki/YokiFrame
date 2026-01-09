@@ -32,17 +32,28 @@ namespace YokiFrame
     /// </summary>
     public abstract class AbstractPanelLoaderPool : IPanelLoaderPool
     {
-        private readonly Stack<IPanelLoader> loaderPool = new();
-        public IPanelLoader AllocateLoader() => loaderPool.Count > 0 ? loaderPool.Pop() : CreatePanelLoader();
-        public void RecycleLoader(IPanelLoader panelLoader) => loaderPool.Push(panelLoader);
+        private readonly Stack<IPanelLoader> mLoaderPool = new();
+        public IPanelLoader AllocateLoader() => mLoaderPool.Count > 0 ? mLoaderPool.Pop() : CreatePanelLoader();
+        public void RecycleLoader(IPanelLoader panelLoader) => mLoaderPool.Push(panelLoader);
         protected abstract IPanelLoader CreatePanelLoader();
     }
 
     /// <summary>
     /// 默认面板加载池（基于 ResKit）
+    /// <para>默认从 Resources/Art/UIPrefab/ 加载面板预制体</para>
     /// </summary>
     public class DefaultPanelLoaderPool : AbstractPanelLoaderPool
     {
+        /// <summary>
+        /// 默认路径前缀（相对于 Resources 文件夹）
+        /// </summary>
+        public const string DEFAULT_PATH_PREFIX = "Art/UIPrefab";
+        
+        /// <summary>
+        /// 路径前缀，可在运行时修改
+        /// </summary>
+        public static string PathPrefix { get; set; } = DEFAULT_PATH_PREFIX;
+        
         protected override IPanelLoader CreatePanelLoader() => new DefaultPanelLoader(this);
 
         public class DefaultPanelLoader : IPanelLoader
@@ -55,13 +66,15 @@ namespace YokiFrame
             public GameObject Load(PanelHandler handler)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                return mResLoader.Load<GameObject>(handler.Type.Name);
+                var path = $"{PathPrefix}/{handler.Type.Name}";
+                return mResLoader.Load<GameObject>(path);
             }
 
             public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                mResLoader.LoadAsync<GameObject>(handler.Type.Name, onLoadComplete);
+                var path = $"{PathPrefix}/{handler.Type.Name}";
+                mResLoader.LoadAsync<GameObject>(path, onLoadComplete);
             }
 
             public void UnLoadAndRecycle()
@@ -84,6 +97,7 @@ namespace YokiFrame
 
     /// <summary>
     /// 默认 UniTask 面板加载池（基于 ResKit）
+    /// <para>默认从 Resources/Art/UIPrefab/ 加载面板预制体</para>
     /// </summary>
     public class DefaultPanelLoaderUniTaskPool : AbstractPanelLoaderPool
     {
@@ -99,18 +113,21 @@ namespace YokiFrame
             public GameObject Load(PanelHandler handler)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                return mResLoader.Load<GameObject>(handler.Type.Name);
+                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+                return mResLoader.Load<GameObject>(path);
             }
 
             public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                mResLoader.LoadAsync<GameObject>(handler.Type.Name, onLoadComplete);
+                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+                mResLoader.LoadAsync<GameObject>(path, onLoadComplete);
             }
 
             public async UniTask<GameObject> LoadUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
             {
-                return await ResKit.LoadUniTaskAsync<GameObject>(handler.Type.Name, cancellationToken);
+                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+                return await ResKit.LoadUniTaskAsync<GameObject>(path, cancellationToken);
             }
 
             public void UnLoadAndRecycle()

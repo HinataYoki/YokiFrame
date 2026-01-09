@@ -105,10 +105,10 @@ namespace YokiFrame
                     flexGrow = 1,
                     flexDirection = FlexDirection.Row,
                     alignItems = Align.Stretch,
-                    paddingTop = 16,
-                    paddingBottom = 16,
-                    paddingLeft = 16,
-                    paddingRight = 16,
+                    paddingTop = YokiFrameUIComponents.Spacing.LG,
+                    paddingBottom = YokiFrameUIComponents.Spacing.LG,
+                    paddingLeft = YokiFrameUIComponents.Spacing.LG,
+                    paddingRight = YokiFrameUIComponents.Spacing.LG,
                     backgroundColor = new StyleColor(new Color(0.08f, 0.08f, 0.10f))
                 }
             };
@@ -129,26 +129,18 @@ namespace YokiFrame
         /// </summary>
         private VisualElement CreateConsoleToolbar()
         {
-            var toolbar = new VisualElement
-            {
-                style =
-                {
-                    flexDirection = FlexDirection.Row,
-                    alignItems = Align.Center,
-                    height = 48,
-                    paddingLeft = 16,
-                    paddingRight = 16,
-                    backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.14f)),
-                    borderBottomWidth = 1,
-                    borderBottomColor = new StyleColor(new Color(0.2f, 0.2f, 0.22f))
-                }
-            };
+            // 使用公共组件创建工具栏
+            var toolbar = YokiFrameUIComponents.CreateToolbar();
+            toolbar.style.height = 48;
+            toolbar.style.paddingLeft = YokiFrameUIComponents.Spacing.LG;
+            toolbar.style.paddingRight = YokiFrameUIComponents.Spacing.LG;
+            toolbar.style.alignItems = Align.Center;
             
             // 标题
             var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.MUSIC) };
             titleIcon.style.width = 18;
             titleIcon.style.height = 18;
-            titleIcon.style.marginRight = 8;
+            titleIcon.style.marginRight = YokiFrameUIComponents.Spacing.SM;
             toolbar.Add(titleIcon);
             
             var title = new Label("AUDIO CONSOLE")
@@ -158,7 +150,7 @@ namespace YokiFrame
                     fontSize = 14,
                     unityFontStyleAndWeight = FontStyle.Bold,
                     letterSpacing = 2f,
-                    color = new StyleColor(new Color(0.85f, 0.85f, 0.87f))
+                    color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary)
                 }
             };
             toolbar.Add(title);
@@ -174,14 +166,14 @@ namespace YokiFrame
                     borderTopRightRadius = 4,
                     borderBottomLeftRadius = 4,
                     borderBottomRightRadius = 4,
-                    backgroundColor = new StyleColor(new Color(0.3f, 0.9f, 0.4f)),
-                    marginLeft = 12
+                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.StatusSuccess),
+                    marginLeft = YokiFrameUIComponents.Spacing.MD
                 }
             };
             reactiveIndicator.tooltip = "响应式更新已启用";
             toolbar.Add(reactiveIndicator);
             
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
             
             // 全局音量
             var masterLabel = new Label("MASTER")
@@ -190,8 +182,8 @@ namespace YokiFrame
                 {
                     fontSize = 10,
                     letterSpacing = 1f,
-                    color = new StyleColor(new Color(0.5f, 0.5f, 0.55f)),
-                    marginRight = 8
+                    color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary),
+                    marginRight = YokiFrameUIComponents.Spacing.SM
                 }
             };
             toolbar.Add(masterLabel);
@@ -207,7 +199,7 @@ namespace YokiFrame
             
             mGlobalVolumeLabel = new Label("1.00")
             {
-                style = { width = 40, marginLeft = 8, fontSize = 12, unityTextAlign = TextAnchor.MiddleRight }
+                style = { width = 40, marginLeft = YokiFrameUIComponents.Spacing.SM, fontSize = 12, unityTextAlign = TextAnchor.MiddleRight }
             };
             toolbar.Add(mGlobalVolumeLabel);
             
@@ -219,7 +211,7 @@ namespace YokiFrame
             toolbar.Add(CreateConsoleButton(KitIcons.PLAY, "恢复全部", () => { if (Application.isPlaying) AudioKit.ResumeAll(); }));
             
             var stopAllBtn = CreateConsoleButton(KitIcons.STOP, "停止全部", () => { if (Application.isPlaying) AudioKit.StopAll(); });
-            stopAllBtn.style.backgroundColor = new StyleColor(new Color(0.6f, 0.2f, 0.2f));
+            stopAllBtn.style.backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.BadgeError);
             toolbar.Add(stopAllBtn);
             
             // 分隔线
@@ -239,9 +231,9 @@ namespace YokiFrame
                 {
                     width = 1,
                     height = 28,
-                    marginLeft = 12,
-                    marginRight = 12,
-                    backgroundColor = new StyleColor(new Color(0.25f, 0.25f, 0.28f))
+                    marginLeft = YokiFrameUIComponents.Spacing.MD,
+                    marginRight = YokiFrameUIComponents.Spacing.MD,
+                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.BadgeDefault)
                 }
             };
         }
@@ -255,14 +247,14 @@ namespace YokiFrame
                 {
                     width = 36,
                     height = 32,
-                    marginLeft = 4,
+                    marginLeft = YokiFrameUIComponents.Spacing.XS,
                     alignItems = Align.Center,
                     justifyContent = Justify.Center,
-                    backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.22f)),
-                    borderTopLeftRadius = 4,
-                    borderTopRightRadius = 4,
-                    borderBottomLeftRadius = 4,
-                    borderBottomRightRadius = 4
+                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.LayerElevated),
+                    borderTopLeftRadius = YokiFrameUIComponents.Radius.MD,
+                    borderTopRightRadius = YokiFrameUIComponents.Radius.MD,
+                    borderBottomLeftRadius = YokiFrameUIComponents.Radius.MD,
+                    borderBottomRightRadius = YokiFrameUIComponents.Radius.MD
                 }
             };
             

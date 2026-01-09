@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,7 +14,7 @@ namespace YokiFrame
         /// 鼠标/触摸模式
         /// </summary>
         Pointer,
-        
+
         /// <summary>
         /// 手柄/键盘导航模式
         /// </summary>
@@ -42,9 +41,9 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// UI 焦点系统 - 管理 UI 焦点和导航
+    /// UI 焦点系统 - 管理 UI 焦点和导航，集成手柄支持
     /// </summary>
-    public class UIFocusSystem : MonoBehaviour
+    public partial class UIFocusSystem : MonoBehaviour
     {
         #region 单例
 
@@ -73,15 +72,30 @@ namespace YokiFrame
 
         #region 配置
 
-        /// <summary>
-        /// 是否启用自动焦点（面板显示时自动聚焦默认元素）
-        /// </summary>
+        [Header("基础配置")]
+        [Tooltip("是否启用自动焦点（面板显示时自动聚焦默认元素）")]
         [SerializeField] private bool mAutoFocusEnabled = true;
 
-        /// <summary>
-        /// 导航输入检测阈值
-        /// </summary>
-        [SerializeField] private float mNavigationThreshold = 0.5f;
+        [Tooltip("是否启用手柄支持")]
+        [SerializeField] private bool mGamepadEnabled = true;
+
+        [Header("手柄配置")]
+        [Tooltip("手柄配置资源")]
+        [SerializeField] private GamepadConfig mGamepadConfig;
+
+        [Tooltip("是否显示焦点高亮")]
+        [SerializeField] private bool mShowFocusHighlight = true;
+
+        #endregion
+
+        #region 组件
+
+        private EventSystem mEventSystem;
+#if ENABLE_INPUT_SYSTEM
+        private GamepadInputHandler mInputHandler;
+#endif
+        private GamepadNavigator mNavigator;
+        private UIFocusHighlight mFocusHighlight;
 
         #endregion
 
@@ -90,7 +104,10 @@ namespace YokiFrame
         private UIInputMode mCurrentInputMode = UIInputMode.Pointer;
         private GameObject mLastFocusedObject;
         private readonly Dictionary<IPanel, GameObject> mPanelFocusMemory = new();
-        private EventSystem mEventSystem;
+
+        #endregion
+
+        #region 属性
 
         /// <summary>
         /// 当前输入模式
@@ -111,6 +128,41 @@ namespace YokiFrame
             set => mAutoFocusEnabled = value;
         }
 
+        /// <summary>
+        /// 是否启用手柄支持
+        /// </summary>
+        public bool GamepadEnabled
+        {
+            get => mGamepadEnabled;
+            set
+            {
+                mGamepadEnabled = value;
+                if (value)
+                {
+                    EnableGamepad();
+                }
+                else
+                {
+                    DisableGamepad();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 手柄导航器
+        /// </summary>
+        public GamepadNavigator Navigator => mNavigator;
+
+        /// <summary>
+        /// 焦点高亮组件
+        /// </summary>
+        public UIFocusHighlight FocusHighlight => mFocusHighlight;
+
+        /// <summary>
+        /// 手柄配置
+        /// </summary>
+        public GamepadConfig GamepadConfig => mGamepadConfig ?? GamepadConfig.Default;
+
         #endregion
 
         #region 生命周期
@@ -127,17 +179,22 @@ namespace YokiFrame
 
         private void Start()
         {
-            mEventSystem = EventSystem.current;
-            if (mEventSystem == null)
-            {
-                mEventSystem = FindFirstObjectByType<EventSystem>();
-            }
+            InitializeEventSystem();
+            InitializeGamepad();
+            InitializeFocusHighlight();
         }
 
         private void Update()
         {
             DetectInputModeChange();
             TrackFocusChange();
+            UpdateNavigator();
+            UpdateFocusHighlight();
+        }
+
+        private void LateUpdate()
+        {
+            mNavigator?.LateUpdate();
         }
 
         private void OnDestroy()
@@ -146,229 +203,83 @@ namespace YokiFrame
             {
                 sInstance = null;
             }
+
+            mNavigator?.Dispose();
+#if ENABLE_INPUT_SYSTEM
+            mInputHandler?.Dispose();
+#endif
             mPanelFocusMemory.Clear();
         }
 
         #endregion
 
-        #region 输入模式检测
+        #region 初始化
 
-        private void DetectInputModeChange()
+        private void InitializeEventSystem()
         {
-            var newMode = mCurrentInputMode;
-
-            // 检测鼠标移动
-            if (Input.GetAxis("Mouse X") != 0 || Input.GetAxis("Mouse Y") != 0 || Input.GetMouseButtonDown(0))
+            mEventSystem = EventSystem.current;
+            if (mEventSystem == null)
             {
-                newMode = UIInputMode.Pointer;
+                mEventSystem = FindFirstObjectByType<EventSystem>();
             }
-            // 检测导航输入
-            else if (Mathf.Abs(Input.GetAxis("Horizontal")) > mNavigationThreshold ||
-                     Mathf.Abs(Input.GetAxis("Vertical")) > mNavigationThreshold ||
-                     Input.GetButtonDown("Submit") ||
-                     Input.GetButtonDown("Cancel"))
-            {
-                newMode = UIInputMode.Navigation;
-            }
+        }
 
-            if (newMode != mCurrentInputMode)
-            {
-                var oldMode = mCurrentInputMode;
-                mCurrentInputMode = newMode;
-                
-                EventKit.Type.Send(new InputModeChangedEvent
-                {
-                    Previous = oldMode,
-                    Current = newMode
-                });
+        private void InitializeGamepad()
+        {
+            if (!mGamepadEnabled) return;
 
-                // 切换到导航模式时，确保有焦点
-                if (newMode == UIInputMode.Navigation && CurrentFocus == null)
-                {
-                    RestoreLastFocus();
-                }
+#if ENABLE_INPUT_SYSTEM
+            mInputHandler = new GamepadInputHandler();
+            mNavigator = new GamepadNavigator(mInputHandler, GamepadConfig, mEventSystem);
+
+            // 绑定事件
+            mNavigator.OnCancel += HandleCancel;
+            mNavigator.OnTabSwitch += HandleTabSwitch;
+            mNavigator.OnMenu += HandleMenu;
+
+            mNavigator.Enable();
+#endif
+        }
+
+        private void InitializeFocusHighlight()
+        {
+            if (!mShowFocusHighlight) return;
+
+            // 在 UIRoot 下创建焦点高亮
+            var parent = UIRoot.Instance?.transform;
+            if (parent != null)
+            {
+                mFocusHighlight = UIFocusHighlight.Create(parent, GamepadConfig);
+                // 确保高亮在最上层
+                mFocusHighlight.transform.SetAsLastSibling();
             }
         }
 
         #endregion
 
-        #region 焦点追踪
+        #region 手柄控制
 
-        private void TrackFocusChange()
+        private void EnableGamepad()
         {
-            var currentFocus = CurrentFocus;
-            if (currentFocus != mLastFocusedObject)
+            if (mNavigator != null)
             {
-                var panel = FindPanelForObject(currentFocus);
-                
-                EventKit.Type.Send(new FocusChangedEvent
-                {
-                    Previous = mLastFocusedObject,
-                    Current = currentFocus,
-                    Panel = panel
-                });
-
-                // 记忆面板焦点
-                if (panel != null && currentFocus != null)
-                {
-                    mPanelFocusMemory[panel] = currentFocus;
-                }
-
-                mLastFocusedObject = currentFocus;
-            }
-        }
-
-        private IPanel FindPanelForObject(GameObject obj)
-        {
-            if (obj == null) return null;
-            
-            var transform = obj.transform;
-            while (transform != null)
-            {
-                var panel = transform.GetComponent<IPanel>();
-                if (panel != null) return panel;
-                transform = transform.parent;
-            }
-            return null;
-        }
-
-        #endregion
-
-        #region 焦点控制
-
-        /// <summary>
-        /// 设置焦点到指定对象
-        /// </summary>
-        public void SetFocus(GameObject target)
-        {
-            if (target == null || mEventSystem == null) return;
-            
-            var selectable = target.GetComponent<Selectable>();
-            if (selectable != null && selectable.interactable)
-            {
-                mEventSystem.SetSelectedGameObject(target);
-            }
-        }
-
-        /// <summary>
-        /// 设置焦点到指定 Selectable
-        /// </summary>
-        public void SetFocus(Selectable selectable)
-        {
-            if (selectable == null || !selectable.interactable || mEventSystem == null) return;
-            mEventSystem.SetSelectedGameObject(selectable.gameObject);
-        }
-
-        /// <summary>
-        /// 清除当前焦点
-        /// </summary>
-        public void ClearFocus()
-        {
-            if (mEventSystem != null)
-            {
-                mEventSystem.SetSelectedGameObject(null);
-            }
-        }
-
-        /// <summary>
-        /// 恢复上次焦点
-        /// </summary>
-        public void RestoreLastFocus()
-        {
-            if (mLastFocusedObject != null && mLastFocusedObject.activeInHierarchy)
-            {
-                SetFocus(mLastFocusedObject);
-            }
-        }
-
-        #endregion
-
-        #region 面板焦点管理
-
-        /// <summary>
-        /// 当面板显示时调用，设置默认焦点
-        /// </summary>
-        public void OnPanelShow(IPanel panel)
-        {
-            if (!mAutoFocusEnabled || panel == null) return;
-
-            // 优先恢复记忆的焦点
-            if (mPanelFocusMemory.TryGetValue(panel, out var remembered) && 
-                remembered != null && remembered.activeInHierarchy)
-            {
-                SetFocus(remembered);
+                mNavigator.Enable();
                 return;
             }
 
-            // 查找默认焦点元素
-            var uiPanel = panel as UIPanel;
-            if (uiPanel != null)
-            {
-                var defaultSelectable = uiPanel.GetDefaultSelectable();
-                if (defaultSelectable != null)
-                {
-                    SetFocus(defaultSelectable);
-                    return;
-                }
-            }
-
-            // 查找第一个可交互元素
-            var firstSelectable = FindFirstSelectable(panel.Transform);
-            if (firstSelectable != null)
-            {
-                SetFocus(firstSelectable);
-            }
+            // 首次启用时初始化
+            InitializeGamepad();
         }
 
-        /// <summary>
-        /// 当面板隐藏时调用，保存焦点记忆
-        /// </summary>
-        public void OnPanelHide(IPanel panel)
+        private void DisableGamepad()
         {
-            if (panel == null) return;
-
-            // 如果当前焦点在该面板内，保存并清除
-            var currentFocus = CurrentFocus;
-            if (currentFocus != null && IsChildOf(currentFocus.transform, panel.Transform))
-            {
-                mPanelFocusMemory[panel] = currentFocus;
-                ClearFocus();
-            }
+            mNavigator?.Disable();
         }
 
-        /// <summary>
-        /// 当面板关闭时调用，清理焦点记忆
-        /// </summary>
-        public void OnPanelClose(IPanel panel)
+        private void UpdateNavigator()
         {
-            if (panel == null) return;
-            mPanelFocusMemory.Remove(panel);
-        }
-
-        /// <summary>
-        /// 获取面板的记忆焦点
-        /// </summary>
-        public GameObject GetPanelFocusMemory(IPanel panel)
-        {
-            if (panel == null) return null;
-            mPanelFocusMemory.TryGetValue(panel, out var focus);
-            return focus;
-        }
-
-        /// <summary>
-        /// 设置面板的记忆焦点
-        /// </summary>
-        public void SetPanelFocusMemory(IPanel panel, GameObject focus)
-        {
-            if (panel == null) return;
-            if (focus == null)
-            {
-                mPanelFocusMemory.Remove(panel);
-            }
-            else
-            {
-                mPanelFocusMemory[panel] = focus;
-            }
+            if (!mGamepadEnabled || mNavigator == null) return;
+            mNavigator.Update(Time.unscaledDeltaTime);
         }
 
         #endregion
@@ -379,13 +290,29 @@ namespace YokiFrame
         {
             if (root == null) return null;
 
+            // 先检查 NavigationGrid
+            var grid = root.GetComponentInChildren<UINavigationGrid>();
+            if (grid != null)
+            {
+                var first = grid.GetFirstSelectable();
+                if (first != null) return first;
+            }
+
+            // 先检查 SelectableGroup
+            var group = root.GetComponentInChildren<SelectableGroup>();
+            if (group != null)
+            {
+                var first = group.GetFirstSelectable();
+                if (first != null) return first;
+            }
+
             // 使用 GetComponentsInChildren 查找所有 Selectable
             var selectables = root.GetComponentsInChildren<Selectable>(false);
-            foreach (var selectable in selectables)
+            for (int i = 0; i < selectables.Length; i++)
             {
-                if (selectable.interactable && selectable.gameObject.activeInHierarchy)
+                if (selectables[i].interactable && selectables[i].gameObject.activeInHierarchy)
                 {
-                    return selectable;
+                    return selectables[i];
                 }
             }
             return null;
@@ -394,7 +321,7 @@ namespace YokiFrame
         private bool IsChildOf(Transform child, Transform parent)
         {
             if (child == null || parent == null) return false;
-            
+
             var current = child;
             while (current != null)
             {
@@ -402,6 +329,20 @@ namespace YokiFrame
                 current = current.parent;
             }
             return false;
+        }
+
+        private IPanel FindPanelForObject(GameObject obj)
+        {
+            if (obj == null) return null;
+
+            var current = obj.transform;
+            while (current != null)
+            {
+                var panel = current.GetComponent<IPanel>();
+                if (panel != null) return panel;
+                current = current.parent;
+            }
+            return null;
         }
 
         #endregion

@@ -143,12 +143,12 @@ namespace YokiFrame
             var machineStateLabel = mHudSection.Q<Label>("machine-state");
             if (machineStateLabel != null)
             {
-                var (stateText, stateColor) = fsm.MachineState switch
+                var (stateText, stateColor, stateIconId) = fsm.MachineState switch
                 {
-                    MachineState.Running => ("● Running", YokiFrameUIComponents.Colors.BrandSuccess),
-                    MachineState.Suspend => ("◐ Suspended", YokiFrameUIComponents.Colors.BrandWarning),
-                    MachineState.End => ("○ Stopped", YokiFrameUIComponents.Colors.TextTertiary),
-                    _ => ("?", YokiFrameUIComponents.Colors.TextTertiary)
+                    MachineState.Running => ("Running", YokiFrameUIComponents.Colors.BrandSuccess, KitIcons.DOT_FILLED),
+                    MachineState.Suspend => ("Suspended", YokiFrameUIComponents.Colors.BrandWarning, KitIcons.DOT_HALF),
+                    MachineState.End => ("Stopped", YokiFrameUIComponents.Colors.TextTertiary, KitIcons.DOT_EMPTY),
+                    _ => ("?", YokiFrameUIComponents.Colors.TextTertiary, KitIcons.DOT)
                 };
                 machineStateLabel.text = stateText;
                 machineStateLabel.style.color = new StyleColor(stateColor);

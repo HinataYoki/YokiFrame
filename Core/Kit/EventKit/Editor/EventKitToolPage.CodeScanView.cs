@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
@@ -111,7 +112,7 @@ namespace YokiFrame
 
         private VisualElement CreateScanToolbar()
         {
-            var toolbar = CreateToolbar();
+            var toolbar = YokiFrameUIComponents.CreateToolbar();
 
             var folderLabel = new Label("扫描目录:");
             folderLabel.AddToClassList("toolbar-label");
@@ -123,16 +124,16 @@ namespace YokiFrame
             mScanFolderField.RegisterValueChangedCallback(evt => mScanFolder = evt.newValue);
             toolbar.Add(mScanFolderField);
 
-            var browseBtn = CreateToolbarButton("...", BrowseScanFolder);
+            var browseBtn = YokiFrameUIComponents.CreateToolbarButton("...", BrowseScanFolder);
             toolbar.Add(browseBtn);
 
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             mScanSummaryLabel = new Label();
             mScanSummaryLabel.AddToClassList("toolbar-label");
             toolbar.Add(mScanSummaryLabel);
 
-            var scanBtn = CreateToolbarButtonWithIcon(EditorTools.KitIcons.TARGET, "扫描", PerformScan);
+            var scanBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(EditorTools.KitIcons.TARGET, "扫描", PerformScan);
             toolbar.Add(scanBtn);
 
             return toolbar;

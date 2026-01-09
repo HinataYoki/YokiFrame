@@ -58,6 +58,7 @@ namespace YokiFrame.EditorTools
             var box = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, flexWrap = Wrap.Wrap, marginLeft = 32 } };
             AddLegendItem(box, "Seq", COLOR_SEQUENCE);
             AddLegendItem(box, "Par", COLOR_PARALLEL);
+            AddLegendItem(box, "Repeat", COLOR_LEAF_REPEAT);
             AddLegendItem(box, "Delay", COLOR_LEAF_DELAY);
             AddLegendItem(box, "Callback", COLOR_LEAF_CALLBACK);
             return box;

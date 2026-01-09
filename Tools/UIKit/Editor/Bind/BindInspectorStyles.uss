@@ -96,3 +96,119 @@
     border-color: rgb(30, 30, 30);
     border-radius: 3px;
 }
+
+/* 类型快速转换按钮 */
+.type-convert-row {
+    margin-top: 4px;
+}
+
+.type-convert-buttons {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.type-convert-btn {
+    margin-right: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    background-color: rgb(60, 60, 60);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(80, 80, 80);
+}
+
+.type-convert-btn:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.type-convert-btn:disabled {
+    opacity: 0.5;
+}
+
+/* 命名建议行 */
+.suggestion-row {
+    background-color: rgb(50, 60, 70);
+    border-radius: 3px;
+    padding: 4px 8px;
+    margin-top: 4px;
+}
+
+.suggestion-content {
+    flex-direction: row;
+    align-items: center;
+}
+
+.suggestion-text {
+    flex-grow: 1;
+    color: rgb(150, 200, 255);
+    font-size: 11px;
+    -unity-font-style: italic;
+}
+
+.suggestion-apply-btn {
+    padding: 2px 8px;
+    font-size: 10px;
+    background-color: rgb(60, 100, 140);
+    border-radius: 3px;
+    border-width: 0;
+    margin-left: 8px;
+}
+
+.suggestion-apply-btn:hover {
+    background-color: rgb(70, 120, 160);
+}
+
+/* 绑定路径显示 */
+.bind-path-row {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top-width: 1px;
+    border-top-color: rgb(50, 50, 50);
+}
+
+.bind-path-text {
+    color: rgb(180, 180, 180);
+    font-size: 11px;
+    -unity-font-style: italic;
+}
+
+/* 代码预览区域 */
+.code-preview-foldout {
+    margin-top: 8px;
+}
+
+.code-preview-foldout > Toggle {
+    background-color: rgb(45, 45, 45);
+    border-radius: 3px;
+    padding: 4px;
+}
+
+.code-preview-text {
+    background-color: rgb(35, 35, 35);
+    border-radius: 3px;
+    padding: 8px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgb(180, 220, 180);
+    white-space: normal;
+    -unity-font: resource("Fonts/RobotoMono-Regular");
+}
+
+/* 跳转到代码按钮 */
+.jump-to-code-btn {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: rgb(60, 80, 100);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(80, 100, 120);
+}
+
+.jump-to-code-btn:hover {
+    background-color: rgb(70, 90, 110);
+}
+
+.jump-to-code-btn:disabled {
+    opacity: 0.5;
+    background-color: rgb(50, 50, 50);
+}

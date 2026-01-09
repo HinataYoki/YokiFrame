@@ -51,14 +51,14 @@ namespace YokiFrame
         protected override void BuildUI(VisualElement root)
         {
             // 工具栏
-            var toolbar = CreateToolbar();
+            var toolbar = YokiFrameUIComponents.CreateToolbar();
             root.Add(toolbar);
             
             var helpLabel = new Label("运行时状态机监控（需要运行游戏）");
             helpLabel.AddToClassList("toolbar-label");
             toolbar.Add(helpLabel);
             
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
             
             // 内容区域
             var content = new VisualElement();
@@ -89,7 +89,7 @@ namespace YokiFrame
             var leftPanel = new VisualElement();
             leftPanel.AddToClassList("left-panel");
             
-            var leftHeader = CreatePanelHeader("活跃状态机");
+            var leftHeader = YokiFrameUIComponents.CreateSectionHeader("活跃状态机");
             leftPanel.Add(leftHeader);
             
             mFsmListView = new ListView();

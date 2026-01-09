@@ -83,7 +83,7 @@ namespace YokiFrame.EditorTools
             toolbar.Add(spacer);
 
             // 重置按钮放右侧
-            var resetBtn = YokiFrameUIComponents.CreateToolbarButton("↩️ 重置默认", ResetToDefault);
+            var resetBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.RESET, "重置默认", ResetToDefault);
             toolbar.Add(resetBtn);
 
             return toolbar;
@@ -105,7 +105,7 @@ namespace YokiFrame.EditorTools
 
         private VisualElement CreateConfigCard()
         {
-            var (card, body) = YokiFrameUIComponents.CreateCard("配置", "⚙️");
+            var (card, body) = YokiFrameUIComponents.CreateCard("配置", KitIcons.SETTINGS);
             card.style.marginBottom = 16;
 
             // === Toggle 开关区域 ===
