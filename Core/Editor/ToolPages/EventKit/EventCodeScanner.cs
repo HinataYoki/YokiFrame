@@ -42,7 +42,7 @@ namespace YokiFrame
         
         // Type 事件 - 支持多种调用模式
         // 模式1: EventKit.Type.Send<DamageEvent>(...)
-        // 模式2: EventKit.Type.Send(new DamageEvent(...))
+        // 模式2: EventKit.Type.Send(new DamageEvent(...)) 或 EventKit.Type.Send(new DamageEvent { ... })
         private static readonly Regex TypeRegisterPattern = new(
             @"EventKit\.Type\.Register\s*<\s*(\w+)\s*>",
             RegexOptions.Compiled);
@@ -51,9 +51,9 @@ namespace YokiFrame
             @"EventKit\.Type\.Send\s*<\s*(\w+)\s*>",
             RegexOptions.Compiled);
         
-        // 匹配 Send(new TypeName(...)) 模式
+        // 匹配 Send(new TypeName 模式（支持跨行初始化器）
         private static readonly Regex TypeSendNewPattern = new(
-            @"EventKit\.Type\.Send\s*\(\s*new\s+(\w+)\s*[({]",
+            @"EventKit\.Type\.Send\s*\(\s*new\s+(\w+)",
             RegexOptions.Compiled);
         
         // 匹配 Send(变量) 模式 - 需要从上下文推断类型，暂不支持
@@ -78,7 +78,10 @@ namespace YokiFrame
         /// <summary>
         /// 扫描指定文件夹下的所有 C# 文件
         /// </summary>
-        public static List<ScanResult> ScanFolder(string folderPath, bool forceRescan = false)
+        /// <param name="folderPath">扫描目录</param>
+        /// <param name="forceRescan">强制重新扫描</param>
+        /// <param name="excludeEditor">是否排除 Editor 目录</param>
+        public static List<ScanResult> ScanFolder(string folderPath, bool forceRescan = false, bool excludeEditor = true)
         {
             // 缓存检查
             if (!forceRescan && mLastScanFolder == folderPath && 
@@ -101,8 +104,8 @@ namespace YokiFrame
             
             foreach (var file in csFiles)
             {
-                // 跳过 Editor 文件夹和 YokiFrame 内部代码
-                if (file.Contains("Editor") || file.Contains("YokiFrame")) continue;
+                // 根据开关决定是否过滤 Editor 目录
+                if (excludeEditor && (file.Contains("\\Editor\\") || file.Contains("/Editor/"))) continue;
                 
                 ScanFile(file);
             }

@@ -30,10 +30,14 @@ namespace YokiFrame
         #region 代码扫描私有字段
 
         private TextField mScanFolderField;
+        private TextField mSearchField;
         private ScrollView mScanResultsScrollView;
         private Label mScanSummaryLabel;
-        private string mScanFolder = "Assets/Scripts";
+        private string mScanFolder = "Assets";
+        private string mSearchKeyword = "";
+        private bool mExcludeEditor = true;
         private readonly List<EventCodeScanner.ScanResult> mScanResults = new(256);
+        private readonly List<VisualElement> mHighlightedElements = new(16);
 
         #endregion
 
@@ -127,6 +131,56 @@ namespace YokiFrame
             var browseBtn = YokiFrameUIComponents.CreateToolbarButton("...", BrowseScanFolder);
             toolbar.Add(browseBtn);
 
+            // 排除 Editor 开关
+            var excludeEditorToggle = YokiFrameUIComponents.CreateModernToggle("排除Editor", mExcludeEditor, 
+                value => mExcludeEditor = value);
+            excludeEditorToggle.style.marginLeft = 8;
+            toolbar.Add(excludeEditorToggle);
+
+            // 搜索框
+            var searchIcon = new Image { image = EditorGUIUtility.IconContent("d_Search Icon").image };
+            searchIcon.style.width = 14;
+            searchIcon.style.height = 14;
+            searchIcon.style.marginLeft = 16;
+            searchIcon.tintColor = new Color(0.6f, 0.6f, 0.6f);
+            toolbar.Add(searchIcon);
+
+            mSearchField = new TextField();
+            mSearchField.value = mSearchKeyword;
+            mSearchField.style.width = 150;
+            mSearchField.style.marginLeft = 4;
+            var placeholder = "搜索事件...";
+            if (string.IsNullOrEmpty(mSearchField.value))
+            {
+                mSearchField.Q<TextElement>().style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+                mSearchField.SetValueWithoutNotify(placeholder);
+            }
+            mSearchField.RegisterCallback<FocusInEvent>(_ =>
+            {
+                if (mSearchField.value == placeholder)
+                {
+                    mSearchField.SetValueWithoutNotify("");
+                    mSearchField.Q<TextElement>().style.color = StyleKeyword.Null;
+                }
+            });
+            mSearchField.RegisterCallback<FocusOutEvent>(_ =>
+            {
+                if (string.IsNullOrEmpty(mSearchField.value))
+                {
+                    mSearchField.Q<TextElement>().style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+                    mSearchField.SetValueWithoutNotify(placeholder);
+                }
+            });
+            mSearchField.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue != placeholder)
+                {
+                    mSearchKeyword = evt.newValue;
+                    PerformSearch(mSearchKeyword);
+                }
+            });
+            toolbar.Add(mSearchField);
+
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             mScanSummaryLabel = new Label();
@@ -153,8 +207,81 @@ namespace YokiFrame
         private void PerformScan()
         {
             mScanResults.Clear();
-            mScanResults.AddRange(EventCodeScanner.ScanFolder(mScanFolder, true));
+            mScanResults.AddRange(EventCodeScanner.ScanFolder(mScanFolder, true, mExcludeEditor));
             RefreshScanResults();
+        }
+
+        /// <summary>
+        /// 执行搜索，高亮匹配的事件并滚动到第一个匹配项
+        /// </summary>
+        private void PerformSearch(string keyword)
+        {
+            // 清除之前的高亮
+            ClearSearchHighlight();
+
+            if (string.IsNullOrWhiteSpace(keyword)) return;
+
+            keyword = keyword.ToLowerInvariant();
+            VisualElement firstMatch = null;
+
+            // 遍历导航映射，查找匹配项
+            foreach (var (navItem, targetElement) in mNavItemMap)
+            {
+                var eventKey = navItem.userData as string;
+                if (eventKey != null && eventKey.ToLowerInvariant().Contains(keyword))
+                {
+                    // 高亮目标元素
+                    HighlightElement(targetElement);
+                    
+                    // 高亮导航项
+                    HighlightNavItem(navItem);
+
+                    if (firstMatch == null)
+                        firstMatch = targetElement;
+                }
+            }
+
+            // 滚动到第一个匹配项
+            if (firstMatch != null)
+            {
+                mScanResultsScrollView.ScrollTo(firstMatch);
+            }
+        }
+
+        /// <summary>
+        /// 高亮元素
+        /// </summary>
+        private void HighlightElement(VisualElement element)
+        {
+            element.style.borderLeftWidth = 3;
+            element.style.borderLeftColor = new StyleColor(new Color(0.34f, 0.61f, 0.84f));
+            element.style.backgroundColor = new StyleColor(new Color(0.24f, 0.37f, 0.58f, 0.2f));
+            mHighlightedElements.Add(element);
+        }
+
+        /// <summary>
+        /// 高亮导航项
+        /// </summary>
+        private void HighlightNavItem(VisualElement navItem)
+        {
+            navItem.style.backgroundColor = new StyleColor(new Color(0.34f, 0.61f, 0.84f, 0.3f));
+            if (!mHighlightedElements.Contains(navItem))
+                mHighlightedElements.Add(navItem);
+        }
+
+        /// <summary>
+        /// 清除搜索高亮
+        /// </summary>
+        private void ClearSearchHighlight()
+        {
+            foreach (var element in mHighlightedElements)
+            {
+                // 重置内容元素样式
+                element.style.borderLeftWidth = StyleKeyword.Null;
+                element.style.borderLeftColor = StyleKeyword.Null;
+                element.style.backgroundColor = StyleKeyword.Null;
+            }
+            mHighlightedElements.Clear();
         }
 
         #endregion
