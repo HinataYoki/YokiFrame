@@ -288,38 +288,6 @@ namespace YokiFrame
             return false;
         }
         
-        /// <summary>
-        /// 递归构建绑定树视图（旧方法，保留兼容）
-        /// </summary>
-        private void BuildBindTreeView(BindTreeNode node, VisualElement parent, int depth)
-        {
-            if (node == null) return;
-            
-            // 只显示有 Bind 组件的节点
-            if (node.Bind != null)
-            {
-                var nodeElement = CreateBindTreeNodeElement(node, depth);
-                parent.Add(nodeElement);
-            }
-            
-            // 递归处理子节点
-            if (node.Children != null)
-            {
-                foreach (var child in node.Children)
-                {
-                    BuildBindTreeView(child, parent, depth + 1);
-                }
-            }
-        }
-        
-        /// <summary>
-        /// 创建绑定树节点元素（旧方法，保留兼容）
-        /// </summary>
-        private VisualElement CreateBindTreeNodeElement(BindTreeNode node, int depth)
-        {
-            // 使用新的卡片样式
-            return CreateBindTreeNodeCard(node, new HashSet<string>(), depth);
-        }
     }
 }
 #endif

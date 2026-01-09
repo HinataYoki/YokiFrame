@@ -278,19 +278,6 @@ namespace YokiFrame
             BindType.Leaf => KitIcons.DOT_EMPTY,
             _ => KitIcons.DOT
         };
-
-        /// <summary>
-        /// 获取绑定类型对应的图标（已废弃，使用 GetBindTypeIconId）
-        /// </summary>
-        [System.Obsolete("使用 GetBindTypeIconId 替代")]
-        private string GetBindTypeIcon(BindType type) => type switch
-        {
-            BindType.Member => "◇",
-            BindType.Element => "●",
-            BindType.Component => "●",
-            BindType.Leaf => "○",
-            _ => "?"
-        };
         
         /// <summary>
         /// 获取类型的短名称
