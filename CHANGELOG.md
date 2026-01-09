@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-01-10
+
+### Fixed
+- 修复 Unity 2021.3 中打开 YokiFrame 编辑器面板时的 NullReferenceException（TextField 内部结构兼容性）
+
 ## [1.5.0] - 2026-01-10
 
 ### Added

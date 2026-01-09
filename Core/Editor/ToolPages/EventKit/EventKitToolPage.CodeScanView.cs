@@ -150,24 +150,28 @@ namespace YokiFrame
             mSearchField.style.width = 150;
             mSearchField.style.marginLeft = 4;
             var placeholder = "搜索事件...";
-            if (string.IsNullOrEmpty(mSearchField.value))
+            // 延迟设置占位符样式，确保 TextField 内部结构已初始化
+            mSearchField.RegisterCallback<AttachToPanelEvent>(_ =>
             {
-                mSearchField.Q<TextElement>().style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
-                mSearchField.SetValueWithoutNotify(placeholder);
-            }
+                if (string.IsNullOrEmpty(mSearchField.value) || mSearchField.value == placeholder)
+                {
+                    SetTextFieldPlaceholderStyle(mSearchField, true);
+                    mSearchField.SetValueWithoutNotify(placeholder);
+                }
+            });
             mSearchField.RegisterCallback<FocusInEvent>(_ =>
             {
                 if (mSearchField.value == placeholder)
                 {
                     mSearchField.SetValueWithoutNotify("");
-                    mSearchField.Q<TextElement>().style.color = StyleKeyword.Null;
+                    SetTextFieldPlaceholderStyle(mSearchField, false);
                 }
             });
             mSearchField.RegisterCallback<FocusOutEvent>(_ =>
             {
                 if (string.IsNullOrEmpty(mSearchField.value))
                 {
-                    mSearchField.Q<TextElement>().style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
+                    SetTextFieldPlaceholderStyle(mSearchField, true);
                     mSearchField.SetValueWithoutNotify(placeholder);
                 }
             });
@@ -282,6 +286,22 @@ namespace YokiFrame
                 element.style.backgroundColor = StyleKeyword.Null;
             }
             mHighlightedElements.Clear();
+        }
+
+        /// <summary>
+        /// 设置 TextField 占位符样式
+        /// 兼容 Unity 2021.3+，不同版本 TextField 内部结构可能不同
+        /// </summary>
+        private static void SetTextFieldPlaceholderStyle(TextField textField, bool isPlaceholder)
+        {
+            // 尝试获取 TextElement，Unity 2021.3 中可能返回 null
+            var textElement = textField.Q<TextElement>();
+            if (textElement != null)
+            {
+                textElement.style.color = isPlaceholder 
+                    ? new StyleColor(new Color(0.5f, 0.5f, 0.5f)) 
+                    : StyleKeyword.Null;
+            }
         }
 
         #endregion
