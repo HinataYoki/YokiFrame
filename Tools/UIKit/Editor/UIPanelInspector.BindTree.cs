@@ -34,6 +34,18 @@ namespace YokiFrame
             content.AddToClassList("uipanel-section-content");
             mBindTreeFoldout.Add(content);
             
+            // 打开代码按钮（放在内容区顶部）
+            var openCodeBtn = CreateOpenCodeButton(panel);
+            if (openCodeBtn != null)
+            {
+                var btnRow = new VisualElement();
+                btnRow.style.flexDirection = FlexDirection.Row;
+                btnRow.style.justifyContent = Justify.FlexEnd;
+                btnRow.style.marginBottom = 8;
+                btnRow.Add(openCodeBtn);
+                content.Add(btnRow);
+            }
+            
             // 绑定树容器（自适应高度，不使用滚动条）
             mBindTreeContainer = new VisualElement();
             mBindTreeContainer.AddToClassList("uipanel-bindtree-container");

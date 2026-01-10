@@ -8,12 +8,19 @@ namespace YokiFrame.EditorTools
 {
     /// <summary>
     /// ResKit 工具页面 - 资源监控（按类型分类 + 搜索）
+    /// 使用响应式订阅模式，通过 EditorDataBridge 接收数据变化
     /// </summary>
     public partial class ResKitToolPage : YokiFrameToolPageBase
     {
         public override string PageName => "ResKit";
         public override string PageIcon => KitIcons.RESKIT;
         public override int Priority => 35;
+
+        #region 常量
+
+        private const float THROTTLE_INTERVAL = 0.5f;
+
+        #endregion
 
         #region 标签页状态
 
@@ -50,9 +57,11 @@ namespace YokiFrame.EditorTools
         
         // 状态
         private bool mAutoRefresh = true;
-        private float mLastRefreshTime;
-        private const float REFRESH_INTERVAL = 0.5f;
         private string mSearchFilter = "";
+        
+        // 响应式
+        private ResKitViewModel mViewModel;
+        private Throttle mRefreshThrottle;
         
         // 数据
         private readonly List<ResDebugger.ResInfo> mAllAssets = new();
@@ -121,6 +130,24 @@ namespace YokiFrame.EditorTools
         private Color GetTypeColor(string typeName) =>
             sTypeColors.TryGetValue(typeName, out var color) ? color : new Color(0.50f, 0.50f, 0.55f);
 
+        /// <summary>
+        /// 获取类型对应的 USS 类名
+        /// </summary>
+        private static string GetTypeClass(string typeName) => typeName?.ToLowerInvariant() switch
+        {
+            "audioclip" => "yoki-res-type--audioclip",
+            "texture2d" => "yoki-res-type--texture2d",
+            "sprite" => "yoki-res-type--sprite",
+            "material" => "yoki-res-type--material",
+            "gameobject" => "yoki-res-type--gameobject",
+            "textasset" => "yoki-res-type--textasset",
+            "scriptableobject" => "yoki-res-type--scriptableobject",
+            "shader" => "yoki-res-type--shader",
+            "font" => "yoki-res-type--font",
+            "animationclip" => "yoki-res-type--animationclip",
+            _ => "yoki-res-type--unknown"
+        };
+
         private string GetTypeIcon(string typeName) => typeName switch
         {
             "AudioClip" => "A",
@@ -147,10 +174,10 @@ namespace YokiFrame.EditorTools
                 ? "ResKit (缓存管理)" 
                 : "Loader (直接加载)";
 
-            mDetailRefCount.RemoveFromClassList("highlight");
+            mDetailRefCount.RemoveFromClassList("yoki-res-detail__value--highlight");
             if (info.RefCount > 1)
             {
-                mDetailRefCount.AddToClassList("highlight");
+                mDetailRefCount.AddToClassList("yoki-res-detail__value--highlight");
             }
         }
 
@@ -172,6 +199,61 @@ namespace YokiFrame.EditorTools
             RefreshCategoryDisplay();
         }
 
+        #region 生命周期
+
+        public override void OnActivate()
+        {
+            base.OnActivate();
+            mViewModel = new ResKitViewModel();
+            mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
+
+            // 订阅事件通道
+            SubscribeChannelThrottled<int>(ResDebugger.CHANNEL_RES_LIST_CHANGED, OnResListChanged, THROTTLE_INTERVAL);
+            SubscribeChannelThrottled<ResDebugger.UnloadRecord>(ResDebugger.CHANNEL_RES_UNLOADED, OnResUnloaded, THROTTLE_INTERVAL);
+
+            if (IsPlaying) RefreshData();
+        }
+
+        public override void OnDeactivate()
+        {
+            mViewModel?.Dispose();
+            mViewModel = null;
+            base.OnDeactivate();
+        }
+
+        protected override void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            base.OnPlayModeStateChanged(state);
+            if (state == PlayModeStateChange.EnteredPlayMode)
+            {
+                RefreshData();
+            }
+            else if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                mAllAssets.Clear();
+                mSelectedAsset = null;
+                RefreshCategoryDisplay();
+                ShowEmptyState();
+            }
+        }
+
+        #endregion
+
+        #region 响应式事件处理
+
+        private void OnResListChanged(int count) => mRefreshThrottle.Execute(RefreshData);
+
+        private void OnResUnloaded(ResDebugger.UnloadRecord record) => mRefreshThrottle.Execute(RefreshHistoryDisplay);
+
+        #endregion
+
+        #region 轮询更新（自动刷新模式）
+
+        /// <summary>
+        /// 轮询更新 - 用于检测资源卸载和 YooAsset 标签页更新
+        /// 注：资源卸载检测需要主动轮询，无法通过事件通知
+        /// </summary>
+        [System.Obsolete("保留用于资源卸载检测")]
         public override void OnUpdate()
         {
 #if YOKIFRAME_YOOASSET_SUPPORT
@@ -179,19 +261,15 @@ namespace YokiFrame.EditorTools
             OnYooAssetUpdate();
 #endif
 
+            // 自动刷新模式下仍需要定期检测资源变化
             if (!mAutoRefresh) return;
             if (!EditorApplication.isPlaying) return;
 
-            var now = Time.realtimeSinceStartup;
-            if (now - mLastRefreshTime < REFRESH_INTERVAL) return;
-            
-            mLastRefreshTime = now;
-            
+            // 检测卸载的资源（这会触发事件通知）
             ResDebugger.DetectUnloadedAssets();
-            
-            RefreshData();
-            RefreshHistoryDisplay();
         }
+
+        #endregion
     }
 }
 #endif

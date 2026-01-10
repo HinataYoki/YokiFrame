@@ -84,6 +84,61 @@ private void OnDisable()
     mUnregisters.Clear();
 }",
                         Explanation = "LinkUnRegister 支持链式调用，自动管理事件生命周期。"
+                    },
+                    new()
+                    {
+                        Title = "编辑器事件系统（EditorEventCenter）",
+                        Code = @"// 编辑器专用事件中心 - 不依赖运行时 EventKit
+// 位于 YokiFrame.EditorTools 命名空间
+
+#if UNITY_EDITOR
+using YokiFrame.EditorTools;
+
+// 类型事件注册
+var subscription = EditorEventCenter.Register<MyEditorEvent>(OnMyEvent);
+
+// 枚举键事件注册
+EditorEventCenter.Register<EditorEventType, string>(
+    EditorEventType.PoolListChanged, 
+    OnPoolListChanged);
+
+// 发送事件
+EditorEventCenter.Send(new MyEditorEvent { Data = ""test"" });
+EditorEventCenter.Send(EditorEventType.PoolListChanged, ""poolName"");
+
+// 取消订阅
+subscription.Dispose();
+
+// 批量清理（EditorWindow 关闭时）
+EditorEventCenter.UnregisterAll(this);
+#endif",
+                        Explanation = "EditorEventCenter 是编辑器专用的轻量级事件系统，不依赖运行时 EventKit，避免编辑器代码污染运行时程序集。"
+                    },
+                    new()
+                    {
+                        Title = "EditorDataBridge 数据通道",
+                        Code = @"// EditorDataBridge 提供编辑器数据通道订阅机制
+// 用于运行时 Debugger 与编辑器 ToolPage 之间的通信
+
+#if UNITY_EDITOR
+using YokiFrame.EditorTools;
+
+// 订阅数据通道
+var subscription = EditorDataBridge.Subscribe<List<PoolDebugInfo>>(
+    DataChannels.CHANNEL_POOL_LIST_CHANGED,
+    OnPoolListChanged);
+
+// 发布数据变化通知
+EditorDataBridge.NotifyDataChanged(DataChannels.CHANNEL_POOL_LIST_CHANGED);
+
+// 预定义通道（DataChannels.cs）：
+// CHANNEL_POOL_LIST_CHANGED   - 池列表变化
+// CHANNEL_POOL_ACTIVE_CHANGED - 活跃对象变化
+// CHANNEL_POOL_EVENT_LOGGED   - 事件日志追加
+// CHANNEL_FSM_STATE_CHANGED   - 状态机状态变化
+// CHANNEL_RES_LOADED          - 资源加载完成
+#endif",
+                        Explanation = "EditorDataBridge 是响应式架构的核心，替代了传统的 OnUpdate 轮询模式。"
                     }
                 }
             };

@@ -1,4 +1,5 @@
 ﻿#if UNITY_EDITOR && YOKIFRAME_LUBAN_SUPPORT
+using System;
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
 using YokiFrame.TableKit.Editor;
@@ -28,6 +29,7 @@ namespace YokiFrame.Editor
             mEditorUI?.SavePrefs();
         }
 
+        [Obsolete("保留用于状态刷新")]
         public override void OnUpdate()
         {
             if (IsPlaying)

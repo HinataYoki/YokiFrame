@@ -19,8 +19,9 @@ namespace YokiFrame.EditorTools
                     new()
                     {
                         Title = "基本焦点控制",
-                        Code = @"// 获取焦点系统实例
+                        Code = @"// 获取焦点系统实例（注意：UnityEngine.Object 禁止使用 ?. 操作符）
 var focusSystem = UIFocusSystem.Instance;
+if (focusSystem == default) return;
 
 // 设置焦点到指定对象
 focusSystem.SetFocus(myButton.gameObject);
@@ -34,7 +35,7 @@ focusSystem.RestoreLastFocus();
 
 // 获取当前焦点对象
 GameObject current = focusSystem.CurrentFocus;",
-                        Explanation = "焦点系统封装了 EventSystem 的焦点管理，提供更便捷的 API。"
+                        Explanation = "焦点系统封装了 EventSystem 的焦点管理。注意：对 UnityEngine.Object 派生类型禁止使用 ?./?? 操作符，应使用 == default 判空。"
                     },
                     new()
                     {
@@ -65,18 +66,21 @@ EventKit.Type.Register<InputModeChangedEvent>(e =>
                     new()
                     {
                         Title = "焦点变化事件",
-                        Code = @"// 监听焦点变化
+                        Code = @"// 监听焦点变化（注意：UnityEngine.Object 禁止使用 ?. 操作符）
 EventKit.Type.Register<FocusChangedEvent>(e =>
 {
-    Debug.Log($""焦点从 {e.Previous?.name} 变为 {e.Current?.name}"");
+    // 正确的判空方式：使用 == default
+    var prevName = e.Previous != default ? e.Previous.name : ""null"";
+    var currName = e.Current != default ? e.Current.name : ""null"";
+    Debug.Log($""焦点从 {prevName} 变为 {currName}"");
     
     // 获取焦点所在的面板
-    if (e.Panel != null)
+    if (e.Panel != default)
     {
         Debug.Log($""当前面板: {e.Panel.GetType().Name}"");
     }
 });",
-                        Explanation = "焦点变化事件包含前后焦点对象和所属面板信息。"
+                        Explanation = "焦点变化事件包含前后焦点对象和所属面板信息。对 UnityEngine.Object 使用 == default 判空，避免 ?. 绕过 Unity 伪空检查。"
                     },
                     new()
                     {
@@ -100,6 +104,7 @@ UIFocusSystem.Instance.SetPanelFocusMemory(panel, myButton.gameObject);
                     {
                         Title = "配置选项",
                         Code = @"var focusSystem = UIFocusSystem.Instance;
+if (focusSystem == default) return;
 
 // 启用/禁用自动焦点（面板显示时自动聚焦）
 focusSystem.AutoFocusEnabled = true;
@@ -107,12 +112,20 @@ focusSystem.AutoFocusEnabled = true;
 // 启用/禁用手柄支持
 focusSystem.GamepadEnabled = true;
 
-// 获取手柄导航器
-GamepadNavigator navigator = focusSystem.Navigator;
+// 获取手柄导航器（注意判空）
+var navigator = focusSystem.Navigator;
+if (navigator != default)
+{
+    // 使用导航器
+}
 
-// 获取焦点高亮组件
-UIFocusHighlight highlight = focusSystem.FocusHighlight;",
-                        Explanation = "可通过 Inspector 或代码配置焦点系统行为。"
+// 获取焦点高亮组件（注意判空）
+var highlight = focusSystem.FocusHighlight;
+if (highlight != default)
+{
+    // 使用高亮组件
+}",
+                        Explanation = "可通过 Inspector 或代码配置焦点系统行为。访问 UnityEngine.Object 子组件时需显式判空。"
                     }
                 }
             };

@@ -80,12 +80,19 @@ namespace YokiFrame.EditorTools
 
             mYooCollectorListContainer.Clear();
 
+            // 重置展开状态时清空资源预览
+            if (mYooExpandedCardIndex == -1)
+            {
+                ClearYooAssetPreview();
+            }
+
             var group = YooCurrentGroup;
             if (group == default)
             {
                 mYooGroupDescLabel.text = "选择一个分组查看收集器";
                 var emptyState = CreateEmptyState(KitIcons.DOCUMENT, "暂无收集器", "点击下方按钮添加收集器");
                 mYooCollectorListContainer.Add(emptyState);
+                ClearYooAssetPreview();
                 return;
             }
 
@@ -98,6 +105,7 @@ namespace YokiFrame.EditorTools
             {
                 var emptyState = CreateEmptyState(KitIcons.DOCUMENT, "暂无收集器", "点击下方按钮添加收集器");
                 mYooCollectorListContainer.Add(emptyState);
+                ClearYooAssetPreview();
                 return;
             }
 
@@ -107,6 +115,12 @@ namespace YokiFrame.EditorTools
                 var collector = group.Collectors[i];
                 var card = CreateYooCollectorCard(collector, i);
                 mYooCollectorListContainer.Add(card);
+            }
+
+            // 如果有展开的卡片，刷新其资源预览
+            if (mYooExpandedCardIndex >= 0 && mYooExpandedCardIndex < group.Collectors.Count)
+            {
+                RefreshYooAssetPreview(mYooExpandedCardIndex);
             }
         }
 
@@ -206,6 +220,8 @@ namespace YokiFrame.EditorTools
             {
                 if (evt.target is Button) return;
                 ToggleYooCardExpand(capturedIndex);
+                // 刷新资源预览
+                RefreshYooAssetPreview(capturedIndex);
                 evt.StopPropagation();
             });
 

@@ -93,6 +93,7 @@ namespace YokiFrame
             RefreshScenes();
         }
 
+        [System.Obsolete("保留用于运行时场景刷新")]
         public override void OnUpdate()
         {
             // 编辑器运行时自动刷新

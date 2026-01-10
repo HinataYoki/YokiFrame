@@ -115,6 +115,7 @@ namespace YokiFrame
             DisposeFileWatcher();
         }
 
+        [Obsolete("保留用于文件监控防抖刷新")]
         public override void OnUpdate()
         {
             // 检查是否需要刷新（从文件监控线程触发）

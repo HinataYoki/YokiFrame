@@ -141,6 +141,7 @@ namespace YokiFrame.EditorTools
 
         #region 生命周期
 
+        [System.Obsolete("响应式模式下不再需要轮询")]
         public override void OnUpdate()
         {
             // 响应式模式下不再需要轮询

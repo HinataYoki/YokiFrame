@@ -251,6 +251,7 @@ namespace YokiFrame.EditorTools
             RefreshTextList();
         }
 
+        [System.Obsolete("保留用于运行时刷新")]
         public override void OnUpdate()
         {
             // 运行时自动刷新

@@ -44,6 +44,11 @@ namespace YokiFrame
         private IFSM mSelectedFsm;
         private string mLastCurrentState;
 
+        // 响应式订阅
+        private IDisposable mFsmListSubscription;
+        private IDisposable mFsmStateSubscription;
+        private IDisposable mHistorySubscription;
+
         #endregion
 
         #region BuildUI
@@ -141,49 +146,39 @@ namespace YokiFrame
         private VisualElement MakeListItem()
         {
             var item = new VisualElement();
-            item.AddToClassList("list-item");
-            item.style.height = LIST_ITEM_HEIGHT;
-            item.style.paddingTop = item.style.paddingBottom = 6;
-            item.style.paddingLeft = item.style.paddingRight = 8;
-            item.style.flexDirection = FlexDirection.Row;
-            item.style.alignItems = Align.Center;
+            item.AddToClassList("yoki-fsm-list-item");
             
             // 状态指示器
             var indicator = new VisualElement { name = "indicator" };
-            indicator.style.width = indicator.style.height = 8;
-            indicator.style.borderTopLeftRadius = indicator.style.borderTopRightRadius = 
-                indicator.style.borderBottomLeftRadius = indicator.style.borderBottomRightRadius = 4;
-            indicator.style.marginRight = 8;
+            indicator.AddToClassList("yoki-fsm-list-item__indicator");
             item.Add(indicator);
             
             // 信息区域
-            var infoArea = new VisualElement { style = { flexGrow = 1 } };
+            var infoArea = new VisualElement();
+            infoArea.AddToClassList("yoki-fsm-list-item__info");
             item.Add(infoArea);
             
             // FSM 名称
             var nameLabel = new Label { name = "fsm-name" };
-            nameLabel.style.fontSize = 12;
-            nameLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
-            nameLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary);
+            nameLabel.AddToClassList("yoki-fsm-list-item__name");
             infoArea.Add(nameLabel);
             
             // 当前状态 + 时间
-            var stateRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 2 } };
-            stateRow.style.alignItems = Align.Center;
+            var stateRow = new VisualElement();
+            stateRow.AddToClassList("yoki-fsm-list-item__state-row");
             infoArea.Add(stateRow);
             
-            stateRow.Add(new Label { name = "current-state", style = { fontSize = 11 } });
-            stateRow.Add(new Label { name = "timer", style = { fontSize = 10, marginLeft = 8, color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary) } });
+            var currentStateLabel = new Label { name = "current-state" };
+            currentStateLabel.AddToClassList("yoki-fsm-list-item__current-state");
+            stateRow.Add(currentStateLabel);
+            
+            var timerLabel = new Label { name = "timer" };
+            timerLabel.AddToClassList("yoki-fsm-list-item__timer");
+            stateRow.Add(timerLabel);
             
             // 状态数量徽章
             var countBadge = new Label { name = "state-count" };
-            countBadge.style.fontSize = 10;
-            countBadge.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-            countBadge.style.paddingLeft = countBadge.style.paddingRight = 6;
-            countBadge.style.paddingTop = countBadge.style.paddingBottom = 2;
-            countBadge.style.backgroundColor = new StyleColor(new UnityEngine.Color(0.15f, 0.15f, 0.17f));
-            countBadge.style.borderTopLeftRadius = countBadge.style.borderTopRightRadius = 
-                countBadge.style.borderBottomLeftRadius = countBadge.style.borderBottomRightRadius = 4;
+            countBadge.AddToClassList("yoki-fsm-list-item__count-badge");
             item.Add(countBadge);
             
             return item;
@@ -198,15 +193,38 @@ namespace YokiFrame
             
             var fsm = mCachedFsms[index];
             var isRunning = fsm.MachineState == MachineState.Running;
-            var stateColor = isRunning ? YokiFrameUIComponents.Colors.BrandSuccess : YokiFrameUIComponents.Colors.TextTertiary;
             
-            element.Q<VisualElement>("indicator").style.backgroundColor = new StyleColor(stateColor);
+            // 更新指示器样式
+            var indicator = element.Q<VisualElement>("indicator");
+            indicator.RemoveFromClassList("yoki-fsm-list-item__indicator--running");
+            indicator.RemoveFromClassList("yoki-fsm-list-item__indicator--suspended");
+            indicator.RemoveFromClassList("yoki-fsm-list-item__indicator--stopped");
+            
+            switch (fsm.MachineState)
+            {
+                case MachineState.Running:
+                    indicator.AddToClassList("yoki-fsm-list-item__indicator--running");
+                    break;
+                case MachineState.Suspend:
+                    indicator.AddToClassList("yoki-fsm-list-item__indicator--suspended");
+                    break;
+                default:
+                    indicator.AddToClassList("yoki-fsm-list-item__indicator--stopped");
+                    break;
+            }
+            
             element.Q<Label>("fsm-name").text = fsm.Name;
             
             var currentStateName = GetCurrentStateName(fsm);
             var stateLabel = element.Q<Label>("current-state");
             stateLabel.text = currentStateName;
-            stateLabel.style.color = new StyleColor(stateColor);
+            
+            // 更新状态标签样式
+            stateLabel.RemoveFromClassList("yoki-fsm-list-item__current-state--running");
+            stateLabel.RemoveFromClassList("yoki-fsm-list-item__current-state--inactive");
+            stateLabel.AddToClassList(isRunning 
+                ? "yoki-fsm-list-item__current-state--running" 
+                : "yoki-fsm-list-item__current-state--inactive");
             
             element.Q<Label>("timer").text = isRunning ? $"{FsmDebugger.GetStateDuration(fsm.Name):F1}s" : "—";
             element.Q<Label>("state-count").text = $"{fsm.GetAllStates().Count}";
@@ -290,6 +308,118 @@ namespace YokiFrame
                 mMatrixContainer.Clear();
         }
 
+        #endregion
+
+        #region 响应式订阅
+
+        /// <summary>
+        /// 页面激活时订阅事件
+        /// </summary>
+        public override void OnActivate()
+        {
+            base.OnActivate();
+            
+            // 订阅 FSM 列表变化
+            mFsmListSubscription = EditorDataBridge.SubscribeThrottled<IFSM>(
+                FsmDebugger.CHANNEL_FSM_LIST_CHANGED,
+                OnFsmListChanged,
+                REFRESH_INTERVAL);
+            
+            // 订阅 FSM 状态变化
+            mFsmStateSubscription = EditorDataBridge.SubscribeThrottled<IFSM>(
+                FsmDebugger.CHANNEL_FSM_STATE_CHANGED,
+                OnFsmStateChanged,
+                REFRESH_INTERVAL);
+            
+            // 订阅转换历史
+            mHistorySubscription = EditorDataBridge.Subscribe<FsmDebugger.TransitionEntry>(
+                FsmDebugger.CHANNEL_FSM_HISTORY_LOGGED,
+                OnHistoryLogged);
+            
+            // 初始刷新
+            RefreshFsmList();
+        }
+
+        /// <summary>
+        /// 页面停用时取消订阅
+        /// </summary>
+        public override void OnDeactivate()
+        {
+            base.OnDeactivate();
+            
+            mFsmListSubscription?.Dispose();
+            mFsmStateSubscription?.Dispose();
+            mHistorySubscription?.Dispose();
+            
+            mFsmListSubscription = null;
+            mFsmStateSubscription = null;
+            mHistorySubscription = null;
+        }
+
+        /// <summary>
+        /// FSM 列表变化回调
+        /// </summary>
+        private void OnFsmListChanged(IFSM _)
+        {
+            RefreshFsmList();
+        }
+
+        /// <summary>
+        /// FSM 状态变化回调
+        /// </summary>
+        private void OnFsmStateChanged(IFSM fsm)
+        {
+            // 刷新列表项显示
+            mFsmListView?.RefreshItems();
+            
+            // 如果是当前选中的 FSM，更新详情
+            if (mSelectedFsm != null && fsm != null && mSelectedFsm.Name == fsm.Name)
+            {
+                var currentState = GetCurrentStateName(mSelectedFsm);
+                if (currentState != mLastCurrentState)
+                {
+                    mLastCurrentState = currentState;
+                    UpdateMatrixSection();
+                }
+                UpdateHudSection();
+            }
+        }
+
+        /// <summary>
+        /// 转换历史记录回调
+        /// </summary>
+        private void OnHistoryLogged(FsmDebugger.TransitionEntry entry)
+        {
+            // 如果是当前选中的 FSM，更新时间轴
+            if (mSelectedFsm != null && entry.FsmName == mSelectedFsm.Name)
+            {
+                UpdateTimelineSection();
+            }
+        }
+
+        /// <summary>
+        /// 刷新 FSM 列表
+        /// </summary>
+        private void RefreshFsmList()
+        {
+            FsmDebugger.GetActiveFsms(mCachedFsms);
+            mFsmListView.itemsSource = mCachedFsms;
+            mFsmListView.RefreshItems();
+            
+            // 如果选中的 FSM 已不存在，清除选择
+            if (mSelectedFsm != null && !mCachedFsms.Contains(mSelectedFsm))
+            {
+                mSelectedFsm = null;
+                mLastCurrentState = null;
+                UpdateRightPanel();
+            }
+        }
+
+        /// <summary>
+        /// 轮询更新 - 仅用于计时器刷新和呼吸动画
+        /// 主要数据更新已迁移到响应式订阅
+        /// </summary>
+        [Obsolete("主要逻辑已迁移到响应式订阅，仅保留计时器和动画刷新")]
         public override void OnUpdate()
         {
             if (!IsPlaying) return;
@@ -298,27 +428,13 @@ namespace YokiFrame
             if (now - mLastRefreshTime < REFRESH_INTERVAL) return;
             mLastRefreshTime = now;
             
-            // 刷新 FSM 列表
-            FsmDebugger.GetActiveFsms(mCachedFsms);
-            mFsmListView.itemsSource = mCachedFsms;
-            mFsmListView.RefreshItems();
+            // 仅刷新计时器显示（列表项中的时间）
+            mFsmListView?.RefreshItems();
             
-            // 刷新右侧面板
-            if (mSelectedFsm != null)
+            // 刷新 HUD 计时器
+            if (mSelectedFsm != null && mDurationLabel != null)
             {
-                // 检查状态是否变化
-                var currentState = GetCurrentStateName(mSelectedFsm);
-                if (currentState != mLastCurrentState)
-                {
-                    mLastCurrentState = currentState;
-                    UpdateMatrixSection(); // 状态变化时重建矩阵
-                }
-                else
-                {
-                    UpdateHudSection(); // 只更新 HUD（计时器）
-                }
-                
-                UpdateTimelineSection();
+                mDurationLabel.text = $"{FsmDebugger.GetStateDuration(mSelectedFsm.Name):F1}s";
             }
             
             // 更新呼吸动画

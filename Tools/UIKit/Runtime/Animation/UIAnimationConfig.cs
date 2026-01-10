@@ -60,7 +60,7 @@ namespace YokiFrame
 
         public override IUIAnimation CreateAnimation()
         {
-            return new FadeAnimation(this);
+            return SafePoolKit<FadeAnimation>.Instance.Allocate().Setup(this);
         }
     }
 
@@ -84,7 +84,7 @@ namespace YokiFrame
 
         public override IUIAnimation CreateAnimation()
         {
-            return new ScaleAnimation(this);
+            return SafePoolKit<ScaleAnimation>.Instance.Allocate().Setup(this);
         }
     }
 
@@ -108,7 +108,7 @@ namespace YokiFrame
 
         public override IUIAnimation CreateAnimation()
         {
-            return new SlideAnimation(this);
+            return SafePoolKit<SlideAnimation>.Instance.Allocate().Setup(this);
         }
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+#if UNITY_EDITOR
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
 
@@ -7,15 +7,10 @@ namespace YokiFrame
     /// <summary>
     /// FsmKit 工具页面 - 转换时间轴区域
     /// 显示状态转换历史，类似 EventKit 的时间轴
+    /// 使用 USS 类消除内联样式
     /// </summary>
     public partial class FsmKitToolPage
     {
-        #region 常量
-
-        private const float TIMELINE_HEIGHT = 200f;
-
-        #endregion
-
         #region 字段
 
         private VisualElement mTimelineList;
@@ -30,35 +25,30 @@ namespace YokiFrame
         /// </summary>
         private VisualElement BuildTimelineSection()
         {
-            var section = new VisualElement();
-            section.name = "timeline-section";
-            section.style.height = TIMELINE_HEIGHT;
-            section.style.minHeight = TIMELINE_HEIGHT;
+            var section = new VisualElement { name = "timeline-section" };
+            section.AddToClassList("yoki-fsm-timeline");
 
             // 工具栏
-            var toolbar = CreateToolbar();
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList("yoki-fsm-timeline__toolbar");
             section.Add(toolbar);
 
-            var titleIcon = new Image { image = EditorTools.KitIcons.GetTexture(EditorTools.KitIcons.TIMELINE) };
-            titleIcon.style.width = 14;
-            titleIcon.style.height = 14;
-            titleIcon.style.marginRight = 4;
+            var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.TIMELINE) };
+            titleIcon.AddToClassList("yoki-fsm-timeline__icon");
             toolbar.Add(titleIcon);
-            
+
             var titleLabel = new Label("转换历史");
-            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            titleLabel.AddToClassList("toolbar-label");
+            titleLabel.AddToClassList("yoki-fsm-timeline__title");
             toolbar.Add(titleLabel);
 
             var recordToggle = CreateToolbarToggle("记录", FsmDebugger.RecordTransitions,
                 v => FsmDebugger.RecordTransitions = v);
             toolbar.Add(recordToggle);
 
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             mHistoryCountLabel = new Label("0/300");
-            mHistoryCountLabel.AddToClassList("toolbar-label");
-            mHistoryCountLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
+            mHistoryCountLabel.AddToClassList("yoki-fsm-timeline__count");
             toolbar.Add(mHistoryCountLabel);
 
             var clearBtn = CreateToolbarButton("清空", () =>
@@ -70,11 +60,10 @@ namespace YokiFrame
 
             // 历史列表（ScrollView）
             var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
+            scrollView.AddToClassList("yoki-fsm-timeline__list");
             section.Add(scrollView);
 
-            mTimelineList = new VisualElement();
-            mTimelineList.name = "timeline-list";
+            mTimelineList = new VisualElement { name = "timeline-list" };
             scrollView.Add(mTimelineList);
 
             return section;
@@ -111,10 +100,8 @@ namespace YokiFrame
             // 空状态
             if (mTimelineList.childCount == 0)
             {
-                var emptyLabel = new Label("  暂无转换记录");
-                emptyLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-                emptyLabel.style.fontSize = 11;
-                emptyLabel.style.marginTop = YokiFrameUIComponents.Spacing.SM;
+                var emptyLabel = new Label("暂无转换记录");
+                emptyLabel.AddToClassList("yoki-fsm-empty__text");
                 mTimelineList.Add(emptyLabel);
             }
         }
@@ -125,55 +112,38 @@ namespace YokiFrame
         private VisualElement CreateTimelineItem(FsmDebugger.TransitionEntry entry)
         {
             var item = new VisualElement();
-            item.style.flexDirection = FlexDirection.Row;
-            item.style.alignItems = Align.Center;
-            item.style.paddingLeft = YokiFrameUIComponents.Spacing.SM;
-            item.style.paddingRight = YokiFrameUIComponents.Spacing.SM;
-            item.style.paddingTop = 4;
-            item.style.paddingBottom = 4;
-            item.style.borderBottomWidth = 1;
-            item.style.borderBottomColor = new StyleColor(new Color(0.15f, 0.15f, 0.17f));
+            item.AddToClassList("yoki-transition-item");
 
             // 时间戳
             var timeLabel = new Label($"[{entry.Time:F2}s]");
-            timeLabel.style.width = 60;
-            timeLabel.style.fontSize = 10;
-            timeLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
+            timeLabel.AddToClassList("yoki-transition-item__time");
             item.Add(timeLabel);
 
             // 动作类型徽章
-            var (actionText, actionColor) = GetActionStyle(entry.Action);
+            var actionText = GetActionText(entry.Action);
             var actionBadge = new Label(actionText);
-            actionBadge.style.width = 60;
-            actionBadge.style.fontSize = 10;
-            actionBadge.style.unityFontStyleAndWeight = FontStyle.Bold;
-            actionBadge.style.color = new StyleColor(actionColor);
+            actionBadge.AddToClassList("yoki-transition-item__action");
+            actionBadge.AddToClassList(GetActionClass(entry.Action));
             item.Add(actionBadge);
 
             // 转换信息
             var transitionContainer = new VisualElement();
-            transitionContainer.style.flexDirection = FlexDirection.Row;
-            transitionContainer.style.alignItems = Align.Center;
-            transitionContainer.style.flexGrow = 1;
+            transitionContainer.AddToClassList("yoki-transition-item__transition");
             item.Add(transitionContainer);
 
             if (entry.Action == "Change")
             {
                 // 状态转换：FromState → ToState
                 var fromLabel = new Label(entry.FromState);
-                fromLabel.style.fontSize = 11;
-                fromLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary);
+                fromLabel.AddToClassList("yoki-transition-item__from-state");
                 transitionContainer.Add(fromLabel);
 
-                var arrowLabel = new Label(" ➜ ");
-                arrowLabel.style.fontSize = 11;
-                arrowLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.BrandPrimary);
+                var arrowLabel = new Label(" → ");
+                arrowLabel.AddToClassList("yoki-transition-item__arrow");
                 transitionContainer.Add(arrowLabel);
 
                 var toLabel = new Label(entry.ToState);
-                toLabel.style.fontSize = 11;
-                toLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-                toLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary);
+                toLabel.AddToClassList("yoki-transition-item__to-state");
                 transitionContainer.Add(toLabel);
             }
             else
@@ -183,8 +153,7 @@ namespace YokiFrame
                 if (!string.IsNullOrEmpty(stateText))
                 {
                     var stateLabel = new Label(stateText);
-                    stateLabel.style.fontSize = 11;
-                    stateLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary);
+                    stateLabel.AddToClassList("yoki-transition-item__from-state");
                     transitionContainer.Add(stateLabel);
                 }
             }
@@ -193,23 +162,36 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取动作样式
+        /// 获取动作显示文本
         /// </summary>
-        private (string text, Color color) GetActionStyle(string action)
+        private static string GetActionText(string action) => action switch
         {
-            return action switch
-            {
-                "Start" => ("▶ Start", YokiFrameUIComponents.Colors.BrandSuccess),
-                "Change" => ("↔ Change", YokiFrameUIComponents.Colors.BrandPrimary),
-                "Stop" or "End" => ("■ Stop", YokiFrameUIComponents.Colors.BrandDanger),
-                "Add" => ("+ Add", new Color(0.6f, 0.8f, 0.6f)),
-                "Remove" => ("- Remove", new Color(0.8f, 0.6f, 0.6f)),
-                "Clear" => ("✕ Clear", YokiFrameUIComponents.Colors.BrandWarning),
-                "Dispose" => ("✕ Dispose", YokiFrameUIComponents.Colors.TextTertiary),
-                _ => (action, YokiFrameUIComponents.Colors.TextSecondary)
-            };
-        }
+            "Start" => "Start",
+            "Change" => "Change",
+            "Stop" or "End" => "Stop",
+            "Add" => "Add",
+            "Remove" => "Remove",
+            "Clear" => "Clear",
+            "Dispose" => "Dispose",
+            _ => action
+        };
+
+        /// <summary>
+        /// 获取动作对应的 USS 类名
+        /// </summary>
+        private static string GetActionClass(string action) => action switch
+        {
+            "Start" => "yoki-transition-item__action--start",
+            "Change" => "yoki-transition-item__action--change",
+            "Stop" or "End" => "yoki-transition-item__action--stop",
+            "Add" => "yoki-transition-item__action--add",
+            "Remove" => "yoki-transition-item__action--remove",
+            "Clear" => "yoki-transition-item__action--clear",
+            "Dispose" => "yoki-transition-item__action--dispose",
+            _ => "yoki-transition-item__action--change"
+        };
 
         #endregion
     }
 }
+#endif

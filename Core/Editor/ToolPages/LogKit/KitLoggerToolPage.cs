@@ -10,6 +10,7 @@ namespace YokiFrame.EditorTools
     /// <summary>
     /// KitLogger 工具页面 - 日志管理
     /// 采用现代化 UI 设计：卡片布局、Toggle 开关、品牌色按钮
+    /// 使用 USS 类消除内联样式
     /// </summary>
     public class KitLoggerToolPage : YokiFrameToolPageBase
     {
@@ -41,11 +42,8 @@ namespace YokiFrame.EditorTools
 
             // 主内容区（带滚动）
             var content = new ScrollView();
-            content.style.flexGrow = 1;
-            content.style.paddingLeft = 20;
-            content.style.paddingRight = 20;
-            content.style.paddingTop = 20;
-            content.style.paddingBottom = 20;
+            content.AddToClassList("content-area");
+            content.AddToClassList("content-area--padded");
             root.Add(content);
 
             // 日志目录卡片
@@ -78,9 +76,7 @@ namespace YokiFrame.EditorTools
             toolbar.Add(refreshBtn);
 
             // 弹性空间
-            var spacer = new VisualElement();
-            spacer.AddToClassList("toolbar-spacer");
-            toolbar.Add(spacer);
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             // 重置按钮放右侧
             var resetBtn = YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.RESET, "重置默认", ResetToDefault);
@@ -92,11 +88,10 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateDirectoryCard()
         {
             var (card, body) = YokiFrameUIComponents.CreateCard("日志目录", KitIcons.FOLDER_DOCS);
-            card.style.marginBottom = 16;
+            card.AddToClassList("yoki-card--spaced");
 
             var (row, valueLabel) = YokiFrameUIComponents.CreateInfoRow("路径");
-            valueLabel.style.whiteSpace = WhiteSpace.Normal;
-            valueLabel.style.overflow = Overflow.Hidden;
+            valueLabel.AddToClassList("yoki-info-value--wrap");
             mLogDirLabel = valueLabel;
             body.Add(row);
 
@@ -106,11 +101,11 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateConfigCard()
         {
             var (card, body) = YokiFrameUIComponents.CreateCard("配置", KitIcons.SETTINGS);
-            card.style.marginBottom = 16;
+            card.AddToClassList("yoki-card--spaced");
 
             // === Toggle 开关区域 ===
             var toggleSection = new VisualElement();
-            toggleSection.style.marginBottom = 16;
+            toggleSection.AddToClassList("yoki-toggle-section");
 
             // 编辑器保存日志
             mSaveLogEditorToggle = YokiFrameUIComponents.CreateModernToggle(
@@ -151,13 +146,11 @@ namespace YokiFrame.EditorTools
 
             // === 数值配置区域 ===
             var configSection = new VisualElement();
-            configSection.style.marginTop = 8;
+            configSection.AddToClassList("yoki-config-section");
 
             // 配置项标题
             var configTitle = new Label("高级配置");
-            configTitle.style.fontSize = 13;
-            configTitle.style.color = new StyleColor(new Color(0.51f, 0.53f, 0.57f));
-            configTitle.style.marginBottom = 12;
+            configTitle.AddToClassList("yoki-config-section__title");
             configSection.Add(configTitle);
 
             // 最大队列
@@ -208,7 +201,7 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateFileStatusCard()
         {
             var (card, body) = YokiFrameUIComponents.CreateCard("日志文件", KitIcons.DOCUMENTATION);
-            card.style.marginBottom = 16;
+            card.AddToClassList("yoki-card--spaced");
 
             var (editorRow, editorValue) = YokiFrameUIComponents.CreateInfoRow("editor.log");
             mEditorLogLabel = editorValue;
@@ -246,7 +239,7 @@ namespace YokiFrame.EditorTools
             mPlayerLogLabel.text = GetFileStatus(playerLog);
         }
 
-        private void UpdateToggleState(VisualElement toggle, bool isChecked)
+        private static void UpdateToggleState(VisualElement toggle, bool isChecked)
         {
             if (toggle == null) return;
             
@@ -256,7 +249,7 @@ namespace YokiFrame.EditorTools
                 toggle.RemoveFromClassList("checked");
         }
 
-        private string GetFileStatus(string filePath)
+        private static string GetFileStatus(string filePath)
         {
             if (!File.Exists(filePath))
                 return "不存在";
@@ -267,7 +260,7 @@ namespace YokiFrame.EditorTools
             return $"{size} | {time}";
         }
 
-        private string FormatFileSize(long bytes)
+        private static string FormatFileSize(long bytes)
         {
             if (bytes < 1024) return $"{bytes} B";
             if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
@@ -321,6 +314,7 @@ namespace YokiFrame.EditorTools
 
         public override void OnActivate()
         {
+            base.OnActivate();
             RefreshStatus();
         }
     }

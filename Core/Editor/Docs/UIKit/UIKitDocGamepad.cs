@@ -27,22 +27,33 @@ UIKit.DisableGamepad();  // 禁用
 if (UIKit.IsNavigationMode)
 {
     // 当前为手柄/键盘导航模式
+}
+
+// 获取焦点系统时需判空（UnityEngine.Object 禁止使用 ?. 操作符）
+var focusSystem = UIFocusSystem.Instance;
+if (focusSystem != default)
+{
+    // 安全使用焦点系统
 }",
-                        Explanation = "系统会自动检测输入设备并切换模式。"
+                        Explanation = "系统会自动检测输入设备并切换模式。对 UnityEngine.Object 使用 == default 判空。"
                     },
                     new()
                     {
                         Title = "焦点管理",
-                        Code = @"// 设置焦点
+                        Code = @"// 设置焦点（内部已处理判空）
 UIKit.SetFocus(someButton);
 UIKit.ClearFocus();
 
-// 获取当前焦点
+// 获取当前焦点（返回值可能为 default）
 var currentFocus = UIKit.GetCurrentFocus();
+if (currentFocus != default)
+{
+    // 安全使用焦点对象
+}
 
 // 在面板中设置默认焦点
 SetDefaultSelectable(mStartButton);",
-                        Explanation = "面板显示时会自动聚焦到默认元素。"
+                        Explanation = "面板显示时会自动聚焦到默认元素。获取焦点对象后需使用 == default 判空。"
                     },
                     new()
                     {

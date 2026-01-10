@@ -1,0 +1,481 @@
+/* FsmKit 状态机图形组件样式 - BEM 命名规范 */
+/* 命名格式: .yoki-{block}__{element}--{modifier} */
+
+/* ========== HUD 区域 ========== */
+.yoki-fsm-hud {
+    height: 120px;
+    background-color: rgb(31, 31, 36);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--border-default);
+}
+
+.yoki-fsm-hud__content {
+    flex-grow: 1;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.yoki-fsm-hud__left {
+    flex-grow: 1;
+}
+
+.yoki-fsm-hud__right {
+    align-items: flex-end;
+}
+
+.yoki-fsm-hud__label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+}
+
+.yoki-fsm-hud__state {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: var(--brand-primary);
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__state--inactive {
+    color: var(--text-tertiary);
+}
+
+.yoki-fsm-hud__prev-state {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__duration {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__machine-state {
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__machine-state--running {
+    color: var(--brand-success);
+}
+
+.yoki-fsm-hud__machine-state--suspended {
+    color: var(--brand-warning);
+}
+
+.yoki-fsm-hud__machine-state--stopped {
+    color: var(--text-tertiary);
+}
+
+/* ========== 状态矩阵区域 ========== */
+.yoki-state-matrix {
+    flex-grow: 1;
+    min-height: 100px;
+    padding: 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-default);
+}
+
+.yoki-state-matrix__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.yoki-state-matrix__icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+.yoki-state-matrix__title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--text-secondary);
+}
+
+.yoki-state-matrix__container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+/* ========== 状态卡片 ========== */
+.yoki-state-card {
+    min-width: 100px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    background-color: rgb(38, 38, 43);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: var(--border-subtle);
+    align-items: center;
+    transition-property: background-color, border-color, scale;
+    transition-duration: 0.15s;
+}
+
+.yoki-state-card:hover {
+    background-color: var(--layer-hover);
+}
+
+.yoki-state-card--active {
+    background-color: rgba(76, 175, 80, 0.15);
+    border-color: var(--brand-success);
+    border-width: 2px;
+}
+
+.yoki-state-card--visited {
+    background-color: rgb(56, 56, 64);
+}
+
+.yoki-state-card--unvisited {
+    background-color: rgb(38, 38, 43);
+    opacity: 0.7;
+}
+
+.yoki-state-card__name {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    -unity-text-align: middle-center;
+}
+
+.yoki-state-card__name--active {
+    color: var(--brand-success);
+}
+
+.yoki-state-card__name--visited {
+    color: var(--text-secondary);
+}
+
+.yoki-state-card__name--unvisited {
+    color: var(--text-tertiary);
+}
+
+.yoki-state-card__count {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+}
+
+.yoki-state-card__indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+}
+
+.yoki-state-card__indicator--active {
+    background-color: var(--brand-success);
+}
+
+.yoki-state-card__indicator--visited {
+    background-color: var(--text-secondary);
+}
+
+.yoki-state-card__indicator--unvisited {
+    background-color: var(--text-disabled);
+}
+
+/* ========== 图例 ========== */
+.yoki-legend {
+    flex-direction: row;
+    align-items: center;
+    margin-left: 16px;
+}
+
+.yoki-legend__item {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 12px;
+}
+
+.yoki-legend__icon {
+    width: 10px;
+    height: 10px;
+    margin-right: 2px;
+}
+
+.yoki-legend__label {
+    font-size: 9px;
+    color: var(--text-tertiary);
+}
+
+/* ========== 时间轴区域 ========== */
+.yoki-fsm-timeline {
+    height: 200px;
+    min-height: 200px;
+}
+
+.yoki-fsm-timeline__toolbar {
+    flex-direction: row;
+    align-items: center;
+    height: 36px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(33, 33, 38);
+    border-top-width: 1px;
+    border-top-color: var(--border-subtle);
+}
+
+.yoki-fsm-timeline__icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+.yoki-fsm-timeline__title {
+    -unity-font-style: bold;
+    color: var(--text-secondary);
+}
+
+.yoki-fsm-timeline__count {
+    color: var(--text-tertiary);
+}
+
+.yoki-fsm-timeline__list {
+    flex-grow: 1;
+}
+
+/* ========== 时间轴条目 ========== */
+.yoki-transition-item {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(38, 38, 43);
+}
+
+.yoki-transition-item__time {
+    width: 60px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+}
+
+.yoki-transition-item__action {
+    width: 60px;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.yoki-transition-item__action--start {
+    color: var(--brand-success);
+}
+
+.yoki-transition-item__action--change {
+    color: var(--brand-primary);
+}
+
+.yoki-transition-item__action--stop {
+    color: var(--brand-danger);
+}
+
+.yoki-transition-item__action--add {
+    color: rgb(153, 204, 153);
+}
+
+.yoki-transition-item__action--remove {
+    color: rgb(204, 153, 153);
+}
+
+.yoki-transition-item__action--clear {
+    color: var(--brand-warning);
+}
+
+.yoki-transition-item__action--dispose {
+    color: var(--text-tertiary);
+}
+
+.yoki-transition-item__transition {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.yoki-transition-item__from-state {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.yoki-transition-item__arrow {
+    font-size: 11px;
+    color: var(--brand-primary);
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+.yoki-transition-item__to-state {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+/* ========== FSM 列表项 ========== */
+.yoki-fsm-list-item {
+    height: 48px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-subtle);
+    transition-property: background-color;
+    transition-duration: 0.15s;
+}
+
+.yoki-fsm-list-item:hover {
+    background-color: var(--layer-hover);
+}
+
+.yoki-fsm-list-item--selected {
+    background-color: var(--layer-selected);
+}
+
+.yoki-fsm-list-item__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+.yoki-fsm-list-item__indicator--running {
+    background-color: var(--brand-success);
+}
+
+.yoki-fsm-list-item__indicator--suspended {
+    background-color: var(--brand-warning);
+}
+
+.yoki-fsm-list-item__indicator--stopped {
+    background-color: var(--text-disabled);
+}
+
+.yoki-fsm-list-item__info {
+    flex-grow: 1;
+}
+
+.yoki-fsm-list-item__name {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.yoki-fsm-list-item__state-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.yoki-fsm-list-item__current-state {
+    font-size: 11px;
+}
+
+.yoki-fsm-list-item__current-state--running {
+    color: var(--brand-success);
+}
+
+.yoki-fsm-list-item__current-state--inactive {
+    color: var(--text-tertiary);
+}
+
+.yoki-fsm-list-item__timer {
+    font-size: 10px;
+    margin-left: 8px;
+    color: var(--text-tertiary);
+}
+
+.yoki-fsm-list-item__count-badge {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgb(38, 38, 43);
+    border-radius: 4px;
+}
+
+/* ========== 工具栏 Toggle ========== */
+.yoki-toolbar-toggle {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 24px;
+    margin-right: 8px;
+    border-radius: 4px;
+    background-color: var(--layer-card);
+    border-width: 1px;
+    border-color: var(--border-default);
+    transition-property: background-color, border-color;
+    transition-duration: 0.15s;
+}
+
+.yoki-toolbar-toggle:hover {
+    background-color: var(--layer-hover);
+    border-color: var(--border-strong);
+}
+
+.yoki-toolbar-toggle--checked {
+    background-color: var(--brand-primary-muted);
+    border-color: var(--brand-primary);
+}
+
+.yoki-toolbar-toggle__label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.yoki-toolbar-toggle--checked .yoki-toolbar-toggle__label {
+    color: var(--brand-primary);
+    -unity-font-style: bold;
+}
+
+/* ========== 空状态 ========== */
+.yoki-fsm-empty {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+}
+
+.yoki-fsm-empty__text {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    -unity-text-align: middle-center;
+}
+
+/* ========== 呼吸动画（当前状态卡片） ========== */
+.yoki-state-card--breathing {
+    transition-property: scale, opacity;
+    transition-duration: 1s;
+    transition-timing-function: ease-in-out;
+}
+
+/* ========== 状态转换动画 ========== */
+.yoki-state-card--entering {
+    scale: 1.05;
+    background-color: rgba(76, 175, 80, 0.25);
+}
+
+.yoki-state-card--exiting {
+    scale: 0.95;
+    opacity: 0.7;
+}

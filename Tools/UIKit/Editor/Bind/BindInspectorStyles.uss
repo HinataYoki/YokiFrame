@@ -1,29 +1,30 @@
-/* AbstractBind Inspector 样式 */
+/* AbstractBind Inspector 样式 - v2 */
+/* 使用全局设计令牌，遵循 BEM 命名规范 */
 
 .bind-inspector {
-    padding: 4px;
+    padding: var(--spacing-xs);
 }
 
 .bind-container {
-    background-color: rgb(56, 56, 56);
-    border-radius: 4px;
-    padding: 8px;
+    background-color: var(--layer-card);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
     border-width: 1px;
-    border-color: rgb(40, 40, 40);
+    border-color: var(--border-subtle);
 }
 
 .bind-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: var(--spacing-sm);
     min-height: 22px;
 }
 
 .bind-label {
     width: 80px;
     min-width: 80px;
-    color: rgb(200, 200, 200);
-    font-size: 12px;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
     -unity-text-align: middle-left;
 }
 
@@ -41,36 +42,37 @@
 }
 
 .bind-type-field {
-    margin-bottom: 4px;
+    margin-bottom: var(--spacing-xs);
 }
 
 .bind-no-component {
-    color: rgb(180, 120, 80);
-    font-size: 11px;
+    color: var(--brand-warning);
+    font-size: var(--font-xs);
     -unity-font-style: italic;
 }
 
-/* 验证提示 */
+
+/* 验证提示 - 使用全局变量 */
 .validation-label {
-    margin-top: 8px;
-    padding: 6px 8px;
-    border-radius: 3px;
-    font-size: 11px;
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-xs);
     white-space: normal;
 }
 
 .validation-error {
-    background-color: rgb(120, 50, 50);
-    color: rgb(255, 200, 200);
+    background-color: rgba(244, 67, 54, 0.2);
+    color: var(--brand-danger);
     border-width: 1px;
-    border-color: rgb(180, 80, 80);
+    border-color: var(--brand-danger);
 }
 
 .validation-success {
-    background-color: rgb(50, 100, 50);
-    color: rgb(200, 255, 200);
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--brand-success);
     border-width: 1px;
-    border-color: rgb(80, 150, 80);
+    border-color: var(--brand-success);
 }
 
 /* PopupField 样式调整 */
@@ -80,26 +82,26 @@
 
 /* TextField 输入框样式 */
 .bind-field TextField > TextInput {
-    background-color: rgb(42, 42, 42);
-    border-color: rgb(30, 30, 30);
-    border-radius: 3px;
-    padding: 2px 4px;
+    background-color: var(--layer-elevated);
+    border-color: var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--spacing-xs);
 }
 
 .bind-field TextField > TextInput:focus {
-    border-color: rgb(62, 95, 150);
+    border-color: var(--brand-primary);
 }
 
 /* EnumField 样式 */
 .bind-field EnumField > VisualElement {
-    background-color: rgb(42, 42, 42);
-    border-color: rgb(30, 30, 30);
-    border-radius: 3px;
+    background-color: var(--layer-elevated);
+    border-color: var(--border-default);
+    border-radius: var(--radius-sm);
 }
 
 /* 类型快速转换按钮 */
 .type-convert-row {
-    margin-top: 4px;
+    margin-top: var(--spacing-xs);
 }
 
 .type-convert-buttons {
@@ -108,29 +110,30 @@
 }
 
 .type-convert-btn {
-    margin-right: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    background-color: rgb(60, 60, 60);
-    border-radius: 3px;
+    margin-right: var(--spacing-xs);
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-xs);
+    background-color: var(--layer-hover);
+    border-radius: var(--radius-sm);
     border-width: 1px;
-    border-color: rgb(80, 80, 80);
+    border-color: var(--border-strong);
 }
 
 .type-convert-btn:hover {
-    background-color: rgb(70, 70, 70);
+    background-color: var(--layer-elevated);
 }
 
 .type-convert-btn:disabled {
     opacity: 0.5;
 }
 
-/* 命名建议行 */
+
+/* 命名建议行 - 使用全局变量 */
 .suggestion-row {
-    background-color: rgb(50, 60, 70);
-    border-radius: 3px;
-    padding: 4px 8px;
-    margin-top: 4px;
+    background-color: rgba(33, 150, 243, 0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-top: var(--spacing-xs);
 }
 
 .suggestion-content {
@@ -140,75 +143,75 @@
 
 .suggestion-text {
     flex-grow: 1;
-    color: rgb(150, 200, 255);
-    font-size: 11px;
+    color: var(--brand-primary);
+    font-size: var(--font-xs);
     -unity-font-style: italic;
 }
 
 .suggestion-apply-btn {
-    padding: 2px 8px;
-    font-size: 10px;
-    background-color: rgb(60, 100, 140);
-    border-radius: 3px;
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-xs);
+    background-color: var(--brand-primary);
+    color: var(--text-on-brand);
+    border-radius: var(--radius-sm);
     border-width: 0;
-    margin-left: 8px;
+    margin-left: var(--spacing-sm);
 }
 
 .suggestion-apply-btn:hover {
-    background-color: rgb(70, 120, 160);
+    background-color: var(--brand-primary-hover);
 }
 
 /* 绑定路径显示 */
 .bind-path-row {
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
     border-top-width: 1px;
-    border-top-color: rgb(50, 50, 50);
+    border-top-color: var(--border-subtle);
 }
 
 .bind-path-text {
-    color: rgb(180, 180, 180);
-    font-size: 11px;
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
     -unity-font-style: italic;
 }
 
 /* 代码预览区域 */
 .code-preview-foldout {
-    margin-top: 8px;
+    margin-top: var(--spacing-sm);
 }
 
 .code-preview-foldout > Toggle {
-    background-color: rgb(45, 45, 45);
-    border-radius: 3px;
-    padding: 4px;
+    background-color: var(--layer-elevated);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs);
 }
 
 .code-preview-text {
-    background-color: rgb(35, 35, 35);
-    border-radius: 3px;
-    padding: 8px;
-    margin-top: 4px;
-    font-size: 11px;
-    color: rgb(180, 220, 180);
+    background-color: var(--layer-base);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-xs);
+    color: var(--brand-success);
     white-space: normal;
-    -unity-font: resource("Fonts/RobotoMono-Regular");
 }
 
 /* 跳转到代码按钮 */
 .jump-to-code-btn {
-    margin-top: 8px;
-    padding: 6px 12px;
-    background-color: rgb(60, 80, 100);
-    border-radius: 3px;
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(33, 150, 243, 0.15);
+    border-radius: var(--radius-sm);
     border-width: 1px;
-    border-color: rgb(80, 100, 120);
+    border-color: rgba(33, 150, 243, 0.3);
 }
 
 .jump-to-code-btn:hover {
-    background-color: rgb(70, 90, 110);
+    background-color: rgba(33, 150, 243, 0.25);
 }
 
 .jump-to-code-btn:disabled {
     opacity: 0.5;
-    background-color: rgb(50, 50, 50);
+    background-color: var(--layer-card);
 }

@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -22,6 +23,11 @@ namespace YokiFrame.EditorTools
         /// 订阅管理器 - 自动在 OnDeactivate 时清理所有订阅
         /// </summary>
         protected CompositeDisposable Subscriptions { get; } = new(8);
+
+        /// <summary>
+        /// VisualElement 查询缓存 - 避免重复查询
+        /// </summary>
+        private readonly Dictionary<string, VisualElement> mQueryCache = new(16);
         
         public VisualElement CreateUI()
         {
@@ -46,9 +52,17 @@ namespace YokiFrame.EditorTools
         {
             // 清理所有订阅
             Subscriptions.Clear();
+            // 清理查询缓存
+            mQueryCache.Clear();
+            // 清理 EditorEventCenter 中属于此页面的订阅
+            EditorEventCenter.UnregisterAll(this);
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         }
         
+        /// <summary>
+        /// 轮询更新（已废弃，请使用响应式订阅）
+        /// </summary>
+        [Obsolete("使用响应式订阅替代轮询。此方法将在未来版本中移除。")]
         public virtual void OnUpdate() { }
 
         /// <summary>
@@ -63,7 +77,78 @@ namespace YokiFrame.EditorTools
             }
         }
 
+        #region VisualElement 查询缓存
+
+        /// <summary>
+        /// 缓存查询 VisualElement - 避免重复调用 Q&lt;T&gt;()
+        /// </summary>
+        /// <typeparam name="T">元素类型</typeparam>
+        /// <param name="name">元素名称</param>
+        /// <returns>查询到的元素，未找到返回 null</returns>
+        protected T QueryCached<T>(string name) where T : VisualElement
+        {
+            if (Root == null) return null;
+            
+            if (!mQueryCache.TryGetValue(name, out var element))
+            {
+                element = Root.Q<T>(name);
+                if (element != null) mQueryCache[name] = element;
+            }
+            return element as T;
+        }
+
+        /// <summary>
+        /// 缓存查询 VisualElement（通过类名）
+        /// </summary>
+        /// <typeparam name="T">元素类型</typeparam>
+        /// <param name="className">CSS 类名</param>
+        /// <returns>查询到的元素，未找到返回 null</returns>
+        protected T QueryCachedByClass<T>(string className) where T : VisualElement
+        {
+            if (Root == null) return null;
+            
+            var cacheKey = $"class:{className}";
+            if (!mQueryCache.TryGetValue(cacheKey, out var element))
+            {
+                element = Root.Q<T>(className: className);
+                if (element != null) mQueryCache[cacheKey] = element;
+            }
+            return element as T;
+        }
+
+        /// <summary>
+        /// 清除查询缓存
+        /// </summary>
+        protected void ClearQueryCache()
+        {
+            mQueryCache.Clear();
+        }
+
+        #endregion
+
         #region 响应式数据绑定
+
+        /// <summary>
+        /// 订阅 EditorEventCenter 类型事件（自动管理生命周期）
+        /// </summary>
+        /// <typeparam name="T">事件数据类型</typeparam>
+        /// <param name="handler">事件处理器</param>
+        protected void SubscribeEvent<T>(Action<T> handler)
+        {
+            Subscriptions.Add(EditorEventCenter.Register(this, handler));
+        }
+
+        /// <summary>
+        /// 订阅 EditorEventCenter 枚举键事件（自动管理生命周期）
+        /// </summary>
+        /// <typeparam name="TKey">枚举键类型</typeparam>
+        /// <typeparam name="TValue">事件数据类型</typeparam>
+        /// <param name="key">枚举键</param>
+        /// <param name="handler">事件处理器</param>
+        protected void SubscribeEvent<TKey, TValue>(TKey key, Action<TValue> handler) where TKey : Enum
+        {
+            Subscriptions.Add(EditorEventCenter.Register(this, key, handler));
+        }
 
         /// <summary>
         /// 订阅数据通道（自动管理生命周期）
@@ -79,6 +164,110 @@ namespace YokiFrame.EditorTools
         protected void SubscribeChannelThrottled<T>(string channel, Action<T> callback, float intervalSeconds)
         {
             Subscriptions.Add(EditorDataBridge.SubscribeThrottled(channel, callback, intervalSeconds));
+        }
+
+        /// <summary>
+        /// 绑定 Label 到 ReactiveProperty（自动管理生命周期）
+        /// </summary>
+        /// <param name="label">目标 Label</param>
+        /// <param name="property">响应式属性</param>
+        /// <returns>订阅句柄</returns>
+        protected IDisposable BindToLabel(Label label, ReactiveProperty<string> property)
+        {
+            if (label == null)
+            {
+                UnityEngine.Debug.LogWarning("[YokiFrameToolPage] BindToLabel: Label 为 null，绑定已跳过");
+                return Disposable.Empty;
+            }
+
+            // 立即设置初始值
+            label.text = property.Value ?? string.Empty;
+            
+            var subscription = property.Subscribe(value => label.text = value ?? string.Empty);
+            Subscriptions.Add(subscription);
+            return subscription;
+        }
+
+        /// <summary>
+        /// 绑定 Label 到 ReactiveProperty（带格式化）
+        /// </summary>
+        /// <typeparam name="T">属性值类型</typeparam>
+        /// <param name="label">目标 Label</param>
+        /// <param name="property">响应式属性</param>
+        /// <param name="formatter">格式化函数</param>
+        /// <returns>订阅句柄</returns>
+        protected IDisposable BindToLabel<T>(Label label, ReactiveProperty<T> property, Func<T, string> formatter)
+        {
+            if (label == null)
+            {
+                UnityEngine.Debug.LogWarning("[YokiFrameToolPage] BindToLabel: Label 为 null，绑定已跳过");
+                return Disposable.Empty;
+            }
+
+            // 立即设置初始值
+            label.text = formatter(property.Value);
+            
+            var subscription = property.Subscribe(value => label.text = formatter(value));
+            Subscriptions.Add(subscription);
+            return subscription;
+        }
+
+        /// <summary>
+        /// 绑定 VisualElement 可见性到 ReactiveProperty
+        /// </summary>
+        /// <param name="element">目标元素</param>
+        /// <param name="property">响应式属性（true=可见）</param>
+        /// <returns>订阅句柄</returns>
+        protected IDisposable BindToVisibility(VisualElement element, ReactiveProperty<bool> property)
+        {
+            if (element == null)
+            {
+                UnityEngine.Debug.LogWarning("[YokiFrameToolPage] BindToVisibility: Element 为 null，绑定已跳过");
+                return Disposable.Empty;
+            }
+
+            // 立即设置初始值
+            element.style.display = property.Value ? DisplayStyle.Flex : DisplayStyle.None;
+            
+            var subscription = property.Subscribe(visible =>
+            {
+                element.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            });
+            Subscriptions.Add(subscription);
+            return subscription;
+        }
+
+        /// <summary>
+        /// 绑定 ListView 到 ReactiveCollection
+        /// </summary>
+        /// <typeparam name="T">集合元素类型</typeparam>
+        /// <param name="listView">目标 ListView</param>
+        /// <param name="collection">响应式集合</param>
+        /// <param name="makeItem">创建列表项回调</param>
+        /// <param name="bindItem">绑定列表项回调</param>
+        /// <returns>订阅句柄</returns>
+        protected IDisposable BindToListView<T>(
+            ListView listView,
+            ReactiveCollection<T> collection,
+            Func<VisualElement> makeItem,
+            Action<VisualElement, int> bindItem)
+        {
+            if (listView == null)
+            {
+                UnityEngine.Debug.LogWarning("[YokiFrameToolPage] BindToListView: ListView 为 null，绑定已跳过");
+                return Disposable.Empty;
+            }
+
+            listView.makeItem = makeItem;
+            listView.bindItem = bindItem;
+            listView.itemsSource = collection;
+
+            var subscription = collection.Subscribe(_ =>
+            {
+                listView.RefreshItems();
+            });
+            Subscriptions.Add(subscription);
+            return subscription;
         }
 
         /// <summary>

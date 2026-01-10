@@ -11,6 +11,20 @@ namespace YokiFrame.EditorTools
     /// </summary>
     public static class ResDebugger
     {
+        #region 事件通道常量
+
+        /// <summary>
+        /// 资源列表变化事件通道
+        /// </summary>
+        public const string CHANNEL_RES_LIST_CHANGED = "ResKit.ResListChanged";
+
+        /// <summary>
+        /// 资源卸载事件通道
+        /// </summary>
+        public const string CHANNEL_RES_UNLOADED = "ResKit.ResUnloaded";
+
+        #endregion
+
         /// <summary>
         /// 资源来源
         /// </summary>
@@ -67,6 +81,9 @@ namespace YokiFrame.EditorTools
         private static readonly List<UnloadRecord> sUnloadHistory = new(128);
         private static readonly HashSet<string> sPreviousLoadedPaths = new();
         private const int MAX_HISTORY_COUNT = 100;
+        
+        // 上次资源数量（用于检测变化）
+        private static int sLastLoadedCount;
 
         /// <summary>
         /// 获取卸载历史记录
@@ -97,6 +114,8 @@ namespace YokiFrame.EditorTools
                 currentPaths.Add(GetAssetKey(asset.Path, asset.TypeName));
             }
             
+            bool hasUnloaded = false;
+            
             // 检测哪些资源被卸载了
             foreach (var prevPath in sPreviousLoadedPaths)
             {
@@ -109,18 +128,24 @@ namespace YokiFrame.EditorTools
                     
                     var stackTrace = GetSimplifiedStackTrace();
                     
-                    sUnloadHistory.Insert(0, new UnloadRecord(
+                    var record = new UnloadRecord(
                         path,
                         typeName,
                         DateTime.Now,
                         stackTrace
-                    ));
+                    );
+                    sUnloadHistory.Insert(0, record);
                     
                     // 限制历史记录数量
                     if (sUnloadHistory.Count > MAX_HISTORY_COUNT)
                     {
                         sUnloadHistory.RemoveAt(sUnloadHistory.Count - 1);
                     }
+                    
+                    hasUnloaded = true;
+                    
+                    // 通知编辑器资源卸载
+                    EditorDataBridge.NotifyDataChanged(CHANNEL_RES_UNLOADED, record);
                 }
             }
             
@@ -129,6 +154,15 @@ namespace YokiFrame.EditorTools
             foreach (var path in currentPaths)
             {
                 sPreviousLoadedPaths.Add(path);
+            }
+            
+            // 检测资源数量变化
+            int currentCount = currentLoaded.Count;
+            if (currentCount != sLastLoadedCount || hasUnloaded)
+            {
+                sLastLoadedCount = currentCount;
+                // 通知编辑器资源列表变化
+                EditorDataBridge.NotifyDataChanged(CHANNEL_RES_LIST_CHANGED, currentCount);
             }
         }
         

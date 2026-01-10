@@ -86,7 +86,7 @@ namespace YokiFrame
             var result = new List<IPanel>(PanelCacheDic.Count);
             foreach (var handler in PanelCacheDic.Values)
             {
-                if (handler?.Panel != null)
+                if (handler != default && handler.Panel != default)
                 {
                     result.Add(handler.Panel);
                 }

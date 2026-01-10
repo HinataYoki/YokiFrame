@@ -202,6 +202,7 @@ namespace YokiFrame
 
         #region 更新
 
+        [Obsolete("保留用于绑定检查标签页轮询刷新")]
         public override void OnUpdate()
         {
             // 响应式模式下，调试标签页不再需要轮询

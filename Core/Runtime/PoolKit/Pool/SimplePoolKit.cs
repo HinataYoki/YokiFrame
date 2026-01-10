@@ -19,12 +19,33 @@ namespace YokiFrame
             {
                 mCacheStack.Push(mFactory.Create());
             }
+            
+#if UNITY_EDITOR
+            PoolDebugger.RegisterPool(this, typeof(T).Name);
+            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
+#endif
+        }
+
+        public override T Allocate()
+        {
+            var result = base.Allocate();
+#if UNITY_EDITOR
+            PoolDebugger.TrackAllocate(this, result);
+            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
+#endif
+            return result;
         }
 
         public override bool Recycle(T obj)
         {
+#if UNITY_EDITOR
+            PoolDebugger.TrackRecycle(this, obj);
+#endif
             mResetMethod?.Invoke(obj);
             mCacheStack.Push(obj);
+#if UNITY_EDITOR
+            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
+#endif
             return true;
         }
     }

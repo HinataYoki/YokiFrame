@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame
@@ -202,24 +203,122 @@ namespace YokiFrame
         {
             serializedObject.Update();
             
-            if (typeIndex == 0 || sAnimationTypes[typeIndex].Type == null)
+            // 记录旧类型用于判断是否需要管理 CanvasGroup
+            var oldType = property.managedReferenceValue?.GetType();
+            System.Type newType = typeIndex > 0 ? sAnimationTypes[typeIndex].Type : null;
+            
+            if (typeIndex == 0 || newType == null)
             {
                 property.managedReferenceValue = null;
             }
             else
             {
-                var type = sAnimationTypes[typeIndex].Type;
-                property.managedReferenceValue = System.Activator.CreateInstance(type);
+                property.managedReferenceValue = System.Activator.CreateInstance(newType);
             }
             
             serializedObject.ApplyModifiedProperties();
             
-            // 刷新参数显示
+            // 刷新参数显示（在 CanvasGroup 操作之前，避免 SerializedObject 失效）
             var paramsContainer = container.Q<VisualElement>(className: "uipanel-animation-params");
             if (paramsContainer != null)
             {
                 RefreshAnimationParams(property, paramsContainer);
             }
+            
+            // 延迟执行 CanvasGroup 管理，避免 Undo 操作导致 SerializedObject 失效
+            EditorApplication.delayCall += () =>
+            {
+                if (target == default) return;
+                ManageCanvasGroupForFadeAnimation(oldType, newType);
+            };
+        }
+        
+        /// <summary>
+        /// 根据 Fade 动画配置管理 CanvasGroup 组件
+        /// </summary>
+        private void ManageCanvasGroupForFadeAnimation(System.Type oldType, System.Type newType)
+        {
+            var panel = target as UIPanel;
+            if (panel == default) return;
+            
+            var gameObject = panel.gameObject;
+            bool wasFade = oldType == typeof(FadeAnimationConfig);
+            bool isFade = newType == typeof(FadeAnimationConfig);
+            
+            // 如果新选择了 Fade 动画，确保有 CanvasGroup
+            if (isFade && !wasFade)
+            {
+                EnsureCanvasGroup(gameObject);
+            }
+            // 如果取消了 Fade 动画，检查是否需要移除 CanvasGroup
+            else if (wasFade && !isFade)
+            {
+                TryRemoveCanvasGroupIfUnused(gameObject);
+            }
+        }
+        
+        /// <summary>
+        /// 确保 GameObject 有 CanvasGroup 组件
+        /// </summary>
+        private void EnsureCanvasGroup(GameObject gameObject)
+        {
+            if (gameObject.TryGetComponent<CanvasGroup>(out _))
+                return;
+            
+            Undo.AddComponent<CanvasGroup>(gameObject);
+            Debug.Log($"[UIKit] 已为 '{gameObject.name}' 添加 CanvasGroup 组件（Fade 动画需要）");
+        }
+        
+        /// <summary>
+        /// 尝试移除未使用的 CanvasGroup 组件
+        /// </summary>
+        private void TryRemoveCanvasGroupIfUnused(GameObject gameObject)
+        {
+            // 重新获取 SerializedObject 以确保数据有效
+            var so = new SerializedObject(target);
+            var showProp = so.FindProperty("mShowAnimationConfig");
+            var hideProp = so.FindProperty("mHideAnimationConfig");
+            
+            // 检查是否还有其他 Fade 动画在使用
+            bool stillUsesFade = false;
+            
+            if (showProp?.managedReferenceValue is FadeAnimationConfig)
+                stillUsesFade = true;
+            if (hideProp?.managedReferenceValue is FadeAnimationConfig)
+                stillUsesFade = true;
+            
+            so.Dispose();
+            
+            if (stillUsesFade)
+                return;
+            
+            // 检查 CanvasGroup 是否有自定义设置（非默认值）
+            if (!gameObject.TryGetComponent<CanvasGroup>(out var canvasGroup))
+                return;
+            
+            // 如果 CanvasGroup 有非默认设置，不自动移除
+            if (!IsCanvasGroupDefault(canvasGroup))
+            {
+                Debug.Log($"[UIKit] '{gameObject.name}' 的 CanvasGroup 有自定义设置，保留组件");
+                return;
+            }
+            
+            Undo.DestroyObjectImmediate(canvasGroup);
+            Debug.Log($"[UIKit] 已移除 '{gameObject.name}' 的 CanvasGroup 组件（不再使用 Fade 动画）");
+        }
+        
+        /// <summary>
+        /// 检查 CanvasGroup 是否为默认设置
+        /// </summary>
+        private static bool IsCanvasGroupDefault(CanvasGroup canvasGroup)
+        {
+            const float EPSILON = 0.001f;
+            
+            // 检查是否为默认值
+            return Mathf.Abs(canvasGroup.alpha - 1f) < EPSILON &&
+                   canvasGroup.interactable &&
+                   canvasGroup.blocksRaycasts &&
+                   !canvasGroup.ignoreParentGroups;
         }
 
         /// <summary>

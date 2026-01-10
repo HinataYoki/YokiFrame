@@ -4,32 +4,60 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 滑动动画
+    /// 滑动动画（协程实现）
     /// </summary>
-    public class SlideAnimation : UIAnimationBase
+    public class SlideAnimation : UIAnimationBase, IPoolable
     {
-        private readonly SlideDirection mDirection;
-        private readonly float mOffset;
+        private SlideDirection mDirection;
+        private float mOffset;
         private Vector2 mFromPosition;
         private Vector2 mToPosition;
 
-        public SlideAnimation(SlideAnimationConfig config) 
-            : base(config.Duration, config.Curve)
+        #region IPoolable
+        
+        public bool IsRecycled { get; set; }
+        
+        void IPoolable.OnRecycled() => Stop();
+        
+        #endregion
+
+        public SlideAnimation() : base() { }
+
+        public SlideAnimation(SlideAnimationConfig config) : base()
         {
-            mDirection = config.Direction;
-            mOffset = config.Offset;
+            Setup(config);
         }
 
-        public SlideAnimation(float duration, SlideDirection direction, float offset, AnimationCurve curve = null)
-            : base(duration, curve)
+        public SlideAnimation(float duration, SlideDirection direction, float offset, AnimationCurve curve = null) : base()
         {
+            Setup(duration, direction, offset, curve);
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal SlideAnimation Setup(SlideAnimationConfig config)
+        {
+            SetupBase(config.Duration, config.Curve);
+            mDirection = config.Direction;
+            mOffset = config.Offset;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal SlideAnimation Setup(float duration, SlideDirection direction, float offset, AnimationCurve curve = null)
+        {
+            SetupBase(duration, curve);
             mDirection = direction;
             mOffset = offset;
+            return this;
         }
 
         public override void Play(RectTransform target, Action onComplete = null)
         {
-            if (target == null)
+            if (target == default)
             {
                 onComplete?.Invoke();
                 return;
@@ -44,7 +72,7 @@ namespace YokiFrame
 
         public override void Reset(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             
             var currentPos = target.anchoredPosition;
             var startPos = CalculateStartPosition(currentPos);
@@ -53,13 +81,13 @@ namespace YokiFrame
 
         public override void SetToEndState(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             target.anchoredPosition = mToPosition;
         }
 
         protected override void ApplyAnimation(RectTransform target, float normalizedTime)
         {
-            if (target != null)
+            if (target != default)
             {
                 target.anchoredPosition = Vector2.Lerp(mFromPosition, mToPosition, normalizedTime);
             }
@@ -76,5 +104,10 @@ namespace YokiFrame
                 _ => endPosition
             };
         }
+        
+        /// <summary>
+        /// 归还到池
+        /// </summary>
+        public override void Recycle() => SafePoolKit<SlideAnimation>.Instance.Recycle(this);
     }
 }

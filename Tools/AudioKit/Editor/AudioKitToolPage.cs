@@ -157,6 +157,7 @@ namespace YokiFrame
         /// </summary>
         private const double REFRESH_INTERVAL = 0.1;
 
+        [Obsolete("保留用于运行时音频监控刷新")]
         public override void OnUpdate()
         {
             // 运行时监控模式下定期刷新活跃音频数据

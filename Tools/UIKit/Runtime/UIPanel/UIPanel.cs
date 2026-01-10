@@ -104,7 +104,28 @@ namespace YokiFrame
             SafeInvokeHook(OnWillShow, nameof(OnWillShow));
             EventKit.Type.Send(new PanelWillShowEvent { Panel = this });
 
-            if (mShowAnimation != null)
+#if YOKIFRAME_UNITASK_SUPPORT
+            // UniTask 环境：使用异步播放
+            if (mShowAnimation is IUIAnimationUniTask uniTaskAnim)
+            {
+                var rectTransform = transform as RectTransform;
+                PlayShowAnimationUniTask(uniTaskAnim, rectTransform, onComplete).Forget();
+            }
+            else if (mShowAnimation != default)
+            {
+                var rectTransform = transform as RectTransform;
+                var tcs = AutoResetUniTaskCompletionSource.Create();
+                mShowAnimation.Play(rectTransform, static state => ((AutoResetUniTaskCompletionSource)state).TrySetResult(), tcs);
+                PlayShowAnimationFallback(tcs.Task, onComplete).Forget();
+            }
+            else
+            {
+                CompleteShow();
+                onComplete?.Invoke();
+            }
+#else
+            // 无 UniTask：使用回调方式
+            if (mShowAnimation != default)
             {
                 var rectTransform = transform as RectTransform;
                 mShowAnimation.Play(rectTransform, () =>
@@ -118,7 +139,38 @@ namespace YokiFrame
                 CompleteShow();
                 onComplete?.Invoke();
             }
+#endif
         }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        private async UniTaskVoid PlayShowAnimationUniTask(IUIAnimationUniTask anim, RectTransform target, Action onComplete)
+        {
+            try
+            {
+                await anim.PlayUniTaskAsync(target, this.GetCancellationTokenOnDestroy());
+                CompleteShow();
+                onComplete?.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                // 面板销毁时取消，忽略
+            }
+        }
+        
+        private async UniTaskVoid PlayShowAnimationFallback(UniTask task, Action onComplete)
+        {
+            try
+            {
+                await task;
+                CompleteShow();
+                onComplete?.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                // 忽略取消
+            }
+        }
+#endif
 
         private void CompleteShow()
         {
@@ -130,7 +182,11 @@ namespace YokiFrame
             EventKit.Type.Send(new PanelDidShowEvent { Panel = this });
 
             // 通知焦点系统
-            UIFocusSystem.Instance?.OnPanelShow(this);
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.OnPanelShow(this);
+            }
         }
 
         public void Hide()
@@ -154,7 +210,28 @@ namespace YokiFrame
             SafeInvokeHook(OnWillHide, nameof(OnWillHide));
             EventKit.Type.Send(new PanelWillHideEvent { Panel = this });
 
-            if (mHideAnimation != null && gameObject.activeInHierarchy)
+#if YOKIFRAME_UNITASK_SUPPORT
+            // UniTask 环境：使用异步播放
+            if (mHideAnimation is IUIAnimationUniTask uniTaskAnim && gameObject.activeInHierarchy)
+            {
+                var rectTransform = transform as RectTransform;
+                PlayHideAnimationUniTask(uniTaskAnim, rectTransform, deactivate, onComplete).Forget();
+            }
+            else if (mHideAnimation != default && gameObject.activeInHierarchy)
+            {
+                var rectTransform = transform as RectTransform;
+                var tcs = AutoResetUniTaskCompletionSource.Create();
+                mHideAnimation.Play(rectTransform, static state => ((AutoResetUniTaskCompletionSource)state).TrySetResult(), tcs);
+                PlayHideAnimationFallback(tcs.Task, deactivate, onComplete).Forget();
+            }
+            else
+            {
+                CompleteHide(deactivate);
+                onComplete?.Invoke();
+            }
+#else
+            // 无 UniTask：使用回调方式
+            if (mHideAnimation != default && gameObject.activeInHierarchy)
             {
                 var rectTransform = transform as RectTransform;
                 mHideAnimation.Play(rectTransform, () =>
@@ -168,12 +245,47 @@ namespace YokiFrame
                 CompleteHide(deactivate);
                 onComplete?.Invoke();
             }
+#endif
         }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        private async UniTaskVoid PlayHideAnimationUniTask(IUIAnimationUniTask anim, RectTransform target, bool deactivate, Action onComplete)
+        {
+            try
+            {
+                await anim.PlayUniTaskAsync(target, this.GetCancellationTokenOnDestroy());
+                CompleteHide(deactivate);
+                onComplete?.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                // 面板销毁时取消，忽略
+            }
+        }
+        
+        private async UniTaskVoid PlayHideAnimationFallback(UniTask task, bool deactivate, Action onComplete)
+        {
+            try
+            {
+                await task;
+                CompleteHide(deactivate);
+                onComplete?.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                // 忽略取消
+            }
+        }
+#endif
 
         private void CompleteHide(bool deactivate)
         {
             // 通知焦点系统
-            UIFocusSystem.Instance?.OnPanelHide(this);
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.OnPanelHide(this);
+            }
 
             // 触发 OnHide
             SafeInvokeHook(OnHide, nameof(OnHide));
@@ -194,7 +306,11 @@ namespace YokiFrame
             State = PanelState.Close;
 
             // 通知焦点系统
-            UIFocusSystem.Instance?.OnPanelClose(this);
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.OnPanelClose(this);
+            }
 
             foreach (var action in mOnClosed)
             {
@@ -206,7 +322,7 @@ namespace YokiFrame
 
         public void OnClosed(Action onClosed) => mOnClosed.Add(onClosed);
 
-        #region Lifecycle Hooks - Existing
+        #region 生命周期钩子 - 基础
 
         protected virtual void OnInit(IUIData data = null) { }
         protected virtual void OnOpen(IUIData data = null) { }
@@ -216,7 +332,7 @@ namespace YokiFrame
 
         #endregion
 
-        #region Lifecycle Hooks - New
+        #region 生命周期钩子 - 扩展
 
         /// <summary>
         /// 在显示动画开始前调用
@@ -262,14 +378,14 @@ namespace YokiFrame
             EventKit.Type.Send(new PanelResumeEvent { Panel = this });
         }
         
-        // Internal methods for UIStackManager to call
+        // 供 UIStackManager 调用的内部方法
         internal void InvokeFocus() => OnFocus();
         internal void InvokeBlur() => OnBlur();
         internal void InvokeResume() => OnResume();
 
         #endregion
 
-        #region Safe Hook Invocation
+        #region 安全钩子调用
 
         /// <summary>
         /// 安全调用生命周期钩子，捕获异常并记录日志
@@ -291,7 +407,40 @@ namespace YokiFrame
         protected virtual void OnBeforeDestroy()
         {
             StopAnimations();
+            RecycleAnimations();
             ClearUIComponents();
+        }
+        
+        /// <summary>
+        /// 标记是否已清理，防止重复清理
+        /// </summary>
+        private bool mIsCleanedUp;
+        
+        /// <summary>
+        /// 销毁前清理资源（由 UIKit 在 DestroyPanel 前调用）
+        /// </summary>
+        void IPanel.Cleanup()
+        {
+            if (mIsCleanedUp) return;
+            mIsCleanedUp = true;
+            OnBeforeDestroy();
+        }
+        
+        /// <summary>
+        /// 归还动画到对象池
+        /// </summary>
+        private void RecycleAnimations()
+        {
+            if (mShowAnimation != default)
+            {
+                mShowAnimation.Recycle();
+                mShowAnimation = null;
+            }
+            if (mHideAnimation != default)
+            {
+                mHideAnimation.Recycle();
+                mHideAnimation = null;
+            }
         }
 
         protected virtual void ClearUIComponents() { }
@@ -300,6 +449,9 @@ namespace YokiFrame
 
         private void OnDestroy()
         {
+            // 如果已通过 Cleanup 清理，跳过
+            if (mIsCleanedUp) return;
+            mIsCleanedUp = true;
             OnBeforeDestroy();
         }
     }

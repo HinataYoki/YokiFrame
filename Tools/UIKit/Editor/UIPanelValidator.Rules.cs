@@ -301,29 +301,47 @@ namespace YokiFrame
         private static void ValidateAnimationConfiguration(GameObject root, ValidationResult result)
         {
             var panel = root.GetComponent<UIPanel>();
-            if (panel == null) return;
+            if (panel == default) return;
             
-            // 检查动画配置
-            var showAnimField = panel.GetType().GetField("mShowAnimation", 
+            // 获取动画配置字段
+            var showAnimConfigField = panel.GetType().GetField("mShowAnimationConfig", 
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var hideAnimField = panel.GetType().GetField("mHideAnimation",
+            var hideAnimConfigField = panel.GetType().GetField("mHideAnimationConfig",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             
-            if (showAnimField != null && hideAnimField != null)
+            if (showAnimConfigField == default || hideAnimConfigField == default) return;
+            
+            var showAnimConfig = showAnimConfigField.GetValue(panel) as UIAnimationConfig;
+            var hideAnimConfig = hideAnimConfigField.GetValue(panel) as UIAnimationConfig;
+            
+            // 如果只配置了一个动画，给出提示
+            if ((showAnimConfig != default && hideAnimConfig == default) || 
+                (showAnimConfig == default && hideAnimConfig != default))
             {
-                var showAnim = showAnimField.GetValue(panel);
-                var hideAnim = hideAnimField.GetValue(panel);
-                
-                // 如果只配置了一个动画，给出提示
-                if ((showAnim != null && hideAnim == null) || (showAnim == null && hideAnim != null))
+                result.Issues.Add(new ValidationIssue
+                {
+                    Severity = IssueSeverity.Info,
+                    Category = IssueCategory.Animation,
+                    Message = "面板只配置了单向动画",
+                    Context = panel,
+                    FixSuggestion = "建议同时配置显示和隐藏动画以保持一致性"
+                });
+            }
+            
+            // 检查 Fade 动画是否缺少 CanvasGroup（会导致首次播放卡顿）
+            bool usesFadeAnimation = showAnimConfig is FadeAnimationConfig || hideAnimConfig is FadeAnimationConfig;
+            if (usesFadeAnimation)
+            {
+                var canvasGroup = root.GetComponent<CanvasGroup>();
+                if (canvasGroup == default)
                 {
                     result.Issues.Add(new ValidationIssue
                     {
-                        Severity = IssueSeverity.Info,
+                        Severity = IssueSeverity.Warning,
                         Category = IssueCategory.Animation,
-                        Message = "面板只配置了单向动画",
+                        Message = "使用 Fade 动画但缺少 CanvasGroup 组件",
                         Context = panel,
-                        FixSuggestion = "建议同时配置显示和隐藏动画以保持一致性"
+                        FixSuggestion = "在面板根节点添加 CanvasGroup 组件，避免首次播放动画时卡顿"
                     });
                 }
             }

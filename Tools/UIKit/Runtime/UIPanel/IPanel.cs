@@ -18,5 +18,11 @@ namespace YokiFrame
         void Show();
         void Hide();
         void Close();
+        
+        /// <summary>
+        /// 销毁前清理资源（由 UIKit 在 DestroyPanel 前调用）
+        /// 用于处理 inactive GameObject 上 OnDestroy 不触发的问题
+        /// </summary>
+        void Cleanup();
     }
 }

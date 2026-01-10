@@ -99,18 +99,27 @@ namespace YokiFrame.EditorTools
             mYooPackageSettingsPanel.style.display = DisplayStyle.None;
             root.Add(mYooPackageSettingsPanel);
 
-            // 主分割视图
-            var splitView = CreateSplitView(200f);
-            splitView.style.flexGrow = 1;
-            root.Add(splitView);
+            // 主分割视图（左侧分组导航 | 右侧内容区）
+            var mainSplitView = CreateSplitView(200f);
+            mainSplitView.style.flexGrow = 1;
+            root.Add(mainSplitView);
 
             // 左侧分组导航
             mYooGroupNavContainer = BuildYooGroupNav();
-            splitView.Add(mYooGroupNavContainer);
+            mainSplitView.Add(mYooGroupNavContainer);
 
-            // 右侧收集器画布
+            // 右侧内容区（收集器画布 | 资源预览）
+            var rightSplitView = CreateSplitView(400f);
+            rightSplitView.style.flexGrow = 1;
+            mainSplitView.Add(rightSplitView);
+
+            // 收集器画布
             mYooCollectorCanvas = BuildYooCollectorCanvas();
-            splitView.Add(mYooCollectorCanvas);
+            rightSplitView.Add(mYooCollectorCanvas);
+
+            // 资源预览面板
+            mYooAssetPreviewPanel = BuildYooAssetPreviewPanel();
+            rightSplitView.Add(mYooAssetPreviewPanel);
 
             // 初始化数据
             InitYooData();

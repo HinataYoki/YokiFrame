@@ -41,6 +41,11 @@ namespace YokiFrame
         /// <summary>
         /// 在绑定树中检测命名冲突
         /// </summary>
+        /// <remarks>
+        /// 命名冲突检测规则：
+        /// - Member 类型的字段名在其直接父容器（Panel/Element/Component）内必须唯一
+        /// - 不同父容器下的 Member 可以同名（因为会生成到不同的类中）
+        /// </remarks>
         /// <param name="rootNode">绑定树根节点</param>
         /// <param name="results">验证结果列表（输出）</param>
         public static void DetectNameConflicts(BindTreeNode rootNode, List<BindValidationResult> results)
@@ -48,25 +53,48 @@ namespace YokiFrame
             if (rootNode == null || results == null)
                 return;
 
-            // 收集同层级的名称
-            var nameToNodes = new Dictionary<string, List<BindTreeNode>>(16);
-            CollectNamesAtSameLevel(rootNode, nameToNodes);
+            // 从根节点开始，递归检测每个容器内的命名冲突
+            DetectNameConflictsInContainer(rootNode, rootNode, results);
+        }
 
-            // 检测冲突
+        /// <summary>
+        /// 在指定容器内检测命名冲突
+        /// </summary>
+        /// <param name="containerNode">容器节点（Panel/Element/Component）</param>
+        /// <param name="currentNode">当前遍历的节点</param>
+        /// <param name="results">验证结果列表</param>
+        private static void DetectNameConflictsInContainer(
+            BindTreeNode containerNode,
+            BindTreeNode currentNode,
+            List<BindValidationResult> results)
+        {
+            if (currentNode == null || currentNode.Children == null)
+                return;
+
+            // 收集当前容器下直接子 Member 的名称
+            var nameToNodes = new Dictionary<string, List<BindTreeNode>>(8);
+
+            foreach (var child in currentNode.Children)
+            {
+                CollectDirectChildMembers(child, containerNode, nameToNodes, results);
+            }
+
+            // 检测当前容器内的冲突
             foreach (var kvp in nameToNodes)
             {
                 if (kvp.Value.Count > 1)
                 {
-                    // 存在冲突
+                    // 获取容器名称用于错误提示
+                    string containerName = GetContainerDisplayName(containerNode);
+                    
                     foreach (var node in kvp.Value)
                     {
                         var result = BindValidationResult.Error(
-                            $"字段名 '{kvp.Key}' 存在 {kvp.Value.Count} 处重复定义",
+                            $"字段名 '{kvp.Key}' 在 {containerName} 中存在 {kvp.Value.Count} 处重复定义",
                             node.GameObject,
                             "请修改字段名以避免冲突",
                             RuleIds.NAME_CONFLICT);
                         results.Add(result);
-                        // 将验证结果关联到节点
                         node.AddValidationResult(result);
                     }
                 }
@@ -74,16 +102,37 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 收集同层级的名称（递归）
+        /// 收集直接子 Member 节点（遇到新容器则递归处理该容器）
         /// </summary>
-        private static void CollectNamesAtSameLevel(
+        private static void CollectDirectChildMembers(
             BindTreeNode node,
-            Dictionary<string, List<BindTreeNode>> nameToNodes)
+            BindTreeNode currentContainer,
+            Dictionary<string, List<BindTreeNode>> nameToNodes,
+            List<BindValidationResult> results)
         {
             if (node == null)
                 return;
 
-            // 只收集 Member 类型的名称（Element/Component 有独立命名空间）
+            // 如果是 Element 或 Component，它是一个新的容器，递归处理
+            if (node.Type is BindType.Element or BindType.Component)
+            {
+                // 先将此节点作为当前容器的成员记录（Element/Component 本身也是父容器的成员）
+                if (!string.IsNullOrEmpty(node.Name))
+                {
+                    if (!nameToNodes.TryGetValue(node.Name, out var list))
+                    {
+                        list = new List<BindTreeNode>(2);
+                        nameToNodes[node.Name] = list;
+                    }
+                    list.Add(node);
+                }
+                
+                // 然后递归处理这个新容器内部的成员
+                DetectNameConflictsInContainer(node, node, results);
+                return;
+            }
+
+            // Member 类型：记录到当前容器的名称集合
             if (node.Type == BindType.Member && !string.IsNullOrEmpty(node.Name))
             {
                 if (!nameToNodes.TryGetValue(node.Name, out var list))
@@ -94,14 +143,30 @@ namespace YokiFrame
                 list.Add(node);
             }
 
-            // 递归处理子节点
+            // 继续遍历子节点（可能有嵌套的 GameObject 但没有 Bind）
             if (node.Children != null)
             {
                 foreach (var child in node.Children)
                 {
-                    CollectNamesAtSameLevel(child, nameToNodes);
+                    CollectDirectChildMembers(child, currentContainer, nameToNodes, results);
                 }
             }
+        }
+
+        /// <summary>
+        /// 获取容器的显示名称
+        /// </summary>
+        private static string GetContainerDisplayName(BindTreeNode containerNode)
+        {
+            if (containerNode == null)
+                return "未知容器";
+
+            return containerNode.Type switch
+            {
+                BindType.Element => $"Element '{containerNode.Name}'",
+                BindType.Component => $"Component '{containerNode.Name}'",
+                _ => containerNode.Bind == null ? $"Panel '{containerNode.Name}'" : $"'{containerNode.Name}'"
+            };
         }
 
         #endregion

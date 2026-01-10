@@ -1111,3 +1111,318 @@
     border-width: 1px;
     border-color: var(--border-default);
 }
+
+/* ========== 通用区块样式 (Section) ========== */
+/* 从 UIPanelInspectorStyles.uss 和 BindInspectorStyles.uss 迁移 */
+.yoki-section {
+    margin-bottom: var(--spacing-md);
+    background-color: var(--layer-card);
+    border-radius: var(--radius-md);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+    overflow: hidden;
+}
+
+.yoki-section__header {
+    background-color: var(--layer-navigation);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-sm);
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-subtle);
+}
+
+.yoki-section__content {
+    padding: var(--spacing-md);
+}
+
+.yoki-section--last {
+    margin-bottom: 0;
+}
+
+/* 子区块样式（内嵌小卡片） */
+.yoki-subsection {
+    background-color: var(--layer-navigation);
+    border-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+    margin-bottom: var(--spacing-sm);
+    overflow: hidden;
+}
+
+.yoki-subsection__header {
+    background-color: var(--layer-elevated);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-sm);
+    -unity-font-style: bold;
+    color: var(--text-secondary);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-subtle);
+}
+
+.yoki-subsection__content {
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* ========== 通用字段行样式 (Field Row) ========== */
+/* 从 UIPanelInspectorStyles.uss 和 BindInspectorStyles.uss 迁移 */
+.yoki-field-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    min-height: 22px;
+}
+
+.yoki-field-row__label {
+    width: 100px;
+    min-width: 100px;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    -unity-text-align: middle-left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.yoki-field-row__label--narrow {
+    width: 80px;
+    min-width: 80px;
+}
+
+.yoki-field-row__field {
+    flex-grow: 1;
+    margin: 0;
+}
+
+/* ========== 通用验证提示样式 ========== */
+/* 从 BindInspectorStyles.uss 迁移 */
+.yoki-validation {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-xs);
+    white-space: normal;
+    margin-top: var(--spacing-sm);
+}
+
+.yoki-validation--success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--brand-success);
+    border-width: 1px;
+    border-color: var(--brand-success);
+}
+
+.yoki-validation--error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: var(--brand-danger);
+    border-width: 1px;
+    border-color: var(--brand-danger);
+}
+
+.yoki-validation--warning {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: var(--brand-warning);
+    border-width: 1px;
+    border-color: var(--brand-warning);
+}
+
+/* ========== 通用按钮行样式 ========== */
+.yoki-button-row {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: var(--spacing-md);
+}
+
+/* ========== 通用帮助提示框 ========== */
+/* 从 UIPanelInspectorStyles.uss 迁移 */
+.yoki-helpbox {
+    flex-direction: row;
+    background-color: rgba(33, 150, 243, 0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border-width: 1px;
+    border-color: rgba(33, 150, 243, 0.3);
+}
+
+.yoki-helpbox__icon {
+    width: 18px;
+    min-width: 18px;
+    font-size: var(--font-base);
+    color: var(--brand-primary);
+    -unity-text-align: upper-center;
+    margin-right: var(--spacing-sm);
+}
+
+.yoki-helpbox__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+/* ========== 通用输入框样式 ========== */
+/* 从 UIPanelInspectorStyles.uss 和 BindInspectorStyles.uss 迁移 */
+.yoki-input {
+    background-color: var(--layer-elevated);
+    border-color: var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--spacing-xs);
+}
+
+.yoki-input:hover {
+    border-color: var(--border-strong);
+}
+
+.yoki-input:focus {
+    border-color: var(--brand-primary);
+}
+
+/* ========== 通用建议行样式 ========== */
+/* 从 BindInspectorStyles.uss 迁移 */
+.yoki-suggestion {
+    background-color: rgba(33, 150, 243, 0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.yoki-suggestion__content {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-suggestion__text {
+    flex-grow: 1;
+    color: var(--brand-primary);
+    font-size: var(--font-xs);
+    -unity-font-style: italic;
+}
+
+.yoki-suggestion__apply-btn {
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-xs);
+    background-color: var(--brand-primary);
+    color: var(--text-on-brand);
+    border-radius: var(--radius-sm);
+    border-width: 0;
+    margin-left: var(--spacing-sm);
+}
+
+.yoki-suggestion__apply-btn:hover {
+    background-color: var(--brand-primary-hover);
+}
+
+/* ========== 通用代码预览样式 ========== */
+/* 从 BindInspectorStyles.uss 迁移 */
+.yoki-code-preview {
+    background-color: var(--layer-base);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-xs);
+    color: var(--brand-success);
+    white-space: normal;
+}
+
+/* ========== 通用小按钮样式 ========== */
+/* 从 UIPanelInspectorStyles.uss 和 BindInspectorStyles.uss 迁移 */
+.yoki-btn-sm {
+    padding: var(--spacing-xs) var(--spacing-md);
+    background-color: var(--layer-hover);
+    border-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: var(--border-strong);
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+}
+
+.yoki-btn-sm:hover {
+    background-color: var(--layer-elevated);
+    color: var(--text-primary);
+}
+
+.yoki-btn-sm:disabled {
+    opacity: 0.5;
+}
+
+/* ========== 通用图例样式 ========== */
+/* 从 UIPanelInspectorStyles.uss 迁移 */
+.yoki-legend {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+}
+
+.yoki-legend__item {
+    flex-direction: row;
+    align-items: center;
+    margin-right: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.yoki-legend__icon {
+    font-size: var(--font-xs);
+    margin-right: var(--spacing-xs);
+}
+
+.yoki-legend__text {
+    font-size: var(--font-xs);
+    color: var(--text-tertiary);
+}
+
+/* ========== 通用统计信息样式 ========== */
+/* 从 UIPanelInspectorStyles.uss 迁移 */
+.yoki-stats {
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* ========== Inspector 容器样式 ========== */
+/* 从 UIPanelInspectorStyles.uss 和 BindInspectorStyles.uss 迁移 */
+.yoki-inspector {
+    padding: var(--spacing-xs);
+}
+
+.yoki-inspector__container {
+    background-color: var(--layer-card);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+}
+
+/* ========== 内容区域修饰符 ========== */
+.content-area--padded {
+    padding: var(--spacing-xl);
+}
+
+/* ========== 卡片修饰符 ========== */
+.yoki-card--spaced {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ========== 信息值修饰符 ========== */
+.yoki-info-value--wrap {
+    white-space: normal;
+    overflow: hidden;
+}
+
+/* ========== Toggle 区域 ========== */
+.yoki-toggle-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ========== 配置区域 ========== */
+.yoki-config-section {
+    margin-top: var(--spacing-sm);
+}
+
+.yoki-config-section__title {
+    font-size: var(--font-sm);
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-md);
+}

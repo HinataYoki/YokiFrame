@@ -29,16 +29,31 @@ namespace YokiFrame
                         --removeCount;
                     }
                 }
+#if UNITY_EDITOR
+                UpdateDebuggerTotalCount();
+#endif
             }
         }
 
         protected SafePoolKit() : base(20)
         {
             mFactory = new DefaultObjectFactory<T>();
+#if UNITY_EDITOR
+            PoolDebugger.RegisterPool(this, typeof(T).Name);
+#endif
         }
         
         void ISingleton.OnSingletonInit() => Init();
-
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// 更新调试器总容量
+        /// </summary>
+        private void UpdateDebuggerTotalCount()
+        {
+            PoolDebugger.UpdateTotalCount(this, CurCount + mMaxCount);
+        }
+#endif
 
         /// <summary>
         /// 初始化对象池
@@ -67,6 +82,10 @@ namespace YokiFrame
         {
             var result = base.Allocate();
             result.IsRecycled = false;
+#if UNITY_EDITOR
+            PoolDebugger.TrackAllocate(this, result);
+            UpdateDebuggerTotalCount();
+#endif
             return result;
         }
 
@@ -76,10 +95,18 @@ namespace YokiFrame
             {
                 return false;
             }
-            //最大空间足够才入栈
+            
+#if UNITY_EDITOR
+            PoolDebugger.TrackRecycle(this, obj);
+#endif
+            
+            // 最大空间足够才入栈
             if (mCacheStack.Count >= mMaxCount)
             {
                 obj.OnRecycled();
+#if UNITY_EDITOR
+                UpdateDebuggerTotalCount();
+#endif
                 return false;
             }
             else
@@ -87,6 +114,9 @@ namespace YokiFrame
                 obj.IsRecycled = true;
                 obj.OnRecycled();
                 mCacheStack.Push(obj);
+#if UNITY_EDITOR
+                UpdateDebuggerTotalCount();
+#endif
                 return true;
             }
         }

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -24,47 +25,29 @@ namespace YokiFrame
         /// </summary>
         private VisualElement BuildMatrixSection()
         {
-            var section = new VisualElement();
-            section.name = "matrix-section";
-            section.style.flexGrow = 1;
-            section.style.minHeight = 100;
-            section.style.paddingLeft = YokiFrameUIComponents.Spacing.MD;
-            section.style.paddingRight = YokiFrameUIComponents.Spacing.MD;
-            section.style.paddingTop = YokiFrameUIComponents.Spacing.MD;
-            section.style.paddingBottom = YokiFrameUIComponents.Spacing.MD;
-            section.style.borderBottomWidth = 1;
-            section.style.borderBottomColor = new StyleColor(YokiFrameUIComponents.Colors.BorderDefault);
+            var section = new VisualElement { name = "matrix-section" };
+            section.AddToClassList("yoki-state-matrix");
 
             // 标题
             var header = new VisualElement();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.alignItems = Align.Center;
-            header.style.marginBottom = YokiFrameUIComponents.Spacing.SM;
+            header.AddToClassList("yoki-state-matrix__header");
             section.Add(header);
 
             var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.CHART) };
-            titleIcon.style.width = 14;
-            titleIcon.style.height = 14;
-            titleIcon.style.marginRight = 4;
+            titleIcon.AddToClassList("yoki-state-matrix__icon");
             header.Add(titleIcon);
-            
+
             var titleLabel = new Label("状态矩阵");
-            titleLabel.style.fontSize = 12;
-            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            titleLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary);
+            titleLabel.AddToClassList("yoki-state-matrix__title");
             header.Add(titleLabel);
 
             // 图例
             var legend = CreateLegend();
-            legend.style.marginLeft = YokiFrameUIComponents.Spacing.LG;
             header.Add(legend);
 
             // 状态卡片容器（Flex-Wrap 网格）
-            mMatrixContainer = new VisualElement();
-            mMatrixContainer.name = "matrix-container";
-            mMatrixContainer.style.flexDirection = FlexDirection.Row;
-            mMatrixContainer.style.flexWrap = Wrap.Wrap;
-            mMatrixContainer.style.alignContent = Align.FlexStart;
+            mMatrixContainer = new VisualElement { name = "matrix-container" };
+            mMatrixContainer.AddToClassList("yoki-state-matrix__container");
             section.Add(mMatrixContainer);
 
             return section;
@@ -76,14 +59,10 @@ namespace YokiFrame
         private VisualElement CreateLegend()
         {
             var legend = new VisualElement();
-            legend.style.flexDirection = FlexDirection.Row;
-            legend.style.alignItems = Align.Center;
+            legend.AddToClassList("yoki-legend");
 
-            // 当前状态
             legend.Add(CreateLegendItem(KitIcons.DOT_FILLED, YokiFrameUIComponents.Colors.BrandSuccess, "当前"));
-            // 已访问
             legend.Add(CreateLegendItem(KitIcons.DOT_EMPTY, YokiFrameUIComponents.Colors.TextSecondary, "已访问"));
-            // 未触达
             legend.Add(CreateLegendItem(KitIcons.DOT_EMPTY, YokiFrameUIComponents.Colors.TextTertiary, "未触达"));
 
             return legend;
@@ -95,20 +74,15 @@ namespace YokiFrame
         private VisualElement CreateLegendItem(string iconId, Color color, string text)
         {
             var item = new VisualElement();
-            item.style.flexDirection = FlexDirection.Row;
-            item.style.alignItems = Align.Center;
-            item.style.marginRight = YokiFrameUIComponents.Spacing.MD;
+            item.AddToClassList("yoki-legend__item");
 
             var iconImg = new Image { image = KitIcons.GetTexture(iconId) };
-            iconImg.style.width = 10;
-            iconImg.style.height = 10;
+            iconImg.AddToClassList("yoki-legend__icon");
             iconImg.tintColor = color;
-            iconImg.style.marginRight = 2;
             item.Add(iconImg);
 
             var textLabel = new Label(text);
-            textLabel.style.fontSize = 9;
-            textLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
+            textLabel.AddToClassList("yoki-legend__label");
             item.Add(textLabel);
 
             return item;
@@ -132,31 +106,12 @@ namespace YokiFrame
             {
                 var stateId = kvp.Key;
                 var stateName = Enum.GetName(fsm.EnumType, stateId) ?? stateId.ToString();
-                
+
                 var isActive = stateId == currentId && fsm.MachineState == MachineState.Running;
                 var isVisited = stats.VisitedStates.Contains(stateName);
                 stats.StateVisitCounts.TryGetValue(stateName, out var visitCount);
 
-                var card = YokiFrameUIComponents.CreateStateCard(stateName, isActive, isVisited, visitCount);
-                
-                // 悬停效果
-                card.RegisterCallback<MouseEnterEvent>(_ =>
-                {
-                    if (!isActive)
-                    {
-                        card.style.backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.LayerHover);
-                    }
-                });
-                card.RegisterCallback<MouseLeaveEvent>(_ =>
-                {
-                    if (!isActive)
-                    {
-                        card.style.backgroundColor = new StyleColor(isVisited 
-                            ? new Color(0.22f, 0.22f, 0.25f) 
-                            : new Color(0.15f, 0.15f, 0.17f));
-                    }
-                });
-
+                var card = CreateStateCard(stateName, isActive, isVisited, visitCount);
                 mMatrixContainer.Add(card);
             }
 
@@ -164,12 +119,91 @@ namespace YokiFrame
             if (states.Count == 0)
             {
                 var emptyLabel = new Label("暂无注册状态");
-                emptyLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-                emptyLabel.style.fontSize = 11;
+                emptyLabel.AddToClassList("yoki-fsm-empty__text");
                 mMatrixContainer.Add(emptyLabel);
             }
+        }
+
+        /// <summary>
+        /// 创建状态卡片
+        /// </summary>
+        private VisualElement CreateStateCard(string stateName, bool isActive, bool isVisited, int visitCount)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("yoki-state-card");
+
+            if (isActive)
+            {
+                card.AddToClassList("yoki-state-card--active");
+            }
+            else if (isVisited)
+            {
+                card.AddToClassList("yoki-state-card--visited");
+            }
+            else
+            {
+                card.AddToClassList("yoki-state-card--unvisited");
+            }
+
+            // 状态指示器
+            var indicator = new VisualElement();
+            indicator.AddToClassList("yoki-state-card__indicator");
+            if (isActive)
+            {
+                indicator.AddToClassList("yoki-state-card__indicator--active");
+            }
+            else if (isVisited)
+            {
+                indicator.AddToClassList("yoki-state-card__indicator--visited");
+            }
+            else
+            {
+                indicator.AddToClassList("yoki-state-card__indicator--unvisited");
+            }
+            card.Add(indicator);
+
+            // 状态名称
+            var nameLabel = new Label(stateName);
+            nameLabel.AddToClassList("yoki-state-card__name");
+            if (isActive)
+            {
+                nameLabel.AddToClassList("yoki-state-card__name--active");
+            }
+            else if (isVisited)
+            {
+                nameLabel.AddToClassList("yoki-state-card__name--visited");
+            }
+            else
+            {
+                nameLabel.AddToClassList("yoki-state-card__name--unvisited");
+            }
+            card.Add(nameLabel);
+
+            // 访问次数
+            if (visitCount > 0)
+            {
+                var countLabel = new Label($"×{visitCount}");
+                countLabel.AddToClassList("yoki-state-card__count");
+                card.Add(countLabel);
+            }
+
+            // 悬停效果
+            card.RegisterCallback<MouseEnterEvent>(_ =>
+            {
+                if (!isActive)
+                {
+                    card.AddToClassList("yoki-state-card--hover");
+                }
+            });
+            card.RegisterCallback<MouseLeaveEvent>(_ =>
+            {
+                card.RemoveFromClassList("yoki-state-card--hover");
+            });
+
+            return card;
         }
 
         #endregion
     }
 }
+#endif

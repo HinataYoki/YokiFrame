@@ -1,0 +1,391 @@
+/* ResKit 资源监控组件样式 - BEM 命名规范 */
+/* 命名格式: .yoki-{block}__{element}--{modifier} */
+
+/* ========== 搜索栏 ========== */
+.yoki-res-search {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: rgb(36, 36, 41);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-default);
+}
+
+.yoki-res-search__icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+}
+
+.yoki-res-search__input {
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.yoki-res-search__clear {
+    width: 24px;
+    height: 24px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.yoki-res-search__clear-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* ========== 分类面板 ========== */
+.yoki-res-category {
+    margin-bottom: 8px;
+    background-color: rgb(41, 41, 46);
+    border-radius: 6px;
+    border-left-width: 4px;
+}
+
+.yoki-res-category__header {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.yoki-res-category__expand-btn {
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.yoki-res-category__expand-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.yoki-res-category__name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    margin-left: 8px;
+    flex-grow: 1;
+}
+
+.yoki-res-category__count {
+    font-size: 11px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 10px;
+}
+
+.yoki-res-category__items {
+    display: none;
+    padding-left: 36px;
+    padding-right: 12px;
+    padding-bottom: 8px;
+    border-top-width: 1px;
+    border-top-color: var(--border-subtle);
+}
+
+.yoki-res-category__items--expanded {
+    display: flex;
+}
+
+/* ========== 资源项 ========== */
+.yoki-res-item {
+    flex-direction: row;
+    align-items: center;
+    height: 32px;
+    margin-top: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    background-color: rgb(31, 31, 36);
+    border-radius: 4px;
+    transition-property: background-color;
+    transition-duration: 0.15s;
+}
+
+.yoki-res-item:hover {
+    background-color: var(--layer-hover);
+}
+
+.yoki-res-item--selected {
+    background-color: var(--layer-selected);
+}
+
+.yoki-res-item__indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-right: 8px;
+}
+
+.yoki-res-item__indicator--loaded {
+    background-color: var(--brand-success);
+}
+
+.yoki-res-item__indicator--loading {
+    background-color: var(--brand-warning);
+}
+
+.yoki-res-item__name {
+    flex-grow: 1;
+    font-size: 11px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.yoki-res-item__source {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    margin-right: 8px;
+}
+
+.yoki-res-item__ref-count {
+    font-size: 10px;
+    width: 32px;
+    -unity-text-align: middle-right;
+    color: var(--text-tertiary);
+}
+
+.yoki-res-item__ref-count--highlight {
+    color: var(--brand-warning);
+}
+
+/* ========== 详情面板 ========== */
+.yoki-res-detail {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 16px;
+}
+
+.yoki-res-detail__card {
+    background-color: rgb(36, 36, 41);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--border-subtle);
+}
+
+.yoki-res-detail__card-header {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-subtle);
+}
+
+.yoki-res-detail__card-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--text-secondary);
+}
+
+.yoki-res-detail__card-body {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 12px;
+}
+
+.yoki-res-detail__row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.yoki-res-detail__label {
+    width: 80px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.yoki-res-detail__value {
+    flex-grow: 1;
+    font-size: 11px;
+    color: var(--text-primary);
+}
+
+.yoki-res-detail__value--highlight {
+    color: var(--brand-warning);
+    -unity-font-style: bold;
+}
+
+/* ========== 卸载历史 ========== */
+.yoki-res-history {
+    margin-top: 16px;
+    margin-left: 16px;
+    margin-right: 16px;
+    background-color: rgb(31, 31, 36);
+    border-radius: 8px;
+}
+
+.yoki-res-history__header {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-subtle);
+}
+
+.yoki-res-history__icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+.yoki-res-history__title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    flex-grow: 1;
+}
+
+.yoki-res-history__count {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.yoki-res-history__list {
+    flex-grow: 1;
+    max-height: 300px;
+}
+
+.yoki-res-history__empty {
+    color: var(--text-tertiary);
+    -unity-text-align: middle-center;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+/* ========== 历史记录项 ========== */
+.yoki-res-history-item {
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-color: rgb(36, 36, 41);
+    border-radius: 6px;
+    border-left-width: 3px;
+    border-left-color: var(--brand-danger);
+}
+
+.yoki-res-history-item__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.yoki-res-history-item__time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-right: 8px;
+}
+
+.yoki-res-history-item__type {
+    font-size: 10px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 4px;
+}
+
+.yoki-res-history-item__path {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.yoki-res-history-item__stack-foldout {
+    font-size: 10px;
+    color: var(--text-tertiary);
+}
+
+.yoki-res-history-item__stack-content {
+    font-size: 10px;
+    color: var(--text-disabled);
+    white-space: normal;
+    padding-left: 8px;
+}
+
+/* ========== 类型颜色 ========== */
+.yoki-res-type--audioclip {
+    color: rgb(64, 140, 230);
+    background-color: rgba(64, 140, 230, 0.15);
+    border-left-color: rgb(64, 140, 230);
+}
+
+.yoki-res-type--texture2d {
+    color: rgb(230, 140, 64);
+    background-color: rgba(230, 140, 64, 0.15);
+    border-left-color: rgb(230, 140, 64);
+}
+
+.yoki-res-type--sprite {
+    color: rgb(140, 217, 89);
+    background-color: rgba(140, 217, 89, 0.15);
+    border-left-color: rgb(140, 217, 89);
+}
+
+.yoki-res-type--material {
+    color: rgb(217, 89, 140);
+    background-color: rgba(217, 89, 140, 0.15);
+    border-left-color: rgb(217, 89, 140);
+}
+
+.yoki-res-type--gameobject {
+    color: rgb(153, 89, 217);
+    background-color: rgba(153, 89, 217, 0.15);
+    border-left-color: rgb(153, 89, 217);
+}
+
+.yoki-res-type--textasset {
+    color: rgb(89, 191, 191);
+    background-color: rgba(89, 191, 191, 0.15);
+    border-left-color: rgb(89, 191, 191);
+}
+
+.yoki-res-type--scriptableobject {
+    color: rgb(191, 191, 89);
+    background-color: rgba(191, 191, 89, 0.15);
+    border-left-color: rgb(191, 191, 89);
+}
+
+.yoki-res-type--shader {
+    color: rgb(140, 140, 191);
+    background-color: rgba(140, 140, 191, 0.15);
+    border-left-color: rgb(140, 140, 191);
+}
+
+.yoki-res-type--font {
+    color: rgb(191, 140, 140);
+    background-color: rgba(191, 140, 140, 0.15);
+    border-left-color: rgb(191, 140, 140);
+}
+
+.yoki-res-type--animationclip {
+    color: rgb(115, 166, 217);
+    background-color: rgba(115, 166, 217, 0.15);
+    border-left-color: rgb(115, 166, 217);
+}
+
+.yoki-res-type--unknown {
+    color: var(--text-tertiary);
+    background-color: rgba(128, 128, 140, 0.15);
+    border-left-color: var(--text-tertiary);
+}

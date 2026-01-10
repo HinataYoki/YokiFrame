@@ -55,7 +55,7 @@ namespace YokiFrame.EditorTools
     /// 响应式集合 - 集合变化时自动通知订阅者
     /// 用于编辑器工具的列表数据绑定
     /// </summary>
-    public sealed class ReactiveCollection<T> : IList<T>, IDisposable
+    public sealed class ReactiveCollection<T> : IList<T>, IList, IDisposable
     {
         private readonly List<T> mItems;
         private readonly List<Action<CollectionChangeEvent<T>>> mListeners;
@@ -129,6 +129,57 @@ namespace YokiFrame.EditorTools
         public void CopyTo(T[] array, int arrayIndex) => mItems.CopyTo(array, arrayIndex);
         public IEnumerator<T> GetEnumerator() => mItems.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        #endregion
+
+        #region IList 显式实现（用于 ListView.itemsSource）
+
+        bool IList.IsFixedSize => false;
+        bool ICollection.IsSynchronized => false;
+        object ICollection.SyncRoot => ((ICollection)mItems).SyncRoot;
+
+        object IList.this[int index]
+        {
+            get => mItems[index];
+            set
+            {
+                if (value is T typedValue)
+                {
+                    this[index] = typedValue;
+                }
+            }
+        }
+
+        int IList.Add(object value)
+        {
+            if (value is T typedValue)
+            {
+                Add(typedValue);
+                return mItems.Count - 1;
+            }
+            return -1;
+        }
+
+        bool IList.Contains(object value) => value is T typedValue && Contains(typedValue);
+        int IList.IndexOf(object value) => value is T typedValue ? IndexOf(typedValue) : -1;
+
+        void IList.Insert(int index, object value)
+        {
+            if (value is T typedValue)
+            {
+                Insert(index, typedValue);
+            }
+        }
+
+        void IList.Remove(object value)
+        {
+            if (value is T typedValue)
+            {
+                Remove(typedValue);
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index) => ((ICollection)mItems).CopyTo(array, index);
 
         #endregion
 

@@ -4,37 +4,72 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 淡入淡出动画
+    /// 淡入淡出动画（协程实现）
     /// </summary>
-    public class FadeAnimation : UIAnimationBase
+    public class FadeAnimation : UIAnimationBase, IPoolable
     {
-        private readonly float mFromAlpha;
-        private readonly float mToAlpha;
+        private float mFromAlpha;
+        private float mToAlpha;
         private CanvasGroup mCanvasGroup;
 
-        public FadeAnimation(FadeAnimationConfig config) 
-            : base(config.Duration, config.Curve)
+        #region IPoolable
+        
+        public bool IsRecycled { get; set; }
+        
+        void IPoolable.OnRecycled()
         {
-            mFromAlpha = config.FromAlpha;
-            mToAlpha = config.ToAlpha;
+            Stop();
+            mCanvasGroup = null;
+        }
+        
+        #endregion
+
+        public FadeAnimation() : base() { }
+
+        public FadeAnimation(FadeAnimationConfig config) : base()
+        {
+            Setup(config);
         }
 
-        public FadeAnimation(float duration, float fromAlpha, float toAlpha, AnimationCurve curve = null)
-            : base(duration, curve)
+        public FadeAnimation(float duration, float fromAlpha, float toAlpha, AnimationCurve curve = null) : base()
         {
+            Setup(duration, fromAlpha, toAlpha, curve);
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal FadeAnimation Setup(FadeAnimationConfig config)
+        {
+            SetupBase(config.Duration, config.Curve);
+            mFromAlpha = config.FromAlpha;
+            mToAlpha = config.ToAlpha;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal FadeAnimation Setup(float duration, float fromAlpha, float toAlpha, AnimationCurve curve = null)
+        {
+            SetupBase(duration, curve);
             mFromAlpha = fromAlpha;
             mToAlpha = toAlpha;
+            return this;
         }
 
         public override void Play(RectTransform target, Action onComplete = null)
         {
-            if (target == null)
+            if (target == default)
             {
                 onComplete?.Invoke();
                 return;
             }
 
-            mCanvasGroup = GetOrAddCanvasGroup(target);
+            if (mCanvasGroup == default || mCanvasGroup.gameObject != target.gameObject)
+            {
+                mCanvasGroup = EnsureCanvasGroup(target);
+            }
             mCanvasGroup.alpha = mFromAlpha;
             
             base.Play(target, onComplete);
@@ -42,36 +77,46 @@ namespace YokiFrame
 
         public override void Reset(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             
-            var canvasGroup = GetOrAddCanvasGroup(target);
-            canvasGroup.alpha = mFromAlpha;
+            if (mCanvasGroup == default || mCanvasGroup.gameObject != target.gameObject)
+            {
+                mCanvasGroup = EnsureCanvasGroup(target);
+            }
+            mCanvasGroup.alpha = mFromAlpha;
         }
 
         public override void SetToEndState(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             
-            var canvasGroup = GetOrAddCanvasGroup(target);
-            canvasGroup.alpha = mToAlpha;
+            if (mCanvasGroup == default || mCanvasGroup.gameObject != target.gameObject)
+            {
+                mCanvasGroup = EnsureCanvasGroup(target);
+            }
+            mCanvasGroup.alpha = mToAlpha;
         }
 
         protected override void ApplyAnimation(RectTransform target, float normalizedTime)
         {
-            if (mCanvasGroup != null)
+            if (mCanvasGroup != default)
             {
                 mCanvasGroup.alpha = Mathf.Lerp(mFromAlpha, mToAlpha, normalizedTime);
             }
         }
 
-        private CanvasGroup GetOrAddCanvasGroup(RectTransform target)
+        private static CanvasGroup EnsureCanvasGroup(RectTransform target)
         {
-            var canvasGroup = target.GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
+            if (target.TryGetComponent<CanvasGroup>(out var canvasGroup))
             {
-                canvasGroup = target.gameObject.AddComponent<CanvasGroup>();
+                return canvasGroup;
             }
-            return canvasGroup;
+            return target.gameObject.AddComponent<CanvasGroup>();
         }
+        
+        /// <summary>
+        /// 归还到池
+        /// </summary>
+        public override void Recycle() => SafePoolKit<FadeAnimation>.Instance.Recycle(this);
     }
 }

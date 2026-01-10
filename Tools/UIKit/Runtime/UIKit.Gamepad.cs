@@ -10,7 +10,14 @@ namespace YokiFrame
         /// <summary>
         /// 当前输入模式
         /// </summary>
-        public static UIInputMode CurrentInputMode => FocusSystem?.CurrentInputMode ?? UIInputMode.Pointer;
+        public static UIInputMode CurrentInputMode
+        {
+            get
+            {
+                var focusSystem = FocusSystem;
+                return focusSystem != default ? focusSystem.CurrentInputMode : UIInputMode.Pointer;
+            }
+        }
 
         /// <summary>
         /// 是否处于手柄/键盘导航模式
@@ -27,9 +34,10 @@ namespace YokiFrame
         /// </summary>
         public static void EnableGamepad()
         {
-            if (FocusSystem != null)
+            var focusSystem = FocusSystem;
+            if (focusSystem != default)
             {
-                FocusSystem.GamepadEnabled = true;
+                focusSystem.GamepadEnabled = true;
             }
         }
 
@@ -38,9 +46,10 @@ namespace YokiFrame
         /// </summary>
         public static void DisableGamepad()
         {
-            if (FocusSystem != null)
+            var focusSystem = FocusSystem;
+            if (focusSystem != default)
             {
-                FocusSystem.GamepadEnabled = false;
+                focusSystem.GamepadEnabled = false;
             }
         }
 
@@ -49,7 +58,15 @@ namespace YokiFrame
         /// </summary>
         public static void ShowFocusHighlight()
         {
-            FocusSystem?.FocusHighlight?.Show();
+            var focusSystem = FocusSystem;
+            if (focusSystem != default)
+            {
+                var highlight = focusSystem.FocusHighlight;
+                if (highlight != default)
+                {
+                    highlight.Show();
+                }
+            }
         }
 
         /// <summary>
@@ -57,7 +74,15 @@ namespace YokiFrame
         /// </summary>
         public static void HideFocusHighlight()
         {
-            FocusSystem?.FocusHighlight?.Hide();
+            var focusSystem = FocusSystem;
+            if (focusSystem != default)
+            {
+                var highlight = focusSystem.FocusHighlight;
+                if (highlight != default)
+                {
+                    highlight.Hide();
+                }
+            }
         }
 
         #endregion
@@ -69,7 +94,10 @@ namespace YokiFrame
         /// </summary>
         public static void ConfigureGridNavigation(UINavigationGrid grid)
         {
-            grid?.ConfigureNavigation();
+            if (grid != default)
+            {
+                grid.ConfigureNavigation();
+            }
         }
 
         /// <summary>
@@ -77,7 +105,10 @@ namespace YokiFrame
         /// </summary>
         public static void ConfigureGroupNavigation(SelectableGroup group)
         {
-            group?.ConfigureNavigation();
+            if (group != default)
+            {
+                group.ConfigureNavigation();
+            }
         }
 
         #endregion

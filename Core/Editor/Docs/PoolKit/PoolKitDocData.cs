@@ -19,7 +19,8 @@ namespace YokiFrame.EditorTools
                 PoolKitDocSimple.CreateSection(),
                 PoolKitDocFactory.CreateSection(),
                 PoolKitDocCustom.CreateSection(),
-                PoolKitDocContainer.CreateSection()
+                PoolKitDocContainer.CreateSection(),
+                PoolKitDocMonitor.CreateSection()
             };
         }
     }

@@ -62,6 +62,49 @@ namespace YokiFrame.EditorTools
     public PlayerState CurrentState => mFsm.CurrentStateId;
 }",
                         Explanation = "状态机需要在 Update 中手动驱动更新。"
+                    },
+                    new()
+                    {
+                        Title = "编辑器监控面板",
+                        Code = @"// FsmKit 监控面板采用响应式架构
+// 打开方式：Tools > YokiFrame > YokiFrame Tools > FsmKit
+
+// 监控面板功能：
+// - HUD 卡片：显示状态机总数、活跃数、状态转换次数
+// - 状态矩阵：可视化状态转换关系
+// - 时间线：记录状态转换历史
+
+// 响应式数据流：
+// FsmDebugger (运行时)
+//   → EditorDataBridge.NotifyDataChanged()
+//   → FsmKitToolPage 订阅回调
+//   → FsmKitViewModel 更新
+//   → UI 自动刷新
+
+// 通道定义：
+// CHANNEL_FSM_STATE_CHANGED - 状态变化通知
+// CHANNEL_FSM_REGISTERED    - 状态机注册通知",
+                        Explanation = "监控面板使用响应式架构，仅在状态变化时更新 UI，避免轮询开销。"
+                    },
+                    new()
+                    {
+                        Title = "自定义监控扩展",
+                        Code = @"// 订阅状态机状态变化（编辑器代码）
+#if UNITY_EDITOR
+using YokiFrame.EditorTools;
+
+// 订阅状态变化
+var subscription = EditorDataBridge.Subscribe<FsmStateChangedData>(
+    DataChannels.CHANNEL_FSM_STATE_CHANGED,
+    data => 
+    {
+        Debug.Log($""状态机 {data.FsmName}: {data.FromState} → {data.ToState}"");
+    });
+
+// 取消订阅
+subscription.Dispose();
+#endif",
+                        Explanation = "可通过 EditorDataBridge 订阅状态机数据变化，实现自定义监控逻辑。"
                     }
                 }
             };

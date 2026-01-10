@@ -112,6 +112,11 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>
+        /// 轮询更新 - 用于动画效果更新
+        /// 注：仅用于 UI 动画，非数据轮询
+        /// </summary>
+        [Obsolete("保留用于动画效果更新")]
         public override void OnUpdate()
         {
             // 更新活跃状态动画

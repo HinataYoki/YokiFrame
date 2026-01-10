@@ -1,4 +1,4 @@
-using UnityEngine;
+#if UNITY_EDITOR
 using UnityEngine.UIElements;
 using YokiFrame.EditorTools;
 
@@ -10,12 +10,6 @@ namespace YokiFrame
     /// </summary>
     public partial class FsmKitToolPage
     {
-        #region 常量
-
-        private const float HUD_HEIGHT = 120f;
-
-        #endregion
-
         #region 构建 HUD
 
         /// <summary>
@@ -23,12 +17,8 @@ namespace YokiFrame
         /// </summary>
         private VisualElement BuildHudSection()
         {
-            var section = new VisualElement();
-            section.name = "hud-section";
-            section.style.height = HUD_HEIGHT;
-            section.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.14f));
-            section.style.borderBottomWidth = 2;
-            section.style.borderBottomColor = new StyleColor(YokiFrameUIComponents.Colors.BorderDefault);
+            var section = new VisualElement { name = "hud-section" };
+            section.AddToClassList("yoki-fsm-hud");
 
             // 初始显示空状态提示
             var emptyHint = CreateHelpBox("选择左侧状态机查看详情");
@@ -43,64 +33,46 @@ namespace YokiFrame
         private VisualElement BuildHudContent()
         {
             var content = new VisualElement();
-            content.style.flexGrow = 1;
-            content.style.paddingLeft = YokiFrameUIComponents.Spacing.LG;
-            content.style.paddingRight = YokiFrameUIComponents.Spacing.LG;
-            content.style.paddingTop = YokiFrameUIComponents.Spacing.MD;
-            content.style.paddingBottom = YokiFrameUIComponents.Spacing.MD;
-            content.style.flexDirection = FlexDirection.Row;
-            content.style.justifyContent = Justify.SpaceBetween;
-            content.style.alignItems = Align.Center;
+            content.AddToClassList("yoki-fsm-hud__content");
 
             // 左侧：状态信息
-            var leftArea = new VisualElement { style = { flexGrow = 1 } };
+            var leftArea = new VisualElement();
+            leftArea.AddToClassList("yoki-fsm-hud__left");
             content.Add(leftArea);
 
             // 小标题
             var titleLabel = new Label("CURRENT STATE");
-            titleLabel.style.fontSize = 10;
-            titleLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-            titleLabel.style.letterSpacing = 1;
+            titleLabel.AddToClassList("yoki-fsm-hud__label");
             leftArea.Add(titleLabel);
 
             // 当前状态（大字）
             mCurrentStateLabel = new Label("—") { name = "current-state-big" };
-            mCurrentStateLabel.style.fontSize = 32;
-            mCurrentStateLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            mCurrentStateLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.BrandPrimary);
-            mCurrentStateLabel.style.marginTop = 4;
+            mCurrentStateLabel.AddToClassList("yoki-fsm-hud__state");
             leftArea.Add(mCurrentStateLabel);
 
             // 上一状态
             mPrevStateLabel = new Label("") { name = "prev-state" };
-            mPrevStateLabel.style.fontSize = 11;
-            mPrevStateLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-            mPrevStateLabel.style.marginTop = 4;
+            mPrevStateLabel.AddToClassList("yoki-fsm-hud__prev-state");
             leftArea.Add(mPrevStateLabel);
 
             // 右侧：计时器
-            var rightArea = new VisualElement { style = { alignItems = Align.FlexEnd } };
+            var rightArea = new VisualElement();
+            rightArea.AddToClassList("yoki-fsm-hud__right");
             content.Add(rightArea);
 
             // 持续时间标签
             var durationTitle = new Label("DURATION");
-            durationTitle.style.fontSize = 10;
-            durationTitle.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary);
-            durationTitle.style.letterSpacing = 1;
+            durationTitle.AddToClassList("yoki-fsm-hud__label");
             rightArea.Add(durationTitle);
 
             // 持续时间（大数字）
             mDurationLabel = new Label("0.0s") { name = "duration-big" };
-            mDurationLabel.style.fontSize = 28;
-            mDurationLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            mDurationLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary);
-            mDurationLabel.style.marginTop = 4;
+            mDurationLabel.AddToClassList("yoki-fsm-hud__duration");
             rightArea.Add(mDurationLabel);
 
             // 机器状态
             var machineStateLabel = new Label("") { name = "machine-state" };
-            machineStateLabel.style.fontSize = 10;
-            machineStateLabel.style.marginTop = 4;
+            machineStateLabel.AddToClassList("yoki-fsm-hud__machine-state");
             rightArea.Add(machineStateLabel);
 
             return content;
@@ -119,9 +91,11 @@ namespace YokiFrame
             // 当前状态
             var currentStateName = GetCurrentStateName(fsm);
             mCurrentStateLabel.text = currentStateName;
-            mCurrentStateLabel.style.color = new StyleColor(isRunning 
-                ? YokiFrameUIComponents.Colors.BrandPrimary 
-                : YokiFrameUIComponents.Colors.TextTertiary);
+            mCurrentStateLabel.RemoveFromClassList("yoki-fsm-hud__state--inactive");
+            if (!isRunning)
+            {
+                mCurrentStateLabel.AddToClassList("yoki-fsm-hud__state--inactive");
+            }
 
             // 上一状态
             var stats = FsmDebugger.GetStats(fsm.Name);
@@ -143,18 +117,23 @@ namespace YokiFrame
             var machineStateLabel = mHudSection.Q<Label>("machine-state");
             if (machineStateLabel != null)
             {
-                var (stateText, stateColor, stateIconId) = fsm.MachineState switch
+                machineStateLabel.RemoveFromClassList("yoki-fsm-hud__machine-state--running");
+                machineStateLabel.RemoveFromClassList("yoki-fsm-hud__machine-state--suspended");
+                machineStateLabel.RemoveFromClassList("yoki-fsm-hud__machine-state--stopped");
+
+                var (stateText, stateClass) = fsm.MachineState switch
                 {
-                    MachineState.Running => ("Running", YokiFrameUIComponents.Colors.BrandSuccess, KitIcons.DOT_FILLED),
-                    MachineState.Suspend => ("Suspended", YokiFrameUIComponents.Colors.BrandWarning, KitIcons.DOT_HALF),
-                    MachineState.End => ("Stopped", YokiFrameUIComponents.Colors.TextTertiary, KitIcons.DOT_EMPTY),
-                    _ => ("?", YokiFrameUIComponents.Colors.TextTertiary, KitIcons.DOT)
+                    MachineState.Running => ("Running", "yoki-fsm-hud__machine-state--running"),
+                    MachineState.Suspend => ("Suspended", "yoki-fsm-hud__machine-state--suspended"),
+                    MachineState.End => ("Stopped", "yoki-fsm-hud__machine-state--stopped"),
+                    _ => ("?", "yoki-fsm-hud__machine-state--stopped")
                 };
                 machineStateLabel.text = stateText;
-                machineStateLabel.style.color = new StyleColor(stateColor);
+                machineStateLabel.AddToClassList(stateClass);
             }
         }
 
         #endregion
     }
 }
+#endif

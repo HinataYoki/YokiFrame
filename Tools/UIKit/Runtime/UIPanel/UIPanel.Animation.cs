@@ -12,23 +12,31 @@ namespace YokiFrame
     /// </summary>
     public abstract partial class UIPanel
     {
-        #region Animation Control
+        #region 动画控制
 
         /// <summary>
-        /// 设置显示动画
+        /// 设置显示动画（会归还旧动画到池）
         /// </summary>
         public void SetShowAnimation(IUIAnimation animation)
         {
-            mShowAnimation?.Stop();
+            if (mShowAnimation != default)
+            {
+                mShowAnimation.Stop();
+                mShowAnimation.Recycle();
+            }
             mShowAnimation = animation;
         }
 
         /// <summary>
-        /// 设置隐藏动画
+        /// 设置隐藏动画（会归还旧动画到池）
         /// </summary>
         public void SetHideAnimation(IUIAnimation animation)
         {
-            mHideAnimation?.Stop();
+            if (mHideAnimation != default)
+            {
+                mHideAnimation.Stop();
+                mHideAnimation.Recycle();
+            }
             mHideAnimation = animation;
         }
 
@@ -37,14 +45,14 @@ namespace YokiFrame
         /// </summary>
         public void StopAnimations()
         {
-            mShowAnimation?.Stop();
-            mHideAnimation?.Stop();
+            if (mShowAnimation != default) mShowAnimation.Stop();
+            if (mHideAnimation != default) mHideAnimation.Stop();
         }
 
         #endregion
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        #region UniTask Async Methods
+        #region UniTask 异步方法
 
         /// <summary>
         /// [UniTask] 异步显示面板
@@ -62,11 +70,11 @@ namespace YokiFrame
                 var rectTransform = transform as RectTransform;
                 await uniTaskAnim.PlayUniTaskAsync(rectTransform, ct);
             }
-            else if (mShowAnimation != null)
+            else if (mShowAnimation != default)
             {
-                var tcs = new UniTaskCompletionSource();
+                var tcs = AutoResetUniTaskCompletionSource.Create();
                 var rectTransform = transform as RectTransform;
-                mShowAnimation.Play(rectTransform, () => tcs.TrySetResult());
+                mShowAnimation.Play(rectTransform, static state => ((AutoResetUniTaskCompletionSource)state).TrySetResult(), tcs);
                 await tcs.Task;
             }
 
@@ -92,11 +100,11 @@ namespace YokiFrame
                 var rectTransform = transform as RectTransform;
                 await uniTaskAnim.PlayUniTaskAsync(rectTransform, ct);
             }
-            else if (mHideAnimation != null && gameObject.activeInHierarchy)
+            else if (mHideAnimation != default && gameObject.activeInHierarchy)
             {
-                var tcs = new UniTaskCompletionSource();
+                var tcs = AutoResetUniTaskCompletionSource.Create();
                 var rectTransform = transform as RectTransform;
-                mHideAnimation.Play(rectTransform, () => tcs.TrySetResult());
+                mHideAnimation.Play(rectTransform, static state => ((AutoResetUniTaskCompletionSource)state).TrySetResult(), tcs);
                 await tcs.Task;
             }
 

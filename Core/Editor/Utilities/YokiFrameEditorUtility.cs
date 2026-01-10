@@ -197,6 +197,28 @@ namespace YokiFrame.EditorTools
             {
                 root.styleSheets.Add(styleSheet);
             }
+            
+            // 加载 Components 目录下的所有组件样式
+            ApplyComponentStyleSheets(root);
+        }
+        
+        /// <summary>
+        /// 加载并应用 Components 目录下的所有组件样式表
+        /// </summary>
+        public static void ApplyComponentStyleSheets(VisualElement root)
+        {
+            var componentsPath = $"{GetYokiFrameRootPath()}/Core/Editor/Styles/Components";
+            var guids = AssetDatabase.FindAssets("t:StyleSheet", new[] { componentsPath });
+            
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                if (styleSheet != null)
+                {
+                    root.styleSheets.Add(styleSheet);
+                }
+            }
         }
         
         /// <summary>

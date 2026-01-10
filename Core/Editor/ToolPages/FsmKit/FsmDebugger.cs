@@ -9,6 +9,25 @@ namespace YokiFrame
     /// </summary>
     public static class FsmDebugger
     {
+        #region 事件通道常量
+
+        /// <summary>
+        /// FSM 列表变化事件通道
+        /// </summary>
+        public const string CHANNEL_FSM_LIST_CHANGED = "FsmKit.FsmListChanged";
+
+        /// <summary>
+        /// FSM 状态变化事件通道
+        /// </summary>
+        public const string CHANNEL_FSM_STATE_CHANGED = "FsmKit.FsmStateChanged";
+
+        /// <summary>
+        /// 转换历史事件通道
+        /// </summary>
+        public const string CHANNEL_FSM_HISTORY_LOGGED = "FsmKit.HistoryLogged";
+
+        #endregion
+
         /// <summary>
         /// 状态转换历史记录
         /// </summary>
@@ -41,6 +60,40 @@ namespace YokiFrame
         public static IReadOnlyList<TransitionEntry> TransitionHistory => sTransitionHistory;
         
         public static bool RecordTransitions { get; set; } = true;
+
+        #region 编辑器通知
+
+        /// <summary>
+        /// 通知编辑器数据变化（通过反射调用 EditorDataBridge）
+        /// 避免运行时程序集直接引用编辑器程序集
+        /// </summary>
+        private static void NotifyEditorDataChanged<T>(string channel, T data)
+        {
+            var bridgeType = Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
+            if (bridgeType == null) return;
+
+            // 获取泛型方法：NotifyDataChanged<T>(string, T)
+            var methods = bridgeType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            System.Reflection.MethodInfo targetMethod = null;
+            for (int i = 0; i < methods.Length; i++)
+            {
+                var m = methods[i];
+                if (m.Name != "NotifyDataChanged" || !m.IsGenericMethodDefinition) continue;
+                var parameters = m.GetParameters();
+                if (parameters.Length == 2 && parameters[0].ParameterType == typeof(string))
+                {
+                    targetMethod = m;
+                    break;
+                }
+            }
+
+            if (targetMethod == null) return;
+
+            var genericMethod = targetMethod.MakeGenericMethod(typeof(T));
+            genericMethod.Invoke(null, new object[] { channel, data });
+        }
+
+        #endregion
 
         /// <summary>
         /// 获取 FSM 运行时统计数据
@@ -94,6 +147,9 @@ namespace YokiFrame
             // 初始化统计数据
             sFsmStats[fsm.Name] = new FsmRuntimeStats();
             CleanupDeadReferences();
+            
+            // 通知编辑器 FSM 列表变化
+            NotifyEditorDataChanged(CHANNEL_FSM_LIST_CHANGED, fsm);
         }
 
         private static void OnFsmDisposed(IFSM fsm)
@@ -101,6 +157,9 @@ namespace YokiFrame
             AddHistory(fsm.Name, "Dispose", null, null);
             sFsmStats.Remove(fsm.Name);
             RemoveFsm(fsm);
+            
+            // 通知编辑器 FSM 列表变化
+            NotifyEditorDataChanged(CHANNEL_FSM_LIST_CHANGED, fsm);
         }
 
         private static void OnFsmCleared(IFSM fsm)
@@ -113,6 +172,9 @@ namespace YokiFrame
                 stats.VisitedStates.Clear();
                 stats.PreviousState = null;
             }
+            
+            // 通知编辑器状态变化
+            NotifyEditorDataChanged(CHANNEL_FSM_STATE_CHANGED, fsm);
         }
 
         private static void OnFsmStarted(IFSM fsm, string initialState)
@@ -124,6 +186,9 @@ namespace YokiFrame
             stats.VisitedStates.Add(initialState);
             stats.StateVisitCounts.TryGetValue(initialState, out var count);
             stats.StateVisitCounts[initialState] = count + 1;
+            
+            // 通知编辑器状态变化
+            NotifyEditorDataChanged(CHANNEL_FSM_STATE_CHANGED, fsm);
         }
 
         private static void OnStateChanged(IFSM fsm, string fromState, string toState)
@@ -136,16 +201,25 @@ namespace YokiFrame
             stats.VisitedStates.Add(toState);
             stats.StateVisitCounts.TryGetValue(toState, out var count);
             stats.StateVisitCounts[toState] = count + 1;
+            
+            // 通知编辑器状态变化
+            NotifyEditorDataChanged(CHANNEL_FSM_STATE_CHANGED, fsm);
         }
 
         private static void OnStateAdded(IFSM fsm, string stateName)
         {
             AddHistory(fsm.Name, "Add", null, stateName);
+            
+            // 通知编辑器状态变化
+            NotifyEditorDataChanged(CHANNEL_FSM_STATE_CHANGED, fsm);
         }
 
         private static void OnStateRemoved(IFSM fsm, string stateName)
         {
             AddHistory(fsm.Name, "Remove", stateName, null);
+            
+            // 通知编辑器状态变化
+            NotifyEditorDataChanged(CHANNEL_FSM_STATE_CHANGED, fsm);
         }
 
         private static void AddHistory(string fsmName, string action, string fromState, string toState)
@@ -155,14 +229,18 @@ namespace YokiFrame
             if (sTransitionHistory.Count >= MAX_HISTORY_COUNT)
                 sTransitionHistory.RemoveAt(0);
 
-            sTransitionHistory.Add(new TransitionEntry
+            var entry = new TransitionEntry
             {
                 Time = UnityEngine.Time.time,
                 FsmName = fsmName,
                 Action = action,
                 FromState = fromState,
                 ToState = toState
-            });
+            };
+            sTransitionHistory.Add(entry);
+            
+            // 通知编辑器历史记录变化
+            NotifyEditorDataChanged(CHANNEL_FSM_HISTORY_LOGGED, entry);
         }
 
         private static void RemoveFsm(IFSM fsm)

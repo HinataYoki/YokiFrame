@@ -19,7 +19,11 @@ namespace YokiFrame
         /// </summary>
         public static void SetFocus(UnityEngine.GameObject target)
         {
-            UIFocusSystem.Instance?.SetFocus(target);
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.SetFocus(target);
+            }
         }
 
         /// <summary>
@@ -27,7 +31,11 @@ namespace YokiFrame
         /// </summary>
         public static void SetFocus(UnityEngine.UI.Selectable selectable)
         {
-            UIFocusSystem.Instance?.SetFocus(selectable);
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.SetFocus(selectable);
+            }
         }
 
         /// <summary>
@@ -35,7 +43,11 @@ namespace YokiFrame
         /// </summary>
         public static void ClearFocus()
         {
-            UIFocusSystem.Instance?.ClearFocus();
+            var focusSystem = UIFocusSystem.Instance;
+            if (focusSystem != default)
+            {
+                focusSystem.ClearFocus();
+            }
         }
 
         /// <summary>
@@ -43,7 +55,8 @@ namespace YokiFrame
         /// </summary>
         public static UnityEngine.GameObject GetCurrentFocus()
         {
-            return UIFocusSystem.Instance?.CurrentFocus;
+            var focusSystem = UIFocusSystem.Instance;
+            return focusSystem != default ? focusSystem.CurrentFocus : null;
         }
 
         /// <summary>
@@ -51,7 +64,8 @@ namespace YokiFrame
         /// </summary>
         public static UIInputMode GetInputMode()
         {
-            return UIFocusSystem.Instance?.CurrentInputMode ?? UIInputMode.Pointer;
+            var focusSystem = UIFocusSystem.Instance;
+            return focusSystem != default ? focusSystem.CurrentInputMode : UIInputMode.Pointer;
         }
 
         #endregion

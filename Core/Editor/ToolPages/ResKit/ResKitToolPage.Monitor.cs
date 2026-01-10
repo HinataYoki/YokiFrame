@@ -1,11 +1,11 @@
 #if UNITY_EDITOR
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame.EditorTools
 {
     /// <summary>
     /// ResKit 工具页面 - 资源监控 UI 构建
+    /// 使用 USS 类消除内联样式
     /// </summary>
     public partial class ResKitToolPage
     {
@@ -60,7 +60,7 @@ namespace YokiFrame.EditorTools
             );
             toolbar.Add(autoRefreshToggle);
 
-            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
 
             mLoadedCountLabel = new Label("已加载: 0");
             mLoadedCountLabel.AddToClassList("toolbar-label");
@@ -79,25 +79,14 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateSearchBar()
         {
             var searchBar = new VisualElement();
-            searchBar.style.flexDirection = FlexDirection.Row;
-            searchBar.style.alignItems = Align.Center;
-            searchBar.style.paddingLeft = 12;
-            searchBar.style.paddingRight = 12;
-            searchBar.style.paddingTop = 8;
-            searchBar.style.paddingBottom = 8;
-            searchBar.style.backgroundColor = new StyleColor(new Color(0.14f, 0.14f, 0.16f));
-            searchBar.style.borderBottomWidth = 1;
-            searchBar.style.borderBottomColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
+            searchBar.AddToClassList("yoki-res-search");
 
             var searchIcon = new Image { image = KitIcons.GetTexture(KitIcons.TARGET) };
-            searchIcon.style.width = 12;
-            searchIcon.style.height = 12;
-            searchIcon.style.marginRight = 8;
+            searchIcon.AddToClassList("yoki-res-search__icon");
             searchBar.Add(searchIcon);
 
             mSearchField = new TextField();
-            mSearchField.style.flexGrow = 1;
-            mSearchField.style.marginRight = 8;
+            mSearchField.AddToClassList("yoki-res-search__input");
             mSearchField.RegisterValueChangedCallback(evt =>
             {
                 mSearchFilter = evt.newValue?.ToLowerInvariant() ?? "";
@@ -111,13 +100,9 @@ namespace YokiFrame.EditorTools
                 mSearchFilter = "";
                 RefreshCategoryDisplay();
             });
-            clearBtn.style.width = 24;
-            clearBtn.style.height = 24;
-            clearBtn.style.paddingLeft = 4;
-            clearBtn.style.paddingRight = 4;
+            clearBtn.AddToClassList("yoki-res-search__clear");
             var clearIcon = new Image { image = KitIcons.GetTexture(KitIcons.DELETE) };
-            clearIcon.style.width = 14;
-            clearIcon.style.height = 14;
+            clearIcon.AddToClassList("yoki-res-search__clear-icon");
             clearBtn.Add(clearIcon);
             searchBar.Add(clearBtn);
 
@@ -169,20 +154,13 @@ namespace YokiFrame.EditorTools
             rightPanel.Add(detailHeader);
 
             mDetailPanel = new VisualElement();
-            mDetailPanel.style.paddingLeft = 16;
-            mDetailPanel.style.paddingRight = 16;
-            mDetailPanel.style.paddingTop = 16;
+            mDetailPanel.AddToClassList("yoki-res-detail");
             rightPanel.Add(mDetailPanel);
 
             BuildDetailPanel();
             
             mHistoryContainer = new VisualElement();
-            mHistoryContainer.style.marginTop = 16;
-            mHistoryContainer.style.backgroundColor = new StyleColor(new Color(0.12f, 0.12f, 0.14f));
-            mHistoryContainer.style.borderTopLeftRadius = mHistoryContainer.style.borderTopRightRadius = 8;
-            mHistoryContainer.style.borderBottomLeftRadius = mHistoryContainer.style.borderBottomRightRadius = 8;
-            mHistoryContainer.style.marginLeft = 16;
-            mHistoryContainer.style.marginRight = 16;
+            mHistoryContainer.AddToClassList("yoki-res-history");
             rightPanel.Add(mHistoryContainer);
             
             return rightPanel;
@@ -196,18 +174,18 @@ namespace YokiFrame.EditorTools
             mDetailPanel.Clear();
 
             var card = new VisualElement();
-            card.AddToClassList("card");
+            card.AddToClassList("yoki-res-detail__card");
             mDetailPanel.Add(card);
 
             var cardHeader = new VisualElement();
-            cardHeader.AddToClassList("card-header");
+            cardHeader.AddToClassList("yoki-res-detail__card-header");
             var cardTitle = new Label("基本信息");
-            cardTitle.AddToClassList("card-title");
+            cardTitle.AddToClassList("yoki-res-detail__card-title");
             cardHeader.Add(cardTitle);
             card.Add(cardHeader);
 
             var cardBody = new VisualElement();
-            cardBody.AddToClassList("card-body");
+            cardBody.AddToClassList("yoki-res-detail__card-body");
             card.Add(cardBody);
 
             mDetailPath = CreateInfoRow(cardBody, "路径");
@@ -223,14 +201,14 @@ namespace YokiFrame.EditorTools
         private Label CreateInfoRow(VisualElement parent, string labelText)
         {
             var row = new VisualElement();
-            row.AddToClassList("info-row");
+            row.AddToClassList("yoki-res-detail__row");
 
             var label = new Label(labelText);
-            label.AddToClassList("info-label");
+            label.AddToClassList("yoki-res-detail__label");
             row.Add(label);
 
             var value = new Label("-");
-            value.AddToClassList("info-value");
+            value.AddToClassList("yoki-res-detail__value");
             row.Add(value);
 
             parent.Add(row);

@@ -30,6 +30,14 @@ namespace YokiFrame
         void Play(RectTransform target, Action onComplete = null);
         
         /// <summary>
+        /// 播放动画（带状态的回调，避免闭包 GC）
+        /// </summary>
+        /// <param name="target">动画目标 RectTransform</param>
+        /// <param name="onComplete">动画完成回调</param>
+        /// <param name="state">传递给回调的状态对象</param>
+        void Play(RectTransform target, Action<object> onComplete, object state);
+        
+        /// <summary>
         /// 停止动画
         /// </summary>
         void Stop();
@@ -45,6 +53,11 @@ namespace YokiFrame
         /// </summary>
         /// <param name="target">动画目标 RectTransform</param>
         void SetToEndState(RectTransform target);
+        
+        /// <summary>
+        /// 归还到对象池
+        /// </summary>
+        void Recycle();
     }
 
 #if YOKIFRAME_UNITASK_SUPPORT

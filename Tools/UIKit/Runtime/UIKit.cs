@@ -51,7 +51,7 @@ namespace YokiFrame
         /// </summary>
         private static readonly Dictionary<Type, PanelHandler> PanelCacheDic = new();
 
-        #region Handler
+        #region 面板句柄管理
         
         /// <summary>
         /// 尝试获取已缓存的 Handler（不创建）
@@ -202,6 +202,8 @@ namespace YokiFrame
         {
             if (panel != null && panel.Transform != null && panel.Transform.gameObject != null)
             {
+                // 主动调用清理，避免 inactive GameObject 上 OnDestroy 不触发
+                panel.Cleanup();
                 UnityEngine.Object.Destroy(panel.Transform.gameObject);
             }
         }

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] - 2026-01-10
+
+### Added
+- **PoolKit 编辑器工具**
+  - 新增对象池运行时监控面板，支持实时查看所有池的状态
+  - Master-Detail 布局：左侧池列表 + 右侧详情面板
+  - HUD 概览：搜索框 + 统计卡片（总数/活跃/空闲/峰值）
+  - 活跃对象卡片：显示对象名、借出时长、调用来源
+  - 操作按钮：代码跳转、Hierarchy 定位、强制归还
+  - 可展开堆栈详情：点击卡片展开完整调用堆栈
+  - 事件日志面板：实时显示 Spawn/Return/Create/Destroy 事件
+  - 追踪/堆栈开关：工具栏快捷切换
+  - 响应式数据更新：通过 EditorDataBridge 订阅运行时数据变化
+  - 活跃时间实时更新：每秒刷新借出时长显示
+  - 代码跳转功能：点击"代码"按钮跳转到借出代码位置
+
 ## [1.5.4] - 2026-01-10
 
 ### Changed

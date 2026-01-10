@@ -4,30 +4,58 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 缩放动画
+    /// 缩放动画（协程实现）
     /// </summary>
-    public class ScaleAnimation : UIAnimationBase
+    public class ScaleAnimation : UIAnimationBase, IPoolable
     {
-        private readonly Vector3 mFromScale;
-        private readonly Vector3 mToScale;
+        private Vector3 mFromScale;
+        private Vector3 mToScale;
 
-        public ScaleAnimation(ScaleAnimationConfig config) 
-            : base(config.Duration, config.Curve)
+        #region IPoolable
+        
+        public bool IsRecycled { get; set; }
+        
+        void IPoolable.OnRecycled() => Stop();
+        
+        #endregion
+
+        public ScaleAnimation() : base() { }
+
+        public ScaleAnimation(ScaleAnimationConfig config) : base()
         {
-            mFromScale = config.FromScale;
-            mToScale = config.ToScale;
+            Setup(config);
         }
 
-        public ScaleAnimation(float duration, Vector3 fromScale, Vector3 toScale, AnimationCurve curve = null)
-            : base(duration, curve)
+        public ScaleAnimation(float duration, Vector3 fromScale, Vector3 toScale, AnimationCurve curve = null) : base()
         {
+            Setup(duration, fromScale, toScale, curve);
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal ScaleAnimation Setup(ScaleAnimationConfig config)
+        {
+            SetupBase(config.Duration, config.Curve);
+            mFromScale = config.FromScale;
+            mToScale = config.ToScale;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置参数（池化复用）
+        /// </summary>
+        internal ScaleAnimation Setup(float duration, Vector3 fromScale, Vector3 toScale, AnimationCurve curve = null)
+        {
+            SetupBase(duration, curve);
             mFromScale = fromScale;
             mToScale = toScale;
+            return this;
         }
 
         public override void Play(RectTransform target, Action onComplete = null)
         {
-            if (target == null)
+            if (target == default)
             {
                 onComplete?.Invoke();
                 return;
@@ -39,22 +67,27 @@ namespace YokiFrame
 
         public override void Reset(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             target.localScale = mFromScale;
         }
 
         public override void SetToEndState(RectTransform target)
         {
-            if (target == null) return;
+            if (target == default) return;
             target.localScale = mToScale;
         }
 
         protected override void ApplyAnimation(RectTransform target, float normalizedTime)
         {
-            if (target != null)
+            if (target != default)
             {
                 target.localScale = Vector3.Lerp(mFromScale, mToScale, normalizedTime);
             }
         }
+        
+        /// <summary>
+        /// 归还到池
+        /// </summary>
+        public override void Recycle() => SafePoolKit<ScaleAnimation>.Instance.Recycle(this);
     }
 }

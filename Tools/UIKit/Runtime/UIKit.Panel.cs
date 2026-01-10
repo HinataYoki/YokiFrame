@@ -80,7 +80,10 @@ namespace YokiFrame
         public static void ShowPanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            panel?.Show();
+            if (panel != default)
+            {
+                panel.Show();
+            }
         }
         
         /// <summary>
@@ -89,7 +92,10 @@ namespace YokiFrame
         public static void HidePanel<T>() where T : UIPanel
         {
             var panel = GetPanel<T>();
-            panel?.Hide();
+            if (panel != default)
+            {
+                panel.Hide();
+            }
         }
         
         /// <summary>
@@ -99,7 +105,10 @@ namespace YokiFrame
         {
             foreach (var handler in PanelCacheDic.Values)
             {
-                handler?.Panel?.Hide();
+                if (handler != default && handler.Panel != default)
+                {
+                    handler.Panel.Hide();
+                }
             }
         }
         
@@ -159,7 +168,7 @@ namespace YokiFrame
             {
                 foreach (var handler in PanelCacheDic.Values)
                 {
-                    if (handler?.Panel != null)
+                    if (handler != default && handler.Panel != default)
                     {
                         panelsToClose.Add(handler.Panel);
                     }
