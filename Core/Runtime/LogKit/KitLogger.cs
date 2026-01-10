@@ -16,9 +16,9 @@ namespace YokiFrame
         public static LogLevel Level = LogLevel.All;
 
         /// <summary>
-        /// 获取配置实例（内部使用）
+        /// 获取 LogKit 配置（内部使用）
         /// </summary>
-        internal static KitLoggerSettings Settings => KitLoggerSettings.Instance;
+        private static YokiFrameSettings.LogKitSettings Settings => YokiFrameSettings.Instance.LogKit;
 
         // 运行时配置缓存（从 Settings 初始化）
         private static bool sEnableEncryption;
@@ -71,6 +71,9 @@ namespace YokiFrame
         public static void ResetToDefault()
         {
             Settings.ResetToDefault();
+#if UNITY_EDITOR
+            YokiFrameSettings.Instance.Save();
+#endif
             sInitialized = false;
             LoadSettings();
         }
@@ -181,7 +184,7 @@ namespace YokiFrame
             settings.MaxSameLogCount = sMaxSameLogCount;
             settings.MaxRetentionDays = sMaxRetentionDays;
             settings.MaxFileSizeMB = (int)(sMaxFileBytes / 1024 / 1024);
-            settings.Save();
+            YokiFrameSettings.Instance.Save();
 #endif
         }
 

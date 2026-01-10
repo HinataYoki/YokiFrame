@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-01-10
+
+### Changed
+- **配置系统重构**
+  - 新增 `YokiFrameSettings` 统一配置 ScriptableObject，集中管理各 Kit 运行时配置
+  - 配置文件自动创建到 `Assets/Settings/Resources/YokiFrameSettings.asset`
+  - 支持 Package 模式：配置存储在用户项目中，Package 代码只读
+  - 运行时通过 `Resources.Load` 加载配置，确保打包后正常生效
+
+### Fixed
+- 修复 KitLogger 真机 IMGUI 配置打包后不生效的问题（原 JSON 配置不会被打包）
+
+### Removed
+- 移除 `KitLoggerSettings.cs`，配置迁移至 `YokiFrameSettings.LogKit`
+- 移除 `ProjectSettings/KitLoggerSettings.json`
+
 ## [1.5.3] - 2026-01-10
 
 ### Changed
