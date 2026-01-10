@@ -26,8 +26,6 @@ namespace YokiFrame
             mRuntimeView.style.paddingBottom = 8;
             mRuntimeView.style.paddingLeft = 8;
             mRuntimeView.style.paddingRight = 8;
-            mRuntimeView.style.display = DisplayStyle.None;
-            mContentContainer.Add(mRuntimeView);
 
             BuildFsmListPanel();
             BuildFsmDetailPanel();

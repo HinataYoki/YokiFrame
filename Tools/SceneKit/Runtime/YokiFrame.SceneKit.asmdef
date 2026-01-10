@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "GUID:224151c835b786a4f8efadaa1799380d",
-        "UniTask"
+        "UniTask",
+        "YooAsset"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -22,6 +23,11 @@
             "name": "UniTask",
             "expression": "",
             "define": "YOKIFRAME_UNITASK_SUPPORT"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "",
+            "define": "YOKIFRAME_YOOASSET_SUPPORT"
         }
     ],
     "noEngineReferences": false

@@ -22,8 +22,6 @@ namespace YokiFrame
             mRuntimeView = new VisualElement();
             mRuntimeView.style.flexGrow = 1;
             mRuntimeView.style.flexDirection = FlexDirection.Column;
-            mRuntimeView.style.display = DisplayStyle.None;
-            mContentContainer.Add(mRuntimeView);
 
             BuildRuntimeToolbar();
             BuildRuntimeContent();

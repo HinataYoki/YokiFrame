@@ -60,6 +60,34 @@ namespace YokiFrame.EditorTools
             window.Show();
         }
 
+        /// <summary>
+        /// 打开窗口并选择指定页面
+        /// </summary>
+        /// <typeparam name="T">页面类型</typeparam>
+        /// <param name="onPageSelected">页面选中后的回调</param>
+        public static void OpenAndSelectPage<T>(System.Action<T> onPageSelected = null) where T : class, IYokiFrameToolPage
+        {
+            var window = GetWindow<YokiFrameToolWindow>(false, WINDOW_TITLE);
+            window.minSize = new Vector2(1000, 600);
+            window.titleContent = new GUIContent(WINDOW_TITLE, LoadIcon());
+            window.Show();
+            window.Focus();
+
+            // 延迟执行，确保窗口 UI 已构建
+            EditorApplication.delayCall += () =>
+            {
+                for (int i = 0; i < window.mPages.Count; i++)
+                {
+                    if (window.mPages[i] is T targetPage)
+                    {
+                        window.SelectPage(i);
+                        onPageSelected?.Invoke(targetPage);
+                        return;
+                    }
+                }
+            };
+        }
+
         private static Texture2D LoadIcon()
         {
             if (sIconTexture == null)

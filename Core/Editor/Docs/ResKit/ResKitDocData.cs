@@ -13,21 +13,28 @@ namespace YokiFrame.EditorTools
         /// </summary>
         internal static List<DocSection> GetAllSections()
         {
-            return new List<DocSection>
+            var sections = new List<DocSection>
             {
+                // ResKit 基础
                 ResKitDocSync.CreateSection(),
                 ResKitDocAsync.CreateSection(),
                 ResKitDocCustomLoader.CreateSection(),
                 ResKitDocRawFile.CreateSection(),
                 ResKitDocRawFileInterface.CreateSection(),
+                
+                // YooAsset 集成
                 ResKitDocYooAssetOverview.CreateSection(),
                 ResKitDocYooAssetEditor.CreateSection(),
                 ResKitDocYooAssetOffline.CreateSection(),
                 ResKitDocYooAssetHost.CreateSection(),
                 ResKitDocYooAssetUpdate.CreateSection(),
-                ResKitDocYooAssetUsage.CreateSection(),
-                ResKitDocYooAssetComplete.CreateSection()
+                ResKitDocYooAssetUsage.CreateSection()
             };
+            
+            // YooInit 完整初始化示例（包含多个子章节）
+            sections.AddRange(ResKitDocYooAssetComplete.GetAllSections());
+            
+            return sections;
         }
     }
 }

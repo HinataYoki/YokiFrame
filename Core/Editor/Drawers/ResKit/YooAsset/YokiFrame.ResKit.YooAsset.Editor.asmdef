@@ -1,0 +1,27 @@
+{
+    "name": "YokiFrame.ResKit.YooAsset.Editor",
+    "rootNamespace": "YokiFrame.EditorTools",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Core.Editor",
+        "YooAsset",
+        "YooAsset.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "",
+            "define": "YOKIFRAME_YOOASSET_SUPPORT"
+        }
+    ],
+    "noEngineReferences": false
+}

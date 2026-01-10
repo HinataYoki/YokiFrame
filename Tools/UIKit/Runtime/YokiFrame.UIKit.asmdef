@@ -5,7 +5,8 @@
         "GUID:224151c835b786a4f8efadaa1799380d",
         "GUID:75469ad4d38634e559750d17036d5f7c",
         "UniTask",
-        "DOTween.Modules"
+        "DOTween.Modules",
+        "YooAsset"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -34,6 +35,11 @@
             "name": "DOTween.Modules",
             "expression": "",
             "define": "YOKIFRAME_DOTWEEN_SUPPORT"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "",
+            "define": "YOKIFRAME_YOOASSET_SUPPORT"
         }
     ],
     "noEngineReferences": false

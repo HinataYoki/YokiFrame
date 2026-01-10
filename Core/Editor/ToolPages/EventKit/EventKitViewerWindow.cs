@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
@@ -53,13 +54,10 @@ namespace YokiFrame
 
         #region UI 元素引用
 
-        private VisualElement mContentContainer;
+        private YokiFrameUIComponents.TabView mTabView;
         private VisualElement mRuntimeView;
         private VisualElement mHistoryView;
         private VisualElement mCodeScanView;
-        private Button mRuntimeTabBtn;
-        private Button mHistoryTabBtn;
-        private Button mCodeScanTabBtn;
 
         // 运行时视图
         private Button mEnumCategoryBtn;
@@ -147,110 +145,52 @@ namespace YokiFrame
             root.style.flexDirection = FlexDirection.Column;
             root.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
 
-            BuildToolbar(root);
-            BuildContentArea(root);
-
-            // 默认显示运行时视图
-            SwitchView(ViewMode.Runtime);
-        }
-
-        /// <summary>
-        /// 构建顶部工具栏
-        /// </summary>
-        private void BuildToolbar(VisualElement parent)
-        {
-            var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.height = 28;
-            toolbar.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.22f));
-            toolbar.style.paddingLeft = 8;
-            toolbar.style.paddingRight = 8;
-            toolbar.style.alignItems = Align.Center;
-            toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(new Color(0.1f, 0.1f, 0.1f));
-            parent.Add(toolbar);
-
-            // 视图切换按钮
-            mRuntimeTabBtn = CreateTabButton("运行时监控", () => SwitchView(ViewMode.Runtime));
-            mHistoryTabBtn = CreateTabButton("事件历史", () => SwitchView(ViewMode.History));
-            mCodeScanTabBtn = CreateTabButton("代码扫描", () => SwitchView(ViewMode.CodeScan));
-
-            toolbar.Add(mRuntimeTabBtn);
-            toolbar.Add(mHistoryTabBtn);
-            toolbar.Add(mCodeScanTabBtn);
-        }
-
-        /// <summary>
-        /// 构建内容区域
-        /// </summary>
-        private void BuildContentArea(VisualElement parent)
-        {
-            mContentContainer = new VisualElement();
-            mContentContainer.style.flexGrow = 1;
-            parent.Add(mContentContainer);
+            // 加载样式表
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                "Assets/YokiFrame/Core/Editor/Styles/YokiFrameToolStyles.uss");
+            if (styleSheet != null)
+            {
+                root.styleSheets.Add(styleSheet);
+            }
 
             // 构建三个视图
             BuildRuntimeView();
             BuildHistoryView();
             BuildCodeScanView();
+
+            // 使用统一的标签页视图组件
+            mTabView = YokiFrameUIComponents.CreateTabView(
+                ("运行时监控", mRuntimeView),
+                ("事件历史", mHistoryView),
+                ("代码扫描", mCodeScanView)
+            );
+            mTabView.OnTabChanged += OnTabChanged;
+            root.Add(mTabView.Root);
         }
 
         /// <summary>
-        /// 切换视图
+        /// 标签页切换回调
         /// </summary>
-        private void SwitchView(ViewMode mode)
+        private void OnTabChanged(int index)
         {
-            mViewMode = mode;
-
-            // 更新标签按钮状态
-            UpdateTabButtonState(mRuntimeTabBtn, mode == ViewMode.Runtime);
-            UpdateTabButtonState(mHistoryTabBtn, mode == ViewMode.History);
-            UpdateTabButtonState(mCodeScanTabBtn, mode == ViewMode.CodeScan);
-
-            // 显示对应视图
-            mRuntimeView.style.display = mode == ViewMode.Runtime ? DisplayStyle.Flex : DisplayStyle.None;
-            mHistoryView.style.display = mode == ViewMode.History ? DisplayStyle.Flex : DisplayStyle.None;
-            mCodeScanView.style.display = mode == ViewMode.CodeScan ? DisplayStyle.Flex : DisplayStyle.None;
+            mViewMode = index switch
+            {
+                0 => ViewMode.Runtime,
+                1 => ViewMode.History,
+                2 => ViewMode.CodeScan,
+                _ => ViewMode.Runtime
+            };
 
             // 刷新数据
-            if (mode == ViewMode.Runtime && EditorApplication.isPlaying)
+            if (mViewMode == ViewMode.Runtime && EditorApplication.isPlaying)
                 RefreshEventData();
-            else if (mode == ViewMode.History)
+            else if (mViewMode == ViewMode.History)
                 RefreshHistoryView();
         }
 
         #endregion
 
         #region UI 辅助方法
-
-        /// <summary>
-        /// 创建标签按钮
-        /// </summary>
-        private Button CreateTabButton(string text, Action onClick)
-        {
-            var btn = new Button(onClick) { text = text };
-            btn.style.height = 24;
-            btn.style.marginRight = 4;
-            btn.style.paddingLeft = 12;
-            btn.style.paddingRight = 12;
-            btn.style.borderTopLeftRadius = 4;
-            btn.style.borderTopRightRadius = 4;
-            btn.style.borderBottomLeftRadius = 0;
-            btn.style.borderBottomRightRadius = 0;
-            btn.style.borderBottomWidth = 0;
-            return btn;
-        }
-
-        /// <summary>
-        /// 更新标签按钮状态
-        /// </summary>
-        private void UpdateTabButtonState(Button btn, bool isActive)
-        {
-            btn.style.backgroundColor = new StyleColor(isActive
-                ? new Color(0.3f, 0.5f, 0.7f)
-                : new Color(0.25f, 0.25f, 0.25f));
-            btn.style.color = new StyleColor(isActive ? Color.white : new Color(0.7f, 0.7f, 0.7f));
-        }
 
         /// <summary>
         /// 创建区块容器

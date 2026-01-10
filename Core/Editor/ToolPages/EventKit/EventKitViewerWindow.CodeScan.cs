@@ -22,8 +22,6 @@ namespace YokiFrame
             mCodeScanView = new VisualElement();
             mCodeScanView.style.flexGrow = 1;
             mCodeScanView.style.flexDirection = FlexDirection.Column;
-            mCodeScanView.style.display = DisplayStyle.None;
-            mContentContainer.Add(mCodeScanView);
 
             BuildScanToolbar();
             BuildScanResults();

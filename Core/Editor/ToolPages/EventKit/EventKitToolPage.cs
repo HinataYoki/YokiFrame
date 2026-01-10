@@ -43,7 +43,7 @@ namespace YokiFrame
         // UI 元素引用
         private VisualElement mRuntimeView;
         private VisualElement mCodeScanView;
-        private VisualElement mToolbarButtons;
+        private YokiFrameUIComponents.TabView mTabView;
 
         // 节流器
         private Throttle mRefreshThrottle;
@@ -54,44 +54,37 @@ namespace YokiFrame
 
         protected override void BuildUI(VisualElement root)
         {
-            // 工具栏
-            var toolbar = YokiFrameUIComponents.CreateToolbar();
-            root.Add(toolbar);
-
-            mToolbarButtons = new VisualElement();
-            mToolbarButtons.style.flexDirection = FlexDirection.Row;
-            toolbar.Add(mToolbarButtons);
-
-            AddViewModeButton(KitIcons.DOT, "运行时监控", ViewMode.Runtime);
-            AddViewModeButton(KitIcons.TARGET, "代码扫描", ViewMode.CodeScan);
-
-            toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
-
-            // 内容区域 - 需要设置 overflow 确保子视图的 ScrollView 能正确工作
-            var content = new VisualElement();
-            content.AddToClassList("content-area");
-            content.style.flexGrow = 1;
-            content.style.overflow = Overflow.Hidden;
-            content.style.paddingLeft = 0;
-            content.style.paddingRight = 0;
-            content.style.paddingTop = 0;
-            content.style.paddingBottom = 0;
-            root.Add(content);
-
             // 创建两个视图
             mRuntimeView = CreateRuntimeView();
             mCodeScanView = CreateCodeScanView();
 
-            content.Add(mRuntimeView);
-            content.Add(mCodeScanView);
+            // 使用统一的标签页视图组件
+            mTabView = YokiFrameUIComponents.CreateTabView(
+                ("运行时监控", mRuntimeView, KitIcons.DOT),
+                ("代码扫描", mCodeScanView, KitIcons.TARGET)
+            );
+            mTabView.OnTabChanged += OnTabChanged;
+            root.Add(mTabView.Root);
 
             // 初始化节流器
             mRefreshThrottle = new Throttle(THROTTLE_INTERVAL);
 
             // 订阅事件
             SubscribeEvents();
+        }
 
-            SwitchView(ViewMode.Runtime);
+        /// <summary>
+        /// 标签页切换回调
+        /// </summary>
+        private void OnTabChanged(int index)
+        {
+            mViewMode = index == 0 ? ViewMode.Runtime : ViewMode.CodeScan;
+            
+            // 切换到运行时视图时刷新
+            if (mViewMode == ViewMode.Runtime && IsPlaying)
+            {
+                RefreshRuntimeView();
+            }
         }
 
         public override void OnActivate()
@@ -166,39 +159,15 @@ namespace YokiFrame
 
         #region 视图切换
 
-        private void AddViewModeButton(string iconId, string text, ViewMode mode)
-        {
-            var button = YokiFrameUIComponents.CreateToolbarButtonWithIcon(iconId, text, () => SwitchView(mode));
-            button.name = $"btn_{mode}";
-            mToolbarButtons.Add(button);
-        }
+        /// <summary>
+        /// 切换到运行时监控标签页
+        /// </summary>
+        public void SwitchToRuntimeView() => mTabView?.SwitchTo(0);
 
-        private void SwitchView(ViewMode mode)
-        {
-            mViewMode = mode;
-
-            mRuntimeView.style.display = mode == ViewMode.Runtime ? DisplayStyle.Flex : DisplayStyle.None;
-            mCodeScanView.style.display = mode == ViewMode.CodeScan ? DisplayStyle.Flex : DisplayStyle.None;
-
-            // 更新按钮状态
-            foreach (var child in mToolbarButtons.Children())
-            {
-                if (child is Button btn)
-                {
-                    var isSelected = btn.name == $"btn_{mode}";
-                    if (isSelected)
-                        btn.AddToClassList("selected");
-                    else
-                        btn.RemoveFromClassList("selected");
-                }
-            }
-
-            // 切换到运行时视图时刷新
-            if (mode == ViewMode.Runtime && IsPlaying)
-            {
-                RefreshRuntimeView();
-            }
-        }
+        /// <summary>
+        /// 切换到代码扫描标签页
+        /// </summary>
+        public void SwitchToCodeScanView() => mTabView?.SwitchTo(1);
 
         #endregion
 

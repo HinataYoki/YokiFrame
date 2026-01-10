@@ -2,7 +2,8 @@
     "name": "YokiFrame.Core.Editor",
     "rootNamespace": "YokiFrame.EditorTools",
     "references": [
-        "YokiFrame"
+        "YokiFrame",
+        "YooAsset.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -21,8 +21,6 @@ namespace YokiFrame
             mHistoryView = new VisualElement();
             mHistoryView.style.flexGrow = 1;
             mHistoryView.style.flexDirection = FlexDirection.Column;
-            mHistoryView.style.display = DisplayStyle.None;
-            mContentContainer.Add(mHistoryView);
 
             BuildHistoryToolbar();
             BuildHistoryList();

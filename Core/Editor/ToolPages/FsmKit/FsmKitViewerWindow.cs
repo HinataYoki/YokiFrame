@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
@@ -45,11 +46,9 @@ namespace YokiFrame
 
         #region UI 元素引用
 
-        private VisualElement mContentContainer;
+        private YokiFrameUIComponents.TabView mTabView;
         private VisualElement mRuntimeView;
         private VisualElement mHistoryView;
-        private Button mRuntimeTabBtn;
-        private Button mHistoryTabBtn;
 
         // 运行时视图
         private ListView mFsmListView;
@@ -123,103 +122,43 @@ namespace YokiFrame
             root.style.flexDirection = FlexDirection.Column;
             root.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
 
-            BuildToolbar(root);
-            BuildContentArea(root);
+            // 加载样式表
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                "Assets/YokiFrame/Core/Editor/Styles/YokiFrameToolStyles.uss");
+            if (styleSheet != null)
+            {
+                root.styleSheets.Add(styleSheet);
+            }
 
-            SwitchView(ViewMode.Runtime);
-        }
-
-        /// <summary>
-        /// 构建顶部工具栏
-        /// </summary>
-        private void BuildToolbar(VisualElement parent)
-        {
-            var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.height = 28;
-            toolbar.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.22f));
-            toolbar.style.paddingLeft = 8;
-            toolbar.style.paddingRight = 8;
-            toolbar.style.alignItems = Align.Center;
-            toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(new Color(0.1f, 0.1f, 0.1f));
-            parent.Add(toolbar);
-
-            mRuntimeTabBtn = CreateTabButton("运行时监控", () => SwitchView(ViewMode.Runtime));
-            mHistoryTabBtn = CreateTabButton("转换历史", () => SwitchView(ViewMode.History));
-
-            toolbar.Add(mRuntimeTabBtn);
-            toolbar.Add(mHistoryTabBtn);
-        }
-
-        /// <summary>
-        /// 构建内容区域
-        /// </summary>
-        private void BuildContentArea(VisualElement parent)
-        {
-            mContentContainer = new VisualElement();
-            mContentContainer.style.flexGrow = 1;
-            parent.Add(mContentContainer);
-
+            // 构建两个视图
             BuildRuntimeView();
             BuildHistoryView();
+
+            // 使用统一的标签页视图组件
+            mTabView = YokiFrameUIComponents.CreateTabView(
+                ("运行时监控", mRuntimeView),
+                ("转换历史", mHistoryView)
+            );
+            mTabView.OnTabChanged += OnTabChanged;
+            root.Add(mTabView.Root);
         }
 
         /// <summary>
-        /// 切换视图
+        /// 标签页切换回调
         /// </summary>
-        private void SwitchView(ViewMode mode)
+        private void OnTabChanged(int index)
         {
-            mViewMode = mode;
+            mViewMode = index == 0 ? ViewMode.Runtime : ViewMode.History;
 
-            UpdateTabButtonState(mRuntimeTabBtn, mode == ViewMode.Runtime);
-            UpdateTabButtonState(mHistoryTabBtn, mode == ViewMode.History);
-
-            mRuntimeView.style.display = mode == ViewMode.Runtime ? DisplayStyle.Flex : DisplayStyle.None;
-            mHistoryView.style.display = mode == ViewMode.History ? DisplayStyle.Flex : DisplayStyle.None;
-
-            if (mode == ViewMode.Runtime && EditorApplication.isPlaying)
+            if (mViewMode == ViewMode.Runtime && EditorApplication.isPlaying)
             {
                 FsmDebugger.GetActiveFsms(mCachedFsms);
                 RefreshFsmList();
             }
-            else if (mode == ViewMode.History)
+            else if (mViewMode == ViewMode.History)
             {
                 RefreshHistoryView();
             }
-        }
-
-        #endregion
-
-        #region UI 辅助方法
-
-        /// <summary>
-        /// 创建标签按钮
-        /// </summary>
-        private Button CreateTabButton(string text, Action onClick)
-        {
-            var btn = new Button(onClick) { text = text };
-            btn.style.height = 24;
-            btn.style.marginRight = 4;
-            btn.style.paddingLeft = 12;
-            btn.style.paddingRight = 12;
-            btn.style.borderTopLeftRadius = 4;
-            btn.style.borderTopRightRadius = 4;
-            btn.style.borderBottomLeftRadius = 0;
-            btn.style.borderBottomRightRadius = 0;
-            btn.style.borderBottomWidth = 0;
-            return btn;
-        }
-
-        /// <summary>
-        /// 更新标签按钮状态
-        /// </summary>
-        private void UpdateTabButtonState(Button btn, bool isActive)
-        {
-            btn.style.backgroundColor = new StyleColor(isActive
-                ? new Color(0.3f, 0.5f, 0.7f)
-                : new Color(0.25f, 0.25f, 0.25f));
-            btn.style.color = new StyleColor(isActive ? Color.white : new Color(0.7f, 0.7f, 0.7f));
         }
 
         #endregion
