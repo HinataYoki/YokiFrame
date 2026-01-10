@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-01-10
+
+### Changed
+- **框架结构重构**
+  - `Core/Runtime/Kit/` 扁平化，移除 `Kit` 中间层，所有基础模块直接位于 `Core/Runtime/` 下
+  - `Core/Editor/CodeGenKit/Editor/` 扁平化，移除多余的 `Editor` 中间层
+  - `Core/Editor/Drawers/ResKit/YooAsset/` 合并到 `Core/Editor/ToolPages/ResKit/YooAsset/`
+  - 删除 `Core/Editor/Drawers/` 目录
+  - `YokiFrame.ResKit.YooAsset.Editor` 程序集合并到 `YokiFrame.Core.Editor`
+- **文件组织优化**
+  - `SceneKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
+  - `AudioKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
+  - `UIKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
+  - `SaveKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
+- **命名规范修正**
+  - `ToolPages/KitLogger/` 重命名为 `ToolPages/LogKit/`（命名一致性）
+  - `UIKit/Runtime/UICreater/` 修正为 `UIKit/Runtime/UICreator/`（拼写错误）
+  - `SceneKit/Runtime/Unitask/` 修正为 `SceneKit/Runtime/UniTask/`（拼写错误）
+
 ## [1.5.2] - 2026-01-10
 
 ### Added

@@ -3,6 +3,7 @@
     "rootNamespace": "YokiFrame.EditorTools",
     "references": [
         "YokiFrame",
+        "YooAsset",
         "YooAsset.Editor"
     ],
     "includePlatforms": [
