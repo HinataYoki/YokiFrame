@@ -56,6 +56,7 @@ namespace YokiFrame.EditorTools
             GenerateIcon(KitIcons.ACTIONKIT);
             GenerateIcon(KitIcons.AUDIOKIT);
             GenerateIcon(KitIcons.BUFFKIT);
+            GenerateIcon(KitIcons.INPUTKIT);
             GenerateIcon(KitIcons.LOCALIZATIONKIT);
             GenerateIcon(KitIcons.SAVEKIT);
             GenerateIcon(KitIcons.SCENEKIT);
@@ -124,6 +125,10 @@ namespace YokiFrame.EditorTools
             GenerateIcon(KitIcons.DIAMOND);
             GenerateIcon(KitIcons.TRIANGLE_UP);
             GenerateIcon(KitIcons.TRIANGLE_DOWN);
+            // 输入相关图标
+            GenerateIcon(KitIcons.GAMEPAD);
+            GenerateIcon(KitIcons.KEYBOARD);
+            GenerateIcon(KitIcons.TOUCH);
         }
 
         private static Texture2D GenerateIcon(string iconId)
@@ -211,6 +216,9 @@ namespace YokiFrame.EditorTools
                     break;
                 case KitIcons.BUFFKIT:
                     DrawSparkleIcon(tex, pink);
+                    break;
+                case KitIcons.INPUTKIT:
+                    DrawGamepadIcon(tex, cyan);
                     break;
                 case KitIcons.LOCALIZATIONKIT:
                     DrawGlobeIcon(tex, cyan);
@@ -402,6 +410,17 @@ namespace YokiFrame.EditorTools
                     break;
                 case KitIcons.TRIANGLE_DOWN:
                     DrawTriangleDownIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                    
+                // 输入相关图标
+                case KitIcons.GAMEPAD:
+                    DrawGamepadIcon(tex, new Color32(100, 180, 220, 255));
+                    break;
+                case KitIcons.KEYBOARD:
+                    DrawKeyboardIcon(tex, new Color32(150, 150, 160, 255));
+                    break;
+                case KitIcons.TOUCH:
+                    DrawTouchIcon(tex, new Color32(100, 200, 150, 255));
                     break;
 
                 default:

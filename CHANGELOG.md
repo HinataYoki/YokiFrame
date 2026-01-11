@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0-preview.1] - 2026-01-11
+
+### Added
+- **InputKit 文档大幅增强**
+  - 新增「快速入门」章节：完整使用流程、核心 API 速查、常见问题解答
+  - 新增「运行时重绑定」详细文档：
+    - BindingIndex 核心概念解释（普通绑定 vs 复合绑定索引结构）
+    - 查找正确 BindingIndex 的多种方法
+    - 基础重绑定 UI 组件实现（UGUI）
+    - 完整按键设置面板示例（键盘/手柄切换、复合绑定 WASD、重置所有）
+    - 高级重绑定配置（RebindOptions、冲突处理、超时处理）
+    - 绑定持久化（自动/手动、云存档、自定义实现）
+    - 重置绑定与 OnBindingChanged 事件参数解析
+    - 获取绑定显示名称（按控制方案、复合绑定、UI 提示）
+  - 新增「输入上下文系统」详细文档：
+    - 核心概念：上下文栈结构与 ActionMap 的区别
+    - 创建 InputContext ScriptableObject 资产
+    - 典型使用场景（UI 系统、对话系统、过场动画、教程引导、QTE 事件）
+    - 在输入处理中检查上下文（IsActionBlocked）
+    - 高级栈操作（PopToContext、ClearContextStack、查询状态）
+    - 与 ActionMap 配合使用
+    - 完整 GameInputManager 集成示例
+
+### Changed
+- InputKitDocData 章节顺序调整，快速入门移至首位
+
 ## [1.5.5] - 2026-01-10
 
 ### Added

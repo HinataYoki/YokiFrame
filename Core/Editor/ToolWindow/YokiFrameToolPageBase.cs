@@ -372,6 +372,39 @@ namespace YokiFrame.EditorTools
             splitView.style.flexGrow = 1;
             return splitView;
         }
+
+        /// <summary>
+        /// 创建分割面板（带 EditorPrefs 持久化）
+        /// </summary>
+        /// <param name="initialLeftWidth">初始左侧宽度</param>
+        /// <param name="prefsKey">EditorPrefs 存储键（为空则不持久化）</param>
+        protected TwoPaneSplitView CreateSplitView(float initialLeftWidth, string prefsKey)
+        {
+            // 从 EditorPrefs 加载保存的宽度
+            float savedWidth = string.IsNullOrEmpty(prefsKey)
+                ? initialLeftWidth
+                : EditorPrefs.GetFloat(prefsKey, initialLeftWidth);
+
+            var splitView = new TwoPaneSplitView(0, savedWidth, TwoPaneSplitViewOrientation.Horizontal);
+            splitView.AddToClassList("split-view");
+            splitView.style.flexGrow = 1;
+
+            // 注册宽度变化事件，保存到 EditorPrefs
+            if (!string.IsNullOrEmpty(prefsKey))
+            {
+                string capturedKey = prefsKey;
+                splitView.RegisterCallback<GeometryChangedEvent>(_ =>
+                {
+                    float currentWidth = splitView.fixedPane?.resolvedStyle.width ?? savedWidth;
+                    if (currentWidth > 0)
+                    {
+                        EditorPrefs.SetFloat(capturedKey, currentWidth);
+                    }
+                });
+            }
+
+            return splitView;
+        }
         
         /// <summary>
         /// 创建面板头部

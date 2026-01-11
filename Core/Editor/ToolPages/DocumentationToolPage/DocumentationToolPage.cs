@@ -142,6 +142,7 @@ namespace YokiFrame.EditorTools
             mModules.Add(CreateBuffKitDoc());
             mModules.Add(CreateLocalizationKitDoc());
             mModules.Add(CreateSceneKitDoc());
+            mModules.Add(CreateInputKitDoc());
         }
         
         #endregion
@@ -326,6 +327,16 @@ namespace YokiFrame.EditorTools
             Description = "场景管理工具，提供统一的场景加载、切换、卸载、预加载、过渡效果等功能。支持 YooAsset 扩展和自定义加载器。",
             Keywords = new List<string> { "场景切换", "过渡效果", "预加载", "异步" },
             Sections = SceneKitDocData.GetAllSections()
+        };
+
+        private DocModule CreateInputKitDoc() => new()
+        {
+            Name = "InputKit",
+            Icon = KitIcons.INPUTKIT,
+            Category = "TOOLS",
+            Description = "输入管理工具，提供双输入系统支持、运行时重绑定、输入缓冲、连招检测、上下文系统、触屏控件、震动反馈、调试工具等功能。",
+            Keywords = new List<string> { "输入", "手柄", "键盘", "触屏", "重绑定", "连招", "震动" },
+            Sections = InputKitDocData.GetAllSections()
         };
 
         #endregion

@@ -22,7 +22,7 @@ namespace YokiFrame.EditorTools
             var nav = new VisualElement();
             nav.AddToClassList("yoo-group-nav");
             nav.style.backgroundColor = new StyleColor(new Color(0.16f, 0.16f, 0.18f));
-            nav.style.minWidth = 180;
+            nav.style.minWidth = 250;
 
             // 头部
             var header = CreatePanelHeader("分组");
@@ -88,14 +88,18 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private VisualElement CreateYooGroupItem(AssetBundleCollectorGroup group, int index)
         {
+            bool isGroupActive = group.ActiveRuleName != nameof(DisableGroup);
+            int capturedIndex = index;
+            var capturedGroup = group;
+
             var item = new VisualElement();
             item.AddToClassList("yoo-group-item");
             item.style.flexDirection = FlexDirection.Row;
             item.style.alignItems = Align.Center;
-            item.style.paddingLeft = 12;
+            item.style.paddingLeft = 8;
             item.style.paddingRight = 8;
-            item.style.paddingTop = 8;
-            item.style.paddingBottom = 8;
+            item.style.paddingTop = 6;
+            item.style.paddingBottom = 6;
             item.style.marginBottom = 4;
             item.style.borderTopLeftRadius = 6;
             item.style.borderTopRightRadius = 6;
@@ -109,11 +113,24 @@ namespace YokiFrame.EditorTools
                 item.style.backgroundColor = new StyleColor(new Color(0.25f, 0.45f, 0.70f));
             }
 
+            // 分组启用开关（使用 YokiFrameUIComponents 滑动开关）
+            var activeToggle = YokiFrameUIComponents.CreateModernToggle("", isGroupActive, newValue =>
+            {
+                capturedGroup.ActiveRuleName = newValue ? nameof(EnableGroup) : nameof(DisableGroup);
+                AssetBundleCollectorSettingData.ModifyGroup(YooCurrentPackage, capturedGroup);
+                MarkYooDirty();
+                RefreshYooGroupNav();
+            });
+            activeToggle.style.marginRight = 4;
+            activeToggle.tooltip = isGroupActive ? "点击禁用此分组（构建时跳过）" : "点击启用此分组";
+            item.Add(activeToggle);
+
             // 文件夹图标
             var icon = new Image { image = KitIcons.GetTexture(KitIcons.FOLDER) };
             icon.style.width = 14;
             icon.style.height = 14;
             icon.style.marginRight = 8;
+            icon.style.opacity = isGroupActive ? 1f : 0.4f;
             item.Add(icon);
 
             // 分组名称标签
@@ -122,6 +139,7 @@ namespace YokiFrame.EditorTools
             nameLabel.style.flexGrow = 1;
             nameLabel.style.overflow = Overflow.Hidden;
             nameLabel.style.textOverflow = TextOverflow.Ellipsis;
+            nameLabel.style.opacity = isGroupActive ? 1f : 0.5f;
             item.Add(nameLabel);
 
             // 隐藏的重命名输入框
@@ -135,17 +153,15 @@ namespace YokiFrame.EditorTools
             // Collector 数量徽章
             var badge = YokiFrameUIComponents.CreateCountLabel(
                 group.Collectors.Count,
-                YokiFrameUIComponents.Colors.BadgeDefault
+                isGroupActive ? YokiFrameUIComponents.Colors.BadgeDefault : YokiFrameUIComponents.Colors.TextTertiary
             );
             badge.style.marginLeft = 8;
             item.Add(badge);
 
             // 单击选中
-            int capturedIndex = index;
             item.RegisterCallback<ClickEvent>(_ => SelectYooGroup(capturedIndex));
 
             // 双击进入编辑模式
-            var capturedGroup = group;
             item.RegisterCallback<MouseDownEvent>(evt =>
             {
                 if (evt.clickCount == 2)

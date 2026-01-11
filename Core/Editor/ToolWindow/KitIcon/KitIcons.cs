@@ -29,6 +29,7 @@ namespace YokiFrame.EditorTools
         public const string ACTIONKIT = "actionkit";
         public const string AUDIOKIT = "audiokit";
         public const string BUFFKIT = "buffkit";
+        public const string INPUTKIT = "inputkit";
         public const string LOCALIZATIONKIT = "localizationkit";
         public const string SAVEKIT = "savekit";
         public const string SCENEKIT = "scenekit";
@@ -105,6 +106,9 @@ namespace YokiFrame.EditorTools
         public const string FOLDER = "folder";
         public const string CLOCK = "clock";
         public const string CHECK = "check";
+        public const string GAMEPAD = "gamepad";
+        public const string KEYBOARD = "keyboard";
+        public const string TOUCH = "touch";
         
         // 状态点图标
         public const string DOT_FILLED = "dot_filled";

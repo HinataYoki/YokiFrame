@@ -3,8 +3,11 @@
     "rootNamespace": "YokiFrame.EditorTools",
     "references": [
         "YokiFrame",
+        "YokiFrame.InputKit",
         "YooAsset",
-        "YooAsset.Editor"
+        "YooAsset.Editor",
+        "UniTask",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [
         "Editor"
@@ -15,6 +18,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "ENABLE_INPUT_SYSTEM"
+        }
+    ],
     "noEngineReferences": false
 }

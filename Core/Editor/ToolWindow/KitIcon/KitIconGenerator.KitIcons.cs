@@ -272,6 +272,57 @@ namespace YokiFrame.EditorTools
             DrawFilledTriangle(tex, 20, 4, 26, 10, 20, 16, color);
         }
 
+        /// <summary>
+        /// 手柄图标 - InputKit
+        /// </summary>
+        private static void DrawGamepadIcon(Texture2D tex, Color32 color)
+        {
+            // 手柄主体
+            DrawFilledRect(tex, 4, 10, 24, 14, color);
+            // 左摇杆
+            DrawFilledCircle(tex, 10, 16, 4, new Color32(255, 255, 255, 180));
+            // 右按钮区
+            DrawFilledCircle(tex, 22, 14, 2, new Color32(255, 255, 255, 180));
+            DrawFilledCircle(tex, 22, 18, 2, new Color32(255, 255, 255, 180));
+            // 手柄握把
+            var darker = new Color32((byte)(color.r * 0.7f), (byte)(color.g * 0.7f), (byte)(color.b * 0.7f), 255);
+            DrawFilledRect(tex, 4, 20, 6, 6, darker);
+            DrawFilledRect(tex, 22, 20, 6, 6, darker);
+        }
+
+        /// <summary>
+        /// 键盘图标
+        /// </summary>
+        private static void DrawKeyboardIcon(Texture2D tex, Color32 color)
+        {
+            // 键盘外框
+            DrawFilledRect(tex, 2, 8, 28, 16, color);
+            var keyColor = new Color32(255, 255, 255, 180);
+            // 按键行
+            for (int row = 0; row < 3; row++)
+            {
+                int y = 10 + row * 4;
+                int startX = 4 + row;
+                for (int i = 0; i < 6 - row; i++)
+                {
+                    DrawFilledRect(tex, startX + i * 4, y, 3, 3, keyColor);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 触摸图标
+        /// </summary>
+        private static void DrawTouchIcon(Texture2D tex, Color32 color)
+        {
+            // 手指
+            DrawFilledCircle(tex, 16, 10, 6, color);
+            DrawFilledRect(tex, 13, 10, 6, 14, color);
+            // 触摸波纹
+            DrawCircleOutline(tex, 16, 10, 10, 2, new Color32(color.r, color.g, color.b, 150));
+            DrawCircleOutline(tex, 16, 10, 14, 2, new Color32(color.r, color.g, color.b, 80));
+        }
+
         #endregion
     }
 }

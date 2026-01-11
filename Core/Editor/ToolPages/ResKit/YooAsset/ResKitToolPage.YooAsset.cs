@@ -100,7 +100,7 @@ namespace YokiFrame.EditorTools
             root.Add(mYooPackageSettingsPanel);
 
             // 主分割视图（左侧分组导航 | 右侧内容区）
-            var mainSplitView = CreateSplitView(200f);
+            var mainSplitView = CreateSplitView(250f, "YokiFrame.ResKit.GroupNavWidth");
             mainSplitView.style.flexGrow = 1;
             root.Add(mainSplitView);
 
@@ -109,7 +109,7 @@ namespace YokiFrame.EditorTools
             mainSplitView.Add(mYooGroupNavContainer);
 
             // 右侧内容区（收集器画布 | 资源预览）
-            var rightSplitView = CreateSplitView(400f);
+            var rightSplitView = CreateSplitView(400f, "YokiFrame.ResKit.PreviewWidth");
             rightSplitView.style.flexGrow = 1;
             mainSplitView.Add(rightSplitView);
 
