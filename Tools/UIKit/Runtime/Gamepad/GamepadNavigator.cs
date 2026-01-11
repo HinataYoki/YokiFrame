@@ -153,7 +153,7 @@ namespace YokiFrame
         /// </summary>
         public void LateUpdate()
         {
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
             if (mInput is GamepadInputHandler handler)
             {
                 handler.LateUpdate();

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine.UIElements;
 using YokiFrame;
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using UnityEngine.InputSystem;
 #endif
 
@@ -126,7 +126,11 @@ namespace YokiFrame.EditorTools
                 bindItem = BindActionMapItem
             };
             mActionMapListView.AddToClassList("action-map-list");
+#if UNITY_2022_2_OR_NEWER
             mActionMapListView.selectionChanged += OnActionMapSelectionChanged;
+#else
+            mActionMapListView.onSelectionChange += OnActionMapSelectionChanged;
+#endif
             panel.Add(mActionMapListView);
 
             return panel;
@@ -151,7 +155,11 @@ namespace YokiFrame.EditorTools
                 bindItem = BindActionItem
             };
             mActionListView.AddToClassList("action-list");
+#if UNITY_2022_2_OR_NEWER
             mActionListView.selectionChanged += OnActionSelectionChanged;
+#else
+            mActionListView.onSelectionChange += OnActionSelectionChanged;
+#endif
             panel.Add(mActionListView);
 
             // 详情面板
@@ -276,7 +284,7 @@ namespace YokiFrame.EditorTools
             if (!EditorUtility.DisplayDialog("重置绑定", "确定要重置所有绑定到默认值吗？", "确定", "取消"))
                 return;
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
             if (InputKit.IsInitialized)
             {
                 InputKit.ResetAllBindings();
@@ -300,7 +308,7 @@ namespace YokiFrame.EditorTools
         {
             mActionMaps.Clear();
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
             // 优先使用运行时已注册的 Asset
             var asset = InputKit.Asset;
             
@@ -323,7 +331,7 @@ namespace YokiFrame.EditorTools
             mActionMapListView.RefreshItems();
         }
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
         /// <summary>
         /// 在编辑器模式下查找项目中的第一个 InputActionAsset
         /// </summary>
@@ -342,7 +350,7 @@ namespace YokiFrame.EditorTools
         {
             mActions.Clear();
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
             if (string.IsNullOrEmpty(mSelectedActionMap)) 
             {
                 mActionListView.itemsSource = mActions;
@@ -420,7 +428,7 @@ namespace YokiFrame.EditorTools
             var (compositeRow, _) = CreateInfoRow("复合绑定", action.IsComposite ? "是" : "否");
             body.Add(compositeRow);
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
             // 重绑定按钮
             var rebindBtn = CreatePrimaryButton("重新绑定", () => StartRebind(action.Name));
             body.Add(rebindBtn);
@@ -443,7 +451,7 @@ namespace YokiFrame.EditorTools
             }
         }
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
         private async void StartRebind(string actionName)
         {
             var action = InputKit.FindAction(actionName);

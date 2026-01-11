@@ -91,7 +91,7 @@ namespace YokiFrame
         #region 组件
 
         private EventSystem mEventSystem;
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
         private GamepadInputHandler mInputHandler;
 #endif
         private GamepadNavigator mNavigator;
@@ -205,7 +205,7 @@ namespace YokiFrame
             }
 
             mNavigator?.Dispose();
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
             mInputHandler?.Dispose();
 #endif
             mPanelFocusMemory.Clear();
@@ -228,7 +228,7 @@ namespace YokiFrame
         {
             if (!mGamepadEnabled) return;
 
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
             mInputHandler = new GamepadInputHandler();
             mNavigator = new GamepadNavigator(mInputHandler, GamepadConfig, mEventSystem);
 

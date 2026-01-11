@@ -15,49 +15,6 @@ namespace YokiFrame
     [CanEditMultipleObjects]
     public class UIDynamicElementEditor : Editor
     {
-        #region 快捷键
-
-        /// <summary>
-        /// Alt+D 快捷键：切换 UIDynamicElement 组件
-        /// </summary>
-        [MenuItem("GameObject/UIKit/(Alt+D)Toggle Dynamic Element &d", false, 2)]
-        private static void ToggleDynamicElement()
-        {
-            foreach (var go in Selection.gameObjects)
-            {
-                if (go == null) continue;
-                
-                var existing = go.GetComponent<UIDynamicElement>();
-                if (existing != null)
-                {
-                    // 已存在则移除
-                    Undo.DestroyObjectImmediate(existing);
-                }
-                else
-                {
-                    // 不存在则添加
-                    Undo.AddComponent<UIDynamicElement>(go);
-                }
-                
-                EditorUtility.SetDirty(go);
-                if (go.scene.IsValid())
-                {
-                    EditorSceneManager.MarkSceneDirty(go.scene);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 验证菜单项是否可用
-        /// </summary>
-        [MenuItem("GameObject/UIKit/(Alt+D)Toggle Dynamic Element &d", true)]
-        private static bool ToggleDynamicElementValidate()
-        {
-            return Selection.gameObjects.Length > 0;
-        }
-
-        #endregion
-
         #region SerializedProperties
 
         private SerializedProperty mEnableRaycastProp;

@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -186,3 +187,5 @@ namespace YokiFrame
         #endregion
     }
 }
+
+#endif

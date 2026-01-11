@@ -12,17 +12,6 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [
-        {
-            "name": "com.unity.inputsystem",
-            "expression": "1.0.0",
-            "define": "ENABLE_INPUT_SYSTEM"
-        },
-        {
-            "name": "com.cysharp.unitask",
-            "expression": "2.0.0",
-            "define": "INPUTKIT_UNITASK"
-        }
-    ],
+    "versionDefines": [],
     "noEngineReferences": false
 }

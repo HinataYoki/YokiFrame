@@ -11,8 +11,8 @@ namespace YokiFrame
 
         private void DetectInputModeChange()
         {
-#if ENABLE_INPUT_SYSTEM
-            if (mInputHandler == null) return;
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
+            if (mInputHandler == default) return;
 
             var newMode = mCurrentInputMode;
             var config = GamepadConfig;

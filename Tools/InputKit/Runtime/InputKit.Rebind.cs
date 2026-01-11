@@ -1,3 +1,4 @@
+#if YOKIFRAME_UNITASK_SUPPORT && YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -278,3 +279,5 @@ namespace YokiFrame
         #endregion
     }
 }
+
+#endif

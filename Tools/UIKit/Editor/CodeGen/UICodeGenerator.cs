@@ -1,7 +1,5 @@
 using System.IO;
-using System.Linq;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace YokiFrame
@@ -11,71 +9,6 @@ namespace YokiFrame
     /// </summary>
     public static class UICodeGenerator
     {
-        #region 菜单项
-
-        [MenuItem("Assets/UIKit - Create UICode", true)]
-        private static bool CreateUICodeValidate()
-        {
-            var obj = Selection.GetFiltered(typeof(GameObject), SelectionMode.Assets | SelectionMode.TopLevel).FirstOrDefault() as GameObject;
-            if (obj == null) return false;
-
-            var prefabType = PrefabUtility.GetPrefabAssetType(obj);
-            if (prefabType == PrefabAssetType.NotAPrefab) return false;
-
-            return obj.GetComponent<UIPanel>() != null;
-        }
-
-        [MenuItem("Assets/UIKit - Create UICode")]
-        private static void CreateUICode()
-        {
-            var obj = Selection.GetFiltered(typeof(GameObject), SelectionMode.Assets | SelectionMode.TopLevel).First() as GameObject;
-
-            if (obj == null)
-            {
-                Debug.LogError("请选择一个预制体");
-                return;
-            }
-
-            // 检查是否是 Prefab
-            var prefabType = PrefabUtility.GetPrefabAssetType(obj);
-            if (prefabType == PrefabAssetType.NotAPrefab)
-            {
-                Debug.LogError($"{obj.name} 不是预制体");
-                return;
-            }
-
-            // 检查是否挂载了 UIPanel 组件
-            if (obj.GetComponent<UIPanel>() == null)
-            {
-                Debug.LogError($"预制体 {obj.name} 没有挂载 UIPanel 组件，无法生成 UI 代码");
-                return;
-            }
-
-            DoCreateCode(obj, UIKitCreateConfig.Instance.ScriptNamespace);
-        }
-
-        [MenuItem("GameObject/UIKit/(Alt+B)Add Bind &b", false, 1)]
-        private static void AddBind()
-        {
-            foreach (var obj in Selection.objects.OfType<GameObject>())
-            {
-                if (obj)
-                {
-                    var bind = obj.GetComponent<Bind>();
-
-                    if (!bind)
-                    {
-                        obj.AddComponent<Bind>();
-                    }
-
-                    EditorUtility.SetDirty(obj);
-                    EditorSceneManager.MarkSceneDirty(obj.scene);
-                }
-            }
-        }
-
-        #endregion
-
         #region 公共方法
 
         /// <summary>

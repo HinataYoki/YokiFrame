@@ -1,4 +1,4 @@
-#if ENABLE_INPUT_SYSTEM
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;

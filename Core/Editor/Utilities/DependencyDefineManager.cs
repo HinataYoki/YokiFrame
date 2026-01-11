@@ -21,6 +21,7 @@ namespace YokiFrame.Core.Editor
             new("YOKIFRAME_LUBAN_SUPPORT", "com.code-philosophy.luban", "Luban.Runtime"),
             new("YOKIFRAME_FMOD_SUPPORT", "com.unity.fmod", "FMODUnity"),
             new("YOKIFRAME_DOTWEEN_SUPPORT", "com.demigiant.dotween", "DOTween.Modules"),
+            new("YOKIFRAME_INPUTSYSTEM_SUPPORT", "com.unity.inputsystem", "Unity.InputSystem"),
         };
 
         static DependencyDefineManager()

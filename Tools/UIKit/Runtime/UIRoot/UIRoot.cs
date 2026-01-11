@@ -288,9 +288,9 @@ namespace YokiFrame
 
         private void InitializeInputModule()
         {
-            if (EventSystem == null || EventSystem.GetComponent<BaseInputModule>() != null) return;
+            if (EventSystem == default || EventSystem.GetComponent<BaseInputModule>() != default) return;
 
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT && !ENABLE_LEGACY_INPUT_MANAGER
             EventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 #else
             EventSystem.gameObject.AddComponent<StandaloneInputModule>();

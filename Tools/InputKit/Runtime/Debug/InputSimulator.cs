@@ -1,10 +1,9 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-#endif
 
 namespace YokiFrame
 {
@@ -40,9 +39,7 @@ namespace YokiFrame
         public void SimulateButtonDown(string buttonName)
         {
             mSimulatedButtons.Add(buttonName);
-#if ENABLE_INPUT_SYSTEM
             SimulateInputSystemButton(buttonName, true);
-#endif
         }
 
         /// <summary>
@@ -51,9 +48,7 @@ namespace YokiFrame
         public void SimulateButtonUp(string buttonName)
         {
             mSimulatedButtons.Remove(buttonName);
-#if ENABLE_INPUT_SYSTEM
             SimulateInputSystemButton(buttonName, false);
-#endif
         }
 
         /// <summary>
@@ -181,7 +176,6 @@ namespace YokiFrame
 
         #region InputSystem 集成
 
-#if ENABLE_INPUT_SYSTEM
         private static void SimulateInputSystemButton(string actionName, bool pressed)
         {
             var keyboard = Keyboard.current;
@@ -212,8 +206,9 @@ namespace YokiFrame
                 _ => Key.None
             };
         }
-#endif
 
         #endregion
     }
 }
+
+#endif

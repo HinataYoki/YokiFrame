@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -225,3 +226,5 @@ namespace YokiFrame
         Floating
     }
 }
+
+#endif

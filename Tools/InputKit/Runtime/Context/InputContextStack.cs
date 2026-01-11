@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -170,14 +171,14 @@ namespace YokiFrame
 
         private static void ApplyContext(InputContext context)
         {
-#if ENABLE_INPUT_SYSTEM
             if (context.EnabledActionMaps != default && context.EnabledActionMaps.Length > 0)
             {
                 InputKit.EnableActionMaps(context.EnabledActionMaps);
             }
-#endif
         }
 
         #endregion
     }
 }
+
+#endif

@@ -117,7 +117,9 @@ namespace YokiFrame
 
         #region 窗口入口
 
-        [MenuItem("YokiFrame/UIKit/创建 UI Panel", false, 10)]
+        /// <summary>
+        /// 打开创建面板窗口
+        /// </summary>
         public static void Open()
         {
             var window = GetWindow<UIKitCreatePanelWindow>(true, WINDOW_NAME);

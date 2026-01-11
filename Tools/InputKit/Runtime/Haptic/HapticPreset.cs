@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 namespace YokiFrame
 {
     /// <summary>
@@ -27,3 +28,5 @@ namespace YokiFrame
         Selection
     }
 }
+
+#endif

@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using UnityEngine;
 
 namespace YokiFrame
@@ -31,3 +32,5 @@ namespace YokiFrame
         }
     }
 }
+
+#endif

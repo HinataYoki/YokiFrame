@@ -17,6 +17,11 @@
     "defineConstraints": [],
     "versionDefines": [
         {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "YOKIFRAME_INPUTSYSTEM_SUPPORT"
+        },
+        {
             "name": "com.cysharp.unitask",
             "expression": "",
             "define": "YOKIFRAME_UNITASK_SUPPORT"

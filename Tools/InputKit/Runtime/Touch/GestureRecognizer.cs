@@ -1,3 +1,4 @@
+#if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using UnityEngine;
 
@@ -25,6 +26,9 @@ namespace YokiFrame
         [SerializeField] private float mTapTimeLimit = 0.3f;
         [SerializeField] private float mDoubleTapInterval = 0.3f;
 
+        [Header("长按配置")]
+        [SerializeField] private float mLongPressThreshold = 0.5f;
+
         #endregion
 
         #region 私有字段
@@ -33,6 +37,7 @@ namespace YokiFrame
         private Vector2 mTouchStartPos;
         private float mTouchStartTime;
         private bool mIsTouching;
+        private bool mLongPressTriggered;
 
         // 双指状态
         private float mInitialPinchDistance;
@@ -82,6 +87,13 @@ namespace YokiFrame
         /// <summary>是否正在捏合</summary>
         public bool IsPinching => mIsPinching;
 
+        /// <summary>长按阈值（秒）</summary>
+        public float LongPressThreshold
+        {
+            get => mLongPressThreshold;
+            set => mLongPressThreshold = Mathf.Max(0.1f, value);
+        }
+
         #endregion
 
         #region 生命周期
@@ -116,10 +128,27 @@ namespace YokiFrame
                     mTouchStartPos = touch.position;
                     mTouchStartTime = Time.unscaledTime;
                     mIsTouching = true;
+                    mLongPressTriggered = false;
+                    break;
+
+                case TouchPhase.Stationary:
+                case TouchPhase.Moved:
+                    // 长按检测
+                    if (mIsTouching && !mLongPressTriggered)
+                    {
+                        float duration = Time.unscaledTime - mTouchStartTime;
+                        float distance = (touch.position - mTouchStartPos).magnitude;
+                        
+                        if (duration >= mLongPressThreshold && distance < mSwipeThreshold)
+                        {
+                            mLongPressTriggered = true;
+                            OnLongPress?.Invoke(touch.position);
+                        }
+                    }
                     break;
 
                 case TouchPhase.Ended:
-                    if (mIsTouching)
+                    if (mIsTouching && !mLongPressTriggered)
                     {
                         ProcessTouchEnd(touch);
                     }
@@ -244,6 +273,7 @@ namespace YokiFrame
         {
             mIsTouching = false;
             mIsPinching = false;
+            mLongPressTriggered = false;
         }
 
         #endregion
@@ -274,3 +304,5 @@ namespace YokiFrame
         Right
     }
 }
+
+#endif

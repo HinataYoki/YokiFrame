@@ -28,6 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - 与 ActionMap 配合使用
     - 完整 GameInputManager 集成示例
 
+### Fixed
+- **InputKit 条件编译重构**
+  - asmdef 添加 `defineConstraints: ["YOKIFRAME_INPUTSYSTEM_SUPPORT"]`，无 InputSystem 时整个程序集跳过编译
+  - 移除运行时文件中冗余的 `#if ENABLE_INPUT_SYSTEM`（由 defineConstraints 统一控制）
+  - `InputKit.Rebind.cs` 保留 `#if YOKIFRAME_UNITASK_SUPPORT`（依赖 UniTask 的异步重绑定功能）
+  - 编辑器文件 `InputKitToolPage.cs` 使用 `YOKIFRAME_INPUTSYSTEM_SUPPORT` 替代 `ENABLE_INPUT_SYSTEM`
+  - 修复无 InputSystem/UniTask 环境下的编译错误
+- **UIKit 条件编译修复**
+  - asmdef 添加 InputSystem 的 `versionDefines` 配置
+  - `GamepadInputHandler.cs`、`UIFocusSystem.cs` 等文件使用 `YOKIFRAME_INPUTSYSTEM_SUPPORT` 替代 `ENABLE_INPUT_SYSTEM`
+  - 修复无 InputSystem 环境下的编译错误
+- **GestureRecognizer 长按功能完善**
+  - 实现 `OnLongPress` 事件触发逻辑
+  - 添加 `LongPressThreshold` 配置属性
+
 ### Changed
 - InputKitDocData 章节顺序调整，快速入门移至首位
 

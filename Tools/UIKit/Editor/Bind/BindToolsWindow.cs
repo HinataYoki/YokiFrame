@@ -41,7 +41,9 @@ namespace YokiFrame
 
         #region 窗口生命周期
 
-        [MenuItem("YokiFrame/UIKit/批量绑定工具", false, 100)]
+        /// <summary>
+        /// 打开批量绑定工具窗口
+        /// </summary>
         public static void ShowWindow()
         {
             var window = GetWindow<BindToolsWindow>();
