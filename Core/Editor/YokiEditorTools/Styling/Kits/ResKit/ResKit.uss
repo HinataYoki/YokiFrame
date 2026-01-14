@@ -1,0 +1,394 @@
+/* ResKit 编辑器组件样式 */
+/* L2 层：Kit 专用样式 */
+
+/* ========== 搜索栏 ========== */
+.yoki-res-search {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-res-search__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-sm);
+    -unity-background-image-tint-color: var(--yoki-text-tertiary);
+}
+
+.yoki-res-search__input {
+    flex-grow: 1;
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    padding: var(--yoki-spacing-xs) var(--yoki-spacing-sm);
+}
+
+.yoki-res-search__input:focus {
+    border-color: var(--yoki-brand-primary);
+}
+
+.yoki-res-search__clear {
+    width: 24px;
+    height: 24px;
+    margin-left: var(--yoki-spacing-sm);
+    background-color: transparent;
+    border-width: 0;
+    padding: 4px;
+}
+
+.yoki-res-search__clear:hover {
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+}
+
+.yoki-res-search__clear-icon {
+    width: 16px;
+    height: 16px;
+    -unity-background-image-tint-color: var(--yoki-text-tertiary);
+}
+
+/* ========== 分类面板 ========== */
+.yoki-res-category {
+    margin-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    overflow: hidden;
+}
+
+.yoki-res-category__header {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-res-category__expand-btn {
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    border-width: 0;
+    padding: 4px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-res-category__expand-icon {
+    width: 16px;
+    height: 16px;
+    -unity-background-image-tint-color: var(--yoki-text-secondary);
+}
+
+.yoki-res-category__name {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}
+
+.yoki-res-category__count {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: var(--yoki-font-xs);
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-res-category__items {
+    display: none;
+    padding: var(--yoki-spacing-xs);
+}
+
+.yoki-res-category__items--expanded {
+    display: flex;
+}
+
+
+/* ========== 资源项 ========== */
+.yoki-res-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-xs) var(--yoki-spacing-sm);
+    border-radius: var(--yoki-radius-sm);
+    margin: 2px 0;
+    transition-property: background-color;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-res-item:hover {
+    background-color: var(--yoki-layer-elevated);
+}
+
+.yoki-res-item__indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-res-item__indicator--loaded {
+    background-color: var(--yoki-brand-success);
+}
+
+.yoki-res-item__indicator--loading {
+    background-color: var(--yoki-brand-warning);
+}
+
+.yoki-res-item__name {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.yoki-res-item__source {
+    font-size: var(--yoki-font-xs);
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-tertiary);
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-res-item__ref-count {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    min-width: 30px;
+    -unity-text-align: middle-right;
+}
+
+.yoki-res-item__ref-count--highlight {
+    color: var(--yoki-brand-warning);
+    -unity-font-style: bold;
+}
+
+/* ========== 详情面板 ========== */
+.yoki-res-detail {
+    padding: var(--yoki-spacing-md);
+}
+
+.yoki-res-detail__card {
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    overflow: hidden;
+}
+
+.yoki-res-detail__card-header {
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-res-detail__card-title {
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-res-detail__card-body {
+    padding: var(--yoki-spacing-md);
+}
+
+.yoki-res-detail__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-res-detail__label {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-tertiary);
+    min-width: 80px;
+}
+
+.yoki-res-detail__value {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.yoki-res-detail__value--highlight {
+    color: var(--yoki-brand-warning);
+    -unity-font-style: bold;
+}
+
+
+/* ========== 历史记录 ========== */
+.yoki-res-history {
+    margin-top: var(--yoki-spacing-md);
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+}
+
+.yoki-res-history__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-res-history__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-sm);
+    -unity-background-image-tint-color: var(--yoki-text-secondary);
+}
+
+.yoki-res-history__title {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}
+
+.yoki-res-history__count {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-res-history__list {
+    max-height: 200px;
+}
+
+.yoki-res-history__empty {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-tertiary);
+    -unity-text-align: middle-center;
+    padding: var(--yoki-spacing-md);
+}
+
+/* ========== 历史记录项 ========== */
+.yoki-res-history-item {
+    padding: var(--yoki-spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-res-history-item__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.yoki-res-history-item__time {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-res-history-item__type {
+    font-size: var(--yoki-font-xs);
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-res-history-item__path {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.yoki-res-history-item__stack-foldout {
+    margin-top: var(--yoki-spacing-xs);
+}
+
+.yoki-res-history-item__stack-content {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    white-space: normal;
+    padding: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+}
+
+/* ========== 类型颜色 ========== */
+.yoki-res-type--audioclip .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--audioclip {
+    background-color: rgba(64, 140, 230, 0.2);
+    color: rgb(64, 140, 230);
+}
+
+.yoki-res-type--texture2d .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--texture2d {
+    background-color: rgba(230, 140, 64, 0.2);
+    color: rgb(230, 140, 64);
+}
+
+.yoki-res-type--sprite .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--sprite {
+    background-color: rgba(140, 217, 89, 0.2);
+    color: rgb(140, 217, 89);
+}
+
+.yoki-res-type--material .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--material {
+    background-color: rgba(217, 89, 140, 0.2);
+    color: rgb(217, 89, 140);
+}
+
+.yoki-res-type--gameobject .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--gameobject {
+    background-color: rgba(153, 89, 217, 0.2);
+    color: rgb(153, 89, 217);
+}
+
+.yoki-res-type--textasset .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--textasset {
+    background-color: rgba(89, 191, 191, 0.2);
+    color: rgb(89, 191, 191);
+}
+
+.yoki-res-type--scriptableobject .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--scriptableobject {
+    background-color: rgba(191, 191, 89, 0.2);
+    color: rgb(191, 191, 89);
+}
+
+.yoki-res-type--shader .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--shader {
+    background-color: rgba(140, 140, 191, 0.2);
+    color: rgb(140, 140, 191);
+}
+
+.yoki-res-type--font .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--font {
+    background-color: rgba(191, 140, 140, 0.2);
+    color: rgb(191, 140, 140);
+}
+
+.yoki-res-type--animationclip .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--animationclip {
+    background-color: rgba(115, 166, 217, 0.2);
+    color: rgb(115, 166, 217);
+}
+
+.yoki-res-type--unknown .yoki-res-category__count,
+.yoki-res-history-item__type.yoki-res-type--unknown {
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-tertiary);
+}
+
+
+/* ========== 分类容器 ========== */
+.yoki-res-category-container {
+    padding: var(--yoki-spacing-sm);
+}

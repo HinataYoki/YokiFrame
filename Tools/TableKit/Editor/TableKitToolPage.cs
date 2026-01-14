@@ -10,11 +10,14 @@ namespace YokiFrame.Editor
     /// TableKit 工具页面 (YokiFrame 集成版)
     /// 嵌入 YokiFrame 工具面板中使用
     /// </summary>
-    public class TableKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "TableKit",
+        name: "TableKit",
+        icon: KitIcons.TABLEKIT,
+        priority: 50,
+        category: YokiPageCategory.Tool)]
+    public class TableKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "TableKit";
-        public override string PageIcon => KitIcons.TABLEKIT;
-        public override int Priority => 50;
 
         private TableKitEditorUI mEditorUI;
 

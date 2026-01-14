@@ -13,11 +13,14 @@ namespace YokiFrame
     /// UIKit 工具页面 - 集成创建面板、调试、绑定检查、验证器功能
     /// 采用响应式数据绑定，通过订阅面板事件实现自动更新
     /// </summary>
-    public partial class UIKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "UIKit",
+        name: "UIKit",
+        icon: KitIcons.UIKIT,
+        priority: 30,
+        category: YokiPageCategory.Tool)]
+    public partial class UIKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "UIKit";
-        public override string PageIcon => KitIcons.UIKIT;
-        public override int Priority => 30;
 
         #region 常量
 
@@ -45,7 +48,7 @@ namespace YokiFrame
         private Button mDebugTabBtn;
         private Button mBindInspectorTabBtn;
         private Button mValidatorTabBtn;
-        
+
         // 响应式更新
         private Throttle mRefreshThrottle;
 
@@ -94,31 +97,31 @@ namespace YokiFrame
         {
             // 创建节流器
             mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
-            
+
             // 订阅面板打开事件
             SubscribeChannel<IPanel>(DataChannels.PANEL_OPENED, OnPanelOpened);
-            
+
             // 订阅面板关闭事件
             SubscribeChannel<IPanel>(DataChannels.PANEL_CLOSED, OnPanelClosed);
-            
+
             // 订阅焦点变化事件
             SubscribeChannel<GameObject>(DataChannels.FOCUS_CHANGED, OnFocusChanged);
         }
-        
+
         private void OnPanelOpened(IPanel panel)
         {
             if (mCurrentTab != TabType.Debug) return;
             if (!mDebugAutoRefresh) return;
             mRefreshThrottle.Execute(RefreshDebugContent);
         }
-        
+
         private void OnPanelClosed(IPanel panel)
         {
             if (mCurrentTab != TabType.Debug) return;
             if (!mDebugAutoRefresh) return;
             mRefreshThrottle.Execute(RefreshDebugContent);
         }
-        
+
         private void OnFocusChanged(GameObject focusObj)
         {
             if (mCurrentTab != TabType.Debug) return;

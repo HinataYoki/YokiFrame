@@ -1,0 +1,136 @@
+/* YokiFrame 设计令牌 (Design Tokens) v2.0 */
+/* L0 层：所有样式的基础变量定义 */
+
+:root {
+    /* === 品牌色系 === */
+    --yoki-brand-primary: rgb(33, 150, 243);
+    --yoki-brand-primary-hover: rgb(66, 165, 245);
+    --yoki-brand-primary-active: rgb(25, 118, 210);
+    --yoki-brand-primary-muted: rgba(33, 150, 243, 0.15);
+    
+    --yoki-brand-secondary: rgb(255, 193, 7);
+    --yoki-brand-success: rgb(76, 175, 80);
+    --yoki-brand-success-muted: rgba(76, 175, 80, 0.15);
+    --yoki-brand-danger: rgb(244, 67, 54);
+    --yoki-brand-danger-muted: rgba(244, 67, 54, 0.15);
+    --yoki-brand-warning: rgb(255, 152, 0);
+    --yoki-brand-warning-muted: rgba(255, 152, 0, 0.15);
+    --yoki-brand-info: rgb(33, 150, 243);
+    --yoki-brand-info-muted: rgba(33, 150, 243, 0.15);
+    
+    /* === 深色模式层级系统 === */
+    --yoki-layer-base: rgb(24, 25, 28);
+    --yoki-layer-navigation: rgb(30, 31, 35);
+    --yoki-layer-surface: rgb(37, 38, 43);
+    --yoki-layer-card: rgb(45, 47, 54);
+    --yoki-layer-elevated: rgb(52, 55, 62);
+    --yoki-layer-hover: rgb(58, 61, 70);
+    --yoki-layer-selected: rgba(33, 150, 243, 0.12);
+    
+    /* === 文本颜色层级 === */
+    --yoki-text-primary: rgb(240, 240, 245);
+    --yoki-text-secondary: rgb(180, 185, 195);
+    --yoki-text-tertiary: rgb(130, 135, 145);
+    --yoki-text-disabled: rgb(85, 90, 100);
+    --yoki-text-on-brand: rgb(255, 255, 255);
+    
+    /* === 边框与分隔 === */
+    --yoki-border-subtle: rgb(45, 48, 55);
+    --yoki-border-default: rgb(55, 58, 65);
+    --yoki-border-strong: rgb(70, 73, 82);
+    --yoki-border-focus: var(--yoki-brand-primary);
+    
+    /* === 间距系统 === */
+    --yoki-spacing-xs: 4px;
+    --yoki-spacing-sm: 8px;
+    --yoki-spacing-md: 12px;
+    --yoki-spacing-lg: 16px;
+    --yoki-spacing-xl: 24px;
+    --yoki-spacing-2xl: 32px;
+    
+    /* === 圆角系统 === */
+    --yoki-radius-sm: 4px;
+    --yoki-radius-md: 6px;
+    --yoki-radius-lg: 8px;
+    --yoki-radius-xl: 12px;
+    
+    /* === 字体大小 === */
+    --yoki-font-xs: 11px;
+    --yoki-font-sm: 12px;
+    --yoki-font-base: 14px;
+    --yoki-font-md: 15px;
+    --yoki-font-lg: 17px;
+    --yoki-font-xl: 19px;
+    --yoki-font-2xl: 22px;
+    
+    /* === 动画时长 === */
+    --yoki-duration-fast: 0.15s;
+    --yoki-duration-normal: 0.2s;
+    --yoki-duration-slow: 0.3s;
+    
+    /* ========== 兼容性别名（旧变量名） ========== */
+    /* 品牌色 */
+    --brand-primary: var(--yoki-brand-primary);
+    --brand-primary-hover: var(--yoki-brand-primary-hover);
+    --brand-primary-active: var(--yoki-brand-primary-active);
+    --brand-primary-muted: var(--yoki-brand-primary-muted);
+    --brand-secondary: var(--yoki-brand-secondary);
+    --brand-success: var(--yoki-brand-success);
+    --brand-success-muted: var(--yoki-brand-success-muted);
+    --brand-danger: var(--yoki-brand-danger);
+    --brand-danger-muted: var(--yoki-brand-danger-muted);
+    --brand-warning: var(--yoki-brand-warning);
+    --brand-warning-muted: var(--yoki-brand-warning-muted);
+    --brand-info: var(--yoki-brand-info);
+    --brand-info-muted: var(--yoki-brand-info-muted);
+    
+    /* 层级 */
+    --layer-base: var(--yoki-layer-base);
+    --layer-navigation: var(--yoki-layer-navigation);
+    --layer-surface: var(--yoki-layer-surface);
+    --layer-card: var(--yoki-layer-card);
+    --layer-elevated: var(--yoki-layer-elevated);
+    --layer-hover: var(--yoki-layer-hover);
+    --layer-selected: var(--yoki-layer-selected);
+    
+    /* 文本 */
+    --text-primary: var(--yoki-text-primary);
+    --text-secondary: var(--yoki-text-secondary);
+    --text-tertiary: var(--yoki-text-tertiary);
+    --text-disabled: var(--yoki-text-disabled);
+    --text-on-brand: var(--yoki-text-on-brand);
+    
+    /* 边框 */
+    --border-subtle: var(--yoki-border-subtle);
+    --border-default: var(--yoki-border-default);
+    --border-strong: var(--yoki-border-strong);
+    --border-focus: var(--yoki-border-focus);
+    
+    /* 间距 */
+    --spacing-xs: var(--yoki-spacing-xs);
+    --spacing-sm: var(--yoki-spacing-sm);
+    --spacing-md: var(--yoki-spacing-md);
+    --spacing-lg: var(--yoki-spacing-lg);
+    --spacing-xl: var(--yoki-spacing-xl);
+    --spacing-2xl: var(--yoki-spacing-2xl);
+    
+    /* 圆角 */
+    --radius-sm: var(--yoki-radius-sm);
+    --radius-md: var(--yoki-radius-md);
+    --radius-lg: var(--yoki-radius-lg);
+    --radius-xl: var(--yoki-radius-xl);
+    
+    /* 字体 */
+    --font-xs: var(--yoki-font-xs);
+    --font-sm: var(--yoki-font-sm);
+    --font-base: var(--yoki-font-base);
+    --font-md: var(--yoki-font-md);
+    --font-lg: var(--yoki-font-lg);
+    --font-xl: var(--yoki-font-xl);
+    --font-2xl: var(--yoki-font-2xl);
+    
+    /* 动画 */
+    --duration-fast: var(--yoki-duration-fast);
+    --duration-normal: var(--yoki-duration-normal);
+    --duration-slow: var(--yoki-duration-slow);
+}

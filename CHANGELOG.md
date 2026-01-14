@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0-preview.2] - 2026-01-14
+
+### Added
+- **InputKit** - 基于 Unity InputSystem 的输入管理封装
+  - 类型安全的输入访问，编译时检查
+  - 运行时重绑定系统（支持键盘/手柄、复合绑定、冲突处理）
+  - 输入上下文系统（UI/对话/过场等场景的输入屏蔽）
+  - 连招检测、输入缓冲、震动反馈
+  - 设备切换检测与 UI 提示更新
+- **SpatialKit** - 高性能空间索引系统
+  - 空间哈希网格（HashGrid）- O(1) 查询，均匀分布最优
+  - 四叉树（Quadtree）- 2D/2.5D 场景自适应分区
+  - 八叉树（Octree）- 完整 3D 空间索引
+  - 范围查询、最近邻查询，零 GC 分配
+  - 替代 Physics.OverlapSphere 的高效方案
+
 ## [1.6.0-preview.1] - 2026-01-11
 
 ### Added

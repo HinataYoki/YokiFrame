@@ -31,7 +31,7 @@ namespace YokiFrame
         protected override void OnInit(IUIData data = null)
         {
             base.OnInit(data);
-            
+
             if (data is DialogData dialogData)
             {
                 mConfig = dialogData.Config;
@@ -42,9 +42,9 @@ namespace YokiFrame
         protected override void OnOpen(IUIData data = null)
         {
             base.OnOpen(data);
-            
+
             mResultSent = false;
-            
+
             if (data is DialogData dialogData)
             {
                 mConfig = dialogData.Config;
@@ -60,7 +60,7 @@ namespace YokiFrame
             if (Handler != null)
             {
                 Handler.IsModal = true;
-                UILevelManager.SetModal(this, true);
+                UIRoot.Instance.SetPanelModal(this, true);
             }
         }
 
@@ -75,7 +75,7 @@ namespace YokiFrame
             // 移除模态
             if (Handler != null)
             {
-                UILevelManager.SetModal(this, false);
+                UIRoot.Instance.SetPanelModal(this, false);
             }
 
             base.OnClose();
@@ -110,7 +110,7 @@ namespace YokiFrame
             };
 
             mOnResult?.Invoke(resultData);
-            
+
             // 触发事件
             EventKit.Type.Send(new DialogResultEvent
             {

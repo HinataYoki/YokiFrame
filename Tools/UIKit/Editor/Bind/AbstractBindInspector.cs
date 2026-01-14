@@ -23,26 +23,26 @@ namespace YokiFrame
     public partial class AbstractBindInspector : Editor
     {
         #region SerializedProperties
-        
+
         private SerializedProperty mBindProp;
         private SerializedProperty mNameProp;
         private SerializedProperty mAutoTypeProp;
         private SerializedProperty mCustomTypeProp;
         private SerializedProperty mTypeProp;
         private SerializedProperty mCommentProp;
-        
+
         #endregion
-        
+
         #region 缓存
-        
+
         // 缓存组件列表（避免 LINQ 分配）
         private readonly List<string> mComponentNames = new(16);
         private int mComponentNameIndex;
-        
+
         #endregion
-        
+
         #region UI 元素缓存
-        
+
         private VisualElement mRoot;
         private VisualElement mNameRow;
         private VisualElement mTypeRow;
@@ -53,7 +53,7 @@ namespace YokiFrame
         private TextField mCustomTypeField;
         private PopupField<string> mComponentPopup;
         private TextField mCommentField;
-        
+
         // 新增 UI 元素
         private VisualElement mTypeConvertRow;
         private Label mBindPathLabel;
@@ -63,7 +63,7 @@ namespace YokiFrame
         private Label mSuggestionLabel;
         private Button mApplySuggestionBtn;
         private Button mJumpToCodeBtn;
-        
+
         #endregion
 
         private void OnEnable()
@@ -74,17 +74,17 @@ namespace YokiFrame
             mCustomTypeProp = serializedObject.FindProperty("customType");
             mTypeProp = serializedObject.FindProperty("type");
             mCommentProp = serializedObject.FindProperty("comment");
-            
+
             CacheComponentNames();
         }
-        
+
         private void CacheComponentNames()
         {
             mComponentNames.Clear();
-            
+
             var targetBind = target as AbstractBind;
             if (targetBind == null) return;
-            
+
             var components = targetBind.GetComponents<UnityEngine.Component>();
             for (int i = 0; i < components.Length; i++)
             {
@@ -94,7 +94,7 @@ namespace YokiFrame
                     mComponentNames.Add(comp.GetType().FullName);
                 }
             }
-            
+
             // 查找当前选中的索引
             mComponentNameIndex = 0;
             var currentType = mAutoTypeProp?.stringValue;
@@ -109,7 +109,7 @@ namespace YokiFrame
                     }
                 }
             }
-            
+
             // 默认选择最后一个（通常是最具体的组件）
             if (mComponentNameIndex == 0 && mComponentNames.Count > 0)
             {
@@ -121,48 +121,51 @@ namespace YokiFrame
         {
             mRoot = new VisualElement();
             mRoot.AddToClassList("bind-inspector");
-            
-            // 加载样式
+
+            // 加载全局样式（包含 CSS 变量定义）
+            YokiStyleService.Apply(mRoot, YokiStyleProfile.CoreOnly);
+
+            // 加载组件样式
             var styleSheet = YokiFrameEditorUtility.LoadStyleSheetByName("BindInspectorStyles");
             if (styleSheet != null)
             {
                 mRoot.styleSheets.Add(styleSheet);
             }
-            
+
             // 主容器
             var container = new VisualElement();
             container.AddToClassList("bind-container");
             mRoot.Add(container);
-            
+
             // 绑定类型
             CreateBindTypeRow(container);
-            
+
             // 字段名称
             mNameRow = CreateNameRow(container);
-            
+
             // 类型选择
             mTypeRow = CreateTypeRow(container);
-            
+
             // 注释
             mCommentRow = CreateCommentRow(container);
-            
+
             // 验证提示
             mValidationLabel = new Label();
             mValidationLabel.AddToClassList("validation-label");
             container.Add(mValidationLabel);
-            
+
             // 命名建议行
             CreateSuggestionRow(container);
-            
+
             // 绑定路径显示
             CreateBindPathRow(container);
-            
+
             // 代码预览区域
             CreateCodePreviewSection(container);
-            
+
             // 跳转到代码按钮
             CreateJumpToCodeButton(container);
-            
+
             // 初始化可见性
             UpdateRowVisibility((BindType)mBindProp.enumValueIndex);
             ValidateFields();
@@ -170,17 +173,17 @@ namespace YokiFrame
             UpdateBindPath();
             UpdateCodePreview();
             UpdateJumpToCodeButton();
-            
+
             return mRoot;
         }
-        
+
         /// <summary>
         /// 格式化组件名称（只显示类名）
         /// </summary>
         private string FormatComponentName(string fullName)
         {
             if (string.IsNullOrEmpty(fullName)) return fullName;
-            
+
             var lastDot = fullName.LastIndexOf('.');
             return lastDot >= 0 ? fullName.Substring(lastDot + 1) : fullName;
         }

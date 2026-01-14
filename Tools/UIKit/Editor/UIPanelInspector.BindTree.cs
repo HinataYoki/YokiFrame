@@ -24,9 +24,17 @@ namespace YokiFrame
             section.AddToClassList("uipanel-section");
             section.AddToClassList("uipanel-section-bindtree");
             
-            // 可折叠标题
-            mBindTreeFoldout = new Foldout { text = "绑定关系", value = true };
+            // 可折叠标题（从 SessionState 恢复折叠状态）
+            bool savedFoldoutState = SessionState.GetBool(KEY_BIND_TREE_FOLDOUT, true);
+            mBindTreeFoldout = new Foldout { text = "绑定关系", value = savedFoldoutState };
             mBindTreeFoldout.AddToClassList("uipanel-bindtree-foldout");
+            
+            // 注册折叠状态变更回调，保存到 SessionState
+            mBindTreeFoldout.RegisterValueChangedCallback(evt =>
+            {
+                SessionState.SetBool(KEY_BIND_TREE_FOLDOUT, evt.newValue);
+            });
+            
             section.Add(mBindTreeFoldout);
             
             // 内容容器

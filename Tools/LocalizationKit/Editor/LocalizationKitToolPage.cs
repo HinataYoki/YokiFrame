@@ -9,11 +9,14 @@ namespace YokiFrame.EditorTools
     /// <summary>
     /// LocalizationKit 编辑器工具页面
     /// </summary>
-    public class LocalizationKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "LocalizationKit",
+        name: "Localization",
+        icon: KitIcons.LOCALIZATIONKIT,
+        priority: 60,
+        category: YokiPageCategory.Tool)]
+    public class LocalizationKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "Localization";
-        public override string PageIcon => KitIcons.LOCALIZATIONKIT;
-        public override int Priority => 60;
 
         private ListView mTextListView;
         private Label mStatusLabel;
@@ -122,7 +125,7 @@ namespace YokiFrame.EditorTools
 
             var statusLabel = element.Q<Label>("status-label");
             var statusIcon = element.Q<Image>("status-icon");
-            
+
             // 确保状态图标存在
             if (statusIcon == null)
             {
@@ -137,7 +140,7 @@ namespace YokiFrame.EditorTools
                 var idx = parent.IndexOf(statusLabel);
                 parent.Insert(idx, statusIcon);
             }
-            
+
             if (entry.IsMissing)
             {
                 statusIcon.image = KitIcons.GetTexture(KitIcons.WARNING);

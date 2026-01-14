@@ -22,6 +22,7 @@ namespace YokiFrame.Core.Editor
             new("YOKIFRAME_FMOD_SUPPORT", "com.unity.fmod", "FMODUnity"),
             new("YOKIFRAME_DOTWEEN_SUPPORT", "com.demigiant.dotween", "DOTween.Modules"),
             new("YOKIFRAME_INPUTSYSTEM_SUPPORT", "com.unity.inputsystem", "Unity.InputSystem"),
+            new("YOKIFRAME_ZSTRING_SUPPORT", "", "ZString"),
         };
 
         static DependencyDefineManager()
@@ -49,7 +50,7 @@ namespace YokiFrame.Core.Editor
                     break;
                 }
             }
-            
+
             if (hasChanges)
             {
                 EditorApplication.delayCall += RefreshDefines;
@@ -69,7 +70,7 @@ namespace YokiFrame.Core.Editor
             {
                 // 使用 foreach 替代 LINQ Concat().Any()
                 bool hasAsmdefChange = false;
-                
+
                 for (int i = 0; i < importedAssets.Length; i++)
                 {
                     if (importedAssets[i].EndsWith(".asmdef"))
@@ -78,7 +79,7 @@ namespace YokiFrame.Core.Editor
                         break;
                     }
                 }
-                
+
                 if (!hasAsmdefChange)
                 {
                     for (int i = 0; i < deletedAssets.Length; i++)
@@ -90,7 +91,7 @@ namespace YokiFrame.Core.Editor
                         }
                     }
                 }
-                
+
                 if (hasAsmdefChange)
                 {
                     EditorApplication.delayCall += RefreshDefines;
@@ -107,7 +108,7 @@ namespace YokiFrame.Core.Editor
             foreach (var dep in sDependencies)
             {
                 var exists = DetectDependency(dep);
-                
+
                 if (exists && !newDefines.Contains(dep.Define))
                 {
                     newDefines.Add(dep.Define);

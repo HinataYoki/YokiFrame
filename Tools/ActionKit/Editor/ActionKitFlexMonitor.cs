@@ -11,11 +11,14 @@ namespace YokiFrame.EditorTools
     /// 使用 Flexbox 可视化区分串行(Sequence)和并行(Parallel)逻辑
     /// 采用响应式数据绑定，通过订阅 Action 事件实现增量更新
     /// </summary>
-    public partial class ActionKitFlexMonitor : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "ActionKit",
+        name: "ActionKit",
+        icon: KitIcons.ACTIONKIT,
+        priority: 30,
+        category: YokiPageCategory.Tool)]
+    public partial class ActionKitFlexMonitor : YokiToolPageBase
     {
-        public override string PageName => "ActionKit";
-        public override string PageIcon => KitIcons.ACTIONKIT;
-        public override int Priority => 30;
 
         #region 常量
 
@@ -55,7 +58,7 @@ namespace YokiFrame.EditorTools
         private ulong mSelectedActionId;
         private int mTotalFinished;
         private bool mClearStackOnExit = true;
-        
+
         // 响应式更新相关
         private Throttle mRefreshThrottle;
 
@@ -82,7 +85,7 @@ namespace YokiFrame.EditorTools
 
             // 初始化响应式订阅
             SetupReactiveSubscriptions();
-            
+
             RefreshData();
         }
 
@@ -97,14 +100,14 @@ namespace YokiFrame.EditorTools
         {
             // 创建节流器，避免频繁刷新
             mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
-            
+
             // 订阅 Action 开始事件
             SubscribeChannel<IAction>(DataChannels.ACTION_STARTED, OnActionStarted);
-            
+
             // 订阅 Action 结束事件
             SubscribeChannel<IAction>(DataChannels.ACTION_FINISHED, OnActionFinished);
         }
-        
+
         /// <summary>
         /// Action 开始时的回调
         /// </summary>
@@ -112,11 +115,11 @@ namespace YokiFrame.EditorTools
         {
             if (!Application.isPlaying) return;
             if (IsInteractionCooldown()) return;
-            
+
             // 使用节流器延迟刷新
             mRefreshThrottle.Execute(RefreshData);
         }
-        
+
         /// <summary>
         /// Action 结束时的回调
         /// </summary>
@@ -124,17 +127,17 @@ namespace YokiFrame.EditorTools
         {
             if (!Application.isPlaying) return;
             if (IsInteractionCooldown()) return;
-            
+
             mTotalFinished++;
-            
+
             // 使用节流器延迟刷新
             mRefreshThrottle.Execute(RefreshData);
         }
-        
+
         /// <summary>
         /// 检查是否在交互冷却期内
         /// </summary>
-        private bool IsInteractionCooldown() 
+        private bool IsInteractionCooldown()
             => EditorApplication.timeSinceStartup - mLastInteractionTime < INTERACTION_COOLDOWN;
 
         #endregion
@@ -148,13 +151,13 @@ namespace YokiFrame.EditorTools
         }
 
         public override void OnActivate() => base.OnActivate();
-        
+
         public override void OnDeactivate() => base.OnDeactivate();
 
         protected override void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             base.OnPlayModeStateChanged(state);
-            
+
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 mTotalFinished = 0;

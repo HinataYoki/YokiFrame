@@ -4,6 +4,7 @@
     "references": [
         "YokiFrame",
         "YokiFrame.InputKit",
+        "YokiFrame.DialogueKit",
         "YooAsset",
         "YooAsset.Editor",
         "UniTask",

@@ -134,93 +134,85 @@ namespace YokiFrame.EditorTools
         #endregion
 
         #region 路径工具
-        
+
         /// <summary>
         /// 获取 YokiFrame 根目录路径（相对于 Assets）
         /// </summary>
         public static string GetYokiFrameRootPath()
         {
-            if (!string.IsNullOrEmpty(sCachedRootPath) && Directory.Exists(sCachedRootPath))
+            if (!string.IsNullOrEmpty(sCachedRootPath))
                 return sCachedRootPath;
-            
-            // 通过查找标志性文件来定位 YokiFrame 目录
-            var guids = AssetDatabase.FindAssets("YokiFrameToolStyles t:StyleSheet");
-            if (guids.Length > 0)
+
+            // 统一走新的路径解析：支持 Packages/、Assets/、Plugins 三种安装方式
+            // EditorToolsRoot = ".../Core/Editor/YokiEditorTools"，向上回退到 ".../YokiFrame"
+            try
             {
-                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                // path = "Assets/.../YokiFrame/Core/Editor/Styles/YokiFrameToolStyles.uss"
-                // 需要回退到 YokiFrame 目录
-                var dir = Path.GetDirectoryName(path); // Styles
-                dir = Path.GetDirectoryName(dir);       // Editor
-                dir = Path.GetDirectoryName(dir);       // Core
-                dir = Path.GetDirectoryName(dir);       // YokiFrame
-                sCachedRootPath = dir?.Replace('\\', '/');
-                return sCachedRootPath;
+                var editorToolsRoot = YokiEditorPaths.GetEditorToolsRoot();
+                if (!string.IsNullOrEmpty(editorToolsRoot))
+                {
+                    var dir = editorToolsRoot;
+                    dir = Path.GetDirectoryName(dir); // Editor
+                    dir = Path.GetDirectoryName(dir); // Core
+                    dir = Path.GetDirectoryName(dir); // YokiFrame
+                    sCachedRootPath = dir?.Replace('\\', '/');
+                    return sCachedRootPath;
+                }
             }
-            
-            // 回退：使用默认路径
+            catch
+            {
+                // Ignore and fallback
+            }
+
+            // 兜底：使用默认路径
             sCachedRootPath = "Assets/YokiFrame";
             return sCachedRootPath;
         }
-        
+
         /// <summary>
         /// 获取主样式表路径
         /// </summary>
+        [System.Obsolete("使用 YokiStyleService.Apply() 替代")]
         public static string GetMainStyleSheetPath()
         {
-            return $"{GetYokiFrameRootPath()}/Core/Editor/Styles/YokiFrameToolStyles.uss";
+            return YokiEditorPaths.CombineWithStylingRoot("Core/YokiCoreComponents.uss");
         }
-        
+
         /// <summary>
         /// 加载主样式表
         /// </summary>
+        [System.Obsolete("使用 YokiStyleService.Apply() 替代")]
         public static StyleSheet LoadMainStyleSheet()
         {
             var path = GetMainStyleSheetPath();
             var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-            
+
             if (styleSheet == null)
             {
                 Debug.LogWarning($"[YokiFrame] 无法加载样式表: {path}");
             }
-            
+
             return styleSheet;
         }
-        
+
         /// <summary>
         /// 为 VisualElement 应用主样式表
         /// </summary>
         public static void ApplyMainStyleSheet(VisualElement root)
         {
-            var styleSheet = LoadMainStyleSheet();
-            if (styleSheet != null)
-            {
-                root.styleSheets.Add(styleSheet);
-            }
-            
-            // 加载 Components 目录下的所有组件样式
-            ApplyComponentStyleSheets(root);
+            // 转发到新的 YokiStyleService
+            YokiStyleService.Apply(root, YokiStyleProfile.Full);
         }
-        
+
         /// <summary>
         /// 加载并应用 Components 目录下的所有组件样式表
         /// </summary>
+        [System.Obsolete("使用 YokiStyleService.Apply() 替代，组件样式已合并到 Core")]
         public static void ApplyComponentStyleSheets(VisualElement root)
         {
-            var componentsPath = $"{GetYokiFrameRootPath()}/Core/Editor/Styles/Components";
-            var guids = AssetDatabase.FindAssets("t:StyleSheet", new[] { componentsPath });
-            
-            foreach (var guid in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-                if (styleSheet != null)
-                {
-                    root.styleSheets.Add(styleSheet);
-                }
-            }
+            // 组件样式已迁移到 Core/YokiCoreComponents.uss，无需单独加载
+            YokiStyleService.Apply(root, YokiStyleProfile.CoreOnly);
         }
-        
+
         /// <summary>
         /// 通过文件名查找并加载样式表
         /// </summary>
@@ -233,11 +225,11 @@ namespace YokiFrame.EditorTools
                 var path = AssetDatabase.GUIDToAssetPath(guids[0]);
                 return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
             }
-            
+
             Debug.LogWarning($"[YokiFrame] 无法找到样式表: {ussFileName}");
             return null;
         }
-        
+
         /// <summary>
         /// 清除缓存（用于路径变更后刷新）
         /// </summary>

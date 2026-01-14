@@ -13,127 +13,59 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "输入读取",
-                Description = "类型安全的输入 API，基于 InputSystem 生成的 C# 类，编译时类型检查，零魔法字符串。",
+                Description = "类型安全的输入 API，编译时检查，零魔法字符串。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "类型安全输入读取",
-                        Code = @"public class PlayerController : MonoBehaviour
-{
-    private GameAppInput mInput;
-    
-    void OnEnable()
-    {
-        // 获取类型安全的输入实例
-        mInput = InputKit.Get<GameAppInput>();
-        
-        // 订阅事件（类型安全）
-        mInput.Player.Attack.performed += OnAttack;
-        mInput.Player.Dodge.performed += OnDodge;
-    }
-    
-    void OnDisable()
-    {
-        mInput.Player.Attack.performed -= OnAttack;
-        mInput.Player.Dodge.performed -= OnDodge;
-    }
-    
-    void Update()
-    {
-        // 类型安全的值读取
-        var move = mInput.Player.Move.ReadValue<Vector2>();
-        transform.Translate(move * Time.deltaTime * 5f);
-        
-        // 按钮状态检测
-        if (mInput.Player.Sprint.IsPressed())
-        {
-            // 冲刺中
-        }
-    }
-    
-    private void OnAttack(InputAction.CallbackContext ctx) => ExecuteAttack();
-    private void OnDodge(InputAction.CallbackContext ctx) => ExecuteDodge();
-}",
-                        Explanation = "通过 InputSystem 生成的类直接访问 Action，编译时类型检查，无运行时字符串查找。"
+                        Title = "输入读取",
+                        Code = @"var input = InputKit.Get<GameAppInput>();
+
+// 值读取
+var move = input.Player.Move.ReadValue<Vector2>();
+
+// 按钮状态
+bool pressed = input.Player.Attack.IsPressed();
+
+// 事件订阅
+input.Player.Attack.performed += ctx => Attack();",
+                        Explanation = "通过生成的类直接访问 Action。"
                     },
                     new()
                     {
                         Title = "设备检测",
-                        Code = @"// 当前设备类型
+                        Code = @"// 当前设备
 InputDeviceType device = InputKit.CurrentDeviceType;
+bool isGamepad = InputKit.IsUsingGamepad;
+bool isKeyboard = InputKit.IsUsingKeyboardMouse;
 
-// 便捷属性检测
-if (InputKit.IsUsingKeyboardMouse)
+// 设备切换事件
+InputKit.OnDeviceChanged += static device =>
 {
-    ShowPrompt(""按 E 交互"");
-}
-else if (InputKit.IsUsingGamepad)
-{
-    ShowPrompt(""按 A 交互"");
-}
-else if (InputKit.IsUsingTouch)
-{
-    ShowTouchButton();
-}
-
-// 检测手柄连接状态
-if (InputKit.IsGamepadConnected)
-{
-    EnableGamepadUI();
-}
-
-// 监听设备切换事件
-InputKit.OnDeviceChanged += static deviceType =>
-{
-    UIManager.Instance.RefreshInputPrompts(deviceType);
+    UIManager.Instance.RefreshPrompts(device);
 };",
-                        Explanation = "设备切换时自动触发事件，用于动态更新 UI 提示图标。"
+                        Explanation = "设备切换时自动触发事件。"
                     },
                     new()
                     {
                         Title = "ActionMap 管理",
-                        Code = @"// 切换 ActionMap（禁用其他，启用指定）
-InputKit.SwitchActionMap(""UI"");
-
-// 同时启用多个 ActionMap
-InputKit.EnableActionMaps(""Player"", ""Camera"");
-
-// 禁用所有 ActionMap
+                        Code = @"InputKit.SwitchActionMap(""UI"");           // 切换（禁用其他）
+InputKit.EnableActionMaps(""Player"", ""Camera""); // 同时启用多个
 InputKit.DisableAllActionMaps();
-
-// 启用所有 ActionMap
-InputKit.EnableAllActionMaps();
-
-// 获取当前启用的 ActionMap
-var enabledMaps = InputKit.GetEnabledActionMaps();
-
-// 备用字符串 API（不推荐，仅用于动态场景）
-var action = InputKit.FindAction(""Player/Attack"");
-var map = InputKit.FindActionMap(""Player"");",
-                        Explanation = "ActionMap 管理用于切换游戏状态（如战斗/UI/对话）。"
+InputKit.EnableAllActionMaps();",
+                        Explanation = "用于切换游戏状态（战斗/UI/对话）。"
                     },
                     new()
                     {
-                        Title = "绑定显示名称",
-                        Code = @"var input = InputKit.Get<GameAppInput>();
-
-// 获取绑定显示名称（类型安全）
+                        Title = "绑定显示",
+                        Code = @"// 获取显示名称
 string display = InputKit.GetBindingDisplayString(input.Player.Attack);
-// 输出: ""Space"" 或 ""Button South""
+// ""Space"" 或 ""Button South""
 
-// 获取指定控制方案的显示名称
-string kbDisplay = InputKit.GetBindingDisplayString(
-    input.Player.Attack, 
-    ""Keyboard&Mouse"");
-
-string gpDisplay = InputKit.GetBindingDisplayString(
-    input.Player.Attack, 
-    ""Gamepad"");
-
-// 用于 UI 显示
-mAttackPrompt.text = $""攻击: {display}"";",
-                        Explanation = "GetBindingDisplayString 返回本地化的按键名称，适合 UI 显示。"
+// 按控制方案获取
+string kb = InputKit.GetBindingDisplayString(action, ""Keyboard&Mouse"");
+string gp = InputKit.GetBindingDisplayString(action, ""Gamepad"");",
+                        Explanation = "返回本地化按键名称，用于 UI 显示。"
                     }
                 }
             };

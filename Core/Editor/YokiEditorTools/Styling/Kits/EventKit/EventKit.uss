@@ -1,0 +1,100 @@
+/* EventKit 编辑器组件样式 */
+/* L2 层：Kit 专用样式 */
+
+/* ========== 事件时间线 ========== */
+.yoki-event-timeline {
+    flex-grow: 1;
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    padding: var(--yoki-spacing-md);
+}
+
+.yoki-event-timeline__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-md);
+    padding-bottom: var(--yoki-spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-event-timeline__title {
+    font-size: var(--yoki-font-md);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-event-timeline__item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    margin: var(--yoki-spacing-xs) 0;
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+    transition-property: background-color, translate;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-event-timeline__item:hover {
+    background-color: var(--yoki-layer-hover);
+    translate: 2px 0;
+}
+
+.yoki-event-timeline__time {
+    width: 60px;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-sm);
+}
+
+.yoki-event-timeline__badge {
+    padding: 3px 10px;
+    border-radius: var(--yoki-radius-sm);
+    margin-right: var(--yoki-spacing-sm);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+}
+
+.yoki-event-timeline__badge--register {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--yoki-brand-success);
+}
+
+.yoki-event-timeline__badge--send {
+    background-color: var(--yoki-brand-primary-muted);
+    color: var(--yoki-brand-primary);
+}
+
+.yoki-event-timeline__badge--unregister {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: var(--yoki-brand-danger);
+}
+
+.yoki-event-timeline__name {
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+}
+
+/* ========== 事件流图 ========== */
+.yoki-event-flow {
+    flex-grow: 1;
+    padding: var(--yoki-spacing-lg);
+}
+
+.yoki-event-flow__node {
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    padding: var(--yoki-spacing-md);
+    margin: var(--yoki-spacing-sm);
+}
+
+.yoki-event-flow__node--sender {
+    border-color: var(--yoki-brand-primary);
+}
+
+.yoki-event-flow__node--receiver {
+    border-color: var(--yoki-brand-success);
+}

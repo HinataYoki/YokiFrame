@@ -9,11 +9,14 @@ namespace YokiFrame
     /// <summary>
     /// BuffKit 工具页面 - 运行时 Buff 监控（响应式）
     /// </summary>
-    public class BuffKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "BuffKit",
+        name: "BuffKit",
+        icon: KitIcons.BUFFKIT,
+        priority: 25,
+        category: YokiPageCategory.Tool)]
+    public class BuffKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "BuffKit";
-        public override string PageIcon => KitIcons.BUFFKIT;
-        public override int Priority => 25;
 
         private const float THROTTLE_INTERVAL = 0.1f;
 
@@ -143,7 +146,7 @@ namespace YokiFrame
         private void RequestRefresh()
         {
             if (!IsPlaying) return;
-            
+
             mRefreshThrottle.Execute(RefreshContainerList);
         }
 
@@ -257,7 +260,7 @@ namespace YokiFrame
         public override void OnActivate()
         {
             base.OnActivate();
-            
+
             // 进入 PlayMode 时刷新一次
             if (IsPlaying)
             {

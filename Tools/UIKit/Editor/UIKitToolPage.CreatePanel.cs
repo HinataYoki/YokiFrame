@@ -367,13 +367,36 @@ namespace YokiFrame
                 };
 
                 var rect = gameObj.AddComponent<RectTransform>();
-
                 rect.anchoredPosition3D = Vector3.zero;
                 rect.localEulerAngles = Vector3.zero;
                 rect.localScale = Vector3.one;
                 rect.anchorMin = Vector2.zero;
                 rect.anchorMax = Vector2.one;
                 rect.sizeDelta = Vector2.zero;
+
+                // 创建 Panel 子对象
+                var panelChild = new GameObject("Panel")
+                {
+                    transform =
+                    {
+                        parent = gameObj.transform,
+                        localScale = Vector3.one
+                    }
+                };
+
+                var panelRect = panelChild.AddComponent<RectTransform>();
+                panelRect.anchoredPosition3D = Vector3.zero;
+                panelRect.localEulerAngles = Vector3.zero;
+                panelRect.localScale = Vector3.one;
+                panelRect.anchorMin = Vector2.zero;
+                panelRect.anchorMax = Vector2.one;
+                panelRect.sizeDelta = Vector2.zero;
+
+                // 添加 Image 组件（UGUI Panel）
+                var panelImage = panelChild.AddComponent<UnityEngine.UI.Image>();
+                panelImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
+                panelImage.type = UnityEngine.UI.Image.Type.Sliced;
+                panelImage.color = Color.white;
 
                 var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(gameObj, PrefabPath, InteractionMode.AutomatedAction);
 

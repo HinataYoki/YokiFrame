@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.SpatialKit.Editor",
+    "rootNamespace": "YokiFrame.EditorTools",
+    "references": [
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:7f8ee18900aa4d84e89e8a57f46f3d0f",
+        "GUID:29152f77ade275d48bfabf09f083f361"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

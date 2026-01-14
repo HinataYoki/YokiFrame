@@ -13,18 +13,17 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "自定义面板",
-                Description = "创建自定义面板需继承 UIPanel 并实现生命周期方法。",
+                Description = "创建面板需继承 UIPanel，实现生命周期方法。推荐使用编辑器工具创建。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "完整面板示例",
+                        Title = "基础面板",
                         Code = @"public class MainMenuPanel : UIPanel
 {
-    // UI 组件引用（使用 Bind 系统自动生成）
-    private Button mBtnStart;
-    private Button mBtnSettings;
-    private Text mTxtVersion;
+    [SerializeField] private Button mBtnStart;
+    [SerializeField] private Button mBtnSettings;
+    [SerializeField] private Text mTxtVersion;
 
     protected override void OnInit(IUIData data = null)
     {
@@ -39,32 +38,6 @@ namespace YokiFrame.EditorTools
         mTxtVersion.text = Application.version;
     }
 
-    protected override void OnWillShow()
-    {
-        // 显示动画开始前
-        AudioKit.Play(""UI/MenuAppear"");
-    }
-
-    protected override void OnDidShow()
-    {
-        // 显示动画完成后
-        mBtnStart.Select(); // 设置默认焦点
-    }
-
-    protected override void OnFocus()
-    {
-        // 获得焦点时
-        base.OnFocus();
-        InputSystem.EnableUIInput();
-    }
-
-    protected override void OnBlur()
-    {
-        // 失去焦点时
-        base.OnBlur();
-        InputSystem.DisableUIInput();
-    }
-
     protected override void OnClose()
     {
         // 关闭时清理
@@ -75,11 +48,11 @@ namespace YokiFrame.EditorTools
     private void OnStartClick() => CloseSelf();
     private void OnSettingsClick() => UIKit.PushOpenPanel<SettingsPanel>();
 }",
-                        Explanation = "UIPanel 继承自 MonoBehaviour，但业务逻辑应尽量与 Unity 生命周期解耦。"
+                        Explanation = "UIPanel 继承 MonoBehaviour，但业务逻辑应与 Unity 生命周期解耦。"
                     },
                     new()
                     {
-                        Title = "面板数据传递",
+                        Title = "数据传递",
                         Code = @"// 定义数据类
 public class GameOverData : IUIData
 {
@@ -88,60 +61,24 @@ public class GameOverData : IUIData
     public bool IsNewRecord;
 }
 
-// 面板中使用数据
+// 面板中使用
 public class GameOverPanel : UIPanel
 {
-    private Text mTxtScore;
-    private Text mTxtHighScore;
-    private GameObject mNewRecordEffect;
+    [SerializeField] private Text mTxtScore;
 
     protected override void OnOpen(IUIData data = null)
     {
-        if (data is GameOverData gameOverData)
+        if (data is GameOverData d)
         {
-            mTxtScore.text = $""得分: {gameOverData.Score}"";
-            mTxtHighScore.text = $""最高分: {gameOverData.HighScore}"";
-            mNewRecordEffect.SetActive(gameOverData.IsNewRecord);
+            mTxtScore.text = $""得分: {d.Score}"";
         }
     }
 }
 
-// 打开面板并传递数据
-var data = new GameOverData 
-{ 
-    Score = 1000, 
-    HighScore = 1500, 
-    IsNewRecord = false 
-};
+// 打开并传递数据
+var data = new GameOverData { Score = 1000 };
 UIKit.OpenPanel<GameOverPanel>(UILevel.Pop, data);",
-                        Explanation = "通过 IUIData 接口传递数据，保持面板与数据源解耦。"
-                    },
-                    new()
-                    {
-                        Title = "配置面板动画",
-                        Code = @"public class AnimatedPanel : UIPanel
-{
-    protected override void Awake()
-    {
-        base.Awake();
-        
-        // 代码配置动画
-        SetShowAnimation(UIAnimationFactory.CreateParallel(
-            UIAnimationFactory.CreateFadeIn(0.3f),
-            UIAnimationFactory.CreateScaleIn(0.3f)
-        ));
-        
-        SetHideAnimation(UIAnimationFactory.CreateParallel(
-            UIAnimationFactory.CreateFadeOut(0.2f),
-            UIAnimationFactory.CreateScaleOut(0.2f)
-        ));
-    }
-
-    // 或者在 Inspector 中配置：
-    // [SerializeField] UIAnimationConfig mShowAnimationConfig;
-    // [SerializeField] UIAnimationConfig mHideAnimationConfig;
-}",
-                        Explanation = "动画可以通过代码或 Inspector 配置。"
+                        Explanation = "通过 IUIData 传递数据，保持面板与数据源解耦。"
                     },
                     new()
                     {
@@ -153,26 +90,61 @@ UIKit.OpenPanel<GameOverPanel>(UILevel.Pop, data);",
     protected override void Awake()
     {
         base.Awake();
-        // 设置默认焦点元素（手柄模式下自动聚焦）
+        // 设置默认焦点（手柄模式自动聚焦）
         SetDefaultSelectable(mBtnGraphics);
     }
 }
 
-// 或者动态设置
+// 或在 OnDidShow 中动态设置
 protected override void OnDidShow()
 {
-    if (UIKit.IsNavigationMode)
+    if (UIKit.GetInputMode() == UIInputMode.Navigation)
     {
         UIKit.SetFocus(mBtnGraphics);
     }
 }",
-                        Explanation = "设置默认焦点可以改善手柄/键盘导航体验。"
+                        Explanation = "默认焦点改善手柄/键盘导航体验。"
+                    },
+                    new()
+                    {
+                        Title = "生命周期钩子",
+                        Code = @"public class AnimatedPanel : UIPanel
+{
+    protected override void OnWillShow()
+    {
+        // 显示动画开始前
+        AudioKit.Play(""UI/Appear"");
+    }
+
+    protected override void OnDidShow()
+    {
+        // 显示动画完成后
+    }
+
+    protected override void OnFocus()
+    {
+        // 成为栈顶面板时
+        base.OnFocus();
+    }
+
+    protected override void OnBlur()
+    {
+        // 失去栈顶位置时
+        base.OnBlur();
+    }
+
+    protected override void OnResume()
+    {
+        // 从栈中恢复时（Pop 后）
+        base.OnResume();
+    }
+}",
+                        Explanation = "生命周期钩子按顺序调用，异常不会中断后续钩子。"
                     },
                     new()
                     {
                         Title = "UIElement 和 UIComponent",
-                        Code = @"// UIElement - 轻量级 UI 元素基类
-// 适合：列表项、小型可复用组件
+                        Code = @"// UIElement - 轻量级 UI 元素（列表项等）
 public class ItemSlot : UIElement
 {
     [SerializeField] private Image mIcon;
@@ -185,26 +157,14 @@ public class ItemSlot : UIElement
     }
 }
 
-// UIComponent - 带生命周期的 UI 组件
-// 适合：需要初始化/清理的复杂组件
+// UIComponent - 带生命周期的复杂组件
 public class PlayerCard : UIComponent
 {
-    protected override void OnInit()
-    {
-        // 初始化
-    }
-
-    protected override void OnShow()
-    {
-        // 显示时
-    }
-
-    protected override void OnHide()
-    {
-        // 隐藏时
-    }
+    protected override void OnInit() { }
+    protected override void OnShow() { }
+    protected override void OnHide() { }
 }",
-                        Explanation = "UIElement 和 UIComponent 适合创建可复用的 UI 组件。"
+                        Explanation = "UIElement 用于面板内复用，UIComponent 用于跨面板复用。"
                     }
                 }
             };

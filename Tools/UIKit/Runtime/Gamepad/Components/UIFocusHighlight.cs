@@ -78,25 +78,36 @@ namespace YokiFrame
             mImage = GetComponent<Image>();
             mCanvasGroup = GetComponent<CanvasGroup>();
             
-            if (mCanvasGroup == null)
+            if (mCanvasGroup == default)
             {
                 mCanvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
 
             // 初始化 Image
-            if (mHighlightSprite != null)
+            if (mHighlightSprite != default)
             {
                 mImage.sprite = mHighlightSprite;
+                mImage.type = mImageType;
             }
-            mImage.type = mImageType;
+            else
+            {
+                // 无 Sprite 时使用 Simple 类型，避免 Sliced 模式下全屏填充
+                mImage.type = Image.Type.Simple;
+            }
             mImage.raycastTarget = false;
 
-            // 初始隐藏
+            // 初始隐藏 - 同时禁用 Image 防止闪烁
             mCanvasGroup.alpha = 0f;
+            mImage.enabled = false;
             mIsVisible = false;
+            
+            // 初始大小为 0
+            mRectTransform.sizeDelta = Vector2.zero;
 
             // 获取 Canvas
             mCanvas = GetComponentInParent<Canvas>();
+            
+            Debug.Log($"[UIFocusHighlight] Awake - Image.enabled={mImage.enabled}, sizeDelta={mRectTransform.sizeDelta}, alpha={mCanvasGroup.alpha}");
         }
 
         private void OnDestroy()
@@ -111,7 +122,7 @@ namespace YokiFrame
         private void LateUpdate()
         {
             // 持续跟随目标（处理目标移动的情况）
-            if (mIsVisible && mTargetRect != null)
+            if (mIsVisible && mTargetRect != default)
             {
                 UpdatePositionImmediate();
             }
@@ -130,19 +141,50 @@ namespace YokiFrame
 
             mCurrentTarget = target;
 
-            if (target == null)
+            if (target == default)
             {
                 Hide();
+                mTargetRect = null;
+                mRectTransform.sizeDelta = Vector2.zero;
+                return;
+            }
+
+            if (!target.activeInHierarchy)
+            {
+                Hide();
+                mTargetRect = null;
+                mRectTransform.sizeDelta = Vector2.zero;
+                return;
+            }
+
+            var selectable = target.GetComponent<Selectable>();
+            if (selectable != null && !selectable.interactable)
+            {
+                Hide();
+                mTargetRect = null;
+                mRectTransform.sizeDelta = Vector2.zero;
                 return;
             }
 
             mTargetRect = target.GetComponent<RectTransform>();
-            if (mTargetRect == null)
+            if (mTargetRect == default)
             {
                 Hide();
+                mRectTransform.sizeDelta = Vector2.zero;
                 return;
             }
 
+            var rectSize = mTargetRect.rect.size;
+            if (rectSize.x <= 0f || rectSize.y <= 0f || rectSize.x > 2000f || rectSize.y > 2000f)
+            {
+                Hide();
+                mTargetRect = null;
+                mRectTransform.sizeDelta = Vector2.zero;
+                return;
+            }
+
+            // 先更新位置，再显示，避免闪烁
+            UpdatePositionImmediate();
             Show();
             AnimateToTarget();
         }
@@ -153,7 +195,14 @@ namespace YokiFrame
         public void Show()
         {
             if (mIsVisible) return;
+            
+            // 无目标时不显示
+            if (mTargetRect == default) return;
+            
             mIsVisible = true;
+            mImage.enabled = true;
+            
+            Debug.Log($"[UIFocusHighlight] Show - target={mCurrentTarget?.name}, sizeDelta={mRectTransform.sizeDelta}");
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
             mFadeTween?.Kill();
@@ -173,10 +222,16 @@ namespace YokiFrame
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
             mFadeTween?.Kill();
-            mFadeTween = mCanvasGroup.DOFade(0f, GetConfig().HighlightScaleDuration);
+            mFadeTween = mCanvasGroup.DOFade(0f, GetConfig().HighlightScaleDuration)
+                .OnComplete(static () => { })  // 确保完成
+                .OnKill(() => { if (!mIsVisible) mImage.enabled = false; });
 #else
             mCanvasGroup.alpha = 0f;
+            mImage.enabled = false;
 #endif
+
+            // 隐藏时归零尺寸，避免后续启用时残留上一次的巨大 size
+            mRectTransform.sizeDelta = Vector2.zero;
         }
 
         /// <summary>
@@ -184,7 +239,7 @@ namespace YokiFrame
         /// </summary>
         public void UpdatePositionImmediate()
         {
-            if (mTargetRect == null) return;
+            if (mTargetRect == default) return;
 
             var config = GetConfig();
             var targetPos = GetTargetWorldPosition();
@@ -199,7 +254,7 @@ namespace YokiFrame
         /// </summary>
         public void SetColor(Color color)
         {
-            if (mImage != null)
+            if (mImage != default)
             {
                 mImage.color = color;
             }
@@ -211,12 +266,12 @@ namespace YokiFrame
 
         private GamepadConfig GetConfig()
         {
-            return mConfig != null ? mConfig : GamepadConfig.Default;
+            return mConfig != default ? mConfig : GamepadConfig.Default;
         }
 
         private void AnimateToTarget()
         {
-            if (mTargetRect == null) return;
+            if (mTargetRect == default) return;
 
             var config = GetConfig();
             var targetPos = GetTargetWorldPosition();
@@ -238,13 +293,13 @@ namespace YokiFrame
 
         private Vector3 GetTargetWorldPosition()
         {
-            if (mTargetRect == null) return Vector3.zero;
+            if (mTargetRect == default) return Vector3.zero;
             return mTargetRect.position;
         }
 
         private Vector2 GetTargetSize()
         {
-            if (mTargetRect == null) return Vector2.zero;
+            if (mTargetRect == default) return Vector2.zero;
             return mTargetRect.rect.size;
         }
 
@@ -265,13 +320,17 @@ namespace YokiFrame
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
+            
+            // 初始大小为 0，避免未设置目标时覆盖屏幕
+            rect.sizeDelta = Vector2.zero;
 
             var highlight = go.GetComponent<UIFocusHighlight>();
             highlight.mConfig = config;
 
-            // 设置默认颜色
+            // 设置默认颜色，确保 Image 保持禁用状态
             var image = go.GetComponent<Image>();
-            image.color = config != null ? config.HighlightColor : GamepadConfig.Default.HighlightColor;
+            image.color = config != default ? config.HighlightColor : GamepadConfig.Default.HighlightColor;
+            image.enabled = false;  // 确保初始禁用
 
             return highlight;
         }

@@ -1,0 +1,115 @@
+/* PoolKit 编辑器组件样式 */
+/* L2 层：Kit 专用样式 */
+
+/* ========== 对象池卡片 ========== */
+.yoki-pool-card {
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    margin: var(--yoki-spacing-sm);
+    overflow: hidden;
+    transition-property: border-color, translate;
+    transition-duration: var(--yoki-duration-normal);
+}
+
+.yoki-pool-card:hover {
+    border-color: var(--yoki-border-default);
+    translate: 0 -2px;
+}
+
+.yoki-pool-card--warning {
+    border-color: var(--yoki-brand-warning);
+}
+
+.yoki-pool-card--danger {
+    border-color: var(--yoki-brand-danger);
+}
+
+.yoki-pool-card__header {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-pool-card__icon {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-pool-card__name {
+    flex-grow: 1;
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-pool-card__badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: var(--yoki-font-xs);
+    background-color: var(--yoki-brand-primary-muted);
+    color: var(--yoki-brand-primary);
+}
+
+.yoki-pool-card__body {
+    padding: var(--yoki-spacing-md);
+}
+
+/* ========== 对象池统计 ========== */
+.yoki-pool-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: var(--yoki-spacing-sm) 0;
+}
+
+.yoki-pool-stats__item {
+    flex-direction: column;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    margin: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+    min-width: 80px;
+}
+
+.yoki-pool-stats__value {
+    font-size: var(--yoki-font-lg);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-pool-stats__label {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-top: var(--yoki-spacing-xs);
+}
+
+/* ========== 对象池进度条 ========== */
+.yoki-pool-progress {
+    height: 6px;
+    background-color: var(--yoki-layer-elevated);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: var(--yoki-spacing-sm) 0;
+}
+
+.yoki-pool-progress__fill {
+    height: 100%;
+    background-color: var(--yoki-brand-primary);
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: var(--yoki-duration-slow);
+}
+
+.yoki-pool-progress__fill--warning {
+    background-color: var(--yoki-brand-warning);
+}
+
+.yoki-pool-progress__fill--danger {
+    background-color: var(--yoki-brand-danger);
+}

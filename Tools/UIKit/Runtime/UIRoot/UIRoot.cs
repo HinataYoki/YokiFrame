@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 #if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -12,42 +11,42 @@ using UnityEngine.UI;
 namespace YokiFrame
 {
     /// <summary>
-    /// UIKit 根节点 - 管理 UI 层级、Canvas 和面板加载
+    /// UIKit 根节点 - 统一管理 UI 系统
     /// </summary>
-    public class UIRoot : MonoBehaviour, ISingleton
+    public partial class UIRoot : MonoBehaviour, ISingleton
     {
         #region 单例
 
-        private static UIRoot mInstance;
-        private static bool mIsInitialized;
+        private static UIRoot sInstance;
+        private static bool sIsInitialized;
 
         public static UIRoot Instance
         {
             get
             {
-                if (mInstance == null)
+                if (sInstance == default)
                 {
-                    mInstance = FindFirstObjectByType<UIRoot>();
-                    if (mInstance == null)
+                    sInstance = FindFirstObjectByType<UIRoot>();
+                    if (sInstance == default)
                     {
-                        mInstance = CreateFromPrefab();
+                        sInstance = CreateFromPrefab();
                     }
-                    if (!mIsInitialized && mInstance != null)
+                    if (!sIsInitialized && sInstance != default)
                     {
-                        mInstance.Initialize();
-                        mIsInitialized = true;
+                        sInstance.Initialize();
+                        sIsInitialized = true;
                     }
                 }
-                return mInstance;
+                return sInstance;
             }
         }
 
         private static UIRoot CreateFromPrefab()
         {
             var prefab = Resources.Load<GameObject>(nameof(UIKit));
-            if (prefab == null)
+            if (prefab == default)
             {
-                KitLogger.Error("[UIRoot] UIKit 预制体未找到，请确保 Resources 文件夹中存在 UIKit.prefab");
+                KitLogger.Error("[UIRoot] UIKit 预制体未找到");
                 return null;
             }
             var uikit = Instantiate(prefab);
@@ -55,6 +54,12 @@ namespace YokiFrame
             DontDestroyOnLoad(uikit);
             return uikit.GetComponentInChildren<UIRoot>();
         }
+
+        #endregion
+
+        #region 配置
+
+        [SerializeField] private UIRootConfig mConfig = new();
 
         #endregion
 
@@ -71,7 +76,7 @@ namespace YokiFrame
             get => mUICamera;
             set
             {
-                if (value == null) return;
+                if (value == default) return;
                 mUICamera = value;
                 Canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 Canvas.worldCamera = mUICamera;
@@ -80,14 +85,14 @@ namespace YokiFrame
 
         #endregion
 
-        #region UI 层级
+        #region UI 层级节点
 
-        public static Dictionary<UILevel, RectTransform> UILevelDic { get; } = new();
+        public static System.Collections.Generic.Dictionary<UILevel, RectTransform> UILevelDic { get; } = new();
 
         public void SetLevelOfPanel(UILevel level, IPanel panel)
         {
-            if (panel == null) return;
-            var hasCanvas = panel.Transform.GetComponent<Canvas>() != null;
+            if (panel == default) return;
+            var hasCanvas = panel.Transform.GetComponent<Canvas>() != default;
             var targetLevel = hasCanvas ? UILevel.CanvasPanel : level;
             panel.Transform.SetParent(UILevelDic[targetLevel]);
             SetupRectTransform(panel.Transform as RectTransform);
@@ -95,7 +100,7 @@ namespace YokiFrame
 
         #endregion
 
-        #region 面板加载
+        #region 面板加载器
 
 #if YOKIFRAME_UNITASK_SUPPORT
         private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderUniTaskPool();
@@ -109,28 +114,25 @@ namespace YokiFrame
             KitLogger.Log($"[UIRoot] 加载池已切换为: {loaderPool.GetType().Name}");
         }
 
+        #endregion
+
+        #region 面板加载
+
         public IPanel LoadPanel(PanelHandler handler)
         {
             var loader = mLoaderPool.AllocateLoader();
             var prefab = loader.Load(handler);
-            
-            if (prefab == null)
+
+            if (prefab == default)
             {
                 KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
                 return null;
             }
 
-            // 检查是否是真正的预制体（不在场景中）还是测试用的临时对象
             bool isSceneObject = prefab.scene.IsValid();
-            
             var panel = Instantiate(prefab).GetComponent<UIPanel>();
-            
-            // 如果是场景中的临时对象（测试用），销毁它
-            if (isSceneObject)
-            {
-                Destroy(prefab);
-            }
-            
+            if (isSceneObject) Destroy(prefab);
+
             SetupPanelHandler(handler, loader, prefab, panel);
             SetLevelOfPanel(handler.Level, panel);
             return panel;
@@ -141,7 +143,7 @@ namespace YokiFrame
             var loader = mLoaderPool.AllocateLoader();
             loader.LoadAsync(handler, prefab =>
             {
-                if (prefab == null)
+                if (prefab == default)
                 {
                     KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
                     onComplete?.Invoke(null);
@@ -167,7 +169,7 @@ namespace YokiFrame
         {
             var op = InstantiateAsync(handler.Prefab);
             yield return op;
-            
+
             if (op.isDone && op.Result.Length > 0)
             {
                 var panel = op.Result[0].GetComponent<UIPanel>();
@@ -179,29 +181,15 @@ namespace YokiFrame
         }
 #endif
 
-        private static void SetupPanelHandler(PanelHandler handler, IPanelLoader loader, GameObject prefab, UIPanel panel)
-        {
-            handler.Prefab = prefab;
-            handler.Loader = loader;
-            handler.Panel = panel;
-            panel.Handler = handler;
-        }
-
 #if YOKIFRAME_UNITASK_SUPPORT
-        /// <summary>
-        /// [UniTask] 异步加载面板
-        /// </summary>
-        public async UniTask<IPanel> LoadPanelUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
+        public async UniTask<IPanel> LoadPanelUniTaskAsync(PanelHandler handler, CancellationToken ct = default)
         {
             var loader = mLoaderPool.AllocateLoader();
-            
-            // 使用 UniTaskCompletionSource 包装回调
             var tcs = new UniTaskCompletionSource<GameObject>();
             loader.LoadAsync(handler, prefab => tcs.TrySetResult(prefab));
-            
-            var prefab = await tcs.Task.AttachExternalCancellation(cancellationToken);
-            
-            if (prefab == null)
+
+            var prefab = await tcs.Task.AttachExternalCancellation(ct);
+            if (prefab == default)
             {
                 KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
                 return null;
@@ -211,10 +199,8 @@ namespace YokiFrame
             handler.Loader = loader;
 
 #if UNITY_2022_3_OR_NEWER
-            // 使用 Unity 2022.3+ 的异步实例化
             var op = InstantiateAsync(prefab);
-            await op.ToUniTask(cancellationToken: cancellationToken);
-            
+            await op.ToUniTask(cancellationToken: ct);
             if (op.isDone && op.Result.Length > 0)
             {
                 var panel = op.Result[0].GetComponent<UIPanel>();
@@ -233,6 +219,138 @@ namespace YokiFrame
         }
 #endif
 
+        private static void SetupPanelHandler(PanelHandler handler, IPanelLoader loader,
+            GameObject prefab, UIPanel panel)
+        {
+            handler.Prefab = prefab;
+            handler.Loader = loader;
+            handler.Panel = panel;
+            panel.Handler = handler;
+        }
+
+        #endregion
+
+        #region 面板操作（供 UIKit 调用）
+
+        internal IPanel OpenPanelInternal(Type type, UILevel level, IUIData data)
+        {
+            WeakenAllHot();
+
+            if (TryGetCachedHandler(type, out var handler))
+            {
+                handler.Data = data;
+                handler.Hot += OpenHot;
+                OpenAndShowPanelInternal(handler.Panel, data);
+                return handler.Panel;
+            }
+
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+
+            var panel = LoadPanel(handler);
+            if (panel != default && panel.Transform != default)
+            {
+                SetupPanelInternal(handler, panel);
+                OpenAndShowPanelInternal(panel, data);
+                return panel;
+            }
+
+            handler.Recycle();
+            return null;
+        }
+
+        internal void OpenPanelAsyncInternal(Type type, UILevel level, IUIData data, Action<IPanel> callback)
+        {
+            if (TryGetCachedHandler(type, out var handler))
+            {
+                handler.Data = data;
+                handler.Hot += OpenHot;
+                OpenAndShowPanelInternal(handler.Panel, data);
+                callback?.Invoke(handler.Panel);
+                return;
+            }
+
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+
+            LoadPanelAsync(handler, panel =>
+            {
+                if (panel != default && panel.Transform != default)
+                {
+                    SetupPanelInternal(handler, panel);
+                    OpenAndShowPanelInternal(panel, data);
+                    callback?.Invoke(panel);
+                }
+                else
+                {
+                    handler.Recycle();
+                    callback?.Invoke(null);
+                }
+            });
+        }
+
+        private void SetupPanelInternal(PanelHandler handler, IPanel panel)
+        {
+            panel.Transform.gameObject.name = handler.Type.Name;
+            AddToOpenedCache(handler.Type, handler);
+            handler.Hot += OpenHot;
+            panel.Init(handler.Data);
+            RegisterPanelToLevel(panel);
+        }
+
+        private void OpenAndShowPanelInternal(IPanel panel, IUIData data)
+        {
+            if (panel == default) return;
+            panel.Open(data);
+            panel.Show();
+        }
+
+        internal void ClosePanelInternal(IPanel panel)
+        {
+            if (panel == default) return;
+
+            var unityObj = panel as UnityEngine.Object;
+            if (unityObj == default)
+            {
+                if (panel.Handler != default)
+                {
+                    RemoveFromStack(panel);
+                    UnregisterPanelFromLevel(panel);
+                    RemoveFromOpenedCache(panel.Handler.Type);
+                    panel.Handler.Recycle();
+                }
+                return;
+            }
+
+            panel.Close();
+            if (panel.Handler == default) return;
+
+            RemoveFromStack(panel);
+            UnregisterPanelFromLevel(panel);
+            OnPanelCloseFocus(panel);
+
+            // 根据 CacheMode 决策是否销毁
+            if (ShouldDestroyOnClose(panel.Handler))
+            {
+                DestroyPanelInternal(panel);
+                RemoveFromOpenedCache(panel.Handler.Type);
+                panel.Handler.Recycle();
+            }
+        }
+
+        internal void DestroyPanelInternal(IPanel panel)
+        {
+            if (panel != default && panel.Transform != default && panel.Transform.gameObject != default)
+            {
+                panel.Cleanup();
+                Destroy(panel.Transform.gameObject);
+            }
+        }
+
         #endregion
 
         #region 初始化
@@ -242,15 +360,17 @@ namespace YokiFrame
             InitializeComponents();
             InitializeUILevels();
             InitializeInputModule();
+            InitializeLevelPanels();
+            InitializeFocusSystem();
         }
 
         private void InitializeComponents()
         {
             var root = transform.root;
-            Canvas ??= GetComponent<Canvas>();
-            CanvasScaler ??= GetComponent<CanvasScaler>();
-            GraphicRaycaster ??= GetComponent<GraphicRaycaster>();
-            EventSystem ??= root.GetComponentInChildren<EventSystem>();
+            if (Canvas == default) Canvas = GetComponent<Canvas>();
+            if (CanvasScaler == default) CanvasScaler = GetComponent<CanvasScaler>();
+            if (GraphicRaycaster == default) GraphicRaycaster = GetComponent<GraphicRaycaster>();
+            if (EventSystem == default) EventSystem = root.GetComponentInChildren<EventSystem>();
         }
 
         private void InitializeUILevels()
@@ -267,8 +387,8 @@ namespace YokiFrame
         private RectTransform GetOrCreateLevelNode(string name)
         {
             var child = transform.Find(name);
-            if (child != null) return child as RectTransform;
-            
+            if (child != default) return child as RectTransform;
+
             var obj = new GameObject(name, typeof(RectTransform));
             var rect = obj.transform as RectTransform;
             rect.SetParent(transform);
@@ -277,7 +397,7 @@ namespace YokiFrame
 
         private static void SetupRectTransform(RectTransform rect)
         {
-            if (rect == null) return;
+            if (rect == default) return;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.anchoredPosition3D = Vector3.zero;
@@ -288,7 +408,8 @@ namespace YokiFrame
 
         private void InitializeInputModule()
         {
-            if (EventSystem == default || EventSystem.GetComponent<BaseInputModule>() != default) return;
+            if (EventSystem == default) return;
+            if (EventSystem.GetComponent<BaseInputModule>() != default) return;
 
 #if YOKIFRAME_INPUTSYSTEM_SUPPORT && !ENABLE_LEGACY_INPUT_MANAGER
             EventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
@@ -303,12 +424,25 @@ namespace YokiFrame
 
         void ISingleton.OnSingletonInit() { }
 
+        private void Update()
+        {
+            UpdateFocusSystem();
+        }
+
+        private void LateUpdate()
+        {
+            LateUpdateFocusSystem();
+        }
+
         private void OnDestroy()
         {
-            if (mInstance != this) return;
-            mInstance = null;
-            mIsInitialized = false;
+            if (sInstance != this) return;
+            sInstance = null;
+            sIsInitialized = false;
             UILevelDic.Clear();
+            ClearAllStacks();
+            ClearAllLevels();
+            DisposeFocusSystem();
         }
 
         #endregion

@@ -36,15 +36,23 @@ namespace YokiFrame
             section.AddToClassList("uipanel-section");
             section.AddToClassList("uipanel-section-panelconfig");
             
-            // 可折叠标题
-            var foldout = new Foldout { text = "面板配置", value = true };
-            foldout.AddToClassList("uipanel-panelconfig-foldout");
-            section.Add(foldout);
+            // 可折叠标题（从 SessionState 恢复折叠状态）
+            bool savedFoldoutState = SessionState.GetBool(KEY_PANEL_CONFIG_FOLDOUT, true);
+            mPanelConfigFoldout = new Foldout { text = "面板配置", value = savedFoldoutState };
+            mPanelConfigFoldout.AddToClassList("uipanel-panelconfig-foldout");
+            
+            // 注册折叠状态变更回调，保存到 SessionState
+            mPanelConfigFoldout.RegisterValueChangedCallback(evt =>
+            {
+                SessionState.SetBool(KEY_PANEL_CONFIG_FOLDOUT, evt.newValue);
+            });
+            
+            section.Add(mPanelConfigFoldout);
             
             // 内容容器
             var content = new VisualElement();
             content.AddToClassList("uipanel-section-content");
-            foldout.Add(content);
+            mPanelConfigFoldout.Add(content);
             
             // 动画配置子区块
             if (hasAnimConfig)

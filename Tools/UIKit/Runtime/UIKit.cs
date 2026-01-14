@@ -4,236 +4,502 @@ using System.Collections.Generic;
 namespace YokiFrame
 {
     /// <summary>
-    /// UI 热度配置常量
-    /// </summary>
-    public static class UIKitConfig
-    {
-        /// <summary>
-        /// 创建界面时赋予的热度值
-        /// </summary>
-        public const int OPEN_HOT = 3;
-        
-        /// <summary>
-        /// 获取界面时赋予的热度值
-        /// </summary>
-        public const int GET_HOT = 2;
-        
-        /// <summary>
-        /// 每次行为造成的衰减热度值
-        /// </summary>
-        public const int WEAKEN = 1;
-    }
-
-    /// <summary>
-    /// UI 管理工具 - 核心 API
+    /// UI 管理工具 - 静态门面
+    /// 所有调用转发到 UIRoot 实例
     /// </summary>
     public partial class UIKit
     {
+        #region 初始化
+
         static UIKit() => _ = UIRoot.Instance;
+
+        #endregion
+
+        #region 配置
 
         /// <summary>
         /// 创建界面时赋予的热度值
         /// </summary>
-        public static int OpenHot = UIKitConfig.OPEN_HOT;
-        
+        public static int OpenHot
+        {
+            get => UIRoot.Instance.OpenHot;
+            set => UIRoot.Instance.OpenHot = value;
+        }
+
         /// <summary>
         /// 获取界面时赋予的热度值
         /// </summary>
-        public static int GetHot = UIKitConfig.GET_HOT;
-        
+        public static int GetHot
+        {
+            get => UIRoot.Instance.GetHot;
+            set => UIRoot.Instance.GetHot = value;
+        }
+
         /// <summary>
         /// 每次行为造成的衰减热度值
         /// </summary>
-        public static int Weaken = UIKitConfig.WEAKEN;
-
-        /// <summary>
-        /// 已经存在的Panel缓存
-        /// </summary>
-        private static readonly Dictionary<Type, PanelHandler> PanelCacheDic = new();
-
-        #region 面板句柄管理
-        
-        /// <summary>
-        /// 尝试获取已缓存的 Handler（不创建）
-        /// </summary>
-        internal static bool TryGetHandler(Type type, out PanelHandler handler)
+        public static int Weaken
         {
-            return PanelCacheDic.TryGetValue(type, out handler);
+            get => UIRoot.Instance.Weaken;
+            set => UIRoot.Instance.Weaken = value;
         }
 
-        /// <summary>
-        /// 获取或创建 Handler（同步，会触发 CreateUI）
-        /// </summary>
-        private static PanelHandler GetOrCreateHandler(Type type, UILevel level, IUIData data, out bool isNewCreated)
-        {
-            // 1. 检查主缓存
-            if (TryGetHandler(type, out var handler))
-            {
-                isNewCreated = false;
-                handler.Data = data;
-                return handler;
-            }
-            
-            // 2. 检查预加载缓存
-            if (UICacheManager.TryGetPreloaded(type, out handler))
-            {
-                isNewCreated = false;
-                handler.Data = data;
-                PanelCacheDic.TryAdd(type, handler);
-                handler.Hot += OpenHot;
-                return handler;
-            }
-            
-            // 3. 创建新面板
-            isNewCreated = true;
-            handler = PanelHandler.Allocate();
-            handler.Type = type;
-            handler.Level = level;
-            handler.Data = data;
-            CreateUI(handler);
-            return handler;
-        }
-        
-        /// <summary>
-        /// 获取或创建 Handler（异步，会触发 CreateUIAsync）
-        /// </summary>
-        private static void GetOrCreateHandlerAsync(Type type, UILevel level, IUIData data, Action<PanelHandler, bool> onComplete)
-        {
-            // 1. 检查主缓存
-            if (TryGetHandler(type, out var handler))
-            {
-                handler.Data = data;
-                onComplete?.Invoke(handler, false);
-                return;
-            }
-            
-            // 2. 检查预加载缓存
-            if (UICacheManager.TryGetPreloaded(type, out handler))
-            {
-                handler.Data = data;
-                PanelCacheDic.TryAdd(type, handler);
-                handler.Hot += OpenHot;
-                onComplete?.Invoke(handler, false);
-                return;
-            }
-            
-            // 3. 创建新面板
-            handler = PanelHandler.Allocate();
-            handler.Type = type;
-            handler.Level = level;
-            handler.Data = data;
-            CreateUIAsync(handler, panel =>
-            {
-                onComplete?.Invoke(panel != null ? handler : null, true);
-            });
-        }
-        
         #endregion
 
-        #region 内部方法
-        
-        private static IPanel CreateUI(PanelHandler handler)
-        {
-            if (handler == null) return null;
-            
-            var panel = UIRoot.Instance.LoadPanel(handler);
-            if (panel != null && panel.Transform != null)
-            {
-                SetupPanel(handler, panel);
-            }
-            else
-            {
-                handler.Recycle();
-            }
+        #region 面板操作
 
-            return panel;
+        /// <summary>
+        /// 获取指定类型的 Panel（纯查询，不触发热度衰减）
+        /// </summary>
+        public static T GetPanel<T>() where T : UIPanel
+        {
+            if (UIRoot.Instance.TryGetCachedHandler(typeof(T), out var handler))
+            {
+                handler.Hot += UIRoot.Instance.GetHot;
+                return handler.Panel as T;
+            }
+            return null;
         }
 
-        private static void CreateUIAsync(PanelHandler handler, Action<IPanel> onPanelCreate)
-        {
-            if (handler == null)
-            {
-                onPanelCreate?.Invoke(null);
-                return;
-            }
-            
-            UIRoot.Instance.LoadPanelAsync(handler, panel =>
-            {
-                if (panel != null && panel.Transform != null)
-                {
-                    SetupPanel(handler, panel);
-                    OpenAndShowPanel(panel, handler.Data);
-                    onPanelCreate?.Invoke(panel);
-                }
-                else
-                {
-                    handler.Recycle();
-                    onPanelCreate?.Invoke(null);
-                }
-            });
-        }
-        
         /// <summary>
-        /// 打开并显示Panel
+        /// 打开指定类型的 Panel
         /// </summary>
-        internal static void OpenAndShowPanel(IPanel panel, IUIData data = null)
+        public static T OpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            if (panel == null) return;
-            panel.Open(data);
-            panel.Show();
+            return UIRoot.Instance.OpenPanelInternal(typeof(T), level, data) as T;
         }
-        
+
         /// <summary>
-        /// 设置Panel的基本属性
+        /// 异步打开指定类型的 Panel
         /// </summary>
-        internal static void SetupPanel(PanelHandler handler, IPanel panel)
+        public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
+            UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            panel.Transform.gameObject.name = handler.Type.Name;
-            PanelCacheDic.TryAdd(handler.Type, handler);
-            handler.Hot += OpenHot;
-            panel.Init(handler.Data);
-            UILevelManager.Register(panel);
+            UIRoot.Instance.OpenPanelAsyncInternal(typeof(T), level, data, callback);
         }
-        
+
         /// <summary>
-        /// 安全销毁Panel的GameObject
+        /// 异步打开指定类型的 Panel（通过 Type）
         /// </summary>
-        private static void DestroyPanel(IPanel panel)
+        public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback)
         {
-            if (panel != null && panel.Transform != null && panel.Transform.gameObject != null)
+            UIRoot.Instance.OpenPanelAsyncInternal(type, level, data, callback);
+        }
+
+        /// <summary>
+        /// 显示指定类型的 Panel
+        /// </summary>
+        public static void ShowPanel<T>() where T : UIPanel
+        {
+            var panel = GetPanel<T>();
+            if (panel != default) panel.Show();
+        }
+
+        /// <summary>
+        /// 隐藏指定类型的 Panel
+        /// </summary>
+        public static void HidePanel<T>() where T : UIPanel
+        {
+            var panel = GetPanel<T>();
+            if (panel != default) panel.Hide();
+        }
+
+        /// <summary>
+        /// 隐藏所有 Panel
+        /// </summary>
+        public static void HideAllPanel()
+        {
+            foreach (var panel in UIRoot.Instance.GetCachedPanels())
             {
-                // 主动调用清理，避免 inactive GameObject 上 OnDestroy 不触发
-                panel.Cleanup();
-                UnityEngine.Object.Destroy(panel.Transform.gameObject);
+                panel?.Hide();
             }
         }
-        
+
         /// <summary>
-        /// 衰减UI热度
+        /// 关闭指定类型的 Panel
         /// </summary>
-        private static void WeakenHot()
+        public static void ClosePanel<T>() where T : UIPanel
         {
-            Pool.List<Type>(list =>
+            if (UIRoot.Instance.TryGetCachedHandler(typeof(T), out var handler))
             {
-                foreach (var handler in PanelCacheDic.Values)
+                UIRoot.Instance.ClosePanelInternal(handler.Panel);
+            }
+        }
+
+        /// <summary>
+        /// 关闭传入的 Panel 实例
+        /// </summary>
+        public static void ClosePanel(IPanel panel)
+        {
+            UIRoot.Instance.ClosePanelInternal(panel);
+        }
+
+        /// <summary>
+        /// 关闭所有面板
+        /// </summary>
+        public static void CloseAllPanel()
+        {
+            Pool.List<IPanel>(panelsToClose =>
+            {
+                foreach (var panel in UIRoot.Instance.GetCachedPanels())
                 {
-                    if (handler == null) continue;
-                    
-                    handler.Hot -= Weaken;
-                    if (handler.Hot <= 0 && handler.Panel != null && handler.Panel.State is PanelState.Close)
-                    {
-                        DestroyPanel(handler.Panel);
-                        list.Add(handler.Type);
-                        handler.Recycle();
-                    }
+                    panelsToClose.Add(panel);
                 }
-                for (int i = 0; i < list.Count; i++)
+                for (int i = 0; i < panelsToClose.Count; i++)
                 {
-                    PanelCacheDic.Remove(list[i]);
+                    UIRoot.Instance.ClosePanelInternal(panelsToClose[i]);
                 }
             });
+            UIRoot.Instance.ClearAllStacks();
+            UIRoot.Instance.ClearAllLevels();
         }
-        
+
+        /// <summary>
+        /// 设置自定义的 Panel 加载器池
+        /// </summary>
+        public static void SetPanelLoader(IPanelLoaderPool loaderPool)
+        {
+            UIRoot.Instance.SetPanelLoader(loaderPool);
+        }
+
+        #endregion
+
+        #region 缓存
+
+        /// <summary>
+        /// 检查面板是否已缓存
+        /// </summary>
+        public static bool IsPanelCached<T>() where T : UIPanel => UIRoot.Instance.IsPanelCached<T>();
+
+        /// <summary>
+        /// 检查面板是否已缓存
+        /// </summary>
+        public static bool IsPanelCached(Type panelType) => UIRoot.Instance.IsPanelCached(panelType);
+
+        /// <summary>
+        /// 获取所有已缓存的面板类型
+        /// </summary>
+        public static IReadOnlyCollection<Type> GetCachedPanelTypes() => UIRoot.Instance.GetCachedPanelTypes();
+
+        /// <summary>
+        /// 获取所有已缓存的面板实例
+        /// </summary>
+        public static IReadOnlyList<IPanel> GetCachedPanels() => UIRoot.Instance.GetCachedPanels();
+
+        /// <summary>
+        /// 获取缓存容量
+        /// </summary>
+        public static int GetCacheCapacity() => UIRoot.Instance.CacheCapacity;
+
+        /// <summary>
+        /// 设置缓存容量
+        /// </summary>
+        public static void SetCacheCapacity(int capacity) => UIRoot.Instance.CacheCapacity = capacity;
+
+        /// <summary>
+        /// 预加载面板
+        /// </summary>
+        public static void PreloadPanelAsync<T>(UILevel level = UILevel.Common, Action<bool> onComplete = null)
+            where T : UIPanel
+        {
+            UIRoot.Instance.PreloadPanelAsync<T>(level, onComplete);
+        }
+
+        /// <summary>
+        /// 预加载面板
+        /// </summary>
+        public static void PreloadPanelAsync(Type panelType, UILevel level = UILevel.Common,
+            Action<bool> onComplete = null)
+        {
+            UIRoot.Instance.PreloadPanelAsync(panelType, level, onComplete);
+        }
+
+        /// <summary>
+        /// 清理指定预加载面板
+        /// </summary>
+        public static void ClearPreloadedCache<T>() where T : UIPanel
+        {
+            UIRoot.Instance.ClearPreloadedPanel<T>();
+        }
+
+        /// <summary>
+        /// 清理所有预加载面板
+        /// </summary>
+        public static void ClearAllPreloadedCache()
+        {
+            UIRoot.Instance.ClearAllPreloadedPanels();
+        }
+
+        #endregion
+
+        #region 堆栈
+
+        /// <summary>
+        /// 压入 Panel 到栈中
+        /// </summary>
+        public static void PushPanel<T>(bool hidePreLevel = true) where T : UIPanel
+        {
+            var panel = GetPanel<T>();
+            if (panel != default) UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+        }
+
+        /// <summary>
+        /// 压入 Panel 到栈中
+        /// </summary>
+        public static void PushPanel(IPanel panel, bool hidePreLevel = true)
+        {
+            UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+        }
+
+        /// <summary>
+        /// 压入 Panel 到指定命名栈
+        /// </summary>
+        public static void PushPanel(IPanel panel, string stackName, bool hidePreLevel = true)
+        {
+            UIRoot.Instance.PushToStack(panel, stackName, hidePreLevel);
+        }
+
+        /// <summary>
+        /// 打开并压入 Panel 到栈中
+        /// </summary>
+        public static void PushOpenPanel<T>(UILevel level = UILevel.Common,
+            IUIData data = null, bool hidePreLevel = true) where T : UIPanel
+        {
+            var panel = OpenPanel<T>(level, data);
+            UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+        }
+
+        /// <summary>
+        /// 异步打开并压入 Panel 到栈中
+        /// </summary>
+        public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null,
+            UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
+        {
+            OpenPanelAsync<T>(panel =>
+            {
+                UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+                callback?.Invoke(panel);
+            }, level, data);
+        }
+
+        /// <summary>
+        /// 弹出面板
+        /// </summary>
+        public static IPanel PopPanel(bool showPreLevel = true, bool autoClose = true)
+        {
+            return UIRoot.Instance.PopFromStack(UIRoot.DEFAULT_STACK, showPreLevel, autoClose);
+        }
+
+        /// <summary>
+        /// 从指定命名栈弹出面板
+        /// /// </summary>
+        public static IPanel PopPanel(string stackName, bool showPreLevel = true, bool autoClose = true)
+        {
+            return UIRoot.Instance.PopFromStack(stackName, showPreLevel, autoClose);
+        }
+
+        /// <summary>
+        /// 查看栈顶面板
+        /// </summary>
+        public static IPanel PeekPanel(string stackName = UIRoot.DEFAULT_STACK)
+        {
+            return UIRoot.Instance.PeekStack(stackName);
+        }
+
+        /// <summary>
+        /// 获取栈深度
+        /// </summary>
+        public static int GetStackDepth(string stackName = UIRoot.DEFAULT_STACK)
+        {
+            return UIRoot.Instance.GetStackDepth(stackName);
+        }
+
+        /// <summary>
+        /// 获取所有栈名称
+        /// </summary>
+        public static IReadOnlyCollection<string> GetAllStackNames()
+        {
+            return UIRoot.Instance.GetAllStackNames();
+        }
+
+        /// <summary>
+        /// 清空指定栈
+        /// </summary>
+        public static void ClearStack(string stackName = UIRoot.DEFAULT_STACK, bool closeAll = true)
+        {
+            UIRoot.Instance.ClearStack(stackName, closeAll);
+        }
+
+        #endregion
+
+        #region 层级
+
+        /// <summary>
+        /// 设置面板层级
+        /// </summary>
+        public static void SetPanelLevel(IPanel panel, UILevel level, int subLevel = 0)
+        {
+            UIRoot.Instance.SetPanelLevel(panel, level, subLevel);
+        }
+
+        /// <summary>
+        /// 设置面板子层级
+        /// </summary>
+        public static void SetPanelSubLevel(IPanel panel, int subLevel)
+        {
+            UIRoot.Instance.SetPanelSubLevel(panel, subLevel);
+        }
+
+        /// <summary>
+        /// 获取指定层级的顶部面板
+        /// </summary>
+        public static IPanel GetTopPanelAtLevel(UILevel level)
+        {
+            return UIRoot.Instance.GetTopPanelAtLevel(level);
+        }
+
+        /// <summary>
+        /// 获取全局顶部面板
+        /// </summary>
+        public static IPanel GetGlobalTopPanel()
+        {
+            return UIRoot.Instance.GetGlobalTopPanel();
+        }
+
+        /// <summary>
+        /// 获取指定层级的所有面板
+        /// </summary>
+        public static IReadOnlyList<IPanel> GetPanelsAtLevel(UILevel level)
+        {
+            return UIRoot.Instance.GetPanelsAtLevel(level);
+        }
+
+        /// <summary>
+        /// 设置面板为模态
+        /// </summary>
+        public static void SetPanelModal(IPanel panel, bool isModal)
+        {
+            UIRoot.Instance.SetPanelModal(panel, isModal);
+        }
+
+        /// <summary>
+        /// 检查是否有模态面板
+        /// </summary>
+        public static bool HasModalBlocker()
+        {
+            return UIRoot.Instance.HasModalBlocker();
+        }
+
+        #endregion
+
+        #region 焦点
+
+        /// <summary>
+        /// 焦点系统是否启用
+        /// </summary>
+        public static bool FocusSystemEnabled
+        {
+            get => UIRoot.Instance.FocusSystemEnabled;
+            set => UIRoot.Instance.FocusSystemEnabled = value;
+        }
+
+        /// <summary>
+        /// 当前输入模式
+        /// </summary>
+        public static UIInputMode GetInputMode() => UIRoot.Instance.CurrentInputMode;
+
+        /// <summary>
+        /// 设置焦点
+        /// </summary>
+        public static void SetFocus(UnityEngine.GameObject target) => UIRoot.Instance.SetFocus(target);
+
+        /// <summary>
+        /// 设置焦点
+        /// </summary>
+        public static void SetFocus(UnityEngine.UI.Selectable selectable) => UIRoot.Instance.SetFocus(selectable);
+
+        /// <summary>
+        /// 清除焦点
+        /// </summary>
+        public static void ClearFocus() => UIRoot.Instance.ClearFocus();
+
+        /// <summary>
+        /// 获取当前焦点
+        /// </summary>
+        public static UnityEngine.GameObject GetCurrentFocus() => UIRoot.Instance.CurrentFocus;
+
+        #endregion
+
+        #region 对话框
+
+        /// <summary>
+        /// 设置默认对话框类型
+        /// </summary>
+        public static void SetDefaultDialogType<T>() where T : UIDialogPanel
+        {
+            UIRoot.Instance.SetDefaultDialogType<T>();
+        }
+
+        /// <summary>
+        /// 设置默认输入对话框类型
+        /// </summary>
+        public static void SetDefaultPromptType<T>() where T : UIDialogPanel
+        {
+            UIRoot.Instance.SetDefaultPromptType<T>();
+        }
+
+        /// <summary>
+        /// 显示对话框
+        /// </summary>
+        public static void ShowDialog(DialogConfig config, Action<DialogResultData> onResult = null)
+        {
+            UIRoot.Instance.ShowDialog(config, onResult);
+        }
+
+        /// <summary>
+        /// 显示指定类型的对话框
+        /// </summary>
+        public static void ShowDialog<T>(DialogConfig config, Action<DialogResultData> onResult = null)
+            where T : UIDialogPanel
+        {
+            UIRoot.Instance.ShowDialog<T>(config, onResult);
+        }
+
+        /// <summary>
+        /// Alert 对话框
+        /// </summary>
+        public static void Alert(string message, string title = null, Action onClose = null)
+        {
+            UIRoot.Instance.Alert(message, title, onClose);
+        }
+
+        /// <summary>
+        /// Confirm 对话框
+        /// </summary>
+        public static void Confirm(string message, string title = null, Action<bool> onResult = null)
+        {
+            UIRoot.Instance.Confirm(message, title, onResult);
+        }
+
+        /// <summary>
+        /// Prompt 对话框
+        /// </summary>
+        public static void Prompt(string message, string title = null, string defaultValue = null,
+            Action<bool, string> onResult = null)
+        {
+            UIRoot.Instance.Prompt(message, title, defaultValue, onResult);
+        }
+
+        /// <summary>
+        /// 是否有对话框正在显示
+        /// </summary>
+        public static bool HasActiveDialog => UIRoot.Instance.HasActiveDialog;
+
+        /// <summary>
+        /// 清空对话框队列
+        /// </summary>
+        public static void ClearDialogQueue() => UIRoot.Instance.ClearDialogQueue();
+
         #endregion
     }
 }

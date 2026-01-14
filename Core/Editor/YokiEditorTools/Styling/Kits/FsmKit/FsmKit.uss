@@ -1,0 +1,418 @@
+/* FsmKit 编辑器组件样式 */
+/* L2 层：Kit 专用样式 */
+
+/* ========== FSM 列表项 ========== */
+.yoki-fsm-list-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+    background-color: var(--yoki-layer-card);
+    transition-property: background-color;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-fsm-list-item:hover {
+    background-color: var(--yoki-layer-elevated);
+}
+
+.yoki-fsm-list-item__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: var(--yoki-spacing-sm);
+    background-color: var(--yoki-text-tertiary);
+}
+
+.yoki-fsm-list-item__indicator--running {
+    background-color: var(--yoki-brand-success);
+}
+
+.yoki-fsm-list-item__indicator--suspended {
+    background-color: var(--yoki-brand-warning);
+}
+
+.yoki-fsm-list-item__indicator--stopped {
+    background-color: var(--yoki-text-tertiary);
+}
+
+.yoki-fsm-list-item__info {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.yoki-fsm-list-item__name {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-fsm-list-item__state-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.yoki-fsm-list-item__current-state {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-fsm-list-item__current-state--running {
+    color: var(--yoki-brand-success);
+}
+
+.yoki-fsm-list-item__current-state--inactive {
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-fsm-list-item__timer {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-left: var(--yoki-spacing-sm);
+}
+
+.yoki-fsm-list-item__count-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: var(--yoki-font-xs);
+    background-color: var(--yoki-brand-primary-muted);
+    color: var(--yoki-brand-primary);
+}
+
+/* ========== HUD 区域 ========== */
+.yoki-fsm-hud {
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+    min-height: 80px;
+}
+
+.yoki-fsm-hud__content {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.yoki-fsm-hud__left {
+    flex-direction: column;
+}
+
+.yoki-fsm-hud__right {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.yoki-fsm-hud__label {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.yoki-fsm-hud__state {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: var(--yoki-brand-success);
+}
+
+.yoki-fsm-hud__state--inactive {
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-fsm-hud__prev-state {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-secondary);
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__duration {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-fsm-hud__machine-state {
+    font-size: var(--yoki-font-xs);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+
+.yoki-fsm-hud__machine-state--running {
+    background-color: var(--yoki-brand-success-muted);
+    color: var(--yoki-brand-success);
+}
+
+.yoki-fsm-hud__machine-state--suspended {
+    background-color: var(--yoki-brand-warning-muted);
+    color: var(--yoki-brand-warning);
+}
+
+.yoki-fsm-hud__machine-state--stopped {
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-tertiary);
+}
+
+
+/* ========== 状态矩阵 ========== */
+.yoki-state-matrix {
+    flex-grow: 1;
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    margin: var(--yoki-spacing-sm);
+}
+
+.yoki-state-matrix__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-md);
+}
+
+.yoki-state-matrix__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-sm);
+    -unity-background-image-tint-color: var(--yoki-text-secondary);
+}
+
+.yoki-state-matrix__title {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}
+
+.yoki-state-matrix__container {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+/* ========== 状态卡片 ========== */
+.yoki-state-card {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    margin: 4px;
+    border-radius: var(--yoki-radius-sm);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    background-color: var(--yoki-layer-elevated);
+    transition-property: border-color, background-color, translate;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-state-card--active {
+    border-color: var(--yoki-brand-success);
+    background-color: var(--yoki-brand-success-muted);
+}
+
+.yoki-state-card--visited {
+    border-color: var(--yoki-border-default);
+}
+
+.yoki-state-card--unvisited {
+    opacity: 0.5;
+}
+
+.yoki-state-card--hover {
+    translate: 0 -2px;
+    border-color: var(--yoki-brand-primary);
+}
+
+.yoki-state-card__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-state-card__indicator--active {
+    background-color: var(--yoki-brand-success);
+}
+
+.yoki-state-card__indicator--visited {
+    background-color: var(--yoki-text-secondary);
+}
+
+.yoki-state-card__indicator--unvisited {
+    background-color: var(--yoki-text-tertiary);
+}
+
+.yoki-state-card__name {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-primary);
+}
+
+.yoki-state-card__name--active {
+    -unity-font-style: bold;
+    color: var(--yoki-brand-success);
+}
+
+.yoki-state-card__name--visited {
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-state-card__name--unvisited {
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-state-card__count {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-left: var(--yoki-spacing-sm);
+}
+
+/* ========== 图例 ========== */
+.yoki-legend {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-legend__item {
+    flex-direction: row;
+    align-items: center;
+    margin-left: var(--yoki-spacing-md);
+}
+
+.yoki-legend__icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
+}
+
+.yoki-legend__label {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+}
+
+
+/* ========== 时间轴 ========== */
+.yoki-fsm-timeline {
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    margin: var(--yoki-spacing-sm);
+    min-height: 120px;
+}
+
+.yoki-fsm-timeline__toolbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-fsm-timeline__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-sm);
+    -unity-background-image-tint-color: var(--yoki-text-secondary);
+}
+
+.yoki-fsm-timeline__title {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-fsm-timeline__count {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-fsm-timeline__list {
+    flex-grow: 1;
+}
+
+/* ========== 转换项 ========== */
+.yoki-transition-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-xs) var(--yoki-spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-transition-item__time {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    min-width: 60px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-transition-item__action {
+    font-size: var(--yoki-font-xs);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: var(--yoki-spacing-sm);
+    min-width: 50px;
+    -unity-text-align: middle-center;
+}
+
+.yoki-transition-item__action--start {
+    background-color: var(--yoki-brand-success-muted);
+    color: var(--yoki-brand-success);
+}
+
+.yoki-transition-item__action--change {
+    background-color: var(--yoki-brand-primary-muted);
+    color: var(--yoki-brand-primary);
+}
+
+.yoki-transition-item__action--stop {
+    background-color: var(--yoki-brand-danger-muted);
+    color: var(--yoki-brand-danger);
+}
+
+.yoki-transition-item__action--add {
+    background-color: var(--yoki-brand-info-muted);
+    color: var(--yoki-brand-info);
+}
+
+.yoki-transition-item__action--remove {
+    background-color: var(--yoki-brand-warning-muted);
+    color: var(--yoki-brand-warning);
+}
+
+.yoki-transition-item__action--clear {
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-transition-item__action--dispose {
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-transition-item__transition {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.yoki-transition-item__from-state {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-transition-item__arrow {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-transition-item__to-state {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-brand-primary);
+    -unity-font-style: bold;
+}
+
+/* ========== 空状态 ========== */
+.yoki-fsm-empty__text {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-tertiary);
+    -unity-text-align: middle-center;
+    padding: var(--yoki-spacing-lg);
+}

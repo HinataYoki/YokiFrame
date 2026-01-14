@@ -13,11 +13,14 @@ namespace YokiFrame
     /// SaveKit 工具页面 - 存档管理器（响应式）
     /// 使用 FileSystemWatcher 监控存档目录变化
     /// </summary>
-    public partial class SaveKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "SaveKit",
+        name: "SaveKit",
+        icon: KitIcons.SAVEKIT,
+        priority: 50,
+        category: YokiPageCategory.Tool)]
+    public partial class SaveKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "SaveKit";
-        public override string PageIcon => KitIcons.SAVEKIT;
-        public override int Priority => 50;
 
         #region 常量
 

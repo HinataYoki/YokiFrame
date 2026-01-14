@@ -16,35 +16,48 @@ namespace YokiFrame
         public PanelHandler Handler { get; set; }
 
         #region 动画配置
-        
+
         /// <summary>
         /// 显示动画配置（支持多态序列化）
         /// </summary>
         [SerializeReference] protected UIAnimationConfig mShowAnimationConfig;
-        
+
         /// <summary>
         /// 隐藏动画配置（支持多态序列化）
         /// </summary>
         [SerializeReference] protected UIAnimationConfig mHideAnimationConfig;
-        
+
         /// <summary>
         /// 当前显示动画实例
         /// </summary>
         protected IUIAnimation mShowAnimation;
-        
+
         /// <summary>
         /// 当前隐藏动画实例
         /// </summary>
         protected IUIAnimation mHideAnimation;
-        
+
         #endregion
 
         #region 焦点配置
-        
+
+        /// <summary>
+        /// 是否在导航模式下自动聚焦默认元素
+        /// </summary>
+        [Header("焦点配置")]
+        [Tooltip("是否在导航模式下自动聚焦默认元素（仅手柄/键盘模式生效）")]
+        [SerializeField] protected bool mAutoFocusOnShow = false;
+
         /// <summary>
         /// 默认焦点元素
         /// </summary>
+        [Tooltip("默认聚焦的元素（为空则查找第一个 Selectable）")]
         [SerializeField] protected Selectable mDefaultSelectable;
+
+        /// <summary>
+        /// 是否在导航模式下自动聚焦
+        /// </summary>
+        public virtual bool AutoFocusOnShow => mAutoFocusOnShow;
 
         /// <summary>
         /// 获取默认焦点元素
@@ -55,10 +68,13 @@ namespace YokiFrame
         /// 设置默认焦点元素
         /// </summary>
         public void SetDefaultSelectable(Selectable selectable) => mDefaultSelectable = selectable;
-        
+
+        /// <summary>
+        /// 设置是否自动聚焦
+        /// </summary>
+        public void SetAutoFocusOnShow(bool value) => mAutoFocusOnShow = value;
+
         #endregion
-
-
 
         private List<Action> mOnClosed = new();
 
@@ -156,7 +172,7 @@ namespace YokiFrame
                 // 面板销毁时取消，忽略
             }
         }
-        
+
         private async UniTaskVoid PlayShowAnimationFallback(UniTask task, Action onComplete)
         {
             try
@@ -176,17 +192,13 @@ namespace YokiFrame
         {
             // 触发 OnShow
             SafeInvokeHook(OnShow, nameof(OnShow));
-            
+
             // 触发 OnDidShow
             SafeInvokeHook(OnDidShow, nameof(OnDidShow));
             EventKit.Type.Send(new PanelDidShowEvent { Panel = this });
 
             // 通知焦点系统
-            var focusSystem = UIFocusSystem.Instance;
-            if (focusSystem != default)
-            {
-                focusSystem.OnPanelShow(this);
-            }
+            UIRoot.Instance.OnPanelShowFocus(this);
         }
 
         public void Hide()
@@ -205,7 +217,7 @@ namespace YokiFrame
         private void HideInternal(bool deactivate, Action onComplete)
         {
             State = PanelState.Hide;
-            
+
             // 触发 OnWillHide
             SafeInvokeHook(OnWillHide, nameof(OnWillHide));
             EventKit.Type.Send(new PanelWillHideEvent { Panel = this });
@@ -262,7 +274,7 @@ namespace YokiFrame
                 // 面板销毁时取消，忽略
             }
         }
-        
+
         private async UniTaskVoid PlayHideAnimationFallback(UniTask task, bool deactivate, Action onComplete)
         {
             try
@@ -281,20 +293,16 @@ namespace YokiFrame
         private void CompleteHide(bool deactivate)
         {
             // 通知焦点系统
-            var focusSystem = UIFocusSystem.Instance;
-            if (focusSystem != default)
-            {
-                focusSystem.OnPanelHide(this);
-            }
+            UIRoot.Instance.OnPanelHideFocus(this);
 
             // 触发 OnHide
             SafeInvokeHook(OnHide, nameof(OnHide));
-            
+
             if (deactivate)
             {
                 gameObject.SetActive(false);
             }
-            
+
             // 触发 OnDidHide
             SafeInvokeHook(OnDidHide, nameof(OnDidHide));
             EventKit.Type.Send(new PanelDidHideEvent { Panel = this });
@@ -304,13 +312,6 @@ namespace YokiFrame
         {
             Hide();
             State = PanelState.Close;
-
-            // 通知焦点系统
-            var focusSystem = UIFocusSystem.Instance;
-            if (focusSystem != default)
-            {
-                focusSystem.OnPanelClose(this);
-            }
 
             foreach (var action in mOnClosed)
             {
@@ -338,46 +339,46 @@ namespace YokiFrame
         /// 在显示动画开始前调用
         /// </summary>
         protected virtual void OnWillShow() { }
-        
+
         /// <summary>
         /// 在显示动画完成后调用
         /// </summary>
         protected virtual void OnDidShow() { }
-        
+
         /// <summary>
         /// 在隐藏动画开始前调用
         /// </summary>
         protected virtual void OnWillHide() { }
-        
+
         /// <summary>
         /// 在隐藏动画完成后调用
         /// </summary>
         protected virtual void OnDidHide() { }
-        
+
         /// <summary>
         /// 当面板成为栈顶面板时调用
         /// </summary>
-        protected virtual void OnFocus() 
+        protected virtual void OnFocus()
         {
             EventKit.Type.Send(new PanelFocusEvent { Panel = this });
         }
-        
+
         /// <summary>
         /// 当面板失去栈顶位置时调用
         /// </summary>
-        protected virtual void OnBlur() 
+        protected virtual void OnBlur()
         {
             EventKit.Type.Send(new PanelBlurEvent { Panel = this });
         }
-        
+
         /// <summary>
         /// 当面板从栈中恢复时调用
         /// </summary>
-        protected virtual void OnResume() 
+        protected virtual void OnResume()
         {
             EventKit.Type.Send(new PanelResumeEvent { Panel = this });
         }
-        
+
         // 供 UIStackManager 调用的内部方法
         internal void InvokeFocus() => OnFocus();
         internal void InvokeBlur() => OnBlur();
@@ -410,12 +411,12 @@ namespace YokiFrame
             RecycleAnimations();
             ClearUIComponents();
         }
-        
+
         /// <summary>
         /// 标记是否已清理，防止重复清理
         /// </summary>
         private bool mIsCleanedUp;
-        
+
         /// <summary>
         /// 销毁前清理资源（由 UIKit 在 DestroyPanel 前调用）
         /// </summary>
@@ -425,7 +426,7 @@ namespace YokiFrame
             mIsCleanedUp = true;
             OnBeforeDestroy();
         }
-        
+
         /// <summary>
         /// 归还动画到对象池
         /// </summary>

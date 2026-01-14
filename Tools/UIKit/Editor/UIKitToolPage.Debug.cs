@@ -232,16 +232,15 @@ namespace YokiFrame
             var (card, body) = CreateCard("焦点信息", KitIcons.TARGET);
             mDebugContent.Add(card);
 
-            var focusSystem = UIFocusSystem.Instance;
-            if (focusSystem == null)
+            if (UIRoot.Instance == default)
             {
-                body.Add(new Label("焦点系统未初始化") { style = { color = new StyleColor(Colors.TextTertiary) } });
+                body.Add(new Label("UIRoot 未初始化") { style = { color = new StyleColor(Colors.TextTertiary) } });
                 return;
             }
 
-            var currentFocus = focusSystem.CurrentFocus;
-            var focusName = currentFocus != null ? currentFocus.name : "无";
-            var inputMode = focusSystem.CurrentInputMode.ToString();
+            var currentFocus = UIRoot.Instance.CurrentFocus;
+            var focusName = currentFocus != default ? currentFocus.name : "无";
+            var inputMode = UIRoot.Instance.CurrentInputMode.ToString();
 
             var (focusRow, _) = CreateInfoRow("当前焦点:", focusName);
             body.Add(focusRow);

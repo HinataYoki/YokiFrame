@@ -1,117 +1,134 @@
 #if YOKIFRAME_UNITASK_SUPPORT
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// UIKit UniTask 异步扩展
+    /// UIKit UniTask 扩展
     /// </summary>
     public partial class UIKit
     {
-        #region UniTask 异步方法
+        #region 面板 UniTask
 
         /// <summary>
-        /// [UniTask] 异步打开指定类型的Panel
+        /// [UniTask] 异步打开面板
         /// </summary>
-        public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common, IUIData data = null, CancellationToken cancellationToken = default) where T : UIPanel
+        public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+            IUIData data = null, CancellationToken ct = default) where T : UIPanel
         {
-            WeakenHot();
-            var type = typeof(T);
-            
-            // 1. 检查主缓存
-            if (TryGetHandler(type, out var handler))
-            {
-                handler.Data = data;
-                OpenAndShowPanel(handler.Panel, data);
-                return handler.Panel as T;
-            }
-            
-            // 2. 检查预加载缓存
-            if (UICacheManager.TryGetPreloaded(type, out handler))
-            {
-                handler.Data = data;
-                // 需要访问 PanelCacheDic，通过内部方法
-                AddToMainCache(type, handler);
-                handler.Hot += OpenHot;
-                OpenAndShowPanel(handler.Panel, data);
-                return handler.Panel as T;
-            }
-            
-            // 3. 创建新 Handler
-            handler = PanelHandler.Allocate();
-            handler.Type = type;
-            handler.Level = level;
-            handler.Data = data;
-            
-            // 异步创建 UI
-            var panel = await CreateUIUniTaskAsync(handler, cancellationToken);
-            
-            if (panel != null && panel.Transform != null)
-            {
-                return panel as T;
-            }
-            
-            KitLogger.Error($"[UIKit] OpenPanelUniTaskAsync: {type.Name} 创建失败");
-            return null;
+            var tcs = new UniTaskCompletionSource<IPanel>();
+            ct.Register(() => tcs.TrySetCanceled());
+            UIRoot.Instance.OpenPanelAsyncInternal(typeof(T), level, data, panel => tcs.TrySetResult(panel));
+            var result = await tcs.Task;
+            return result as T;
         }
 
         /// <summary>
-        /// [UniTask] 异步打开并压入Panel到栈中
+        /// [UniTask] 异步打开面板（通过 Type）
         /// </summary>
-        public static async UniTask<T> PushOpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true, CancellationToken cancellationToken = default) where T : UIPanel
+        public static async UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = UILevel.Common,
+            IUIData data = null, CancellationToken ct = default)
         {
-            var panel = await OpenPanelUniTaskAsync<T>(level, data, cancellationToken);
-            if (panel != null)
+            var tcs = new UniTaskCompletionSource<IPanel>();
+            ct.Register(() => tcs.TrySetCanceled());
+            UIRoot.Instance.OpenPanelAsyncInternal(type, level, data, panel => tcs.TrySetResult(panel));
+            return await tcs.Task;
+        }
+
+        /// <summary>
+        /// [UniTask] 异步打开并压入面板
+        /// </summary>
+        public static async UniTask<T> PushOpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+            IUIData data = null, bool hidePreLevel = true, CancellationToken ct = default) where T : UIPanel
+        {
+            var panel = await OpenPanelUniTaskAsync<T>(level, data, ct);
+            if (panel != default)
             {
-                PushPanel(panel, hidePreLevel);
+                UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
             }
             return panel;
         }
 
         /// <summary>
-        /// [UniTask] 异步弹出面板（等待动画完成）
+        /// [UniTask] 异步弹出面板
         /// </summary>
-        public static UniTask<IPanel> PopPanelUniTaskAsync(bool showPreLevel = true, bool autoClose = true, CancellationToken cancellationToken = default)
+        public static UniTask<IPanel> PopPanelUniTaskAsync(string stackName = UIRoot.DEFAULT_STACK,
+            bool showPrevious = true, bool autoClose = true, CancellationToken ct = default)
         {
-            return UIStackManager.PopUniTaskAsync(UIStackManager.DEFAULT_STACK, showPreLevel, autoClose, cancellationToken);
+            return UIRoot.Instance.PopFromStackUniTaskAsync(stackName, showPrevious, autoClose, ct);
+        }
+
+        #endregion
+
+        #region 缓存 UniTask
+
+        /// <summary>
+        /// [UniTask] 预加载面板
+        /// </summary>
+        public static UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+            CancellationToken ct = default) where T : UIPanel
+        {
+            return UIRoot.Instance.PreloadPanelUniTaskAsync<T>(level, ct);
         }
 
         /// <summary>
-        /// [UniTask] 从指定命名栈异步弹出面板（等待动画完成）
+        /// [UniTask] 预加载面板
         /// </summary>
-        public static UniTask<IPanel> PopPanelUniTaskAsync(string stackName, bool showPreLevel = true, bool autoClose = true, CancellationToken cancellationToken = default)
+        public static UniTask<bool> PreloadPanelUniTaskAsync(Type panelType, UILevel level = UILevel.Common,
+            CancellationToken ct = default)
         {
-            return UIStackManager.PopUniTaskAsync(stackName, showPreLevel, autoClose, cancellationToken);
+            return UIRoot.Instance.PreloadPanelUniTaskAsync(panelType, level, ct);
+        }
+
+        #endregion
+
+        #region 对话框 UniTask
+
+        /// <summary>
+        /// [UniTask] 显示对话框
+        /// </summary>
+        public static UniTask<DialogResultData> ShowDialogUniTaskAsync(DialogConfig config,
+            CancellationToken ct = default)
+        {
+            return UIRoot.Instance.ShowDialogUniTaskAsync(config, ct);
         }
 
         /// <summary>
-        /// [UniTask] 异步创建 UI
+        /// [UniTask] 显示指定类型的对话框
         /// </summary>
-        private static async UniTask<IPanel> CreateUIUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken)
+        public static UniTask<DialogResultData> ShowDialogUniTaskAsync<T>(DialogConfig config,
+            CancellationToken ct = default) where T : UIDialogPanel
         {
-            if (handler == null) return null;
-            
-            var panel = await UIRoot.Instance.LoadPanelUniTaskAsync(handler, cancellationToken);
-            
-            if (panel != null && panel.Transform != null)
-            {
-                SetupPanel(handler, panel);
-                OpenAndShowPanel(panel, handler.Data);
-                return panel;
-            }
-            
-            handler.Recycle();
-            return null;
+            return UIRoot.Instance.ShowDialogUniTaskAsync<T>(config, ct);
         }
 
         /// <summary>
-        /// 添加到主缓存（内部方法，供 UniTask 扩展使用）
+        /// [UniTask] Alert 对话框
         /// </summary>
-        private static void AddToMainCache(System.Type type, PanelHandler handler)
+        public static UniTask AlertUniTaskAsync(string message, string title = null,
+            CancellationToken ct = default)
         {
-            // partial class 可以直接访问私有成员 PanelCacheDic
-            PanelCacheDic.TryAdd(type, handler);
+            return UIRoot.Instance.AlertUniTaskAsync(message, title, ct);
+        }
+
+        /// <summary>
+        /// [UniTask] Confirm 对话框
+        /// </summary>
+        public static UniTask<bool> ConfirmUniTaskAsync(string message, string title = null,
+            CancellationToken ct = default)
+        {
+            return UIRoot.Instance.ConfirmUniTaskAsync(message, title, ct);
+        }
+
+        /// <summary>
+        /// [UniTask] Prompt 对话框
+        /// </summary>
+        public static UniTask<(bool confirmed, string value)> PromptUniTaskAsync(string message,
+            string title = null, string defaultValue = null, CancellationToken ct = default)
+        {
+            return UIRoot.Instance.PromptUniTaskAsync(message, title, defaultValue, ct);
         }
 
         #endregion

@@ -11,11 +11,14 @@ namespace YokiFrame
     /// <summary>
     /// SceneKit 工具页面 - 场景管理器
     /// </summary>
-    public partial class SceneKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "SceneKit",
+        name: "SceneKit",
+        icon: KitIcons.SCENEKIT,
+        priority: 45,
+        category: YokiPageCategory.Tool)]
+    public partial class SceneKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "SceneKit";
-        public override string PageIcon => KitIcons.SCENEKIT;
-        public override int Priority => 45;
 
         #region 私有字段
 

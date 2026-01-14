@@ -93,8 +93,8 @@ namespace YokiFrame
         public void OnPointerEnter(PointerEventData eventData)
         {
             // 鼠标悬停时自动选中（可选行为）
-            if (UIFocusSystem.Instance != null && 
-                UIFocusSystem.Instance.CurrentInputMode == UIInputMode.Pointer)
+            if (UIRoot.Instance != default &&
+                UIRoot.Instance.CurrentInputMode == UIInputMode.Pointer)
             {
                 // 在指针模式下，悬停不自动选中
                 return;
@@ -120,7 +120,7 @@ namespace YokiFrame
             if (!hasOverride) return;
 
             var nav = mSelectable.navigation;
-            
+
             // 如果有任何覆盖，切换到显式模式
             if (nav.mode != Navigation.Mode.Explicit)
             {

@@ -11,11 +11,14 @@ namespace YokiFrame
     /// AudioKit 工具页面 - 现代化机架式设计（带子轨道显示）
     /// 采用响应式数据绑定，通过订阅音频事件实现自动更新
     /// </summary>
-    public partial class AudioKitToolPage : YokiFrameToolPageBase
+    [YokiToolPage(
+        kit: "AudioKit",
+        name: "AudioKit",
+        icon: KitIcons.AUDIOKIT,
+        priority: 40,
+        category: YokiPageCategory.Tool)]
+    public partial class AudioKitToolPage : YokiToolPageBase
     {
-        public override string PageName => "AudioKit";
-        public override string PageIcon => KitIcons.AUDIOKIT;
-        public override int Priority => 40;
 
         private enum TabType { CodeGenerator, RuntimeMonitor }
 
@@ -23,7 +26,7 @@ namespace YokiFrame
 
         private const string ASSETS_PREFIX = "Assets";
         private const float THROTTLE_INTERVAL = 0.15f;  // 节流间隔 150ms
-        
+
         private static readonly string[] AUDIO_EXTENSIONS = { ".wav", ".mp3", ".ogg", ".aiff", ".aif", ".flac" };
 
         #endregion
@@ -32,11 +35,11 @@ namespace YokiFrame
 
         private TabType mCurrentTab = TabType.RuntimeMonitor;
         private VisualElement mTabContent;
-        
+
         // Tab 按钮引用
         private Button mRuntimeMonitorTabBtn;
         private Button mCodeGeneratorTabBtn;
-        
+
         // 响应式更新
         private Throttle mRefreshThrottle;
         private bool mAutoRefresh = true;
@@ -48,22 +51,22 @@ namespace YokiFrame
         protected override void BuildUI(VisualElement root)
         {
             LoadPrefs();
-            
+
             // 使用公共组件创建标签栏
             var tabBar = YokiFrameUIComponents.CreateTabBar();
             root.Add(tabBar);
-            
+
             mRuntimeMonitorTabBtn = YokiFrameUIComponents.CreateTabButton("运行时监控", mCurrentTab == TabType.RuntimeMonitor, () => SwitchTab(TabType.RuntimeMonitor));
             mCodeGeneratorTabBtn = YokiFrameUIComponents.CreateTabButton("代码生成器", mCurrentTab == TabType.CodeGenerator, () => SwitchTab(TabType.CodeGenerator));
             tabBar.Add(mRuntimeMonitorTabBtn);
             tabBar.Add(mCodeGeneratorTabBtn);
-            
+
             mTabContent = new VisualElement { style = { flexGrow = 1 } };
             root.Add(mTabContent);
-            
+
             // 初始化响应式订阅
             SetupReactiveSubscriptions();
-            
+
             SwitchTab(TabType.RuntimeMonitor);
         }
 
@@ -78,16 +81,16 @@ namespace YokiFrame
         {
             // 创建节流器，避免频繁刷新
             mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
-            
+
             // 订阅音频播放开始事件
             SubscribeChannel<(string path, int channelId, float volume, float pitch, float duration)>(
                 DataChannels.AUDIO_PLAY_STARTED, OnAudioPlayStarted);
-            
+
             // 订阅音频播放停止事件
             SubscribeChannel<(string path, int channelId)>(
                 DataChannels.AUDIO_PLAY_STOPPED, OnAudioPlayStopped);
         }
-        
+
         /// <summary>
         /// 音频播放开始时的回调
         /// </summary>
@@ -96,11 +99,11 @@ namespace YokiFrame
             if (!Application.isPlaying) return;
             if (mCurrentTab != TabType.RuntimeMonitor) return;
             if (!mAutoRefresh) return;
-            
+
             // 使用节流器延迟刷新
             mRefreshThrottle.Execute(RefreshMonitorData);
         }
-        
+
         /// <summary>
         /// 音频播放停止时的回调
         /// </summary>
@@ -109,7 +112,7 @@ namespace YokiFrame
             if (!Application.isPlaying) return;
             if (mCurrentTab != TabType.RuntimeMonitor) return;
             if (!mAutoRefresh) return;
-            
+
             // 使用节流器延迟刷新
             mRefreshThrottle.Execute(RefreshMonitorData);
         }
@@ -130,13 +133,13 @@ namespace YokiFrame
             mCurrentTab = tabType;
             mTabContent.Clear();
             mChannelPanels.Clear();
-            
+
             // 清理混音台资源
             if (tabType != TabType.RuntimeMonitor)
                 CleanupConsole();
-            
+
             UpdateTabButtonStyles();
-            
+
             if (tabType == TabType.CodeGenerator)
                 BuildCodeGeneratorUI(mTabContent);
             else
@@ -151,7 +154,7 @@ namespace YokiFrame
         /// 上次刷新时间
         /// </summary>
         private double mLastRefreshTime;
-        
+
         /// <summary>
         /// 刷新间隔（秒）
         /// </summary>
@@ -164,12 +167,12 @@ namespace YokiFrame
             if (!Application.isPlaying) return;
             if (mCurrentTab != TabType.RuntimeMonitor) return;
             if (!mAutoRefresh) return;
-            
+
             // 节流：每 100ms 刷新一次
             double currentTime = EditorApplication.timeSinceStartup;
             if (currentTime - mLastRefreshTime < REFRESH_INTERVAL) return;
             mLastRefreshTime = currentTime;
-            
+
             RefreshConsoleData();
         }
 
@@ -180,22 +183,33 @@ namespace YokiFrame
             base.OnDeactivate();
         }
 
+        public override void OnActivate()
+        {
+            base.OnActivate();
+
+            // 切换回页面时刷新数据
+            if (mCurrentTab == TabType.RuntimeMonitor && Application.isPlaying && mChannelPanels.Count > 0)
+            {
+                RefreshMonitorData();
+            }
+        }
+
         /// <summary>
         /// PlayMode 状态变化时重建 UI
         /// </summary>
         protected override void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             base.OnPlayModeStateChanged(state);
-            
+
             // 进入或退出 PlayMode 后重建当前 Tab 的 UI
-            if (state == PlayModeStateChange.EnteredPlayMode || 
+            if (state == PlayModeStateChange.EnteredPlayMode ||
                 state == PlayModeStateChange.EnteredEditMode)
             {
                 // 延迟一帧执行，确保 Unity 状态已完全切换
                 EditorApplication.delayCall += () =>
                 {
                     if (mTabContent == null) return;
-                    
+
                     // 重建当前 Tab
                     SwitchTab(mCurrentTab);
                 };
