@@ -31,6 +31,7 @@ namespace YokiFrame
         [Tooltip("需要适配的边缘")]
         private SafeAreaEdge mEdges = SafeAreaEdge.All;
 
+#if UNITY_EDITOR
         [SerializeField]
         [Tooltip("是否在编辑器中模拟安全区")]
         private bool mSimulateInEditor = false;
@@ -38,6 +39,7 @@ namespace YokiFrame
         [SerializeField]
         [Tooltip("编辑器模拟的安全区边距")]
         private Vector4 mSimulatedInsets = new(50, 50, 100, 50); // left, right, top, bottom
+#endif
 
         #endregion
 
@@ -124,7 +126,7 @@ namespace YokiFrame
         private Rect GetSafeArea()
         {
             var screenSize = new Vector2Int(Screen.width, Screen.height);
-            
+
             // 检查缓存
             if (sCacheValid && sCachedScreenSize == screenSize)
             {
@@ -252,7 +254,7 @@ namespace YokiFrame
             {
                 mRectTransform = GetComponent<RectTransform>();
             }
-            
+
             if (Application.isPlaying)
             {
                 ApplySafeArea();

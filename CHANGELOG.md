@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-01-15
+
+### Fixed
+- **PoolKit** 修复打包时 `PoolEvent`/`PoolEventType` 类型未找到的编译错误（移除非编辑器分支中对仅编辑器类型的引用）
+- **UIKit** 修复 `SafeAreaAdapter.mSimulateInEditor` 字段打包时 CS0414 警告（将编辑器模拟字段用 `#if UNITY_EDITOR` 包裹）
+
 ## [1.6.0-preview.2] - 2026-01-14
 
 ### Added

@@ -1,6 +1,6 @@
 {
     "name": "com.hinatayoki.yokiframe",
-    "version": "1.6.0",
+    "version": "1.6.1",
     "displayName": "YokiFrame",
     "description": "A lightweight Unity development framework providing architecture design, event system, action sequences, state machine, UI management, resource loading, object pooling, singleton management, logging system, and data binding. Supports extension with YooAsset and other third-party resource management solutions.",
     "unity": "2021.3",

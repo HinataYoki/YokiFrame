@@ -15,24 +15,24 @@ namespace YokiFrame
     {
 #if UNITY_EDITOR
         #region 事件通道常量
-        
+
         /// <summary>
         /// 池列表变化事件通道
         /// </summary>
         public const string CHANNEL_POOL_LIST_CHANGED = "PoolKit.PoolListChanged";
-        
+
         /// <summary>
         /// 活跃对象变化事件通道
         /// </summary>
         public const string CHANNEL_POOL_ACTIVE_CHANGED = "PoolKit.PoolActiveChanged";
-        
+
         /// <summary>
         /// 事件日志事件通道
         /// </summary>
         public const string CHANNEL_POOL_EVENT_LOGGED = "PoolKit.PoolEventLogged";
-        
+
         #endregion
-        
+
         /// <summary>
         /// 通知编辑器数据变化（通过反射调用 EditorDataBridge）
         /// 避免运行时程序集直接引用编辑器程序集
@@ -42,7 +42,7 @@ namespace YokiFrame
         {
             var bridgeType = Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
             if (bridgeType == null) return;
-            
+
             // 获取泛型方法：NotifyDataChanged<T>(string, T)
             // 使用 GetMethods 遍历避免 AmbiguousMatchException
             var methods = bridgeType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -58,48 +58,48 @@ namespace YokiFrame
                     break;
                 }
             }
-            
+
             if (targetMethod == null) return;
-            
+
             var genericMethod = targetMethod.MakeGenericMethod(typeof(T));
             genericMethod.Invoke(null, new object[] { channel, data });
         }
-        
+
         /// <summary>
         /// 泄露检测阈值（秒）
         /// </summary>
         public const float LEAK_THRESHOLD_SECONDS = 30f;
-        
+
         /// <summary>
         /// 事件历史最大记录数
         /// </summary>
         public const int MAX_EVENT_HISTORY = 200;
-        
+
         /// <summary>
         /// 池调试信息字典
         /// </summary>
         private static readonly Dictionary<object, PoolDebugInfo> sPools = new();
-        
+
         /// <summary>
         /// 对象到池的映射（用于快速查找）
         /// </summary>
         private static readonly Dictionary<object, object> sObjectToPool = new();
-        
+
         /// <summary>
         /// 事件历史队列
         /// </summary>
         private static readonly Queue<PoolEvent> sEventHistory = new(MAX_EVENT_HISTORY);
-        
+
         /// <summary>
         /// 是否启用追踪
         /// </summary>
         public static bool EnableTracking { get; set; } = true;
-        
+
         /// <summary>
         /// 是否记录堆栈（性能开销较大）
         /// </summary>
         public static bool EnableStackTrace { get; set; } = true;
-        
+
         /// <summary>
         /// 是否记录事件历史
         /// </summary>
@@ -111,9 +111,9 @@ namespace YokiFrame
         public static void RegisterPool(object pool, string name)
         {
             if (pool == default || !EnableTracking) return;
-            
+
             if (sPools.ContainsKey(pool)) return;
-            
+
             var info = new PoolDebugInfo
             {
                 Name = name,
@@ -121,7 +121,7 @@ namespace YokiFrame
                 PoolRef = pool
             };
             sPools[pool] = info;
-            
+
             NotifyEditorDataChanged(CHANNEL_POOL_LIST_CHANGED, info);
         }
 
@@ -131,7 +131,7 @@ namespace YokiFrame
         public static void UnregisterPool(object pool)
         {
             if (pool == default) return;
-            
+
             if (sPools.TryGetValue(pool, out var info))
             {
                 foreach (var activeObj in info.ActiveObjects)
@@ -142,7 +142,7 @@ namespace YokiFrame
                     }
                 }
                 sPools.Remove(pool);
-                
+
                 NotifyEditorDataChanged(CHANNEL_POOL_LIST_CHANGED, info);
             }
         }
@@ -153,9 +153,9 @@ namespace YokiFrame
         public static void TrackAllocate(object pool, object obj)
         {
             if (pool == default || obj == default || !EnableTracking) return;
-            
+
             if (!sPools.TryGetValue(pool, out var info)) return;
-            
+
             var stackTrace = EnableStackTrace ? Environment.StackTrace : string.Empty;
             var activeInfo = new ActiveObjectInfo
             {
@@ -163,21 +163,21 @@ namespace YokiFrame
                 SpawnTime = Time.realtimeSinceStartup,
                 StackTrace = stackTrace
             };
-            
+
             info.ActiveObjects.Add(activeInfo);
             info.ActiveCount = info.ActiveObjects.Count;
             sObjectToPool[obj] = pool;
-            
+
             if (info.ActiveCount > info.PeakCount)
             {
                 info.PeakCount = info.ActiveCount;
             }
-            
+
             if (EnableEventHistory)
             {
                 RecordEvent(PoolEventType.Spawn, info.Name, obj, stackTrace);
             }
-            
+
             NotifyEditorDataChanged(CHANNEL_POOL_ACTIVE_CHANGED, info);
         }
 
@@ -187,9 +187,9 @@ namespace YokiFrame
         public static void TrackRecycle(object pool, object obj)
         {
             if (pool == default || obj == default || !EnableTracking) return;
-            
+
             if (!sPools.TryGetValue(pool, out var info)) return;
-            
+
             for (int i = info.ActiveObjects.Count - 1; i >= 0; i--)
             {
                 if (ReferenceEquals(info.ActiveObjects[i].Obj, obj))
@@ -198,16 +198,16 @@ namespace YokiFrame
                     break;
                 }
             }
-            
+
             info.ActiveCount = info.ActiveObjects.Count;
             sObjectToPool.Remove(obj);
-            
+
             if (EnableEventHistory)
             {
                 var stackTrace = EnableStackTrace ? Environment.StackTrace : string.Empty;
                 RecordEvent(PoolEventType.Return, info.Name, obj, stackTrace);
             }
-            
+
             NotifyEditorDataChanged(CHANNEL_POOL_ACTIVE_CHANGED, info);
         }
 
@@ -217,7 +217,7 @@ namespace YokiFrame
         public static void UpdateTotalCount(object pool, int totalCount)
         {
             if (pool == default || !EnableTracking) return;
-            
+
             if (sPools.TryGetValue(pool, out var info))
             {
                 info.TotalCount = totalCount;
@@ -247,27 +247,27 @@ namespace YokiFrame
         public static bool ForceReturn(object pool, object obj)
         {
             if (pool == default || obj == default) return false;
-            
+
             string poolName = "Unknown";
             if (sPools.TryGetValue(pool, out var info))
             {
                 poolName = info.Name;
             }
-            
+
             var poolType = pool.GetType();
             var recycleMethod = poolType.GetMethod("Recycle");
-            
+
             if (recycleMethod == default) return false;
-            
+
             try
             {
                 recycleMethod.Invoke(pool, new[] { obj });
-                
+
                 if (EnableEventHistory)
                 {
                     RecordEvent(PoolEventType.Forced, poolName, obj, "ForceReturn");
                 }
-                
+
                 return true;
             }
             catch (Exception e)
@@ -286,13 +286,13 @@ namespace YokiFrame
             {
                 sEventHistory.Dequeue();
             }
-            
+
             var objName = obj?.ToString() ?? "null";
             if (obj is UnityEngine.Object unityObj && unityObj != default)
             {
                 objName = unityObj.name;
             }
-            
+
             var evt = new PoolEvent
             {
                 EventType = eventType,
@@ -303,9 +303,9 @@ namespace YokiFrame
                 StackTrace = stackTrace,
                 ObjRef = obj
             };
-            
+
             sEventHistory.Enqueue(evt);
-            
+
             NotifyEditorDataChanged(CHANNEL_POOL_EVENT_LOGGED, evt);
         }
 
@@ -315,7 +315,7 @@ namespace YokiFrame
         private static string ParseStackTraceSource(string stackTrace)
         {
             if (string.IsNullOrEmpty(stackTrace)) return "Unknown";
-            
+
             var lines = stackTrace.Split('\n');
             foreach (var line in lines)
             {
@@ -326,49 +326,49 @@ namespace YokiFrame
                 if (line.Contains("SimplePoolKit")) continue;
                 if (line.Contains("UnityEngine.")) continue;
                 if (line.Contains("UnityEditor.")) continue;
-                
+
                 var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
-                
+
                 if (trimmed.StartsWith("at "))
                 {
                     trimmed = trimmed.Substring(3);
                 }
-                
+
                 var parenIndex = trimmed.IndexOf('(');
                 if (parenIndex > 0)
                 {
                     trimmed = trimmed.Substring(0, parenIndex);
                 }
-                
+
                 if (!string.IsNullOrEmpty(trimmed) && trimmed.Length > 3 && trimmed.Contains("."))
                 {
                     return trimmed;
                 }
             }
-            
+
             return "Unknown";
         }
-        
+
         /// <summary>
         /// 获取事件历史（最新的在前）
         /// </summary>
         public static void GetEventHistory(List<PoolEvent> result, PoolEventType? filterType = null, string poolName = null)
         {
             result.Clear();
-            
+
             var events = sEventHistory.ToArray();
             for (int i = events.Length - 1; i >= 0; i--)
             {
                 var evt = events[i];
-                
+
                 if (filterType != null && evt.EventType != filterType.Value) continue;
                 if (!string.IsNullOrEmpty(poolName) && evt.PoolName != poolName) continue;
-                
+
                 result.Add(evt);
             }
         }
-        
+
         /// <summary>
         /// 清空事件历史
         /// </summary>
@@ -376,7 +376,7 @@ namespace YokiFrame
         {
             sEventHistory.Clear();
         }
-        
+
         /// <summary>
         /// 事件历史数量
         /// </summary>
@@ -412,7 +412,6 @@ namespace YokiFrame
         public static void UpdateTotalCount(object pool, int totalCount) { }
         public static void GetAllPools(List<PoolDebugInfo> result) => result.Clear();
         public static bool ForceReturn(object pool, object obj) => false;
-        public static void GetEventHistory(List<PoolEvent> result, PoolEventType? filterType = null, string poolName = null) => result.Clear();
         public static void ClearEventHistory() { }
         public static void Clear() { }
 #endif
