@@ -323,12 +323,8 @@ namespace YokiFrame
             {
                 if (blocker != default)
                 {
-#if UNITY_EDITOR
-                    if (!Application.isPlaying)
-                        UnityEngine.Object.DestroyImmediate(blocker);
-                    else
-#endif
-                    UnityEngine.Object.Destroy(blocker);
+                    // OnDestroy 中必须使用 DestroyImmediate 避免延迟销毁警告
+                    UnityEngine.Object.DestroyImmediate(blocker);
                 }
             }
             mModalBlockers.Clear();

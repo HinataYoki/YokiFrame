@@ -1,17 +1,26 @@
 {
     "name": "com.hinatayoki.yokiframe",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "displayName": "YokiFrame",
     "description": "A lightweight Unity development framework providing architecture design, event system, action sequences, state machine, UI management, resource loading, object pooling, singleton management, logging system, and data binding. Supports extension with YooAsset and other third-party resource management solutions.",
     "unity": "2021.3",
+    "unityRelease": "0f1",
+    "changelogUrl": "https://github.com/HinataYoki/YokiFrame/blob/main/Assets/YokiFrame/CHANGELOG.md",
+    "licensesUrl": "https://github.com/HinataYoki/YokiFrame/blob/main/LICENSE",
     "author": {
         "name": "HinataYoki",
+        "email": "hinatayoki@example.com",
         "url": "https://github.com/HinataYoki/YokiFrame"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/HinataYoki/YokiFrame.git"
     },
     "keywords": [
         "framework",
         "architecture",
         "mvc",
+        "mvvm",
         "event",
         "action",
         "sequence",
@@ -19,13 +28,25 @@
         "state-machine",
         "ui",
         "uikit",
+        "uitoolkit",
         "resource",
         "reskit",
         "pool",
+        "poolkit",
         "singleton",
         "logger",
+        "logkit",
         "binding",
+        "data-binding",
+        "input",
+        "inputkit",
+        "spatial",
+        "spatialkit",
         "yooasset",
-        "tools"
-    ]
+        "unitask",
+        "tools",
+        "editor-tools"
+    ],
+    "dependencies": {},
+    "samples": []
 }
