@@ -121,7 +121,20 @@ namespace YokiFrame
 
             if (mFocusHighlight != default)
             {
-                Destroy(mFocusHighlight.gameObject);
+                // OnDestroy 中必须使用 DestroyImmediate，且需判空防止重复销毁
+                if (mFocusHighlight.gameObject != default)
+                {
+#if UNITY_EDITOR
+                    if (!Application.isPlaying)
+                        UnityEngine.Object.DestroyImmediate(mFocusHighlight.gameObject);
+                    else
+#endif
+                    {
+                        // 先停止所有动画，避免 DOTween 持有引用
+                        mFocusHighlight.Hide();
+                        UnityEngine.Object.DestroyImmediate(mFocusHighlight.gameObject);
+                    }
+                }
                 mFocusHighlight = null;
             }
         }

@@ -443,6 +443,13 @@ namespace YokiFrame
             ClearAllStacks();
             ClearAllLevels();
             DisposeFocusSystem();
+            
+            // 清空组件引用，防止 DontDestroyOnLoad 对象残留
+            Canvas = null;
+            CanvasScaler = null;
+            GraphicRaycaster = null;
+            EventSystem = null;
+            mUICamera = null;
         }
 
         #endregion

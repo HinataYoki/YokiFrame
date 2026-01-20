@@ -113,10 +113,20 @@ namespace YokiFrame
         private void OnDestroy()
         {
 #if YOKIFRAME_DOTWEEN_SUPPORT
-            mMoveTween?.Kill();
-            mSizeTween?.Kill();
-            mFadeTween?.Kill();
+            // 立即终止所有 Tween，防止延迟回调持有引用
+            mMoveTween?.Kill(complete: false);
+            mSizeTween?.Kill(complete: false);
+            mFadeTween?.Kill(complete: false);
+            mMoveTween = null;
+            mSizeTween = null;
+            mFadeTween = null;
 #endif
+            // 清理引用，防止残留
+            mCurrentTarget = null;
+            mTargetRect = null;
+            mImage = null;
+            mCanvasGroup = null;
+            mCanvas = null;
         }
 
         private void LateUpdate()

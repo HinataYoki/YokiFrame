@@ -202,6 +202,12 @@ namespace YokiFrame
             {
                 sInstance = null;
             }
+            
+            // 清理可能残留的引用，防止场景切换时触发 "Some objects were not cleaned up"
+            mBoxStyle = null;
+            mLabelStyle = null;
+            mHeaderStyle = null;
+            mStylesInitialized = false;
         }
 
         private void Update()

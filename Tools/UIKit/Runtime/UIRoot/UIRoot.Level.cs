@@ -321,7 +321,8 @@ namespace YokiFrame
 
             foreach (var blocker in mModalBlockers.Values)
             {
-                if (blocker != default)
+                // 双重判空：防止 blocker 已被标记销毁或为 null
+                if (blocker != default && blocker != null)
                 {
                     // OnDestroy 中必须使用 DestroyImmediate 避免延迟销毁警告
                     UnityEngine.Object.DestroyImmediate(blocker);

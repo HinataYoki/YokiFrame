@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-01-20
+
+### Fixed
+- **UIKit** 修复场景切换时 "Some objects were not cleaned up" 警告
+  - `UIFocusHighlight`: `OnDestroy` 中立即终止 DOTween 动画（`Kill(complete: false)`），清空所有组件引用防止延迟回调持有 GameObject
+  - `UIRoot.Focus`: `DisposeFocusSystem()` 改用 `DestroyImmediate`，销毁前先调用 `Hide()` 停止动画
+  - `UIRoot.Level`: `ClearAllLevels()` 添加 `blocker != null` 双重判空，防止已标记销毁对象触发异常
+  - `UIDebugOverlay`: `OnDestroy` 中清空 GUIStyle 引用（`mBoxStyle`/`mLabelStyle`/`mHeaderStyle`），防止场景切换时残留
+
 ## [1.6.2] - 2026-01-16
 
 ### Fixed
