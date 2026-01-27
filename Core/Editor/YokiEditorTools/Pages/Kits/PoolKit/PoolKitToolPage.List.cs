@@ -157,8 +157,18 @@ namespace YokiFrame.EditorTools
             // 池名称
             element.Q<Label>("pool-name").text = pool.Name;
 
-            // 借出/总量徽章
-            element.Q<Label>("count-badge").text = $"{pool.ActiveCount} / {pool.TotalCount}";
+            // 借出/池内/最大容量徽章（格式：使用中/池内/容量）
+            var badge = element.Q<Label>("count-badge");
+            if (pool.MaxCacheCount > 0)
+            {
+                // 有容量限制：显示 使用中/池内/容量
+                badge.text = $"使用 {pool.ActiveCount} / 池内 {pool.InactiveCount} / 容量 {pool.MaxCacheCount}";
+            }
+            else
+            {
+                // 无容量限制：显示 使用中/池内/无限制
+                badge.text = $"使用 {pool.ActiveCount} / 池内 {pool.InactiveCount} / 容量 ∞";
+            }
 
             // 细条进度条
             var progressBar = element.Q<VisualElement>("progress-bar");

@@ -46,19 +46,19 @@ namespace YokiFrame.EditorTools
             section.Add(mHudCardRow);
 
             // 四个指标卡片
-            var totalResult = YokiFrameUIComponents.CreateHudCard("Total", "0", YokiFrameUIComponents.Colors.TextSecondary);
+            var totalResult = YokiFrameUIComponents.CreateHudCard("总数", "0", YokiFrameUIComponents.Colors.TextSecondary);
             mTotalLabel = totalResult.valueLabel;
             mHudCardRow.Add(totalResult.card);
 
-            var activeResult = YokiFrameUIComponents.CreateHudCard("Active", "0", YokiFrameUIComponents.Colors.BrandWarning);
+            var activeResult = YokiFrameUIComponents.CreateHudCard("使用中", "0", YokiFrameUIComponents.Colors.BrandWarning);
             mActiveLabel = activeResult.valueLabel;
             mHudCardRow.Add(activeResult.card);
 
-            var inactiveResult = YokiFrameUIComponents.CreateHudCard("Inactive", "0", YokiFrameUIComponents.Colors.BrandSuccess);
+            var inactiveResult = YokiFrameUIComponents.CreateHudCard("池内", "0", YokiFrameUIComponents.Colors.BrandSuccess);
             mInactiveLabel = inactiveResult.valueLabel;
             mHudCardRow.Add(inactiveResult.card);
 
-            var peakResult = YokiFrameUIComponents.CreateHudCard("Peak", "0", YokiFrameUIComponents.Colors.BrandPrimary);
+            var peakResult = YokiFrameUIComponents.CreateHudCard("峰值", "0", YokiFrameUIComponents.Colors.BrandPrimary);
             mPeakLabel = peakResult.valueLabel;
             mHudCardRow.Add(peakResult.card);
 

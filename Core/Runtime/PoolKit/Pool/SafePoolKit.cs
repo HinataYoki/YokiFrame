@@ -31,6 +31,7 @@ namespace YokiFrame
                 }
 #if UNITY_EDITOR
                 UpdateDebuggerTotalCount();
+                PoolDebugger.UpdateMaxCacheCount(this, mMaxCount);
 #endif
             }
         }
@@ -39,7 +40,7 @@ namespace YokiFrame
         {
             mFactory = new DefaultObjectFactory<T>();
 #if UNITY_EDITOR
-            PoolDebugger.RegisterPool(this, typeof(T).Name);
+            PoolDebugger.RegisterPool(this, typeof(T).Name, mMaxCount);
 #endif
         }
         
@@ -47,11 +48,13 @@ namespace YokiFrame
         
 #if UNITY_EDITOR
         /// <summary>
-        /// 更新调试器总容量
+        /// 更新调试器总容量（池内 + 借出）
         /// </summary>
         private void UpdateDebuggerTotalCount()
         {
-            PoolDebugger.UpdateTotalCount(this, CurCount + mMaxCount);
+            // TotalCount = 池内对象数 + 借出对象数
+            var activeCount = PoolDebugger.GetActiveCount(this);
+            PoolDebugger.UpdateTotalCount(this, CurCount + activeCount);
         }
 #endif
 

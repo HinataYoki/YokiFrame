@@ -21,7 +21,8 @@ namespace YokiFrame
             }
             
 #if UNITY_EDITOR
-            PoolDebugger.RegisterPool(this, typeof(T).Name);
+            PoolDebugger.RegisterPool(this, typeof(T).Name, -1); // SimplePoolKit 无容量限制
+            // 初始化时 TotalCount = 池内对象数（活跃数为 0）
             PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
 #endif
         }
@@ -31,7 +32,9 @@ namespace YokiFrame
             var result = base.Allocate();
 #if UNITY_EDITOR
             PoolDebugger.TrackAllocate(this, result);
-            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
+            // TotalCount = 池内对象数 + 借出对象数
+            var activeCount = PoolDebugger.GetActiveCount(this);
+            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
 #endif
             return result;
         }
@@ -44,7 +47,9 @@ namespace YokiFrame
             mResetMethod?.Invoke(obj);
             mCacheStack.Push(obj);
 #if UNITY_EDITOR
-            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count);
+            // TotalCount = 池内对象数 + 借出对象数
+            var activeCount = PoolDebugger.GetActiveCount(this);
+            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
 #endif
             return true;
         }

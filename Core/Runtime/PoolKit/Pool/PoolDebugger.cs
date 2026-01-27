@@ -66,11 +66,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 泄露检测阈值（秒）
-        /// </summary>
-        public const float LEAK_THRESHOLD_SECONDS = 30f;
-
-        /// <summary>
         /// 事件历史最大记录数
         /// </summary>
         public const int MAX_EVENT_HISTORY = 200;
@@ -108,7 +103,10 @@ namespace YokiFrame
         /// <summary>
         /// 注册池到调试器
         /// </summary>
-        public static void RegisterPool(object pool, string name)
+        /// <param name="pool">池实例</param>
+        /// <param name="name">池名称</param>
+        /// <param name="maxCacheCount">最大缓存容量（-1 表示无限制）</param>
+        public static void RegisterPool(object pool, string name, int maxCacheCount = -1)
         {
             if (pool == default || !EnableTracking) return;
 
@@ -118,7 +116,8 @@ namespace YokiFrame
             {
                 Name = name,
                 TypeName = pool.GetType().Name,
-                PoolRef = pool
+                PoolRef = pool,
+                MaxCacheCount = maxCacheCount
             };
             sPools[pool] = info;
 
@@ -221,6 +220,33 @@ namespace YokiFrame
             if (sPools.TryGetValue(pool, out var info))
             {
                 info.TotalCount = totalCount;
+            }
+        }
+
+        /// <summary>
+        /// 获取池的活跃对象数量
+        /// </summary>
+        public static int GetActiveCount(object pool)
+        {
+            if (pool == default || !EnableTracking) return 0;
+
+            if (sPools.TryGetValue(pool, out var info))
+            {
+                return info.ActiveCount;
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// 更新池的最大缓存容量
+        /// </summary>
+        public static void UpdateMaxCacheCount(object pool, int maxCacheCount)
+        {
+            if (pool == default || !EnableTracking) return;
+
+            if (sPools.TryGetValue(pool, out var info))
+            {
+                info.MaxCacheCount = maxCacheCount;
             }
         }
 
@@ -393,7 +419,6 @@ namespace YokiFrame
         }
 #else
         // 非编辑器模式下的空实现
-        public const float LEAK_THRESHOLD_SECONDS = 30f;
         public const int MAX_EVENT_HISTORY = 200;
         public const string CHANNEL_POOL_LIST_CHANGED = "PoolKit.PoolListChanged";
         public const string CHANNEL_POOL_ACTIVE_CHANGED = "PoolKit.PoolActiveChanged";
@@ -406,10 +431,13 @@ namespace YokiFrame
         public static int EventHistoryCount => 0;
         
         public static void RegisterPool(object pool, string name) { }
+        public static void RegisterPool(object pool, string name, int maxCacheCount) { }
         public static void UnregisterPool(object pool) { }
         public static void TrackAllocate(object pool, object obj) { }
         public static void TrackRecycle(object pool, object obj) { }
         public static void UpdateTotalCount(object pool, int totalCount) { }
+        public static int GetActiveCount(object pool) => 0;
+        public static void UpdateMaxCacheCount(object pool, int maxCacheCount) { }
         public static void GetAllPools(List<PoolDebugInfo> result) => result.Clear();
         public static bool ForceReturn(object pool, object obj) => false;
         public static void ClearEventHistory() { }

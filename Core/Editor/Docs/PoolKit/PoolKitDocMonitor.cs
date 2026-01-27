@@ -13,7 +13,7 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "监控面板（PoolKit Monitor）",
-                Description = "运行时对象池监控工具，提供池状态可视化、泄露检测、强制归还等调试功能。",
+                Description = "运行时对象池监控工具，提供池状态可视化、活跃对象追踪、代码定位等调试功能。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
@@ -38,15 +38,17 @@ foreach (var pool in pools)
     Debug.Log($""池: {pool.Name}"");
     Debug.Log($""  使用率: {pool.UsageRate:P0}"");
     Debug.Log($""  健康状态: {pool.HealthStatus}"");
-    Debug.Log($""  活跃对象: {pool.ActiveCount}/{pool.TotalCount}"");
+    Debug.Log($""  使用中: {pool.ActiveCount}"");
+    Debug.Log($""  池内: {pool.InactiveCount}"");
+    Debug.Log($""  容量: {(pool.MaxCacheCount < 0 ? ""无限制"" : pool.MaxCacheCount.ToString())}"");
     Debug.Log($""  峰值: {pool.PeakCount}"");
     
-    // 检查泄露嫌疑对象（持有超过30秒）
+    // 遍历活跃对象
     foreach (var obj in pool.ActiveObjects)
     {
-        if (obj.Duration > 30f)
+        Debug.Log($""  活跃对象: {obj.Obj}"");
+        if (!string.IsNullOrEmpty(obj.StackTrace))
         {
-            Debug.LogWarning($""  泄露嫌疑: {obj.Obj}, 持有 {obj.Duration:F1}s"");
             Debug.Log($""    来源: {obj.StackTrace}"");
         }
     }
@@ -57,31 +59,33 @@ foreach (var pool in pools)
                     {
                         Title = "健康状态说明",
                         Code = @"// PoolHealthStatus 枚举值说明
-// Healthy  - 使用率 < 50%，池状态健康
-// Normal   - 使用率 50% - 70%，正常运行
-// Busy     - 使用率 70% - 90%，池较繁忙
-// Warning  - 使用率 > 90%，需要关注
+// Healthy  - 使用率 < 50%，池状态健康（蓝色）
+// Normal   - 使用率 50% - 80%，正常运行（灰色）
+// Busy     - 使用率 > 80%，池较繁忙（橙色）
 
 // 使用率计算公式
-float usageRate = (float)activeCount / totalCount;",
-                        Explanation = "健康状态根据使用率自动计算，帮助快速识别需要优化的池。"
+float usageRate = (float)activeCount / totalCount;
+
+// 数字显示格式
+// 使用 X / 池内 Y / 容量 Z
+// - 使用：当前借出的对象数量
+// - 池内：池中待机的对象数量
+// - 容量：池的最大缓存容量（∞ 表示无限制）",
+                        Explanation = "健康状态根据使用率自动计算，通过颜色快速识别需要优化的池。"
                     },
                     new()
                     {
-                        Title = "强制归还对象",
-                        Code = @"// 强制归还指定对象（用于调试泄露）
-var pool = SafePoolKit<Bullet>.Instance;
-var leakedObj = pool.ActiveObjects[0].Obj;
+                        Title = "代码定位功能",
+                        Code = @"// 点击活跃对象卡片上的""代码""按钮，可跳转到对象借出的代码位置
+// 支持两种堆栈格式：
+// 1. Unity 格式：at ClassName.Method () [0x00000] in /path/file.cs:123
+// 2. Mono 格式：ClassName.Method () [0x00000] in F:\path\file.cs:123
 
-if (PoolDebugger.ForceReturn(pool, leakedObj))
-{
-    Debug.Log(""强制归还成功"");
-}
-else
-{
-    Debug.LogWarning(""强制归还失败，对象可能已被回收"");
-}",
-                        Explanation = "强制归还功能仅用于调试，生产环境应修复泄露根因。"
+// 堆栈追踪需要启用
+PoolDebugger.EnableStackTrace = true;
+
+// 堆栈会自动过滤 Unity 引擎和框架代码，定位到项目代码位置",
+                        Explanation = "代码定位功能帮助快速找到对象借出的代码位置，便于排查对象未归还的问题。"
                     },
                     new()
                     {
@@ -130,7 +134,7 @@ var subscription = EditorDataBridge.Subscribe<List<PoolDebugInfo>>(
     {
         foreach (var pool in pools)
         {
-            if (pool.HealthStatus == PoolHealthStatus.Warning)
+            if (pool.HealthStatus == PoolHealthStatus.Busy)
             {
                 Debug.LogWarning($""池 {pool.Name} 使用率过高！"");
             }

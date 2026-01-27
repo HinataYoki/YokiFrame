@@ -24,18 +24,6 @@ namespace YokiFrame
         /// 调用堆栈 (Debug 模式下记录)
         /// </summary>
         public string StackTrace { get; set; }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// 持有时间（秒）
-        /// </summary>
-        public float Duration => Time.realtimeSinceStartup - SpawnTime;
-#else
-        /// <summary>
-        /// 持有时间（秒）- 非编辑器模式返回 0
-        /// </summary>
-        public float Duration => 0f;
-#endif
     }
 
     /// <summary>
@@ -69,6 +57,11 @@ namespace YokiFrame
         public int PeakCount { get; set; }
         
         /// <summary>
+        /// 最大缓存容量（池的容量上限，-1 表示无限制）
+        /// </summary>
+        public int MaxCacheCount { get; set; } = -1;
+        
+        /// <summary>
         /// 活跃对象列表
         /// </summary>
         public List<ActiveObjectInfo> ActiveObjects { get; } = new();
@@ -79,12 +72,12 @@ namespace YokiFrame
         public object PoolRef { get; set; }
 
         /// <summary>
-        /// 待机中数量
+        /// 待机中数量（池内可用对象）
         /// </summary>
         public int InactiveCount => TotalCount - ActiveCount;
 
         /// <summary>
-        /// 使用率 (0-1)
+        /// 使用率 (0-1)，基于活跃对象数 / 总对象数
         /// </summary>
         public float UsageRate => TotalCount > 0 ? (float)ActiveCount / TotalCount : 0f;
 

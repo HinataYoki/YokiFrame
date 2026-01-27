@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 using YokiFrame;
 
@@ -72,6 +73,10 @@ namespace YokiFrame.EditorTools
             toolbar.Add(helpLabel);
 
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
+
+            // 颜色图例
+            var legend = CreateColorLegend();
+            toolbar.Add(legend);
 
             // 追踪开关
             var trackingToggle = CreateToolbarToggle("追踪", PoolDebugger.EnableTracking, value =>
@@ -198,9 +203,6 @@ namespace YokiFrame.EditorTools
 
         public override void OnDeactivate()
         {
-            // 停止时间更新调度器
-            StopDurationUpdateScheduler();
-
             // 清理 ViewModel
             mViewModel?.Dispose();
             mViewModel = null;
@@ -236,7 +238,16 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void OnPoolListChanged(PoolDebugInfo info)
         {
-            mRefreshThrottle.Execute(RefreshPoolList);
+            mRefreshThrottle.Execute(() =>
+            {
+                RefreshPoolList();
+                
+                // 如果有选中的池，同时刷新右侧详情
+                if (mSelectedPool != default)
+                {
+                    UpdateRightPanel();
+                }
+            });
         }
 
         /// <summary>
@@ -244,15 +255,18 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void OnPoolActiveChanged(PoolDebugInfo info)
         {
-            // 仅当变化的池是当前选中的池时才刷新
-            if (mSelectedPool != null && info != null && mSelectedPool.Name == info.Name)
+            // 刷新池列表（更新左侧数字显示）
+            mRefreshThrottle.Execute(() =>
             {
-                mRefreshThrottle.Execute(() =>
+                RefreshPoolList();
+                
+                // 如果变化的池是当前选中的池，同时刷新右侧详情
+                if (mSelectedPool != default && info != default && mSelectedPool.Name == info.Name)
                 {
                     UpdateHudSection();
                     UpdateActiveObjectsList();
-                });
-            }
+                }
+            });
         }
 
         /// <summary>
@@ -340,6 +354,84 @@ namespace YokiFrame.EditorTools
             mFilteredEvents.Clear();
             mEventLogListView?.RefreshItems();
         }
+
+        #region 工具方法
+
+        /// <summary>
+        /// 创建颜色图例
+        /// </summary>
+        private VisualElement CreateColorLegend()
+        {
+            var legend = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = Align.Center,
+                    marginRight = 12
+                }
+            };
+
+            // 健康（蓝色）
+            legend.Add(CreateLegendItem("健康", new Color(0.13f, 0.59f, 0.95f), "使用率 < 50%"));
+            
+            // 正常（灰色）
+            legend.Add(CreateLegendItem("正常", new Color(0.71f, 0.73f, 0.76f), "使用率 50%-80%"));
+            
+            // 繁忙（橙色）
+            legend.Add(CreateLegendItem("繁忙", new Color(1f, 0.60f, 0f), "使用率 > 80%"));
+
+            return legend;
+        }
+
+        /// <summary>
+        /// 创建单个图例项
+        /// </summary>
+        private VisualElement CreateLegendItem(string label, Color color, string tooltip)
+        {
+            var item = new VisualElement
+            {
+                tooltip = tooltip,
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = Align.Center,
+                    marginLeft = 8
+                }
+            };
+
+            // 颜色指示器
+            var indicator = new VisualElement
+            {
+                style =
+                {
+                    width = 8,
+                    height = 8,
+                    backgroundColor = new StyleColor(color),
+                    borderTopLeftRadius = 4,
+                    borderTopRightRadius = 4,
+                    borderBottomLeftRadius = 4,
+                    borderBottomRightRadius = 4,
+                    marginRight = 4
+                }
+            };
+            item.Add(indicator);
+
+            // 文字标签
+            var text = new Label(label)
+            {
+                style =
+                {
+                    fontSize = 11,
+                    color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary)
+                }
+            };
+            item.Add(text);
+
+            return item;
+        }
+
+        #endregion
     }
 }
 #endif

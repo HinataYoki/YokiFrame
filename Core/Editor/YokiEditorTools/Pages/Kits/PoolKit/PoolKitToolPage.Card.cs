@@ -89,17 +89,7 @@ namespace YokiFrame.EditorTools
             };
             header.Add(infoArea);
 
-            // 第一行：对象名 + 持续时间
-            var row1 = new VisualElement
-            {
-                style =
-                {
-                    flexDirection = FlexDirection.Row,
-                    alignItems = Align.Center
-                }
-            };
-            infoArea.Add(row1);
-
+            // 对象名
             var objName = GetObjectDisplayName(info.Obj);
             var nameLabel = new Label(objName)
             {
@@ -107,27 +97,13 @@ namespace YokiFrame.EditorTools
                 {
                     fontSize = 12,
                     color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary),
-                    flexGrow = 1,
                     overflow = Overflow.Hidden,
                     textOverflow = TextOverflow.Ellipsis
                 }
             };
-            row1.Add(nameLabel);
+            infoArea.Add(nameLabel);
 
-            var duration = Time.realtimeSinceStartup - info.SpawnTime;
-            var durationLabel = new Label($"{duration:F1}s")
-            {
-                name = "duration",
-                style =
-                {
-                    fontSize = 10,
-                    marginLeft = 8
-                }
-            };
-            ApplyDurationColor(durationLabel, duration);
-            row1.Add(durationLabel);
-
-            // 第二行：调用来源
+            // 调用来源
             var source = YokiFrameUIComponents.ParseStackTraceSource(
                 info.StackTrace, "PoolDebugger", "PoolKit", "SafePoolKit", "SimplePoolKit");
             var sourceLabel = new Label(source)
@@ -149,7 +125,13 @@ namespace YokiFrame.EditorTools
 
             header.RegisterCallback<ClickEvent>(evt =>
             {
-                if (evt.target is Button) return;
+                // 检查点击目标或其父级是否为按钮
+                var target = evt.target as VisualElement;
+                while (target != default && target != header)
+                {
+                    if (target is Button) return;
+                    target = target.parent;
+                }
                 ToggleCardExpansion(header.parent, cardId);
             });
 
@@ -171,14 +153,6 @@ namespace YokiFrame.EditorTools
             var gotoBtn = CreateActionButton(KitIcons.CODE, "代码", () => OnGotoSourceCode(info));
             gotoBtn.tooltip = "跳转到借出代码位置";
             buttonArea.Add(gotoBtn);
-
-            var pingBtn = CreateActionButton(KitIcons.LOCATION, "定位", () => OnPingObject(info));
-            pingBtn.tooltip = "在 Hierarchy 中定位对象";
-            buttonArea.Add(pingBtn);
-
-            var returnBtn = CreateActionButton(KitIcons.RESET, "归还", () => OnReturnObject(info), true);
-            returnBtn.tooltip = "强制归还到池";
-            buttonArea.Add(returnBtn);
 
             return buttonArea;
         }
@@ -245,16 +219,6 @@ namespace YokiFrame.EditorTools
             });
 
             return btn;
-        }
-
-        private static void ApplyDurationColor(Label label, float duration)
-        {
-            if (duration >= DANGER_THRESHOLD)
-                label.style.color = new StyleColor(YokiFrameUIComponents.Colors.BrandDanger);
-            else if (duration >= WARNING_THRESHOLD)
-                label.style.color = new StyleColor(YokiFrameUIComponents.Colors.BrandWarning);
-            else
-                label.style.color = new StyleColor(YokiFrameUIComponents.Colors.TextSecondary);
         }
 
         #endregion

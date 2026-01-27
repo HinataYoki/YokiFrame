@@ -38,16 +38,6 @@ namespace YokiFrame.EditorTools
         #region 过滤状态
 
         /// <summary>
-        /// 是否仅显示泄露对象
-        /// </summary>
-        public ReactiveProperty<bool> ShowLeaksOnly { get; } = new(false);
-
-        /// <summary>
-        /// 是否按时长排序
-        /// </summary>
-        public ReactiveProperty<bool> SortByDuration { get; } = new(false);
-
-        /// <summary>
         /// 事件类型过滤（null = 全部）
         /// </summary>
         public ReactiveProperty<PoolEventType?> EventFilter { get; } = new();
@@ -163,25 +153,9 @@ namespace YokiFrame.EditorTools
         {
             mTempActiveObjects.Clear();
 
-            var now = Time.realtimeSinceStartup;
             for (int i = 0; i < pool.ActiveObjects.Count; i++)
             {
-                var obj = pool.ActiveObjects[i];
-                
-                // 泄露过滤
-                if (ShowLeaksOnly.Value)
-                {
-                    var duration = now - obj.SpawnTime;
-                    if (duration < PoolDebugger.LEAK_THRESHOLD_SECONDS) continue;
-                }
-                
-                mTempActiveObjects.Add(obj);
-            }
-
-            // 按时长排序
-            if (SortByDuration.Value)
-            {
-                mTempActiveObjects.Sort(static (a, b) => a.SpawnTime.CompareTo(b.SpawnTime));
+                mTempActiveObjects.Add(pool.ActiveObjects[i]);
             }
 
             // 检查是否有变化
@@ -243,32 +217,6 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 切换泄露过滤
-        /// </summary>
-        public void ToggleLeaksOnly()
-        {
-            if (mIsDisposed) return;
-            ShowLeaksOnly.Value = !ShowLeaksOnly.Value;
-            if (SelectedPool.Value != null)
-            {
-                RefreshActiveObjects(SelectedPool.Value);
-            }
-        }
-
-        /// <summary>
-        /// 切换时长排序
-        /// </summary>
-        public void ToggleSortByDuration()
-        {
-            if (mIsDisposed) return;
-            SortByDuration.Value = !SortByDuration.Value;
-            if (SelectedPool.Value != null)
-            {
-                RefreshActiveObjects(SelectedPool.Value);
-            }
-        }
-
-        /// <summary>
         /// 设置事件过滤
         /// </summary>
         public void SetEventFilter(PoolEventType? filter)
@@ -291,21 +239,6 @@ namespace YokiFrame.EditorTools
             EventLogs.Clear();
         }
 
-        /// <summary>
-        /// 强制归还对象
-        /// </summary>
-        public bool ForceReturnObject(ActiveObjectInfo info)
-        {
-            if (mIsDisposed || SelectedPool.Value == null || info.Obj == null) return false;
-
-            var success = PoolDebugger.ForceReturn(SelectedPool.Value.PoolRef, info.Obj);
-            if (success)
-            {
-                RefreshSelectedPoolDetails();
-            }
-            return success;
-        }
-
         #endregion
 
         #region IDisposable
@@ -319,8 +252,6 @@ namespace YokiFrame.EditorTools
             SelectedPool.Dispose();
             ActiveObjects.Dispose();
             EventLogs.Dispose();
-            ShowLeaksOnly.Dispose();
-            SortByDuration.Dispose();
             EventFilter.Dispose();
             TotalCount.Dispose();
             ActiveCount.Dispose();

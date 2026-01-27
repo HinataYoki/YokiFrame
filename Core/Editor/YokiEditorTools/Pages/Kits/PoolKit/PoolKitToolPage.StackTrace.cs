@@ -21,6 +21,11 @@ namespace YokiFrame.EditorTools
             @"^(.+?)\s*\(.*?\)\s*\(at\s+(.+?):(\d+)\)$",
             RegexOptions.Compiled);
         
+        // Mono 堆栈格式: "ClassName.Method () [0x00000] in path/file.cs:123"
+        private static readonly Regex sStackFrameRegexMono = new(
+            @"^(.+?)\s*\(.*?\)\s*\[0x[0-9a-fA-F]+\]\s*in\s+(.+?):(\d+)$",
+            RegexOptions.Compiled);
+        
         // 备用格式: "at ClassName.Method() in path/file.cs:line 123"
         private static readonly Regex sStackFrameRegexAlt = new(
             @"^\s*(?:at\s+)?(.+?)\s*(?:\(.*?\))?\s*(?:in\s+(.+?):line\s+(\d+))?$",
@@ -72,6 +77,19 @@ namespace YokiFrame.EditorTools
                 frame.MethodName = match.Groups[1].Value;
                 frame.FilePath = match.Groups[2].Value;
                 if (int.TryParse(match.Groups[3].Value, out var lineNum))
+                {
+                    frame.LineNumber = lineNum;
+                }
+                return frame;
+            }
+
+            // 尝试 Mono 格式: "ClassName.Method () [0x00000] in path/file.cs:123"
+            var matchMono = sStackFrameRegexMono.Match(trimmed);
+            if (matchMono.Success && matchMono.Groups[2].Success)
+            {
+                frame.MethodName = matchMono.Groups[1].Value;
+                frame.FilePath = matchMono.Groups[2].Value;
+                if (int.TryParse(matchMono.Groups[3].Value, out var lineNum))
                 {
                     frame.LineNumber = lineNum;
                 }
@@ -145,15 +163,6 @@ namespace YokiFrame.EditorTools
             }
         }
 
-        private void OnPingObject(ActiveObjectInfo info)
-        {
-            if (info.Obj is UnityEngine.Object unityObj && unityObj != default)
-            {
-                EditorGUIUtility.PingObject(unityObj);
-                Selection.activeObject = unityObj;
-            }
-        }
-
         /// <summary>
         /// 跳转到借出代码位置
         /// </summary>
@@ -161,15 +170,17 @@ namespace YokiFrame.EditorTools
         {
             if (string.IsNullOrEmpty(info.StackTrace))
             {
-                Debug.LogWarning("[PoolKit] 无堆栈信息，请启用堆栈追踪");
+                Debug.LogWarning("[PoolKit] 无堆栈信息，请在工具栏启用「堆栈」开关");
                 return;
             }
 
             // 解析堆栈找到第一个有效的代码位置
             var frames = ParseStackFrames(info.StackTrace);
+            
             for (int i = 0; i < frames.Count; i++)
             {
                 var frame = frames[i];
+                
                 if (!string.IsNullOrEmpty(frame.FilePath) && frame.LineNumber > 0)
                 {
                     OpenFileAtLine(frame.FilePath, frame.LineNumber);
@@ -177,19 +188,7 @@ namespace YokiFrame.EditorTools
                 }
             }
 
-            Debug.LogWarning("[PoolKit] 未找到有效的代码位置");
-        }
-
-        private void OnReturnObject(ActiveObjectInfo info)
-        {
-            if (mSelectedPool == default || info.Obj == default) return;
-
-            var success = PoolDebugger.ForceReturn(mSelectedPool.PoolRef, info.Obj);
-            if (success)
-            {
-                UpdateActiveObjectsList();
-                UpdateEventLogList();
-            }
+            Debug.LogWarning("[PoolKit] 未找到有效的代码位置，堆栈可能不包含项目代码");
         }
 
         private void OpenFileAtLine(string filePath, int lineNumber)
