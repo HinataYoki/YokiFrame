@@ -14,6 +14,11 @@ namespace YokiFrame
 
         private static readonly SimplePoolKit<Lerp> mPool = new(() => new Lerp());
 
+        static Lerp()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Lerp>();
+        }
+
         public static Lerp Allocate(float a, float b, float duration, Action<float> onLerp = null, Action onLerpFinish = null)
         {
             var retNode = mPool.Allocate();
@@ -67,7 +72,7 @@ namespace YokiFrame
                 OnLerp = null;
                 OnLerpFinish = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Lerp>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Lerp>(mPool, this));
             }
         }
 

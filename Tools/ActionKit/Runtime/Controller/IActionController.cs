@@ -30,6 +30,10 @@ namespace YokiFrame
         /// 暂停任务
         /// </summary>
         bool Paused { get; set; }
+        /// <summary>
+        /// 是否已取消
+        /// </summary>
+        bool IsCancelled { get; }
 
         /// <summary>
         /// 任务开始
@@ -39,6 +43,10 @@ namespace YokiFrame
         /// 任务结束
         /// </summary>
         void OnEnd();
+        /// <summary>
+        /// 取消任务（提前终止）
+        /// </summary>
+        void Cancel();
         /// <summary>
         /// 回收
         /// </summary>

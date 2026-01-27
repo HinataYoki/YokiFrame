@@ -12,6 +12,14 @@ namespace YokiFrame
     {
         internal static ulong ID_GENERATOR = 0;
 
+        /// <summary>
+        /// 静态构造函数 - 自动注册到 PlayerLoop
+        /// </summary>
+        static ActionKit()
+        {
+            ActionKitPlayerLoopSystem.Initialize();
+        }
+
         public static ISequence Sequence()
         {
             return YokiFrame.Sequence.Allocate();

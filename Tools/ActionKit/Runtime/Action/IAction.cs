@@ -109,7 +109,10 @@ namespace YokiFrame
 
     public static class IActionExtensions
     {
-        public static IActionController Start(this IAction self, MonoBehaviour monoBehaviour, Action<IActionController> onFinish = null)
+        /// <summary>
+        /// 启动 Action（自动注册到 PlayerLoop）
+        /// </summary>
+        public static IActionController Start(this IAction self, Action<IActionController> onFinish = null)
         {
             var controller = ActionController.Allocate();
             controller.CurExcuteActionID = self.ActionID;
@@ -118,12 +121,15 @@ namespace YokiFrame
             controller.Finish = onFinish;
             
 #if UNITY_EDITOR
-            // 捕获调用堆栈（跳过当前方法和 Unity 内部调用）
-            var stackTrace = new System.Diagnostics.StackTrace(1, true);
-            ActionStackTraceService.Register(self.ActionID, stackTrace);
+            // 仅在启用追踪时捕获堆栈（避免性能开销）
+            if (ActionStackTraceService.Enabled)
+            {
+                var stackTrace = new System.Diagnostics.StackTrace(1, true);
+                ActionStackTraceService.Register(self.ActionID, stackTrace);
+            }
 #endif
             
-            monoBehaviour.ExecuteByUpdate(controller);
+            ActionKitPlayerLoopSystem.Execute(controller);
             return controller;
         }
 

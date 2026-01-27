@@ -9,6 +9,11 @@ namespace YokiFrame
         private Task mExecutingTask;
         private static readonly SimplePoolKit<TaskAction> mPool = new(() => new TaskAction());
 
+        static TaskAction()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<TaskAction>();
+        }
+
         public static TaskAction Allocate(Func<Task> taskGetter)
         {
             var taskAction = mPool.Allocate();
@@ -47,7 +52,7 @@ namespace YokiFrame
                 mTaskGetter = null;
                 mExecutingTask = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<TaskAction>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<TaskAction>(mPool, this));
             }
         }
 

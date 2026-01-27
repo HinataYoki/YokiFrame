@@ -20,6 +20,14 @@ namespace YokiFrame
         /// 延迟任务池
         /// </summary>
         private static readonly SimplePoolKit<Delay> mPool = new(() => new Delay());
+        
+        /// <summary>
+        /// 静态构造函数 - 注册回收处理器
+        /// </summary>
+        static Delay()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Delay>();
+        }
 
         public static Delay Allocate(float delayTime, Action onDelayFinish = null)
         {
@@ -57,7 +65,7 @@ namespace YokiFrame
             {
                 OnDelayFinish = null;
                 Deinited = true;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Delay>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Delay>(mPool, this));
             }
         }
 

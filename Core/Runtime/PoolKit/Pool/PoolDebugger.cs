@@ -33,20 +33,27 @@ namespace YokiFrame
 
         #endregion
 
+        #region 反射缓存（避免重复查找）
+
+        private static System.Reflection.MethodInfo sCachedNotifyMethodDefinition;
+        private static readonly Dictionary<Type, System.Reflection.MethodInfo> sCachedGenericMethods = new();
+        private static bool sReflectionInitialized;
+        
+        // 参数数组缓存（避免每次分配）
+        private static readonly object[] sInvokeParams = new object[2];
+
         /// <summary>
-        /// 通知编辑器数据变化（通过反射调用 EditorDataBridge）
-        /// 避免运行时程序集直接引用编辑器程序集
+        /// 初始化反射缓存（仅执行一次）
         /// </summary>
-        [Conditional("UNITY_EDITOR")]
-        private static void NotifyEditorDataChanged<T>(string channel, T data)
+        private static void InitializeReflectionCache()
         {
+            if (sReflectionInitialized) return;
+            sReflectionInitialized = true;
+
             var bridgeType = Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
             if (bridgeType == null) return;
 
-            // 获取泛型方法：NotifyDataChanged<T>(string, T)
-            // 使用 GetMethods 遍历避免 AmbiguousMatchException
             var methods = bridgeType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            System.Reflection.MethodInfo targetMethod = null;
             for (int i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
@@ -54,15 +61,58 @@ namespace YokiFrame
                 var parameters = m.GetParameters();
                 if (parameters.Length == 2 && parameters[0].ParameterType == typeof(string))
                 {
-                    targetMethod = m;
+                    sCachedNotifyMethodDefinition = m;
                     break;
                 }
             }
+        }
 
-            if (targetMethod == null) return;
+        /// <summary>
+        /// 获取缓存的泛型方法实例
+        /// </summary>
+        private static System.Reflection.MethodInfo GetCachedGenericMethod(Type dataType)
+        {
+            if (sCachedGenericMethods.TryGetValue(dataType, out var method))
+            {
+                return method;
+            }
 
-            var genericMethod = targetMethod.MakeGenericMethod(typeof(T));
-            genericMethod.Invoke(null, new object[] { channel, data });
+            if (sCachedNotifyMethodDefinition == null) return null;
+
+            var genericMethod = sCachedNotifyMethodDefinition.MakeGenericMethod(dataType);
+            sCachedGenericMethods[dataType] = genericMethod;
+            return genericMethod;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 通知编辑器数据变化（通过反射调用 EditorDataBridge）
+        /// 避免运行时程序集直接引用编辑器程序集
+        /// </summary>
+        [Conditional("UNITY_EDITOR")]
+        private static void NotifyEditorDataChanged<T>(string channel, T data)
+        {
+            if (!EnableTracking) return;
+
+            InitializeReflectionCache();
+            var genericMethod = GetCachedGenericMethod(typeof(T));
+            if (genericMethod == null) return;
+
+            try
+            {
+                // 复用参数数组，避免每次分配
+                sInvokeParams[0] = channel;
+                sInvokeParams[1] = data;
+                genericMethod.Invoke(null, sInvokeParams);
+                // 清空引用，避免持有对象
+                sInvokeParams[0] = null;
+                sInvokeParams[1] = null;
+            }
+            catch
+            {
+                // 静默失败，避免影响运行时性能
+            }
         }
 
         /// <summary>
@@ -108,7 +158,7 @@ namespace YokiFrame
         /// <param name="maxCacheCount">最大缓存容量（-1 表示无限制）</param>
         public static void RegisterPool(object pool, string name, int maxCacheCount = -1)
         {
-            if (pool == default || !EnableTracking) return;
+            if (pool == default) return;
 
             if (sPools.ContainsKey(pool)) return;
 
@@ -121,7 +171,10 @@ namespace YokiFrame
             };
             sPools[pool] = info;
 
-            NotifyEditorDataChanged(CHANNEL_POOL_LIST_CHANGED, info);
+            if (EnableTracking)
+            {
+                NotifyEditorDataChanged(CHANNEL_POOL_LIST_CHANGED, info);
+            }
         }
 
         /// <summary>
@@ -154,6 +207,19 @@ namespace YokiFrame
             if (pool == default || obj == default || !EnableTracking) return;
 
             if (!sPools.TryGetValue(pool, out var info)) return;
+
+            // 检查对象是否已经在活跃列表中（避免重复添加）
+            var objHash = obj.GetHashCode();
+            for (int i = 0; i < info.ActiveObjects.Count; i++)
+            {
+                var storedObj = info.ActiveObjects[i].Obj;
+                if (ReferenceEquals(storedObj, obj) || 
+                    (storedObj.GetHashCode() == objHash && Equals(storedObj, obj)))
+                {
+                    UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackAllocate 检测到重复: Pool={info.Name}, HashCode={objHash}, 已存在于索引 {i}");
+                    return; // 已存在，不重复添加
+                }
+            }
 
             var stackTrace = EnableStackTrace ? Environment.StackTrace : string.Empty;
             var activeInfo = new ActiveObjectInfo
@@ -189,13 +255,26 @@ namespace YokiFrame
 
             if (!sPools.TryGetValue(pool, out var info)) return;
 
+            var found = false;
+            var objHash = obj.GetHashCode();
+            
             for (int i = info.ActiveObjects.Count - 1; i >= 0; i--)
             {
-                if (ReferenceEquals(info.ActiveObjects[i].Obj, obj))
+                var storedObj = info.ActiveObjects[i].Obj;
+                
+                // 优先使用 ReferenceEquals，如果失败则使用 Equals 和 HashCode
+                if (ReferenceEquals(storedObj, obj) || 
+                    (storedObj.GetHashCode() == objHash && Equals(storedObj, obj)))
                 {
                     info.ActiveObjects.RemoveAt(i);
+                    found = true;
                     break;
                 }
+            }
+
+            if (!found)
+            {
+                UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackRecycle 未找到匹配: Pool={info.Name}, HashCode={objHash}, ActiveCount={info.ActiveObjects.Count}");
             }
 
             info.ActiveCount = info.ActiveObjects.Count;

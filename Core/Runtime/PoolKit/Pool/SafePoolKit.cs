@@ -86,8 +86,11 @@ namespace YokiFrame
             var result = base.Allocate();
             result.IsRecycled = false;
 #if UNITY_EDITOR
-            PoolDebugger.TrackAllocate(this, result);
-            UpdateDebuggerTotalCount();
+            if (PoolDebugger.EnableTracking)
+            {
+                PoolDebugger.TrackAllocate(this, result);
+                UpdateDebuggerTotalCount();
+            }
 #endif
             return result;
         }
@@ -100,7 +103,10 @@ namespace YokiFrame
             }
             
 #if UNITY_EDITOR
-            PoolDebugger.TrackRecycle(this, obj);
+            if (PoolDebugger.EnableTracking)
+            {
+                PoolDebugger.TrackRecycle(this, obj);
+            }
 #endif
             
             // 最大空间足够才入栈
@@ -108,7 +114,10 @@ namespace YokiFrame
             {
                 obj.OnRecycled();
 #if UNITY_EDITOR
-                UpdateDebuggerTotalCount();
+                if (PoolDebugger.EnableTracking)
+                {
+                    UpdateDebuggerTotalCount();
+                }
 #endif
                 return false;
             }
@@ -118,7 +127,10 @@ namespace YokiFrame
                 obj.OnRecycled();
                 mCacheStack.Push(obj);
 #if UNITY_EDITOR
-                UpdateDebuggerTotalCount();
+                if (PoolDebugger.EnableTracking)
+                {
+                    UpdateDebuggerTotalCount();
+                }
 #endif
                 return true;
             }

@@ -144,13 +144,16 @@ namespace YokiFrame.EditorTools
 
         #region 生命周期
 
-        [System.Obsolete("响应式模式下不再需要轮询")]
-        public override void OnUpdate()
+        public override void OnActivate()
         {
-            // 响应式模式下不再需要轮询
+            base.OnActivate();
+            
+            // 重新设置响应式订阅（页面切换时需要重新绑定）
+            SetupReactiveSubscriptions();
+            
+            // 强制刷新数据（修复页面切换后不更新的问题）
+            RefreshData();
         }
-
-        public override void OnActivate() => base.OnActivate();
 
         public override void OnDeactivate() => base.OnDeactivate();
 

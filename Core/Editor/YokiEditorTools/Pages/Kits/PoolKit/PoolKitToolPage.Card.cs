@@ -16,6 +16,7 @@ namespace YokiFrame.EditorTools
         private const float CARD_HEADER_HEIGHT = 42f;
         private const float ACTION_BUTTON_WIDTH = 56f;
         private const float ACTION_BUTTON_HEIGHT = 24f;
+        private const float LONG_USAGE_WARNING_THRESHOLD = 60f; // 60 秒未回收视为长时间占用
 
         #endregion
 
@@ -25,6 +26,10 @@ namespace YokiFrame.EditorTools
         {
             var cardId = info.GetHashCode();
             var isExpanded = mExpandedCards.Contains(cardId);
+            
+            // 计算使用时长
+            var usageDuration = Time.realtimeSinceStartup - info.SpawnTime;
+            var isLongUsage = usageDuration > LONG_USAGE_WARNING_THRESHOLD;
 
             var card = new VisualElement { name = $"card-{index}", userData = info };
             card.style.marginLeft = card.style.marginRight = 6;
@@ -34,11 +39,15 @@ namespace YokiFrame.EditorTools
                 card.style.borderBottomLeftRadius = card.style.borderBottomRightRadius = 6;
             card.style.borderLeftWidth = card.style.borderRightWidth =
                 card.style.borderTopWidth = card.style.borderBottomWidth = 1;
+            
+            // 长时间占用时使用警告色边框
+            var borderColor = isLongUsage 
+                ? YokiFrameUIComponents.Colors.BrandWarning 
+                : YokiFrameUIComponents.Colors.BorderDefault;
             card.style.borderLeftColor = card.style.borderRightColor =
-                card.style.borderTopColor = card.style.borderBottomColor =
-                    new StyleColor(YokiFrameUIComponents.Colors.BorderDefault);
+                card.style.borderTopColor = card.style.borderBottomColor = new StyleColor(borderColor);
 
-            var header = CreateCardHeader(info, cardId, isExpanded);
+            var header = CreateCardHeader(info, cardId, isExpanded, usageDuration, isLongUsage);
             card.Add(header);
 
             var stackContent = CreateStackContent(info);
@@ -49,10 +58,11 @@ namespace YokiFrame.EditorTools
             return card;
         }
 
-        private VisualElement CreateCardHeader(ActiveObjectInfo info, int cardId, bool isExpanded)
+        private VisualElement CreateCardHeader(ActiveObjectInfo info, int cardId, bool isExpanded, float usageDuration, bool isLongUsage)
         {
             var header = new VisualElement
             {
+                name = "card-header", // 添加 name 以便后续查找
                 style =
                 {
                     flexDirection = FlexDirection.Row,
@@ -103,6 +113,18 @@ namespace YokiFrame.EditorTools
             };
             infoArea.Add(nameLabel);
 
+            // 第二行：调用来源 + 使用时长
+            var secondRow = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = Align.Center,
+                    marginTop = 2
+                }
+            };
+            infoArea.Add(secondRow);
+
             // 调用来源
             var source = YokiFrameUIComponents.ParseStackTraceSource(
                 info.StackTrace, "PoolDebugger", "PoolKit", "SafePoolKit", "SimplePoolKit");
@@ -112,12 +134,34 @@ namespace YokiFrame.EditorTools
                 {
                     fontSize = 10,
                     color = new StyleColor(new Color(1f, 0.76f, 0.03f)),
-                    marginTop = 2,
                     overflow = Overflow.Hidden,
-                    textOverflow = TextOverflow.Ellipsis
+                    textOverflow = TextOverflow.Ellipsis,
+                    flexShrink = 1
                 }
             };
-            infoArea.Add(sourceLabel);
+            secondRow.Add(sourceLabel);
+
+            // 使用时长标签
+            var durationText = FormatDuration(usageDuration);
+            var durationColor = isLongUsage 
+                ? YokiFrameUIComponents.Colors.BrandWarning 
+                : YokiFrameUIComponents.Colors.TextTertiary;
+            
+            var durationLabel = new Label($" | {durationText}")
+            {
+                name = "duration-label", // 添加 name 以便后续更新
+                style =
+                {
+                    fontSize = 10,
+                    color = new StyleColor(durationColor),
+                    marginLeft = 4,
+                    flexShrink = 0
+                }
+            };
+            durationLabel.tooltip = isLongUsage 
+                ? $"警告：对象已使用 {durationText}，可能存在泄漏" 
+                : $"使用时长：{durationText}";
+            secondRow.Add(durationLabel);
 
             // 右侧操作按钮区域
             var buttonArea = CreateCardButtonArea(info);
@@ -219,6 +263,18 @@ namespace YokiFrame.EditorTools
             });
 
             return btn;
+        }
+
+        /// <summary>
+        /// 格式化时长显示
+        /// </summary>
+        private static string FormatDuration(float seconds)
+        {
+            if (seconds < 60f)
+                return $"{seconds:F1}s";
+            if (seconds < 3600f)
+                return $"{(int)(seconds / 60)}m {(int)(seconds % 60)}s";
+            return $"{(int)(seconds / 3600)}h {(int)((seconds % 3600) / 60)}m";
         }
 
         #endregion

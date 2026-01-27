@@ -57,6 +57,10 @@ namespace YokiFrame.EditorTools
 
         // 节流器
         private Throttle mRefreshThrottle;
+        
+        // 定时刷新
+        private double mLastAutoRefreshTime;
+        private const double AUTO_REFRESH_INTERVAL = 1.0; // 每秒刷新一次时长显示
 
         #endregion
 
@@ -172,21 +176,21 @@ namespace YokiFrame.EditorTools
             // 创建节流器
             mRefreshThrottle = CreateThrottle(THROTTLE_INTERVAL);
 
-            // 订阅运行时数据变化通道（带节流）
-            SubscribeChannelThrottled<PoolDebugInfo>(
-                PoolDebugger.CHANNEL_POOL_LIST_CHANGED,
-                OnPoolListChanged,
-                THROTTLE_INTERVAL);
+            // 订阅运行时数据变化通道
+            Subscriptions.Add(
+                EditorDataBridge.Subscribe<PoolDebugInfo>(
+                    PoolDebugger.CHANNEL_POOL_LIST_CHANGED,
+                    OnPoolListChanged));
 
-            SubscribeChannelThrottled<PoolDebugInfo>(
-                PoolDebugger.CHANNEL_POOL_ACTIVE_CHANGED,
-                OnPoolActiveChanged,
-                THROTTLE_INTERVAL);
+            Subscriptions.Add(
+                EditorDataBridge.Subscribe<PoolDebugInfo>(
+                    PoolDebugger.CHANNEL_POOL_ACTIVE_CHANGED,
+                    OnPoolActiveChanged));
 
-            SubscribeChannelThrottled<PoolEvent>(
-                PoolDebugger.CHANNEL_POOL_EVENT_LOGGED,
-                OnPoolEventLogged,
-                THROTTLE_INTERVAL);
+            Subscriptions.Add(
+                EditorDataBridge.Subscribe<PoolEvent>(
+                    PoolDebugger.CHANNEL_POOL_EVENT_LOGGED,
+                    OnPoolEventLogged));
 
             // 初始加载数据（页面激活时立即刷新）
             if (IsPlaying)
@@ -199,10 +203,24 @@ namespace YokiFrame.EditorTools
                     UpdateRightPanel();
                 }
             }
+            
+            // 强制重新绑定 ListView（修复页面切换后不更新的问题）
+            if (mPoolListView != default)
+            {
+                mPoolListView.itemsSource = mCachedPools;
+                mPoolListView.Rebuild();
+            }
+            
+            // 注册定时刷新（每秒更新时长显示）
+            EditorApplication.update += OnEditorUpdate;
+            mLastAutoRefreshTime = EditorApplication.timeSinceStartup;
         }
 
         public override void OnDeactivate()
         {
+            // 取消定时刷新
+            EditorApplication.update -= OnEditorUpdate;
+            
             // 清理 ViewModel
             mViewModel?.Dispose();
             mViewModel = null;
@@ -231,6 +249,27 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
+        #region 定时刷新
+
+        /// <summary>
+        /// 编辑器更新回调 - 用于定时刷新时长显示
+        /// </summary>
+        private void OnEditorUpdate()
+        {
+            if (!IsPlaying) return;
+            if (mSelectedPool == default) return;
+            
+            var currentTime = EditorApplication.timeSinceStartup;
+            if (currentTime - mLastAutoRefreshTime < AUTO_REFRESH_INTERVAL) return;
+            
+            mLastAutoRefreshTime = currentTime;
+            
+            // 仅刷新活跃对象列表的时长显示
+            UpdateActiveObjectsList();
+        }
+
+        #endregion
+
         #region 响应式事件处理
 
         /// <summary>
@@ -255,18 +294,14 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void OnPoolActiveChanged(PoolDebugInfo info)
         {
-            // 刷新池列表（更新左侧数字显示）
-            mRefreshThrottle.Execute(() =>
+            // 调试日志：验证事件接收
+            if (info != default)
             {
-                RefreshPoolList();
-                
-                // 如果变化的池是当前选中的池，同时刷新右侧详情
-                if (mSelectedPool != default && info != default && mSelectedPool.Name == info.Name)
-                {
-                    UpdateHudSection();
-                    UpdateActiveObjectsList();
-                }
-            });
+                UnityEngine.Debug.Log($"[PoolKitToolPage] OnPoolActiveChanged 接收: Pool={info.Name}, ActiveCount={info.ActiveCount}, ActiveObjects.Count={info.ActiveObjects.Count}");
+            }
+            
+            // 刷新池列表（更新左侧数字显示）
+            RefreshPoolList();
         }
 
         /// <summary>
@@ -296,6 +331,7 @@ namespace YokiFrame.EditorTools
             if (mSelectedPool != default)
             {
                 var selectedName = mSelectedPool.Name;
+                var oldSelectedPool = mSelectedPool;
                 mSelectedPool = default;
 
                 for (int i = 0; i < mCachedPools.Count; i++)
@@ -315,7 +351,8 @@ namespace YokiFrame.EditorTools
                 }
                 else
                 {
-                    // 更新右侧面板数据
+                    // 强制刷新右侧面板（即使引用相同，数据可能已变化）
+                    // 因为 PoolDebugInfo 是引用类型，其 ActiveCount/ActiveObjects 会被运行时更新
                     UpdateRightPanel();
                 }
             }
@@ -348,7 +385,8 @@ namespace YokiFrame.EditorTools
             UpdateHudSection();
 
             // 清空活跃对象列表
-            mActiveObjectsScrollView?.Clear();
+            mFilteredActiveObjects.Clear();
+            mActiveObjectsListView?.Rebuild();
 
             // 清空事件日志列表
             mFilteredEvents.Clear();

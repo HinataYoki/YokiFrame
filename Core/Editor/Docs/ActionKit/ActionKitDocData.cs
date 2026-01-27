@@ -20,7 +20,8 @@ namespace YokiFrame.EditorTools
                 ActionKitDocRepeat.CreateSection(),
                 ActionKitDocTask.CreateSection(),
                 ActionKitDocAsync.CreateSection(),
-                ActionKitDocController.CreateSection()
+                ActionKitDocController.CreateSection(),
+                ActionKitDocCancel.CreateSection()
             };
         }
     }

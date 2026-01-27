@@ -18,6 +18,11 @@ namespace YokiFrame
         /// </summary>
         private static readonly SimplePoolKit<Coroutine> mPool = new(() => new Coroutine());
 
+        static Coroutine()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Coroutine>();
+        }
+
         public static Coroutine Allocate(Func<IEnumerator> coroutineGetter)
         {
             var coroutine = mPool.Allocate();
@@ -36,7 +41,7 @@ namespace YokiFrame
         
         public override void OnStart()
         {
-            mRunningCoroutine = MonoGlobalExecutor.Instance.StartCoroutine(ExecuteCoroutine());
+            mRunningCoroutine = CoroutineRunner.StartCoroutineStatic(ExecuteCoroutine());
         }
 
         private IEnumerator ExecuteCoroutine()
@@ -52,14 +57,14 @@ namespace YokiFrame
                 Deinited = true;
                 
                 // 取消正在执行的协程
-                if (mRunningCoroutine != null && MonoGlobalExecutor.Instance != null)
+                if (mRunningCoroutine != null)
                 {
-                    MonoGlobalExecutor.Instance.StopCoroutine(mRunningCoroutine);
+                    CoroutineRunner.StopCoroutineStatic(mRunningCoroutine);
                     mRunningCoroutine = null;
                 }
                 
                 mCoroutineGetter = null;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Coroutine>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Coroutine>(mPool, this));
             }
         }
 

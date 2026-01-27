@@ -15,6 +15,11 @@ namespace YokiFrame
 
         private static readonly SimplePoolKit<Repeat> mPool = new(() => new Repeat());
 
+        static Repeat()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Repeat>();
+        }
+
         public static Repeat Allocate(int repeatCount = 0, Func<bool> condition = null)
         {
             var repeat = mPool.Allocate();
@@ -73,7 +78,7 @@ namespace YokiFrame
                 mMaxRepeatCount = 0;
                 mCondition = () => true;
                 mSequence.OnDeinit();
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Repeat>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Repeat>(mPool, this));
             }
         }
 

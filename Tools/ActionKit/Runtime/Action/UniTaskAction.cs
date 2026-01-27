@@ -15,6 +15,11 @@ namespace YokiFrame
         private CancellationTokenSource mCts;
         private static readonly SimplePoolKit<UniTaskAction> mPool = new(() => new UniTaskAction());
 
+        static UniTaskAction()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<UniTaskAction>();
+        }
+
         public static UniTaskAction Allocate(Func<CancellationToken, UniTask> taskGetter)
         {
             var action = mPool.Allocate();
@@ -66,7 +71,7 @@ namespace YokiFrame
                 mCts?.Dispose();
                 mCts = null;
                 mTaskGetter = null;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<UniTaskAction>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<UniTaskAction>(mPool, this));
             }
         }
 

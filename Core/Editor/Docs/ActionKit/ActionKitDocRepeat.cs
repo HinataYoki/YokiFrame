@@ -22,20 +22,23 @@ namespace YokiFrame.EditorTools
                         Code = @"// 重复指定次数
 ActionKit.Repeat(3)
     .Append(ActionKit.Delay(1f, () => Debug.Log(""重复执行"")))
-    .Start(this);
+    .Start();
 
-// 无限重复
-ActionKit.Repeat(-1)
+// 无限重复（需手动取消）
+var controller = ActionKit.Repeat(-1)
     .Append(ActionKit.Delay(0.5f, () => Debug.Log(""每0.5秒执行"")))
-    .Start(this);
+    .Start();
+
+// 稍后取消
+ActionKit.Delay(5f, () => controller.Cancel()).Start();
 
 // 条件重复
 int count = 0;
 ActionKit.Repeat(condition: () => count < 5)
     .Append(ActionKit.Callback(() => count++))
     .Append(ActionKit.Delay(0.5f, null))
-    .Start(this);",
-                        Explanation = "Repeat(-1) 表示无限重复，直到手动停止。"
+    .Start();",
+                        Explanation = "Repeat(-1) 表示无限重复，需通过 Cancel() 手动终止。"
                     }
                 }
             };

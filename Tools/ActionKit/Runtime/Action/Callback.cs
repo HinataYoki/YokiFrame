@@ -13,6 +13,11 @@ namespace YokiFrame
         /// </summary>
         private static readonly SimplePoolKit<Callback> mPool = new(() => new Callback());
 
+        static Callback()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Callback>();
+        }
+
         public static Callback Allocate(Action callback)
         {
             var callbackAction = mPool.Allocate();
@@ -36,7 +41,7 @@ namespace YokiFrame
                 Deinited = true;
                 mCallback = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Callback>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Callback>(mPool, this));
             }
         }
 

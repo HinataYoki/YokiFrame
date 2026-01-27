@@ -31,10 +31,14 @@ namespace YokiFrame
         {
             var result = base.Allocate();
 #if UNITY_EDITOR
-            PoolDebugger.TrackAllocate(this, result);
-            // TotalCount = 池内对象数 + 借出对象数
-            var activeCount = PoolDebugger.GetActiveCount(this);
-            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
+            if (PoolDebugger.EnableTracking)
+            {
+                UnityEngine.Debug.Log($"[SimplePoolKit] Allocate: Type={typeof(T).Name}, HashCode={result?.GetHashCode()}, PoolCount={mCacheStack.Count}");
+                PoolDebugger.TrackAllocate(this, result);
+                var activeCount = PoolDebugger.GetActiveCount(this);
+                PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
+                UnityEngine.Debug.Log($"[SimplePoolKit] Allocate 完成: ActiveCount={activeCount}, PoolCount={mCacheStack.Count}");
+            }
 #endif
             return result;
         }
@@ -42,14 +46,21 @@ namespace YokiFrame
         public override bool Recycle(T obj)
         {
 #if UNITY_EDITOR
-            PoolDebugger.TrackRecycle(this, obj);
+            if (PoolDebugger.EnableTracking)
+            {
+                UnityEngine.Debug.Log($"[SimplePoolKit] Recycle 调用: Type={typeof(T).Name}, Obj={obj?.GetType().Name}, HashCode={obj?.GetHashCode()}");
+                PoolDebugger.TrackRecycle(this, obj);
+            }
 #endif
             mResetMethod?.Invoke(obj);
             mCacheStack.Push(obj);
 #if UNITY_EDITOR
-            // TotalCount = 池内对象数 + 借出对象数
-            var activeCount = PoolDebugger.GetActiveCount(this);
-            PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
+            if (PoolDebugger.EnableTracking)
+            {
+                var activeCount = PoolDebugger.GetActiveCount(this);
+                PoolDebugger.UpdateTotalCount(this, mCacheStack.Count + activeCount);
+                UnityEngine.Debug.Log($"[SimplePoolKit] Recycle 完成: ActiveCount={activeCount}, PoolCount={mCacheStack.Count}");
+            }
 #endif
             return true;
         }

@@ -13,6 +13,11 @@ namespace YokiFrame
         /// </summary>
         private static readonly SimplePoolKit<Condition> mPool = new(() => new Condition());
 
+        static Condition()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Condition>();
+        }
+
         public static Condition Allocate(Func<bool> callback)
         {
             var condition = mPool.Allocate();
@@ -46,7 +51,7 @@ namespace YokiFrame
                 Deinited = true;
                 mCondition = null;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Condition>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Condition>(mPool, this));
             }
         }
 

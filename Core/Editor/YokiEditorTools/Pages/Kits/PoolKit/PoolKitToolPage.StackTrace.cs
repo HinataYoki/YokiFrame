@@ -308,10 +308,21 @@ namespace YokiFrame.EditorTools
             {
                 style =
                 {
+                    flexDirection = FlexDirection.Column,
+                    paddingLeft = 4,
+                    paddingTop = 3,
+                    paddingBottom = 3,
+                    marginBottom = 2
+                }
+            };
+
+            // 方法名行
+            var methodRow = new VisualElement
+            {
+                style =
+                {
                     flexDirection = FlexDirection.Row,
-                    alignItems = Align.Center,
-                    height = 22f,
-                    paddingLeft = 4
+                    alignItems = Align.Center
                 }
             };
 
@@ -322,11 +333,11 @@ namespace YokiFrame.EditorTools
                     fontSize = 10,
                     color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary),
                     flexGrow = 1,
-                    overflow = Overflow.Hidden,
-                    textOverflow = TextOverflow.Ellipsis
+                    whiteSpace = WhiteSpace.Normal,
+                    overflow = Overflow.Visible
                 }
             };
-            element.Add(methodLabel);
+            methodRow.Add(methodLabel);
 
             if (!string.IsNullOrEmpty(frame.FilePath))
             {
@@ -337,7 +348,8 @@ namespace YokiFrame.EditorTools
                     {
                         fontSize = 9,
                         color = new StyleColor(YokiFrameUIComponents.Colors.BrandPrimary),
-                        marginLeft = 8
+                        marginLeft = 8,
+                        flexShrink = 0
                     }
                 };
                 locationLabel.pickingMode = PickingMode.Position;
@@ -349,9 +361,10 @@ namespace YokiFrame.EditorTools
                 locationLabel.RegisterCallback<MouseLeaveEvent>(evt =>
                     locationLabel.style.color = new StyleColor(YokiFrameUIComponents.Colors.BrandPrimary));
 
-                element.Add(locationLabel);
+                methodRow.Add(locationLabel);
             }
 
+            element.Add(methodRow);
             return element;
         }
 

@@ -182,23 +182,30 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 从场景中收集所有活跃的根 Action
+        /// 从 PlayerLoop 收集所有活跃的根 Action
         /// </summary>
         public static void CollectActiveActions(List<IAction> result, List<string> executorNames)
         {
             result.Clear();
             executorNames.Clear();
             
-            var executors = UnityEngine.Object.FindObjectsByType<MonoUpdateExecutor>(FindObjectsSortMode.None);
-            var tempList = new List<IAction>(16);
-            
-            foreach (var executor in executors)
+            // 使用反射访问 ActionKitPlayerLoopSystem 的静态方法
+            var playerLoopSystemType = typeof(IAction).Assembly.GetType("YokiFrame.ActionKitPlayerLoopSystem");
+            if (playerLoopSystemType != null)
             {
-                executor.GetExecutingActions(tempList);
-                foreach (var action in tempList)
+                var getExecutingActionsMethod = playerLoopSystemType.GetMethod(
+                    "GetExecutingActions", 
+                    BindingFlags.Static | BindingFlags.Public);
+                
+                if (getExecutingActionsMethod != null)
                 {
-                    result.Add(action);
-                    executorNames.Add(executor.gameObject.name);
+                    getExecutingActionsMethod.Invoke(null, new object[] { result });
+                    
+                    // PlayerLoop 驱动的 Action 统一标记为 "PlayerLoop"
+                    for (int i = 0; i < result.Count; i++)
+                    {
+                        executorNames.Add("PlayerLoop");
+                    }
                 }
             }
         }

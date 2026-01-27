@@ -22,6 +22,11 @@ namespace YokiFrame
         /// </summary>
         private static readonly SimplePoolKit<DelayFrame> mPool = new(() => new DelayFrame());
 
+        static DelayFrame()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<DelayFrame>();
+        }
+
         public static DelayFrame Allocate(int frameCount, Action onDelayFinish = null)
         {
             var delayFrame = mPool.Allocate();
@@ -63,7 +68,7 @@ namespace YokiFrame
             {
                 Deinited = true;
                 mOnDelayFinish = null;
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<DelayFrame>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<DelayFrame>(mPool, this));
             }
         }
 

@@ -11,14 +11,18 @@ namespace YokiFrame
                 controller.CurExcuteActionID = 0;
                 controller.Action = null;
                 controller.Finish = null;
+                ((ActionController)controller).mIsCancelled = false;
             });
 
-        public static IActionController Allocate() => controllerPool.Allocate() as ActionController;
+        public static IActionController Allocate() => controllerPool.Allocate();
+
+        private bool mIsCancelled;
 
         public ulong CurExcuteActionID { get; set; }
         public IAction Action { get; set; }
         public Action<IActionController> Finish { get; set; }
         public ActionUpdateModes UpdateMode { get; set; }
+        public bool IsCancelled => mIsCancelled;
         public bool Paused
         {
             get => Action.Paused;
@@ -40,6 +44,13 @@ namespace YokiFrame
             {
                 Action.OnDeinit();
             }
+        }
+
+        public void Cancel()
+        {
+            if (mIsCancelled) return;
+            mIsCancelled = true;
+            ActionKitPlayerLoopSystem.CancelAction(this);
         }
 
         public void Recycle()

@@ -21,7 +21,7 @@ namespace YokiFrame.EditorTools
                         Title = "Task 包装",
                         Code = @"// 包装 Task 为 ActionKit 动作
 ActionKit.Task(() => LoadDataAsync())
-    .Start(this);
+    .Start();
 
 async Task LoadDataAsync()
 {
@@ -37,13 +37,13 @@ async Task LoadDataAsync()
 ActionKit.WaitWhile(
     () => isLoading,  // 当 isLoading 为 false 时继续
     () => Debug.Log(""加载完成"")
-).Start(this);
+).Start();
 
 // 实际应用：等待动画播放完成
 ActionKit.WaitWhile(
     () => animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1f,
     () => OnAnimationComplete()
-).Start(this);",
+).Start();",
                         Explanation = "WaitWhile 在条件为 true 时持续等待，条件变为 false 时执行回调。"
                     },
                     new()
@@ -52,19 +52,19 @@ ActionKit.WaitWhile(
                         Code = @"// Lerp 基础用法
 ActionKit.Lerp(0f, 100f, 2f, 
     value => healthBar.fillAmount = value / 100f
-).Start(this);
+).Start();
 
 // 带完成回调
 ActionKit.Lerp(0f, 1f, 0.5f,
     onLerp: t => canvasGroup.alpha = t,
     onLerpFinish: () => Debug.Log(""淡入完成"")
-).Start(this);
+).Start();
 
 // 在序列中使用
 ActionKit.Sequence()
     .Lerp(0f, 1f, 0.3f, t => transform.localScale = Vector3.one * t)
     .Callback(() => Debug.Log(""缩放完成""))
-    .Start(this);",
+    .Start();",
                         Explanation = "Lerp 动作支持 onLerp（每帧回调）和 onLerpFinish（完成回调）两个参数。"
                     }
                 }

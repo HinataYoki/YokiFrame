@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2026-01-28
+
+### Changed
+- **ActionKit** 驱动机制从 MonoBehaviour 改为 PlayerLoop，提升性能并消除 GameObject 依赖
+  - 移除 `ActionKitMonoDriver`，使用 `PlayerLoopHelper` 注入 Update 循环
+  - 支持 EditMode 和 PlayMode 自动切换驱动模式
+
 ## [1.6.4] - 2026-01-27
 
 ### Changed

@@ -27,6 +27,11 @@ namespace YokiFrame
         /// </summary>
         private static readonly SimplePoolKit<Sequence> mPool = new(() => new Sequence());
 
+        static Sequence()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Sequence>();
+        }
+
         public static Sequence Allocate()
         {
             var sequence = mPool.Allocate();
@@ -97,7 +102,7 @@ namespace YokiFrame
 
                 Deinited = true;
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Sequence>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Sequence>(mPool, this));
             }
         }
 

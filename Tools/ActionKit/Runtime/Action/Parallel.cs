@@ -24,6 +24,11 @@ namespace YokiFrame
         /// </summary>
         private bool mWaitAll = true;
 
+        static Parallel()
+        {
+            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Parallel>();
+        }
+
         public static Parallel Allocate(bool waitAll)
         {
             var parallel = mPool.Allocate();
@@ -87,7 +92,7 @@ namespace YokiFrame
                 }
                 mActions.Clear();
 
-                MonoRecycler.AddRecycleCallback(new ActionRecycler<Parallel>(mPool, this));
+                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Parallel>(mPool, this));
             }
         }
 

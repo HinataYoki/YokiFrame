@@ -24,7 +24,7 @@ ActionKit.Sequence()
     .Append(ActionKit.Delay(1f, () => Debug.Log(""第1秒"")))
     .Append(ActionKit.Delay(1f, () => Debug.Log(""第2秒"")))
     .Append(ActionKit.Callback(() => Debug.Log(""完成"")))
-    .Start(this);
+    .Start();
 
 // 嵌套序列
 ActionKit.Sequence()
@@ -32,7 +32,7 @@ ActionKit.Sequence()
     .Sequence(s => s
         .Append(ActionKit.Callback(() => Debug.Log(""嵌套1"")))
         .Append(ActionKit.Callback(() => Debug.Log(""嵌套2""))))
-    .Start(this);",
+    .Start();",
                         Explanation = "Sequence 按顺序执行所有子动作。"
                     },
                     new()
@@ -42,7 +42,7 @@ ActionKit.Sequence()
 ActionKit.Parallel()
     .Append(ActionKit.Delay(1f, () => Debug.Log(""动作A完成"")))
     .Append(ActionKit.Delay(2f, () => Debug.Log(""动作B完成"")))
-    .Start(this, controller =>
+    .Start(controller =>
     {
         Debug.Log(""所有动作完成"");
     });
@@ -51,7 +51,7 @@ ActionKit.Parallel()
 ActionKit.Parallel(waitAll: false)
     .Append(ActionKit.Delay(1f, null))
     .Append(ActionKit.Delay(2f, null))
-    .Start(this);",
+    .Start();",
                         Explanation = "Parallel 同时执行所有子动作，默认等待全部完成。"
                     }
                 }
