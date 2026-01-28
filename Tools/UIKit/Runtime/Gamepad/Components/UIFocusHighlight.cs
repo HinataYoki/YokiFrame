@@ -114,9 +114,9 @@ namespace YokiFrame
         {
 #if YOKIFRAME_DOTWEEN_SUPPORT
             // 立即终止所有 Tween，防止延迟回调持有引用
-            mMoveTween?.Kill(complete: false);
-            mSizeTween?.Kill(complete: false);
-            mFadeTween?.Kill(complete: false);
+            if (mMoveTween != default) mMoveTween.Kill(complete: false);
+            if (mSizeTween != default) mSizeTween.Kill(complete: false);
+            if (mFadeTween != default) mFadeTween.Kill(complete: false);
             mMoveTween = null;
             mSizeTween = null;
             mFadeTween = null;
@@ -212,10 +212,10 @@ namespace YokiFrame
             mIsVisible = true;
             mImage.enabled = true;
             
-            Debug.Log($"[UIFocusHighlight] Show - target={mCurrentTarget?.name}, sizeDelta={mRectTransform.sizeDelta}");
+            Debug.Log($"[UIFocusHighlight] Show - target={(mCurrentTarget == default ? "null" : mCurrentTarget.name)}, sizeDelta={mRectTransform.sizeDelta}");
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
-            mFadeTween?.Kill();
+            if (mFadeTween != default) mFadeTween.Kill();
             mFadeTween = mCanvasGroup.DOFade(1f, GetConfig().HighlightScaleDuration);
 #else
             mCanvasGroup.alpha = 1f;
@@ -231,7 +231,7 @@ namespace YokiFrame
             mIsVisible = false;
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
-            mFadeTween?.Kill();
+            if (mFadeTween != default) mFadeTween.Kill();
             mFadeTween = mCanvasGroup.DOFade(0f, GetConfig().HighlightScaleDuration)
                 .OnComplete(static () => { })  // 确保完成
                 .OnKill(() => { if (!mIsVisible) mImage.enabled = false; });
@@ -288,8 +288,8 @@ namespace YokiFrame
             var targetSize = GetTargetSize() + config.HighlightPadding * 2f;
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
-            mMoveTween?.Kill();
-            mSizeTween?.Kill();
+            if (mMoveTween != default) mMoveTween.Kill();
+            if (mSizeTween != default) mSizeTween.Kill();
 
             mMoveTween = mRectTransform.DOMove(targetPos, config.HighlightMoveDuration)
                 .SetEase(Ease.OutQuad);

@@ -18,12 +18,16 @@ namespace YokiFrame
         #region 单例
 
         private static UIRoot sInstance;
+        internal static UIRoot sInstanceInternal => sInstance;
         private static bool sIsInitialized;
+        private static bool sIsQuitting; // 防止退出时重新创建
 
         public static UIRoot Instance
         {
             get
             {
+                if (sIsQuitting) return null; // 退出时不再创建
+                
                 if (sInstance == default)
                 {
                     sInstance = FindFirstObjectByType<UIRoot>();
@@ -108,10 +112,23 @@ namespace YokiFrame
         private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderPool();
 #endif
 
+        /// <summary>
+        /// 设置面板加载器
+        /// </summary>
+        /// <param name="loaderPool">加载器池</param>
         public void SetPanelLoader(IPanelLoaderPool loaderPool)
         {
             mLoaderPool = loaderPool;
-            KitLogger.Log($"[UIRoot] 加载池已切换为: {loaderPool.GetType().Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("[UIRoot] 加载池已切换为: ");
+                sb.Append(loaderPool.GetType().Name);
+                KitLogger.Log(sb.ToString());
+            }
+#else
+            KitLogger.Log("[UIRoot] 加载池已切换为: " + loaderPool.GetType().Name);
+#endif
         }
 
         #endregion
@@ -125,7 +142,16 @@ namespace YokiFrame
 
             if (prefab == default)
             {
-                KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] 面板加载失败: ");
+                    sb.Append(handler.Type.Name);
+                    KitLogger.Error(sb.ToString());
+                }
+#else
+                KitLogger.Error("[UIRoot] 面板加载失败: " + handler.Type.Name);
+#endif
                 return null;
             }
 
@@ -145,7 +171,16 @@ namespace YokiFrame
             {
                 if (prefab == default)
                 {
-                    KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                    {
+                        sb.Append("[UIRoot] 面板加载失败: ");
+                        sb.Append(handler.Type.Name);
+                        KitLogger.Error(sb.ToString());
+                    }
+#else
+                    KitLogger.Error("[UIRoot] 面板加载失败: " + handler.Type.Name);
+#endif
                     onComplete?.Invoke(null);
                     return;
                 }
@@ -191,7 +226,16 @@ namespace YokiFrame
             var prefab = await tcs.Task.AttachExternalCancellation(ct);
             if (prefab == default)
             {
-                KitLogger.Error($"[UIRoot] 面板加载失败: {handler.Type.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] 面板加载失败: ");
+                    sb.Append(handler.Type.Name);
+                    KitLogger.Error(sb.ToString());
+                }
+#else
+                KitLogger.Error("[UIRoot] 面板加载失败: " + handler.Type.Name);
+#endif
                 return null;
             }
 
@@ -437,6 +481,10 @@ namespace YokiFrame
         private void OnDestroy()
         {
             if (sInstance != this) return;
+            
+            // 标记正在退出，防止异步任务触发单例重新创建
+            sIsQuitting = true;
+            
             sInstance = null;
             sIsInitialized = false;
             UILevelDic.Clear();

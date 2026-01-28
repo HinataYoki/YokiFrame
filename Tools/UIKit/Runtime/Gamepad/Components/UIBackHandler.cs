@@ -81,7 +81,11 @@ namespace YokiFrame
                     break;
 
                 case BackBehavior.HidePanel:
-                    GetComponent<IPanel>()?.Hide();
+                    var hidePanel = GetComponent<IPanel>();
+                    if (hidePanel != default)
+                    {
+                        hidePanel.Hide();
+                    }
                     break;
 
                 case BackBehavior.DoNothing:

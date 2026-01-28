@@ -321,7 +321,11 @@ namespace YokiFrame
 
                 case NavigationBoundaryBehavior.JumpToGroup:
                     var jumpTarget = GetJumpTarget(direction);
-                    return jumpTarget?.GetFirstSelectable();
+                    if (jumpTarget != default)
+                    {
+                        return jumpTarget.GetFirstSelectable();
+                    }
+                    return null;
 
                 default:
                     return null;

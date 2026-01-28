@@ -22,6 +22,46 @@ namespace YokiFrame
         /// </summary>
         private readonly Dictionary<IPanel, GameObject> mModalBlockers = new();
 
+        /// <summary>
+        /// 模态遮罩对象池（懒加载）
+        /// 修复：避免静态构造函数中创建 GameObject
+        /// </summary>
+        private static SimplePoolKit<GameObject> sModalBlockerPool;
+
+        /// <summary>
+        /// 获取模态遮罩对象池（延迟初始化）
+        /// </summary>
+        private static SimplePoolKit<GameObject> ModalBlockerPool
+        {
+            get
+            {
+                if (sModalBlockerPool == default)
+                {
+                    sModalBlockerPool = new SimplePoolKit<GameObject>(
+                        factoryMethod: static () =>
+                        {
+                            var obj = new GameObject("ModalBlocker");
+                            var rect = obj.AddComponent<RectTransform>();
+                            var image = obj.AddComponent<Image>();
+                            image.color = new Color(0, 0, 0, 0.5f);
+                            image.raycastTarget = true;
+                            return obj;
+                        },
+                        resetMethod: static obj =>
+                        {
+                            if (obj != default)
+                            {
+                                obj.SetActive(false);
+                                obj.transform.SetParent(null);
+                            }
+                        },
+                        initCount: 4
+                    );
+                }
+                return sModalBlockerPool;
+            }
+        }
+
         #endregion
 
         #region 层级初始化
@@ -41,9 +81,10 @@ namespace YokiFrame
         /// <summary>
         /// 注册面板到层级
         /// </summary>
+        /// <param name="panel">要注册的面板</param>
         internal void RegisterPanelToLevel(IPanel panel)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
 
             var level = panel.Handler.Level;
             if (!mLevelPanels.TryGetValue(level, out var list))
@@ -65,9 +106,10 @@ namespace YokiFrame
         /// <summary>
         /// 从层级注销面板
         /// </summary>
+        /// <param name="panel">要注销的面板</param>
         internal void UnregisterPanelFromLevel(IPanel panel)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
 
             var level = panel.Handler.Level;
             if (mLevelPanels.TryGetValue(level, out var list))
@@ -85,9 +127,12 @@ namespace YokiFrame
         /// <summary>
         /// 设置面板层级
         /// </summary>
+        /// <param name="panel">面板</param>
+        /// <param name="newLevel">新层级</param>
+        /// <param name="subLevel">子层级</param>
         public void SetPanelLevel(IPanel panel, UILevel newLevel, int subLevel = 0)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
 
             var oldLevel = panel.Handler.Level;
 
@@ -123,9 +168,11 @@ namespace YokiFrame
         /// <summary>
         /// 设置面板子层级
         /// </summary>
+        /// <param name="panel">面板</param>
+        /// <param name="subLevel">子层级</param>
         public void SetPanelSubLevel(IPanel panel, int subLevel)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
             panel.Handler.SubLevel = subLevel;
             SortLevel(panel.Handler.Level);
         }
@@ -133,6 +180,8 @@ namespace YokiFrame
         /// <summary>
         /// 获取指定层级的顶部面板
         /// </summary>
+        /// <param name="level">层级</param>
+        /// <returns>顶部面板，没有则返回 null</returns>
         public IPanel GetTopPanelAtLevel(UILevel level)
         {
             if (!mLevelPanels.TryGetValue(level, out var list) || list.Count == 0)
@@ -143,7 +192,7 @@ namespace YokiFrame
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 var panel = list[i];
-                if (panel?.Transform != default && panel.Transform.gameObject.activeInHierarchy)
+                if (panel != default && panel.Transform != default && panel.Transform.gameObject.activeInHierarchy)
                 {
                     return panel;
                 }
@@ -192,7 +241,7 @@ namespace YokiFrame
             for (int i = 0; i < list.Count; i++)
             {
                 var panel = list[i];
-                if (panel?.Transform != default)
+                if (panel != default && panel.Transform != default)
                 {
                     panel.Transform.SetSiblingIndex(i);
                 }
@@ -206,9 +255,11 @@ namespace YokiFrame
         /// <summary>
         /// 设置面板为模态
         /// </summary>
+        /// <param name="panel">面板</param>
+        /// <param name="isModal">是否为模态</param>
         public void SetPanelModal(IPanel panel, bool isModal)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
 
             var wasModal = panel.Handler.IsModal;
             panel.Handler.IsModal = isModal;
@@ -224,7 +275,7 @@ namespace YokiFrame
 
         private void ShowModalBlocker(IPanel panel)
         {
-            if (panel?.Transform == default) return;
+            if (panel == default || panel.Transform == default) return;
             if (mModalBlockers.ContainsKey(panel)) return;
 
             var blocker = CreateModalBlocker(panel);
@@ -243,12 +294,8 @@ namespace YokiFrame
             {
                 if (blocker != default)
                 {
-#if UNITY_EDITOR
-                    if (!Application.isPlaying)
-                        UnityEngine.Object.DestroyImmediate(blocker);
-                    else
-#endif
-                    UnityEngine.Object.Destroy(blocker);
+                    // 归还到对象池
+                    ModalBlockerPool.Recycle(blocker);
                 }
                 mModalBlockers.Remove(panel);
                 UpdateModalBlockerInteractivity();
@@ -260,8 +307,10 @@ namespace YokiFrame
             var parent = panel.Transform.parent;
             if (parent == default) return null;
 
-            var blocker = new GameObject($"ModalBlocker_{panel.Handler.Type.Name}");
-            var rect = blocker.AddComponent<RectTransform>();
+            // 从对象池获取遮罩
+            var blocker = ModalBlockerPool.Allocate();
+            blocker.SetActive(true);
+            var rect = blocker.GetComponent<RectTransform>();
             rect.SetParent(parent);
 
             rect.anchorMin = Vector2.zero;
@@ -269,10 +318,6 @@ namespace YokiFrame
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = Vector2.zero;
             rect.localScale = Vector3.one;
-
-            var image = blocker.AddComponent<Image>();
-            image.color = new Color(0, 0, 0, 0.5f);
-            image.raycastTarget = true;
 
             var panelIndex = panel.Transform.GetSiblingIndex();
             rect.SetSiblingIndex(Mathf.Max(0, panelIndex));
@@ -290,7 +335,7 @@ namespace YokiFrame
                 for (int i = list.Count - 1; i >= 0; i--)
                 {
                     var panel = list[i];
-                    if (panel?.Transform == default) continue;
+                    if (panel == default || panel.Transform == default) continue;
 
                     if (panel.Transform.TryGetComponent<GraphicRaycaster>(out var raycaster))
                     {
@@ -319,13 +364,12 @@ namespace YokiFrame
         {
             foreach (var list in mLevelPanels.Values) list.Clear();
 
+            // 归还所有模态遮罩到对象池
             foreach (var blocker in mModalBlockers.Values)
             {
-                // 双重判空：防止 blocker 已被标记销毁或为 null
                 if (blocker != default && blocker != null)
                 {
-                    // OnDestroy 中必须使用 DestroyImmediate 避免延迟销毁警告
-                    UnityEngine.Object.DestroyImmediate(blocker);
+                    ModalBlockerPool.Recycle(blocker);
                 }
             }
             mModalBlockers.Clear();

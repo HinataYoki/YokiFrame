@@ -162,7 +162,9 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.bytes : null;");
+                sb.AppendLine("        var bytes = textAsset != null ? textAsset.bytes : null;");
+                sb.AppendLine("        handler.Release();");
+                sb.AppendLine("        return bytes;");
                 sb.AppendLine("    }");
                 sb.AppendLine();
                 sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
@@ -175,7 +177,9 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.text : null;");
+                sb.AppendLine("        var text = textAsset != null ? textAsset.text : null;");
+                sb.AppendLine("        handler.Release();");
+                sb.AppendLine("        return text;");
                 sb.AppendLine("    }");
             }
             else

@@ -13,6 +13,11 @@ namespace YokiFrame
 
         static UIKit() => _ = UIRoot.Instance;
 
+        /// <summary>
+        /// 获取 UIRoot 实例（退出时返回 null）
+        /// </summary>
+        private static UIRoot Root => UIRoot.Instance;
+
         #endregion
 
         #region 配置
@@ -22,8 +27,8 @@ namespace YokiFrame
         /// </summary>
         public static int OpenHot
         {
-            get => UIRoot.Instance.OpenHot;
-            set => UIRoot.Instance.OpenHot = value;
+            get => Root?.OpenHot ?? 0;
+            set { if (Root != default) Root.OpenHot = value; }
         }
 
         /// <summary>
@@ -31,8 +36,8 @@ namespace YokiFrame
         /// </summary>
         public static int GetHot
         {
-            get => UIRoot.Instance.GetHot;
-            set => UIRoot.Instance.GetHot = value;
+            get => Root?.GetHot ?? 0;
+            set { if (Root != default) Root.GetHot = value; }
         }
 
         /// <summary>
@@ -40,8 +45,8 @@ namespace YokiFrame
         /// </summary>
         public static int Weaken
         {
-            get => UIRoot.Instance.Weaken;
-            set => UIRoot.Instance.Weaken = value;
+            get => Root?.Weaken ?? 0;
+            set { if (Root != default) Root.Weaken = value; }
         }
 
         #endregion
@@ -53,9 +58,12 @@ namespace YokiFrame
         /// </summary>
         public static T GetPanel<T>() where T : UIPanel
         {
-            if (UIRoot.Instance.TryGetCachedHandler(typeof(T), out var handler))
+            var root = Root;
+            if (root == default) return null;
+            
+            if (root.TryGetCachedHandler(typeof(T), out var handler))
             {
-                handler.Hot += UIRoot.Instance.GetHot;
+                handler.Hot += root.GetHot;
                 return handler.Panel as T;
             }
             return null;
@@ -66,7 +74,7 @@ namespace YokiFrame
         /// </summary>
         public static T OpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            return UIRoot.Instance.OpenPanelInternal(typeof(T), level, data) as T;
+            return Root?.OpenPanelInternal(typeof(T), level, data) as T;
         }
 
         /// <summary>
@@ -75,7 +83,7 @@ namespace YokiFrame
         public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
             UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
         {
-            UIRoot.Instance.OpenPanelAsyncInternal(typeof(T), level, data, callback);
+            Root?.OpenPanelAsyncInternal(typeof(T), level, data, callback);
         }
 
         /// <summary>
@@ -83,7 +91,7 @@ namespace YokiFrame
         /// </summary>
         public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback)
         {
-            UIRoot.Instance.OpenPanelAsyncInternal(type, level, data, callback);
+            Root?.OpenPanelAsyncInternal(type, level, data, callback);
         }
 
         /// <summary>
@@ -109,9 +117,12 @@ namespace YokiFrame
         /// </summary>
         public static void HideAllPanel()
         {
-            foreach (var panel in UIRoot.Instance.GetCachedPanels())
+            var root = Root;
+            if (root == default) return;
+            
+            foreach (var panel in root.GetCachedPanels())
             {
-                panel?.Hide();
+                if (panel != default) panel.Hide();
             }
         }
 
@@ -120,9 +131,12 @@ namespace YokiFrame
         /// </summary>
         public static void ClosePanel<T>() where T : UIPanel
         {
-            if (UIRoot.Instance.TryGetCachedHandler(typeof(T), out var handler))
+            var root = Root;
+            if (root == default) return;
+            
+            if (root.TryGetCachedHandler(typeof(T), out var handler))
             {
-                UIRoot.Instance.ClosePanelInternal(handler.Panel);
+                root.ClosePanelInternal(handler.Panel);
             }
         }
 
@@ -131,7 +145,7 @@ namespace YokiFrame
         /// </summary>
         public static void ClosePanel(IPanel panel)
         {
-            UIRoot.Instance.ClosePanelInternal(panel);
+            Root?.ClosePanelInternal(panel);
         }
 
         /// <summary>
@@ -139,19 +153,22 @@ namespace YokiFrame
         /// </summary>
         public static void CloseAllPanel()
         {
+            var root = Root;
+            if (root == default) return;
+            
             Pool.List<IPanel>(panelsToClose =>
             {
-                foreach (var panel in UIRoot.Instance.GetCachedPanels())
+                foreach (var panel in root.GetCachedPanels())
                 {
                     panelsToClose.Add(panel);
                 }
                 for (int i = 0; i < panelsToClose.Count; i++)
                 {
-                    UIRoot.Instance.ClosePanelInternal(panelsToClose[i]);
+                    root.ClosePanelInternal(panelsToClose[i]);
                 }
             });
-            UIRoot.Instance.ClearAllStacks();
-            UIRoot.Instance.ClearAllLevels();
+            root.ClearAllStacks();
+            root.ClearAllLevels();
         }
 
         /// <summary>
@@ -159,7 +176,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelLoader(IPanelLoaderPool loaderPool)
         {
-            UIRoot.Instance.SetPanelLoader(loaderPool);
+            Root?.SetPanelLoader(loaderPool);
         }
 
         #endregion
@@ -169,32 +186,32 @@ namespace YokiFrame
         /// <summary>
         /// 检查面板是否已缓存
         /// </summary>
-        public static bool IsPanelCached<T>() where T : UIPanel => UIRoot.Instance.IsPanelCached<T>();
+        public static bool IsPanelCached<T>() where T : UIPanel => Root?.IsPanelCached<T>() ?? false;
 
         /// <summary>
         /// 检查面板是否已缓存
         /// </summary>
-        public static bool IsPanelCached(Type panelType) => UIRoot.Instance.IsPanelCached(panelType);
+        public static bool IsPanelCached(Type panelType) => Root?.IsPanelCached(panelType) ?? false;
 
         /// <summary>
         /// 获取所有已缓存的面板类型
         /// </summary>
-        public static IReadOnlyCollection<Type> GetCachedPanelTypes() => UIRoot.Instance.GetCachedPanelTypes();
+        public static IReadOnlyCollection<Type> GetCachedPanelTypes() => Root?.GetCachedPanelTypes() ?? Array.Empty<Type>();
 
         /// <summary>
         /// 获取所有已缓存的面板实例
         /// </summary>
-        public static IReadOnlyList<IPanel> GetCachedPanels() => UIRoot.Instance.GetCachedPanels();
+        public static IReadOnlyList<IPanel> GetCachedPanels() => Root?.GetCachedPanels() ?? Array.Empty<IPanel>();
 
         /// <summary>
         /// 获取缓存容量
         /// </summary>
-        public static int GetCacheCapacity() => UIRoot.Instance.CacheCapacity;
+        public static int GetCacheCapacity() => Root?.CacheCapacity ?? 0;
 
         /// <summary>
         /// 设置缓存容量
         /// </summary>
-        public static void SetCacheCapacity(int capacity) => UIRoot.Instance.CacheCapacity = capacity;
+        public static void SetCacheCapacity(int capacity) { if (Root != default) Root.CacheCapacity = capacity; }
 
         /// <summary>
         /// 预加载面板
@@ -202,7 +219,7 @@ namespace YokiFrame
         public static void PreloadPanelAsync<T>(UILevel level = UILevel.Common, Action<bool> onComplete = null)
             where T : UIPanel
         {
-            UIRoot.Instance.PreloadPanelAsync<T>(level, onComplete);
+            Root?.PreloadPanelAsync<T>(level, onComplete);
         }
 
         /// <summary>
@@ -211,7 +228,7 @@ namespace YokiFrame
         public static void PreloadPanelAsync(Type panelType, UILevel level = UILevel.Common,
             Action<bool> onComplete = null)
         {
-            UIRoot.Instance.PreloadPanelAsync(panelType, level, onComplete);
+            Root?.PreloadPanelAsync(panelType, level, onComplete);
         }
 
         /// <summary>
@@ -219,7 +236,7 @@ namespace YokiFrame
         /// </summary>
         public static void ClearPreloadedCache<T>() where T : UIPanel
         {
-            UIRoot.Instance.ClearPreloadedPanel<T>();
+            Root?.ClearPreloadedPanel<T>();
         }
 
         /// <summary>
@@ -227,7 +244,7 @@ namespace YokiFrame
         /// </summary>
         public static void ClearAllPreloadedCache()
         {
-            UIRoot.Instance.ClearAllPreloadedPanels();
+            Root?.ClearAllPreloadedPanels();
         }
 
         #endregion
@@ -239,8 +256,11 @@ namespace YokiFrame
         /// </summary>
         public static void PushPanel<T>(bool hidePreLevel = true) where T : UIPanel
         {
+            var root = Root;
+            if (root == default) return;
+            
             var panel = GetPanel<T>();
-            if (panel != default) UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+            if (panel != default) root.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
         }
 
         /// <summary>
@@ -248,7 +268,7 @@ namespace YokiFrame
         /// </summary>
         public static void PushPanel(IPanel panel, bool hidePreLevel = true)
         {
-            UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+            Root?.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
         }
 
         /// <summary>
@@ -256,7 +276,7 @@ namespace YokiFrame
         /// </summary>
         public static void PushPanel(IPanel panel, string stackName, bool hidePreLevel = true)
         {
-            UIRoot.Instance.PushToStack(panel, stackName, hidePreLevel);
+            Root?.PushToStack(panel, stackName, hidePreLevel);
         }
 
         /// <summary>
@@ -265,8 +285,11 @@ namespace YokiFrame
         public static void PushOpenPanel<T>(UILevel level = UILevel.Common,
             IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
+            var root = Root;
+            if (root == default) return;
+            
             var panel = OpenPanel<T>(level, data);
-            UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+            root.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
         }
 
         /// <summary>
@@ -275,9 +298,12 @@ namespace YokiFrame
         public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null,
             UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
+            var root = Root;
+            if (root == default) return;
+            
             OpenPanelAsync<T>(panel =>
             {
-                UIRoot.Instance.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+                root.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
                 callback?.Invoke(panel);
             }, level, data);
         }
@@ -287,15 +313,15 @@ namespace YokiFrame
         /// </summary>
         public static IPanel PopPanel(bool showPreLevel = true, bool autoClose = true)
         {
-            return UIRoot.Instance.PopFromStack(UIRoot.DEFAULT_STACK, showPreLevel, autoClose);
+            return Root?.PopFromStack(UIRoot.DEFAULT_STACK, showPreLevel, autoClose);
         }
 
         /// <summary>
         /// 从指定命名栈弹出面板
-        /// /// </summary>
+        /// </summary>
         public static IPanel PopPanel(string stackName, bool showPreLevel = true, bool autoClose = true)
         {
-            return UIRoot.Instance.PopFromStack(stackName, showPreLevel, autoClose);
+            return Root?.PopFromStack(stackName, showPreLevel, autoClose);
         }
 
         /// <summary>
@@ -303,7 +329,7 @@ namespace YokiFrame
         /// </summary>
         public static IPanel PeekPanel(string stackName = UIRoot.DEFAULT_STACK)
         {
-            return UIRoot.Instance.PeekStack(stackName);
+            return Root?.PeekStack(stackName);
         }
 
         /// <summary>
@@ -311,7 +337,7 @@ namespace YokiFrame
         /// </summary>
         public static int GetStackDepth(string stackName = UIRoot.DEFAULT_STACK)
         {
-            return UIRoot.Instance.GetStackDepth(stackName);
+            return Root?.GetStackDepth(stackName) ?? 0;
         }
 
         /// <summary>
@@ -319,7 +345,7 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyCollection<string> GetAllStackNames()
         {
-            return UIRoot.Instance.GetAllStackNames();
+            return Root?.GetAllStackNames() ?? Array.Empty<string>();
         }
 
         /// <summary>
@@ -327,7 +353,7 @@ namespace YokiFrame
         /// </summary>
         public static void ClearStack(string stackName = UIRoot.DEFAULT_STACK, bool closeAll = true)
         {
-            UIRoot.Instance.ClearStack(stackName, closeAll);
+            Root?.ClearStack(stackName, closeAll);
         }
 
         #endregion
@@ -339,7 +365,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelLevel(IPanel panel, UILevel level, int subLevel = 0)
         {
-            UIRoot.Instance.SetPanelLevel(panel, level, subLevel);
+            Root?.SetPanelLevel(panel, level, subLevel);
         }
 
         /// <summary>
@@ -347,7 +373,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelSubLevel(IPanel panel, int subLevel)
         {
-            UIRoot.Instance.SetPanelSubLevel(panel, subLevel);
+            Root?.SetPanelSubLevel(panel, subLevel);
         }
 
         /// <summary>
@@ -355,7 +381,7 @@ namespace YokiFrame
         /// </summary>
         public static IPanel GetTopPanelAtLevel(UILevel level)
         {
-            return UIRoot.Instance.GetTopPanelAtLevel(level);
+            return Root?.GetTopPanelAtLevel(level);
         }
 
         /// <summary>
@@ -363,7 +389,7 @@ namespace YokiFrame
         /// </summary>
         public static IPanel GetGlobalTopPanel()
         {
-            return UIRoot.Instance.GetGlobalTopPanel();
+            return Root?.GetGlobalTopPanel();
         }
 
         /// <summary>
@@ -371,7 +397,7 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyList<IPanel> GetPanelsAtLevel(UILevel level)
         {
-            return UIRoot.Instance.GetPanelsAtLevel(level);
+            return Root?.GetPanelsAtLevel(level) ?? Array.Empty<IPanel>();
         }
 
         /// <summary>
@@ -379,7 +405,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelModal(IPanel panel, bool isModal)
         {
-            UIRoot.Instance.SetPanelModal(panel, isModal);
+            Root?.SetPanelModal(panel, isModal);
         }
 
         /// <summary>
@@ -387,7 +413,7 @@ namespace YokiFrame
         /// </summary>
         public static bool HasModalBlocker()
         {
-            return UIRoot.Instance.HasModalBlocker();
+            return Root?.HasModalBlocker() ?? false;
         }
 
         #endregion
@@ -399,34 +425,34 @@ namespace YokiFrame
         /// </summary>
         public static bool FocusSystemEnabled
         {
-            get => UIRoot.Instance.FocusSystemEnabled;
-            set => UIRoot.Instance.FocusSystemEnabled = value;
+            get => Root?.FocusSystemEnabled ?? false;
+            set { if (Root != default) Root.FocusSystemEnabled = value; }
         }
 
         /// <summary>
         /// 当前输入模式
         /// </summary>
-        public static UIInputMode GetInputMode() => UIRoot.Instance.CurrentInputMode;
+        public static UIInputMode GetInputMode() => Root?.CurrentInputMode ?? UIInputMode.Pointer;
 
         /// <summary>
         /// 设置焦点
         /// </summary>
-        public static void SetFocus(UnityEngine.GameObject target) => UIRoot.Instance.SetFocus(target);
+        public static void SetFocus(UnityEngine.GameObject target) => Root?.SetFocus(target);
 
         /// <summary>
         /// 设置焦点
         /// </summary>
-        public static void SetFocus(UnityEngine.UI.Selectable selectable) => UIRoot.Instance.SetFocus(selectable);
+        public static void SetFocus(UnityEngine.UI.Selectable selectable) => Root?.SetFocus(selectable);
 
         /// <summary>
         /// 清除焦点
         /// </summary>
-        public static void ClearFocus() => UIRoot.Instance.ClearFocus();
+        public static void ClearFocus() => Root?.ClearFocus();
 
         /// <summary>
         /// 获取当前焦点
         /// </summary>
-        public static UnityEngine.GameObject GetCurrentFocus() => UIRoot.Instance.CurrentFocus;
+        public static UnityEngine.GameObject GetCurrentFocus() => Root?.CurrentFocus;
 
         #endregion
 
@@ -437,7 +463,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetDefaultDialogType<T>() where T : UIDialogPanel
         {
-            UIRoot.Instance.SetDefaultDialogType<T>();
+            Root?.SetDefaultDialogType<T>();
         }
 
         /// <summary>
@@ -445,7 +471,7 @@ namespace YokiFrame
         /// </summary>
         public static void SetDefaultPromptType<T>() where T : UIDialogPanel
         {
-            UIRoot.Instance.SetDefaultPromptType<T>();
+            Root?.SetDefaultPromptType<T>();
         }
 
         /// <summary>
@@ -453,7 +479,7 @@ namespace YokiFrame
         /// </summary>
         public static void ShowDialog(DialogConfig config, Action<DialogResultData> onResult = null)
         {
-            UIRoot.Instance.ShowDialog(config, onResult);
+            Root?.ShowDialog(config, onResult);
         }
 
         /// <summary>
@@ -462,7 +488,7 @@ namespace YokiFrame
         public static void ShowDialog<T>(DialogConfig config, Action<DialogResultData> onResult = null)
             where T : UIDialogPanel
         {
-            UIRoot.Instance.ShowDialog<T>(config, onResult);
+            Root?.ShowDialog<T>(config, onResult);
         }
 
         /// <summary>
@@ -470,7 +496,7 @@ namespace YokiFrame
         /// </summary>
         public static void Alert(string message, string title = null, Action onClose = null)
         {
-            UIRoot.Instance.Alert(message, title, onClose);
+            Root?.Alert(message, title, onClose);
         }
 
         /// <summary>
@@ -478,7 +504,7 @@ namespace YokiFrame
         /// </summary>
         public static void Confirm(string message, string title = null, Action<bool> onResult = null)
         {
-            UIRoot.Instance.Confirm(message, title, onResult);
+            Root?.Confirm(message, title, onResult);
         }
 
         /// <summary>
@@ -487,18 +513,18 @@ namespace YokiFrame
         public static void Prompt(string message, string title = null, string defaultValue = null,
             Action<bool, string> onResult = null)
         {
-            UIRoot.Instance.Prompt(message, title, defaultValue, onResult);
+            Root?.Prompt(message, title, defaultValue, onResult);
         }
 
         /// <summary>
         /// 是否有对话框正在显示
         /// </summary>
-        public static bool HasActiveDialog => UIRoot.Instance.HasActiveDialog;
+        public static bool HasActiveDialog => Root?.HasActiveDialog ?? false;
 
         /// <summary>
         /// 清空对话框队列
         /// </summary>
-        public static void ClearDialogQueue() => UIRoot.Instance.ClearDialogQueue();
+        public static void ClearDialogQueue() => Root?.ClearDialogQueue();
 
         #endregion
     }

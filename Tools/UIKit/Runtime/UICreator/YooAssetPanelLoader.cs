@@ -34,7 +34,7 @@ namespace YokiFrame
         public GameObject Load(PanelHandler handler)
         {
             mHandler = ResKit.LoadAsset<GameObject>(handler.Type.Name);
-            return mHandler?.Asset as GameObject;
+            return mHandler != default ? mHandler.Asset as GameObject : null;
         }
 
         public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
@@ -42,7 +42,10 @@ namespace YokiFrame
             ResKit.LoadAssetAsync<GameObject>(handler.Type.Name, h =>
             {
                 mHandler = h;
-                onLoadComplete?.Invoke(h?.Asset as GameObject);
+                if (onLoadComplete != default)
+                {
+                    onLoadComplete(h != default ? h.Asset as GameObject : null);
+                }
             });
         }
 
@@ -56,7 +59,7 @@ namespace YokiFrame
 
         public void UnLoadAndRecycle()
         {
-            mHandler?.Release();
+            if (mHandler != default) mHandler.Release();
             mHandler = null;
             mLoaderPool.RecycleLoader(this);
         }

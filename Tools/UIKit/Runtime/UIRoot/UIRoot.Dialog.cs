@@ -52,6 +52,8 @@ namespace YokiFrame
         /// <summary>
         /// 显示对话框
         /// </summary>
+        /// <param name="config">对话框配置</param>
+        /// <param name="onResult">结果回调</param>
         public void ShowDialog(DialogConfig config, Action<DialogResultData> onResult = null)
         {
             ShowDialog(mDefaultDialogType, config, onResult);
@@ -60,6 +62,9 @@ namespace YokiFrame
         /// <summary>
         /// 显示指定类型的对话框
         /// </summary>
+        /// <typeparam name="T">对话框类型</typeparam>
+        /// <param name="config">对话框配置</param>
+        /// <param name="onResult">结果回调</param>
         public void ShowDialog<T>(DialogConfig config, Action<DialogResultData> onResult = null)
             where T : UIDialogPanel
         {
@@ -69,6 +74,9 @@ namespace YokiFrame
         /// <summary>
         /// 显示指定类型的对话框
         /// </summary>
+        /// <param name="panelType">对话框类型</param>
+        /// <param name="config">对话框配置</param>
+        /// <param name="onResult">结果回调</param>
         public void ShowDialog(Type panelType, DialogConfig config, Action<DialogResultData> onResult)
         {
             if (panelType == default)
@@ -93,6 +101,9 @@ namespace YokiFrame
         /// <summary>
         /// 显示 Alert 对话框
         /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="title">标题</param>
+        /// <param name="onClose">关闭回调</param>
         public void Alert(string message, string title = null, Action onClose = null)
         {
             var config = DialogConfig.Alert(message, title);
@@ -102,6 +113,9 @@ namespace YokiFrame
         /// <summary>
         /// 显示 Confirm 对话框
         /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="title">标题</param>
+        /// <param name="onResult">结果回调</param>
         public void Confirm(string message, string title = null, Action<bool> onResult = null)
         {
             var config = DialogConfig.Confirm(message, title);
@@ -111,6 +125,10 @@ namespace YokiFrame
         /// <summary>
         /// 显示 Prompt 对话框
         /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="title">标题</param>
+        /// <param name="defaultValue">默认值</param>
+        /// <param name="onResult">结果回调</param>
         public void Prompt(string message, string title = null, string defaultValue = null,
             Action<bool, string> onResult = null)
         {
@@ -146,7 +164,16 @@ namespace YokiFrame
                 mCurrentDialog = panel as UIDialogPanel;
                 if (mCurrentDialog == default)
                 {
-                    KitLogger.Error($"[UIRoot] 无法创建对话框: {item.PanelType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                    {
+                        sb.Append("[UIRoot] 无法创建对话框: ");
+                        sb.Append(item.PanelType.Name);
+                        KitLogger.Error(sb.ToString());
+                    }
+#else
+                    KitLogger.Error("[UIRoot] 无法创建对话框: " + item.PanelType.Name);
+#endif
                     data.OnResult?.Invoke(new DialogResultData { Result = DialogResult.Cancel });
                 }
             });

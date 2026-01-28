@@ -66,14 +66,22 @@ namespace YokiFrame
             public GameObject Load(PanelHandler handler)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                var path = $"{PathPrefix}/{handler.Type.Name}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+                var path = Cysharp.Text.ZString.Concat(PathPrefix, "/", handler.Type.Name);
+#else
+                var path = PathPrefix + "/" + handler.Type.Name;
+#endif
                 return mResLoader.Load<GameObject>(path);
             }
 
             public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                var path = $"{PathPrefix}/{handler.Type.Name}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+                var path = Cysharp.Text.ZString.Concat(PathPrefix, "/", handler.Type.Name);
+#else
+                var path = PathPrefix + "/" + handler.Type.Name;
+#endif
                 mResLoader.LoadAsync<GameObject>(path, onLoadComplete);
             }
 
@@ -113,26 +121,41 @@ namespace YokiFrame
             public GameObject Load(PanelHandler handler)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+                var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
+#else
+                var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
+#endif
                 return mResLoader.Load<GameObject>(path);
             }
 
             public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
             {
                 mResLoader = ResKit.GetLoaderPool().Allocate();
-                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+                var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
+#else
+                var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
+#endif
                 mResLoader.LoadAsync<GameObject>(path, onLoadComplete);
             }
 
             public async UniTask<GameObject> LoadUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
             {
-                var path = $"{DefaultPanelLoaderPool.PathPrefix}/{handler.Type.Name}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+                var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
+#else
+                var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
+#endif
                 return await ResKit.LoadUniTaskAsync<GameObject>(path, cancellationToken);
             }
 
             public void UnLoadAndRecycle()
             {
-                mResLoader?.UnloadAndRecycle();
+                if (mResLoader != default)
+                {
+                    mResLoader.UnloadAndRecycle();
+                }
                 mResLoader = null;
                 mLoaderPool.RecycleLoader(this);
             }

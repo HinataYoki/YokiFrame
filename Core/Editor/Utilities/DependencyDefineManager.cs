@@ -11,6 +11,20 @@ namespace YokiFrame.Core.Editor
     /// 依赖检测与宏定义管理器
     /// 自动检测项目中的可选依赖，并添加对应的 Scripting Define Symbols
     /// </summary>
+    /// <remarks>
+    /// <para>支持的依赖检测方式：</para>
+    /// <list type="bullet">
+    /// <item>Package Manager 包检测（通过 package.json）</item>
+    /// <item>Assembly Definition 检测（通过 .asmdef 文件）</item>
+    /// </list>
+    /// <para>自动触发时机：</para>
+    /// <list type="bullet">
+    /// <item>编辑器启动时（InitializeOnLoad）</item>
+    /// <item>Package Manager 包变化时</item>
+    /// <item>.asmdef 文件导入/删除时</item>
+    /// </list>
+    /// <para>手动触发：菜单 YokiFrame/刷新依赖宏定义</para>
+    /// </remarks>
     [InitializeOnLoad]
     public static class DependencyDefineManager
     {
@@ -22,7 +36,7 @@ namespace YokiFrame.Core.Editor
             new("YOKIFRAME_FMOD_SUPPORT", "com.unity.fmod", "FMODUnity"),
             new("YOKIFRAME_DOTWEEN_SUPPORT", "com.demigiant.dotween", "DOTween.Modules"),
             new("YOKIFRAME_INPUTSYSTEM_SUPPORT", "com.unity.inputsystem", "Unity.InputSystem"),
-            new("YOKIFRAME_ZSTRING_SUPPORT", "", "ZString"),
+            new("YOKIFRAME_ZSTRING_SUPPORT", "com.cysharp.zstring", "ZString"),
         };
 
         static DependencyDefineManager()
@@ -35,26 +49,23 @@ namespace YokiFrame.Core.Editor
         private static void OnPackagesChanged(
             UnityEditor.PackageManager.PackageRegistrationEventArgs args)
         {
-            // 使用 foreach 替代 LINQ Any()
-            bool hasChanges = false;
-            foreach (var _ in args.added)
-            {
-                hasChanges = true;
-                break;
-            }
-            if (!hasChanges)
-            {
-                foreach (var _ in args.removed)
-                {
-                    hasChanges = true;
-                    break;
-                }
-            }
-
+            bool hasChanges = HasAnyElement(args.added) || HasAnyElement(args.removed);
             if (hasChanges)
             {
                 EditorApplication.delayCall += RefreshDefines;
             }
+        }
+
+        /// <summary>
+        /// 检查集合是否包含任何元素（避免 LINQ Any()）
+        /// </summary>
+        private static bool HasAnyElement<T>(System.Collections.Generic.IEnumerable<T> collection)
+        {
+            foreach (var _ in collection)
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -68,35 +79,27 @@ namespace YokiFrame.Core.Editor
                 string[] movedAssets,
                 string[] movedFromAssetPaths)
             {
-                // 使用 foreach 替代 LINQ Concat().Any()
-                bool hasAsmdefChange = false;
-
-                for (int i = 0; i < importedAssets.Length; i++)
-                {
-                    if (importedAssets[i].EndsWith(".asmdef"))
-                    {
-                        hasAsmdefChange = true;
-                        break;
-                    }
-                }
-
-                if (!hasAsmdefChange)
-                {
-                    for (int i = 0; i < deletedAssets.Length; i++)
-                    {
-                        if (deletedAssets[i].EndsWith(".asmdef"))
-                        {
-                            hasAsmdefChange = true;
-                            break;
-                        }
-                    }
-                }
-
+                bool hasAsmdefChange = HasAsmdefFile(importedAssets) || HasAsmdefFile(deletedAssets);
                 if (hasAsmdefChange)
                 {
                     EditorApplication.delayCall += RefreshDefines;
                 }
             }
+        }
+
+        /// <summary>
+        /// 检查资源数组中是否包含 .asmdef 文件
+        /// </summary>
+        private static bool HasAsmdefFile(string[] assets)
+        {
+            for (int i = 0; i < assets.Length; i++)
+            {
+                if (assets[i].EndsWith(".asmdef"))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         [MenuItem("YokiFrame/刷新依赖宏定义")]
@@ -129,30 +132,38 @@ namespace YokiFrame.Core.Editor
 
         private static bool DetectDependency(DependencyInfo dep)
         {
-            // 方式1：检测 Package 是否存在
-            if (!string.IsNullOrEmpty(dep.PackageName))
+            try
             {
-                var packagePath = $"Packages/{dep.PackageName}";
-                if (Directory.Exists(packagePath)) return true;
-            }
-
-            // 方式2：检测 asmdef 是否存在
-            if (!string.IsNullOrEmpty(dep.AsmdefName))
-            {
-                // 搜索所有 asmdef 文件
-                var guids = AssetDatabase.FindAssets("t:AssemblyDefinitionAsset");
-                foreach (var guid in guids)
+                // 方式1：检测 Package 是否存在
+                if (!string.IsNullOrEmpty(dep.PackageName))
                 {
-                    var path = AssetDatabase.GUIDToAssetPath(guid);
-                    var fileName = Path.GetFileNameWithoutExtension(path);
-                    if (fileName == dep.AsmdefName)
+                    var packagePath = $"Packages/{dep.PackageName}";
+                    if (Directory.Exists(packagePath)) return true;
+                }
+
+                // 方式2：检测 asmdef 是否存在
+                if (!string.IsNullOrEmpty(dep.AsmdefName))
+                {
+                    // 搜索所有 asmdef 文件
+                    var guids = AssetDatabase.FindAssets("t:AssemblyDefinitionAsset");
+                    foreach (var guid in guids)
                     {
-                        return true;
+                        var path = AssetDatabase.GUIDToAssetPath(guid);
+                        var fileName = Path.GetFileNameWithoutExtension(path);
+                        if (fileName == dep.AsmdefName)
+                        {
+                            return true;
+                        }
                     }
                 }
-            }
 
-            return false;
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[DependencyDefineManager] 检测依赖失败: {dep.Define}, 错误: {ex.Message}");
+                return false;
+            }
         }
 
         private static HashSet<string> GetCurrentDefines()

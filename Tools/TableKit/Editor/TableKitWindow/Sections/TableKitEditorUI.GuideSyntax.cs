@@ -210,7 +210,9 @@ public class YooAssetTableLoader : ITableLoader
     {
         var path = string.Format(mPathPattern, tableName);
         var handle = mPackage.LoadRawFileSync(path);
-        return handle.GetRawFileData();
+        var data = handle.GetRawFileData();
+        handle.Release();
+        return data;
     }
 }
 

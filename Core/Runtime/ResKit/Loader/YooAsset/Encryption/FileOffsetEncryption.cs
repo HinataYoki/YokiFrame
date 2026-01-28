@@ -44,7 +44,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FileOffsetEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[FileOffsetEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new EncryptResult { Encrypted = false };
             }
         }
@@ -73,7 +73,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FileOffsetDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[FileOffsetDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -86,7 +86,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FileOffsetDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[FileOffsetDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -100,7 +100,7 @@ namespace YokiFrame
                 // 检查数据长度是否足够
                 if (data.Length <= mOffsetInt)
                 {
-                    Debug.LogError($"[FileOffsetDecryption] 文件长度 ({data.Length}) 小于偏移量 ({mOffsetInt}): {fileInfo.FileLoadPath}");
+                    KitLogger.DebugError($"[FileOffsetDecryption] 文件长度 ({data.Length}) 小于偏移量 ({mOffsetInt}): {fileInfo.FileLoadPath}");
                     return Array.Empty<byte>();
                 }
                 
@@ -110,7 +110,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FileOffsetDecryption] 读取文件失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[FileOffsetDecryption] 读取文件失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return Array.Empty<byte>();
             }
         }

@@ -111,11 +111,17 @@ namespace YokiFrame
 
         private void DisposeFocusSystem()
         {
-            mNavigator?.Dispose();
-            mNavigator = null;
+            if (mNavigator != default)
+            {
+                mNavigator.Dispose();
+                mNavigator = null;
+            }
 #if YOKIFRAME_INPUTSYSTEM_SUPPORT
-            mInputHandler?.Dispose();
-            mInputHandler = null;
+            if (mInputHandler != default)
+            {
+                mInputHandler.Dispose();
+                mInputHandler = null;
+            }
 #endif
             mPanelFocusMemory.Clear();
 
@@ -270,7 +276,7 @@ namespace YokiFrame
 
         private void DisableGamepad()
         {
-            mNavigator?.Disable();
+            if (mNavigator != default) mNavigator.Disable();
         }
 
         private void UpdateFocusSystem()
@@ -282,7 +288,7 @@ namespace YokiFrame
 
         private void LateUpdateFocusSystem()
         {
-            mNavigator?.LateUpdate();
+            if (mNavigator != default) mNavigator.LateUpdate();
         }
 
         private void UpdateNavigator()

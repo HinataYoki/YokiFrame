@@ -160,7 +160,7 @@ namespace YokiFrame
         /// </summary>
         protected virtual void OnBackgroundClicked()
         {
-            if (mConfig?.CloseOnBackgroundClick == true)
+            if (mConfig != default && mConfig.CloseOnBackgroundClick)
             {
                 SendResult(mConfig.BackgroundClickResult);
                 CloseSelf();
@@ -178,7 +178,7 @@ namespace YokiFrame
         {
             if (button == null) return;
 
-            bool shouldShow = (mConfig?.Buttons & type) != 0;
+            bool shouldShow = mConfig != default && (mConfig.Buttons & type) != 0;
             button.gameObject.SetActive(shouldShow);
 
             if (shouldShow)

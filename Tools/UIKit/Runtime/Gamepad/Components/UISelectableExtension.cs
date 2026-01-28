@@ -102,7 +102,10 @@ namespace YokiFrame
 
             if (mSelectable != null && mSelectable.interactable)
             {
-                EventSystem.current?.SetSelectedGameObject(gameObject);
+                if (EventSystem.current != default)
+                {
+                    EventSystem.current.SetSelectedGameObject(gameObject);
+                }
             }
         }
 

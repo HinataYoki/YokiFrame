@@ -197,7 +197,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 获取当前已加载的资源列表（包括 ResKit 缓存和底层 Loader 追踪）
+        /// 获取当前已加载的资源列表（包括 ResKit 缓存、底层 Loader 追踪和场景资源）
         /// </summary>
         public static List<ResInfo> GetLoadedAssets()
         {
@@ -243,6 +243,29 @@ namespace YokiFrame.EditorTools
                 }
             }
 
+            // 3. 从场景追踪获取
+            var trackedScenes = SceneLoadTracker.GetTrackedScenes();
+            if (trackedScenes != null)
+            {
+                UnityEngine.Debug.Log($"[ResDebugger] 场景追踪数量: {trackedScenes.Count}");
+                foreach (var kvp in trackedScenes)
+                {
+                    var scene = kvp.Value;
+                    UnityEngine.Debug.Log($"[ResDebugger] 场景: {scene.Path}, IsLoaded={scene.IsLoaded}");
+                    result.Add(new ResInfo(
+                        scene.Path,
+                        "Scene",
+                        1,
+                        scene.IsLoaded,
+                        ResSource.Loader
+                    ));
+                }
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[ResDebugger] 场景追踪为 null");
+            }
+
             return result;
         }
 
@@ -276,6 +299,9 @@ namespace YokiFrame.EditorTools
                     }
                 }
             }
+            
+            var trackedScenes = SceneLoadTracker.GetTrackedScenes();
+            if (trackedScenes != null) count += trackedScenes.Count;
             
             return count;
         }

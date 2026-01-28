@@ -153,12 +153,41 @@ namespace YokiFrame
         /// <summary>
         /// 手动记录日志
         /// </summary>
+        /// <param name="level">日志级别</param>
+        /// <param name="category">分类</param>
+        /// <param name="message">消息内容</param>
         public static void Log(LogLevel level, string category, string message)
         {
             if (!sIsEnabled || level < sLogLevel) return;
             
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-            var formattedMessage = $"[{timestamp}] [UIKit:{category}] {message}";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("[");
+                sb.Append(timestamp);
+                sb.Append("] [UIKit:");
+                sb.Append(category);
+                sb.Append("] ");
+                sb.Append(message);
+                var formattedMessage = sb.ToString();
+                
+                switch (level)
+                {
+                    case LogLevel.Verbose:
+                    case LogLevel.Info:
+                        Debug.Log(formattedMessage);
+                        break;
+                    case LogLevel.Warning:
+                        Debug.LogWarning(formattedMessage);
+                        break;
+                    case LogLevel.Error:
+                        Debug.LogError(formattedMessage);
+                        break;
+                }
+            }
+#else
+            var formattedMessage = "[" + timestamp + "] [UIKit:" + category + "] " + message;
             
             switch (level)
             {
@@ -173,6 +202,7 @@ namespace YokiFrame
                     Debug.LogError(formattedMessage);
                     break;
             }
+#endif
         }
 
         #endregion
@@ -218,50 +248,113 @@ namespace YokiFrame
         private static void OnPanelWillShow(PanelWillShowEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Lifecycle", $"Panel.WillShow: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.WillShow: ");
+                sb.Append(panelName);
+                Log(LogLevel.Verbose, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Lifecycle", "Panel.WillShow: " + panelName);
+#endif
         }
 
         private static void OnPanelDidShow(PanelDidShowEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Info, "Lifecycle", $"Panel.DidShow: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.DidShow: ");
+                sb.Append(panelName);
+                Log(LogLevel.Info, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Info, "Lifecycle", "Panel.DidShow: " + panelName);
+#endif
         }
 
         private static void OnPanelWillHide(PanelWillHideEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Lifecycle", $"Panel.WillHide: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.WillHide: ");
+                sb.Append(panelName);
+                Log(LogLevel.Verbose, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Lifecycle", "Panel.WillHide: " + panelName);
+#endif
         }
 
         private static void OnPanelDidHide(PanelDidHideEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Info, "Lifecycle", $"Panel.DidHide: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.DidHide: ");
+                sb.Append(panelName);
+                Log(LogLevel.Info, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Info, "Lifecycle", "Panel.DidHide: " + panelName);
+#endif
         }
 
         private static void OnPanelFocus(PanelFocusEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Lifecycle", $"Panel.Focus: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.Focus: ");
+                sb.Append(panelName);
+                Log(LogLevel.Verbose, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Lifecycle", "Panel.Focus: " + panelName);
+#endif
         }
 
         private static void OnPanelBlur(PanelBlurEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Lifecycle", $"Panel.Blur: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.Blur: ");
+                sb.Append(panelName);
+                Log(LogLevel.Verbose, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Lifecycle", "Panel.Blur: " + panelName);
+#endif
         }
 
         private static void OnPanelResume(PanelResumeEvent evt)
         {
             if (!sLogLifecycle) return;
-            var panelName = evt.Panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Lifecycle", $"Panel.Resume: {panelName}");
+            var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("Panel.Resume: ");
+                sb.Append(panelName);
+                Log(LogLevel.Verbose, "Lifecycle", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Lifecycle", "Panel.Resume: " + panelName);
+#endif
         }
 
         private static void OnFocusChanged(UIFocusChangedEvent evt)
@@ -269,13 +362,33 @@ namespace YokiFrame
             if (!sLogFocus) return;
             var prevName = evt.Previous != null ? evt.Previous.name : "null";
             var currName = evt.Current != null ? evt.Current.name : "null";
-            Log(LogLevel.Verbose, "Focus", $"焦点变化: {prevName} -> {currName}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("焦点变化: ");
+                sb.Append(prevName);
+                sb.Append(" -> ");
+                sb.Append(currName);
+                Log(LogLevel.Verbose, "Focus", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Focus", "焦点变化: " + prevName + " -> " + currName);
+#endif
         }
 
         private static void OnInputModeChanged(UIInputModeChangedEvent evt)
         {
             if (!sLogFocus) return;
-            Log(LogLevel.Info, "Focus", $"输入模式变化: {evt.Mode}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("输入模式变化: ");
+                sb.Append(evt.Mode.ToString());
+                Log(LogLevel.Info, "Focus", sb.ToString());
+            }
+#else
+            Log(LogLevel.Info, "Focus", "输入模式变化: " + evt.Mode.ToString());
+#endif
         }
 
         #endregion
@@ -285,32 +398,80 @@ namespace YokiFrame
         /// <summary>
         /// 记录栈操作
         /// </summary>
+        /// <param name="operation">操作名称</param>
+        /// <param name="stackName">栈名称</param>
+        /// <param name="panel">面板</param>
         internal static void LogStackOperation(string operation, string stackName, IPanel panel)
         {
             if (!sIsEnabled || !sLogStack) return;
-            var panelName = panel?.GetType().Name ?? "null";
-            Log(LogLevel.Info, "Stack", $"{operation}: {panelName} (栈: {stackName})");
+            var panelName = panel != default ? panel.GetType().Name : "null";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append(operation);
+                sb.Append(": ");
+                sb.Append(panelName);
+                sb.Append(" (栈: ");
+                sb.Append(stackName);
+                sb.Append(")");
+                Log(LogLevel.Info, "Stack", sb.ToString());
+            }
+#else
+            Log(LogLevel.Info, "Stack", operation + ": " + panelName + " (栈: " + stackName + ")");
+#endif
         }
 
         /// <summary>
         /// 记录缓存操作
         /// </summary>
+        /// <param name="operation">操作名称</param>
+        /// <param name="panelType">面板类型</param>
+        /// <param name="success">是否成功</param>
         internal static void LogCacheOperation(string operation, Type panelType, bool success = true)
         {
             if (!sIsEnabled || !sLogCache) return;
-            var typeName = panelType?.Name ?? "Unknown";
+            var typeName = panelType != default ? panelType.Name : "Unknown";
             var status = success ? "成功" : "失败";
-            Log(LogLevel.Info, "Cache", $"{operation}: {typeName} ({status})");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append(operation);
+                sb.Append(": ");
+                sb.Append(typeName);
+                sb.Append(" (");
+                sb.Append(status);
+                sb.Append(")");
+                Log(LogLevel.Info, "Cache", sb.ToString());
+            }
+#else
+            Log(LogLevel.Info, "Cache", operation + ": " + typeName + " (" + status + ")");
+#endif
         }
 
         /// <summary>
         /// 记录动画事件
         /// </summary>
+        /// <param name="eventName">事件名称</param>
+        /// <param name="panel">面板</param>
+        /// <param name="animationType">动画类型</param>
         internal static void LogAnimationEvent(string eventName, IPanel panel, string animationType)
         {
             if (!sIsEnabled || !sLogAnimation) return;
-            var panelName = panel?.GetType().Name ?? "Unknown";
-            Log(LogLevel.Verbose, "Animation", $"{eventName}: {panelName} ({animationType})");
+            var panelName = panel != default ? panel.GetType().Name : "Unknown";
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append(eventName);
+                sb.Append(": ");
+                sb.Append(panelName);
+                sb.Append(" (");
+                sb.Append(animationType);
+                sb.Append(")");
+                Log(LogLevel.Verbose, "Animation", sb.ToString());
+            }
+#else
+            Log(LogLevel.Verbose, "Animation", eventName + ": " + panelName + " (" + animationType + ")");
+#endif
         }
 
         #endregion

@@ -151,21 +151,6 @@ namespace YokiFrame.EditorTools
             _ => "yoki-res-type--unknown"
         };
 
-        private string GetTypeIcon(string typeName) => typeName switch
-        {
-            "AudioClip" => "A",
-            "Texture2D" => "T",
-            "Sprite" => "S",
-            "Material" => "M",
-            "GameObject" => "G",
-            "TextAsset" => "X",
-            "ScriptableObject" => "O",
-            "Shader" => "H",
-            "Font" => "F",
-            "AnimationClip" => "C",
-            _ => "?"
-        };
-
         private void SelectAsset(ResDebugger.ResInfo info)
         {
             mSelectedAsset = info;

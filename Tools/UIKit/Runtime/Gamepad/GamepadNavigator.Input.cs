@@ -246,7 +246,10 @@ namespace YokiFrame
         /// </summary>
         public void ClearFocus()
         {
-            mEventSystem?.SetSelectedGameObject(null);
+            if (mEventSystem != default)
+            {
+                mEventSystem.SetSelectedGameObject(null);
+            }
         }
 
         #endregion

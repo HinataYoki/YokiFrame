@@ -40,7 +40,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AesEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[AesEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new EncryptResult { Encrypted = false };
             }
         }
@@ -92,7 +92,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AesDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[AesDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -109,7 +109,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AesDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[AesDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -132,14 +132,14 @@ namespace YokiFrame
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
                 {
-                    Debug.LogError($"[AesDecryption] 文件不存在: {path}");
+                    KitLogger.DebugError($"[AesDecryption] 文件不存在: {path}");
                     return Array.Empty<byte>();
                 }
                 
                 var encrypted = File.ReadAllBytes(path);
                 if (encrypted.Length == 0)
                 {
-                    Debug.LogWarning($"[AesDecryption] 文件为空: {path}");
+                    KitLogger.DebugWarning($"[AesDecryption] 文件为空: {path}");
                     return Array.Empty<byte>();
                 }
                 
@@ -147,12 +147,12 @@ namespace YokiFrame
             }
             catch (CryptographicException ex)
             {
-                Debug.LogError($"[AesDecryption] 解密失败（密钥可能不匹配）: {path}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[AesDecryption] 解密失败（密钥可能不匹配）: {path}, 错误: {ex.Message}");
                 return Array.Empty<byte>();
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AesDecryption] 读取文件失败: {path}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[AesDecryption] 读取文件失败: {path}, 错误: {ex.Message}");
                 return Array.Empty<byte>();
             }
         }

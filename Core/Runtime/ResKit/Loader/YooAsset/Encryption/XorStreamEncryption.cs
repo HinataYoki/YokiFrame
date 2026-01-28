@@ -99,7 +99,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[XorStreamEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[XorStreamEncryption] 加密失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new EncryptResult { Encrypted = false };
             }
         }
@@ -132,7 +132,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[XorStreamDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[XorStreamDecryption] 加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -150,7 +150,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[XorStreamDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[XorStreamDecryption] 异步加载 AssetBundle 失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }
@@ -169,7 +169,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[XorStreamDecryption] 读取文件失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[XorStreamDecryption] 读取文件失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return Array.Empty<byte>();
             }
         }
@@ -191,7 +191,7 @@ namespace YokiFrame
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[XorStreamDecryption] Fallback 加载失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
+                KitLogger.DebugError($"[XorStreamDecryption] Fallback 加载失败: {fileInfo.FileLoadPath}, 错误: {ex.Message}");
                 return new DecryptResult();
             }
         }

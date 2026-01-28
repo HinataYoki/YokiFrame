@@ -1,34 +1,28 @@
-{
-    "name": "YokiFrame.SceneKit",
-    "rootNamespace": "",
-    "references": [
-        "GUID:224151c835b786a4f8efadaa1799380d",
-        "UniTask",
-        "YooAsset"
-    ],
-    "includePlatforms": [],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": true,
-    "defineConstraints": [],
-    "versionDefines": [
-        {
-            "name": "com.cysharp.unitask",
-            "expression": "",
-            "define": "YOKIFRAME_UNITASK_SUPPORT"
-        },
-        {
-            "name": "UniTask",
-            "expression": "",
-            "define": "YOKIFRAME_UNITASK_SUPPORT"
-        },
-        {
-            "name": "com.tuyoogame.yooasset",
-            "expression": "",
-            "define": "YOKIFRAME_YOOASSET_SUPPORT"
-        }
-    ],
-    "noEngineReferences": false
+﻿{
+    "name":  "YokiFrame.SceneKit",
+    "rootNamespace":  "",
+    "references":  [
+                       "GUID:224151c835b786a4f8efadaa1799380d",
+                       "UniTask",
+                       "YooAsset"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

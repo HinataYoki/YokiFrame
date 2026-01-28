@@ -78,7 +78,7 @@ namespace YokiFrame
             Prefab = null;
             Panel = null;
             Data = null;
-            Loader?.UnLoadAndRecycle();
+            if (Loader != default) Loader.UnLoadAndRecycle();
             Loader = null;
             StackName = "main";
             SubLevel = 0;

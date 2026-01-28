@@ -34,7 +34,6 @@ namespace YokiFrame.EditorTools
         private CategoryPanel CreateCategoryPanel(string typeName)
         {
             var accentColor = GetTypeColor(typeName);
-            var icon = GetTypeIcon(typeName);
             var typeClass = GetTypeClass(typeName);
 
             var root = new VisualElement();
@@ -55,7 +54,7 @@ namespace YokiFrame.EditorTools
             header.Add(expandBtn);
 
             // 图标和名称
-            var nameLabel = new Label($"{icon} {typeName}");
+            var nameLabel = new Label(typeName);
             nameLabel.AddToClassList("yoki-res-category__name");
             header.Add(nameLabel);
 

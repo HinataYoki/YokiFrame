@@ -222,6 +222,12 @@ namespace YokiFrame
             PreloadPanelAsync(typeof(T), level, onComplete);
         }
 
+        /// <summary>
+        /// 预加载面板（异步）
+        /// </summary>
+        /// <param name="panelType">面板类型</param>
+        /// <param name="level">UI 层级</param>
+        /// <param name="onComplete">完成回调</param>
         public void PreloadPanelAsync(Type panelType, UILevel level, Action<bool> onComplete)
         {
             if (panelType == default)
@@ -260,13 +266,31 @@ namespace YokiFrame
                     panel.Transform.gameObject.SetActive(false);
                     panel.Init(null);
                     AddToPreloadedCache(panelType, handler);
-                    KitLogger.Log($"[UIRoot] 预加载面板成功: {panelType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                    {
+                        sb.Append("[UIRoot] 预加载面板成功: ");
+                        sb.Append(panelType.Name);
+                        KitLogger.Log(sb.ToString());
+                    }
+#else
+                    KitLogger.Log("[UIRoot] 预加载面板成功: " + panelType.Name);
+#endif
                     onComplete?.Invoke(true);
                 }
                 else
                 {
                     handler.Recycle();
-                    KitLogger.Warning($"[UIRoot] 预加载面板失败: {panelType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                    {
+                        sb.Append("[UIRoot] 预加载面板失败: ");
+                        sb.Append(panelType.Name);
+                        KitLogger.Warning(sb.ToString());
+                    }
+#else
+                    KitLogger.Warning("[UIRoot] 预加载面板失败: " + panelType.Name);
+#endif
                     onComplete?.Invoke(false);
                 }
             });
@@ -307,7 +331,16 @@ namespace YokiFrame
 
             if (lruType == default) return false;
 
-            KitLogger.Log($"[UIRoot] LRU 淘汰预加载面板: {lruType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("[UIRoot] LRU 淘汰预加载面板: ");
+                sb.Append(lruType.Name);
+                KitLogger.Log(sb.ToString());
+            }
+#else
+            KitLogger.Log("[UIRoot] LRU 淘汰预加载面板: " + lruType.Name);
+#endif
             ClearPreloadedPanel(lruType);
             return true;
         }
@@ -323,7 +356,7 @@ namespace YokiFrame
             {
                 UnityEngine.Object.Destroy(data.Handler.Panel.Transform.gameObject);
             }
-            data.Handler?.Recycle();
+            if (data.Handler != default) data.Handler.Recycle();
             mPreloadedCache.Remove(panelType);
         }
 
@@ -380,12 +413,30 @@ namespace YokiFrame
                 panel.Transform.gameObject.SetActive(false);
                 panel.Init(null);
                 AddToPreloadedCache(panelType, handler);
-                KitLogger.Log($"[UIRoot] 预加载面板成功: {panelType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] 预加载面板成功: ");
+                    sb.Append(panelType.Name);
+                    KitLogger.Log(sb.ToString());
+                }
+#else
+                KitLogger.Log("[UIRoot] 预加载面板成功: " + panelType.Name);
+#endif
                 return true;
             }
 
             handler.Recycle();
-            KitLogger.Warning($"[UIRoot] 预加载面板失败: {panelType.Name}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("[UIRoot] 预加载面板失败: ");
+                sb.Append(panelType.Name);
+                KitLogger.Warning(sb.ToString());
+            }
+#else
+            KitLogger.Warning("[UIRoot] 预加载面板失败: " + panelType.Name);
+#endif
             return false;
         }
 #endif

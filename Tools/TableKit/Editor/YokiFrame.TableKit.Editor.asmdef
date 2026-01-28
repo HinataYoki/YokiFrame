@@ -1,30 +1,27 @@
-{
-    "name": "YokiFrame.TableKit.Editor",
-    "rootNamespace": "YokiFrame.Editor",
-    "references": [
-        "YokiFrame.Core.Editor",
-        "YokiFrame.TableKit.Editor.TableKitWindow"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": true,
-    "defineConstraints": [],
-    "versionDefines": [
-        {
-            "name": "com.code-philosophy.luban",
-            "expression": "",
-            "define": "YOKIFRAME_LUBAN_SUPPORT"
-        },
-        {
-            "name": "Luban.Runtime",
-            "expression": "",
-            "define": "YOKIFRAME_LUBAN_SUPPORT"
-        }
-    ],
-    "noEngineReferences": false
+﻿{
+    "name":  "YokiFrame.TableKit.Editor",
+    "rootNamespace":  "YokiFrame.Editor",
+    "references":  [
+                       "YokiFrame.Core.Editor",
+                       "YokiFrame.TableKit.Editor.TableKitWindow"
+                   ],
+    "includePlatforms":  [
+                             "Editor"
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

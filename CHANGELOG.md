@@ -5,12 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2026-01-28
+
+### Fixed
+- **UIKit** 修复静态构造函数中创建 GameObject 导致的 `Internal_CreateGameObject` 异常
+  - `UIRoot.Level.cs` 的 `sModalBlockerPool` 改为懒加载属性，避免类加载时触发 Unity 限制
+- **UIKit** 修复退出 PlayMode 时空引用异常（`NullReferenceException`）
+  - `UIKit.cs` 所有静态方法添加空引用保护，退出时安全降级返回默认值
+  - 引入 `Root` 辅助属性统一管理单例访问
+- **UIKit** 修复 UnityObject 判空规范违规
+  - 移除 `panel?.Show()` / `panel?.Hide()` 等对 MonoBehaviour 的 `?.` 操作符使用
+  - 改用 `if (panel != default)` 显式判空
+- **ResKit** 监控面板 UI 优化
+  - 移除不直观的单字母图标（G、?），直接显示完整类型名称
+  - 修复资源名称过长导致的文字挤压问题（添加 `flex-shrink` 和 `min-width: 0`）
+
 ## [1.6.5] - 2026-01-28
 
 ### Changed
 - **ActionKit** 驱动机制从 MonoBehaviour 改为 PlayerLoop，提升性能并消除 GameObject 依赖
   - 移除 `ActionKitMonoDriver`，使用 `PlayerLoopHelper` 注入 Update 循环
   - 支持 EditMode 和 PlayMode 自动切换驱动模式
+  - 新增性能基准测试（1000 个 Action 创建、Sequence 组合、对象池复用）
+
+### Fixed
+- **PoolKit** 修复编辑器在其他项目运行时堆栈路径解析异常（`Path.GetFileName` 遇到非法字符时的 `ArgumentException`）
+- **PoolKit** 优化堆栈追踪，跳过框架内部调用，直接显示业务代码位置
+- **PoolKit** 优化 UniTask 异步方法堆栈追踪，识别状态机并提取原始方法名
+- **TableKit** 修复生成代码中 `ResKit.LoadAsset<TextAsset>()` 返回的 handler 未释放导致的资源泄漏
+- **UIKit** 修复 PlayMode 退出时 UIKit GameObject 未清理的警告（"Some objects were not cleaned up"）
+  - 新增 `sIsQuitting` 标记防止异步任务触发单例重新创建
+  - `ExitingPlayMode` 时强制停止所有 UI 动画并标记面板为销毁中
+  - `EnteredPlayMode` 时重置退出标记允许重新创建
+- **ResKit** 新增场景资源追踪，SceneKit 加载的场景现在会在 ResKit 监视器面板中显示
 
 ## [1.6.4] - 2026-01-27
 

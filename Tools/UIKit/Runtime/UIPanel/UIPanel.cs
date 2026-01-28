@@ -15,6 +15,11 @@ namespace YokiFrame
         public PanelState State { get; set; }
         public PanelHandler Handler { get; set; }
 
+        /// <summary>
+        /// 标记是否正在销毁（防止 OnDestroy 时访问单例）
+        /// </summary>
+        private bool mIsDestroying;
+
         #region 动画配置
 
         /// <summary>
@@ -197,8 +202,11 @@ namespace YokiFrame
             SafeInvokeHook(OnDidShow, nameof(OnDidShow));
             EventKit.Type.Send(new PanelDidShowEvent { Panel = this });
 
-            // 通知焦点系统
-            UIRoot.Instance.OnPanelShowFocus(this);
+            // 通知焦点系统（防止销毁时访问单例）
+            if (!mIsDestroying && UIRoot.sInstanceInternal != default)
+            {
+                UIRoot.Instance.OnPanelShowFocus(this);
+            }
         }
 
         public void Hide()
@@ -292,8 +300,11 @@ namespace YokiFrame
 
         private void CompleteHide(bool deactivate)
         {
-            // 通知焦点系统
-            UIRoot.Instance.OnPanelHideFocus(this);
+            // 通知焦点系统（防止销毁时访问单例）
+            if (!mIsDestroying && UIRoot.sInstanceInternal != default)
+            {
+                UIRoot.Instance.OnPanelHideFocus(this);
+            }
 
             // 触发 OnHide
             SafeInvokeHook(OnHide, nameof(OnHide));
@@ -391,15 +402,32 @@ namespace YokiFrame
         /// <summary>
         /// 安全调用生命周期钩子，捕获异常并记录日志
         /// </summary>
+        /// <param name="hook">钩子方法</param>
+        /// <param name="hookName">钩子名称</param>
         private void SafeInvokeHook(Action hook, string hookName)
         {
             try
             {
-                hook?.Invoke();
+                if (hook != default) hook();
             }
             catch (Exception e)
             {
-                KitLogger.Error($"[UIKit] {GetType().Name}.{hookName} threw exception: {e.Message}\n{e.StackTrace}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIKit] ");
+                    sb.Append(GetType().Name);
+                    sb.Append(".");
+                    sb.Append(hookName);
+                    sb.Append(" threw exception: ");
+                    sb.Append(e.Message);
+                    sb.Append("\n");
+                    sb.Append(e.StackTrace);
+                    KitLogger.Error(sb.ToString());
+                }
+#else
+                KitLogger.Error("[UIKit] " + GetType().Name + "." + hookName + " threw exception: " + e.Message + "\n" + e.StackTrace);
+#endif
             }
         }
 
@@ -450,6 +478,9 @@ namespace YokiFrame
 
         private void OnDestroy()
         {
+            // 标记正在销毁，防止访问单例
+            mIsDestroying = true;
+            
             // 如果已通过 Cleanup 清理，跳过
             if (mIsCleanedUp) return;
             mIsCleanedUp = true;

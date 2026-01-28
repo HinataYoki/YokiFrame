@@ -32,9 +32,12 @@ namespace YokiFrame
         /// <summary>
         /// 压入面板到栈
         /// </summary>
+        /// <param name="panel">要压入的面板</param>
+        /// <param name="stackName">栈名称</param>
+        /// <param name="hidePrevious">是否隐藏前一个面板</param>
         public void PushToStack(IPanel panel, string stackName = DEFAULT_STACK, bool hidePrevious = true)
         {
-            if (panel?.Handler == default) return;
+            if (panel == default || panel.Handler == default) return;
 
             var stack = GetOrCreateStack(stackName);
 
@@ -42,7 +45,7 @@ namespace YokiFrame
             if (panel.Handler.OnStack != default)
             {
                 var oldStack = GetStackContaining(panel);
-                oldStack?.Remove(panel.Handler.OnStack);
+                if (oldStack != default) oldStack.Remove(panel.Handler.OnStack);
             }
 
             // 隐藏前一个面板
@@ -62,11 +65,24 @@ namespace YokiFrame
         /// <summary>
         /// 从栈弹出面板
         /// </summary>
+        /// <param name="stackName">栈名称</param>
+        /// <param name="showPrevious">是否显示前一个面板</param>
+        /// <param name="autoClose">是否自动关闭弹出的面板</param>
+        /// <returns>弹出的面板</returns>
         public IPanel PopFromStack(string stackName = DEFAULT_STACK, bool showPrevious = true, bool autoClose = true)
         {
             if (!mStacks.TryGetValue(stackName, out var stack) || stack.Count == 0)
             {
-                KitLogger.Warning($"[UIRoot] Cannot pop from empty stack: {stackName}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] Cannot pop from empty stack: ");
+                    sb.Append(stackName);
+                    KitLogger.Warning(sb.ToString());
+                }
+#else
+                KitLogger.Warning("[UIRoot] Cannot pop from empty stack: " + stackName);
+#endif
                 return null;
             }
 
@@ -91,6 +107,8 @@ namespace YokiFrame
         /// <summary>
         /// 查看栈顶面板
         /// </summary>
+        /// <param name="stackName">栈名称</param>
+        /// <returns>栈顶面板，栈为空时返回 null</returns>
         public IPanel PeekStack(string stackName = DEFAULT_STACK)
         {
             if (!mStacks.TryGetValue(stackName, out var stack) || stack.Count == 0)
@@ -103,6 +121,8 @@ namespace YokiFrame
         /// <summary>
         /// 获取栈深度
         /// </summary>
+        /// <param name="stackName">栈名称</param>
+        /// <returns>栈中面板数量</returns>
         public int GetStackDepth(string stackName = DEFAULT_STACK)
         {
             if (!mStacks.TryGetValue(stackName, out var stack)) return 0;
@@ -117,6 +137,8 @@ namespace YokiFrame
         /// <summary>
         /// 清空指定栈
         /// </summary>
+        /// <param name="stackName">栈名称</param>
+        /// <param name="closeAll">是否关闭所有面板</param>
         public void ClearStack(string stackName = DEFAULT_STACK, bool closeAll = true)
         {
             if (!mStacks.TryGetValue(stackName, out var stack)) return;
@@ -146,14 +168,15 @@ namespace YokiFrame
         /// <summary>
         /// 从栈中移除指定面板
         /// </summary>
+        /// <param name="panel">要移除的面板</param>
         public void RemoveFromStack(IPanel panel)
         {
-            if (panel?.Handler?.OnStack == default) return;
+            if (panel == default || panel.Handler == default || panel.Handler.OnStack == default) return;
 
             var stack = GetStackContaining(panel);
             if (stack == default) return;
 
-            bool wasTop = stack.Last?.Value == panel;
+            bool wasTop = stack.Last != default && stack.Last.Value == panel;
             stack.Remove(panel.Handler.OnStack);
             panel.Handler.OnStack = null;
 
@@ -166,12 +189,18 @@ namespace YokiFrame
         /// <summary>
         /// 检查面板是否在栈中
         /// </summary>
-        public bool IsInStack(IPanel panel) => panel?.Handler?.OnStack != default;
+        /// <param name="panel">要检查的面板</param>
+        /// <returns>是否在栈中</returns>
+        public bool IsInStack(IPanel panel) => 
+            panel != default && panel.Handler != default && panel.Handler.OnStack != default;
 
         /// <summary>
         /// 获取面板所在栈名称
         /// </summary>
-        public string GetPanelStackName(IPanel panel) => panel?.Handler?.StackName;
+        /// <param name="panel">面板</param>
+        /// <returns>栈名称，面板不在栈中时返回 null</returns>
+        public string GetPanelStackName(IPanel panel) => 
+            panel != default && panel.Handler != default ? panel.Handler.StackName : null;
 
         /// <summary>
         /// 清空所有栈
@@ -183,7 +212,7 @@ namespace YokiFrame
                 var node = stack.First;
                 while (node != default)
                 {
-                    if (node.Value?.Handler != default)
+                    if (node.Value != default && node.Value.Handler != default)
                     {
                         node.Value.Handler.OnStack = null;
                     }
@@ -210,7 +239,7 @@ namespace YokiFrame
 
         private PooledLinkedList<IPanel> GetStackContaining(IPanel panel)
         {
-            if (panel?.Handler?.StackName == default) return null;
+            if (panel == default || panel.Handler == default || panel.Handler.StackName == default) return null;
             mStacks.TryGetValue(panel.Handler.StackName, out var stack);
             return stack;
         }
@@ -236,12 +265,26 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步弹出面板
         /// </summary>
+        /// <param name="stackName">栈名称</param>
+        /// <param name="showPrevious">是否显示前一个面板</param>
+        /// <param name="autoClose">是否自动关闭弹出的面板</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>弹出的面板</returns>
         public async UniTask<IPanel> PopFromStackUniTaskAsync(string stackName = DEFAULT_STACK,
             bool showPrevious = true, bool autoClose = true, CancellationToken ct = default)
         {
             if (!mStacks.TryGetValue(stackName, out var stack) || stack.Count == 0)
             {
-                KitLogger.Warning($"[UIRoot] Cannot pop from empty stack: {stackName}");
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] Cannot pop from empty stack: ");
+                    sb.Append(stackName);
+                    KitLogger.Warning(sb.ToString());
+                }
+#else
+                KitLogger.Warning("[UIRoot] Cannot pop from empty stack: " + stackName);
+#endif
                 return null;
             }
 

@@ -235,6 +235,25 @@ namespace YokiFrame.EditorTools
             return obj.ToString();
         }
 
+        /// <summary>
+        /// 安全获取文件名，避免非法路径字符导致异常
+        /// </summary>
+        private static string GetSafeFileName(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) return string.Empty;
+
+            try
+            {
+                return System.IO.Path.GetFileName(filePath);
+            }
+            catch (ArgumentException)
+            {
+                // 路径包含非法字符，手动提取最后一段
+                var lastSlash = filePath.LastIndexOfAny(new[] { '/', '\\' });
+                return lastSlash >= 0 ? filePath.Substring(lastSlash + 1) : filePath;
+            }
+        }
+
         #endregion
 
         #region 堆栈 UI 构建
@@ -341,7 +360,7 @@ namespace YokiFrame.EditorTools
 
             if (!string.IsNullOrEmpty(frame.FilePath))
             {
-                var fileName = System.IO.Path.GetFileName(frame.FilePath);
+                var fileName = GetSafeFileName(frame.FilePath);
                 var locationLabel = new Label($"{fileName}:{frame.LineNumber}")
                 {
                     style =

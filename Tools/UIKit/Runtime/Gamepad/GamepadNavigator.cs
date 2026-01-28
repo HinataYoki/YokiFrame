@@ -71,7 +71,7 @@ namespace YokiFrame
         /// <summary>
         /// 当前焦点对象
         /// </summary>
-        public GameObject CurrentFocus => mEventSystem?.currentSelectedGameObject;
+        public GameObject CurrentFocus => mEventSystem == default ? null : mEventSystem.currentSelectedGameObject;
 
         #endregion
 

@@ -26,6 +26,8 @@ namespace YokiFrame
         private readonly ResourcePackage mPackage;
         private YooAsset.SceneHandle mHandle;
         private bool mIsSuspended;
+        private string mScenePath;
+        private bool mIsAdditive;
 
         public bool IsSuspended => mIsSuspended;
         public float Progress => mHandle?.Progress ?? 0f;
@@ -48,6 +50,9 @@ namespace YokiFrame
             IProgress<float> progress = null, CancellationToken cancellationToken = default)
         {
             mIsSuspended = false;
+            mScenePath = scenePath;
+            mIsAdditive = isAdditive;
+            
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
             mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, suspendLoad);
 
@@ -72,7 +77,9 @@ namespace YokiFrame
             }
 
             progress?.Report(1f);
-            return mHandle.SceneObject;
+            var scene = mHandle.SceneObject;
+            SceneLoadTracker.OnLoad(this, mScenePath, scene, mIsAdditive);
+            return scene;
         }
 
         public void UnloadAsync(Scene scene, Action onComplete)
@@ -101,7 +108,9 @@ namespace YokiFrame
 
         public void UnloadAndRecycle()
         {
+            SceneLoadTracker.OnUnload(this);
             mHandle = null; mIsSuspended = false;
+            mScenePath = null; mIsAdditive = false;
             mPool?.Recycle(this);
         }
     }
