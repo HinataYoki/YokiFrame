@@ -97,6 +97,7 @@ namespace YokiFrame.TableKit.Editor
             {
                 mGenerateBtn.SetEnabled(true);
                 mLogContent.value = logBuilder.ToString();
+                SaveConsoleLog(); // 持久化生成/验证日志
             }
         }
 
@@ -221,6 +222,7 @@ namespace YokiFrame.TableKit.Editor
             {
                 mGenerateBtn.SetEnabled(true);
                 mLogContent.value = logBuilder.ToString();
+                SaveConsoleLog(); // 持久化单目标生成日志
             }
         }
 

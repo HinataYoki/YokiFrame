@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 影响配置：命名空间、程序集、生成模板、Scripts路径、Prefab路径
 - **UIKit** 修复文件夹选择按钮图标不居中问题
   - 添加垂直/水平居中对齐样式
+- **TableKit** 控制台日志持久化
+  - 修复窗口重新打开/编译后日志内容丢失的问题
+  - 日志内容通过 EditorPrefs 持久化存储
+  - 仅在生成/验证/刷新/清除操作时更新日志
+  - 确保编译、PlayMode 切换、窗口重开后日志保留
 
 ## [1.6.6] - 2026-01-28
 

@@ -123,6 +123,7 @@ namespace YokiFrame.TableKit.Editor
         private const string PREF_GENERATE_EXTERNAL_TYPE_UTIL = "TableKit_GenerateExternalTypeUtil";
         private const string PREF_CONFIG_EXPANDED = "TableKit_ConfigExpanded";
         private const string PREF_GUIDE_EXPANDED = "TableKit_GuideExpanded";
+        private const string PREF_CONSOLE_LOG = "TableKit_ConsoleLog";
 
         #endregion
 
@@ -196,6 +197,11 @@ namespace YokiFrame.TableKit.Editor
             // 加载多目标输出配置
             LoadExtraOutputTargets();
         }
+        
+        /// <summary>
+        /// 加载持久化的控制台日志
+        /// </summary>
+        private string LoadConsoleLog() => EditorPrefs.GetString(PREF_CONSOLE_LOG, "等待操作...");
 
         public void SavePrefs()
         {
@@ -211,6 +217,23 @@ namespace YokiFrame.TableKit.Editor
             EditorPrefs.SetBool(PREF_USE_ASSEMBLY, mUseAssemblyDefinition);
             EditorPrefs.SetString(PREF_ASSEMBLY_NAME, mAssemblyName);
             EditorPrefs.SetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, mGenerateExternalTypeUtil);
+            
+            // 持久化控制台日志
+            if (mLogContent != default)
+            {
+                EditorPrefs.SetString(PREF_CONSOLE_LOG, mLogContent.value);
+            }
+        }
+        
+        /// <summary>
+        /// 保存控制台日志（独立方法，供生成/验证后调用）
+        /// </summary>
+        private void SaveConsoleLog()
+        {
+            if (mLogContent != default)
+            {
+                EditorPrefs.SetString(PREF_CONSOLE_LOG, mLogContent.value);
+            }
         }
 
         /// <summary>

@@ -87,7 +87,7 @@ namespace YokiFrame.TableKit.Editor
             mLogContent = new TextField();
             mLogContent.multiline = true;
             mLogContent.isReadOnly = true;
-            mLogContent.value = "等待操作...";
+            mLogContent.value = LoadConsoleLog(); // 恢复上次日志
             mLogContent.style.fontSize = Design.FontSizeSmall;
             mLogContent.style.color = new StyleColor(Design.TextSecondary);
             mLogContent.style.whiteSpace = WhiteSpace.Normal;
@@ -135,6 +135,7 @@ namespace YokiFrame.TableKit.Editor
         {
             mLogContent.value = "日志已清除";
             UpdateStatusBanner(BuildStatus.Ready);
+            SaveConsoleLog(); // 持久化清除状态
         }
 
         #endregion
