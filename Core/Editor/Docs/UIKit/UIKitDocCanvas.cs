@@ -12,10 +12,55 @@ namespace YokiFrame.EditorTools
         {
             return new DocSection
             {
-                Title = "Canvas 优化",
-                Description = "通过嵌套 Canvas 实现动静分离，隔离频繁更新的 UI 元素，避免触发整个 Canvas 重建。",
+                Title = "Canvas 配置与优化",
+                Description = "UIKit Canvas 配置已从代码抽离到 YokiFrameSettings，支持统一管理和运行时应用。同时提供动静分离方案优化渲染性能。",
                 CodeExamples = new List<CodeExample>
                 {
+                    new()
+                    {
+                        Title = "Canvas 配置管理",
+                        Code = @"// Canvas 配置已独立为 UIKitSettings ScriptableObject
+// 路径：Assets/Settings/Resources/UIKitSettings.asset
+
+// 编辑器配置方式：
+// 1. 打开 YokiFrame Tools 窗口
+// 2. 切换到 UIKit 标签页
+// 3. 点击 ""设置"" 子标签页
+// 4. 修改 Canvas/CanvasScaler/GraphicRaycaster 配置
+// 5. 点击 ""保存"" 按钮
+
+// 配置项包括：
+// - Canvas: 渲染模式、排序顺序、像素完美
+// - CanvasScaler: 缩放模式、参考分辨率(默认3840x2160)、匹配权重
+// - GraphicRaycaster: 阻挡对象、阻挡层级
+
+// 运行时自动应用：
+// UIRoot 初始化时会自动从 UIKitSettings 读取配置并应用到 Canvas 组件",
+                        Explanation = "配置统一管理，无需修改 Prefab，支持不同项目快速切换配置。UIKitSettings 独立于 Core，避免依赖污染。"
+                    },
+                    new()
+                    {
+                        Title = "代码访问配置",
+                        Code = @"// 访问 UIKit 配置
+var config = UIKitSettings.Instance;
+
+// 读取配置
+RenderMode renderMode = config.RenderMode;
+Vector2 resolution = config.ReferenceResolution;
+float matchWeight = config.MatchWidthOrHeight;
+
+// 修改配置（编辑器模式）
+#if UNITY_EDITOR
+config.ReferenceResolution = new Vector2(1920, 1080);
+config.MatchWidthOrHeight = 0.5f;
+UnityEditor.EditorUtility.SetDirty(config);
+UnityEditor.AssetDatabase.SaveAssets();
+#endif
+
+// 重置为默认值
+config.ResetToDefault();",
+                        Explanation = "运行时可读取配置，编辑器模式可修改配置。UIKitSettings 独立管理，不依赖 YokiFrameSettings。"
+                    },
                     new()
                     {
                         Title = "UIDynamicElement 组件",

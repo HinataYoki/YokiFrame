@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.7] - 2026-01-28
+
+### Added
+- **UIKit** Canvas 配置系统重构
+  - 创建独立 UIKitSettings ScriptableObject 管理 Canvas 配置
+  - 路径: Assets/Settings/Resources/UIKitSettings.asset
+  - 避免 Core 依赖 Tools，保持架构清晰
+  - 配置包含 Canvas、CanvasScaler、GraphicRaycaster 所有参数
+- **UIKit** 编辑器新增设置标签页
+  - 新增第5个标签页 "设置"，可视化配置 Canvas 参数
+  - 支持实时修改：渲染模式、参考分辨率(默认3840x2160)、匹配权重等
+  - 提供重置默认值和保存功能
+
+### Changed
+- **UIKit** UIRoot 运行时配置应用
+  - 初始化时自动从 UIKitSettings 读取配置
+  - 新增三个配置应用方法：ApplyCanvasConfig()、ApplyCanvasScalerConfig()、ApplyGraphicRaycasterConfig()
+
+### Fixed
+- **UIKit** 修复创建面板配置持久化问题
+  - 修复项目设置重启后恢复默认的问题
+  - 在所有配置修改回调中添加 SaveConfig() 调用
+  - 影响配置：命名空间、程序集、生成模板、Scripts路径、Prefab路径
+- **UIKit** 修复文件夹选择按钮图标不居中问题
+  - 添加垂直/水平居中对齐样式
+
 ## [1.6.6] - 2026-01-28
 
 ### Fixed

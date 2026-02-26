@@ -61,7 +61,11 @@ namespace YokiFrame
 
             // 右列内容：命名空间
             rightColumn.Add(BuildCompactInputRow("命名空间", ref mNamespaceField, ScriptNamespace, 
-                evt => ScriptNamespace = evt.newValue));
+                evt =>
+                {
+                    ScriptNamespace = evt.newValue;
+                    UIKitCreateConfig.Instance.SaveConfig();
+                }));
 
             content.Add(gridContainer);
 
@@ -173,6 +177,7 @@ namespace YokiFrame
             {
                 ScriptGeneratePath = path;
                 mScriptPathField.value = path;
+                UIKitCreateConfig.Instance.SaveConfig();
             }));
 
             // Prefab 路径
@@ -180,6 +185,7 @@ namespace YokiFrame
             {
                 PrefabGeneratePath = path;
                 mPrefabPathField.value = path;
+                UIKitCreateConfig.Instance.SaveConfig();
             }));
 
             return section;
@@ -225,6 +231,10 @@ namespace YokiFrame
             browseBtn.style.marginLeft = Spacing.XS;
             browseBtn.style.paddingLeft = 0;
             browseBtn.style.paddingRight = 0;
+            browseBtn.style.paddingTop = 0;
+            browseBtn.style.paddingBottom = 0;
+            browseBtn.style.alignItems = Align.Center;
+            browseBtn.style.justifyContent = Justify.Center;
 
             var folderIcon = new Image { image = KitIcons.GetTexture(KitIcons.FOLDER_DOCS) };
             folderIcon.style.width = ICON_SIZE;
@@ -256,7 +266,11 @@ namespace YokiFrame
             }
 
             mAssemblyDropdown = new DropdownField(mAssemblyNames, currentIndex);
-            mAssemblyDropdown.RegisterValueChangedCallback(evt => AssemblyName = evt.newValue);
+            mAssemblyDropdown.RegisterValueChangedCallback(evt =>
+            {
+                AssemblyName = evt.newValue;
+                UIKitCreateConfig.Instance.SaveConfig();
+            });
             return mAssemblyDropdown;
         }
 
@@ -275,6 +289,7 @@ namespace YokiFrame
             mTemplateDropdown.RegisterValueChangedCallback(evt =>
             {
                 UICodeGenTemplateRegistry.SetActiveTemplate(evt.newValue);
+                UIKitCreateConfig.Instance.SaveConfig();
             });
             return mTemplateDropdown;
         }

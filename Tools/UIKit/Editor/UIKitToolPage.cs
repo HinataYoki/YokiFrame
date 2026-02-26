@@ -35,7 +35,8 @@ namespace YokiFrame
             CreatePanel,    // 创建面板
             Debug,          // 调试
             BindInspector,  // 绑定检查
-            Validator       // 验证器
+            Validator,      // 验证器
+            Settings        // 设置
         }
 
         #endregion
@@ -48,6 +49,7 @@ namespace YokiFrame
         private Button mDebugTabBtn;
         private Button mBindInspectorTabBtn;
         private Button mValidatorTabBtn;
+        private Button mSettingsTabBtn;
 
         // 响应式更新
         private Throttle mRefreshThrottle;
@@ -70,11 +72,13 @@ namespace YokiFrame
             mDebugTabBtn = CreateTabButton("调试", TabType.Debug);
             mBindInspectorTabBtn = CreateTabButton("绑定检查", TabType.BindInspector);
             mValidatorTabBtn = CreateTabButton("验证器", TabType.Validator);
+            mSettingsTabBtn = CreateTabButton("设置", TabType.Settings);
 
             tabBar.Add(mCreatePanelTabBtn);
             tabBar.Add(mDebugTabBtn);
             tabBar.Add(mBindInspectorTabBtn);
             tabBar.Add(mValidatorTabBtn);
+            tabBar.Add(mSettingsTabBtn);
 
             // 内容区域
             mTabContent = new VisualElement { style = { flexGrow = 1 } };
@@ -154,6 +158,7 @@ namespace YokiFrame
             UpdateSingleTabStyle(mDebugTabBtn, mCurrentTab == TabType.Debug);
             UpdateSingleTabStyle(mBindInspectorTabBtn, mCurrentTab == TabType.BindInspector);
             UpdateSingleTabStyle(mValidatorTabBtn, mCurrentTab == TabType.Validator);
+            UpdateSingleTabStyle(mSettingsTabBtn, mCurrentTab == TabType.Settings);
         }
 
         private void UpdateSingleTabStyle(Button btn, bool isActive)
@@ -182,6 +187,9 @@ namespace YokiFrame
                     break;
                 case TabType.Validator:
                     BuildValidatorUI(mTabContent);
+                    break;
+                case TabType.Settings:
+                    BuildSettingsUI(mTabContent);
                     break;
             }
         }

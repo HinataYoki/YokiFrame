@@ -65,6 +65,11 @@ namespace YokiFrame
 
         [SerializeField] private UIRootConfig mConfig = new();
 
+        /// <summary>
+        /// UIKit Canvas 配置（从 UIKitSettings 读取）
+        /// </summary>
+        private UIKitSettings Config => UIKitSettings.Instance;
+
         #endregion
 
         #region 组件引用
@@ -415,6 +420,54 @@ namespace YokiFrame
             if (CanvasScaler == default) CanvasScaler = GetComponent<CanvasScaler>();
             if (GraphicRaycaster == default) GraphicRaycaster = GetComponent<GraphicRaycaster>();
             if (EventSystem == default) EventSystem = root.GetComponentInChildren<EventSystem>();
+
+            // 应用配置到组件
+            ApplyCanvasConfig();
+            ApplyCanvasScalerConfig();
+            ApplyGraphicRaycasterConfig();
+        }
+
+        /// <summary>
+        /// 应用 Canvas 配置
+        /// </summary>
+        private void ApplyCanvasConfig()
+        {
+            if (Canvas == default) return;
+
+            Canvas.renderMode = Config.RenderMode;
+            Canvas.sortingOrder = Config.SortOrder;
+            Canvas.targetDisplay = Config.TargetDisplay;
+            Canvas.pixelPerfect = Config.PixelPerfect;
+        }
+
+        /// <summary>
+        /// 应用 CanvasScaler 配置
+        /// </summary>
+        private void ApplyCanvasScalerConfig()
+        {
+            if (CanvasScaler == default) return;
+
+            CanvasScaler.uiScaleMode = Config.ScaleMode;
+            CanvasScaler.referenceResolution = Config.ReferenceResolution;
+            CanvasScaler.screenMatchMode = Config.ScreenMatchMode;
+            CanvasScaler.matchWidthOrHeight = Config.MatchWidthOrHeight;
+            CanvasScaler.referencePixelsPerUnit = Config.ReferencePixelsPerUnit;
+            CanvasScaler.physicalUnit = Config.PhysicalUnit;
+            CanvasScaler.fallbackScreenDPI = Config.FallbackScreenDPI;
+            CanvasScaler.defaultSpriteDPI = Config.DefaultSpriteDPI;
+            CanvasScaler.dynamicPixelsPerUnit = Config.DynamicPixelsPerUnit;
+        }
+
+        /// <summary>
+        /// 应用 GraphicRaycaster 配置
+        /// </summary>
+        private void ApplyGraphicRaycasterConfig()
+        {
+            if (GraphicRaycaster == default) return;
+
+            GraphicRaycaster.ignoreReversedGraphics = Config.IgnoreReversedGraphics;
+            GraphicRaycaster.blockingObjects = Config.BlockingObjects;
+            GraphicRaycaster.blockingMask = Config.BlockingMask;
         }
 
         private void InitializeUILevels()
