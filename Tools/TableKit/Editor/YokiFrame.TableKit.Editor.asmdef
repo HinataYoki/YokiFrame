@@ -1,6 +1,6 @@
 ﻿{
     "name":  "YokiFrame.TableKit.Editor",
-    "rootNamespace":  "YokiFrame.Editor",
+    "rootNamespace":  "YokiFrame.TableKit.Editor",
     "references":  [
                        "YokiFrame.Core.Editor",
                        "YokiFrame.TableKit.Editor.TableKitWindow"

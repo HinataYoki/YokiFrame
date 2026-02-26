@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.LocalizationKit.Editor",
-    "rootNamespace": "YokiFrame.EditorTools",
+    "rootNamespace": "YokiFrame.LocalizationKit.Editor",
     "references": [
         "GUID:bcdb477476245ee448d8865cea3cea0c",
         "GUID:29152f77ade275d48bfabf09f083f361"

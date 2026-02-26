@@ -88,38 +88,31 @@ namespace YokiFrame
             var infoCount = result.Issues.Count - errorCount - warningCount;
 
             var summaryRow = new VisualElement();
-            summaryRow.style.flexDirection = FlexDirection.Row;
-            summaryRow.style.alignItems = Align.Center;
-            summaryRow.style.paddingTop = Spacing.SM;
-            summaryRow.style.paddingBottom = Spacing.SM;
-            summaryRow.style.paddingLeft = Spacing.MD;
-            summaryRow.style.paddingRight = Spacing.MD;
-            summaryRow.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
-            summaryRow.style.borderTopLeftRadius = summaryRow.style.borderTopRightRadius = Radius.MD;
-            summaryRow.style.borderBottomLeftRadius = summaryRow.style.borderBottomRightRadius = Radius.MD;
-            summaryRow.style.marginBottom = Spacing.MD;
+            summaryRow.AddToClassList("yoki-validator-summary");
 
             var targetName = result.Target != null ? result.Target.name : "未知";
-            summaryRow.Add(new Label($"目标: {targetName}") { style = { unityFontStyleAndWeight = FontStyle.Bold, flexGrow = 1 } });
+            var targetLabel = new Label($"目标: {targetName}");
+            targetLabel.AddToClassList("yoki-validator-summary__target");
+            summaryRow.Add(targetLabel);
 
             if (errorCount > 0)
             {
                 var errorBadge = CreateBadge(errorCount.ToString(), Colors.BadgeError);
-                errorBadge.style.marginRight = Spacing.MD;
+                errorBadge.AddToClassList("yoki-validator-summary__badge");
                 summaryRow.Add(errorBadge);
             }
 
             if (warningCount > 0)
             {
                 var warningBadge = CreateBadge(warningCount.ToString(), Colors.BadgeWarning);
-                warningBadge.style.marginRight = Spacing.MD;
+                warningBadge.AddToClassList("yoki-validator-summary__badge");
                 summaryRow.Add(warningBadge);
             }
 
             if (infoCount > 0)
             {
                 var infoBadge = CreateBadge(infoCount.ToString(), Colors.BadgeInfo);
-                infoBadge.style.marginRight = Spacing.MD;
+                infoBadge.AddToClassList("yoki-validator-summary__badge");
                 summaryRow.Add(infoBadge);
             }
 
@@ -134,36 +127,43 @@ namespace YokiFrame
 
         private void DrawIssueItem(UIPanelValidator.ValidationIssue issue)
         {
-            var bgColor = GetIssueSeverityBgColor(issue.Severity);
-
             var card = new VisualElement();
-            card.style.backgroundColor = new StyleColor(bgColor);
-            card.style.paddingTop = Spacing.SM;
-            card.style.paddingBottom = Spacing.SM;
-            card.style.paddingLeft = Spacing.MD;
-            card.style.paddingRight = Spacing.MD;
-            card.style.marginBottom = Spacing.SM;
-            card.style.borderTopLeftRadius = card.style.borderTopRightRadius = Radius.MD;
-            card.style.borderBottomLeftRadius = card.style.borderBottomRightRadius = Radius.MD;
+            card.AddToClassList("yoki-validator-issue-card");
+            
+            // Add severity modifier
+            switch (issue.Severity)
+            {
+                case UIPanelValidator.IssueSeverity.Error:
+                    card.AddToClassList("yoki-validator-issue-card--error");
+                    break;
+                case UIPanelValidator.IssueSeverity.Warning:
+                    card.AddToClassList("yoki-validator-issue-card--warning");
+                    break;
+                case UIPanelValidator.IssueSeverity.Info:
+                    card.AddToClassList("yoki-validator-issue-card--info");
+                    break;
+            }
 
             // 第一行：图标 + 类别 + 消息
             var headerRow = new VisualElement();
-            headerRow.style.flexDirection = FlexDirection.Row;
-            headerRow.style.alignItems = Align.FlexStart;
+            headerRow.AddToClassList("yoki-validator-issue-header");
 
             var iconId = GetIssueSeverityIconId(issue.Severity);
             var iconColor = GetIssueSeverityTextColor(issue.Severity);
             var iconImage = new Image { image = KitIcons.GetTexture(iconId) };
-            iconImage.style.width = 16;
-            iconImage.style.height = 16;
-            iconImage.style.marginRight = Spacing.XS;
+            iconImage.AddToClassList("yoki-validator-issue-icon");
             iconImage.tintColor = iconColor;
             headerRow.Add(iconImage);
 
             var categoryLabel = GetIssueCategoryLabel(issue.Category);
-            headerRow.Add(new Label($"[{categoryLabel}]") { style = { width = 50, fontSize = 11, color = new StyleColor(Colors.TextTertiary) } });
+            var categoryElement = new Label($"[{categoryLabel}]");
+            categoryElement.AddToClassList("yoki-validator-issue-category");
+            categoryElement.style.color = new StyleColor(Colors.TextTertiary);
+            headerRow.Add(categoryElement);
 
-            headerRow.Add(new Label(issue.Message) { style = { flexGrow = 1, whiteSpace = WhiteSpace.Normal } });
+            var messageElement = new Label(issue.Message);
+            messageElement.AddToClassList("yoki-validator-issue-message");
+            headerRow.Add(messageElement);
 
             card.Add(headerRow);
 
@@ -171,19 +171,18 @@ namespace YokiFrame
             if (!string.IsNullOrEmpty(issue.FixSuggestion))
             {
                 var suggestionRow = new VisualElement();
-                suggestionRow.style.flexDirection = FlexDirection.Row;
-                suggestionRow.style.alignItems = Align.Center;
-                suggestionRow.style.paddingLeft = Spacing.XL;
-                suggestionRow.style.marginTop = Spacing.XS;
+                suggestionRow.AddToClassList("yoki-validator-suggestion-row");
                 
                 var arrowIcon = new Image { image = KitIcons.GetTexture(KitIcons.ARROW_RIGHT) };
-                arrowIcon.style.width = 12;
-                arrowIcon.style.height = 12;
-                arrowIcon.style.marginRight = Spacing.XS;
+                arrowIcon.AddToClassList("yoki-validator-suggestion-icon");
                 arrowIcon.tintColor = Colors.TextTertiary;
                 suggestionRow.Add(arrowIcon);
                 
-                suggestionRow.Add(new Label(issue.FixSuggestion) { style = { fontSize = 11, color = new StyleColor(Colors.TextTertiary) } });
+                var suggestionText = new Label(issue.FixSuggestion);
+                suggestionText.AddToClassList("yoki-validator-suggestion-text");
+                suggestionText.style.color = new StyleColor(Colors.TextTertiary);
+                suggestionRow.Add(suggestionText);
+                
                 card.Add(suggestionRow);
             }
 
@@ -191,9 +190,7 @@ namespace YokiFrame
             if (issue.Context != null)
             {
                 var btnRow = new VisualElement();
-                btnRow.style.flexDirection = FlexDirection.Row;
-                btnRow.style.justifyContent = Justify.FlexEnd;
-                btnRow.style.marginTop = Spacing.XS;
+                btnRow.AddToClassList("yoki-validator-button-row");
 
                 btnRow.Add(CreateSmallButton("定位", () =>
                 {
@@ -222,8 +219,7 @@ namespace YokiFrame
         private void DrawSceneResults()
         {
             var titleLabel = new Label($"场景验证结果 ({mValidatorSceneResults.Count} 个面板有问题)");
-            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            titleLabel.style.marginBottom = Spacing.MD;
+            titleLabel.AddToClassList("yoki-validator-scene-title");
             mValidatorContent.Add(titleLabel);
 
             for (int i = 0; i < mValidatorSceneResults.Count; i++)
@@ -231,21 +227,15 @@ namespace YokiFrame
                 var result = mValidatorSceneResults[i];
 
                 var card = new VisualElement();
-                card.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
-                card.style.paddingTop = Spacing.SM;
-                card.style.paddingBottom = Spacing.SM;
-                card.style.paddingLeft = Spacing.MD;
-                card.style.paddingRight = Spacing.MD;
-                card.style.marginBottom = Spacing.SM;
-                card.style.borderTopLeftRadius = card.style.borderTopRightRadius = Radius.MD;
-                card.style.borderBottomLeftRadius = card.style.borderBottomRightRadius = Radius.MD;
+                card.AddToClassList("yoki-validator-scene-card");
 
                 var headerRow = new VisualElement();
-                headerRow.style.flexDirection = FlexDirection.Row;
-                headerRow.style.alignItems = Align.Center;
+                headerRow.AddToClassList("yoki-validator-scene-header");
 
                 var targetName = result.Target != null ? result.Target.name : "未知";
-                headerRow.Add(new Label(targetName) { style = { unityFontStyleAndWeight = FontStyle.Bold, flexGrow = 1 } });
+                var nameLabel = new Label(targetName);
+                nameLabel.AddToClassList("yoki-validator-scene-name");
+                headerRow.Add(nameLabel);
 
                 headerRow.Add(CreateSmallButton("详情", () => SetValidatorTarget(result.Target)));
 
@@ -258,7 +248,10 @@ namespace YokiFrame
 
                 var errorCount = result.GetErrorCount();
                 var warningCount = result.GetWarningCount();
-                card.Add(new Label($"  错误: {errorCount}, 警告: {warningCount}") { style = { fontSize = 11, color = new StyleColor(Colors.TextTertiary), marginTop = Spacing.XS } });
+                var statsLabel = new Label($"  错误: {errorCount}, 警告: {warningCount}");
+                statsLabel.AddToClassList("yoki-validator-scene-stats");
+                statsLabel.style.color = new StyleColor(Colors.TextTertiary);
+                card.Add(statsLabel);
 
                 mValidatorContent.Add(card);
             }

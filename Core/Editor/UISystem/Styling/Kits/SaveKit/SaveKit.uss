@@ -1,0 +1,44 @@
+/* SaveKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-save-{block}[__{element}][--{modifier}] */
+
+/* ========== 存档列表样式 ========== */
+.yoki-save-list {
+    flex-grow: 1;
+    padding: var(--yoki-spacing-md);
+}
+
+.yoki-save-item {
+    flex-direction: row;
+    padding: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-card);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-save-item:hover {
+    background-color: var(--yoki-layer-hover);
+}
+
+.yoki-save-item__info {
+    flex-grow: 1;
+}
+
+.yoki-save-item__name {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-save-item__meta {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-save-item__actions {
+    flex-direction: row;
+    align-items: center;
+}

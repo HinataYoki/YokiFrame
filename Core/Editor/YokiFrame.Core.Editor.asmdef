@@ -1,32 +1,22 @@
-﻿{
-    "name":  "YokiFrame.Core.Editor",
-    "rootNamespace":  "YokiFrame.EditorTools",
-    "references":  [
-                       "YokiFrame",
-                       "YokiFrame.InputKit",
-                       "YokiFrame.DialogueKit",
-                       "YooAsset",
-                       "YooAsset.Editor",
-                       "UniTask",
-                       "GUID:75469ad4d38634e559750d17036d5f7c"
-                   ],
-    "includePlatforms":  [
-                             "Editor"
-                         ],
-    "excludePlatforms":  [
-
-                         ],
-    "allowUnsafeCode":  false,
-    "overrideReferences":  false,
-    "precompiledReferences":  [
-
-                              ],
-    "autoReferenced":  true,
-    "defineConstraints":  [
-
-                          ],
-    "versionDefines":  [
-
-                       ],
-    "noEngineReferences":  false
+{
+    "name": "YokiFrame.Core.Editor",
+    "rootNamespace": "YokiFrame.EditorTools",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:e34a5702dd353724aa315fb8011f08c3",
+        "GUID:4d1926c9df5b052469a1c63448b7609a",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

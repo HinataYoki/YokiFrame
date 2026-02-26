@@ -32,10 +32,12 @@ namespace YokiFrame.EditorTools
         {
             // 工具栏
             var toolbar = CreateToolbar();
+            toolbar.AddToClassList("yoki-localization-selector");
             root.Add(toolbar);
 
             // 语言选择
             mLanguageDropdown = new DropdownField("预览语言");
+            mLanguageDropdown.AddToClassList("yoki-localization-selector__dropdown");
             mLanguageDropdown.choices = new List<string>
             {
                 "简体中文", "繁体中文", "English", "日本語", "한국어"
@@ -84,20 +86,16 @@ namespace YokiFrame.EditorTools
         private VisualElement MakeTextItem()
         {
             var container = new VisualElement();
-            container.style.paddingLeft = 10;
-            container.style.paddingRight = 10;
-            container.style.paddingTop = 5;
-            container.style.paddingBottom = 5;
-            container.style.borderBottomWidth = 1;
-            container.style.borderBottomColor = new Color(0.3f, 0.3f, 0.3f);
+            container.AddToClassList("yoki-localization-entry");
 
             var idLabel = new Label();
             idLabel.name = "id-label";
-            idLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            idLabel.AddToClassList("yoki-localization-entry__key");
             container.Add(idLabel);
 
             var textLabel = new Label();
             textLabel.name = "text-label";
+            textLabel.AddToClassList("yoki-localization-entry__value");
             textLabel.style.whiteSpace = WhiteSpace.Normal;
             textLabel.style.overflow = Overflow.Hidden;
             container.Add(textLabel);
@@ -143,6 +141,8 @@ namespace YokiFrame.EditorTools
 
             if (entry.IsMissing)
             {
+                element.RemoveFromClassList("yoki-localization-entry--missing");
+                element.AddToClassList("yoki-localization-entry--missing");
                 statusIcon.image = KitIcons.GetTexture(KitIcons.WARNING);
                 statusIcon.tintColor = new Color(1f, 0.5f, 0f);
                 statusIcon.style.display = DisplayStyle.Flex;
@@ -151,6 +151,7 @@ namespace YokiFrame.EditorTools
             }
             else
             {
+                element.RemoveFromClassList("yoki-localization-entry--missing");
                 statusIcon.style.display = DisplayStyle.None;
                 statusLabel.text = $"语言: {entry.LanguageId}";
                 statusLabel.style.color = new Color(0.6f, 0.6f, 0.6f);

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-02-27
+
+### Changed
+- **编辑器架构优化**
+  - 重构编辑器 UI 架构，提升模块化程度和可维护性
+  - 优化 UIToolkit 组件组织结构，增强组件复用性
+  - 改进 ToolsWindow 页面结构，精简生命周期管理逻辑
+  - 优化 USS 样式组织，全面采用 BEM 命名规范确保样式隔离
+  - 减少 YokiFrameUIComponents 中的代码重复，提取通用模式
+- **编辑器性能提升**
+  - 增强响应式数据绑定模式，减少不必要的 UI 更新
+  - 优化编辑器事件系统隔离（EditorEventCenter/EditorDataBridge）
+  - 实现查询结果缓存机制，避免重复 DOM 查询
+  - 减少编辑器 GC 分配，提升大型项目编辑器响应速度
+
 ## [1.6.7] - 2026-01-28
 
 ### Added

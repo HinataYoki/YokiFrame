@@ -50,30 +50,9 @@ namespace YokiFrame.EditorTools
         private VisualElement CreateActionCard(IAction action, string typeName, string executorName, bool isRoot)
         {
             var typeColor = GetTypeColor(typeName);
-            var card = new VisualElement
-            {
-                name = $"card-{action.ActionID}",
-                style =
-                {
-                    backgroundColor = new StyleColor(CARD_BG),
-                    borderTopLeftRadius = CARD_BORDER_RADIUS,
-                    borderTopRightRadius = CARD_BORDER_RADIUS,
-                    borderBottomLeftRadius = CARD_BORDER_RADIUS,
-                    borderBottomRightRadius = CARD_BORDER_RADIUS,
-                    marginLeft = CARD_MARGIN,
-                    marginRight = CARD_MARGIN,
-                    marginTop = CARD_MARGIN,
-                    marginBottom = CARD_MARGIN,
-                    paddingLeft = CARD_PADDING,
-                    paddingRight = CARD_PADDING,
-                    paddingTop = CARD_PADDING,
-                    paddingBottom = CARD_PADDING,
-                    borderLeftWidth = 3,
-                    borderLeftColor = new StyleColor(typeColor),
-                    position = Position.Relative,
-                    overflow = Overflow.Hidden
-                }
-            };
+            var card = new VisualElement { name = $"card-{action.ActionID}" };
+            card.AddToClassList("yoki-action-node");
+            card.style.borderLeftColor = new StyleColor(typeColor);
 
             ApplyStatusStyle(card, action.ActionState);
             BuildCardHeader(card, action, typeName, typeColor, executorName, isRoot);
@@ -84,24 +63,36 @@ namespace YokiFrame.EditorTools
 
         private void BuildCardHeader(VisualElement card, IAction action, string typeName, Color typeColor, string executorName, bool isRoot)
         {
-            var header = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+            var header = new VisualElement();
+            header.AddToClassList("yoki-action-node__header");
             card.Add(header);
 
             // 状态点
             var statusColor = action.ActionState switch { ActionStatus.Started => COLOR_RUNNING, ActionStatus.Finished => COLOR_FINISHED, _ => new Color(0.4f, 0.4f, 0.4f) };
-            var dot = new VisualElement { style = { width = 8, height = 8, borderTopLeftRadius = 4, borderTopRightRadius = 4, borderBottomLeftRadius = 4, borderBottomRightRadius = 4, backgroundColor = new StyleColor(statusColor), marginRight = 6 } };
+            var dot = new VisualElement();
+            dot.AddToClassList("yoki-action-node__status-dot");
+            dot.style.backgroundColor = new StyleColor(statusColor);
             header.Add(dot);
 
             // 图标和类型
-            header.Add(new Label(GetTypeIcon(typeName)) { style = { fontSize = 12, marginRight = 4, color = new StyleColor(typeColor) } });
-            header.Add(new Label(typeName) { style = { fontSize = 11, unityFontStyleAndWeight = FontStyle.Bold, color = new StyleColor(typeColor), marginRight = 8 } });
+            var icon = new Label(GetTypeIcon(typeName));
+            icon.AddToClassList("yoki-action-node__icon");
+            icon.style.color = new StyleColor(typeColor);
+            header.Add(icon);
+            
+            var typeLabel = new Label(typeName);
+            typeLabel.AddToClassList("yoki-action-node__type");
+            typeLabel.style.color = new StyleColor(typeColor);
+            header.Add(typeLabel);
 
             // 调试信息
             var debugInfo = action.GetDebugInfo();
             if (debugInfo != typeName && !debugInfo.StartsWith(typeName))
             {
                 var info = debugInfo.Length > 30 ? debugInfo.Substring(0, 27) + "..." : debugInfo;
-                header.Add(new Label(info) { style = { fontSize = 10, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)), flexGrow = 1 }, tooltip = debugInfo });
+                var infoLabel = new Label(info) { tooltip = debugInfo };
+                infoLabel.AddToClassList("yoki-action-node__info");
+                header.Add(infoLabel);
             }
 
             // Sequence 进度
@@ -109,13 +100,17 @@ namespace YokiFrame.EditorTools
             if (typeName == "Sequence" && childCount > 0)
             {
                 var idx = ActionMonitorService.GetCurrentChildIndex(action);
-                header.Add(new Label($"[{idx + 1}/{childCount}]") { style = { fontSize = 10, color = new StyleColor(COLOR_SEQUENCE), marginLeft = 8 } });
+                var progress = new Label($"[{idx + 1}/{childCount}]");
+                progress.AddToClassList("yoki-action-node__progress");
+                progress.style.color = new StyleColor(COLOR_SEQUENCE);
+                header.Add(progress);
             }
 
             // 执行器标签
             if (isRoot)
             {
-                var exec = new Label(executorName) { style = { fontSize = 9, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)), marginLeft = 8, paddingLeft = 6, paddingRight = 6, paddingTop = 2, paddingBottom = 2, backgroundColor = new StyleColor(new Color(0.15f, 0.15f, 0.15f)), borderTopLeftRadius = 3, borderTopRightRadius = 3, borderBottomLeftRadius = 3, borderBottomRightRadius = 3 } };
+                var exec = new Label(executorName);
+                exec.AddToClassList("yoki-action-node__executor");
                 header.Add(exec);
             }
         }
@@ -134,41 +129,28 @@ namespace YokiFrame.EditorTools
 
         private VisualElement CreateChildContainer(bool isSequence, bool isParallel, bool isRepeat)
         {
-            var container = new VisualElement { style = { marginTop = 8, paddingTop = 8 } };
+            var container = new VisualElement();
+            container.AddToClassList("yoki-action-child-container");
 
-            if (isSequence || isRepeat)
+            if (isSequence)
             {
-                // 纵向排列，左侧连接线
-                container.style.flexDirection = FlexDirection.Column;
-                container.style.borderLeftWidth = 2;
-                container.style.borderLeftColor = new StyleColor(isRepeat ? COLOR_LEAF_REPEAT : COLOR_SEQUENCE);
-                container.style.paddingLeft = 8;
-                container.style.marginLeft = 4;
+                container.AddToClassList("yoki-action-child-container--sequence");
+                container.style.borderLeftColor = new StyleColor(COLOR_SEQUENCE);
             }
             else if (isParallel)
             {
-                // 横向排列，边框包围
-                container.style.flexDirection = FlexDirection.Row;
-                container.style.flexWrap = Wrap.Wrap;
-                container.style.alignItems = Align.FlexStart;
-                container.style.borderTopWidth = 1;
-                container.style.borderBottomWidth = 1;
-                container.style.borderLeftWidth = 1;
-                container.style.borderRightWidth = 1;
+                container.AddToClassList("yoki-action-child-container--parallel");
                 container.style.borderTopColor = new StyleColor(COLOR_PARALLEL);
                 container.style.borderBottomColor = new StyleColor(COLOR_PARALLEL);
                 container.style.borderLeftColor = new StyleColor(COLOR_PARALLEL);
                 container.style.borderRightColor = new StyleColor(COLOR_PARALLEL);
-                container.style.borderTopLeftRadius = 4;
-                container.style.borderTopRightRadius = 4;
-                container.style.borderBottomLeftRadius = 4;
-                container.style.borderBottomRightRadius = 4;
-                container.style.paddingLeft = 4;
-                container.style.paddingRight = 4;
-                container.style.paddingTop = 4;
-                container.style.paddingBottom = 4;
-                container.style.backgroundColor = new StyleColor(new Color(0.25f, 0.2f, 0.15f, 0.3f));
             }
+            else if (isRepeat)
+            {
+                container.AddToClassList("yoki-action-child-container--repeat");
+                container.style.borderLeftColor = new StyleColor(COLOR_LEAF_REPEAT);
+            }
+            
             return container;
         }
 
@@ -177,16 +159,13 @@ namespace YokiFrame.EditorTools
             switch (status)
             {
                 case ActionStatus.Started:
-                    card.style.borderTopWidth = 1;
-                    card.style.borderBottomWidth = 1;
-                    card.style.borderRightWidth = 1;
+                    card.AddToClassList("yoki-action-node--running");
                     card.style.borderTopColor = new StyleColor(new Color(COLOR_RUNNING.r, COLOR_RUNNING.g, COLOR_RUNNING.b, 0.4f));
                     card.style.borderBottomColor = new StyleColor(new Color(COLOR_RUNNING.r, COLOR_RUNNING.g, COLOR_RUNNING.b, 0.4f));
                     card.style.borderRightColor = new StyleColor(new Color(COLOR_RUNNING.r, COLOR_RUNNING.g, COLOR_RUNNING.b, 0.4f));
-                    card.style.opacity = 1f;
                     break;
                 case ActionStatus.Finished:
-                    card.style.opacity = 0.5f;
+                    card.AddToClassList("yoki-action-node--finished");
                     break;
                 default:
                     card.style.opacity = 0.8f;
@@ -220,7 +199,9 @@ namespace YokiFrame.EditorTools
 
             if (mActiveActions.Count == 0)
             {
-                mTreeContainer.Add(new Label("暂无活跃的 Action") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)), unityTextAlign = TextAnchor.MiddleCenter, paddingTop = 40, paddingBottom = 40 } });
+                var emptyLabel = new Label("暂无活跃的 Action");
+                emptyLabel.AddToClassList("yoki-action-empty");
+                mTreeContainer.Add(emptyLabel);
                 return;
             }
 
@@ -237,8 +218,16 @@ namespace YokiFrame.EditorTools
             foreach (var kvp in mNodeCache)
             {
                 var isSelected = kvp.Key == mSelectedActionId;
-                kvp.Value.style.borderRightWidth = isSelected ? 2 : 0;
-                kvp.Value.style.borderRightColor = isSelected ? new StyleColor(new Color(0.4f, 0.7f, 1f)) : new StyleColor(Color.clear);
+                if (isSelected)
+                {
+                    kvp.Value.AddToClassList("yoki-action-node--selected");
+                    kvp.Value.style.borderRightColor = new StyleColor(new Color(0.4f, 0.7f, 1f));
+                }
+                else
+                {
+                    kvp.Value.RemoveFromClassList("yoki-action-node--selected");
+                    kvp.Value.style.borderRightColor = new StyleColor(Color.clear);
+                }
             }
         }
 

@@ -1,0 +1,646 @@
+/* UIKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-ui-{block}[__{element}][--{modifier}] */
+
+/* ========== 工具栏样式 ========== */
+.yoki-ui-toolbar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-toolbar);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-toolbar__label {
+    -unity-text-align: middle-left;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-ui-toolbar__target-field {
+    width: 200px;
+}
+
+.yoki-ui-toolbar__button {
+    height: 24px;
+    margin-left: var(--yoki-spacing-xs);
+}
+
+/* ========== 过滤栏样式 ========== */
+.yoki-ui-filter-bar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-filter-bar);
+}
+
+/* ========== 创建面板样式 ========== */
+.yoki-ui-create-panel {
+    flex-grow: 1;
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    padding-top: var(--yoki-spacing-md);
+    padding-bottom: var(--yoki-spacing-md);
+    background-color: rgb(46, 46, 46);
+}
+
+.yoki-ui-create-panel__hero-input {
+    height: 40px;
+    font-size: 16px;
+}
+
+.yoki-ui-create-panel__button {
+    height: 38px;
+}
+
+/* ========== 绑定检查样式 ========== */
+.yoki-ui-bind-content {
+    flex-grow: 1;
+    padding: var(--yoki-spacing-md);
+    background-color: rgb(46, 46, 46);
+}
+
+.yoki-ui-bind-item {
+    padding: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-xs);
+    background-color: rgb(46, 46, 54);
+    border-left-width: 3px;
+    border-top-left-radius: var(--yoki-radius-sm);
+    border-top-right-radius: var(--yoki-radius-sm);
+    border-bottom-left-radius: var(--yoki-radius-sm);
+    border-bottom-right-radius: var(--yoki-radius-sm);
+}
+
+.yoki-ui-bind-item--warning {
+    border-left-color: var(--yoki-badge-warning);
+}
+
+.yoki-ui-bind-item--error {
+    border-left-color: var(--yoki-badge-error);
+}
+
+/* ========== 调试页面样式 ========== */
+.yoki-ui-debug-toolbar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-toolbar);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-debug-toggle {
+    height: 24px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-ui-debug-toggle--active {
+    background-color: var(--yoki-brand-primary);
+    color: white;
+}
+
+.yoki-ui-debug-toggle--inactive {
+    background-color: var(--yoki-layer-card);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-ui-debug-content {
+    flex-grow: 1;
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-top: var(--yoki-spacing-md);
+}
+
+.yoki-ui-debug-panel-row {
+    flex-direction: row;
+    align-items: center;
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-debug-panel-row__name {
+    width: 150px;
+}
+
+.yoki-ui-debug-panel-row__state {
+    width: 60px;
+}
+
+.yoki-ui-debug-panel-row__level {
+    width: 100px;
+}
+
+/* ========== 设置页面样式 ========== */
+.yoki-ui-settings-toolbar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: rgb(38, 38, 38);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(51, 51, 51);
+}
+
+.yoki-ui-settings-toolbar__title {
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    flex-grow: 1;
+    color: rgb(240, 240, 245);
+}
+
+.yoki-ui-settings-content {
+    flex-grow: 1;
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-top: var(--yoki-spacing-md);
+    background-color: rgb(46, 46, 46);
+}
+
+/* 设置内容包装器：提供左右留白 */
+.yoki-ui-settings-wrapper {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.yoki-ui-settings-field-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-ui-settings-field-row__label {
+    width: 150px;
+    min-width: 150px;
+    flex-shrink: 0;
+    color: rgb(181, 186, 194);
+}
+
+.yoki-ui-settings-field-row__field {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.yoki-ui-settings-field-row__value-label {
+    width: 40px;
+    -unity-text-align: middle-right;
+}
+
+/* ========== 验证器页面样式 ========== */
+.yoki-ui-validator-toolbar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-toolbar);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-validator-target-bar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-filter-bar);
+}
+
+.yoki-ui-validator-filter-bar {
+    flex-direction: row;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-filter-bar);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-validator-filter-button {
+    height: 24px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-ui-validator-filter-button--error {
+    background-color: var(--yoki-status-error);
+    color: white;
+}
+
+.yoki-ui-validator-filter-button--warning {
+    background-color: var(--yoki-status-warning);
+    color: white;
+}
+
+.yoki-ui-validator-filter-button--info {
+    background-color: var(--yoki-status-info);
+    color: white;
+}
+
+.yoki-ui-validator-filter-button--inactive {
+    background-color: var(--yoki-layer-card);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-ui-validator-content {
+    flex-grow: 1;
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-top: var(--yoki-spacing-md);
+}
+
+.yoki-ui-validator-category-dropdown {
+    width: 80px;
+}
+
+/* ========== 通用辅助样式 ========== */
+.yoki-ui-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-ui-button {
+    height: 24px;
+}
+
+.yoki-ui-button--with-margin {
+    margin-left: var(--yoki-spacing-xs);
+}
+
+.yoki-ui-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-ui-row--padded {
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-ui-row--tight {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.yoki-ui-row--justified-end {
+    justify-content: flex-end;
+    margin-top: var(--yoki-spacing-sm);
+}
+
+.yoki-ui-label--fixed-width {
+    width: 100px;
+}
+
+.yoki-ui-label--medium-width {
+    width: 150px;
+}
+
+.yoki-ui-label--small-width {
+    width: 60px;
+}
+
+.yoki-ui-label--grow {
+    flex-grow: 1;
+}
+
+.yoki-ui-field--grow {
+    flex-grow: 1;
+}
+
+.yoki-ui-field--overflow-hidden {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.yoki-ui-spacer {
+    flex-grow: 1;
+}
+
+.yoki-ui-margin-top {
+    margin-top: var(--yoki-spacing-sm);
+}
+
+/* ========== CreatePanel 专用样式 ========== */
+.yoki-create-zone {
+    background-color: rgb(46, 46, 46);
+    border-top-left-radius: var(--yoki-radius-lg);
+    border-top-right-radius: var(--yoki-radius-lg);
+    border-bottom-left-radius: var(--yoki-radius-lg);
+    border-bottom-right-radius: var(--yoki-radius-lg);
+    padding-top: var(--yoki-spacing-xl);
+    padding-bottom: var(--yoki-spacing-xl);
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    margin-bottom: var(--yoki-spacing-lg);
+}
+
+.yoki-create-hero-input {
+    height: 40px;
+    font-size: 16px;
+    background-color: rgb(31, 31, 31);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgb(77, 77, 77);
+    border-bottom-color: rgb(77, 77, 77);
+    border-left-color: rgb(77, 77, 77);
+    border-right-color: rgb(77, 77, 77);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.yoki-create-primary-button {
+    background-color: rgb(51, 115, 191);
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    color: white;
+}
+
+.yoki-create-primary-button:hover {
+    background-color: rgb(64, 128, 217);
+}
+
+.yoki-create-title-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-lg);
+}
+
+.yoki-create-title-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-create-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(240, 240, 245);
+}
+
+.yoki-create-input-label {
+    font-size: 12px;
+    margin-bottom: var(--yoki-spacing-xs);
+    color: rgb(181, 186, 194);
+}
+
+.yoki-create-validation-label {
+    font-size: 11px;
+    margin-bottom: var(--yoki-spacing-sm);
+    display: none;
+}
+
+.yoki-create-preview-label {
+    font-size: 12px;
+    margin-bottom: var(--yoki-spacing-lg);
+}
+
+.yoki-create-preview-container {
+    display: none;
+    margin-bottom: var(--yoki-spacing-lg);
+}
+
+.yoki-create-button-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.yoki-create-button-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-create-button-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+}
+
+/* Settings Deck */
+.yoki-settings-deck {
+    margin-bottom: var(--yoki-spacing-lg);
+    background-color: rgb(46, 46, 54);
+    border-top-left-radius: var(--yoki-radius-lg);
+    border-top-right-radius: var(--yoki-radius-lg);
+    border-bottom-left-radius: var(--yoki-radius-lg);
+    border-bottom-right-radius: var(--yoki-radius-lg);
+}
+
+.yoki-settings-content {
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-bottom: var(--yoki-spacing-md);
+}
+
+.yoki-settings-summary {
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-bottom: var(--yoki-spacing-sm);
+    display: flex;
+}
+
+.yoki-settings-summary-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: var(--yoki-spacing-xs);
+    opacity: 0.5;
+}
+
+.yoki-settings-summary-label {
+    font-size: 11px;
+    color: rgb(181, 186, 194);
+}
+
+.yoki-compact-row {
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-compact-label {
+    font-size: 11px;
+    margin-bottom: 2px;
+    color: rgb(181, 186, 194);
+}
+
+.yoki-compact-dropdown {
+    height: 30px;
+}
+
+.yoki-compact-input {
+    height: 30px;
+}
+
+.yoki-path-section {
+    margin-top: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    border-top-width: 1px;
+    border-top-color: var(--yoki-border-default);
+}
+
+.yoki-path-container {
+    flex-direction: row;
+}
+
+.yoki-path-browse-button {
+    width: 32px;
+    height: 30px;
+    margin-left: var(--yoki-spacing-xs);
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.yoki-path-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* ========== Validator Logic 专用样式 ========== */
+.yoki-validator-summary {
+    flex-direction: row;
+    align-items: center;
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-toolbar);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+    margin-bottom: var(--yoki-spacing-md);
+}
+
+.yoki-validator-summary__target {
+    -unity-font-style: bold;
+    flex-grow: 1;
+}
+
+.yoki-validator-summary__badge {
+    margin-right: var(--yoki-spacing-md);
+}
+
+.yoki-validator-issue-card {
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-sm);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-validator-issue-card--error {
+    background-color: rgba(220, 53, 69, 0.3);
+}
+
+.yoki-validator-issue-card--warning {
+    background-color: rgba(255, 193, 7, 0.3);
+}
+
+.yoki-validator-issue-card--info {
+    background-color: rgba(13, 202, 240, 0.3);
+}
+
+.yoki-validator-issue-header {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.yoki-validator-issue-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-validator-issue-category {
+    width: 50px;
+    font-size: 11px;
+}
+
+.yoki-validator-issue-message {
+    flex-grow: 1;
+    white-space: normal;
+}
+
+.yoki-validator-suggestion-row {
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--yoki-spacing-xl);
+    margin-top: var(--yoki-spacing-xs);
+}
+
+.yoki-validator-suggestion-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-validator-suggestion-text {
+    font-size: 11px;
+}
+
+.yoki-validator-button-row {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: var(--yoki-spacing-xs);
+}
+
+.yoki-validator-scene-title {
+    -unity-font-style: bold;
+    margin-bottom: var(--yoki-spacing-md);
+}
+
+.yoki-validator-scene-card {
+    background-color: var(--yoki-layer-toolbar);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-sm);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-validator-scene-header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-validator-scene-name {
+    -unity-font-style: bold;
+    flex-grow: 1;
+}
+
+.yoki-validator-scene-stats {
+    font-size: 11px;
+    margin-top: var(--yoki-spacing-xs);
+}

@@ -35,14 +35,7 @@ namespace YokiFrame
         {
             // 工具栏
             var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.paddingLeft = Spacing.SM;
-            toolbar.style.paddingRight = Spacing.SM;
-            toolbar.style.paddingTop = Spacing.XS;
-            toolbar.style.paddingBottom = Spacing.XS;
-            toolbar.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
-            toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            toolbar.AddToClassList("yoki-ui-validator-toolbar");
             container.Add(toolbar);
 
             var validateSelectedBtn = new Button(() => SetValidatorTarget(Selection.activeGameObject)) { text = "验证选中" };
@@ -72,33 +65,23 @@ namespace YokiFrame
 
             // 目标选择栏
             var targetBar = new VisualElement();
-            targetBar.style.flexDirection = FlexDirection.Row;
-            targetBar.style.paddingLeft = Spacing.SM;
-            targetBar.style.paddingRight = Spacing.SM;
-            targetBar.style.paddingTop = Spacing.XS;
-            targetBar.style.paddingBottom = Spacing.XS;
-            targetBar.style.backgroundColor = new StyleColor(Colors.LayerFilterBar);
+            targetBar.AddToClassList("yoki-ui-validator-target-bar");
             container.Add(targetBar);
 
-            targetBar.Add(new Label("验证目标:") { style = { unityTextAlign = TextAnchor.MiddleLeft, marginRight = Spacing.XS } });
+            var targetLabel = new Label("验证目标:");
+            targetLabel.AddToClassList("yoki-ui-toolbar__label");
+            targetBar.Add(targetLabel);
 
             var targetField = new ObjectField();
             targetField.objectType = typeof(GameObject);
             targetField.value = mValidatorTargetPanel;
-            targetField.style.width = 200;
+            targetField.AddToClassList("yoki-ui-toolbar__target-field");
             targetField.RegisterValueChangedCallback(evt => SetValidatorTarget(evt.newValue as GameObject));
             targetBar.Add(targetField);
 
             // 过滤栏
             var filterBar = new VisualElement();
-            filterBar.style.flexDirection = FlexDirection.Row;
-            filterBar.style.paddingLeft = Spacing.SM;
-            filterBar.style.paddingRight = Spacing.SM;
-            filterBar.style.paddingTop = Spacing.XS;
-            filterBar.style.paddingBottom = Spacing.XS;
-            filterBar.style.backgroundColor = new StyleColor(Colors.LayerFilterBar);
-            filterBar.style.borderBottomWidth = 1;
-            filterBar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            filterBar.AddToClassList("yoki-ui-validator-filter-bar");
             container.Add(filterBar);
 
             // 严重程度过滤
@@ -106,12 +89,15 @@ namespace YokiFrame
             filterBar.Add(CreateValidatorFilterButton("警告", mValidatorShowWarnings, Colors.StatusWarning, v => { mValidatorShowWarnings = v; RefreshValidatorContent(); }));
             filterBar.Add(CreateValidatorFilterButton("信息", mValidatorShowInfo, Colors.StatusInfo, v => { mValidatorShowInfo = v; RefreshValidatorContent(); }));
 
-            filterBar.Add(new Label("类别:") { style = { unityTextAlign = TextAnchor.MiddleLeft, marginLeft = Spacing.MD, marginRight = Spacing.XS } });
+            var categoryLabel = new Label("类别:");
+            categoryLabel.AddToClassList("yoki-ui-toolbar__label");
+            categoryLabel.style.marginLeft = Spacing.MD;
+            filterBar.Add(categoryLabel);
 
             var categoryDropdown = new DropdownField();
             categoryDropdown.choices = new List<string> { "全部", "绑定", "引用", "Canvas", "动画", "焦点", "其他" };
             categoryDropdown.index = mValidatorCategoryFilter.HasValue ? (int)mValidatorCategoryFilter.Value + 1 : 0;
-            categoryDropdown.style.width = 80;
+            categoryDropdown.AddToClassList("yoki-ui-validator-category-dropdown");
             categoryDropdown.RegisterValueChangedCallback(evt =>
             {
                 var idx = categoryDropdown.choices.IndexOf(evt.newValue);
@@ -122,10 +108,7 @@ namespace YokiFrame
 
             // 内容区域
             mValidatorContent = new ScrollView();
-            mValidatorContent.style.flexGrow = 1;
-            mValidatorContent.style.paddingLeft = Spacing.MD;
-            mValidatorContent.style.paddingRight = Spacing.MD;
-            mValidatorContent.style.paddingTop = Spacing.MD;
+            mValidatorContent.AddToClassList("yoki-ui-validator-content");
             container.Add(mValidatorContent);
 
             RefreshValidatorContent();
@@ -135,13 +118,28 @@ namespace YokiFrame
         {
             var btn = new Button();
             btn.text = text;
-            btn.style.height = 24;
-            btn.style.marginRight = Spacing.XS;
+            btn.AddToClassList("yoki-ui-validator-filter-button");
 
             void UpdateStyle(bool isActive)
             {
-                btn.style.backgroundColor = new StyleColor(isActive ? activeColor : Colors.LayerCard);
-                btn.style.color = new StyleColor(isActive ? Color.white : Colors.TextSecondary);
+                btn.RemoveFromClassList("yoki-ui-validator-filter-button--error");
+                btn.RemoveFromClassList("yoki-ui-validator-filter-button--warning");
+                btn.RemoveFromClassList("yoki-ui-validator-filter-button--info");
+                btn.RemoveFromClassList("yoki-ui-validator-filter-button--inactive");
+
+                if (isActive)
+                {
+                    if (activeColor == Colors.StatusError)
+                        btn.AddToClassList("yoki-ui-validator-filter-button--error");
+                    else if (activeColor == Colors.StatusWarning)
+                        btn.AddToClassList("yoki-ui-validator-filter-button--warning");
+                    else if (activeColor == Colors.StatusInfo)
+                        btn.AddToClassList("yoki-ui-validator-filter-button--info");
+                }
+                else
+                {
+                    btn.AddToClassList("yoki-ui-validator-filter-button--inactive");
+                }
             }
 
             UpdateStyle(initialValue);

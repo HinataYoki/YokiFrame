@@ -26,6 +26,7 @@ namespace YokiFrame
 
             // 场景列表
             mSceneListView = new ListView();
+            mSceneListView.AddToClassList("yoki-scene-list");
             mSceneListView.makeItem = MakeSceneItem;
             mSceneListView.bindItem = BindSceneItem;
             mSceneListView.fixedItemHeight = 56;
@@ -154,10 +155,7 @@ namespace YokiFrame
         private VisualElement MakeSceneItem()
         {
             var item = new VisualElement();
-            item.AddToClassList("list-item");
-            item.style.minHeight = 52;
-            item.style.paddingTop = Spacing.SM;
-            item.style.paddingBottom = Spacing.SM;
+            item.AddToClassList("yoki-scene-item");
 
             // 状态指示器
             var indicator = new VisualElement();
@@ -176,9 +174,7 @@ namespace YokiFrame
 
             var sceneLabel = new Label();
             sceneLabel.name = "scene-label";
-            sceneLabel.style.fontSize = 13;
-            sceneLabel.style.color = new StyleColor(Colors.TextPrimary);
-            sceneLabel.style.flexGrow = 1;
+            sceneLabel.AddToClassList("yoki-scene-item__name");
             topRow.Add(sceneLabel);
 
             var stateBadge = new Label();
@@ -196,9 +192,7 @@ namespace YokiFrame
 
             var infoLabel = new Label();
             infoLabel.name = "info-label";
-            infoLabel.style.fontSize = 11;
-            infoLabel.style.color = new StyleColor(Colors.TextTertiary);
-            infoLabel.style.marginTop = Spacing.XS;
+            infoLabel.AddToClassList("yoki-scene-item__path");
             content.Add(infoLabel);
 
             // 活动场景标记
@@ -241,6 +235,13 @@ namespace YokiFrame
             // 活动场景标记
             activeLabel.text = scene.IsActive ? "活动" : "";
             activeLabel.style.display = scene.IsActive ? DisplayStyle.Flex : DisplayStyle.None;
+            
+            // 活动场景修饰符
+            element.RemoveFromClassList("yoki-scene-item--active");
+            if (scene.IsActive)
+            {
+                element.AddToClassList("yoki-scene-item--active");
+            }
         }
 
         private static string GetStateText(SceneState state) => state switch

@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.SpatialKit.Editor",
-    "rootNamespace": "YokiFrame.EditorTools",
+    "rootNamespace": "YokiFrame.SpatialKit.Editor",
     "references": [
         "GUID:75469ad4d38634e559750d17036d5f7c",
         "GUID:7f8ee18900aa4d84e89e8a57f46f3d0f",

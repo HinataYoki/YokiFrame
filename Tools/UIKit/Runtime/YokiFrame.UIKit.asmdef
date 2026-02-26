@@ -1,6 +1,6 @@
 ﻿{
     "name":  "YokiFrame.UIKit",
-    "rootNamespace":  "",
+    "rootNamespace":  "YokiFrame.UIKit",
     "references":  [
                        "GUID:224151c835b786a4f8efadaa1799380d",
                        "GUID:75469ad4d38634e559750d17036d5f7c",

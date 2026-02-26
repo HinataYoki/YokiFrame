@@ -98,20 +98,8 @@ namespace YokiFrame
             container.Add(toolbar);
             
             // 混音台主容器（横向排列通道条，铺满宽度）
-            mConsoleContainer = new VisualElement
-            {
-                style =
-                {
-                    flexGrow = 1,
-                    flexDirection = FlexDirection.Row,
-                    alignItems = Align.Stretch,
-                    paddingTop = YokiFrameUIComponents.Spacing.LG,
-                    paddingBottom = YokiFrameUIComponents.Spacing.LG,
-                    paddingLeft = YokiFrameUIComponents.Spacing.LG,
-                    paddingRight = YokiFrameUIComponents.Spacing.LG,
-                    backgroundColor = new StyleColor(new Color(0.08f, 0.08f, 0.10f))
-                }
-            };
+            mConsoleContainer = new VisualElement();
+            mConsoleContainer.AddToClassList("yoki-audio-console");
             container.Add(mConsoleContainer);
             
             // 创建内置通道条（每个通道条使用 flexGrow 平分宽度）
@@ -129,12 +117,8 @@ namespace YokiFrame
         /// </summary>
         private VisualElement CreateConsoleToolbar()
         {
-            // 使用公共组件创建工具栏
             var toolbar = YokiFrameUIComponents.CreateToolbar();
-            toolbar.style.height = 48;
-            toolbar.style.paddingLeft = YokiFrameUIComponents.Spacing.LG;
-            toolbar.style.paddingRight = YokiFrameUIComponents.Spacing.LG;
-            toolbar.style.alignItems = Align.Center;
+            toolbar.AddToClassList("yoki-audio-toolbar");
             
             // 标题
             var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.MUSIC) };
@@ -143,52 +127,24 @@ namespace YokiFrame
             titleIcon.style.marginRight = YokiFrameUIComponents.Spacing.SM;
             toolbar.Add(titleIcon);
             
-            var title = new Label("AUDIO CONSOLE")
-            {
-                style =
-                {
-                    fontSize = 14,
-                    unityFontStyleAndWeight = FontStyle.Bold,
-                    letterSpacing = 2f,
-                    color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary)
-                }
-            };
+            var title = new Label("AUDIO CONSOLE");
+            title.AddToClassList("yoki-audio-toolbar__title");
             toolbar.Add(title);
             
             // 响应式指示器
-            var reactiveIndicator = new VisualElement
-            {
-                style =
-                {
-                    width = 8,
-                    height = 8,
-                    borderTopLeftRadius = 4,
-                    borderTopRightRadius = 4,
-                    borderBottomLeftRadius = 4,
-                    borderBottomRightRadius = 4,
-                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.StatusSuccess),
-                    marginLeft = YokiFrameUIComponents.Spacing.MD
-                }
-            };
-            reactiveIndicator.tooltip = "响应式更新已启用";
+            var reactiveIndicator = new VisualElement { tooltip = "响应式更新已启用" };
+            reactiveIndicator.AddToClassList("yoki-audio-toolbar__indicator");
             toolbar.Add(reactiveIndicator);
             
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());
             
             // 全局音量
-            var masterLabel = new Label("MASTER")
-            {
-                style =
-                {
-                    fontSize = 10,
-                    letterSpacing = 1f,
-                    color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary),
-                    marginRight = YokiFrameUIComponents.Spacing.SM
-                }
-            };
+            var masterLabel = new Label("MASTER");
+            masterLabel.AddToClassList("yoki-audio-toolbar__master-label");
             toolbar.Add(masterLabel);
             
-            mGlobalVolumeSlider = new Slider(0f, 1f) { style = { width = 120 } };
+            mGlobalVolumeSlider = new Slider(0f, 1f);
+            mGlobalVolumeSlider.AddToClassList("yoki-audio-toolbar__volume-slider");
             mGlobalVolumeSlider.value = Application.isPlaying ? AudioKit.GetGlobalVolume() : 1f;
             mGlobalVolumeSlider.RegisterValueChangedCallback(evt =>
             {
@@ -197,10 +153,8 @@ namespace YokiFrame
             });
             toolbar.Add(mGlobalVolumeSlider);
             
-            mGlobalVolumeLabel = new Label("1.00")
-            {
-                style = { width = 40, marginLeft = YokiFrameUIComponents.Spacing.SM, fontSize = 12, unityTextAlign = TextAnchor.MiddleRight }
-            };
+            mGlobalVolumeLabel = new Label("1.00");
+            mGlobalVolumeLabel.AddToClassList("yoki-audio-toolbar__volume-label");
             toolbar.Add(mGlobalVolumeLabel);
             
             // 分隔线
@@ -211,7 +165,7 @@ namespace YokiFrame
             toolbar.Add(CreateConsoleButton(KitIcons.PLAY, "恢复全部", () => { if (Application.isPlaying) AudioKit.ResumeAll(); }));
             
             var stopAllBtn = CreateConsoleButton(KitIcons.STOP, "停止全部", () => { if (Application.isPlaying) AudioKit.StopAll(); });
-            stopAllBtn.style.backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.BadgeError);
+            stopAllBtn.AddToClassList("yoki-audio-toolbar__button--stop");
             toolbar.Add(stopAllBtn);
             
             // 分隔线
@@ -225,38 +179,15 @@ namespace YokiFrame
 
         private VisualElement CreateConsoleDivider()
         {
-            return new VisualElement
-            {
-                style =
-                {
-                    width = 1,
-                    height = 28,
-                    marginLeft = YokiFrameUIComponents.Spacing.MD,
-                    marginRight = YokiFrameUIComponents.Spacing.MD,
-                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.BadgeDefault)
-                }
-            };
+            var divider = new VisualElement();
+            divider.AddToClassList("yoki-audio-toolbar__divider");
+            return divider;
         }
 
         private Button CreateConsoleButton(string iconId, string tooltip, System.Action onClick)
         {
-            var btn = new Button(onClick)
-            {
-                tooltip = tooltip,
-                style =
-                {
-                    width = 36,
-                    height = 32,
-                    marginLeft = YokiFrameUIComponents.Spacing.XS,
-                    alignItems = Align.Center,
-                    justifyContent = Justify.Center,
-                    backgroundColor = new StyleColor(YokiFrameUIComponents.Colors.LayerElevated),
-                    borderTopLeftRadius = YokiFrameUIComponents.Radius.MD,
-                    borderTopRightRadius = YokiFrameUIComponents.Radius.MD,
-                    borderBottomLeftRadius = YokiFrameUIComponents.Radius.MD,
-                    borderBottomRightRadius = YokiFrameUIComponents.Radius.MD
-                }
-            };
+            var btn = new Button(onClick) { tooltip = tooltip };
+            btn.AddToClassList("yoki-audio-toolbar__button");
             
             var icon = new Image { image = KitIcons.GetTexture(iconId) };
             icon.style.width = 16;

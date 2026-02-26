@@ -1,0 +1,44 @@
+/* BuffKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-buff-{block}[__{element}][--{modifier}] */
+
+/* ========== 通用工具栏样式 ========== */
+.yoki-buff-toolbar {
+    flex-direction: row;
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-toolbar);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-light);
+}
+
+/* ========== Buff 卡片样式 ========== */
+.yoki-buff-card {
+    padding: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-card);
+    border-left-width: 3px;
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-buff-card--positive {
+    border-left-color: var(--yoki-brand-success);
+}
+
+.yoki-buff-card--negative {
+    border-left-color: var(--yoki-badge-error);
+}
+
+.yoki-buff-card__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-buff-card__title {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}

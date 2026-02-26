@@ -1,0 +1,250 @@
+/* YokiFrame Vector 输入组件样式 */
+/* 现代化 Vector2/Vector3/Vector4 输入框 - 完全自定义设计 */
+/* 设计理念：紧凑、美观、现代化，摆脱 Unity 原生丑陋样式 */
+
+/* ========== Vector 输入容器 ========== */
+.yoki-vector-input {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+/* 轴之间的间距通过 margin 实现 */
+.yoki-vector-input > .yoki-vector-axis {
+    margin-right: 6px;
+}
+
+/* ========== 单个轴容器 ========== */
+.yoki-vector-axis {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 轴容器内元素间距 */
+.yoki-vector-axis > .yoki-vector-axis__label {
+    margin-right: 4px;
+}
+
+/* ========== 轴标签 ========== */
+.yoki-vector-axis__label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    -unity-font-style: bold;
+    min-width: 10px;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+}
+
+/* ========== 轴输入框（完全自定义） ========== */
+.yoki-vector-axis__input {
+    min-width: 55px;
+    max-width: 80px;
+    height: 22px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    -unity-text-align: middle-left;
+    transition-duration: 0.15s;
+}
+
+/* 移除 Unity TextField 默认样式 */
+.yoki-vector-axis__input > .unity-text-field__input {
+    background-color: transparent;
+    border-width: 0;
+    padding: 0;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    -unity-text-align: middle-left;
+}
+
+/* 输入框悬停状态 */
+.yoki-vector-axis__input:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 输入框焦点状态 */
+.yoki-vector-axis__input:focus {
+    background-color: rgba(0, 0, 0, 0.45);
+    border-color: #4A9EFF;
+    border-width: 1px;
+}
+
+.yoki-vector-axis__input:focus > .unity-text-field__input {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* 输入框禁用状态 */
+.yoki-vector-axis__input:disabled {
+    opacity: 0.4;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ========== 紧凑模式 ========== */
+.yoki-vector-input--compact > .yoki-vector-axis {
+    margin-right: 4px;
+}
+
+.yoki-vector-input--compact .yoki-vector-axis > .yoki-vector-axis__label {
+    margin-right: 3px;
+}
+
+.yoki-vector-input--compact .yoki-vector-axis__label {
+    font-size: 10px;
+    min-width: 8px;
+}
+
+.yoki-vector-input--compact .yoki-vector-axis__input {
+    min-width: 45px;
+    max-width: 65px;
+    height: 20px;
+    font-size: 10px;
+    padding: 2px 4px;
+}
+
+/* ========== 响应式布局 ========== */
+@media (max-width: 400px) {
+    .yoki-vector-input {
+        flex-wrap: wrap;
+    }
+    
+    .yoki-vector-input > .yoki-vector-axis {
+        margin-right: 4px;
+        margin-bottom: 4px;
+    }
+}
+
+
+
+/* ========== Figma 风格单行紧凑型 Vector2 输入框 ========== */
+/* 严格单行水平布局，类似 Figma 属性面板 */
+
+/* 整行容器：横向排列 */
+.yoki-res-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 20px;
+    margin-bottom: 2px;
+}
+
+/* 左侧主标签：使用 Unity 默认宽度 */
+.yoki-res-row > .unity-base-field__label {
+    min-width: 120px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+    -unity-text-align: middle-left;
+    padding-right: 8px;
+    flex-shrink: 0;
+}
+
+/* 右侧输入组容器：横向排列，占据剩余空间 */
+.yoki-res-input-group {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
+/* 输入组内元素间距 */
+.yoki-res-input-group > * {
+    margin-right: 4px;
+}
+
+/* 单个轴容器（X/Y）：横向排列，平分空间 */
+.yoki-res-axis {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 2px 6px;
+    min-height: 20px;
+}
+
+/* 轴容器内元素间距 */
+.yoki-res-axis > .yoki-res-prefix {
+    margin-right: 4px;
+}
+
+.yoki-res-axis:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 注意：Unity UIToolkit 不支持 :focus-within 伪类，改用 :focus 在输入框上 */
+
+/* 轴前缀标签（X/Y）*/
+.yoki-res-prefix {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    -unity-font-style: bold;
+    min-width: 10px;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* FloatField/IntegerField：移除默认样式，融入外层容器 */
+.yoki-res-float {
+    flex-grow: 1;
+    min-height: 16px;
+}
+
+/* 移除 FloatField 默认 Label */
+.yoki-res-float > .unity-base-field__label {
+    display: none;
+}
+
+/* 移除 FloatField 默认输入框样式，使其透明融入外层 */
+.yoki-res-float > .unity-base-field__input {
+    background-color: transparent;
+    border-width: 0;
+    padding: 0;
+    margin: 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    -unity-text-align: middle-left;
+}
+
+/* 输入框焦点状态：高亮父容器 */
+.yoki-res-float:focus > .unity-base-field__input {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* 对调按钮：固定 24x24 */
+.yoki-res-btn {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+}
+
+.yoki-res-btn:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.yoki-res-btn:active {
+    background-color: rgba(0, 0, 0, 0.6);
+    border-color: #4A9EFF;
+}

@@ -30,37 +30,25 @@ namespace YokiFrame
         {
             // 工具栏
             var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.paddingLeft = Spacing.SM;
-            toolbar.style.paddingRight = Spacing.SM;
-            toolbar.style.paddingTop = Spacing.XS;
-            toolbar.style.paddingBottom = Spacing.XS;
-            toolbar.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
-            toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            toolbar.AddToClassList("yoki-ui-settings-toolbar");
             container.Add(toolbar);
 
             var titleLabel = new Label("UIKit Canvas 配置");
-            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            titleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            titleLabel.style.flexGrow = 1;
+            titleLabel.AddToClassList("yoki-ui-settings-toolbar__title");
             toolbar.Add(titleLabel);
 
             var resetBtn = new UIButton(OnResetSettings) { text = "重置默认" };
-            resetBtn.style.height = 24;
+            resetBtn.AddToClassList("yoki-ui-button");
             toolbar.Add(resetBtn);
 
             var saveBtn = new UIButton(OnSaveSettings) { text = "保存" };
-            saveBtn.style.height = 24;
-            saveBtn.style.marginLeft = Spacing.XS;
+            saveBtn.AddToClassList("yoki-ui-button");
+            saveBtn.AddToClassList("yoki-ui-button--with-margin");
             toolbar.Add(saveBtn);
 
             // 内容区域
             mSettingsContent = new ScrollView();
-            mSettingsContent.style.flexGrow = 1;
-            mSettingsContent.style.paddingLeft = Spacing.MD;
-            mSettingsContent.style.paddingRight = Spacing.MD;
-            mSettingsContent.style.paddingTop = Spacing.MD;
+            mSettingsContent.AddToClassList("yoki-ui-settings-content");
             container.Add(mSettingsContent);
 
             LoadSettings();
@@ -76,18 +64,23 @@ namespace YokiFrame
         {
             mSettingsContent.Clear();
 
+            // 添加容器包装，提供左右留白
+            var contentWrapper = new VisualElement();
+            contentWrapper.AddToClassList("yoki-ui-settings-wrapper");
+            mSettingsContent.Add(contentWrapper);
+
             // Canvas 配置
             var (canvasCard, canvasBody) = CreateCard("Canvas 配置", KitIcons.SETTINGS);
-            mSettingsContent.Add(canvasCard);
+            contentWrapper.Add(canvasCard);
 
             canvasBody.Add(CreateEnumField("渲染模式", mSettings.RenderMode, v => mSettings.RenderMode = (RenderMode)v));
             canvasBody.Add(CreateIntField("排序顺序", mSettings.SortOrder, v => mSettings.SortOrder = v));
             canvasBody.Add(CreateIntField("目标显示器", mSettings.TargetDisplay, v => mSettings.TargetDisplay = v));
-            canvasBody.Add(CreateToggleField("像素完美", mSettings.PixelPerfect, v => mSettings.PixelPerfect = v));
+            canvasBody.Add(CreateModernToggle("像素完美", mSettings.PixelPerfect, v => mSettings.PixelPerfect = v));
 
             // CanvasScaler 配置
             var (scalerCard, scalerBody) = CreateCard("CanvasScaler 配置", KitIcons.SETTINGS);
-            mSettingsContent.Add(scalerCard);
+            contentWrapper.Add(scalerCard);
 
             scalerBody.Add(CreateEnumField("缩放模式", mSettings.ScaleMode, v => mSettings.ScaleMode = (CanvasScaler.ScaleMode)v));
             scalerBody.Add(CreateVector2Field("参考分辨率", mSettings.ReferenceResolution, v => mSettings.ReferenceResolution = v));
@@ -101,9 +94,9 @@ namespace YokiFrame
 
             // GraphicRaycaster 配置
             var (raycasterCard, raycasterBody) = CreateCard("GraphicRaycaster 配置", KitIcons.SETTINGS);
-            mSettingsContent.Add(raycasterCard);
+            contentWrapper.Add(raycasterCard);
 
-            raycasterBody.Add(CreateToggleField("忽略反向图形", mSettings.IgnoreReversedGraphics, v => mSettings.IgnoreReversedGraphics = v));
+            raycasterBody.Add(CreateModernToggle("忽略反向图形", mSettings.IgnoreReversedGraphics, v => mSettings.IgnoreReversedGraphics = v));
             raycasterBody.Add(CreateEnumField("阻挡对象类型", mSettings.BlockingObjects, v => mSettings.BlockingObjects = (GraphicRaycaster.BlockingObjects)v));
             raycasterBody.Add(CreateLayerMaskField("阻挡层级", mSettings.BlockingMask, v => mSettings.BlockingMask = v));
         }
@@ -117,11 +110,14 @@ namespace YokiFrame
             var row = CreateFieldRow(label);
             
             var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
+            fieldContainer.AddToClassList("yoki-ui-settings-field-row__field");
             
-            var field = new EnumField(value);
-            field.style.flexGrow = 1;
+#if UNITY_2023_1_OR_NEWER
+            var field = new UnityEngine.UIElements.EnumField(value);
+#else
+            var field = new UnityEditor.UIElements.EnumField(value);
+#endif
+            field.AddToClassList("yoki-ui-field--grow");
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
             
             fieldContainer.Add(field);
@@ -134,11 +130,14 @@ namespace YokiFrame
             var row = CreateFieldRow(label);
             
             var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
+            fieldContainer.AddToClassList("yoki-ui-field--overflow-hidden");
             
-            var field = new IntegerField { value = value };
-            field.style.flexGrow = 1;
+#if UNITY_2023_1_OR_NEWER
+            var field = new UnityEngine.UIElements.IntegerField { value = value };
+#else
+            var field = new UnityEditor.UIElements.IntegerField { value = value };
+#endif
+            field.AddToClassList("yoki-ui-field--grow");
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
             
             fieldContainer.Add(field);
@@ -151,11 +150,14 @@ namespace YokiFrame
             var row = CreateFieldRow(label);
             
             var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
+            fieldContainer.AddToClassList("yoki-ui-field--overflow-hidden");
             
-            var field = new FloatField { value = value };
-            field.style.flexGrow = 1;
+#if UNITY_2023_1_OR_NEWER
+            var field = new UnityEngine.UIElements.FloatField { value = value };
+#else
+            var field = new UnityEditor.UIElements.FloatField { value = value };
+#endif
+            field.AddToClassList("yoki-ui-field--grow");
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
             
             fieldContainer.Add(field);
@@ -165,19 +167,13 @@ namespace YokiFrame
 
         private VisualElement CreateVector2Field(string label, Vector2 value, Action<Vector2> onChanged)
         {
-            var row = CreateFieldRow(label);
-            
-            var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
-            
-            var field = new Vector2Field { value = value, label = string.Empty };
-            field.style.flexGrow = 1;
-            field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            
-            fieldContainer.Add(field);
-            row.Add(fieldContainer);
-            return row;
+            // 直接使用 Figma 风格单行紧凑型 Vector2 输入组件
+            // 该组件自带主标签，无需 CreateFieldRow
+            return CreateFigmaVector2Input(
+                label: label,
+                value: value,
+                onChanged: onChanged
+            );
         }
 
         private VisualElement CreateToggleField(string label, bool value, Action<bool> onChanged)
@@ -194,17 +190,15 @@ namespace YokiFrame
             var row = CreateFieldRow(label);
             
             var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
+            fieldContainer.AddToClassList("yoki-ui-settings-field-row__field");
             
             var field = new UISlider(min, max) { value = value };
-            field.style.flexGrow = 1;
+            field.AddToClassList("yoki-ui-field--grow");
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
             fieldContainer.Add(field);
             
             var valueLabel = new Label(value.ToString("F2"));
-            valueLabel.style.width = 40;
-            valueLabel.style.unityTextAlign = TextAnchor.MiddleRight;
+            valueLabel.AddToClassList("yoki-ui-settings-field-row__value-label");
             field.RegisterValueChangedCallback(evt => valueLabel.text = evt.newValue.ToString("F2"));
             fieldContainer.Add(valueLabel);
             
@@ -227,11 +221,10 @@ namespace YokiFrame
             }
             
             var fieldContainer = new VisualElement();
-            fieldContainer.style.flexGrow = 1;
-            fieldContainer.style.overflow = Overflow.Hidden;
+            fieldContainer.AddToClassList("yoki-ui-field--overflow-hidden");
             
             var field = new UnityEditor.UIElements.MaskField(layerNames, value) { label = string.Empty };
-            field.style.flexGrow = 1;
+            field.AddToClassList("yoki-ui-field--grow");
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke((LayerMask)evt.newValue));
             
             fieldContainer.Add(field);
@@ -242,14 +235,10 @@ namespace YokiFrame
         private VisualElement CreateFieldRow(string label)
         {
             var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.alignItems = Align.Center;
-            row.style.marginBottom = Spacing.SM;
+            row.AddToClassList("yoki-ui-settings-field-row");
 
             var labelElement = new Label(label);
-            labelElement.style.width = 150;
-            labelElement.style.minWidth = 150;
-            labelElement.style.flexShrink = 0;
+            labelElement.AddToClassList("yoki-ui-settings-field-row__label");
             row.Add(labelElement);
 
             return row;

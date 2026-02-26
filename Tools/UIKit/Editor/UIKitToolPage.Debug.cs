@@ -31,14 +31,7 @@ namespace YokiFrame
         {
             // 工具栏
             var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.paddingLeft = Spacing.SM;
-            toolbar.style.paddingRight = Spacing.SM;
-            toolbar.style.paddingTop = Spacing.XS;
-            toolbar.style.paddingBottom = Spacing.XS;
-            toolbar.style.backgroundColor = new StyleColor(Colors.LayerToolbar);
-            toolbar.style.borderBottomWidth = 1;
-            toolbar.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            toolbar.AddToClassList("yoki-ui-debug-toolbar");
             container.Add(toolbar);
 
             // 过滤按钮
@@ -51,28 +44,23 @@ namespace YokiFrame
 
             // 响应式提示
             var reactiveIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
-            reactiveIcon.style.width = 14;
-            reactiveIcon.style.height = 14;
-            reactiveIcon.style.marginRight = Spacing.SM;
+            reactiveIcon.AddToClassList("yoki-ui-icon");
             reactiveIcon.tintColor = Colors.StatusSuccess;
             reactiveIcon.tooltip = "响应式更新";
             toolbar.Add(reactiveIcon);
 
             // 自动刷新
             var autoRefreshToggle = CreateModernToggle("自动刷新", mDebugAutoRefresh, v => mDebugAutoRefresh = v);
-            autoRefreshToggle.style.marginRight = Spacing.SM;
+            autoRefreshToggle.AddToClassList("yoki-ui-icon");
             toolbar.Add(autoRefreshToggle);
 
             var refreshBtn = new Button(RefreshDebugContent) { text = "刷新" };
-            refreshBtn.style.height = 24;
+            refreshBtn.AddToClassList("yoki-ui-button");
             toolbar.Add(refreshBtn);
 
             // 内容区域
             mDebugContent = new ScrollView();
-            mDebugContent.style.flexGrow = 1;
-            mDebugContent.style.paddingLeft = Spacing.MD;
-            mDebugContent.style.paddingRight = Spacing.MD;
-            mDebugContent.style.paddingTop = Spacing.MD;
+            mDebugContent.AddToClassList("yoki-ui-debug-content");
             container.Add(mDebugContent);
 
             RefreshDebugContent();
@@ -82,13 +70,13 @@ namespace YokiFrame
         {
             var btn = new Button();
             btn.text = text;
-            btn.style.height = 24;
-            btn.style.marginRight = Spacing.XS;
+            btn.AddToClassList("yoki-ui-debug-toggle");
 
             void UpdateStyle(bool isActive)
             {
-                btn.style.backgroundColor = new StyleColor(isActive ? Colors.BrandPrimary : Colors.LayerCard);
-                btn.style.color = new StyleColor(isActive ? Color.white : Colors.TextSecondary);
+                btn.RemoveFromClassList("yoki-ui-debug-toggle--active");
+                btn.RemoveFromClassList("yoki-ui-debug-toggle--inactive");
+                btn.AddToClassList(isActive ? "yoki-ui-debug-toggle--active" : "yoki-ui-debug-toggle--inactive");
             }
 
             UpdateStyle(initialValue);
@@ -148,20 +136,24 @@ namespace YokiFrame
         private VisualElement CreateDebugPanelRow(IPanel panel)
         {
             var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.alignItems = Align.Center;
-            row.style.paddingTop = Spacing.XS;
-            row.style.paddingBottom = Spacing.XS;
-            row.style.borderBottomWidth = 1;
-            row.style.borderBottomColor = new StyleColor(Colors.BorderLight);
+            row.AddToClassList("yoki-ui-debug-panel-row");
 
             var panelName = panel.GetType().Name;
             var state = panel.State.ToString();
             var level = panel.Handler?.Level.ToString() ?? "Unknown";
 
-            row.Add(new Label(panelName) { style = { width = 150 } });
-            row.Add(new Label($"[{state}]") { style = { width = 60, color = new StyleColor(GetStateColor(panel.State)) } });
-            row.Add(new Label($"Level: {level}") { style = { width = 100 } });
+            var nameLabel = new Label(panelName);
+            nameLabel.AddToClassList("yoki-ui-debug-panel-row__name");
+            row.Add(nameLabel);
+
+            var stateLabel = new Label($"[{state}]");
+            stateLabel.AddToClassList("yoki-ui-debug-panel-row__state");
+            stateLabel.style.color = new StyleColor(GetStateColor(panel.State));
+            row.Add(stateLabel);
+
+            var levelLabel = new Label($"Level: {level}");
+            levelLabel.AddToClassList("yoki-ui-debug-panel-row__level");
+            row.Add(levelLabel);
 
             row.Add(new VisualElement { style = { flexGrow = 1 } });
 
@@ -208,14 +200,20 @@ namespace YokiFrame
                 var topPanelName = topPanel?.GetType().Name ?? "空";
 
                 var row = new VisualElement();
-                row.style.flexDirection = FlexDirection.Row;
-                row.style.alignItems = Align.Center;
-                row.style.paddingTop = Spacing.XS;
-                row.style.paddingBottom = Spacing.XS;
+                row.AddToClassList("yoki-ui-row");
+                row.AddToClassList("yoki-ui-row--padded");
 
-                row.Add(new Label($"栈 [{stackName}]") { style = { width = 100 } });
-                row.Add(new Label($"深度: {depth}") { style = { width = 60 } });
-                row.Add(new Label($"栈顶: {topPanelName}") { style = { flexGrow = 1 } });
+                var stackLabel = new Label($"栈 [{stackName}]");
+                stackLabel.AddToClassList("yoki-ui-label--fixed-width");
+                row.Add(stackLabel);
+
+                var depthLabel = new Label($"深度: {depth}");
+                depthLabel.AddToClassList("yoki-ui-label--small-width");
+                row.Add(depthLabel);
+
+                var topLabel = new Label($"栈顶: {topPanelName}");
+                topLabel.AddToClassList("yoki-ui-label--grow");
+                row.Add(topLabel);
 
                 if (depth > 0)
                 {
@@ -251,9 +249,8 @@ namespace YokiFrame
             if (currentFocus != null)
             {
                 var btnRow = new VisualElement();
-                btnRow.style.flexDirection = FlexDirection.Row;
-                btnRow.style.justifyContent = Justify.FlexEnd;
-                btnRow.style.marginTop = Spacing.SM;
+                btnRow.AddToClassList("yoki-ui-row");
+                btnRow.AddToClassList("yoki-ui-row--justified-end");
 
                 btnRow.Add(CreateSmallButton("选择焦点对象", () =>
                 {
@@ -286,12 +283,12 @@ namespace YokiFrame
             foreach (var panel in cachedPanels)
             {
                 var row = new VisualElement();
-                row.style.flexDirection = FlexDirection.Row;
-                row.style.alignItems = Align.Center;
-                row.style.paddingTop = 2;
-                row.style.paddingBottom = 2;
+                row.AddToClassList("yoki-ui-row");
+                row.AddToClassList("yoki-ui-row--tight");
 
-                row.Add(new Label($"  - {panel.GetType().Name}") { style = { flexGrow = 1 } });
+                var panelLabel = new Label($"  - {panel.GetType().Name}");
+                panelLabel.AddToClassList("yoki-ui-label--grow");
+                row.Add(panelLabel);
 
                 if (panel is MonoBehaviour mb && mb != null)
                 {
@@ -302,7 +299,7 @@ namespace YokiFrame
             }
 
             var clearBtn = CreateDangerButton("清空缓存", () => UIKit.ClearAllPreloadedCache());
-            clearBtn.style.marginTop = Spacing.SM;
+            clearBtn.AddToClassList("yoki-ui-margin-top");
             body.Add(clearBtn);
         }
 

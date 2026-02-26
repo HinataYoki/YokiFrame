@@ -1,0 +1,157 @@
+/* AudioKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-audio-{block}[__{element}][--{modifier}] */
+
+/* ========== 混音台工具栏样式 ========== */
+.yoki-audio-toolbar {
+    height: 48px;
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    align-items: center;
+}
+
+.yoki-audio-toolbar__title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-audio-toolbar__indicator {
+    width: 8px;
+    height: 8px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    background-color: var(--yoki-brand-success);
+    margin-left: var(--yoki-spacing-md);
+}
+
+.yoki-audio-toolbar__master-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--yoki-text-tertiary);
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-audio-toolbar__volume-slider {
+    width: 120px;
+}
+
+.yoki-audio-toolbar__volume-label {
+    width: 40px;
+    margin-left: var(--yoki-spacing-sm);
+    font-size: 12px;
+    -unity-text-align: middle-right;
+}
+
+.yoki-audio-toolbar__divider {
+    width: 1px;
+    height: 28px;
+    margin-left: var(--yoki-spacing-md);
+    margin-right: var(--yoki-spacing-md);
+    background-color: var(--yoki-badge-default);
+}
+
+.yoki-audio-toolbar__button {
+    width: 36px;
+    height: 32px;
+    margin-left: var(--yoki-spacing-xs);
+    align-items: center;
+    justify-content: center;
+    background-color: var(--yoki-layer-elevated);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-audio-toolbar__button--stop {
+    background-color: var(--yoki-badge-error);
+}
+
+/* ========== 混音台主容器样式 ========== */
+.yoki-audio-console {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: stretch;
+    padding-top: var(--yoki-spacing-lg);
+    padding-bottom: var(--yoki-spacing-lg);
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    background-color: rgb(20, 20, 26);
+}
+
+/* ========== 代码生成器样式 ========== */
+.yoki-audio-generator {
+    flex-grow: 1;
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    padding-top: var(--yoki-spacing-lg);
+}
+
+.yoki-audio-generator__title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: var(--yoki-spacing-lg);
+}
+
+.yoki-audio-generator__results-label {
+    -unity-font-style: bold;
+    margin-top: var(--yoki-spacing-lg);
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-audio-generator__results-list {
+    height: 300px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--yoki-border-light);
+    border-bottom-color: var(--yoki-border-light);
+    border-left-color: var(--yoki-border-light);
+    border-right-color: var(--yoki-border-light);
+}
+
+.yoki-audio-generator__result-name {
+    width: 200px;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-audio-generator__result-id {
+    width: 80px;
+    color: var(--yoki-brand-success);
+}
+
+.yoki-audio-generator__result-path {
+    flex-grow: 1;
+    font-size: 10px;
+    color: var(--yoki-text-tertiary);
+}
+
+.yoki-audio-generator__button-row {
+    margin-top: var(--yoki-spacing-lg);
+}
+
+.yoki-audio-generator__scan-button {
+    flex-grow: 1;
+}
+
+.yoki-audio-generator__generate-button {
+    flex-grow: 1;
+    margin-left: var(--yoki-spacing-sm);
+}
+
+.yoki-audio-generator__path-container {
+    flex-grow: 1;
+}
+
+.yoki-audio-generator__path-field {
+    flex-grow: 1;
+}
+
+.yoki-audio-generator__browse-button {
+    width: 30px;
+    margin-left: var(--yoki-spacing-xs);
+}

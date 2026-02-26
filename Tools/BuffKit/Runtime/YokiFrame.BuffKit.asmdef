@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.BuffKit",
-    "rootNamespace": "YokiFrame",
+    "rootNamespace": "YokiFrame.BuffKit",
     "references": [
         "GUID:224151c835b786a4f8efadaa1799380d"
     ],

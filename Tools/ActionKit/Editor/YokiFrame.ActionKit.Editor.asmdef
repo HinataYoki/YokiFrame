@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.ActionKit.Editor",
-    "rootNamespace": "YokiFrame",
+    "rootNamespace": "YokiFrame.ActionKit.Editor",
     "references": [
         "YokiFrame.ActionKit",
         "YokiFrame.Core.Editor"

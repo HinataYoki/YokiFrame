@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame",
-    "rootNamespace": "",
+    "rootNamespace": "YokiFrame",
     "references": [
         "UniTask",
         "YooAsset"

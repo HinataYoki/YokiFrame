@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.SceneKit.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "YokiFrame.SceneKit.Editor",
     "references": [
         "GUID:224151c835b786a4f8efadaa1799380d",
         "GUID:dd3a9e2a0fd71af489af598cfa5ee6ab",

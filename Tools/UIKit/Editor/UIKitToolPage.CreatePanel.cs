@@ -81,11 +81,7 @@ namespace YokiFrame
         private void BuildCreatePanelUI(VisualElement container)
         {
             var scrollView = new ScrollView();
-            scrollView.style.flexGrow = 1;
-            scrollView.style.paddingLeft = Spacing.LG;
-            scrollView.style.paddingRight = Spacing.LG;
-            scrollView.style.paddingTop = Spacing.MD;
-            scrollView.style.paddingBottom = Spacing.MD;
+            scrollView.AddToClassList("yoki-ui-create-panel");
             container.Add(scrollView);
 
             // 区域 1: 折叠式配置舱
@@ -108,32 +104,18 @@ namespace YokiFrame
         private VisualElement BuildCreationZone()
         {
             var zone = new VisualElement();
-            zone.style.backgroundColor = new StyleColor(Colors.LayerSection);
-            zone.style.borderTopLeftRadius = Radius.LG;
-            zone.style.borderTopRightRadius = Radius.LG;
-            zone.style.borderBottomLeftRadius = Radius.LG;
-            zone.style.borderBottomRightRadius = Radius.LG;
-            zone.style.paddingTop = Spacing.XL;
-            zone.style.paddingBottom = Spacing.XL;
-            zone.style.paddingLeft = Spacing.LG;
-            zone.style.paddingRight = Spacing.LG;
-            zone.style.marginBottom = Spacing.LG;
+            zone.AddToClassList("yoki-create-zone");
 
             // 标题
             var titleRow = new VisualElement();
-            titleRow.style.flexDirection = FlexDirection.Row;
-            titleRow.style.alignItems = Align.Center;
-            titleRow.style.marginBottom = Spacing.LG;
+            titleRow.AddToClassList("yoki-create-title-row");
 
             var titleIcon = new Image { image = KitIcons.GetTexture(KitIcons.UIKIT) };
-            titleIcon.style.width = 20;
-            titleIcon.style.height = 20;
-            titleIcon.style.marginRight = Spacing.SM;
+            titleIcon.AddToClassList("yoki-create-title-icon");
             titleRow.Add(titleIcon);
 
             var title = new Label("创建 UI 面板");
-            title.style.fontSize = 15;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.AddToClassList("yoki-create-title");
             title.style.color = new StyleColor(Colors.TextPrimary);
             titleRow.Add(title);
 
@@ -141,16 +123,13 @@ namespace YokiFrame
 
             // Panel 名称输入框
             var inputLabel = new Label("Panel 名称");
-            inputLabel.style.fontSize = 12;
+            inputLabel.AddToClassList("yoki-create-input-label");
             inputLabel.style.color = new StyleColor(Colors.TextSecondary);
-            inputLabel.style.marginBottom = Spacing.XS;
             zone.Add(inputLabel);
 
             mPanelNameField = new TextField();
-            mPanelNameField.style.height = HERO_INPUT_HEIGHT;
-            mPanelNameField.style.fontSize = HERO_INPUT_FONT_SIZE;
+            mPanelNameField.AddToClassList("yoki-create-hero-input");
             mPanelNameField.style.marginBottom = Spacing.SM;
-            ApplyHeroInputStyle(mPanelNameField);
 
             // 设置 placeholder
             var textInput = mPanelNameField.Q<TextElement>();
@@ -169,44 +148,35 @@ namespace YokiFrame
 
             // 验证提示标签
             mValidationLabel = new Label();
-            mValidationLabel.style.fontSize = 11;
-            mValidationLabel.style.marginBottom = Spacing.SM;
-            mValidationLabel.style.display = DisplayStyle.None;
+            mValidationLabel.AddToClassList("yoki-create-validation-label");
             zone.Add(mValidationLabel);
 
             // 实时预览标签
             mPreviewLabel = new Label("输入 Panel 名称开始创建...");
-            mPreviewLabel.style.fontSize = 12;
+            mPreviewLabel.AddToClassList("yoki-create-preview-label");
             mPreviewLabel.style.color = new StyleColor(Colors.TextTertiary);
-            mPreviewLabel.style.marginBottom = Spacing.LG;
             zone.Add(mPreviewLabel);
 
             // 文件预览容器
             mPreviewContainer = new VisualElement();
-            mPreviewContainer.style.display = DisplayStyle.None;
-            mPreviewContainer.style.marginBottom = Spacing.LG;
+            mPreviewContainer.AddToClassList("yoki-create-preview-container");
             zone.Add(mPreviewContainer);
 
             // 创建按钮
             mCreateButton = new Button(OnCreateUIPanelClick);
+            mCreateButton.AddToClassList("yoki-create-primary-button");
             mCreateButton.style.height = BUTTON_HEIGHT;
             mCreateButton.style.display = DisplayStyle.None;
-            ApplyPrimaryButtonStyle(mCreateButton);
 
             var btnContent = new VisualElement();
-            btnContent.style.flexDirection = FlexDirection.Row;
-            btnContent.style.alignItems = Align.Center;
-            btnContent.style.justifyContent = Justify.Center;
+            btnContent.AddToClassList("yoki-create-button-content");
 
             var btnIcon = new Image { image = KitIcons.GetTexture(KitIcons.CODEGEN) };
-            btnIcon.style.width = 16;
-            btnIcon.style.height = 16;
-            btnIcon.style.marginRight = Spacing.XS;
+            btnIcon.AddToClassList("yoki-create-button-icon");
             btnContent.Add(btnIcon);
 
             var btnLabel = new Label("创建 UI 面板");
-            btnLabel.style.fontSize = 13;
-            btnLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            btnLabel.AddToClassList("yoki-create-button-label");
             btnContent.Add(btnLabel);
 
             mCreateButton.Add(btnContent);

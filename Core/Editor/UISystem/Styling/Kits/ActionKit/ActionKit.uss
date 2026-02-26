@@ -1,0 +1,252 @@
+/* ActionKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-action-{block}[__{element}][--{modifier}] */
+
+/* ========== 工具栏样式 ========== */
+.yoki-action-toolbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.yoki-action-toolbar__title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+}
+
+.yoki-action-toolbar__indicator {
+    width: 8px;
+    height: 8px;
+    margin-left: var(--yoki-spacing-md);
+    border-radius: 4px;
+    background-color: var(--yoki-brand-success);
+}
+
+/* ========== 内容区样式 ========== */
+.yoki-action-content {
+    flex-direction: row;
+    align-items: stretch;
+    padding-top: var(--yoki-spacing-lg);
+    padding-bottom: var(--yoki-spacing-lg);
+    padding-left: var(--yoki-spacing-lg);
+    padding-right: var(--yoki-spacing-lg);
+    background-color: rgb(32, 33, 37);
+}
+
+/* ========== 卡片样式 ========== */
+.yoki-action-card {
+    background-color: rgb(46, 46, 46);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.yoki-action-card:hover {
+    background-color: var(--yoki-layer-hover);
+}
+
+.yoki-action-card--selected {
+    background-color: var(--yoki-layer-selected);
+    border-left-width: 3px;
+    border-left-color: var(--yoki-brand-primary);
+}
+
+.yoki-action-card__header {
+    font-size: 13px;
+    -unity-font-style: bold;
+    padding-left: 12px;
+    padding-top: 10px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(64, 64, 64);
+}
+
+.yoki-action-card__title {
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}
+
+.yoki-action-card__badge {
+    font-size: var(--yoki-font-xs);
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: var(--yoki-radius-sm);
+    background-color: rgba(33, 150, 243, 0.15);
+    color: var(--yoki-brand-primary);
+}
+
+.yoki-action-card__content {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 12px;
+}
+
+/* ========== 堆栈追踪样式 ========== */
+.yoki-action-stack {
+    background-color: rgb(20, 21, 24);
+    border-radius: var(--yoki-radius-md);
+    padding: var(--yoki-spacing-md);
+    margin-top: var(--yoki-spacing-lg);
+}
+
+.yoki-action-stack__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-action-stack__label {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    flex-grow: 1;
+}
+
+.yoki-action-stack__content {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 12px;
+    font-size: 11px;
+    color: rgb(153, 153, 153);
+    white-space: normal;
+}
+
+/* ========== 节点卡片样式 ========== */
+.yoki-action-node {
+    background-color: rgb(56, 56, 56);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    margin-left: 4px;
+    margin-right: 4px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-left-width: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.yoki-action-node--running {
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+    opacity: 1;
+}
+
+.yoki-action-node--finished {
+    opacity: 0.5;
+}
+
+.yoki-action-node--selected {
+    border-right-width: 2px;
+}
+
+.yoki-action-node__header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-action-node__status-dot {
+    width: 8px;
+    height: 8px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    margin-right: 6px;
+}
+
+.yoki-action-node__icon {
+    font-size: 12px;
+    margin-right: 4px;
+}
+
+.yoki-action-node__type {
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-right: 8px;
+}
+
+.yoki-action-node__info {
+    font-size: 10px;
+    color: rgb(153, 153, 153);
+    flex-grow: 1;
+}
+
+.yoki-action-node__progress {
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.yoki-action-node__executor {
+    font-size: 9px;
+    color: rgb(128, 128, 128);
+    margin-left: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgb(38, 38, 38);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+/* ========== 子容器样式 ========== */
+.yoki-action-child-container {
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
+.yoki-action-child-container--sequence {
+    flex-direction: column;
+    border-left-width: 2px;
+    padding-left: 8px;
+    margin-left: 4px;
+}
+
+.yoki-action-child-container--parallel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    background-color: rgba(64, 51, 38, 0.3);
+}
+
+.yoki-action-child-container--repeat {
+    flex-direction: column;
+    border-left-width: 2px;
+    padding-left: 8px;
+    margin-left: 4px;
+}
+
+/* ========== 空状态样式 ========== */
+.yoki-action-empty {
+    color: rgb(128, 128, 128);
+    -unity-text-align: middle-center;
+    padding-top: 40px;
+    padding-bottom: 40px;
+}

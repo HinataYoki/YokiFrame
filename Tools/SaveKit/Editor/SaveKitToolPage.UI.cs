@@ -31,6 +31,7 @@ namespace YokiFrame
 
             // 槽位列表
             mSlotListView = new ListView();
+            mSlotListView.AddToClassList("yoki-save-list");
             mSlotListView.makeItem = MakeSlotItem;
             mSlotListView.bindItem = BindSlotItem;
             mSlotListView.fixedItemHeight = 60;
@@ -180,10 +181,7 @@ namespace YokiFrame
         private VisualElement MakeSlotItem()
         {
             var item = new VisualElement();
-            item.AddToClassList("list-item");
-            item.style.minHeight = 56;
-            item.style.paddingTop = 10;
-            item.style.paddingBottom = 10;
+            item.AddToClassList("yoki-save-item");
 
             // 状态指示器
             var indicator = new VisualElement();
@@ -193,8 +191,7 @@ namespace YokiFrame
 
             // 内容区域
             var content = new VisualElement();
-            content.style.flexGrow = 1;
-            content.style.justifyContent = Justify.Center;
+            content.AddToClassList("yoki-save-item__info");
             item.Add(content);
 
             var topRow = CreateRow();
@@ -202,9 +199,7 @@ namespace YokiFrame
 
             var slotLabel = new Label();
             slotLabel.name = "slot-label";
-            slotLabel.style.fontSize = 13;
-            slotLabel.style.color = new StyleColor(Colors.TextPrimary);
-            slotLabel.style.flexGrow = 1;
+            slotLabel.AddToClassList("yoki-save-item__name");
             topRow.Add(slotLabel);
 
             var versionBadge = new Label();
@@ -224,9 +219,7 @@ namespace YokiFrame
 
             var timeLabel = new Label();
             timeLabel.name = "time-label";
-            timeLabel.style.fontSize = 11;
-            timeLabel.style.color = new StyleColor(Colors.TextTertiary);
-            timeLabel.style.marginTop = Spacing.SM;
+            timeLabel.AddToClassList("yoki-save-item__meta");
             content.Add(timeLabel);
 
             // 文件大小

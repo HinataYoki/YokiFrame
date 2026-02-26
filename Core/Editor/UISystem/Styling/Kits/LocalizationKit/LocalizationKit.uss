@@ -1,0 +1,41 @@
+/* LocalizationKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-localization-{block}[__{element}][--{modifier}] */
+
+/* ========== 语言选择器样式 ========== */
+.yoki-localization-selector {
+    flex-direction: row;
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-toolbar);
+}
+
+.yoki-localization-selector__dropdown {
+    width: 200px;
+    margin-left: var(--yoki-spacing-sm);
+}
+
+/* ========== 翻译条目样式 ========== */
+.yoki-localization-entry {
+    padding: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-card);
+    border-top-left-radius: var(--yoki-radius-sm);
+    border-top-right-radius: var(--yoki-radius-sm);
+    border-bottom-left-radius: var(--yoki-radius-sm);
+    border-bottom-right-radius: var(--yoki-radius-sm);
+}
+
+.yoki-localization-entry__key {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-secondary);
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-localization-entry__value {
+    font-size: var(--yoki-font-base);
+    color: var(--yoki-text-primary);
+}
+
+.yoki-localization-entry--missing {
+    border-left-width: 3px;
+    border-left-color: var(--yoki-badge-warning);
+}

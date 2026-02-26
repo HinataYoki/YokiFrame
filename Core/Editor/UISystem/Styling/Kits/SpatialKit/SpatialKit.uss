@@ -1,0 +1,62 @@
+/* SpatialKit 编辑器样式 */
+/* 遵循 BEM 命名规范：.yoki-spatial-{block}[__{element}][--{modifier}] */
+
+/* ========== 空间网格样式 ========== */
+.yoki-spatial-grid {
+    flex-grow: 1;
+    background-color: rgb(20, 20, 26);
+}
+
+.yoki-spatial-grid__cell {
+    border-width: 1px;
+    border-color: var(--yoki-border-light);
+}
+
+.yoki-spatial-grid__cell--occupied {
+    background-color: rgba(33, 150, 243, 0.2);
+}
+
+/* ========== 实体列表样式 ========== */
+.yoki-spatial-entity-list {
+    padding: var(--yoki-spacing-md);
+}
+
+.yoki-spatial-entity {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-card);
+    border-top-left-radius: var(--yoki-radius-sm);
+    border-top-right-radius: var(--yoki-radius-sm);
+    border-bottom-left-radius: var(--yoki-radius-sm);
+    border-bottom-right-radius: var(--yoki-radius-sm);
+}
+
+.yoki-spatial-entity__name {
+    font-size: var(--yoki-font-base);
+    color: var(--yoki-text-primary);
+    flex-grow: 1;
+}
+
+.yoki-spatial-entity__position {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    margin-left: var(--yoki-spacing-md);
+}
+
+/* ========== 查询结果样式 ========== */
+.yoki-spatial-query-result {
+    padding: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-elevated);
+    border-top-left-radius: var(--yoki-radius-md);
+    border-top-right-radius: var(--yoki-radius-md);
+    border-bottom-left-radius: var(--yoki-radius-md);
+    border-bottom-right-radius: var(--yoki-radius-md);
+}
+
+.yoki-spatial-query-result__count {
+    font-size: var(--yoki-font-lg);
+    -unity-font-style: bold;
+    color: var(--yoki-brand-primary);
+}

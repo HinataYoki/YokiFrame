@@ -1,6 +1,6 @@
 ﻿{
     "name":  "YokiFrame.LocalizationKit",
-    "rootNamespace":  "",
+    "rootNamespace":  "YokiFrame.LocalizationKit",
     "references":  [
                        "GUID:224151c835b786a4f8efadaa1799380d",
                        "GUID:3c78026e8f7c6bb4da6cf8c58b8ddb02",

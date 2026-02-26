@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.BuffKit.Editor",
-    "rootNamespace": "YokiFrame",
+    "rootNamespace": "YokiFrame.BuffKit.Editor",
     "references": [
         "YokiFrame",
         "YokiFrame.BuffKit",

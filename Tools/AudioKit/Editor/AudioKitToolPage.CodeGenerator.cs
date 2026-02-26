@@ -58,13 +58,12 @@ namespace YokiFrame
 
         private void BuildCodeGeneratorUI(VisualElement container)
         {
-            var scrollView = new ScrollView { style = { flexGrow = 1, paddingLeft = YokiFrameUIComponents.Spacing.LG, paddingRight = YokiFrameUIComponents.Spacing.LG, paddingTop = YokiFrameUIComponents.Spacing.LG } };
+            var scrollView = new ScrollView();
+            scrollView.AddToClassList("yoki-audio-generator");
             container.Add(scrollView);
             
             var title = new Label("音频 ID 代码生成器");
-            title.style.fontSize = 16;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.marginBottom = YokiFrameUIComponents.Spacing.LG;
+            title.AddToClassList("yoki-audio-generator__title");
             scrollView.Add(title);
             
             // 扫描配置区块
@@ -90,31 +89,24 @@ namespace YokiFrame
             
             // 按钮行
             var buttonRow = YokiFrameUIComponents.CreateRow();
-            buttonRow.style.marginTop = YokiFrameUIComponents.Spacing.LG;
+            buttonRow.AddToClassList("yoki-audio-generator__button-row");
             scrollView.Add(buttonRow);
             
             var scanBtn = YokiFrameUIComponents.CreateSecondaryButton("扫描音频文件", ScanAudioFiles);
-            scanBtn.style.flexGrow = 1;
+            scanBtn.AddToClassList("yoki-audio-generator__scan-button");
             buttonRow.Add(scanBtn);
             
             mGenerateButton = YokiFrameUIComponents.CreatePrimaryButton("生成代码", GenerateCode);
-            mGenerateButton.style.flexGrow = 1;
-            mGenerateButton.style.marginLeft = YokiFrameUIComponents.Spacing.SM;
+            mGenerateButton.AddToClassList("yoki-audio-generator__generate-button");
             mGenerateButton.SetEnabled(false);
             buttonRow.Add(mGenerateButton);
             
             mResultsCountLabel = new Label("扫描结果");
-            mResultsCountLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            mResultsCountLabel.style.marginTop = YokiFrameUIComponents.Spacing.LG;
-            mResultsCountLabel.style.marginBottom = YokiFrameUIComponents.Spacing.SM;
+            mResultsCountLabel.AddToClassList("yoki-audio-generator__results-label");
             scrollView.Add(mResultsCountLabel);
             
             mResultsListView = new ListView { makeItem = CreateResultItem, bindItem = BindResultItem };
-            mResultsListView.style.height = 300;
-            mResultsListView.style.borderTopWidth = mResultsListView.style.borderBottomWidth = 1;
-            mResultsListView.style.borderLeftWidth = mResultsListView.style.borderRightWidth = 1;
-            mResultsListView.style.borderTopColor = mResultsListView.style.borderBottomColor = new StyleColor(YokiFrameUIComponents.Colors.BorderLight);
-            mResultsListView.style.borderLeftColor = mResultsListView.style.borderRightColor = new StyleColor(YokiFrameUIComponents.Colors.BorderLight);
+            mResultsListView.AddToClassList("yoki-audio-generator__results-list");
             scrollView.Add(mResultsListView);
         }
 
@@ -141,9 +133,10 @@ namespace YokiFrame
         private VisualElement CreatePathRow(string labelText, ref TextField textField, string initialValue, Action<string> onPathChanged, bool isFile = false)
         {
             var pathContainer = YokiFrameUIComponents.CreateRow();
-            pathContainer.style.flexGrow = 1;
+            pathContainer.AddToClassList("yoki-audio-generator__path-container");
             
-            var field = new TextField { value = initialValue, style = { flexGrow = 1 } };
+            var field = new TextField { value = initialValue };
+            field.AddToClassList("yoki-audio-generator__path-field");
             field.RegisterValueChangedCallback(evt => onPathChanged?.Invoke(evt.newValue));
             textField = field;
             pathContainer.Add(field);
@@ -158,7 +151,8 @@ namespace YokiFrame
                     var assetsIndex = path.IndexOf(ASSETS_PREFIX, StringComparison.Ordinal);
                     onPathChanged?.Invoke(assetsIndex >= 0 ? path[assetsIndex..] : path);
                 }
-            }) { text = "...", style = { width = 30, marginLeft = YokiFrameUIComponents.Spacing.XS } };
+            }) { text = "..." };
+            browseBtn.AddToClassList("yoki-audio-generator__browse-button");
             pathContainer.Add(browseBtn);
             
             return YokiFrameUIComponents.CreateCompactFormRow(labelText, pathContainer);
@@ -167,9 +161,19 @@ namespace YokiFrame
         private VisualElement CreateResultItem()
         {
             var item = YokiFrameUIComponents.CreateListItemRow();
-            item.Add(new Label { style = { width = 200, color = new StyleColor(YokiFrameUIComponents.Colors.TextPrimary) } });
-            item.Add(new Label { style = { width = 80, color = new StyleColor(YokiFrameUIComponents.Colors.StatusSuccess) } });
-            item.Add(new Label { style = { flexGrow = 1, fontSize = 10, color = new StyleColor(YokiFrameUIComponents.Colors.TextTertiary) } });
+            
+            var nameLabel = new Label();
+            nameLabel.AddToClassList("yoki-audio-generator__result-name");
+            item.Add(nameLabel);
+            
+            var idLabel = new Label();
+            idLabel.AddToClassList("yoki-audio-generator__result-id");
+            item.Add(idLabel);
+            
+            var pathLabel = new Label();
+            pathLabel.AddToClassList("yoki-audio-generator__result-path");
+            item.Add(pathLabel);
+            
             return item;
         }
 

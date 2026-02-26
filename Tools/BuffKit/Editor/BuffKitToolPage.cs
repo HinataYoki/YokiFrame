@@ -36,6 +36,7 @@ namespace YokiFrame
         {
             // 工具栏
             var toolbar = CreateToolbar();
+            toolbar.AddToClassList("yoki-buff-toolbar");
             root.Add(toolbar);
 
             var helpLabel = new Label("运行时 Buff 监控（响应式）");
@@ -238,21 +239,27 @@ namespace YokiFrame
         private VisualElement CreateBuffItem(BuffInstance instance)
         {
             var item = new VisualElement();
-            item.AddToClassList("state-item");
+            item.AddToClassList("yoki-buff-card");
+            // 根据 Buff 类型添加修饰符（假设正面 Buff）
+            item.AddToClassList("yoki-buff-card--positive");
+
+            var header = new VisualElement();
+            header.AddToClassList("yoki-buff-card__header");
+            item.Add(header);
 
             var nameLabel = new Label($"Buff #{instance.BuffId}");
-            nameLabel.AddToClassList("state-name");
-            item.Add(nameLabel);
+            nameLabel.AddToClassList("yoki-buff-card__title");
+            header.Add(nameLabel);
 
             var stackLabel = new Label($"x{instance.StackCount}");
             stackLabel.AddToClassList("state-type");
             stackLabel.style.width = 40;
-            item.Add(stackLabel);
+            header.Add(stackLabel);
 
             var durationLabel = new Label(instance.IsPermanent ? "永久" : $"{instance.RemainingDuration:F1}s");
             durationLabel.AddToClassList("state-type");
             durationLabel.style.width = 60;
-            item.Add(durationLabel);
+            header.Add(durationLabel);
 
             return item;
         }

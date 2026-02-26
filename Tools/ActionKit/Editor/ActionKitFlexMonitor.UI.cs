@@ -12,11 +12,13 @@ namespace YokiFrame.EditorTools
 
         private void BuildHeader(VisualElement parent)
         {
-            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginBottom = 16 } };
-            parent.Add(row);
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList("yoki-action-toolbar");
+            parent.Add(toolbar);
 
-            var title = new Label("Action 流程可视化") { style = { fontSize = 16, unityFontStyleAndWeight = FontStyle.Bold, flexGrow = 1 } };
-            row.Add(title);
+            var title = new Label("Action 流程可视化");
+            title.AddToClassList("yoki-action-toolbar__title");
+            toolbar.Add(title);
 
             // 响应式模式提示
             var hintIcon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
@@ -24,13 +26,13 @@ namespace YokiFrame.EditorTools
             hintIcon.style.height = 12;
             hintIcon.style.marginRight = 4;
             hintIcon.tintColor = COLOR_RUNNING;
-            row.Add(hintIcon);
+            toolbar.Add(hintIcon);
             
             var hint = new Label("响应式") { style = { fontSize = 10, color = new StyleColor(COLOR_RUNNING), marginRight = 8 }, tooltip = "自动响应 Action 状态变化" };
-            row.Add(hint);
+            toolbar.Add(hint);
             
             var refreshBtn = new Button(RefreshData) { text = "刷新", style = { marginLeft = 8 } };
-            row.Add(refreshBtn);
+            toolbar.Add(refreshBtn);
         }
 
         private void BuildStatsCard(VisualElement parent)
@@ -38,7 +40,9 @@ namespace YokiFrame.EditorTools
             var card = CreateLocalCard("统计信息");
             parent.Add(card);
 
-            var content = new VisualElement { style = { paddingLeft = 12, paddingRight = 12, paddingBottom = 12, flexDirection = FlexDirection.Row } };
+            var content = new VisualElement();
+            content.AddToClassList("yoki-action-card__content");
+            content.style.flexDirection = FlexDirection.Row;
             card.Add(content);
 
             var activeBox = CreateStatBox("活跃", "0", COLOR_RUNNING);
@@ -75,7 +79,11 @@ namespace YokiFrame.EditorTools
 
         private VisualElement CreateStatBox(string label, string value, Color color)
         {
-            var box = new VisualElement { style = { backgroundColor = new StyleColor(CARD_BG_DARK), borderTopLeftRadius = 4, borderTopRightRadius = 4, borderBottomLeftRadius = 4, borderBottomRightRadius = 4, paddingLeft = 16, paddingRight = 16, paddingTop = 8, paddingBottom = 8, borderLeftWidth = 3, borderLeftColor = new StyleColor(color) } };
+            var box = new VisualElement();
+            box.AddToClassList("yoki-action-card");
+            box.style.borderLeftWidth = 3;
+            box.style.borderLeftColor = new StyleColor(color);
+            
             box.Add(new Label(label) { style = { fontSize = 11, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)) } });
             var val = new Label(value) { name = "value", style = { fontSize = 20, unityFontStyleAndWeight = FontStyle.Bold, color = new StyleColor(color) } };
             box.Add(val);
@@ -137,7 +145,9 @@ namespace YokiFrame.EditorTools
             card.style.minHeight = 200;
             parent.Add(card);
 
-            mTreeContainer = new VisualElement { style = { paddingLeft = 12, paddingRight = 12, paddingTop = 8, paddingBottom = 12, flexDirection = FlexDirection.Column } };
+            mTreeContainer = new VisualElement();
+            mTreeContainer.AddToClassList("yoki-action-card__content");
+            mTreeContainer.style.flexDirection = FlexDirection.Column;
             card.Add(mTreeContainer);
         }
 
@@ -147,7 +157,8 @@ namespace YokiFrame.EditorTools
             card.style.marginTop = 12;
             parent.Add(card);
 
-            mStackTraceLabel = new Label("点击卡片查看堆栈") { style = { paddingLeft = 12, paddingRight = 12, paddingTop = 8, paddingBottom = 12, fontSize = 11, color = new StyleColor(new Color(0.6f, 0.6f, 0.6f)), whiteSpace = WhiteSpace.Normal } };
+            mStackTraceLabel = new Label("点击卡片查看堆栈");
+            mStackTraceLabel.AddToClassList("yoki-action-stack__content");
             card.Add(mStackTraceLabel);
         }
 
@@ -156,8 +167,11 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private VisualElement CreateLocalCard(string title)
         {
-            var card = new VisualElement { style = { backgroundColor = new StyleColor(CARD_BG_DARK), borderTopLeftRadius = CARD_BORDER_RADIUS, borderTopRightRadius = CARD_BORDER_RADIUS, borderBottomLeftRadius = CARD_BORDER_RADIUS, borderBottomRightRadius = CARD_BORDER_RADIUS } };
-            var header = new Label(title) { style = { fontSize = 13, unityFontStyleAndWeight = FontStyle.Bold, paddingLeft = 12, paddingTop = 10, paddingBottom = 8, borderBottomWidth = 1, borderBottomColor = new StyleColor(new Color(0.25f, 0.25f, 0.25f)) } };
+            var card = new VisualElement();
+            card.AddToClassList("yoki-action-card");
+            
+            var header = new Label(title);
+            header.AddToClassList("yoki-action-card__header");
             card.Add(header);
             return card;
         }

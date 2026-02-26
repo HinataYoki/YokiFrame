@@ -1,6 +1,6 @@
 {
     "name": "YokiFrame.AudioKit.Editor",
-    "rootNamespace": "YokiFrame",
+    "rootNamespace": "YokiFrame.AudioKit.Editor",
     "references": [
         "YokiFrame.AudioKit",
         "YokiFrame",
