@@ -34,7 +34,7 @@ namespace YokiFrame
         /// <summary>
         /// 返回包含此字符串的 StringBuilder
         /// </summary>
-        public static StringBuilder Builder(this string selfStr) => new StringBuilder(selfStr);
+        public static StringBuilder Builder(this string selfStr) => new(selfStr);
 
         /// <summary>
         /// 返回指定容量的 StringBuilder 并追加此字符串

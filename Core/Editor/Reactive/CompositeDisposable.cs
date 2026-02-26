@@ -15,7 +15,7 @@ namespace YokiFrame.EditorTools
 
         public CompositeDisposable(int capacity = 8)
         {
-            mDisposables = new List<IDisposable>(capacity);
+            mDisposables = new(capacity);
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public void Add(IDisposable disposable)
         {
-            if (disposable == null) return;
+            if (disposable is null) return;
 
             if (mIsDisposed)
             {
@@ -50,7 +50,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public bool Remove(IDisposable disposable)
         {
-            if (disposable == null || mIsDisposed) return false;
+            if (disposable is null || mIsDisposed) return false;
 
             var removed = mDisposables.Remove(disposable);
             if (removed)

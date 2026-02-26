@@ -18,7 +18,7 @@ namespace YokiFrame
         /// <summary>
         /// 获取 LogKit 配置（内部使用）
         /// </summary>
-        private static YokiFrameSettings.LogKitSettings Settings => YokiFrameSettings.Instance.LogKit;
+        private static YokiFrameSettings.LogKitSettings Settings => YokiFrameSettings.Instance?.LogKit;
 
         // 运行时配置缓存（从 Settings 初始化）
         private static bool sEnableEncryption;
@@ -155,7 +155,7 @@ namespace YokiFrame
             sInitialized = true;
 
             var settings = Settings;
-            if (settings == null) return;
+            if (settings is null) return;
 
             sSaveLogInEditor = settings.SaveLogInEditor;
             sSaveLogInPlayer = settings.SaveLogInPlayer;
@@ -174,7 +174,7 @@ namespace YokiFrame
         {
 #if UNITY_EDITOR
             var settings = Settings;
-            if (settings == null) return;
+            if (settings is null) return;
 
             settings.SaveLogInEditor = sSaveLogInEditor;
             settings.SaveLogInPlayer = sSaveLogInPlayer;

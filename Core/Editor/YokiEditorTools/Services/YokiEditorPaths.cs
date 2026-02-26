@@ -22,7 +22,7 @@ namespace YokiFrame.EditorTools
             try
             {
                 var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(YokiEditorPaths).Assembly);
-                if (packageInfo != null)
+                if (packageInfo is not null)
                 {
                     // packageInfo.assetPath is like "Packages/com.xxx.yokiframe"
                     sCachedEditorToolsRoot = NormalizeAssetPath($"{packageInfo.assetPath}/Core/Editor/YokiEditorTools");
@@ -38,7 +38,7 @@ namespace YokiFrame.EditorTools
             try
             {
                 var guids = AssetDatabase.FindAssets($"{nameof(YokiEditorPaths)} t:MonoScript");
-                if (guids != null && guids.Length > 0)
+                if (guids is not null && guids.Length > 0)
                 {
                     var scriptPath = AssetDatabase.GUIDToAssetPath(guids[0]);
                     var dir = Path.GetDirectoryName(scriptPath); // .../YokiEditorTools/Services

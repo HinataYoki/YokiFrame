@@ -115,40 +115,68 @@ namespace YokiFrame
         private VisualElement CreateEnumField(string label, Enum value, Action<Enum> onChanged)
         {
             var row = CreateFieldRow(label);
+            
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
             var field = new EnumField(value);
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            row.Add(field);
+            
+            fieldContainer.Add(field);
+            row.Add(fieldContainer);
             return row;
         }
 
         private VisualElement CreateIntField(string label, int value, Action<int> onChanged)
         {
             var row = CreateFieldRow(label);
+            
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
             var field = new IntegerField { value = value };
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            row.Add(field);
+            
+            fieldContainer.Add(field);
+            row.Add(fieldContainer);
             return row;
         }
 
         private VisualElement CreateFloatField(string label, float value, Action<float> onChanged)
         {
             var row = CreateFieldRow(label);
+            
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
             var field = new FloatField { value = value };
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            row.Add(field);
+            
+            fieldContainer.Add(field);
+            row.Add(fieldContainer);
             return row;
         }
 
         private VisualElement CreateVector2Field(string label, Vector2 value, Action<Vector2> onChanged)
         {
             var row = CreateFieldRow(label);
-            var field = new Vector2Field { value = value };
+            
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
+            var field = new Vector2Field { value = value, label = string.Empty };
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            row.Add(field);
+            
+            fieldContainer.Add(field);
+            row.Add(fieldContainer);
             return row;
         }
 
@@ -164,17 +192,23 @@ namespace YokiFrame
         private VisualElement CreateSliderField(string label, float value, float min, float max, Action<float> onChanged)
         {
             var row = CreateFieldRow(label);
+            
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
             var field = new UISlider(min, max) { value = value };
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke(evt.newValue));
-            row.Add(field);
-
+            fieldContainer.Add(field);
+            
             var valueLabel = new Label(value.ToString("F2"));
             valueLabel.style.width = 40;
             valueLabel.style.unityTextAlign = TextAnchor.MiddleRight;
             field.RegisterValueChangedCallback(evt => valueLabel.text = evt.newValue.ToString("F2"));
-            row.Add(valueLabel);
-
+            fieldContainer.Add(valueLabel);
+            
+            row.Add(fieldContainer);
             return row;
         }
 
@@ -182,7 +216,6 @@ namespace YokiFrame
         {
             var row = CreateFieldRow(label);
             
-            // 获取所有层级名称
             var layerNames = new System.Collections.Generic.List<string>();
             for (var i = 0; i < 32; i++)
             {
@@ -193,10 +226,16 @@ namespace YokiFrame
                 }
             }
             
+            var fieldContainer = new VisualElement();
+            fieldContainer.style.flexGrow = 1;
+            fieldContainer.style.overflow = Overflow.Hidden;
+            
             var field = new UnityEditor.UIElements.MaskField(layerNames, value) { label = string.Empty };
             field.style.flexGrow = 1;
             field.RegisterValueChangedCallback(evt => onChanged?.Invoke((LayerMask)evt.newValue));
-            row.Add(field);
+            
+            fieldContainer.Add(field);
+            row.Add(fieldContainer);
             return row;
         }
 
@@ -210,6 +249,7 @@ namespace YokiFrame
             var labelElement = new Label(label);
             labelElement.style.width = 150;
             labelElement.style.minWidth = 150;
+            labelElement.style.flexShrink = 0;
             row.Add(labelElement);
 
             return row;

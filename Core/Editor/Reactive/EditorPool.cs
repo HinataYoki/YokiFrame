@@ -37,7 +37,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public static void Return(List<T> list)
         {
-            if (list == null) return;
+            if (list is null) return;
             list.Clear();
             sPool.Push(list);
         }
@@ -81,7 +81,7 @@ namespace YokiFrame.EditorTools
         /// <param name="item">要归还的对象</param>
         public static void Return(T item)
         {
-            if (item == null) return;
+            if (item is null) return;
             if (item is IPoolable poolable) poolable.OnReturn();
             sPool.Push(item);
         }
@@ -122,7 +122,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public static void Return(Dictionary<TKey, TValue> dict)
         {
-            if (dict == null) return;
+            if (dict is null) return;
             dict.Clear();
             sPool.Push(dict);
         }
@@ -157,7 +157,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public static void Return(HashSet<T> set)
         {
-            if (set == null) return;
+            if (set is null) return;
             set.Clear();
             sPool.Push(set);
         }

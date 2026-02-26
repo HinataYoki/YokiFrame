@@ -31,7 +31,7 @@ namespace YokiFrame
             var assetPath = NormalizePath(path);
             mAsset = AssetDatabase.LoadAssetAtPath<T>(assetPath);
             
-            if (mAsset == null)
+            if (mAsset == default)
             {
                 // 尝试不带扩展名的路径（兼容 Resources 风格）
                 var guids = AssetDatabase.FindAssets(System.IO.Path.GetFileNameWithoutExtension(path));
@@ -41,7 +41,7 @@ namespace YokiFrame
                     if (foundPath.Contains(path.Replace("\\", "/")))
                     {
                         mAsset = AssetDatabase.LoadAssetAtPath<T>(foundPath);
-                        if (mAsset != null) break;
+                        if (mAsset != default) break;
                     }
                 }
             }

@@ -30,10 +30,10 @@ namespace YokiFrame
             mMethodName = methodName;
             mAccess = AccessModifier.Public;
             mModifiers = MemberModifier.None;
-            mParameters = new List<ParameterInfo>(4);
-            mAttributes = new List<AttributeCode>(2);
-            mGenericParams = new List<string>(2);
-            mGenericConstraints = new List<string>(2);
+            mParameters = new(4);
+            mAttributes = new(2);
+            mGenericParams = new(2);
+            mGenericConstraints = new(2);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace YokiFrame
         /// </summary>
         public MethodCode WithParameter(string type, string name, string defaultValue = null)
         {
-            mParameters.Add(new ParameterInfo(type, name, defaultValue));
+            mParameters.Add(new(type, name, defaultValue));
             return this;
         }
 
@@ -77,7 +77,7 @@ namespace YokiFrame
         /// </summary>
         public MethodCode WithAttribute(string attributeName)
         {
-            mAttributes.Add(new AttributeCode(attributeName));
+            mAttributes.Add(new(attributeName));
             return this;
         }
 
@@ -169,7 +169,7 @@ namespace YokiFrame
 
             if (mBodyBuilder != null)
             {
-                var bodyScope = new MethodBodyScope();
+                var bodyScope = new CustomCodeScope("");
                 mBodyBuilder.Invoke(bodyScope);
                 foreach (var code in bodyScope.Codes)
                 {
@@ -186,7 +186,7 @@ namespace YokiFrame
             if (mParameters.Count == 0)
                 return string.Empty;
 
-            var builder = new StringBuilder(64);
+            var builder = new System.Text.StringBuilder(64);
             for (int i = 0; i < mParameters.Count; i++)
             {
                 if (i > 0) builder.Append(", ");

@@ -45,15 +45,14 @@ namespace YokiFrame
             
 #if UNITY_EDITOR
             Name = name ?? $"FSM<{typeof(TEnum).Name}>";
-            if (FsmEditorHook.OnFsmCreated != null)
-                FsmEditorHook.OnFsmCreated.Invoke(this);
+            FsmEditorHook.OnFsmCreated?.Invoke(this);
 #endif
         }
 
 #if UNITY_EDITOR
         public IReadOnlyDictionary<int, IState> GetAllStates()
         {
-            mStateIdCache ??= new Dictionary<int, IState>();
+            mStateIdCache ??= new();
             mStateIdCache.Clear();
             foreach (var kvp in mStateDic)
                 mStateIdCache[Convert.ToInt32(kvp.Key)] = kvp.Value;
@@ -76,14 +75,13 @@ namespace YokiFrame
             }
             mStateDic.Add(id, state);
 
-            if (CurState == null)
+            if (CurState is null)
             {
                 CurState = state;
                 CurEnum = id;
             }
 #if UNITY_EDITOR
-            if (FsmEditorHook.OnStateAdded != null)
-                FsmEditorHook.OnStateAdded.Invoke(this, id.ToString());
+            FsmEditorHook.OnStateAdded?.Invoke(this, id.ToString());
 #endif
         }
 
@@ -100,8 +98,7 @@ namespace YokiFrame
                 mStateDic[id].Dispose();
                 mStateDic.Remove(id);
 #if UNITY_EDITOR
-                if (FsmEditorHook.OnStateRemoved != null)
-                    FsmEditorHook.OnStateRemoved.Invoke(this, id.ToString());
+                FsmEditorHook.OnStateRemoved?.Invoke(this, id.ToString());
 #endif
             }
         }
@@ -119,8 +116,7 @@ namespace YokiFrame
                     CurEnum = id;
                     state.Start();
 #if UNITY_EDITOR
-                    if (FsmEditorHook.OnStateChanged != null)
-                        FsmEditorHook.OnStateChanged.Invoke(this, prevEnum.ToString(), id.ToString());
+                    FsmEditorHook.OnStateChanged?.Invoke(this, prevEnum.ToString(), id.ToString());
 #endif
                 }
             }
@@ -146,8 +142,7 @@ namespace YokiFrame
                         state.Start();
                     }
 #if UNITY_EDITOR
-                    if (FsmEditorHook.OnStateChanged != null)
-                        FsmEditorHook.OnStateChanged.Invoke(this, prevEnum.ToString(), id.ToString());
+                    FsmEditorHook.OnStateChanged?.Invoke(this, prevEnum.ToString(), id.ToString());
 #endif
                 }
             }
@@ -155,7 +150,7 @@ namespace YokiFrame
 
         public void Clear()
         {
-            if (MachineState is not MachineState.End && CurState != null)
+            if (MachineState is not MachineState.End && CurState is not null)
             {
                 End();
                 CurState = null;
@@ -198,13 +193,12 @@ namespace YokiFrame
 
         public void Start()
         {
-            if (CurState != null && mMachineState is not MachineState.Running)
+            if (CurState is not null && mMachineState is not MachineState.Running)
             {
                 mMachineState = MachineState.Running;
                 CurState.Start();
 #if UNITY_EDITOR
-                if (FsmEditorHook.OnFsmStarted != null)
-                    FsmEditorHook.OnFsmStarted.Invoke(this, CurEnum.ToString());
+                FsmEditorHook.OnFsmStarted?.Invoke(this, CurEnum.ToString());
 #endif
             }
         }
@@ -218,15 +212,14 @@ namespace YokiFrame
                 CurEnum = id;
                 state.Start();
 #if UNITY_EDITOR
-                if (FsmEditorHook.OnFsmStarted != null)
-                    FsmEditorHook.OnFsmStarted.Invoke(this, id.ToString());
+                FsmEditorHook.OnFsmStarted?.Invoke(this, id.ToString());
 #endif
             }
         }
 
         public void Suspend()
         {
-            if (CurState != null && mMachineState is MachineState.Running)
+            if (CurState is not null && mMachineState is MachineState.Running)
             {
                 mMachineState = MachineState.Suspend;
                 CurState?.Suspend();
@@ -262,7 +255,7 @@ namespace YokiFrame
     {
         public void Start(TArgs args)
         {
-            if (CurState != null && mMachineState is not MachineState.Running)
+            if (CurState is not null && mMachineState is not MachineState.Running)
             {
                 mMachineState = MachineState.Running;
                 if (CurState is IState<TArgs> stateWithArgs)

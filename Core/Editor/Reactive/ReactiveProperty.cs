@@ -25,7 +25,7 @@ namespace YokiFrame.EditorTools
         {
             mValue = initialValue;
             mComparer = comparer ?? EqualityComparer<T>.Default;
-            mListeners = new List<Action<T, T>>(4);
+            mListeners = new(4);
         }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace YokiFrame.EditorTools
         /// <returns>用于取消订阅的 IDisposable</returns>
         public IDisposable Subscribe(Action<T, T> onChanged)
         {
-            if (mIsDisposed || onChanged == null) return Disposable.Empty;
+            if (mIsDisposed || onChanged is null) return Disposable.Empty;
             
             mListeners.Add(onChanged);
             return Disposable.Create(() => mListeners.Remove(onChanged));
@@ -70,7 +70,7 @@ namespace YokiFrame.EditorTools
         /// <returns>用于取消订阅的 IDisposable</returns>
         public IDisposable Subscribe(Action<T> onChanged)
         {
-            if (onChanged == null) return Disposable.Empty;
+            if (onChanged is null) return Disposable.Empty;
             return Subscribe((_, newVal) => onChanged(newVal));
         }
 

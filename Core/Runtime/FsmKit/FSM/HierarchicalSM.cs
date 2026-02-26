@@ -33,7 +33,7 @@ namespace YokiFrame
 #if UNITY_EDITOR
         public IReadOnlyDictionary<int, IState> GetAllStates()
         {
-            mStateIdCache ??= new Dictionary<int, IState>();
+            mStateIdCache ??= new();
             mStateIdCache.Clear();
             foreach (var kvp in mStateDic)
                 mStateIdCache[Convert.ToInt32(kvp.Key)] = kvp.Value.Item1;

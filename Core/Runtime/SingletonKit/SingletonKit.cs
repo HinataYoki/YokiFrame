@@ -84,7 +84,7 @@ namespace YokiFrame
                     return null;
                 }
 
-                if (mInstance == null)
+                if (mInstance is null)
                 {
                     lock (mLock)
                     {
@@ -149,7 +149,7 @@ namespace YokiFrame
             }
 
             // 根据缓存的属性或默认逻辑创建 GameObject
-            if (mCachedPathAttribute != null)
+            if (mCachedPathAttribute is not null)
             {
                 instance = CreateComponentOnGameObject(mCachedPathAttribute);
             }
@@ -171,7 +171,7 @@ namespace YokiFrame
         private static T CreateComponentOnGameObject(MonoSingletonPathAttribute pathAttr)
         {
             var obj = FindOrCreateGameObjectPath(pathAttr.PathInHierarchy);
-            if (obj == null)
+            if (obj == default)
             {
                 // 兜底创建
                 obj = pathAttr.IsRectTransform
@@ -181,7 +181,7 @@ namespace YokiFrame
             }
 
             var instance = obj.GetComponent(typeof(T)) as T;
-            if (instance == null)
+            if (instance == default)
             {
                 instance = obj.AddComponent(typeof(T)) as T;
             }
@@ -224,7 +224,7 @@ namespace YokiFrame
         {
             GameObject child;
 
-            if (parent == null)
+            if (parent == default)
             {
                 child = GameObject.Find(name);
             }
@@ -234,10 +234,10 @@ namespace YokiFrame
                 child = childTransform != null ? childTransform.gameObject : null;
             }
 
-            if (child == null)
+            if (child == default)
             {
                 child = new GameObject(name);
-                if (parent != null)
+                if (parent != default)
                 {
                     child.transform.SetParent(parent.transform);
                 }

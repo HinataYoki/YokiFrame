@@ -57,8 +57,8 @@ namespace YokiFrame
 
             sFilePath = Path.Combine(LogDirectory, Application.isEditor ? "editor.log" : "player.log");
 
-            sQueue = new BlockingCollection<LogCommand>(KitLogger.MaxQueueSize);
-            sCts = new CancellationTokenSource();
+            sQueue = new(KitLogger.MaxQueueSize);
+            sCts = new();
 
             InitAes();
             sSharedBuffer = new byte[INITIAL_BUFFER_SIZE];
@@ -85,15 +85,15 @@ namespace YokiFrame
             try { sWriteTask?.Wait(500); } catch { }
 
             sCts?.Dispose();
-            sCts = null;
+            sCts = default;
             sCachedAes?.Dispose();
-            sCachedAes = null;
-            sSharedBuffer = null;
+            sCachedAes = default;
+            sSharedBuffer = default;
         }
 
         public static void Enqueue(LogCommand cmd)
         {
-            if (!sInitialized || sQueue == null || sQueue.IsAddingCompleted) return;
+            if (!sInitialized || sQueue is null || sQueue.IsAddingCompleted) return;
             sQueue.TryAdd(cmd);
         }
 
@@ -117,7 +117,7 @@ namespace YokiFrame
             if (skipLog) return;
 
             bool needStack = type == LogType.Error || type == LogType.Exception || type == LogType.Assert;
-            string capturedStack = null;
+            string capturedStack = default;
             if (needStack)
             {
                 capturedStack = string.IsNullOrEmpty(stackTrace) ? Environment.StackTrace : stackTrace;
@@ -180,7 +180,7 @@ namespace YokiFrame
             }
 
             string finalLine = sb.ToString();
-            if (KitLogger.EnableEncryption && sCachedAes != null)
+            if (KitLogger.EnableEncryption && sCachedAes != default)
             {
                 finalLine = EncryptString(finalLine);
             }
@@ -193,7 +193,7 @@ namespace YokiFrame
 
         private static void InitAes()
         {
-            if (sCachedAes != null) return;
+            if (sCachedAes != default) return;
             sCachedAes = Aes.Create();
             sCachedAes.Key = sKey;
             sCachedAes.IV = sIV;
@@ -254,7 +254,7 @@ namespace YokiFrame
         {
             if (string.IsNullOrEmpty(rawStack)) return "";
 
-            sCachedStackSb ??= new StringBuilder(1024);
+            sCachedStackSb ??= new(1024);
             sCachedStackSb.Clear();
 
             var lines = rawStack.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);

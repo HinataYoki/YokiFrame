@@ -119,7 +119,7 @@ namespace YokiFrame
         /// </summary>
         public static KitLoggerIMGUI Enable(int maxLogCount = 200)
         {
-            if (sInstance != null) return sInstance;
+            if (sInstance != default) return sInstance;
 
             var go = new GameObject("[KitLoggerIMGUI]");
             DontDestroyOnLoad(go);
@@ -133,10 +133,10 @@ namespace YokiFrame
         /// </summary>
         public static void Disable()
         {
-            if (sInstance != null)
+            if (sInstance != default)
             {
                 Destroy(sInstance.gameObject);
-                sInstance = null;
+                sInstance = default;
             }
         }
 
@@ -156,7 +156,7 @@ namespace YokiFrame
                 mLogCount = 0;
                 mWarningCount = 0;
                 mErrorCount = 0;
-                mLastMessage = null;
+                mLastMessage = default;
                 mLastMessageIndex = -1;
             }
         }
@@ -172,7 +172,7 @@ namespace YokiFrame
 
         private void Awake()
         {
-            if (sInstance != null && sInstance != this)
+            if (sInstance != default && sInstance != this)
             {
                 Destroy(gameObject);
                 return;
@@ -182,7 +182,7 @@ namespace YokiFrame
             // 初始化窗口位置
             float width = Mathf.Min(Screen.width * 0.9f, 800);
             float height = Mathf.Min(Screen.height * 0.6f, 400);
-            mWindowRect = new Rect(
+            mWindowRect = new(
                 (Screen.width - width) / 2,
                 (Screen.height - height) / 2,
                 width,
@@ -198,7 +198,7 @@ namespace YokiFrame
         {
             if (sInstance == this)
             {
-                sInstance = null;
+                sInstance = default;
             }
         }
 

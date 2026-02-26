@@ -113,11 +113,11 @@ namespace YokiFrame
         /// </summary>
         public static ICodeScope Region(this ICodeScope self, string regionName, System.Action<ICodeScope> content)
         {
-            self.Codes.Add(new CustomCode($"#region {regionName}"));
+            self.Codes.Add(new CommentCode($"#region {regionName}"));
             self.EmptyLine();
             content?.Invoke(self);
             self.EmptyLine();
-            self.Codes.Add(new CustomCode("#endregion"));
+            self.Codes.Add(new CommentCode("#endregion"));
             return self;
         }
     }

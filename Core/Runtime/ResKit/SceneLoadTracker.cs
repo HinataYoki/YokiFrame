@@ -31,7 +31,7 @@ namespace YokiFrame
         /// </summary>
         public static void OnLoad(ISceneResLoader loader, string path, Scene scene, bool isAdditive)
         {
-            if (loader == null) return;
+            if (loader is null) return;
             
             if (!sTrackedScenes.TryGetValue(loader, out var tracked))
             {
@@ -53,7 +53,7 @@ namespace YokiFrame
         /// </summary>
         public static void OnUnload(ISceneResLoader loader)
         {
-            if (loader == null) return;
+            if (loader is null) return;
             var removed = sTrackedScenes.Remove(loader);
             KitLogger.DebugLog($"[SceneLoadTracker] 追踪场景卸载: Removed={removed}, Count={sTrackedScenes.Count}");
         }

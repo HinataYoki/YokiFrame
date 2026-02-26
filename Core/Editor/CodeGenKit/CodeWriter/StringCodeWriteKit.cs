@@ -21,7 +21,7 @@ namespace YokiFrame
         /// <param name="initialCapacity">初始容量</param>
         public StringCodeWriteKit(int initialCapacity = 1024)
         {
-            mBuilder = new StringBuilder(initialCapacity);
+            mBuilder = new(initialCapacity);
         }
 
         public int IndentCount

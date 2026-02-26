@@ -26,7 +26,7 @@ namespace YokiFrame
         /// </summary>
         public byte[] GetXorKey()
         {
-            if (mXorKey == null)
+            if (mXorKey is null)
             {
                 using var sha = SHA256.Create();
                 mXorKey = sha.ComputeHash(Encoding.UTF8.GetBytes(XorKeySeed));
@@ -39,7 +39,7 @@ namespace YokiFrame
         /// </summary>
         public byte[] GetAesKey()
         {
-            if (mAesKey == null) InitAesKeyIV();
+            if (mAesKey is null) InitAesKeyIV();
             return mAesKey;
         }
 
@@ -48,7 +48,7 @@ namespace YokiFrame
         /// </summary>
         public byte[] GetAesIV()
         {
-            if (mAesIV == null) InitAesKeyIV();
+            if (mAesIV is null) InitAesKeyIV();
             return mAesIV;
         }
 

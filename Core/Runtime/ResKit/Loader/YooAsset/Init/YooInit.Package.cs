@@ -14,7 +14,7 @@ namespace YokiFrame
         /// 获取指定名称的资源包
         /// </summary>
         public static ResourcePackage GetPackage(string packageName)
-            => sPackages.TryGetValue(packageName, out var package) ? package : null;
+            => sPackages.TryGetValue(packageName, out var package) ? package : default;
 
         /// <summary>
         /// 尝试获取指定名称的资源包
@@ -49,7 +49,7 @@ namespace YokiFrame
                     return true;
                 }
             }
-            package = null;
+            package = default;
             return false;
         }
 
@@ -58,7 +58,7 @@ namespace YokiFrame
         /// </summary>
         public static bool CheckPathValid(string path, ResourcePackage package = null)
         {
-            if (package != null)
+            if (package != default)
                 return package.CheckLocationValid(path);
 
             foreach (var pkg in sPackages.Values)

@@ -45,7 +45,7 @@ namespace YokiFrame
         public static byte[] LoadRawFileData(string path, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == null || !package.CheckLocationValid(path))
+            if (package == default || !package.CheckLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 return null;
@@ -63,7 +63,7 @@ namespace YokiFrame
         public static string LoadRawFileText(string path, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == null || !package.CheckLocationValid(path))
+            if (package == default || !package.CheckLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 return null;
@@ -99,10 +99,10 @@ namespace YokiFrame
         public static IEnumerator LoadRawAsync(string path, Action<RawFileHandle> onComplete, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == null || !package.CheckLocationValid(path))
+            if (package == default || !package.CheckLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
-                onComplete?.Invoke(null);
+                onComplete?.Invoke(default);
                 yield break;
             }
 

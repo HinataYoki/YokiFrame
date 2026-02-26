@@ -60,6 +60,10 @@ namespace YokiFrame.EditorTools
             
             body = new VisualElement();
             body.AddToClassList("card-body");
+            body.style.paddingLeft = Spacing.MD;
+            body.style.paddingRight = Spacing.MD;
+            body.style.paddingTop = Spacing.SM;
+            body.style.paddingBottom = Spacing.MD;
             card.Add(body);
             
             return (card, body);

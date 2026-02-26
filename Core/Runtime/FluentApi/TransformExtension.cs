@@ -23,9 +23,9 @@ namespace YokiFrame
             foreach (Transform child in parent.transform)
             {
                 T result = child.FindComponent<T>(targetName);
-                if (result) return result;
+                if (result != default) return result;
             }
-            return null;
+            return default;
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace YokiFrame
         public static T FindByPath<T>(this Transform self, string path) where T : Component
         {
             var child = self.Find(path);
-            return child != null ? child.GetComponent<T>() : null;
+            return child != default ? child.GetComponent<T>() : default;
         }
 
         #endregion

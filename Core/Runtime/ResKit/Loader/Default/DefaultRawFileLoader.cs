@@ -63,7 +63,7 @@ namespace YokiFrame
 
         public void UnloadAndRecycle()
         {
-            if (mTextAsset != null)
+            if (mTextAsset != default)
             {
                 Resources.UnloadAsset(mTextAsset);
                 mTextAsset = null;

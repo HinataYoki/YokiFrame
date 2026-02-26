@@ -69,12 +69,12 @@ namespace YokiFrame.EditorTools
         /// <returns>用于取消订阅的 IDisposable</returns>
         public static IDisposable Subscribe<T>(string channel, Action<T> callback)
         {
-            if (string.IsNullOrEmpty(channel) || callback == null) 
+            if (string.IsNullOrEmpty(channel) || callback is null) 
                 return Disposable.Empty;
 
             if (!sChannels.TryGetValue(channel, out var listeners))
             {
-                listeners = new List<Delegate>(4);
+                listeners = new(4);
                 sChannels[channel] = listeners;
             }
             
@@ -100,7 +100,7 @@ namespace YokiFrame.EditorTools
             Action<T> callback, 
             float intervalSeconds)
         {
-            if (string.IsNullOrEmpty(channel) || callback == null) 
+            if (string.IsNullOrEmpty(channel) || callback is null) 
                 return Disposable.Empty;
 
             string throttleKey = $"{channel}_throttle_{callback.GetHashCode()}";

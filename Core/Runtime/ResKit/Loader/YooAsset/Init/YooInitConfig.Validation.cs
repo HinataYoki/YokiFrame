@@ -148,10 +148,10 @@ namespace YokiFrame
         /// <returns>是否有效</returns>
         public bool Validate(out List<string> errors)
         {
-            errors = new List<string>();
+            errors = new();
 
             // 验证包名
-            if (PackageNames == null || PackageNames.Count == 0)
+            if (PackageNames is not { Count: > 0 })
             {
                 errors.Add("资源包列表不能为空");
             }

@@ -41,7 +41,7 @@ namespace YokiFrame
         public static T GetOrAddComponent<T>(this GameObject self) where T : Component
         {
             var comp = self.GetComponent<T>();
-            return comp ? comp : self.AddComponent<T>();
+            return comp != default ? comp : self.AddComponent<T>();
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace YokiFrame
         public static GameObject RemoveComponent<T>(this GameObject self) where T : Component
         {
             var comp = self.GetComponent<T>();
-            if (comp) UnityEngine.Object.Destroy(comp);
+            if (comp != default) UnityEngine.Object.Destroy(comp);
             return self;
         }
 
@@ -80,7 +80,7 @@ namespace YokiFrame
         public static GameObject RemoveComponentImmediate<T>(this GameObject self) where T : Component
         {
             var comp = self.GetComponent<T>();
-            if (comp) UnityEngine.Object.DestroyImmediate(comp);
+            if (comp != default) UnityEngine.Object.DestroyImmediate(comp);
             return self;
         }
 

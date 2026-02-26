@@ -60,13 +60,13 @@ namespace YokiFrame
         /// 判断引用类型对象是否为空 (== null)
         /// </summary>
         /// <remarks>仅适用于引用类型，值类型请直接使用 == 比较</remarks>
-        public static bool IsNull<T>(this T selfObj) where T : class => selfObj == null;
+        public static bool IsNull<T>(this T selfObj) where T : class => selfObj is null;
 
         /// <summary>
         /// 判断引用类型对象是否不为空 (!= null)
         /// </summary>
         /// <remarks>仅适用于引用类型，值类型请直接使用 != 比较</remarks>
-        public static bool IsNotNull<T>(this T selfObj) where T : class => selfObj != null;
+        public static bool IsNotNull<T>(this T selfObj) where T : class => selfObj is not null;
 
         /// <summary>
         /// 如果为 null 则返回默认值
@@ -110,7 +110,7 @@ namespace YokiFrame
         /// </summary>
         public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> self, TKey key, TValue defaultValue = default)
         {
-            if (self == null) return defaultValue;
+            if (self is null) return defaultValue;
             return self.TryGetValue(key, out var value) ? value : defaultValue;
         }
 

@@ -59,7 +59,7 @@ namespace YokiFrame
         /// </summary>
         public void Add(TKey key, TValue value)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key is null) throw new ArgumentNullException(nameof(key));
             Insert(key, value, true);
         }
 
@@ -68,7 +68,7 @@ namespace YokiFrame
         /// </summary>
         public bool TryAdd(TKey key, TValue value)
         {
-            if (key == null) return false;
+            if (key is null) return false;
             return Insert(key, value, true, throwOnExisting: false);
         }
 
@@ -103,7 +103,7 @@ namespace YokiFrame
         /// </summary>
         public TValue GetOrAdd(TKey key, TValue value)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key is null) throw new ArgumentNullException(nameof(key));
             
             int index = FindEntry(key);
             if (index >= 0)
@@ -118,8 +118,8 @@ namespace YokiFrame
         /// </summary>
         public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
-            if (valueFactory == null) throw new ArgumentNullException(nameof(valueFactory));
+            if (key is null) throw new ArgumentNullException(nameof(key));
+            if (valueFactory is null) throw new ArgumentNullException(nameof(valueFactory));
             
             int index = FindEntry(key);
             if (index >= 0)
@@ -134,7 +134,7 @@ namespace YokiFrame
 
         public bool Remove(TKey key)
         {
-            if (key == null) return false;
+            if (key is null) return false;
             
             int hashCode = mComparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashCode % mEntries.Length;
@@ -177,7 +177,7 @@ namespace YokiFrame
         /// </summary>
         public void ForEach(Action<TKey, TValue> action)
         {
-            if (action == null) throw new ArgumentNullException(nameof(action));
+            if (action is null) throw new ArgumentNullException(nameof(action));
             
             for (int i = 0; i < mEntries.Length; i++)
             {
@@ -215,7 +215,7 @@ namespace YokiFrame
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int FindEntry(TKey key)
         {
-            if (key == null) return -1;
+            if (key is null) return -1;
             
             int hashCode = mComparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashCode % mEntries.Length;

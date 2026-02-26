@@ -13,8 +13,7 @@ namespace YokiFrame
         public void Send<T>(T args = default)
         {
 #if UNITY_EDITOR
-            if (EasyEventEditorHook.OnSend != null)
-                EasyEventEditorHook.OnSend.Invoke("Type", typeof(T).Name, args);
+            EasyEventEditorHook.OnSend?.Invoke("Type", typeof(T).Name, args);
 #endif
             mEventDic.GetEvent<EasyEvent<T>>()?.Trigger(args);
         }

@@ -55,7 +55,7 @@ namespace YokiFrame
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
             mAsyncOp = SceneManager.LoadSceneAsync(scenePath, loadMode);
 
-            if (mAsyncOp == null)
+            if (mAsyncOp == default)
             {
                 KitLogger.Error($"[ResKit] 场景加载失败: {scenePath}");
                 onComplete?.Invoke(default);
@@ -86,7 +86,7 @@ namespace YokiFrame
             }
 
             var asyncOp = SceneManager.UnloadSceneAsync(scene);
-            if (asyncOp == null)
+            if (asyncOp == default)
             {
                 onComplete?.Invoke();
                 return;
@@ -125,7 +125,7 @@ namespace YokiFrame
 
         private static void EnsureCoroutineRunner()
         {
-            if (sCoroutineRunner != null) return;
+            if (sCoroutineRunner != default) return;
 
             var go = new GameObject("[ResKit_SceneCoroutineRunner]");
             go.hideFlags = HideFlags.HideAndDontSave;

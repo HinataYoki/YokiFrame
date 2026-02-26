@@ -33,8 +33,8 @@ namespace YokiFrame.EditorTools
             
             // 创建新窗口
             var window = CreateInstance<YokiPagePopoutWindow>();
-            window.titleContent = new GUIContent(page.PageName);
-            window.minSize = new Vector2(600, 400);
+            window.titleContent = new(page.PageName);
+            window.minSize = new(600, 400);
             window.mPage = page;
             window.Show();
             

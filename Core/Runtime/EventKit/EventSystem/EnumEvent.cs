@@ -48,8 +48,7 @@ namespace YokiFrame
         public void Send<TEnum>(TEnum key) where TEnum : Enum
         {
 #if UNITY_EDITOR
-            if (EasyEventEditorHook.OnSend != null)
-                EasyEventEditorHook.OnSend.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", null);
+            EasyEventEditorHook.OnSend?.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", null);
 #endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent>()?.Trigger();
@@ -60,8 +59,7 @@ namespace YokiFrame
         public void Send<TEnum, TArgs>(TEnum key, TArgs args) where TEnum : Enum
         {
 #if UNITY_EDITOR
-            if (EasyEventEditorHook.OnSend != null)
-                EasyEventEditorHook.OnSend.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", args);
+            EasyEventEditorHook.OnSend?.Invoke("Enum", $"{typeof(TEnum).Name}.{key}", args);
 #endif
             GetEvents(key, out var enumEvent);
             enumEvent.GetEvent<EasyEvent<TArgs>>()?.Trigger(args);

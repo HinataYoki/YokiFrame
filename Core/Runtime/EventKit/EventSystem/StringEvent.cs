@@ -21,8 +21,7 @@ namespace YokiFrame
         public void Send(string key)
         {
 #if UNITY_EDITOR
-            if (EasyEventEditorHook.OnSend != null)
-                EasyEventEditorHook.OnSend.Invoke("String", key, null);
+            EasyEventEditorHook.OnSend?.Invoke("String", key, null);
 #endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent>()?.Trigger();
@@ -33,8 +32,7 @@ namespace YokiFrame
         public void Send<T>(string key, T args)
         {
 #if UNITY_EDITOR
-            if (EasyEventEditorHook.OnSend != null)
-                EasyEventEditorHook.OnSend.Invoke("String", key, args);
+            EasyEventEditorHook.OnSend?.Invoke("String", key, args);
 #endif
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent<T>>()?.Trigger(args);

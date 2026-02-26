@@ -33,7 +33,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public void Execute(Action action)
         {
-            if (mIsDisposed || action == null || mScheduleHost == null) return;
+            if (mIsDisposed || action is null || mScheduleHost is null) return;
 
             // 取消之前的调度
             Cancel();
@@ -65,7 +65,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public void Flush()
         {
-            if (mIsDisposed || mPendingAction == null) return;
+            if (mIsDisposed || mPendingAction is null) return;
 
             Cancel();
             var action = mPendingAction;
@@ -76,7 +76,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 是否有待执行的动作
         /// </summary>
-        public bool HasPending => mPendingAction != null;
+        public bool HasPending => mPendingAction is not null;
 
         public void Dispose()
         {

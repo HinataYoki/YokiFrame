@@ -32,7 +32,7 @@ namespace YokiFrame
             mPropertyName = propertyName;
             mAccess = AccessModifier.Public;
             mModifiers = MemberModifier.None;
-            mAttributes = new List<AttributeCode>(2);
+            mAttributes = new(2);
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace YokiFrame
         /// </summary>
         public PropertyCode WithAttribute(string attributeName)
         {
-            mAttributes.Add(new AttributeCode(attributeName));
+            mAttributes.Add(new(attributeName));
             return this;
         }
 
@@ -158,7 +158,7 @@ namespace YokiFrame
             }
 
             // 自动属性或完整属性
-            if (mGetterBody == null && mSetterBody == null)
+            if (mGetterBody is null && mSetterBody is null)
             {
                 // 自动属性
                 var getterStr = mHasGetter ? "get; " : "";
@@ -175,7 +175,7 @@ namespace YokiFrame
 
                 if (mHasGetter)
                 {
-                    if (mGetterBody != null)
+                    if (mGetterBody is not null)
                     {
                         var getterScope = new CustomCodeScope("get");
                         mGetterBody.Invoke(getterScope);
@@ -190,7 +190,7 @@ namespace YokiFrame
                 if (mHasSetter)
                 {
                     var setterAccessStr = ModifierHelper.GetAccessString(mSetterAccess);
-                    if (mSetterBody != null)
+                    if (mSetterBody is not null)
                     {
                         var setterScope = new CustomCodeScope($"{setterAccessStr}set");
                         mSetterBody.Invoke(setterScope);

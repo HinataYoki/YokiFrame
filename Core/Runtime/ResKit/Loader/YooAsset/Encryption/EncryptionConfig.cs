@@ -31,13 +31,13 @@ namespace YokiFrame
 
         public byte[] GetAesKey()
         {
-            if (mAesKey == null) InitAesKeyIV();
+            if (mAesKey is null) InitAesKeyIV();
             return mAesKey;
         }
 
         public byte[] GetAesIV()
         {
-            if (mAesIV == null) InitAesKeyIV();
+            if (mAesIV is null) InitAesKeyIV();
             return mAesIV;
         }
 

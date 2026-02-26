@@ -45,7 +45,7 @@ namespace YokiFrame
             handler.IsDone = true;
             handler.Retain();
 
-            if (handler.Asset == null)
+            if (handler.Asset == default)
             {
                 KitLogger.Error($"[ResKit] 资源加载失败: {path}");
                 SafePoolKit<ResHandler>.Instance.Recycle(handler);
@@ -98,7 +98,7 @@ namespace YokiFrame
                 handler.Asset = asset;
                 handler.IsDone = true;
 
-                if (asset == null)
+                if (asset == default)
                 {
                     KitLogger.Error($"[ResKit] 资源加载失败: {path}");
                 }
@@ -186,7 +186,7 @@ namespace YokiFrame
             handler.Asset = asset;
             handler.IsDone = true;
 
-            if (asset == null)
+            if (asset == default)
             {
                 KitLogger.Error($"[ResKit] 资源加载失败: {path}");
             }

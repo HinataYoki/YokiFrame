@@ -26,7 +26,7 @@ namespace YokiFrame
             mFieldName = fieldName;
             mAccess = AccessModifier.Private;
             mModifiers = MemberModifier.None;
-            mAttributes = new List<AttributeCode>(2);
+            mAttributes = new(2);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace YokiFrame
         /// </summary>
         public FieldCode WithAttribute(string attributeName)
         {
-            mAttributes.Add(new AttributeCode(attributeName));
+            mAttributes.Add(new(attributeName));
             return this;
         }
 

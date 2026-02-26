@@ -40,7 +40,7 @@ namespace YokiFrame
             if (mStylesInitialized) return;
             mStylesInitialized = true;
 
-            mLogStyle = new GUIStyle(GUI.skin.label)
+            mLogStyle = new(GUI.skin.label)
             {
                 fontSize = 12,
                 wordWrap = true,
@@ -48,25 +48,25 @@ namespace YokiFrame
                 normal = { textColor = Color.white }
             };
 
-            mWarningStyle = new GUIStyle(mLogStyle)
+            mWarningStyle = new(mLogStyle)
             {
                 normal = { textColor = new Color(1f, 0.9f, 0.3f) }
             };
 
-            mErrorStyle = new GUIStyle(mLogStyle)
+            mErrorStyle = new(mLogStyle)
             {
                 normal = { textColor = new Color(1f, 0.4f, 0.4f) }
             };
 
-            mToolbarStyle = new GUIStyle(GUI.skin.button)
+            mToolbarStyle = new(GUI.skin.button)
             {
                 fontSize = 11,
                 fixedHeight = 25
             };
 
-            mBoxStyle = new GUIStyle(GUI.skin.box)
+            mBoxStyle = new(GUI.skin.box)
             {
-                padding = new RectOffset(5, 5, 5, 5)
+                padding = new(5, 5, 5, 5)
             };
         }
 
@@ -121,7 +121,7 @@ namespace YokiFrame
             GUILayout.EndScrollView();
 
             // 窗口拖拽
-            GUI.DragWindow(new Rect(0, 0, mWindowRect.width, 20));
+            GUI.DragWindow(new(0, 0, mWindowRect.width, 20));
         }
 
         private void DrawFilterToggle(LogTypeFilter filterType, string label, Color color)

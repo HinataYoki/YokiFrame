@@ -47,9 +47,9 @@ namespace YokiFrame
         {
             get
             {
-                if (mArchitecture == null)
+                if (mArchitecture is null)
                 {
-                    mArchitecture ??= new T();
+                    mArchitecture ??= new();
                     // 初始化架构,用户自己的服务在这里面写入
                     mArchitecture.OnInit();
                     // 服务在注册结束后统一初始化，确保在OnInit中服务互相引用不会拿空
@@ -76,8 +76,9 @@ namespace YokiFrame
                 // 如果没有注册到架构会尝试注册到架构
                 if (force)
                 {
-                    service = new K();
-                    Register(service as K);
+                    var newService = new K();
+                    Register(newService);
+                    return newService;
                 }
             }
             return service as K;
@@ -85,7 +86,7 @@ namespace YokiFrame
 
         public void Register<K>(K service) where K : class, IService, new()
         {
-            if (service == null) throw new ArgumentNullException(nameof(service));
+            if (service is null) throw new ArgumentNullException(nameof(service));
             var key = typeof(K);
             if (mServices.ContainsKey(key))
             {
@@ -126,7 +127,7 @@ namespace YokiFrame
         public T GetService<T>() where T : class, IService, new()
         {
             if (!mInitialized) return default;
-            return mArchitecture.GetService<T>();
+            return mArchitecture?.GetService<T>();
         }
     }
 

@@ -30,7 +30,7 @@ namespace YokiFrame
         public static async UniTask InitAsync(YooInitConfig config, CancellationToken ct = default)
         {
             if (Initialized) return;
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config is null) throw new ArgumentNullException(nameof(config));
 
             KitLogger.Log($"[YooInit] 开始初始化，模式: {config.PlayMode}");
 
@@ -120,7 +120,7 @@ namespace YokiFrame
                 yield break;
             }
 
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config is null) throw new ArgumentNullException(nameof(config));
 
             KitLogger.Log($"[YooInit] 开始初始化，模式: {config.PlayMode}");
 
@@ -217,7 +217,7 @@ namespace YokiFrame
 
         private static InitializationOperation InitHostMode(ResourcePackage package, YooInitConfig config)
         {
-            if (HostModeHandler == null)
+            if (HostModeHandler is null)
             {
                 throw new InvalidOperationException(
                     "[YooInit] HostPlayMode 需要配置远程服务。请在调用 InitAsync 前设置 YooInit.HostModeHandler 委托。\n" +
@@ -237,7 +237,7 @@ namespace YokiFrame
 
         private static InitializationOperation InitWebMode(ResourcePackage package, YooInitConfig config)
         {
-            if (WebModeHandler == null)
+            if (WebModeHandler is null)
             {
                 throw new InvalidOperationException(
                     "[YooInit] WebPlayMode 需要配置 WebGL 远程服务。请在调用 InitAsync 前设置 YooInit.WebModeHandler 委托。");
@@ -248,7 +248,7 @@ namespace YokiFrame
         private static InitializationOperation CreateInitOperation(ResourcePackage package, YooInitConfig config)
         {
             // 优先使用通用自定义处理器
-            if (CustomHandler != null)
+            if (CustomHandler is not null)
                 return CustomHandler(package, config);
 
             return config.PlayMode switch
@@ -264,7 +264,7 @@ namespace YokiFrame
 
         private static InitializationOperation InitCustomMode(ResourcePackage package, YooInitConfig config)
         {
-            if (CustomHandler == null)
+            if (CustomHandler is null)
             {
                 throw new InvalidOperationException(
                     "[YooInit] CustomPlayMode 需要配置自定义初始化逻辑。请在调用 InitAsync 前设置 YooInit.CustomHandler 委托。\n" +

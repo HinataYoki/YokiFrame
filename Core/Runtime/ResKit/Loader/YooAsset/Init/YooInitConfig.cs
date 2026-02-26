@@ -73,7 +73,7 @@ namespace YokiFrame
             get => PackageNames is { Count: > 0 } ? PackageNames[0] : DEFAULT_PACKAGE_NAME;
             set
             {
-                if (PackageNames == null) PackageNames = new List<string>();
+                PackageNames ??= new();
                 if (PackageNames.Count == 0) PackageNames.Add(value);
                 else PackageNames[0] = value;
             }

@@ -55,7 +55,7 @@ namespace YokiFrame
         public void UnloadAndRecycle()
         {
             ResLoadTracker.OnUnload(this);
-            if (mAsset != null)
+            if (mAsset != default)
             {
                 // GameObject/Component 无法通过 UnloadAsset 释放，置空引用等待 UnloadUnusedAssets
                 if (mAsset is not (GameObject or Component))

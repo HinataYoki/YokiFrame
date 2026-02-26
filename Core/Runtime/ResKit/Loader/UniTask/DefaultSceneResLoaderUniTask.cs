@@ -45,7 +45,7 @@ namespace YokiFrame
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
             mAsyncOp = SceneManager.LoadSceneAsync(scenePath, loadMode);
 
-            if (mAsyncOp == null)
+            if (mAsyncOp == default)
             {
                 KitLogger.Error($"[ResKit] 场景加载失败: {scenePath}");
                 return default;
@@ -88,7 +88,7 @@ namespace YokiFrame
             if (!scene.IsValid() || !scene.isLoaded) return;
 
             var asyncOp = SceneManager.UnloadSceneAsync(scene);
-            if (asyncOp == null) return;
+            if (asyncOp == default) return;
 
             await asyncOp.ToUniTask(cancellationToken: cancellationToken);
         }

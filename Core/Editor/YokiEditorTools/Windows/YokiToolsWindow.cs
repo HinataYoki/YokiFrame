@@ -56,8 +56,8 @@ namespace YokiFrame.EditorTools
         public static void Open()
         {
             var window = GetWindow<YokiToolsWindow>(false, WINDOW_TITLE);
-            window.minSize = new Vector2(1000, 600);
-            window.titleContent = new GUIContent(WINDOW_TITLE, LoadIcon());
+            window.minSize = new(1000, 600);
+            window.titleContent = new(WINDOW_TITLE, LoadIcon());
             window.Show();
         }
 
@@ -68,8 +68,8 @@ namespace YokiFrame.EditorTools
             where T : class, IYokiToolPage
         {
             var window = GetWindow<YokiToolsWindow>(false, WINDOW_TITLE);
-            window.minSize = new Vector2(1000, 600);
-            window.titleContent = new GUIContent(WINDOW_TITLE, LoadIcon());
+            window.minSize = new(1000, 600);
+            window.titleContent = new(WINDOW_TITLE, LoadIcon());
             window.Show();
             window.Focus();
 
@@ -181,7 +181,7 @@ namespace YokiFrame.EditorTools
             mainContainer.Add(sidebar);
 
             // 创建内容区域
-            mContentContainer = new VisualElement();
+            mContentContainer = new();
             mContentContainer.AddToClassList("content-container");
             mainContainer.Add(mContentContainer);
 

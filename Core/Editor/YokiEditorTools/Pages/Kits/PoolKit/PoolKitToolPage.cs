@@ -386,11 +386,13 @@ namespace YokiFrame.EditorTools
 
             // 清空活跃对象列表
             mFilteredActiveObjects.Clear();
-            mActiveObjectsListView?.Rebuild();
+            if (mActiveObjectsListView != default)
+                mActiveObjectsListView.Rebuild();
 
             // 清空事件日志列表
             mFilteredEvents.Clear();
-            mEventLogListView?.RefreshItems();
+            if (mEventLogListView != default)
+                mEventLogListView.RefreshItems();
         }
 
         #region 工具方法

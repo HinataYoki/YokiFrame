@@ -51,7 +51,7 @@ namespace YokiFrame
             sReflectionInitialized = true;
 
             var bridgeType = Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
-            if (bridgeType == null) return;
+            if (bridgeType is null) return;
 
             var methods = bridgeType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             for (int i = 0; i < methods.Length; i++)
@@ -77,7 +77,7 @@ namespace YokiFrame
                 return method;
             }
 
-            if (sCachedNotifyMethodDefinition == null) return null;
+            if (sCachedNotifyMethodDefinition is null) return null;
 
             var genericMethod = sCachedNotifyMethodDefinition.MakeGenericMethod(dataType);
             sCachedGenericMethods[dataType] = genericMethod;
@@ -97,7 +97,7 @@ namespace YokiFrame
 
             InitializeReflectionCache();
             var genericMethod = GetCachedGenericMethod(typeof(T));
-            if (genericMethod == null) return;
+            if (genericMethod is null) return;
 
             try
             {

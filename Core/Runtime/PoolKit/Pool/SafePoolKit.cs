@@ -66,7 +66,7 @@ namespace YokiFrame
         /// <param name="factoryMethod">对象创建方法</param>
         public void Init(int initCount = 0, int maxCount = 20, Func<T> factoryMethod = null)
         {
-            if (factoryMethod != null)
+            if (factoryMethod is not null)
             {
                 mFactory = new CustomObjectFactory<T>(factoryMethod);
             }

@@ -29,7 +29,7 @@ namespace YokiFrame.EditorTools
             mGetter = getter ?? throw new ArgumentNullException(nameof(getter));
             mSetter = setter;
             mComparer = comparer ?? EqualityComparer<T>.Default;
-            mListeners = new List<Action<T>>(4);
+            mListeners = new(4);
             mCachedValue = getter();
         }
 
@@ -43,7 +43,7 @@ namespace YokiFrame.EditorTools
             set
             {
                 if (mIsDisposed) return;
-                if (mSetter == null)
+                if (mSetter is null)
                 {
                     UnityEngine.Debug.LogWarning("[BindableProperty] 属性为只读，无法设置值");
                     return;
@@ -60,7 +60,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 是否为只读属性
         /// </summary>
-        public bool IsReadOnly => mSetter == null;
+        public bool IsReadOnly => mSetter is null;
 
         /// <summary>
         /// 是否已释放
@@ -74,7 +74,7 @@ namespace YokiFrame.EditorTools
         /// <returns>用于取消订阅的 IDisposable</returns>
         public IDisposable Subscribe(Action<T> onChanged)
         {
-            if (mIsDisposed || onChanged == null) return Disposable.Empty;
+            if (mIsDisposed || onChanged is null) return Disposable.Empty;
             
             mListeners.Add(onChanged);
             return Disposable.Create(() => mListeners.Remove(onChanged));
@@ -87,7 +87,7 @@ namespace YokiFrame.EditorTools
         /// <returns>用于取消订阅的 IDisposable</returns>
         public IDisposable SubscribeWithInitialValue(Action<T> onChanged)
         {
-            if (mIsDisposed || onChanged == null) return Disposable.Empty;
+            if (mIsDisposed || onChanged is null) return Disposable.Empty;
             
             onChanged(mCachedValue);
             return Subscribe(onChanged);

@@ -74,7 +74,7 @@ namespace YokiFrame
 
         public void UnloadAsync(Scene scene, Action onComplete)
         {
-            if (mHandle != null && mHandle.SceneObject.IsValid())
+            if (mHandle != default && mHandle.SceneObject.IsValid())
             {
                 var unloadOp = mHandle.UnloadAsync();
                 unloadOp.Completed += _ => onComplete?.Invoke();
@@ -82,14 +82,14 @@ namespace YokiFrame
             else if (scene.IsValid() && scene.isLoaded)
             {
                 var asyncOp = SceneManager.UnloadSceneAsync(scene);
-                if (asyncOp != null) { asyncOp.completed += _ => onComplete?.Invoke(); return; }
+                if (asyncOp != default) { asyncOp.completed += _ => onComplete?.Invoke(); return; }
                 onComplete?.Invoke();
             }
             else onComplete?.Invoke();
         }
 
-        public void SuspendLoad() { if (mHandle != null && !mIsSuspended) mIsSuspended = true; }
-        public void ResumeLoad() { if (mHandle != null && mIsSuspended) { mHandle.ActivateScene(); mIsSuspended = false; } }
+        public void SuspendLoad() { if (mHandle != default && !mIsSuspended) mIsSuspended = true; }
+        public void ResumeLoad() { if (mHandle != default && mIsSuspended) { mHandle.ActivateScene(); mIsSuspended = false; } }
 
         public void UnloadAndRecycle()
         {
@@ -101,7 +101,7 @@ namespace YokiFrame
 
         private static void EnsureCoroutineRunner()
         {
-            if (sCoroutineRunner != null) return;
+            if (sCoroutineRunner != default) return;
             var go = new GameObject("[ResKit_YooAssetSceneCoroutineRunner]");
             go.hideFlags = HideFlags.HideAndDontSave;
             UnityEngine.Object.DontDestroyOnLoad(go);
@@ -110,7 +110,7 @@ namespace YokiFrame
 
         private IEnumerator TrackProgress()
         {
-            while (mHandle != null && !mHandle.IsDone) { mOnProgress?.Invoke(mHandle.Progress); yield return null; }
+            while (mHandle != default && !mHandle.IsDone) { mOnProgress?.Invoke(mHandle.Progress); yield return null; }
             mOnProgress?.Invoke(1f);
         }
 

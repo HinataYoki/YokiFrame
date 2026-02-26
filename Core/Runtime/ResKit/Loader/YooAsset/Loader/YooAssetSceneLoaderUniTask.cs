@@ -56,7 +56,7 @@ namespace YokiFrame
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
             mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, suspendLoad);
 
-            if (mHandle == null)
+            if (mHandle == default)
             {
                 KitLogger.Error($"[ResKit] YooAsset 场景加载失败: {scenePath}");
                 return default;
@@ -87,7 +87,7 @@ namespace YokiFrame
 
         public async UniTask UnloadUniTaskAsync(Scene scene, CancellationToken cancellationToken = default)
         {
-            if (mHandle != null && mHandle.SceneObject.IsValid())
+            if (mHandle != default && mHandle.SceneObject.IsValid())
             {
                 var unloadOp = mHandle.UnloadAsync();
                 while (!unloadOp.IsDone)
@@ -99,12 +99,12 @@ namespace YokiFrame
             else if (scene.IsValid() && scene.isLoaded)
             {
                 var asyncOp = SceneManager.UnloadSceneAsync(scene);
-                if (asyncOp != null) await asyncOp.ToUniTask(cancellationToken: cancellationToken);
+                if (asyncOp != default) await asyncOp.ToUniTask(cancellationToken: cancellationToken);
             }
         }
 
-        public void SuspendLoad() { if (mHandle != null && !mIsSuspended) mIsSuspended = true; }
-        public void ResumeLoad() { if (mHandle != null && mIsSuspended) { mHandle.ActivateScene(); mIsSuspended = false; } }
+        public void SuspendLoad() { if (mHandle != default && !mIsSuspended) mIsSuspended = true; }
+        public void ResumeLoad() { if (mHandle != default && mIsSuspended) { mHandle.ActivateScene(); mIsSuspended = false; } }
 
         public void UnloadAndRecycle()
         {

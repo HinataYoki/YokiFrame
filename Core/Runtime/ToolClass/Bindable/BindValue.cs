@@ -26,7 +26,7 @@ namespace YokiFrame
 
         public LinkUnRegister<T> Bind(Action<T> callback)
         {
-            if (callback != null)
+            if (callback is not null)
             {
                 return mOnValueChanged.Register(callback);
             }
@@ -35,7 +35,7 @@ namespace YokiFrame
 
         public void UnBind(Action<T> callback)
         {
-            if (callback != null) mOnValueChanged.UnRegister(callback);
+            if (callback is not null) mOnValueChanged.UnRegister(callback);
         }
 
         public void UnBindAll() => mOnValueChanged.UnRegisterAll();

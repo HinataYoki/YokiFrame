@@ -32,7 +32,7 @@ namespace YokiFrame
         /// </summary>
         public static void OnLoad(IResLoader loader, string path, Type assetType, Object asset)
         {
-            if (loader == null) return;
+            if (loader is null) return;
             
             if (!sTrackedAssets.TryGetValue(loader, out var tracked))
             {
@@ -52,7 +52,7 @@ namespace YokiFrame
         /// </summary>
         public static void OnUnload(IResLoader loader)
         {
-            if (loader == null) return;
+            if (loader is null) return;
             sTrackedAssets.Remove(loader);
         }
 

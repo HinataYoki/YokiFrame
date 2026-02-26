@@ -207,7 +207,7 @@ namespace YokiFrame.EditorTools
         /// <param name="owner">订阅者对象</param>
         public static void UnregisterAll(object owner)
         {
-            if (owner == null) return;
+            if (owner is null) return;
 
             // 收集要移除的订阅 ID
             var toRemove = ListPool<int>.Get();
@@ -249,12 +249,12 @@ namespace YokiFrame.EditorTools
 
         private static IDisposable RegisterInternal<T>(object owner, Action<T> handler)
         {
-            if (handler == null) return Disposable.Empty;
+            if (handler is null) return Disposable.Empty;
 
             var type = typeof(T);
             if (!sTypeChannels.TryGetValue(type, out var channel))
             {
-                channel = new EventChannel();
+                channel = new();
                 sTypeChannels[type] = channel;
             }
 
@@ -272,12 +272,12 @@ namespace YokiFrame.EditorTools
 
         private static IDisposable RegisterEnumInternal<TKey, TValue>(object owner, TKey key, Action<TValue> handler) where TKey : Enum
         {
-            if (handler == null) return Disposable.Empty;
+            if (handler is null) return Disposable.Empty;
 
             var channelKey = (typeof(TKey), Convert.ToInt32(key));
             if (!sEnumChannels.TryGetValue(channelKey, out var channel))
             {
-                channel = new EventChannel();
+                channel = new();
                 sEnumChannels[channelKey] = channel;
             }
 

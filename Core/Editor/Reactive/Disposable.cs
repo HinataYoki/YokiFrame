@@ -50,7 +50,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         public static IDisposable Create(Action disposeAction)
         {
-            if (disposeAction == null) return Empty;
+            if (disposeAction is null) return Empty;
             return new ActionDisposable(disposeAction);
         }
     }

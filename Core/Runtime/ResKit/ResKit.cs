@@ -130,7 +130,7 @@ namespace YokiFrame
         /// </summary>
         internal static void UnloadAsset(ResHandler handler)
         {
-            if (handler == null) return;
+            if (handler is null) return;
 
             var key = new ResCacheKey(handler.AssetType, handler.Path);
             sAssetCache.Remove(key);
