@@ -21,6 +21,11 @@ namespace YokiFrame
         public int RefCount;
         public bool IsDone;
 
+        /// <summary>
+        /// 等待加载完成的回调链（用委托链代替 List，常见情况零堆分配）
+        /// </summary>
+        private Action<ResHandler> mOnLoaded;
+
         public bool IsRecycled { get; set; }
 
         public void Retain() => RefCount++;
@@ -34,6 +39,32 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>
+        /// 添加加载完成回调。若已完成则立即回调，否则排队等待。
+        /// </summary>
+        public void AddLoadedCallback(Action<ResHandler> callback)
+        {
+            if (callback is null) return;
+
+            if (IsDone)
+            {
+                callback.Invoke(this);
+                return;
+            }
+
+            mOnLoaded += callback;
+        }
+
+        /// <summary>
+        /// 加载完成后，通知所有等待者
+        /// </summary>
+        public void InvokeLoadedCallbacks()
+        {
+            var callbacks = mOnLoaded;
+            mOnLoaded = null;
+            callbacks?.Invoke(this);
+        }
+
         public void OnRecycled()
         {
             Path = null;
@@ -43,6 +74,7 @@ namespace YokiFrame
             Loader = null;
             RefCount = 0;
             IsDone = false;
+            mOnLoaded = null;
         }
     }
 

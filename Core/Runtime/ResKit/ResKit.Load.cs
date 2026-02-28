@@ -34,6 +34,18 @@ namespace YokiFrame
             if (sAssetCache.TryGetValue(key, out var handler))
             {
                 handler.Retain();
+
+                // 命中了异步加载中的未完成缓存，用临时 loader 同步补全
+                // 不能用 handler.Loader（异步 handle 仍在进行中，覆盖会导致泄漏）
+                if (!handler.IsDone)
+                {
+                    var tempLoader = sLoaderPool.Allocate();
+                    handler.Asset = tempLoader.Load<T>(path);
+                    handler.IsDone = true;
+                    tempLoader.UnloadAndRecycle();
+                    handler.InvokeLoadedCallbacks();
+                }
+
                 return handler;
             }
 
@@ -81,7 +93,13 @@ namespace YokiFrame
             if (sAssetCache.TryGetValue(key, out var handler))
             {
                 handler.Retain();
-                onComplete?.Invoke(handler);
+
+                // 已完成直接回调，未完成则排队等待
+                if (handler.IsDone)
+                    onComplete?.Invoke(handler);
+                else
+                    handler.AddLoadedCallback(onComplete);
+
                 return;
             }
 
@@ -104,6 +122,7 @@ namespace YokiFrame
                 }
 
                 onComplete?.Invoke(handler);
+                handler.InvokeLoadedCallbacks();
             });
         }
 
@@ -156,7 +175,14 @@ namespace YokiFrame
             if (sAssetCache.TryGetValue(key, out var handler))
             {
                 handler.Retain();
-                return UniTask.FromResult(handler);
+
+                // 已完成直接返回，未完成则用 tcs 等待
+                if (handler.IsDone)
+                    return UniTask.FromResult(handler);
+
+                var tcs = new UniTaskCompletionSource<ResHandler>();
+                handler.AddLoadedCallback(h => tcs.TrySetResult(h));
+                return tcs.Task.AttachExternalCancellation(cancellationToken);
             }
 
             return LoadAssetUniTaskAsyncInternal<T>(path, key, cancellationToken);
@@ -191,6 +217,7 @@ namespace YokiFrame
                 KitLogger.Error($"[ResKit] 资源加载失败: {path}");
             }
 
+            handler.InvokeLoadedCallbacks();
             return handler;
         }
 

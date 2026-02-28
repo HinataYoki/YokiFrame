@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-02-28
+
+### Fixed
+- **ResKit** 修复异步加载中缓存命中返回未完成 handler 的 bug
+  - 同一帧多次异步加载同一资源时，后续请求命中缓存但 `Asset` 仍为 `null`，导致回调拿到空资源
+  - 同步加载命中异步未完成缓存时，同样返回空 `Asset`
+  - UniTask 异步加载存在相同问题，`UniTask.FromResult` 直接返回未就绪的 handler
+  - 修复方案：`ResHandler` 新增等待回调链（`mOnLoaded` 委托链，零堆分配），未完成的请求排队等待，加载完成后统一通知
+  - 同步加载命中未完成缓存时，使用临时 loader 同步补全，不影响原异步 loader 的 handle 生命周期
+  - 已验证 Resources / YooAsset / AssetDatabase 三种后端均无引用计数泄漏
+
 ## [1.7.0] - 2026-02-27
 
 ### Changed
