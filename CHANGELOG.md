@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.3] - 2026-03-01
+
+### Fixed
+- **Meta GUID** 修复 8 个 .meta 文件中 AI 生成的非随机 GUID，避免作为 package 引入其他项目时发生 GUID 冲突
+  - `Core/Runtime/ResKit.meta`
+  - `Core/Runtime/ResKit/Loader.meta`
+  - `Core/Runtime/ResKit/ResKit.cs.meta`
+  - `Core/Runtime/SingletonKit/MonoSingletonPathAttribute.cs.meta`
+  - `Core/Runtime/SingletonKit/Singleton/Singleton.cs.meta`
+  - `Tools/ActionKit/Runtime/Executor/ActionKitPlayerLoopSystem.cs.meta`
+  - `Tools/ActionKit/Runtime/Executor/CoroutineRunner.cs.meta`
+  - `Tools/UIKit/Editor/UIKitToolPage.Settings.cs.meta`
+
 ## [1.7.2] - 2026-03-01
 
 ### Fixed
