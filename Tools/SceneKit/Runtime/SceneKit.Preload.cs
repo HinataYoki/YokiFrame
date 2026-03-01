@@ -33,8 +33,17 @@ namespace YokiFrame
             if (IsSceneLoaded(sceneName))
             {
                 var existingHandler = GetSceneHandler(sceneName);
-                KitLogger.Warning($"[SceneKit] 场景已加载: {sceneName}");
-                onComplete?.Invoke(existingHandler);
+
+                if (existingHandler.State == SceneState.Loaded)
+                {
+                    KitLogger.Warning($"[SceneKit] 场景已加载: {sceneName}");
+                    onComplete?.Invoke(existingHandler);
+                }
+                else
+                {
+                    existingHandler.AddLoadedCallback(onComplete);
+                }
+
                 return existingHandler;
             }
 
@@ -76,6 +85,7 @@ namespace YokiFrame
             });
 
             onComplete?.Invoke(handler);
+            handler.InvokeLoadedCallbacks();
         }
 
         /// <summary>

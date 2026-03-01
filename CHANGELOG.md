@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-03-01
+
+### Fixed
+- **SceneKit** 修复异步加载场景时缓存命中返回未完成 handler 的竞态 bug（与 ResKit 1.7.1 修复的 bug 同构）
+  - `LoadSceneAsync` / `PreloadSceneAsync` 在场景加载中再次请求同一场景时，直接返回 `State == Loading` 的 handler，`Scene` 为 `default`
+  - 修复方案：`SceneHandler` 新增等待回调链，未完成的请求排队等待，加载完成后统一通知
+- **SceneKit** 修复卸载正在加载中的场景导致 use-after-recycle
+  - `UnloadSceneAsync` 未检查 `SceneState.Loading` 状态，导致 handler 被回收后异步加载回调仍写入已回收对象
+  - 修复方案：增加 `Loading` 状态前置检查，拒绝卸载正在加载中的场景
+- **UIKit** 修复并发打开同一类型面板导致重复创建实例
+  - 连续调用 `OpenPanelAsync` 或同步异步混合调用同一面板类型时，创建多个面板实例，后续实例成为无法管理的孤儿面板
+  - 修复方案：新增 `mLoadingPanelTypes` 集合跟踪加载中的面板类型，重复请求直接拦截
+- **AudioKit** 修复并发异步加载同一音频路径导致 loader 泄漏
+  - 同一帧多次 `PlayAsync` / `PlayUniTaskAsync` / `PreloadUniTaskAsync` 同一路径时，后完成的 loader 覆盖缓存条目，先完成的 loader 永远不会被释放
+  - 修复方案：异步加载回调中增加缓存存在性检查，若已被并发加载缓存则释放当前 loader
+
 ## [1.7.1] - 2026-02-28
 
 ### Fixed

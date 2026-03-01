@@ -66,6 +66,13 @@ namespace YokiFrame
                 return;
             }
 
+            if (handler.State == SceneState.Loading)
+            {
+                KitLogger.Warning($"[SceneKit] 场景正在加载中，无法卸载: {handler.SceneName}");
+                onComplete?.Invoke();
+                return;
+            }
+
             // 设置卸载状态
             handler.SetState(SceneState.Unloading);
 

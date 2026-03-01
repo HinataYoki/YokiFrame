@@ -83,7 +83,16 @@ namespace YokiFrame
                     return;
                 }
 
-                mClipCache.Add(path, loadedClip, loader);
+                // 防止并发加载同一路径导致 loader 泄漏
+                if (mClipCache.Contains(path))
+                {
+                    loader.UnloadAndRecycle();
+                    mClipCache.TryGet(path, out loadedClip);
+                }
+                else
+                {
+                    mClipCache.Add(path, loadedClip, loader);
+                }
                 var audioHandle = PlayInternal(path, loadedClip, config);
                 onComplete?.Invoke(audioHandle);
             });
@@ -352,7 +361,17 @@ namespace YokiFrame
                 return null;
             }
 
-            mClipCache.Add(path, clip, loader);
+            // 防止并发加载同一路径导致 loader 泄漏
+            if (mClipCache.Contains(path))
+            {
+                loader.UnloadAndRecycle();
+                mClipCache.TryGet(path, out clip);
+            }
+            else
+            {
+                mClipCache.Add(path, clip, loader);
+            }
+
             return PlayInternal(path, clip, config);
         }
 
@@ -381,7 +400,15 @@ namespace YokiFrame
 
             if (clip != null)
             {
-                mClipCache.Add(path, clip, loader);
+                // 防止并发加载同一路径导致 loader 泄漏
+                if (mClipCache.Contains(path))
+                {
+                    loader.UnloadAndRecycle();
+                }
+                else
+                {
+                    mClipCache.Add(path, clip, loader);
+                }
             }
             else
             {

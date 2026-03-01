@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
@@ -7,6 +8,11 @@ namespace YokiFrame
     /// </summary>
     public partial class UIRoot
     {
+        /// <summary>
+        /// 正在异步加载中的面板类型集合，防止并发重复创建
+        /// </summary>
+        private readonly HashSet<Type> mLoadingPanelTypes = new();
+
         #region 面板操作（供 UIKit 调用）
 
         internal IPanel OpenPanelInternal(Type type, UILevel level, IUIData data)
@@ -19,6 +25,12 @@ namespace YokiFrame
                 handler.Hot += OpenHot;
                 OpenAndShowPanelInternal(handler.Panel, data);
                 return handler.Panel;
+            }
+
+            if (mLoadingPanelTypes.Contains(type))
+            {
+                KitLogger.Warning($"[UIRoot] 面板正在异步加载中，忽略同步打开: {type.Name}");
+                return null;
             }
 
             handler = PanelHandler.Allocate();
@@ -49,6 +61,15 @@ namespace YokiFrame
                 return;
             }
 
+            if (mLoadingPanelTypes.Contains(type))
+            {
+                KitLogger.Warning($"[UIRoot] 面板正在加载中，忽略重复请求: {type.Name}");
+                callback?.Invoke(null);
+                return;
+            }
+
+            mLoadingPanelTypes.Add(type);
+
             handler = PanelHandler.Allocate();
             handler.Type = type;
             handler.Level = level;
@@ -56,6 +77,8 @@ namespace YokiFrame
 
             LoadPanelAsync(handler, panel =>
             {
+                mLoadingPanelTypes.Remove(type);
+
                 if (panel != default && panel.Transform != default)
                 {
                     SetupPanelInternal(handler, panel);

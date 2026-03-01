@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -77,6 +78,11 @@ namespace YokiFrame
         /// </summary>
         public AsyncOperation AsyncOp { get; set; }
 
+        /// <summary>
+        /// 等待加载完成的回调链
+        /// </summary>
+        private Action<SceneHandler> mOnLoaded;
+
         #endregion
 
         #region IPoolable
@@ -103,6 +109,7 @@ namespace YokiFrame
             Loader?.Recycle();
             Loader = null;
             AsyncOp = null;
+            mOnLoaded = null;
         }
 
         #endregion
@@ -124,6 +131,32 @@ namespace YokiFrame
         public void SetState(SceneState state)
         {
             State = state;
+        }
+
+        /// <summary>
+        /// 添加加载完成回调。若已完成则立即回调，否则排队等待。
+        /// </summary>
+        public void AddLoadedCallback(Action<SceneHandler> callback)
+        {
+            if (callback is null) return;
+
+            if (State == SceneState.Loaded)
+            {
+                callback.Invoke(this);
+                return;
+            }
+
+            mOnLoaded += callback;
+        }
+
+        /// <summary>
+        /// 加载完成后，通知所有等待者
+        /// </summary>
+        public void InvokeLoadedCallbacks()
+        {
+            var callbacks = mOnLoaded;
+            mOnLoaded = null;
+            callbacks?.Invoke(this);
         }
 
         #endregion
