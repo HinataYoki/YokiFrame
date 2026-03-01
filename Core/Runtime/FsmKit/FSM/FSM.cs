@@ -271,7 +271,7 @@ namespace YokiFrame
 
         public void Start(TEnum id, TArgs args)
         {
-            if (mStateDic.TryGetValue(id, out var state))
+            if (mStateDic.TryGetValue(id, out var state) && mMachineState is not MachineState.Running)
             {
                 mMachineState = MachineState.Running;
                 CurState = state;

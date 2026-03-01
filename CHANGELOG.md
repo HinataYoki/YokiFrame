@@ -5,9 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.7.4] - 2026-03-02
+## [1.7.5] - 2026-03-02
+
+### Fixed
+- **FsmKit** 修复 `HierarchicalSM` 状态不同步的严重缺陷
+  - 修复 `ValueTuple` 作为值类型存储在字典中导致的更新丢失问题
+  - 重写 `Start`/`End`/`Suspend`/`Change` 方法，确保更新后的 `MachineState` 能够正确写回字典
+- **FsmKit** 修复 `FSM<TEnum, TArgs>.Start` 方法缺少 `MachineState.Running` 守卫的问题，防止运行中的状态机被重复启动导致前驱状态泄漏
 
 ### Changed
+- **LogKit** 优化 `KitLoggerWriter.CleanStackTrace` 方法，将换行符数组缓存为静态字段，避免后台 I/O 线程反复在热路径中产生零碎的 `char[]` GC 分配
+
+## [1.7.4] - 2026-03-02
 - **ResKit** 全面精简加载器条件编译冗余，UniTask 加载器改为继承基类，消除重复方法
   - `DefaultResLoaderUniTask` 继承 `DefaultResLoader`，删除 3 个重复方法
   - `YooAssetResLoaderUniTask` 继承 `YooAssetResLoader`，删除 4 个重复方法

@@ -41,6 +41,7 @@ namespace YokiFrame
 
         // 堆栈清理
         private static readonly Regex sStackCleanRegex = new(@"^\s*at\s+(.*?)(?=\s*\[|\s*in\s|<|$)", RegexOptions.Compiled);
+        private static readonly char[] sNewLineChars = { '\n', '\r' };
         [ThreadStatic] private static StringBuilder sCachedStackSb;
 
         // 去重过滤
@@ -257,7 +258,7 @@ namespace YokiFrame
             sCachedStackSb ??= new(1024);
             sCachedStackSb.Clear();
 
-            var lines = rawStack.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = rawStack.Split(sNewLineChars, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];

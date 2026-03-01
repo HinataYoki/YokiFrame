@@ -8,7 +8,12 @@ namespace YokiFrame
     /// </summary>
     public class HierarchicalSM<TEnum> : IFSM<TEnum> where TEnum : Enum
     {
-        private readonly SortedDictionary<TEnum, (IState, MachineState)> mStateDic = new();
+        private readonly SortedDictionary<TEnum, (IState State, MachineState Status)> mStateDic = new();
+
+        /// <summary>
+        /// 缓存的 key 列表，用于状态更新时避免遍历中修改字典
+        /// </summary>
+        private readonly List<TEnum> mTempKeys = new(8);
 
         private MachineState machineState = MachineState.End;
         public MachineState MachineState => machineState;
@@ -19,7 +24,7 @@ namespace YokiFrame
         // IFSM 接口实现
         public string Name { get; set; }
         public Type EnumType => typeof(TEnum);
-        IState IFSM.CurrentState => mStateDic.TryGetValue(CurEnum, out var s) ? s.Item1 : null;
+        IState IFSM.CurrentState => mStateDic.TryGetValue(CurEnum, out var s) ? s.State : null;
         int IFSM.CurrentStateId => CurEnum != null ? Convert.ToInt32(CurEnum) : -1;
 #endif
 
@@ -36,7 +41,7 @@ namespace YokiFrame
             mStateIdCache ??= new();
             mStateIdCache.Clear();
             foreach (var kvp in mStateDic)
-                mStateIdCache[Convert.ToInt32(kvp.Key)] = kvp.Value.Item1;
+                mStateIdCache[Convert.ToInt32(kvp.Key)] = kvp.Value.State;
             return mStateIdCache;
         }
 #endif
@@ -44,18 +49,18 @@ namespace YokiFrame
         public void Get(TEnum id, out IState state)
         {
             mStateDic.TryGetValue(id, out var statePair);
-            state = statePair.Item1;
+            state = statePair.State;
         }
 
         public void Add(TEnum id, IState state)
         {
             if (mStateDic.TryGetValue(id, out var statePair))
             {
-                if (statePair.Item2 is not MachineState.End)
+                if (statePair.Status is not MachineState.End)
                 {
-                    statePair.Item1.End();
+                    statePair.State.End();
                 }
-                statePair.Item1.Dispose();
+                statePair.State.Dispose();
                 mStateDic.Remove(id);
             }
             switch (state)
@@ -73,11 +78,11 @@ namespace YokiFrame
         {
             foreach (var state in mStateDic.Values)
             {
-                if (state.Item2 is not MachineState.End)
+                if (state.Status is not MachineState.End)
                 {
-                    state.Item1.End();
+                    state.State.End();
                 }
-                state.Item1.Dispose();
+                state.State.Dispose();
             }
             mStateDic.Clear();
         }
@@ -88,9 +93,9 @@ namespace YokiFrame
             {
                 foreach (var state in mStateDic.Values)
                 {
-                    if (state.Item2 is MachineState.Running)
+                    if (state.Status is MachineState.Running)
                     {
-                        state.Item1.CustomUpdate();
+                        state.State.CustomUpdate();
                     }
                 }
             }
@@ -99,12 +104,21 @@ namespace YokiFrame
         public void End()
         {
             machineState = MachineState.End;
-            foreach (var state in mStateDic.Values)
+            // ValueTuple 是值类型，遍历 .Values 获取的是副本，需收集 key 后写回
+            mTempKeys.Clear();
+            foreach (var kvp in mStateDic)
             {
-                if (state.Item2 is not MachineState.End)
+                if (kvp.Value.Status is not MachineState.End)
                 {
-                    state.Item1.End();
+                    kvp.Value.State.End();
+                    mTempKeys.Add(kvp.Key);
                 }
+            }
+            for (int i = 0; i < mTempKeys.Count; i++)
+            {
+                var key = mTempKeys[i];
+                var entry = mStateDic[key];
+                mStateDic[key] = (entry.State, MachineState.End);
             }
         }
 
@@ -114,9 +128,9 @@ namespace YokiFrame
             {
                 foreach (var state in mStateDic.Values)
                 {
-                    if (state.Item2 is MachineState.Running)
+                    if (state.Status is MachineState.Running)
                     {
-                        state.Item1.FixedUpdate();
+                        state.State.FixedUpdate();
                     }
                 }
             }
@@ -126,11 +140,11 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                if (state.Item2 is not MachineState.End)
+                if (state.Status is not MachineState.End)
                 {
-                    state.Item1.End();
+                    state.State.End();
                 }
-                state.Item1.Dispose();
+                state.State.Dispose();
                 mStateDic.Remove(id);
             }
         }
@@ -138,12 +152,21 @@ namespace YokiFrame
         public void Start()
         {
             machineState = MachineState.Running;
-            foreach (var state in mStateDic.Values)
+            // ValueTuple 是值类型，遍历 .Values 获取的是副本，需收集 key 后写回
+            mTempKeys.Clear();
+            foreach (var kvp in mStateDic)
             {
-                if (state.Item2 is not MachineState.Running)
+                if (kvp.Value.Status is not MachineState.Running)
                 {
-                    state.Item1.Start();
+                    kvp.Value.State.Start();
+                    mTempKeys.Add(kvp.Key);
                 }
+            }
+            for (int i = 0; i < mTempKeys.Count; i++)
+            {
+                var key = mTempKeys[i];
+                var entry = mStateDic[key];
+                mStateDic[key] = (entry.State, MachineState.Running);
             }
         }
 
@@ -152,12 +175,21 @@ namespace YokiFrame
             if (machineState is MachineState.Running)
             {
                 machineState = MachineState.Suspend;
-                foreach (var state in mStateDic.Values)
+                // ValueTuple 是值类型，遍历 .Values 获取的是副本，需收集 key 后写回
+                mTempKeys.Clear();
+                foreach (var kvp in mStateDic)
                 {
-                    if (state.Item2 is MachineState.Running)
+                    if (kvp.Value.Status is MachineState.Running)
                     {
-                        state.Item1.Suspend();
+                        kvp.Value.State.Suspend();
+                        mTempKeys.Add(kvp.Key);
                     }
+                }
+                for (int i = 0; i < mTempKeys.Count; i++)
+                {
+                    var key = mTempKeys[i];
+                    var entry = mStateDic[key];
+                    mStateDic[key] = (entry.State, MachineState.Suspend);
                 }
             }
         }
@@ -168,36 +200,41 @@ namespace YokiFrame
             {
                 foreach (var state in mStateDic.Values)
                 {
-                    if (state.Item2 is MachineState.Running)
+                    if (state.Status is MachineState.Running)
                     {
-                        state.Item1.Update();
+                        state.State.Update();
                     }
                 }
             }
         }
 
-        public void Change(TEnum id, MachineState machineState)
+        public void Change(TEnum id, MachineState targetState)
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                switch (machineState)
+                if (state.Status == targetState) return;
+
+                switch (targetState)
                 {
                     case MachineState.End:
-                        if (state.Item2 is not MachineState.End)
+                        if (state.Status is not MachineState.End)
                         {
-                            state.Item1.End();
+                            state.State.End();
+                            mStateDic[id] = (state.State, MachineState.End);
                         }
                         break;
                     case MachineState.Suspend:
-                        if (state.Item2 is MachineState.Running)
+                        if (state.Status is MachineState.Running)
                         {
-                            state.Item1.Suspend();
+                            state.State.Suspend();
+                            mStateDic[id] = (state.State, MachineState.Suspend);
                         }
                         break;
                     case MachineState.Running:
-                        if (state.Item2 is not MachineState.Running)
+                        if (state.Status is not MachineState.Running)
                         {
-                            state.Item1.Start();
+                            state.State.Start();
+                            mStateDic[id] = (state.State, MachineState.Running);
                         }
                         break;
                 }
