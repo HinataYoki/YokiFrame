@@ -58,8 +58,8 @@ namespace YokiFrame
 
         public class DefaultPanelLoader : IPanelLoader
         {
-            private readonly IPanelLoaderPool mLoaderPool;
-            private IResLoader mResLoader;
+            protected readonly IPanelLoaderPool mLoaderPool;
+            protected IResLoader mResLoader;
 
             public DefaultPanelLoader(IPanelLoaderPool pool) => mLoaderPool = pool;
 
@@ -111,53 +111,28 @@ namespace YokiFrame
     {
         protected override IPanelLoader CreatePanelLoader() => new DefaultPanelLoaderUniTask(this);
 
-        public class DefaultPanelLoaderUniTask : IPanelLoaderUniTask
+        /// <summary>
+        /// 默认 UniTask 面板加载器 - 继承 DefaultPanelLoader，仅扩展 UniTask 异步方法
+        /// </summary>
+        public class DefaultPanelLoaderUniTask : DefaultPanelLoaderPool.DefaultPanelLoader, IPanelLoaderUniTask
         {
-            private readonly IPanelLoaderPool mLoaderPool;
-            private IResLoader mResLoader;
-
-            public DefaultPanelLoaderUniTask(IPanelLoaderPool pool) => mLoaderPool = pool;
-
-            public GameObject Load(PanelHandler handler)
-            {
-                mResLoader = ResKit.GetLoaderPool().Allocate();
-#if YOKIFRAME_ZSTRING_SUPPORT
-                var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
-#else
-                var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
-#endif
-                return mResLoader.Load<GameObject>(path);
-            }
-
-            public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
-            {
-                mResLoader = ResKit.GetLoaderPool().Allocate();
-#if YOKIFRAME_ZSTRING_SUPPORT
-                var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
-#else
-                var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
-#endif
-                mResLoader.LoadAsync<GameObject>(path, onLoadComplete);
-            }
+            public DefaultPanelLoaderUniTask(IPanelLoaderPool pool) : base(pool) { }
 
             public async UniTask<GameObject> LoadUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
             {
+                mResLoader ??= ResKit.GetLoaderPool().Allocate();
 #if YOKIFRAME_ZSTRING_SUPPORT
                 var path = Cysharp.Text.ZString.Concat(DefaultPanelLoaderPool.PathPrefix, "/", handler.Type.Name);
 #else
                 var path = DefaultPanelLoaderPool.PathPrefix + "/" + handler.Type.Name;
 #endif
-                return await ResKit.LoadUniTaskAsync<GameObject>(path, cancellationToken);
-            }
+                if (mResLoader is IResLoaderUniTask uniTaskLoader)
+                    return await uniTaskLoader.LoadUniTaskAsync<GameObject>(path, cancellationToken);
 
-            public void UnLoadAndRecycle()
-            {
-                if (mResLoader != default)
-                {
-                    mResLoader.UnloadAndRecycle();
-                }
-                mResLoader = null;
-                mLoaderPool.RecycleLoader(this);
+                // 回退：TCS 包装回调
+                var tcs = new UniTaskCompletionSource<GameObject>();
+                mResLoader.LoadAsync<GameObject>(path, p => tcs.TrySetResult(p));
+                return await tcs.Task.AttachExternalCancellation(cancellationToken);
             }
         }
     }

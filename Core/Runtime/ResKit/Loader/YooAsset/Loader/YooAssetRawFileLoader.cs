@@ -1,6 +1,5 @@
 #if YOKIFRAME_YOOASSET_SUPPORT
 using System;
-using System.Collections.Generic;
 using YooAsset;
 
 namespace YokiFrame
@@ -8,12 +7,9 @@ namespace YokiFrame
     /// <summary>
     /// YooAsset 原始文件加载池（智能查找包）
     /// </summary>
-    public class YooAssetRawFileLoaderPool : IRawFileLoaderPool
+    public class YooAssetRawFileLoaderPool : AbstractRawFileLoaderPool
     {
-        private readonly Stack<IRawFileLoader> mPool = new();
-
-        public IRawFileLoader Allocate() => mPool.Count > 0 ? mPool.Pop() : new YooAssetRawFileLoader(this);
-        public void Recycle(IRawFileLoader loader) => mPool.Push(loader);
+        protected override IRawFileLoader CreateLoader() => new YooAssetRawFileLoader(this);
     }
 
     /// <summary>
@@ -21,15 +17,15 @@ namespace YokiFrame
     /// </summary>
     public class YooAssetRawFileLoader : IRawFileLoader
     {
-        private readonly IRawFileLoaderPool mPool;
-        private RawFileHandle mHandle;
+        protected readonly IRawFileLoaderPool mPool;
+        protected RawFileHandle mHandle;
 
         public YooAssetRawFileLoader(IRawFileLoaderPool pool) => mPool = pool;
 
         /// <summary>
         /// 智能查找包含路径的包
         /// </summary>
-        private static ResourcePackage FindPackage(string path)
+        protected static ResourcePackage FindPackage(string path)
         {
             // 优先使用 YooInit 的智能查找
             if (YooInit.Initialized)

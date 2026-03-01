@@ -260,40 +260,46 @@ namespace YokiFrame
 
             LoadPanelAsync(handler, panel =>
             {
-                if (panel != default && panel.Transform != default)
-                {
-                    panel.Transform.gameObject.name = panelType.Name;
-                    panel.Transform.gameObject.SetActive(false);
-                    panel.Init(null);
-                    AddToPreloadedCache(panelType, handler);
-#if YOKIFRAME_ZSTRING_SUPPORT
-                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
-                    {
-                        sb.Append("[UIRoot] 预加载面板成功: ");
-                        sb.Append(panelType.Name);
-                        KitLogger.Log(sb.ToString());
-                    }
-#else
-                    KitLogger.Log("[UIRoot] 预加载面板成功: " + panelType.Name);
-#endif
-                    onComplete?.Invoke(true);
-                }
-                else
-                {
-                    handler.Recycle();
-#if YOKIFRAME_ZSTRING_SUPPORT
-                    using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
-                    {
-                        sb.Append("[UIRoot] 预加载面板失败: ");
-                        sb.Append(panelType.Name);
-                        KitLogger.Warning(sb.ToString());
-                    }
-#else
-                    KitLogger.Warning("[UIRoot] 预加载面板失败: " + panelType.Name);
-#endif
-                    onComplete?.Invoke(false);
-                }
+                onComplete?.Invoke(SetupPreloadedPanel(panelType, handler, panel));
             });
+        }
+
+        /// <summary>
+        /// 预加载面板的结果处理（回调版和 UniTask 版共用）
+        /// </summary>
+        private bool SetupPreloadedPanel(Type panelType, PanelHandler handler, IPanel panel)
+        {
+            if (panel != default && panel.Transform != default)
+            {
+                panel.Transform.gameObject.name = panelType.Name;
+                panel.Transform.gameObject.SetActive(false);
+                panel.Init(null);
+                AddToPreloadedCache(panelType, handler);
+#if YOKIFRAME_ZSTRING_SUPPORT
+                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+                {
+                    sb.Append("[UIRoot] 预加载面板成功: ");
+                    sb.Append(panelType.Name);
+                    KitLogger.Log(sb.ToString());
+                }
+#else
+                KitLogger.Log("[UIRoot] 预加载面板成功: " + panelType.Name);
+#endif
+                return true;
+            }
+
+            handler.Recycle();
+#if YOKIFRAME_ZSTRING_SUPPORT
+            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            {
+                sb.Append("[UIRoot] 预加载面板失败: ");
+                sb.Append(panelType.Name);
+                KitLogger.Warning(sb.ToString());
+            }
+#else
+            KitLogger.Warning("[UIRoot] 预加载面板失败: " + panelType.Name);
+#endif
+            return false;
         }
 
         private void AddToPreloadedCache(Type type, PanelHandler handler)
@@ -406,38 +412,7 @@ namespace YokiFrame
             handler.CacheMode = PanelCacheMode.Hot;
 
             var panel = await LoadPanelUniTaskAsync(handler, ct);
-
-            if (panel != default && panel.Transform != default)
-            {
-                panel.Transform.gameObject.name = panelType.Name;
-                panel.Transform.gameObject.SetActive(false);
-                panel.Init(null);
-                AddToPreloadedCache(panelType, handler);
-#if YOKIFRAME_ZSTRING_SUPPORT
-                using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
-                {
-                    sb.Append("[UIRoot] 预加载面板成功: ");
-                    sb.Append(panelType.Name);
-                    KitLogger.Log(sb.ToString());
-                }
-#else
-                KitLogger.Log("[UIRoot] 预加载面板成功: " + panelType.Name);
-#endif
-                return true;
-            }
-
-            handler.Recycle();
-#if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
-            {
-                sb.Append("[UIRoot] 预加载面板失败: ");
-                sb.Append(panelType.Name);
-                KitLogger.Warning(sb.ToString());
-            }
-#else
-            KitLogger.Warning("[UIRoot] 预加载面板失败: " + panelType.Name);
-#endif
-            return false;
+            return SetupPreloadedPanel(panelType, handler, panel);
         }
 #endif
     }

@@ -129,10 +129,22 @@ namespace YokiFrame
         public async UniTask<IPanel> LoadPanelUniTaskAsync(PanelHandler handler, CancellationToken ct = default)
         {
             var loader = mLoaderPool.AllocateLoader();
-            var tcs = new UniTaskCompletionSource<GameObject>();
-            loader.LoadAsync(handler, prefab => tcs.TrySetResult(prefab));
 
-            var prefab = await tcs.Task.AttachExternalCancellation(ct);
+            GameObject prefab;
+
+            // 优先用原生 UniTask 加载器
+            if (loader is IPanelLoaderUniTask uniTaskLoader)
+            {
+                prefab = await uniTaskLoader.LoadUniTaskAsync(handler, ct);
+            }
+            else
+            {
+                // 回退：TCS 包装回调
+                var tcs = new UniTaskCompletionSource<GameObject>();
+                loader.LoadAsync(handler, p => tcs.TrySetResult(p));
+                prefab = await tcs.Task.AttachExternalCancellation(ct);
+            }
+
             if (prefab == default)
             {
 #if YOKIFRAME_ZSTRING_SUPPORT

@@ -166,31 +166,28 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// [UniTask] 异步加载并获取句柄
+        /// [UniTask] 异步加载并获取句柄（优先使用原生 UniTask 加载器）
         /// </summary>
-        public static UniTask<ResHandler> LoadAssetUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
+        public static async UniTask<ResHandler> LoadAssetUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
         {
             var key = new ResCacheKey(typeof(T), path);
 
+            // 缓存命中
             if (sAssetCache.TryGetValue(key, out var handler))
             {
                 handler.Retain();
 
-                // 已完成直接返回，未完成则用 tcs 等待
                 if (handler.IsDone)
-                    return UniTask.FromResult(handler);
+                    return handler;
 
-                var tcs = new UniTaskCompletionSource<ResHandler>();
-                handler.AddLoadedCallback(h => tcs.TrySetResult(h));
-                return tcs.Task.AttachExternalCancellation(cancellationToken);
+                // 未完成，排队等待
+                var waitTcs = new UniTaskCompletionSource<ResHandler>();
+                handler.AddLoadedCallback(h => waitTcs.TrySetResult(h));
+                return await waitTcs.Task.AttachExternalCancellation(cancellationToken);
             }
 
-            return LoadAssetUniTaskAsyncInternal<T>(path, key, cancellationToken);
-        }
-
-        private static async UniTask<ResHandler> LoadAssetUniTaskAsyncInternal<T>(string path, ResCacheKey key, CancellationToken cancellationToken) where T : Object
-        {
-            var handler = SafePoolKit<ResHandler>.Instance.Allocate();
+            // 缓存未命中 — 新建 handler
+            handler = SafePoolKit<ResHandler>.Instance.Allocate();
             handler.Path = path;
             handler.AssetType = typeof(T);
             handler.Loader = sLoaderPool.Allocate();
@@ -198,17 +195,21 @@ namespace YokiFrame
 
             sAssetCache.Add(key, handler);
 
-            // 使用 UniTaskCompletionSource 包装回调
-            var tcs = new UniTaskCompletionSource<Object>();
-            
-            handler.Loader.LoadAsync<T>(path, asset =>
-            {
-                tcs.TrySetResult(asset);
-            });
+            Object asset;
 
-            // 等待加载完成或取消
-            var asset = await tcs.Task.AttachExternalCancellation(cancellationToken);
-            
+            // 优先用原生 UniTask 加载器（零额外分配）
+            if (handler.Loader is IResLoaderUniTask uniTaskLoader)
+            {
+                asset = await uniTaskLoader.LoadUniTaskAsync<T>(path, cancellationToken);
+            }
+            else
+            {
+                // 回退：用 TCS 包装回调
+                var tcs = new UniTaskCompletionSource<Object>();
+                handler.Loader.LoadAsync<T>(path, a => tcs.TrySetResult(a));
+                asset = await tcs.Task.AttachExternalCancellation(cancellationToken);
+            }
+
             handler.Asset = asset;
             handler.IsDone = true;
 

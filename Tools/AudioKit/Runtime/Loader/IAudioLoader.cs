@@ -73,8 +73,8 @@ namespace YokiFrame
 
         public class DefaultAudioLoader : IAudioLoader
         {
-            private readonly IAudioLoaderPool mLoaderPool;
-            private IResLoader mResLoader;
+            protected readonly IAudioLoaderPool mLoaderPool;
+            protected IResLoader mResLoader;
 
             public DefaultAudioLoader(IAudioLoaderPool pool) => mLoaderPool = pool;
 
@@ -118,35 +118,24 @@ namespace YokiFrame
     {
         protected override IAudioLoader CreateAudioLoader() => new DefaultAudioLoaderUniTask(this);
 
-        public class DefaultAudioLoaderUniTask : IAudioLoaderUniTask
+        /// <summary>
+        /// 默认 UniTask 音频加载器 - 继承 DefaultAudioLoader，仅扩展 UniTask 异步方法
+        /// </summary>
+        public class DefaultAudioLoaderUniTask : DefaultAudioLoaderPool.DefaultAudioLoader, IAudioLoaderUniTask
         {
-            private readonly IAudioLoaderPool mLoaderPool;
-            private IResLoader mResLoader;
-
-            public DefaultAudioLoaderUniTask(IAudioLoaderPool pool) => mLoaderPool = pool;
-
-            public AudioClip Load(string path)
-            {
-                mResLoader = ResKit.GetLoaderPool().Allocate();
-                return mResLoader.Load<AudioClip>(path);
-            }
-
-            public void LoadAsync(string path, Action<AudioClip> onComplete)
-            {
-                mResLoader = ResKit.GetLoaderPool().Allocate();
-                mResLoader.LoadAsync<AudioClip>(path, onComplete);
-            }
+            public DefaultAudioLoaderUniTask(IAudioLoaderPool pool) : base(pool) { }
 
             public async UniTask<AudioClip> LoadUniTaskAsync(string path, CancellationToken cancellationToken = default)
             {
-                return await ResKit.LoadUniTaskAsync<AudioClip>(path, cancellationToken);
-            }
+                mResLoader ??= ResKit.GetLoaderPool().Allocate();
 
-            public void UnloadAndRecycle()
-            {
-                mResLoader?.UnloadAndRecycle();
-                mResLoader = null;
-                mLoaderPool.RecycleLoader(this);
+                if (mResLoader is IResLoaderUniTask uniTaskLoader)
+                    return await uniTaskLoader.LoadUniTaskAsync<AudioClip>(path, cancellationToken);
+
+                // 回退：TCS 包装回调
+                var tcs = new UniTaskCompletionSource<AudioClip>();
+                mResLoader.LoadAsync<AudioClip>(path, a => tcs.TrySetResult(a));
+                return await tcs.Task.AttachExternalCancellation(cancellationToken);
             }
         }
     }

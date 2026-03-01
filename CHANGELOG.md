@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.4] - 2026-03-02
+
+### Changed
+- **ResKit** 全面精简加载器条件编译冗余，UniTask 加载器改为继承基类，消除重复方法
+  - `DefaultResLoaderUniTask` 继承 `DefaultResLoader`，删除 3 个重复方法
+  - `YooAssetResLoaderUniTask` 继承 `YooAssetResLoader`，删除 4 个重复方法
+  - `DefaultRawFileLoaderUniTask` 继承 `DefaultRawFileLoader`，删除 6 个重复方法
+  - `YooAssetRawFileLoaderUniTask` 继承 `YooAssetRawFileLoader`，删除 7 个重复方法
+  - `YooAssetSceneLoaderUniTaskPool` 继承 `YooAssetSceneLoaderPool`，删除重复池字段
+- **ResKit** `ResKit.LoadAssetUniTaskAsync` 优先走原生 `IResLoaderUniTask.LoadUniTaskAsync`，不再 TCS 包装回调
+- **UIKit** 全面精简 UniTask 调用链，消除多层 TCS 包装
+  - `UIRoot.LoadPanelUniTaskAsync` 优先走 `IPanelLoaderUniTask.LoadUniTaskAsync`
+  - 新增 `UIRoot.OpenPanelUniTaskAsyncInternal`，`UIKit.OpenPanelUniTaskAsync` 直接调用原生 UniTask 路径
+  - 提取 `SetupPreloadedPanel` 共用方法，消除预加载回调版和 UniTask 版的重复逻辑
+  - `DefaultPanelLoaderUniTask` 继承 `DefaultPanelLoader`，删除 3 个重复方法
+- **AudioKit** `DefaultAudioLoaderUniTask` 继承 `DefaultAudioLoader`，删除 3 个重复方法
+
+### Fixed
+- **UIKit** 修复 `DefaultPanelLoaderUniTask.LoadUniTaskAsync` 通过 `ResKit.LoadUniTaskAsync` 加载时 ResHandler 未 Release 的资源泄漏
+  - 改为使用 `mResLoader`（IResLoaderUniTask）直接加载，与 sync/callback 路径保持一致的资源生命周期管理
+- **UIKit** 修复 `YooAssetPanelLoader.LoadUniTaskAsync` 未持有 ResHandler 的资源泄漏
+  - 改为使用 `ResKit.LoadAssetUniTaskAsync`（返回 ResHandler）并存储引用，`UnLoadAndRecycle` 时正确 Release
+- **AudioKit** 修复 `DefaultAudioLoaderUniTask.LoadUniTaskAsync` 通过 `ResKit.LoadUniTaskAsync` 加载时 ResHandler 未 Release 的资源泄漏
+  - 修复方式同 UIKit DefaultPanelLoaderUniTask
+
 ## [1.7.3] - 2026-03-01
 
 ### Fixed

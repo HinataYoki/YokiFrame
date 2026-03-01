@@ -18,7 +18,7 @@ namespace YokiFrame
     public class DefaultResLoader : IResLoader
     {
         private readonly IResLoaderPool mPool;
-        private Object mAsset;
+        protected Object mAsset;
 
         public DefaultResLoader(IResLoaderPool pool) => mPool = pool;
 

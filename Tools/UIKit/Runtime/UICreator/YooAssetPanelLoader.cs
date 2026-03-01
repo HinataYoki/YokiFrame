@@ -52,8 +52,8 @@ namespace YokiFrame
 #if YOKIFRAME_UNITASK_SUPPORT
         public async UniTask<GameObject> LoadUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
         {
-            var prefab = await ResKit.LoadUniTaskAsync<GameObject>(handler.Type.Name, cancellationToken);
-            return prefab;
+            mHandler = await ResKit.LoadAssetUniTaskAsync<GameObject>(handler.Type.Name, cancellationToken);
+            return mHandler != default ? mHandler.Asset as GameObject : null;
         }
 #endif
 

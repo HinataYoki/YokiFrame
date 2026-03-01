@@ -1,6 +1,5 @@
 #if YOKIFRAME_YOOASSET_SUPPORT
 using System;
-using System.Collections.Generic;
 using YooAsset;
 using Object = UnityEngine.Object;
 
@@ -9,18 +8,16 @@ namespace YokiFrame
     /// <summary>
     /// YooAsset 资源加载池
     /// </summary>
-    public class YooAssetResLoaderPool : IResLoaderPool
+    public class YooAssetResLoaderPool : AbstractResLoaderPool
     {
-        private readonly Stack<IResLoader> mPool = new();
-        private readonly ResourcePackage mPackage;
+        protected readonly ResourcePackage mPackage;
 
         public YooAssetResLoaderPool() : this(YooAssets.GetPackage("DefaultPackage")) { }
         public YooAssetResLoaderPool(string packageName) : this(YooAssets.GetPackage(packageName)) { }
         public YooAssetResLoaderPool(ResourcePackage package)
             => mPackage = package ?? throw new ArgumentNullException(nameof(package));
 
-        public IResLoader Allocate() => mPool.Count > 0 ? mPool.Pop() : new YooAssetResLoader(this, mPackage);
-        public void Recycle(IResLoader loader) => mPool.Push(loader);
+        protected override IResLoader CreateLoader() => new YooAssetResLoader(this, mPackage);
     }
 
     /// <summary>
@@ -29,8 +26,8 @@ namespace YokiFrame
     public class YooAssetResLoader : IResLoader
     {
         private readonly IResLoaderPool mPool;
-        private readonly ResourcePackage mPackage;
-        private AssetHandle mHandle;
+        protected readonly ResourcePackage mPackage;
+        protected AssetHandle mHandle;
 
         public YooAssetResLoader(IResLoaderPool pool, ResourcePackage package)
         {

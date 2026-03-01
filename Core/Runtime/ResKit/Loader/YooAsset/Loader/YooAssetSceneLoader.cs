@@ -12,7 +12,7 @@ namespace YokiFrame
     /// </summary>
     public class YooAssetSceneLoaderPool : AbstractSceneResLoaderPool
     {
-        private readonly ResourcePackage mPackage;
+        protected readonly ResourcePackage mPackage;
 
         public YooAssetSceneLoaderPool(ResourcePackage package) => mPackage = package;
 

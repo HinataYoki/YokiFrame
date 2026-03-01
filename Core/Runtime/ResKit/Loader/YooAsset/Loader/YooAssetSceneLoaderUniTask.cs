@@ -8,12 +8,11 @@ using YooAsset;
 namespace YokiFrame
 {
     /// <summary>
-    /// YooAsset UniTask 场景加载池
+    /// YooAsset UniTask 场景加载池 - 继承 YooAssetSceneLoaderPool，仅覆写创建方法
     /// </summary>
-    public class YooAssetSceneLoaderUniTaskPool : AbstractSceneResLoaderPool
+    public class YooAssetSceneLoaderUniTaskPool : YooAssetSceneLoaderPool
     {
-        private readonly ResourcePackage mPackage;
-        public YooAssetSceneLoaderUniTaskPool(ResourcePackage package) => mPackage = package;
+        public YooAssetSceneLoaderUniTaskPool(ResourcePackage package) : base(package) { }
         protected override ISceneResLoader CreateLoader() => new YooAssetSceneLoaderUniTask(this, mPackage);
     }
 

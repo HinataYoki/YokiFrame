@@ -17,8 +17,8 @@ namespace YokiFrame
     /// </summary>
     public class DefaultRawFileLoader : IRawFileLoader
     {
-        private readonly IRawFileLoaderPool mPool;
-        private TextAsset mTextAsset;
+        protected readonly IRawFileLoaderPool mPool;
+        protected TextAsset mTextAsset;
 
         public DefaultRawFileLoader(IRawFileLoaderPool pool) => mPool = pool;
 

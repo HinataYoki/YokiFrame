@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+#if YOKIFRAME_UNITASK_SUPPORT
+using System.Threading;
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace YokiFrame
 {
@@ -92,6 +96,50 @@ namespace YokiFrame
                 }
             });
         }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        /// <summary>
+        /// [UniTask] 异步打开面板（内部使用，直接走原生 UniTask 加载路径）
+        /// </summary>
+        internal async UniTask<IPanel> OpenPanelUniTaskAsyncInternal(Type type, UILevel level, IUIData data,
+            System.Threading.CancellationToken ct)
+        {
+            if (TryGetCachedHandler(type, out var handler))
+            {
+                handler.Data = data;
+                handler.Hot += OpenHot;
+                OpenAndShowPanelInternal(handler.Panel, data);
+                return handler.Panel;
+            }
+
+            if (mLoadingPanelTypes.Contains(type))
+            {
+                KitLogger.Warning($"[UIRoot] 面板正在加载中，忽略重复请求: {type.Name}");
+                return null;
+            }
+
+            mLoadingPanelTypes.Add(type);
+
+            handler = PanelHandler.Allocate();
+            handler.Type = type;
+            handler.Level = level;
+            handler.Data = data;
+
+            var panel = await LoadPanelUniTaskAsync(handler, ct);
+
+            mLoadingPanelTypes.Remove(type);
+
+            if (panel != default && panel.Transform != default)
+            {
+                SetupPanelInternal(handler, panel);
+                OpenAndShowPanelInternal(panel, data);
+                return panel;
+            }
+
+            handler.Recycle();
+            return null;
+        }
+#endif
 
         private void SetupPanelInternal(PanelHandler handler, IPanel panel)
         {

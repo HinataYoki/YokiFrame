@@ -1,6 +1,4 @@
 #if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using YooAsset;
@@ -9,57 +7,26 @@ using Object = UnityEngine.Object;
 namespace YokiFrame
 {
     /// <summary>
-    /// YooAsset 资源加载池（支持 UniTask）
+    /// YooAsset 资源加载池（支持 UniTask） - 继承 YooAssetResLoaderPool，仅覆写创建方法
     /// </summary>
-    public class YooAssetResLoaderUniTaskPool : IResLoaderPool
+    public class YooAssetResLoaderUniTaskPool : YooAssetResLoaderPool
     {
-        private readonly Stack<IResLoader> mPool = new();
-        private readonly ResourcePackage mPackage;
+        public YooAssetResLoaderUniTaskPool() : base() { }
+        public YooAssetResLoaderUniTaskPool(string packageName) : base(packageName) { }
+        public YooAssetResLoaderUniTaskPool(ResourcePackage package) : base(package) { }
 
-        public YooAssetResLoaderUniTaskPool() : this(YooAssets.GetPackage("DefaultPackage")) { }
-        public YooAssetResLoaderUniTaskPool(string packageName) : this(YooAssets.GetPackage(packageName)) { }
-        public YooAssetResLoaderUniTaskPool(ResourcePackage package)
-            => mPackage = package ?? throw new ArgumentNullException(nameof(package));
-
-        public IResLoader Allocate() => mPool.Count > 0 ? mPool.Pop() : new YooAssetResLoaderUniTask(this, mPackage);
-        public void Recycle(IResLoader loader) => mPool.Push(loader);
+        protected override IResLoader CreateLoader() => new YooAssetResLoaderUniTask(this, mPackage);
     }
 
     /// <summary>
-    /// YooAsset 资源加载器（支持 UniTask）
+    /// YooAsset 资源加载器（支持 UniTask） - 继承 YooAssetResLoader，仅扩展 UniTask 异步方法
     /// </summary>
-    public class YooAssetResLoaderUniTask : IResLoaderUniTask
+    public class YooAssetResLoaderUniTask : YooAssetResLoader, IResLoaderUniTask
     {
-        private readonly IResLoaderPool mPool;
-        private readonly ResourcePackage mPackage;
-        private AssetHandle mHandle;
-
         public YooAssetResLoaderUniTask(IResLoaderPool pool, ResourcePackage package)
-        {
-            mPool = pool;
-            mPackage = package;
-        }
+            : base(pool, package) { }
 
-        public T Load<T>(string path) where T : Object
-        {
-            mHandle = mPackage.LoadAssetSync<T>(path);
-            var asset = mHandle.GetAssetObject<T>();
-            ResLoadTracker.OnLoad(this, path, typeof(T), asset);
-            return asset;
-        }
-
-        public void LoadAsync<T>(string path, Action<T> onComplete) where T : Object
-        {
-            mHandle = mPackage.LoadAssetAsync<T>(path);
-            mHandle.Completed += handle =>
-            {
-                var asset = handle.GetAssetObject<T>();
-                ResLoadTracker.OnLoad(this, path, typeof(T), asset);
-                onComplete?.Invoke(asset);
-            };
-        }
-
-        public async UniTask<T> LoadUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) 
+        public async UniTask<T> LoadUniTaskAsync<T>(string path, CancellationToken cancellationToken = default)
             where T : Object
         {
             mHandle = mPackage.LoadAssetAsync<T>(path);
@@ -67,14 +34,6 @@ namespace YokiFrame
             var asset = mHandle.GetAssetObject<T>();
             ResLoadTracker.OnLoad(this, path, typeof(T), asset);
             return asset;
-        }
-
-        public void UnloadAndRecycle()
-        {
-            ResLoadTracker.OnUnload(this);
-            mHandle?.Release();
-            mHandle = null;
-            mPool.Recycle(this);
         }
     }
 }

@@ -18,23 +18,17 @@ namespace YokiFrame
         public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
             IUIData data = null, CancellationToken ct = default) where T : UIPanel
         {
-            var tcs = new UniTaskCompletionSource<IPanel>();
-            ct.Register(() => tcs.TrySetCanceled());
-            UIRoot.Instance.OpenPanelAsyncInternal(typeof(T), level, data, panel => tcs.TrySetResult(panel));
-            var result = await tcs.Task;
-            return result as T;
+            var panel = await UIRoot.Instance.OpenPanelUniTaskAsyncInternal(typeof(T), level, data, ct);
+            return panel as T;
         }
 
         /// <summary>
         /// [UniTask] 异步打开面板（通过 Type）
         /// </summary>
-        public static async UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = UILevel.Common,
+        public static UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = UILevel.Common,
             IUIData data = null, CancellationToken ct = default)
         {
-            var tcs = new UniTaskCompletionSource<IPanel>();
-            ct.Register(() => tcs.TrySetCanceled());
-            UIRoot.Instance.OpenPanelAsyncInternal(type, level, data, panel => tcs.TrySetResult(panel));
-            return await tcs.Task;
+            return UIRoot.Instance.OpenPanelUniTaskAsyncInternal(type, level, data, ct);
         }
 
         /// <summary>
