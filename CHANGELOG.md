@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.6] - 2026-03-04
+
+### Added
+- **ResKit** 新增批量资源加载（AllAssets）与子资源加载（SubAssets）功能
+  - 新增 `IAllAssetsLoader` / `ISubAssetsLoader` 接口及 UniTask 扩展接口
+  - 新增 `AllAssetsResHandler` / `SubAssetsResHandler` 句柄类，通过 `Retain()/Release()` 引用计数管理资源生命周期
+  - `SubAssetsResHandler` 提供 `GetSubAssetObject<T>(name)` 按名称查找子资源（如 SpriteAtlas 内精灵）
+  - 新增门面 API：`ResKit.LoadAll<T>`、`ResKit.LoadAllAsset<T>`、`ResKit.LoadSubAsset<T>` 及对应的 Async / UniTask 变体
+  - YooAsset / Resources / Editor(AssetDatabase) 三种后端均已实现
+  - 新增 `ResKitDocAllAssetsAndSubAssets` 编辑器文档，含各后端语义差异说明与使用示例
+
+### Fixed
+- **ResKit** 修复 `YooAssetResLoader` / `YooAssetResLoaderUniTask` 中 `SubAssetsHandle` 使用了错误的属性 `AllAssetObjects`（应为 `SubAssetObjects`）
+
 ## [1.7.5] - 2026-03-02
 
 ### Fixed

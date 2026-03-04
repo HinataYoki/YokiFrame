@@ -15,7 +15,7 @@ namespace YokiFrame
     /// <summary>
     /// 默认加载器（Resources）
     /// </summary>
-    public class DefaultResLoader : IResLoader
+    public class DefaultResLoader : IResLoader, IAllAssetsLoader, ISubAssetsLoader
     {
         private readonly IResLoaderPool mPool;
         protected Object mAsset;
@@ -40,6 +40,43 @@ namespace YokiFrame
             };
         }
 
+        #region IAllAssetsLoader
+
+        /// <summary>
+        /// Resources.LoadAll: 加载 Resources 文件夹中指定路径下的所有资源。
+        /// 若 path 指向文件夹，加载该文件夹内所有资源；若指向文件，加载该文件及其子对象。
+        /// 注意：与 YooAsset 的 LoadAllAssets（按 Bundle 加载）含义不同。
+        /// </summary>
+        public T[] LoadAll<T>(string path) where T : Object
+            => Resources.LoadAll<T>(path);
+
+        public void LoadAllAsync<T>(string path, Action<T[]> onComplete) where T : Object
+        {
+            // Resources 无原生异步 LoadAll，同步回退
+            var result = Resources.LoadAll<T>(path);
+            onComplete?.Invoke(result);
+        }
+
+        #endregion
+
+        #region ISubAssetsLoader
+
+        public SubAssetsResult<T> LoadSub<T>(string path) where T : Object
+        {
+            // Resources 无真正子资源概念，回退到 LoadAll
+            var all = Resources.LoadAll<T>(path);
+            var main = all is { Length: > 0 } ? all[0] : null;
+            return new SubAssetsResult<T>(main, all);
+        }
+
+        public void LoadSubAsync<T>(string path, Action<SubAssetsResult<T>> onComplete) where T : Object
+        {
+            var result = LoadSub<T>(path);
+            onComplete?.Invoke(result);
+        }
+
+        #endregion
+
         public void UnloadAndRecycle()
         {
             ResLoadTracker.OnUnload(this);
@@ -56,3 +93,4 @@ namespace YokiFrame
         }
     }
 }
+

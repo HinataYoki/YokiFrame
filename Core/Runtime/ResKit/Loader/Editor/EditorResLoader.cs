@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -18,7 +19,7 @@ namespace YokiFrame
     /// <summary>
     /// 编辑器资源加载器（使用 AssetDatabase.LoadAssetAtPath）
     /// </summary>
-    public class EditorResLoader : IResLoader
+    public class EditorResLoader : IResLoader, IAllAssetsLoader, ISubAssetsLoader
     {
         private readonly IResLoaderPool mPool;
         private Object mAsset;
@@ -59,6 +60,55 @@ namespace YokiFrame
             onComplete?.Invoke(asset);
         }
 
+        #region IAllAssetsLoader
+
+        public T[] LoadAll<T>(string path) where T : Object
+        {
+            var assetPath = NormalizePath(path);
+            var allObjects = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+            var result = new List<T>();
+
+            foreach (var obj in allObjects)
+            {
+                if (obj is T typed)
+                    result.Add(typed);
+            }
+            return result.ToArray();
+        }
+
+        public void LoadAllAsync<T>(string path, Action<T[]> onComplete) where T : Object
+        {
+            var result = LoadAll<T>(path);
+            onComplete?.Invoke(result);
+        }
+
+        #endregion
+
+        #region ISubAssetsLoader
+
+        public SubAssetsResult<T> LoadSub<T>(string path) where T : Object
+        {
+            var assetPath = NormalizePath(path);
+            var main = AssetDatabase.LoadAssetAtPath<T>(assetPath);
+            var representations = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+            var subList = new List<T>();
+
+            foreach (var obj in representations)
+            {
+                if (obj is T typed)
+                    subList.Add(typed);
+            }
+            return new SubAssetsResult<T>(main, subList.ToArray());
+        }
+
+        public void LoadSubAsync<T>(string path, Action<SubAssetsResult<T>> onComplete) where T : Object
+        {
+            var result = LoadSub<T>(path);
+            onComplete?.Invoke(result);
+        }
+
+        #endregion
+
         public void UnloadAndRecycle()
         {
             // 追踪资源卸载
@@ -86,3 +136,4 @@ namespace YokiFrame
     }
 }
 #endif
+

@@ -28,7 +28,10 @@ namespace YokiFrame.EditorTools
                 ResKitDocYooAssetOffline.CreateSection(),
                 ResKitDocYooAssetHost.CreateSection(),
                 ResKitDocYooAssetUpdate.CreateSection(),
-                ResKitDocYooAssetUsage.CreateSection()
+                ResKitDocYooAssetUsage.CreateSection(),
+                
+                // 批量与子资源加载
+                ResKitDocAllAssetsAndSubAssets.CreateSection()
             };
             
             // YooInit 完整初始化示例（包含多个子章节）

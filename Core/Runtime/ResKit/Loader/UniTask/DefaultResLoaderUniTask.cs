@@ -15,9 +15,9 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// 默认 UniTask 加载器（Resources） - 继承 DefaultResLoader，仅扩展 UniTask 异步方法
+    /// 默认 UniTask 加载器（Resources） - 继承 DefaultResLoader，扩展 UniTask 异步方法
     /// </summary>
-    public class DefaultResLoaderUniTask : DefaultResLoader, IResLoaderUniTask
+    public class DefaultResLoaderUniTask : DefaultResLoader, IResLoaderUniTask, IAllAssetsLoaderUniTask, ISubAssetsLoaderUniTask
     {
         public DefaultResLoaderUniTask(IResLoaderPool pool) : base(pool) { }
 
@@ -29,6 +29,23 @@ namespace YokiFrame
             ResLoadTracker.OnLoad(this, path, typeof(T), mAsset);
             return mAsset as T;
         }
+
+        public UniTask<T[]> LoadAllUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
+        {
+            // Resources 无原生异步 LoadAll，同步完成
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = LoadAll<T>(path);
+            return UniTask.FromResult(result);
+        }
+
+        public UniTask<SubAssetsResult<T>> LoadSubUniTaskAsync<T>(string path, CancellationToken cancellationToken = default) where T : Object
+        {
+            // Resources 无原生异步子资源加载，同步完成
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = LoadSub<T>(path);
+            return UniTask.FromResult(result);
+        }
     }
 }
 #endif
+

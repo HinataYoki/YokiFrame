@@ -79,6 +79,154 @@ namespace YokiFrame
     }
 
     /// <summary>
+    /// 批量资源句柄 — 管理 AllAssets 加载的生命周期
+    /// </summary>
+    /// <remarks>
+    /// 调用方通过 Retain()/Release() 管理引用计数。
+    /// 引用归零后自动回收底层 Loader（释放 YooAsset AllAssetsHandle）。
+    /// </remarks>
+    public class AllAssetsResHandler
+    {
+        public string Path;
+        public Type AssetType;
+        public Object[] AllAssetObjects;
+        public IResLoader Loader;
+        public int RefCount;
+        public bool IsDone;
+
+        private Action<AllAssetsResHandler> mOnLoaded;
+
+        public void Retain() => RefCount++;
+
+        public void Release()
+        {
+            RefCount--;
+            if (RefCount <= 0)
+            {
+                Loader?.UnloadAndRecycle();
+                Loader = null;
+                AllAssetObjects = null;
+                Path = null;
+                AssetType = null;
+                mOnLoaded = null;
+            }
+        }
+
+        /// <summary>
+        /// 获取所有指定类型的资源
+        /// </summary>
+        public T[] GetAllAssetObjects<T>() where T : Object
+        {
+            if (AllAssetObjects is null) return Array.Empty<T>();
+
+            var result = new System.Collections.Generic.List<T>(AllAssetObjects.Length);
+            foreach (var obj in AllAssetObjects)
+            {
+                if (obj is T typed)
+                    result.Add(typed);
+            }
+            return result.ToArray();
+        }
+
+        public void AddLoadedCallback(Action<AllAssetsResHandler> callback)
+        {
+            if (callback is null) return;
+            if (IsDone) { callback.Invoke(this); return; }
+            mOnLoaded += callback;
+        }
+
+        public void InvokeLoadedCallbacks()
+        {
+            var callbacks = mOnLoaded;
+            mOnLoaded = null;
+            callbacks?.Invoke(this);
+        }
+    }
+
+    /// <summary>
+    /// 子资源句柄 — 管理 SubAssets 加载的生命周期
+    /// </summary>
+    /// <remarks>
+    /// 调用方通过 Retain()/Release() 管理引用计数。
+    /// 引用归零后自动回收底层 Loader（释放 YooAsset SubAssetsHandle）。
+    /// </remarks>
+    public class SubAssetsResHandler
+    {
+        public string Path;
+        public Type AssetType;
+        public Object[] AllAssetObjects;
+        public IResLoader Loader;
+        public int RefCount;
+        public bool IsDone;
+
+        private Action<SubAssetsResHandler> mOnLoaded;
+
+        public void Retain() => RefCount++;
+
+        public void Release()
+        {
+            RefCount--;
+            if (RefCount <= 0)
+            {
+                Loader?.UnloadAndRecycle();
+                Loader = null;
+                AllAssetObjects = null;
+                Path = null;
+                AssetType = null;
+                mOnLoaded = null;
+            }
+        }
+
+        /// <summary>
+        /// 按名称获取子资源对象
+        /// </summary>
+        /// <param name="name">子资源名称</param>
+        /// <typeparam name="T">子资源类型</typeparam>
+        /// <returns>匹配的子资源，未找到返回 null</returns>
+        public T GetSubAssetObject<T>(string name) where T : Object
+        {
+            if (AllAssetObjects is null) return null;
+
+            foreach (var obj in AllAssetObjects)
+            {
+                if (obj is T typed && typed.name == name)
+                    return typed;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 获取所有指定类型的子资源
+        /// </summary>
+        public T[] GetAllSubAssetObjects<T>() where T : Object
+        {
+            if (AllAssetObjects is null) return Array.Empty<T>();
+
+            var result = new List<T>(AllAssetObjects.Length);
+            foreach (var obj in AllAssetObjects)
+            {
+                if (obj is T typed)
+                    result.Add(typed);
+            }
+            return result.ToArray();
+        }
+
+        public void AddLoadedCallback(Action<SubAssetsResHandler> callback)
+        {
+            if (callback is null) return;
+            if (IsDone) { callback.Invoke(this); return; }
+            mOnLoaded += callback;
+        }
+
+        public void InvokeLoadedCallbacks()
+        {
+            var callbacks = mOnLoaded;
+            mOnLoaded = null;
+            callbacks?.Invoke(this);
+        }
+    }
+
+    /// <summary>
     /// 资源缓存 Key（避免字符串拼接 GC）
     /// </summary>
     public readonly struct ResCacheKey : IEquatable<ResCacheKey>
