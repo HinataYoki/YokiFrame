@@ -105,10 +105,25 @@ namespace YokiFrame
             mPanelNameField = nameField;
             section.Add(nameRow);
 
-            // UI 层级
-            var (levelRow, levelField) = CreateEnumFieldRow("UI层级", mSelectedLevel, v => mSelectedLevel = v);
-            mLevelField = levelField;
-            section.Add(levelRow);
+            // UI 层级（DropdownField — UILevel 已非 enum）
+            {
+                var levelNames = new System.Collections.Generic.List<string>();
+                var predefined = UILevel.PredefinedLevels;
+                int initialIndex = 0;
+                for (int i = 0; i < predefined.Count; i++)
+                {
+                    levelNames.Add(predefined[i].ToString());
+                    if (predefined[i] == mSelectedLevel) initialIndex = i;
+                }
+                mLevelField = new DropdownField(levelNames, initialIndex);
+                mLevelField.RegisterValueChangedCallback(evt =>
+                {
+                    if (UILevel.TryParse(evt.newValue, out var parsed))
+                        mSelectedLevel = parsed;
+                });
+                var levelRow = CreateCompactFormRow("UI层级", mLevelField);
+                section.Add(levelRow);
+            }
 
             // 模态面板
             var (modalRow, modalToggle) = CreateToggleRow("模态面板", mIsModal, v => mIsModal = v);

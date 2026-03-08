@@ -43,7 +43,7 @@ namespace YokiFrame
         /// <summary>
         /// 预加载面板
         /// </summary>
-        public static void PreloadPanelAsync<T>(UILevel level = UILevel.Common, Action<bool> onComplete = null)
+        public static void PreloadPanelAsync<T>(UILevel level = default, Action<bool> onComplete = null)
             where T : UIPanel
         {
             Root?.PreloadPanelAsync<T>(level, onComplete);
@@ -52,7 +52,7 @@ namespace YokiFrame
         /// <summary>
         /// 预加载面板
         /// </summary>
-        public static void PreloadPanelAsync(Type panelType, UILevel level = UILevel.Common,
+        public static void PreloadPanelAsync(Type panelType, UILevel level = default,
             Action<bool> onComplete = null)
         {
             Root?.PreloadPanelAsync(panelType, level, onComplete);

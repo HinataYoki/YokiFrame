@@ -9,7 +9,7 @@ namespace YokiFrame
         /// <summary>
         /// UI 层级
         /// </summary>
-        public UILevel Level { get; set; } = UILevel.Common;
+        public UILevel Level { get; set; }
 
         /// <summary>
         /// 是否为模态面板

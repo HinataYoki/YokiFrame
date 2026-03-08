@@ -15,7 +15,7 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步打开面板
         /// </summary>
-        public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+        public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = default,
             IUIData data = null, CancellationToken ct = default) where T : UIPanel
         {
             var panel = await UIRoot.Instance.OpenPanelUniTaskAsyncInternal(typeof(T), level, data, ct);
@@ -25,7 +25,7 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步打开面板（通过 Type）
         /// </summary>
-        public static UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = UILevel.Common,
+        public static UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = default,
             IUIData data = null, CancellationToken ct = default)
         {
             return UIRoot.Instance.OpenPanelUniTaskAsyncInternal(type, level, data, ct);
@@ -34,7 +34,7 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步打开并压入面板
         /// </summary>
-        public static async UniTask<T> PushOpenPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+        public static async UniTask<T> PushOpenPanelUniTaskAsync<T>(UILevel level = default,
             IUIData data = null, bool hidePreLevel = true, CancellationToken ct = default) where T : UIPanel
         {
             var panel = await OpenPanelUniTaskAsync<T>(level, data, ct);
@@ -61,7 +61,7 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 预加载面板
         /// </summary>
-        public static UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+        public static UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = default,
             CancellationToken ct = default) where T : UIPanel
         {
             return UIRoot.Instance.PreloadPanelUniTaskAsync<T>(level, ct);
@@ -70,7 +70,7 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 预加载面板
         /// </summary>
-        public static UniTask<bool> PreloadPanelUniTaskAsync(Type panelType, UILevel level = UILevel.Common,
+        public static UniTask<bool> PreloadPanelUniTaskAsync(Type panelType, UILevel level = default,
             CancellationToken ct = default)
         {
             return UIRoot.Instance.PreloadPanelUniTaskAsync(panelType, level, ct);

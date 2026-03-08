@@ -68,9 +68,10 @@ namespace YokiFrame
 
         private void InitializeLevelPanels()
         {
-            foreach (UILevel level in Enum.GetValues(typeof(UILevel)))
+            var predefined = UILevel.PredefinedLevels;
+            for (int i = 0; i < predefined.Count; i++)
             {
-                mLevelPanels[level] = new List<IPanel>();
+                mLevelPanels[predefined[i]] = new List<IPanel>();
             }
         }
 
@@ -201,18 +202,30 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取全局顶部面板
+        /// 获取全局顶部面板（遍历所有已注册层级，从高到低）
         /// </summary>
         public IPanel GetGlobalTopPanel()
         {
-            var levels = new[] { UILevel.AlwayTop, UILevel.Pop, UILevel.Common, UILevel.Bg, UILevel.AlwayBottom };
-            for (int i = 0; i < levels.Length; i++)
+            mSortedLevelsCache.Clear();
+            foreach (var level in mLevelPanels.Keys)
             {
-                var panel = GetTopPanelAtLevel(levels[i]);
+                if (level == UILevel.CanvasPanel) continue;
+                mSortedLevelsCache.Add(level);
+            }
+            mSortedLevelsCache.Sort(static (a, b) => b.Order.CompareTo(a.Order));
+
+            for (int i = 0; i < mSortedLevelsCache.Count; i++)
+            {
+                var panel = GetTopPanelAtLevel(mSortedLevelsCache[i]);
                 if (panel != default) return panel;
             }
             return null;
         }
+
+        /// <summary>
+        /// GetGlobalTopPanel 排序缓存（避免每次调用产生闭包分配）
+        /// </summary>
+        private readonly List<UILevel> mSortedLevelsCache = new();
 
         /// <summary>
         /// 获取指定层级的所有面板

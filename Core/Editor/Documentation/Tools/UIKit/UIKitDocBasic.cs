@@ -73,10 +73,16 @@ UIKit.CloseAllPanel();"
                     {
                         Title = "UI 层级",
                         Code = @"// UILevel 从低到高：
-// AlwayBottom → Bg → Common（默认）→ Pop → AlwayTop → CanvasPanel
+// AlwayBottom → Bg → Hud → Common（默认）→ Toast → Pop → Guide → AlwayTop → CanvasPanel
 
 // 打开时指定层级
 UIKit.OpenPanel<DialogPanel>(UILevel.Pop);
+
+// 使用 Hud 层级（血条、名牌等）
+UIKit.OpenPanel<HealthBarPanel>(UILevel.Hud);
+
+// 使用 Toast 层级（轻提示）
+UIKit.OpenPanel<AchievementToast>(UILevel.Toast);
 
 // 动态修改层级
 UIKit.SetPanelLevel(panel, UILevel.AlwayTop, subLevel: 0);
@@ -86,8 +92,12 @@ UIKit.SetPanelSubLevel(panel, 10);
 
 // 获取顶部面板
 var topPanel = UIKit.GetGlobalTopPanel();
-var topAtLevel = UIKit.GetTopPanelAtLevel(UILevel.Pop);",
-                        Explanation = "层级确保 UI 正确叠放，如弹窗始终在主界面之上。"
+var topAtLevel = UIKit.GetTopPanelAtLevel(UILevel.Pop);
+
+// 自定义层级（用户扩展，无需修改框架）
+var tutorial = new UILevel(150); // 在 Pop(100) 和 AlwayTop(200) 之间
+UIKit.OpenPanel<TutorialPanel>(tutorial);",
+                        Explanation = "层级确保 UI 正确叠放。UILevel 支持用户自定义扩展，框架会自动创建对应层级节点。"
                     }
                 }
             };

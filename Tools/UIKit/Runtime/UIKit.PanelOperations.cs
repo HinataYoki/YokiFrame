@@ -28,7 +28,7 @@ namespace YokiFrame
         /// <summary>
         /// 打开指定类型的 Panel
         /// </summary>
-        public static T OpenPanel<T>(UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
+        public static T OpenPanel<T>(UILevel level = default, IUIData data = null) where T : UIPanel
         {
             return Root?.OpenPanelInternal(typeof(T), level, data) as T;
         }
@@ -37,7 +37,7 @@ namespace YokiFrame
         /// 异步打开指定类型的 Panel
         /// </summary>
         public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
-            UILevel level = UILevel.Common, IUIData data = null) where T : UIPanel
+            UILevel level = default, IUIData data = null) where T : UIPanel
         {
             Root?.OpenPanelAsyncInternal(typeof(T), level, data, callback);
         }

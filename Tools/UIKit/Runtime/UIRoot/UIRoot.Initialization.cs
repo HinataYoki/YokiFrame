@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -81,8 +81,10 @@ namespace YokiFrame
         private void InitializeUILevels()
         {
             UILevelDic.Clear();
-            foreach (UILevel level in Enum.GetValues(typeof(UILevel)))
+            var predefined = UILevel.PredefinedLevels;
+            for (int i = 0; i < predefined.Count; i++)
             {
+                var level = predefined[i];
                 var rect = GetOrCreateLevelNode(level.ToString());
                 UILevelDic.Add(level, rect);
                 SetupRectTransform(rect);

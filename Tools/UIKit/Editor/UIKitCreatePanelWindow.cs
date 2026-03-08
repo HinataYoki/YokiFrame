@@ -54,7 +54,7 @@ namespace YokiFrame
         #region 面板配置字段
 
         private string mPanelCreateName = string.Empty;
-        private UILevel mSelectedLevel = UILevel.Common;
+        private UILevel mSelectedLevel;
         private bool mIsModal;
         private bool mGenerateLifecycleHooks = true;
         private bool mGenerateFocusSupport;
@@ -90,7 +90,7 @@ namespace YokiFrame
         private TextField mScriptPathField;
         private TextField mPrefabPathField;
         private TextField mPanelNameField;
-        private EnumField mLevelField;
+        private DropdownField mLevelField;
         private Toggle mModalToggle;
         private Toggle mLifecycleToggle;
         private Toggle mFocusToggle;

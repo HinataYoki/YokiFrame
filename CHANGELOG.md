@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.7] - 2026-03-08
+
+### Added
+- **UIKit** `UILevel` 从 enum 重构为 `readonly struct`，支持用户自定义层级
+  - 用户可通过 `new UILevel(order)` 创建自定义层级，无需修改框架代码
+  - `default(UILevel)` 等价于 `UILevel.Common`（Order = 0），方法签名可用 `UILevel level = default`
+  - 预定义 9 个层级：AlwayBottom(-200)、Bg(-100)、Hud(-50)、Common(0)、Toast(50)、Pop(100)、Guide(150)、AlwayTop(200)、CanvasPanel(300)
+  - 新增 Hud 层级 — 血条、名牌、伤害飘字等世界跟踪 UI
+  - 新增 Toast 层级 — Toast 消息、成就通知、系统广播
+  - 新增 Guide 层级 — 新手引导、教程遮罩、高亮提示
+  - 提供 `PredefinedLevels`、`PredefinedLevelNames`、`TryParse()` 静态 API
+  - 支持隐式 int 转换、比较运算符、`IEquatable`/`IComparable` 接口
+- **UIKit** 自定义层级懒创建机制
+  - `EnsureLevelExists()` 首次使用自定义层级时自动在 UIRoot 下创建对应 GameObject 节点
+  - 节点按 Order 值自动插入正确的 sibling 位置
+  - 预定义层级节点使用字段名命名（如 "Common"、"Hud"），自定义层级节点使用 "UILevel({order})" 格式
+- **UIKit** 新增 `UILevelPropertyDrawer` Inspector 自定义绘制器
+  - 支持 `[SerializeField] UILevel` 字段在 Inspector 中显示为预定义层级下拉框
+  - 非预定义值显示为 "Custom (N)"
+  - 同时支持 UIToolkit 和 IMGUI 回退
+
+### Changed
+- **UIKit** 所有公共 API 的 `UILevel level = UILevel.Common` 默认参数统一改为 `UILevel level = default`
+- **UIKit** 编辑器创建面板窗口的 UI 层级选择从 `EnumField` 改为 `DropdownField`
+- **UIKit** `GetGlobalTopPanel()` 从硬编码层级数组改为动态遍历所有已注册层级，使用缓存 List 避免闭包 GC 分配
+
+### Breaking Changes
+- **UILevel 序列化不兼容** — 旧 enum int 值（如 Pop=3）与新 struct Order 值（Pop=100）不同，升级后需在 Inspector 中重新选择 UILevel 字段值
+- **UILevel 不再是 Enum** — 依赖 `Enum.GetValues(typeof(UILevel))` 或 `EnumField` 的用户代码需迁移到 `UILevel.PredefinedLevels` 和 `DropdownField`
+
 ## [1.7.6] - 2026-03-04
 
 ### Added

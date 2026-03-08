@@ -216,7 +216,7 @@ namespace YokiFrame
 
         #region 预加载
 
-        public void PreloadPanelAsync<T>(UILevel level = UILevel.Common, Action<bool> onComplete = null)
+        public void PreloadPanelAsync<T>(UILevel level = default, Action<bool> onComplete = null)
             where T : UIPanel
         {
             PreloadPanelAsync(typeof(T), level, onComplete);
@@ -385,7 +385,7 @@ namespace YokiFrame
 
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        public async UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = UILevel.Common,
+        public async UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = default,
             CancellationToken ct = default) where T : UIPanel
         {
             return await PreloadPanelUniTaskAsync(typeof(T), level, ct);

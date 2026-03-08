@@ -13,7 +13,7 @@ namespace YokiFrame
         /// <summary>
         /// UI层级
         /// </summary>
-        public UILevel Level = UILevel.Common;
+        public UILevel Level;
         /// <summary>
         /// 预制体
         /// </summary>
@@ -73,7 +73,7 @@ namespace YokiFrame
         void IPoolable.OnRecycled()
         {
             Type = null;
-            Level = UILevel.Common;
+            Level = default;
             OnStack = null;
             Prefab = null;
             Panel = null;

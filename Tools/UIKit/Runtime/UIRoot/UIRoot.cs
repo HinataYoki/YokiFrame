@@ -97,8 +97,44 @@ namespace YokiFrame
             if (panel == default) return;
             var hasCanvas = panel.Transform.GetComponent<Canvas>() != default;
             var targetLevel = hasCanvas ? UILevel.CanvasPanel : level;
+            EnsureLevelExists(targetLevel);
             panel.Transform.SetParent(UILevelDic[targetLevel]);
             SetupRectTransform(panel.Transform as RectTransform);
+        }
+
+        /// <summary>
+        /// 确保层级节点存在（自定义层级首次使用时自动创建并按 Order 值插入正确位置）
+        /// </summary>
+        internal void EnsureLevelExists(UILevel level)
+        {
+            if (UILevelDic.ContainsKey(level)) return;
+
+            var rect = GetOrCreateLevelNode(level.ToString());
+            SetupRectTransform(rect);
+
+            // 按 Order 值找到正确的 sibling 位置
+            int siblingIndex = transform.childCount - 1;
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                foreach (var kvp in UILevelDic)
+                {
+                    if (kvp.Value == child && kvp.Key > level)
+                    {
+                        siblingIndex = i;
+                        goto found;
+                    }
+                }
+            }
+            found:
+            rect.SetSiblingIndex(siblingIndex);
+
+            UILevelDic.Add(level, rect);
+
+            if (!mLevelPanels.ContainsKey(level))
+            {
+                mLevelPanels[level] = new System.Collections.Generic.List<IPanel>();
+            }
         }
 
         private static void SetupRectTransform(RectTransform rect)

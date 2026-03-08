@@ -41,7 +41,7 @@ namespace YokiFrame
         /// <summary>
         /// 打开并压入 Panel 到栈中
         /// </summary>
-        public static void PushOpenPanel<T>(UILevel level = UILevel.Common,
+        public static void PushOpenPanel<T>(UILevel level = default,
             IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
             var root = Root;
@@ -55,7 +55,7 @@ namespace YokiFrame
         /// 异步打开并压入 Panel 到栈中
         /// </summary>
         public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null,
-            UILevel level = UILevel.Common, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
+            UILevel level = default, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
         {
             var root = Root;
             if (root == default) return;
