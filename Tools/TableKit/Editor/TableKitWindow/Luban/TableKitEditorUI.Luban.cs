@@ -261,9 +261,12 @@ namespace YokiFrame.TableKit.Editor
         {
             var projectRoot = Path.GetDirectoryName(Application.dataPath);
             var workDir = Path.IsPathRooted(mLubanWorkDir) ? mLubanWorkDir : Path.Combine(projectRoot, mLubanWorkDir);
+            var datasDir = Path.Combine(workDir, "Datas");
 
-            if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir))
-                EditorUtility.RevealInFinder(workDir);
+            if (!string.IsNullOrEmpty(workDir) && Directory.Exists(datasDir))
+                EditorUtility.OpenWithDefaultApp(datasDir);
+            else if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir))
+                EditorUtility.OpenWithDefaultApp(workDir);
             else
                 EditorUtility.DisplayDialog("提示", $"Luban 工作目录未配置或不存在\n路径: {workDir}", "确定");
         }
@@ -279,9 +282,11 @@ namespace YokiFrame.TableKit.Editor
             if (!Directory.Exists(lubanCodeDir)) Directory.CreateDirectory(lubanCodeDir);
 
             logBuilder.AppendLine("正在生成 TableKit 运行时代码...");
-            TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil, 
-                mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath, mCodeTarget);
+            TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil,
+                mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath, mCodeTarget,
+                mUseAsyncLoading, mOutputDataDir, mDataTarget);
             logBuilder.AppendLine("[OK] TableKit 运行时代码生成完成");
+            if (mUseAsyncLoading) logBuilder.AppendLine("[OK] 已生成异步加载代码 (InitAsync/ReloadAsync)");
 
             if (mGenerateExternalTypeUtil) logBuilder.AppendLine("[OK] 已生成 ExternalTypeUtil.cs");
         }

@@ -39,6 +39,7 @@ namespace YokiFrame.TableKit.Editor
 
             BuildAssemblyOption(toggleGroup);
             BuildExternalTypeOption(toggleGroup);
+            BuildAsyncLoadingOption(toggleGroup);
 
             return container;
         }
@@ -104,6 +105,34 @@ namespace YokiFrame.TableKit.Editor
             extHint2.style.fontSize = Design.FontSizeSmall;
             extHint2.style.color = new StyleColor(Design.BrandWarning);
             toggleGroup.Add(extHint2);
+        }
+
+        private void BuildAsyncLoadingOption(VisualElement toggleGroup)
+        {
+            var asyncRow = new VisualElement();
+            asyncRow.style.flexDirection = FlexDirection.Row;
+            asyncRow.style.alignItems = Align.Center;
+            asyncRow.style.marginTop = 8;
+            asyncRow.style.marginBottom = 4;
+            toggleGroup.Add(asyncRow);
+
+            mUseAsyncLoadingToggle = CreateCapsuleToggle("异步加载模式", mUseAsyncLoading, v =>
+            {
+                mUseAsyncLoading = v;
+                SavePrefs();
+            });
+            asyncRow.Add(mUseAsyncLoadingToggle);
+
+            var asyncHint = new Label("启用后生成 InitAsync() 方法，使用 UniTask 异步加载配置表数据");
+            asyncHint.style.fontSize = Design.FontSizeSmall;
+            asyncHint.style.color = new StyleColor(Design.TextTertiary);
+            asyncHint.style.marginBottom = 4;
+            toggleGroup.Add(asyncHint);
+
+            var asyncHint2 = new Label("需要项目已安装 UniTask 并定义 YOKIFRAME_UNITASK_SUPPORT");
+            asyncHint2.style.fontSize = Design.FontSizeSmall;
+            asyncHint2.style.color = new StyleColor(Design.BrandWarning);
+            toggleGroup.Add(asyncHint2);
         }
 
         #endregion

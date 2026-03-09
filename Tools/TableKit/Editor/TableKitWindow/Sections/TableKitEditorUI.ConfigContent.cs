@@ -169,6 +169,11 @@ namespace YokiFrame.TableKit.Editor
             {
                 mOutputDataDir = path;
                 mOutputDataDirField.value = path;
+                if (!mCustomEditorDataPath)
+                {
+                    mEditorDataPath = path;
+                    mEditorDataPathField?.SetValueWithoutNotify(path);
+                }
                 SavePrefs();
                 RefreshConfigStatus();
             }, false, "选择数据输出目录"));
@@ -204,7 +209,38 @@ namespace YokiFrame.TableKit.Editor
             var tkSection = CreateSubSection("TableKit 路径");
             container.Add(tkSection);
 
-            tkSection.Add(CreateValidatedPathRow("编辑器数据:", ref mEditorDataPathField, mEditorDataPath, path =>
+            // 自定义编辑器数据路径 Toggle
+            var customEditorPathRow = new VisualElement();
+            customEditorPathRow.style.flexDirection = FlexDirection.Row;
+            customEditorPathRow.style.alignItems = Align.Center;
+            customEditorPathRow.style.marginTop = 8;
+            customEditorPathRow.style.marginBottom = 4;
+            tkSection.Add(customEditorPathRow);
+
+            mCustomEditorDataPathToggle = CreateCapsuleToggle("自定义编辑器数据路径", mCustomEditorDataPath, v =>
+            {
+                mCustomEditorDataPath = v;
+                mEditorDataPathRow?.SetEnabled(v);
+                if (!v)
+                {
+                    mEditorDataPath = mOutputDataDir;
+                    mEditorDataPathField?.SetValueWithoutNotify(mEditorDataPath);
+                }
+                SavePrefs();
+            });
+            customEditorPathRow.Add(mCustomEditorDataPathToggle);
+
+            var customEditorPathHint = new Label("关闭时编辑器数据路径自动跟随数据输出路径");
+            customEditorPathHint.style.fontSize = Design.FontSizeSmall;
+            customEditorPathHint.style.color = new StyleColor(Design.TextTertiary);
+            customEditorPathHint.style.marginBottom = 8;
+            tkSection.Add(customEditorPathHint);
+
+            // 编辑器数据路径
+            mEditorDataPathRow = new VisualElement();
+            tkSection.Add(mEditorDataPathRow);
+
+            mEditorDataPathRow.Add(CreateValidatedPathRow("编辑器数据:", ref mEditorDataPathField, mEditorDataPath, path =>
             {
                 mEditorDataPath = path;
                 mEditorDataPathField.value = path;
@@ -216,7 +252,9 @@ namespace YokiFrame.TableKit.Editor
             editorDataHint.style.color = new StyleColor(Design.TextTertiary);
             editorDataHint.style.marginTop = 2;
             editorDataHint.style.marginLeft = 80;
-            tkSection.Add(editorDataHint);
+            mEditorDataPathRow.Add(editorDataHint);
+
+            mEditorDataPathRow.SetEnabled(mCustomEditorDataPath);
 
             var runtimeRow = new VisualElement();
             runtimeRow.style.flexDirection = FlexDirection.Row;

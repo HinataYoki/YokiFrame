@@ -105,6 +105,17 @@ namespace YokiFrame.TableKit.Editor
             AddGuideDescription(yooSection, "使用 YooAsset 加载配置表的完整实现：");
             yooSection.Add(CreateCodeBlock(GUIDE_CODE_YOOASSET));
 
+            // 异步加载
+            var asyncSection = CreateGuideSection("异步加载模式");
+            container.Add(asyncSection);
+
+            AddGuideDescription(asyncSection,
+                "开启构建选项中的「异步加载模式」后，生成的代码包含 InitAsync 异步初始化方法。" +
+                "可通过 SetAsyncBinaryLoader/SetAsyncJsonLoader 自定义异步加载方式，" +
+                "通过 SetTableFileNames 覆盖预加载的文件列表。" +
+                "如果不显式调用 InitAsync，首次访问 TableKit.Tables 时将自动触发同步 Init() 加载：");
+            asyncSection.Add(CreateCodeBlock(GUIDE_CODE_ASYNC));
+
             // 注意事项
             var noteSection = CreateGuideSection("注意事项");
             container.Add(noteSection);

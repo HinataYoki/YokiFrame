@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.8] - 2026-03-09
+
+### Added
+- **TableKit** 异步加载模式新增 `SetTableFileNames(string[])` 运行时覆盖接口
+  - 生成时嵌入的 `TABLE_FILE_NAMES` 作为默认值，运行时可通过该方法替换
+  - `InitAsync` 优先使用覆盖值 (`sCustomTableFileNames ?? TABLE_FILE_NAMES`)
+- **TableKit** 异步自定义加载器文档补充
+  - 运行时使用文档新增 `SetAsyncBinaryLoader` / `SetAsyncJsonLoader` / `SetTableFileNames` 用法示例
+  - 编辑器使用指南新增异步自定义加载器完整代码示例
+  - 最佳实践文档补充自定义加载器与文件名覆盖说明
+- **TableKit** 新增 `TableKitCodeGenerator` 单元测试（47 个测试用例）
+  - 覆盖：基础生成、命名空间、路径嵌入/转义、编辑器区块、同步/异步模式、TABLE_FILE_NAMES 嵌入、运行时覆盖、asmdef 生成、ExternalTypeUtil、旧文件清理、Tables 自动初始化、InitAsync 预缓存策略、Clear 方法
+- **TableKit** 数据预览卡片新增"验证配置"按钮
+
+### Changed
+- **TableKit** 编辑器数据路径默认跟随数据输出目录，新增"自定义编辑器数据路径"开关
+- **TableKit** "打开配置表"按钮直接打开 Datas 文件夹（`OpenWithDefaultApp`），替代原来的目录定位
+- **TableKit** 配置表信息搜索框宽度从 150 调整为 180，修复提示文字截断
+- **TableKit** 命令中心移除重复的"验证"按钮，验证功能统一由数据预览卡片提供
+
 ## [1.7.7] - 2026-03-08
 
 ### Added

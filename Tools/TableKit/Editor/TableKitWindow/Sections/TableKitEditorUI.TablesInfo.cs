@@ -71,7 +71,7 @@ namespace YokiFrame.TableKit.Editor
             searchContainer.Add(searchIcon);
 
             mTablesSearchField = new TextField();
-            mTablesSearchField.style.width = 150;
+            mTablesSearchField.style.width = 180;
             mTablesSearchField.style.height = 22;
             // 设置占位符样式
             var placeholder = "搜索表名...";

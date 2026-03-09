@@ -77,6 +77,8 @@ namespace YokiFrame.TableKit.Editor
         private bool mUseAssemblyDefinition;
         private string mAssemblyName;
         private bool mGenerateExternalTypeUtil;
+        private bool mUseAsyncLoading;
+        private bool mCustomEditorDataPath;
 
         #endregion
 
@@ -94,6 +96,9 @@ namespace YokiFrame.TableKit.Editor
         private VisualElement mUseAssemblyToggle;
         private TextField mAssemblyNameField;
         private VisualElement mGenerateExternalTypeUtilToggle;
+        private VisualElement mUseAsyncLoadingToggle;
+        private VisualElement mCustomEditorDataPathToggle;
+        private VisualElement mEditorDataPathRow;
         private VisualElement mConfigFoldout;
         private VisualElement mConfigStatusDot;
         private VisualElement mStatusBanner;
@@ -121,6 +126,8 @@ namespace YokiFrame.TableKit.Editor
         private const string PREF_USE_ASSEMBLY = "TableKit_UseAssembly";
         private const string PREF_ASSEMBLY_NAME = "TableKit_AssemblyName";
         private const string PREF_GENERATE_EXTERNAL_TYPE_UTIL = "TableKit_GenerateExternalTypeUtil";
+        private const string PREF_USE_ASYNC_LOADING = "TableKit_UseAsyncLoading";
+        private const string PREF_CUSTOM_EDITOR_DATA_PATH = "TableKit_CustomEditorDataPath";
         private const string PREF_CONFIG_EXPANDED = "TableKit_ConfigExpanded";
         private const string PREF_GUIDE_EXPANDED = "TableKit_GuideExpanded";
         private const string PREF_CONSOLE_LOG = "TableKit_ConsoleLog";
@@ -193,6 +200,14 @@ namespace YokiFrame.TableKit.Editor
             mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
             mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.TableKit");
             mGenerateExternalTypeUtil = EditorPrefs.GetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, false);
+            mUseAsyncLoading = EditorPrefs.GetBool(PREF_USE_ASYNC_LOADING, false);
+            mCustomEditorDataPath = EditorPrefs.GetBool(PREF_CUSTOM_EDITOR_DATA_PATH, false);
+
+            // 未开启自定义编辑器数据路径时，跟随数据输出目录
+            if (!mCustomEditorDataPath)
+            {
+                mEditorDataPath = mOutputDataDir;
+            }
             
             // 加载多目标输出配置
             LoadExtraOutputTargets();
@@ -217,6 +232,8 @@ namespace YokiFrame.TableKit.Editor
             EditorPrefs.SetBool(PREF_USE_ASSEMBLY, mUseAssemblyDefinition);
             EditorPrefs.SetString(PREF_ASSEMBLY_NAME, mAssemblyName);
             EditorPrefs.SetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, mGenerateExternalTypeUtil);
+            EditorPrefs.SetBool(PREF_USE_ASYNC_LOADING, mUseAsyncLoading);
+            EditorPrefs.SetBool(PREF_CUSTOM_EDITOR_DATA_PATH, mCustomEditorDataPath);
             
             // 持久化控制台日志
             if (mLogContent != default)
@@ -257,6 +274,9 @@ namespace YokiFrame.TableKit.Editor
             mUseAssemblyDefinition = false;
             mAssemblyName = "YokiFrame.TableKit";
             mGenerateExternalTypeUtil = false;
+            mUseAsyncLoading = false;
+            mCustomEditorDataPath = false;
+            mEditorDataPath = mOutputDataDir;
             
             // 清空多目标输出列表
             mExtraOutputTargets.Clear();
@@ -279,6 +299,10 @@ namespace YokiFrame.TableKit.Editor
             // 更新 UI - Toggle 开关
             UpdateCapsuleToggle(mUseAssemblyToggle, mUseAssemblyDefinition);
             UpdateCapsuleToggle(mGenerateExternalTypeUtilToggle, mGenerateExternalTypeUtil);
+            UpdateCapsuleToggle(mUseAsyncLoadingToggle, mUseAsyncLoading);
+            UpdateCapsuleToggle(mCustomEditorDataPathToggle, mCustomEditorDataPath);
+            mEditorDataPathField.value = mEditorDataPath;
+            mEditorDataPathRow.SetEnabled(mCustomEditorDataPath);
 
             // 保存并刷新
             SavePrefs();

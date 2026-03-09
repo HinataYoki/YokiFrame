@@ -39,21 +39,39 @@ namespace cfg
         /// <summary>
         /// 生成程序集定义文件
         /// </summary>
-        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame, string codeTarget)
+        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame,
+            string codeTarget, bool useAsyncLoading = false)
         {
             // 基础引用
             var referencesList = new List<string> { "\"Luban.Runtime\"" };
-            
+
             if (hasYokiFrame)
                 referencesList.Add("\"YokiFrame\"");
-            
+
             // 根据代码生成器类型添加对应的 JSON 库引用
             if (codeTarget == "cs-newtonsoft-json")
                 referencesList.Add("\"Newtonsoft.Json\"");
             // cs-simple-json 使用 Luban.Runtime 内置的 SimpleJSON，无需额外引用
             // cs-bin 不需要 JSON 库
 
+            // 异步加载需要 UniTask 引用
+            if (useAsyncLoading)
+                referencesList.Add("\"UniTask\"");
+
             var references = string.Join(",\n        ", referencesList);
+
+            // 异步加载时添加 versionDefines 自动定义 YOKIFRAME_UNITASK_SUPPORT
+            var versionDefines = "[]";
+            if (useAsyncLoading)
+            {
+                versionDefines = @"[
+        {
+            ""name"": ""com.cysharp.unitask"",
+            ""expression"": """",
+            ""define"": ""YOKIFRAME_UNITASK_SUPPORT""
+        }
+    ]";
+            }
 
             var content = $@"{{
     ""name"": ""{assemblyName}"",
@@ -68,7 +86,7 @@ namespace cfg
     ""precompiledReferences"": [],
     ""autoReferenced"": true,
     ""defineConstraints"": [],
-    ""versionDefines"": [],
+    ""versionDefines"": {versionDefines},
     ""noEngineReferences"": false
 }}";
             File.WriteAllText(Path.Combine(outputDir, $"{assemblyName}.asmdef"), content, Encoding.UTF8);

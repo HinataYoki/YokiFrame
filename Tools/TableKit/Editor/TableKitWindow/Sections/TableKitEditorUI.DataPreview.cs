@@ -66,6 +66,12 @@ namespace YokiFrame.TableKit.Editor
             searchRow.style.alignItems = Align.Center;
             headerRow.Add(searchRow);
 
+            // 验证配置按钮
+            var validateBtn = new Button(ValidateLuban) { text = "验证配置" };
+            ApplySmallButtonStyle(validateBtn);
+            validateBtn.style.marginRight = 8;
+            searchRow.Add(validateBtn);
+
             var searchField = new TextField();
             searchField.style.width = 150;
             searchField.value = "";

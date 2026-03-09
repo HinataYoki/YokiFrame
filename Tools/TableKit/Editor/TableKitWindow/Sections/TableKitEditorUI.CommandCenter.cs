@@ -115,19 +115,11 @@ namespace YokiFrame.TableKit.Editor
             resetBtn.tooltip = "还原所有配置为默认值";
             container.Add(resetBtn);
 
-            // 验证按钮
-            var validateBtn = new Button(ValidateLuban) { text = "验证" };
-            validateBtn.style.marginLeft = 4;
-            ApplySecondaryButtonStyle(validateBtn);
-            container.Add(validateBtn);
-
-            // 打开目录
-            var openBtn = new Button(OpenLubanFolder) { text = "..." };
-            openBtn.style.width = 28;
-            openBtn.style.height = 28;
+            // 打开配置表目录
+            var openBtn = new Button(OpenLubanFolder) { text = "打开配置表" };
             openBtn.style.marginLeft = 4;
             ApplySecondaryButtonStyle(openBtn);
-            openBtn.tooltip = "打开 Luban 工作目录";
+            openBtn.tooltip = "打开 Luban 配置表数据目录 (Datas)";
             container.Add(openBtn);
 
             // 生成按钮
