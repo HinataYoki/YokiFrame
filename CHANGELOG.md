@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.9] - 2026-03-20
+
+### Fixed
+- **SaveKit** 修复加载后部分 RegisterModule 再保存导致未注册模块数据丢失的严重 BUG
+  - `SerializeRegisteredModules` 现在同时保留未被引用覆盖的原始字节模块
+- **SaveKit** 修复 `ModuleCount` 不包含加载后的字节模块，导致计数与实际不一致
+- **SaveKit** 修复 `DeserializeSaveData` unsafe 代码对损坏文件无越界保护，可能导致内存访问违规
+  - 添加模块数量合理性检查、读取前剩余空间校验、数据长度负值检查
+
+### Changed
+- **SaveKit** Architecture 集成重构
+  - `CollectFromArchitecture` 改为注册对象引用（等价于手动 `RegisterModule`），替代原来的 `SetRawModule` 方式
+  - `ApplyToArchitecture` 直接通过 `JsonUtility.FromJsonOverwrite` 覆盖 Architecture 中的 Model 数据
+  - 去掉 `SerializableModelData` 包裹，`CollectFromArchitecture` 和手动 `RegisterModule` 两种方式保存的数据格式完全兼容
+- **SaveKit** `RegisterModule` 重复注册同类型模块时输出日志提示
+- **SaveKit** 编辑器文档更新
+  - 加载数据示例：去掉"加载后重新注册引用"的说明，注册后持续持有引用无需重复注册
+  - Architecture 集成示例：说明 `CollectFromArchitecture` 等价于手动 `RegisterModule`，注册的是引用
+
 ## [1.7.8] - 2026-03-09
 
 ### Added

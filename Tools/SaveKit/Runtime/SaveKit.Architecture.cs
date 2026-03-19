@@ -12,7 +12,8 @@ namespace YokiFrame
         #region Architecture 集成
 
         /// <summary>
-        /// 从 Architecture 收集所有 IModel 数据
+        /// 从 Architecture 一键注册所有 IModel 到 SaveData
+        /// 等价于对每个 IModel 手动调用 RegisterModule，注册的是对象引用
         /// </summary>
         /// <typeparam name="T">Architecture 类型</typeparam>
         /// <param name="data">要填充的 SaveData</param>
@@ -25,33 +26,20 @@ namespace YokiFrame
             
             Pool.List<IModel>(models =>
             {
-                // 获取所有 IModel 服务
                 CollectModelsFromArchitecture(architecture, models);
 
-                var serializer = GetSerializer();
                 foreach (var model in models)
                 {
-                    var modelType = model.GetType();
-                    var typeKey = modelType.FullName.GetHashCode();
-
-                    // 使用 JsonUtility 序列化 Model
-                    var jsonData = JsonUtility.ToJson(model);
-                    var modelWrapper = new SerializableModelData
-                    {
-                        TypeName = modelType.AssemblyQualifiedName,
-                        Data = jsonData
-                    };
-
-                    var bytes = serializer.Serialize(modelWrapper);
-                    data.SetRawModule(typeKey, bytes);
+                    data.RegisterModuleByType(model, model.GetType());
                 }
 
-                KitLogger.Log($"[SaveKit] 从 Architecture 收集了 {models.Count} 个 Model");
+                KitLogger.Log($"[SaveKit] 从 Architecture 注册了 {models.Count} 个 Model");
             });
         }
 
         /// <summary>
-        /// 将 SaveData 应用到 Architecture 的 IModel
+        /// 将 SaveData 中的数据一键应用回 Architecture 的 IModel
+        /// 通过 JsonUtility.FromJsonOverwrite 直接覆盖 Architecture 中的 Model 数据
         /// </summary>
         /// <typeparam name="T">Architecture 类型</typeparam>
         /// <param name="data">包含数据的 SaveData</param>
@@ -74,24 +62,16 @@ namespace YokiFrame
                     var modelType = model.GetType();
                     var typeKey = modelType.FullName.GetHashCode();
 
+                    // 优先从引用模块获取字节（已注册的模块保存后在 raw data 中）
+                    // 也兼容手动 RegisterModule 后保存的数据
                     if (!data.HasRawModule(typeKey))
-                    {
                         continue;
-                    }
 
                     try
                     {
                         var bytes = data.GetRawModule(typeKey);
-                        var modelWrapper = serializer.Deserialize<SerializableModelData>(bytes);
-
-                        if (modelWrapper.TypeName != modelType.AssemblyQualifiedName)
-                        {
-                            KitLogger.Warning($"[SaveKit] 类型不匹配: {modelWrapper.TypeName} vs {modelType.AssemblyQualifiedName}");
-                            continue;
-                        }
-
-                        // 使用 JsonUtility 覆盖对象数据
-                        JsonUtility.FromJsonOverwrite(modelWrapper.Data, model);
+                        var json = System.Text.Encoding.UTF8.GetString(bytes);
+                        JsonUtility.FromJsonOverwrite(json, model);
                         appliedCount++;
                     }
                     catch (Exception ex)
@@ -106,7 +86,6 @@ namespace YokiFrame
 
         private static void CollectModelsFromArchitecture(IArchitecture architecture, List<IModel> models)
         {
-            // 从所有服务中筛选出 IModel
             foreach (var service in architecture.GetAllServices())
             {
                 if (service is IModel model)
@@ -114,16 +93,6 @@ namespace YokiFrame
                     models.Add(model);
                 }
             }
-        }
-
-        /// <summary>
-        /// 用于序列化 Model 数据的包装类
-        /// </summary>
-        [Serializable]
-        private class SerializableModelData
-        {
-            public string TypeName;
-            public string Data;
         }
 
         #endregion

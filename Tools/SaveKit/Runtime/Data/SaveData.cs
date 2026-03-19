@@ -39,9 +39,21 @@ namespace YokiFrame
         public bool IsRecycled { get; set; }
 
         /// <summary>
-        /// 获取已注册的模块数量
+        /// 获取已注册的模块数量（包含引用模块和加载的字节模块）
         /// </summary>
-        public int ModuleCount => mModuleRefs.Count;
+        public int ModuleCount
+        {
+            get
+            {
+                var count = mModuleRefs.Count;
+                foreach (var key in mModuleData.Keys)
+                {
+                    if (!mModuleRefs.ContainsKey(key))
+                        count++;
+                }
+                return count;
+            }
+        }
 
         #endregion
 
@@ -94,6 +106,9 @@ namespace YokiFrame
 
             var key = GetTypeKey<T>();
             
+            if (mModuleRefs.ContainsKey(key))
+                KitLogger.Log($"[SaveKit] 模块 {typeof(T).Name} 已注册，引用已替换");
+
             // 存储引用
             mModuleRefs[key] = data;
             
@@ -101,6 +116,28 @@ namespace YokiFrame
             mSerializeDelegates[key] = serializer => serializer.Serialize(data);
             
             // 移除旧的字节数据
+            mModuleData.Remove(key);
+        }
+
+        /// <summary>
+        /// 通过运行时类型注册模块引用（供 Architecture 集成使用）
+        /// </summary>
+        internal void RegisterModuleByType(object data, Type type)
+        {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            var key = type.FullName.GetHashCode();
+            
+            if (mModuleRefs.ContainsKey(key))
+                KitLogger.Log($"[SaveKit] 模块 {type.Name} 已注册，引用已替换");
+
+            mModuleRefs[key] = data;
+            mSerializeDelegates[key] = serializer =>
+            {
+                var json = UnityEngine.JsonUtility.ToJson(data);
+                return System.Text.Encoding.UTF8.GetBytes(json);
+            };
             mModuleData.Remove(key);
         }
 
@@ -192,23 +229,41 @@ namespace YokiFrame
         internal bool RemoveRawModule(int key) => mModuleData.Remove(key);
 
         /// <summary>
-        /// 序列化所有已注册的模块（在线程池调用）
+        /// 序列化所有模块（在线程池调用）
+        /// 包含已注册的引用模块和未被覆盖的原始字节模块
         /// </summary>
         /// <param name="serializer">序列化器</param>
         /// <returns>序列化后的模块数据数组</returns>
         internal (int key, byte[] bytes)[] SerializeRegisteredModules(ISaveSerializer serializer)
         {
-            var count = mSerializeDelegates.Count;
-            if (count == 0)
+            // 计算总数：引用模块 + 未被引用覆盖的字节模块
+            var totalCount = mSerializeDelegates.Count;
+            foreach (var key in mModuleData.Keys)
+            {
+                if (!mSerializeDelegates.ContainsKey(key))
+                    totalCount++;
+            }
+
+            if (totalCount == 0)
                 return Array.Empty<(int, byte[])>();
 
-            var result = new (int key, byte[] bytes)[count];
+            var result = new (int key, byte[] bytes)[totalCount];
             var i = 0;
 
+            // 序列化引用模块
             foreach (var kvp in mSerializeDelegates)
             {
                 var bytes = kvp.Value(serializer);
                 result[i++] = (kvp.Key, bytes);
+            }
+
+            // 保留未被引用覆盖的原始字节模块
+            foreach (var kvp in mModuleData)
+            {
+                if (!mSerializeDelegates.ContainsKey(kvp.Key))
+                {
+                    result[i++] = (kvp.Key, kvp.Value);
+                }
             }
 
             return result;

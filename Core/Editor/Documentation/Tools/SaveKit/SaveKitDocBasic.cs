@@ -49,9 +49,10 @@ if (saveData != null)
     var playerData = saveData.GetModule<PlayerData>();
     var inventoryData = saveData.GetModule<InventoryData>();
     
-    // 重新注册引用以便后续保存
+    // 注意：加载后无需重新注册模块
+    // 已注册的模块会持续持有引用，除非手动 UnregisterModule
+    // 如需修改加载的数据并保存，只需注册一次即可
     saveData.RegisterModule(playerData);
-    saveData.RegisterModule(inventoryData);
 }"
                     },
                     new()

@@ -98,27 +98,51 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 反序列化字节数组为 SaveData（unsafe 优化版本）
+        /// 反序列化字节数组为 SaveData（unsafe 优化版本，带越界保护）
         /// </summary>
         internal static unsafe SaveData DeserializeSaveData(byte[] bytes)
         {
             var data = new SaveData();
-            
+            var totalLength = bytes.Length;
+
+            if (totalLength < 4)
+                return data;
+
             fixed (byte* pBytes = bytes)
             {
                 var ptr = pBytes;
+                var end = pBytes + totalLength;
                 
                 // 读取模块数量
                 var count = *(int*)ptr;
                 ptr += 4;
 
+                if (count < 0 || count > 10000)
+                {
+                    KitLogger.Warning($"[SaveKit] 模块数量异常: {count}，数据可能已损坏");
+                    return data;
+                }
+
                 // 读取每个模块
                 for (var i = 0; i < count; i++)
                 {
+                    // 检查是否有足够的空间读取 key(4) + length(4)
+                    if (ptr + 8 > end)
+                    {
+                        KitLogger.Warning($"[SaveKit] 数据截断: 期望读取模块 {i}/{count}");
+                        break;
+                    }
+
                     var key = *(int*)ptr;
                     ptr += 4;
                     var length = *(int*)ptr;
                     ptr += 4;
+
+                    if (length < 0 || ptr + length > end)
+                    {
+                        KitLogger.Warning($"[SaveKit] 模块 {i} 数据长度异常: {length}");
+                        break;
+                    }
                     
                     var value = new byte[length];
                     if (length > 0)
