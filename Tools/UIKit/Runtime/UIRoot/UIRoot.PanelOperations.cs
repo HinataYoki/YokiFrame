@@ -19,7 +19,7 @@ namespace YokiFrame
 
         #region 面板操作（供 UIKit 调用）
 
-        internal IPanel OpenPanelInternal(Type type, UILevel level, IUIData data)
+        internal IPanel OpenPanelInternal(Type type, UILevel level, IUIData data, string tag = null)
         {
             WeakenAllHot();
 
@@ -41,6 +41,7 @@ namespace YokiFrame
             handler.Type = type;
             handler.Level = level;
             handler.Data = data;
+            handler.Tag = tag;
 
             var panel = LoadPanel(handler);
             if (panel != default && panel.Transform != default)
@@ -54,7 +55,7 @@ namespace YokiFrame
             return null;
         }
 
-        internal void OpenPanelAsyncInternal(Type type, UILevel level, IUIData data, Action<IPanel> callback)
+        internal void OpenPanelAsyncInternal(Type type, UILevel level, IUIData data, Action<IPanel> callback, string tag = null)
         {
             if (TryGetCachedHandler(type, out var handler))
             {
@@ -78,6 +79,7 @@ namespace YokiFrame
             handler.Type = type;
             handler.Level = level;
             handler.Data = data;
+            handler.Tag = tag;
 
             LoadPanelAsync(handler, panel =>
             {
@@ -102,7 +104,7 @@ namespace YokiFrame
         /// [UniTask] 异步打开面板（内部使用，直接走原生 UniTask 加载路径）
         /// </summary>
         internal async UniTask<IPanel> OpenPanelUniTaskAsyncInternal(Type type, UILevel level, IUIData data,
-            System.Threading.CancellationToken ct)
+            System.Threading.CancellationToken ct, string tag = null)
         {
             if (TryGetCachedHandler(type, out var handler))
             {
@@ -124,6 +126,7 @@ namespace YokiFrame
             handler.Type = type;
             handler.Level = level;
             handler.Data = data;
+            handler.Tag = tag;
 
             var panel = await LoadPanelUniTaskAsync(handler, ct);
 

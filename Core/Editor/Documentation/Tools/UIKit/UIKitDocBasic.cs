@@ -67,7 +67,35 @@ UIKit.ClosePanel<SettingsPanel>();
 UIKit.ClosePanel(panel);
 
 // 关闭所有
-UIKit.CloseAllPanel();"
+UIKit.CloseAllPanel();
+
+// 按 Tag 批量关闭（见「Tag 批量关闭」）
+UIKit.ClosePanelsByTag(""game-hud"");"
+                    },
+                    new()
+                    {
+                        Title = "Tag 批量关闭",
+                        Code = @"// 打开时为面板打上 tag
+UIKit.OpenPanel<HealthBarPanel>(tag: ""game-hud"");
+UIKit.OpenPanel<MiniMapPanel>(tag: ""game-hud"");
+UIKit.OpenPanel<SkillBarPanel>(tag: ""game-hud"");
+
+// 异步方式同样支持
+UIKit.OpenPanelAsync<BuffPanel>(tag: ""game-hud"");
+var panel = await UIKit.OpenPanelUniTaskAsync<ComboPanel>(tag: ""game-hud"");
+
+// 批量关闭同一 tag 的所有面板
+UIKit.ClosePanelsByTag(""game-hud"");
+
+// 常见场景：进入战斗时打开战斗 HUD，退出战斗时一键关闭
+// Enter
+UIKit.OpenPanel<HealthBarPanel>(UILevel.Hud, tag: ""battle"");
+UIKit.OpenPanel<BossHpPanel>(UILevel.Hud, tag: ""battle"");
+UIKit.OpenPanel<SkillCooldownPanel>(UILevel.Common, tag: ""battle"");
+
+// Exit
+UIKit.ClosePanelsByTag(""battle"");",
+                        Explanation = "tag 是可选参数，不传则不参与 Tag 索引。同一个面板类型只能存在一个实例（缓存复用），多次 Open 相同类型不会重复注册 Tag。"
                     },
                     new()
                     {

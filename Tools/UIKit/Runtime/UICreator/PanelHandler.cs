@@ -64,6 +64,11 @@ namespace YokiFrame
         /// </summary>
         public PanelCacheMode CacheMode = PanelCacheMode.Hot;
 
+        /// <summary>
+        /// 面板标签，用于批量关闭
+        /// </summary>
+        public string Tag = null;
+
         public bool IsRecycled { get; set; }
 
         public static PanelHandler Allocate() => SafePoolKit<PanelHandler>.Instance.Allocate();
@@ -85,6 +90,7 @@ namespace YokiFrame
             IsModal = false;
             OpenTimestamp = 0;
             CacheMode = PanelCacheMode.Hot;
+            Tag = null;
         }
     }
 }

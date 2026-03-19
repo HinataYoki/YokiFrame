@@ -16,9 +16,9 @@ namespace YokiFrame
         /// [UniTask] 异步打开面板
         /// </summary>
         public static async UniTask<T> OpenPanelUniTaskAsync<T>(UILevel level = default,
-            IUIData data = null, CancellationToken ct = default) where T : UIPanel
+            IUIData data = null, CancellationToken ct = default, string tag = null) where T : UIPanel
         {
-            var panel = await UIRoot.Instance.OpenPanelUniTaskAsyncInternal(typeof(T), level, data, ct);
+            var panel = await UIRoot.Instance.OpenPanelUniTaskAsyncInternal(typeof(T), level, data, ct, tag);
             return panel as T;
         }
 
@@ -26,9 +26,9 @@ namespace YokiFrame
         /// [UniTask] 异步打开面板（通过 Type）
         /// </summary>
         public static UniTask<IPanel> OpenPanelUniTaskAsync(Type type, UILevel level = default,
-            IUIData data = null, CancellationToken ct = default)
+            IUIData data = null, CancellationToken ct = default, string tag = null)
         {
-            return UIRoot.Instance.OpenPanelUniTaskAsyncInternal(type, level, data, ct);
+            return UIRoot.Instance.OpenPanelUniTaskAsyncInternal(type, level, data, ct, tag);
         }
 
         /// <summary>

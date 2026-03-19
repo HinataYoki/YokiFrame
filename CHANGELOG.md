@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.9] - 2026-03-20
 
+### Added
+
+- **UIKit** `OpenPanel` / `OpenPanelAsync` / `OpenPanelUniTaskAsync` 新增可选 `tag` 参数，支持为面板打标签
+- **UIKit** 新增 `UIKit.ClosePanelsByTag(string tag)` — 批量关闭所有带指定 tag 的面板
+  - `PanelHandler` 新增 `Tag` 字段，Recycle 时自动清空
+  - `UIRoot` 内部维护 `mTagIndex (Dictionary<string, HashSet<Type>>)`，AddToCache / RemoveFromCache 时自动同步
+  - 支持同一 tag 绑定多个面板类型，关闭后索引自动清理
+
 ### Fixed
 - **SaveKit** 修复加载后部分 RegisterModule 再保存导致未注册模块数据丢失的严重 BUG
   - `SerializeRegisteredModules` 现在同时保留未被引用覆盖的原始字节模块

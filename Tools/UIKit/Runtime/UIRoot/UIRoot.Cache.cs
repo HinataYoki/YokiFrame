@@ -20,6 +20,11 @@ namespace YokiFrame
         private readonly Dictionary<Type, PanelHandler> mOpenedCache = new();
 
         /// <summary>
+        /// Tag -> 面板类型集合索引，用于批量关闭
+        /// </summary>
+        private readonly Dictionary<string, HashSet<Type>> mTagIndex = new();
+
+        /// <summary>
         /// 预加载面板缓存（独立管理，LRU 淘汰）
         /// </summary>
         private readonly Dictionary<Type, PanelCacheData> mPreloadedCache = new();
@@ -140,12 +145,52 @@ namespace YokiFrame
         {
             if (mOpenedCache.ContainsKey(type)) return;
             mOpenedCache[type] = handler;
+            if (!string.IsNullOrEmpty(handler.Tag))
+            {
+                if (!mTagIndex.TryGetValue(handler.Tag, out var set))
+                {
+                    set = new HashSet<Type>();
+                    mTagIndex[handler.Tag] = set;
+                }
+                set.Add(type);
+            }
         }
 
         /// <summary>
         /// 从已打开缓存移除
         /// </summary>
-        internal bool RemoveFromOpenedCache(Type type) => mOpenedCache.Remove(type);
+        internal bool RemoveFromOpenedCache(Type type)
+        {
+            if (mOpenedCache.TryGetValue(type, out var handler))
+            {
+                if (!string.IsNullOrEmpty(handler.Tag) && mTagIndex.TryGetValue(handler.Tag, out var set))
+                {
+                    set.Remove(type);
+                    if (set.Count == 0) mTagIndex.Remove(handler.Tag);
+                }
+            }
+            return mOpenedCache.Remove(type);
+        }
+
+        /// <summary>
+        /// 批量关闭指定Tag的所有面板（内部）
+        /// </summary>
+        internal void ClosePanelsByTagInternal(string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return;
+            if (!mTagIndex.TryGetValue(tag, out var types) || types.Count == 0) return;
+
+            Pool.List<IPanel>(panelsToClose =>
+            {
+                foreach (var type in types)
+                {
+                    if (mOpenedCache.TryGetValue(type, out var handler) && handler.Panel != default)
+                        panelsToClose.Add(handler.Panel);
+                }
+                for (int i = 0; i < panelsToClose.Count; i++)
+                    ClosePanelInternal(panelsToClose[i]);
+            });
+        }
 
         /// <summary>
         /// 定时衰减热度（在 Update 中调用）

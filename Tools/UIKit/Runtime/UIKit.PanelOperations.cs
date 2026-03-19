@@ -28,26 +28,26 @@ namespace YokiFrame
         /// <summary>
         /// 打开指定类型的 Panel
         /// </summary>
-        public static T OpenPanel<T>(UILevel level = default, IUIData data = null) where T : UIPanel
+        public static T OpenPanel<T>(UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
         {
-            return Root?.OpenPanelInternal(typeof(T), level, data) as T;
+            return Root?.OpenPanelInternal(typeof(T), level, data, tag) as T;
         }
 
         /// <summary>
         /// 异步打开指定类型的 Panel
         /// </summary>
         public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
-            UILevel level = default, IUIData data = null) where T : UIPanel
+            UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
         {
-            Root?.OpenPanelAsyncInternal(typeof(T), level, data, callback);
+            Root?.OpenPanelAsyncInternal(typeof(T), level, data, callback, tag);
         }
 
         /// <summary>
         /// 异步打开指定类型的 Panel（通过 Type）
         /// </summary>
-        public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback)
+        public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback, string tag = null)
         {
-            Root?.OpenPanelAsyncInternal(type, level, data, callback);
+            Root?.OpenPanelAsyncInternal(type, level, data, callback, tag);
         }
 
         /// <summary>
@@ -125,6 +125,14 @@ namespace YokiFrame
             });
             root.ClearAllStacks();
             root.ClearAllLevels();
+        }
+
+        /// <summary>
+        /// 关闭所有指定 Tag 的面板
+        /// </summary>
+        public static void ClosePanelsByTag(string tag)
+        {
+            Root?.ClosePanelsByTagInternal(tag);
         }
 
         /// <summary>
