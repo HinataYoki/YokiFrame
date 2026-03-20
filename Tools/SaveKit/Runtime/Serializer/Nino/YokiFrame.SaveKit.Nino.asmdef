@@ -1,0 +1,24 @@
+{
+    "name": "YokiFrame.BinarySave",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "GUID:3c78026e8f7c6bb4da6cf8c58b8ddb02"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "HAS_NINO"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.jasonxudeveloper.nino",
+            "expression": "",
+            "define": "HAS_NINO"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-03-20
+
+### Added
+
+- **SaveKit** `ISaveSerializer` 新增非泛型方法 `Serialize(object)` 和 `DeserializeOverwrite(byte[], object)`
+  - 支持运行时 Type 场景（如 Architecture 集成中按类型序列化/反序列化 IModel）
+  - `JsonSaveSerializer` 已实现上述方法
+- **SaveKit** 新增 `NinoSaveSerializer` — 基于 Nino 的高性能二进制序列化器
+  - 独立程序集 `YokiFrame.BinarySave`，通过 `defineConstraints: YOKIFRAME_NINO_SUPPORT` 条件编译
+  - 使用非泛型 `NinoDeserializer.Deserialize(bytes, Type)` API，支持跨程序集反序列化
+  - 通过 `SaveKit.SetSerializer(new NinoSaveSerializer())` 一行切换
+- **DependencyDefineService** 新增 Type 反射检测方式（第三种检测模式）
+  - 通过 `AppDomain.CurrentDomain.GetAssemblies()` + `Assembly.GetType()` 检测类型是否存在
+  - 解决 precompiled DLL 包（无 .asmdef、非本地路径）无法被包路径和 asmdef 检测发现的问题
+  - `DependencyInfo` 新增可选 `TypeName` 字段
+  - 新增 Nino 依赖项：检测 `Nino.Core.NinoTypeAttribute` 自动定义 `YOKIFRAME_NINO_SUPPORT`
+
+### Fixed
+
+- **SaveKit** 修复 `SaveData.RegisterModuleByType` 硬编码 `JsonUtility.ToJson` 的问题
+  - 改为通过委托延迟调用 `serializer.Serialize(data)` ，遵循 `ISaveSerializer` 接口
+- **SaveKit** 修复 `SaveKit.ApplyToArchitecture` 硬编码 `JsonUtility.FromJsonOverwrite` 的问题
+  - 改为调用 `serializer.DeserializeOverwrite(bytes, model)`，支持任意序列化器
+
 ## [1.7.9] - 2026-03-20
 
 ### Added

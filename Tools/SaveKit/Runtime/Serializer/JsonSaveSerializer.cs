@@ -32,5 +32,25 @@ namespace YokiFrame
             var json = Encoding.UTF8.GetString(bytes);
             return JsonUtility.FromJson<T>(json);
         }
+
+        public byte[] Serialize(object data)
+        {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            var json = JsonUtility.ToJson(data, PrettyPrint);
+            return Encoding.UTF8.GetBytes(json);
+        }
+
+        public void DeserializeOverwrite(byte[] bytes, object target)
+        {
+            if (bytes == null || bytes.Length == 0)
+                throw new ArgumentException("Bytes cannot be null or empty", nameof(bytes));
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+
+            var json = Encoding.UTF8.GetString(bytes);
+            JsonUtility.FromJsonOverwrite(json, target);
+        }
     }
 }

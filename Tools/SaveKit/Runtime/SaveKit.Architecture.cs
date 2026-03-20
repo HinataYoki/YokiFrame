@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace YokiFrame
 {
@@ -70,8 +69,7 @@ namespace YokiFrame
                     try
                     {
                         var bytes = data.GetRawModule(typeKey);
-                        var json = System.Text.Encoding.UTF8.GetString(bytes);
-                        JsonUtility.FromJsonOverwrite(json, model);
+                        serializer.DeserializeOverwrite(bytes, model);
                         appliedCount++;
                     }
                     catch (Exception ex)

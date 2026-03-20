@@ -16,6 +16,7 @@ namespace YokiFrame.EditorTools
     /// <list type="bullet">
     /// <item>Package Manager 包检测（通过 package.json）</item>
     /// <item>Assembly Definition 检测（通过 .asmdef 文件）</item>
+    /// <item>Type 检测（通过反射检测类型是否存在，适用于 precompiled DLL）</item>
     /// </list>
     /// <para>自动触发时机：</para>
     /// <list type="bullet">
@@ -37,6 +38,7 @@ namespace YokiFrame.EditorTools
             new("YOKIFRAME_DOTWEEN_SUPPORT", "com.demigiant.dotween", "DOTween.Modules"),
             new("YOKIFRAME_INPUTSYSTEM_SUPPORT", "com.unity.inputsystem", "Unity.InputSystem"),
             new("YOKIFRAME_ZSTRING_SUPPORT", "com.cysharp.zstring", "ZString"),
+            new("YOKIFRAME_NINO_SUPPORT", "com.jasonxudeveloper.nino", null, "Nino.Core.NinoTypeAttribute"),
         };
 
         static DependencyDefineService()
@@ -134,11 +136,11 @@ namespace YokiFrame.EditorTools
         {
             try
             {
-                // 方式1：检测 Package 是否存在
+                // 方式1：通过 PackageInfo API 检测包是否存在（支持 registry / git / local 等所有安装方式）
                 if (!string.IsNullOrEmpty(dep.PackageName))
                 {
-                    var packagePath = $"Packages/{dep.PackageName}";
-                    if (Directory.Exists(packagePath)) return true;
+                    var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForPackageName(dep.PackageName);
+                    if (packageInfo != null) return true;
                 }
 
                 // 方式2：检测 asmdef 是否存在
@@ -153,6 +155,28 @@ namespace YokiFrame.EditorTools
                         if (fileName == dep.AsmdefName)
                         {
                             return true;
+                        }
+                    }
+                }
+
+                // 方式3：检测类型所在的 DLL 是否存在于磁盘（适用于 precompiled DLL 无 asmdef 的包）
+                // 注意：不能仅用 AppDomain.GetAssemblies() 检测，因为 DLL 移除后已加载的 assembly 仍在内存中
+                if (!string.IsNullOrEmpty(dep.TypeName))
+                {
+                    var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                    foreach (var assembly in assemblies)
+                    {
+                        if (assembly.IsDynamic) continue;
+                        var type = assembly.GetType(dep.TypeName);
+                        if (type != null)
+                        {
+                            // 类型在内存中找到，但需确认 DLL 文件仍存在于磁盘
+                            try
+                            {
+                                if (File.Exists(assembly.Location))
+                                    return true;
+                            }
+                            catch { /* Location 可能为空或无效 */ }
                         }
                     }
                 }
@@ -187,12 +211,14 @@ namespace YokiFrame.EditorTools
             public readonly string Define;
             public readonly string PackageName;
             public readonly string AsmdefName;
+            public readonly string TypeName;
 
-            public DependencyInfo(string define, string packageName, string asmdefName)
+            public DependencyInfo(string define, string packageName, string asmdefName, string typeName = null)
             {
                 Define = define;
                 PackageName = packageName;
                 AsmdefName = asmdefName;
+                TypeName = typeName;
             }
         }
     }

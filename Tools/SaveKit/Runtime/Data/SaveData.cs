@@ -133,11 +133,7 @@ namespace YokiFrame
                 KitLogger.Log($"[SaveKit] 模块 {type.Name} 已注册，引用已替换");
 
             mModuleRefs[key] = data;
-            mSerializeDelegates[key] = serializer =>
-            {
-                var json = UnityEngine.JsonUtility.ToJson(data);
-                return System.Text.Encoding.UTF8.GetBytes(json);
-            };
+            mSerializeDelegates[key] = serializer => serializer.Serialize(data);
             mModuleData.Remove(key);
         }
 
