@@ -24,8 +24,16 @@
         /// </summary>
         public static bool HotCacheEnabled
         {
-            get => Root?.HotCacheEnabled ?? true;
-            set { if (Root != default) Root.HotCacheEnabled = value; }
+            get
+            {
+                var root = Root;
+                return root != default ? root.HotCacheEnabled : true;
+            }
+            set
+            {
+                var root = Root;
+                if (root != default) root.HotCacheEnabled = value;
+            }
         }
 
         /// <summary>
@@ -33,8 +41,16 @@
         /// </summary>
         public static int OpenHot
         {
-            get => Root?.OpenHot ?? 0;
-            set { if (Root != default) Root.OpenHot = value; }
+            get
+            {
+                var root = Root;
+                return root != default ? root.OpenHot : 0;
+            }
+            set
+            {
+                var root = Root;
+                if (root != default) root.OpenHot = value;
+            }
         }
 
         /// <summary>
@@ -42,8 +58,16 @@
         /// </summary>
         public static int GetHot
         {
-            get => Root?.GetHot ?? 0;
-            set { if (Root != default) Root.GetHot = value; }
+            get
+            {
+                var root = Root;
+                return root != default ? root.GetHot : 0;
+            }
+            set
+            {
+                var root = Root;
+                if (root != default) root.GetHot = value;
+            }
         }
 
         /// <summary>
@@ -51,8 +75,16 @@
         /// </summary>
         public static int Weaken
         {
-            get => Root?.Weaken ?? 0;
-            set { if (Root != default) Root.Weaken = value; }
+            get
+            {
+                var root = Root;
+                return root != default ? root.Weaken : 0;
+            }
+            set
+            {
+                var root = Root;
+                if (root != default) root.Weaken = value;
+            }
         }
 
         #endregion
@@ -64,34 +96,62 @@
         /// </summary>
         public static bool FocusSystemEnabled
         {
-            get => Root?.FocusSystemEnabled ?? false;
-            set { if (Root != default) Root.FocusSystemEnabled = value; }
+            get
+            {
+                var root = Root;
+                return root != default ? root.FocusSystemEnabled : false;
+            }
+            set
+            {
+                var root = Root;
+                if (root != default) root.FocusSystemEnabled = value;
+            }
         }
 
         /// <summary>
         /// 当前输入模式
         /// </summary>
-        public static UIInputMode GetInputMode() => Root?.CurrentInputMode ?? UIInputMode.Pointer;
+        public static UIInputMode GetInputMode()
+        {
+            var root = Root;
+            return root != default ? root.CurrentInputMode : UIInputMode.Pointer;
+        }
 
         /// <summary>
         /// 设置焦点
         /// </summary>
-        public static void SetFocus(UnityEngine.GameObject target) => Root?.SetFocus(target);
+        public static void SetFocus(UnityEngine.GameObject target)
+        {
+            var root = Root;
+            if (root != default) root.SetFocus(target);
+        }
 
         /// <summary>
         /// 设置焦点
         /// </summary>
-        public static void SetFocus(UnityEngine.UI.Selectable selectable) => Root?.SetFocus(selectable);
+        public static void SetFocus(UnityEngine.UI.Selectable selectable)
+        {
+            var root = Root;
+            if (root != default) root.SetFocus(selectable);
+        }
 
         /// <summary>
         /// 清除焦点
         /// </summary>
-        public static void ClearFocus() => Root?.ClearFocus();
+        public static void ClearFocus()
+        {
+            var root = Root;
+            if (root != default) root.ClearFocus();
+        }
 
         /// <summary>
         /// 获取当前焦点
         /// </summary>
-        public static UnityEngine.GameObject GetCurrentFocus() => Root?.CurrentFocus;
+        public static UnityEngine.GameObject GetCurrentFocus()
+        {
+            var root = Root;
+            return root != default ? root.CurrentFocus : null;
+        }
 
         #endregion
     }

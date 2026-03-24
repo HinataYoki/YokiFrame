@@ -14,7 +14,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetDefaultDialogType<T>() where T : UIDialogPanel
         {
-            Root?.SetDefaultDialogType<T>();
+            var root = Root;
+            if (root == default) return;
+            root.SetDefaultDialogType<T>();
         }
 
         /// <summary>
@@ -22,7 +24,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetDefaultPromptType<T>() where T : UIDialogPanel
         {
-            Root?.SetDefaultPromptType<T>();
+            var root = Root;
+            if (root == default) return;
+            root.SetDefaultPromptType<T>();
         }
 
         /// <summary>
@@ -30,7 +34,9 @@ namespace YokiFrame
         /// </summary>
         public static void ShowDialog(DialogConfig config, Action<DialogResultData> onResult = null)
         {
-            Root?.ShowDialog(config, onResult);
+            var root = Root;
+            if (root == default) return;
+            root.ShowDialog(config, onResult);
         }
 
         /// <summary>
@@ -39,7 +45,9 @@ namespace YokiFrame
         public static void ShowDialog<T>(DialogConfig config, Action<DialogResultData> onResult = null)
             where T : UIDialogPanel
         {
-            Root?.ShowDialog<T>(config, onResult);
+            var root = Root;
+            if (root == default) return;
+            root.ShowDialog<T>(config, onResult);
         }
 
         /// <summary>
@@ -47,7 +55,9 @@ namespace YokiFrame
         /// </summary>
         public static void Alert(string message, string title = null, Action onClose = null)
         {
-            Root?.Alert(message, title, onClose);
+            var root = Root;
+            if (root == default) return;
+            root.Alert(message, title, onClose);
         }
 
         /// <summary>
@@ -55,7 +65,9 @@ namespace YokiFrame
         /// </summary>
         public static void Confirm(string message, string title = null, Action<bool> onResult = null)
         {
-            Root?.Confirm(message, title, onResult);
+            var root = Root;
+            if (root == default) return;
+            root.Confirm(message, title, onResult);
         }
 
         /// <summary>
@@ -64,18 +76,31 @@ namespace YokiFrame
         public static void Prompt(string message, string title = null, string defaultValue = null,
             Action<bool, string> onResult = null)
         {
-            Root?.Prompt(message, title, defaultValue, onResult);
+            var root = Root;
+            if (root == default) return;
+            root.Prompt(message, title, defaultValue, onResult);
         }
 
         /// <summary>
         /// 是否有对话框正在显示
         /// </summary>
-        public static bool HasActiveDialog => Root?.HasActiveDialog ?? false;
+        public static bool HasActiveDialog
+        {
+            get
+            {
+                var root = Root;
+                return root != default ? root.HasActiveDialog : false;
+            }
+        }
 
         /// <summary>
         /// 清空对话框队列
         /// </summary>
-        public static void ClearDialogQueue() => Root?.ClearDialogQueue();
+        public static void ClearDialogQueue()
+        {
+            var root = Root;
+            if (root != default) root.ClearDialogQueue();
+        }
 
         #endregion
     }

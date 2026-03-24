@@ -27,7 +27,9 @@ namespace YokiFrame
         /// </summary>
         public static void PushPanel(IPanel panel, bool hidePreLevel = true)
         {
-            Root?.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
+            var root = Root;
+            if (root == default) return;
+            root.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
         }
 
         /// <summary>
@@ -35,7 +37,9 @@ namespace YokiFrame
         /// </summary>
         public static void PushPanel(IPanel panel, string stackName, bool hidePreLevel = true)
         {
-            Root?.PushToStack(panel, stackName, hidePreLevel);
+            var root = Root;
+            if (root == default) return;
+            root.PushToStack(panel, stackName, hidePreLevel);
         }
 
         /// <summary>
@@ -72,7 +76,9 @@ namespace YokiFrame
         /// </summary>
         public static IPanel PopPanel(bool showPreLevel = true, bool autoClose = true)
         {
-            return Root?.PopFromStack(UIRoot.DEFAULT_STACK, showPreLevel, autoClose);
+            var root = Root;
+            if (root == default) return null;
+            return root.PopFromStack(UIRoot.DEFAULT_STACK, showPreLevel, autoClose);
         }
 
         /// <summary>
@@ -80,7 +86,9 @@ namespace YokiFrame
         /// </summary>
         public static IPanel PopPanel(string stackName, bool showPreLevel = true, bool autoClose = true)
         {
-            return Root?.PopFromStack(stackName, showPreLevel, autoClose);
+            var root = Root;
+            if (root == default) return null;
+            return root.PopFromStack(stackName, showPreLevel, autoClose);
         }
 
         /// <summary>
@@ -88,7 +96,9 @@ namespace YokiFrame
         /// </summary>
         public static IPanel PeekPanel(string stackName = UIRoot.DEFAULT_STACK)
         {
-            return Root?.PeekStack(stackName);
+            var root = Root;
+            if (root == default) return null;
+            return root.PeekStack(stackName);
         }
 
         /// <summary>
@@ -96,7 +106,8 @@ namespace YokiFrame
         /// </summary>
         public static int GetStackDepth(string stackName = UIRoot.DEFAULT_STACK)
         {
-            return Root?.GetStackDepth(stackName) ?? 0;
+            var root = Root;
+            return root != default ? root.GetStackDepth(stackName) : 0;
         }
 
         /// <summary>
@@ -104,7 +115,8 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyCollection<string> GetAllStackNames()
         {
-            return Root?.GetAllStackNames() ?? Array.Empty<string>();
+            var root = Root;
+            return root != default ? root.GetAllStackNames() : Array.Empty<string>();
         }
 
         /// <summary>
@@ -112,7 +124,9 @@ namespace YokiFrame
         /// </summary>
         public static void ClearStack(string stackName = UIRoot.DEFAULT_STACK, bool closeAll = true)
         {
-            Root?.ClearStack(stackName, closeAll);
+            var root = Root;
+            if (root == default) return;
+            root.ClearStack(stackName, closeAll);
         }
 
         #endregion

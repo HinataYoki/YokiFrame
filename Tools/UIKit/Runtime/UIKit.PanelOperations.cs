@@ -30,7 +30,9 @@ namespace YokiFrame
         /// </summary>
         public static T OpenPanel<T>(UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
         {
-            return Root?.OpenPanelInternal(typeof(T), level, data, tag) as T;
+            var root = Root;
+            if (root == default) return null;
+            return root.OpenPanelInternal(typeof(T), level, data, tag) as T;
         }
 
         /// <summary>
@@ -39,7 +41,9 @@ namespace YokiFrame
         public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
             UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
         {
-            Root?.OpenPanelAsyncInternal(typeof(T), level, data, callback, tag);
+            var root = Root;
+            if (root == default) return;
+            root.OpenPanelAsyncInternal(typeof(T), level, data, callback, tag);
         }
 
         /// <summary>
@@ -47,7 +51,9 @@ namespace YokiFrame
         /// </summary>
         public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback, string tag = null)
         {
-            Root?.OpenPanelAsyncInternal(type, level, data, callback, tag);
+            var root = Root;
+            if (root == default) return;
+            root.OpenPanelAsyncInternal(type, level, data, callback, tag);
         }
 
         /// <summary>
@@ -101,7 +107,9 @@ namespace YokiFrame
         /// </summary>
         public static void ClosePanel(IPanel panel)
         {
-            Root?.ClosePanelInternal(panel);
+            var root = Root;
+            if (root == default) return;
+            root.ClosePanelInternal(panel);
         }
 
         /// <summary>
@@ -132,7 +140,9 @@ namespace YokiFrame
         /// </summary>
         public static void ClosePanelsByTag(string tag)
         {
-            Root?.ClosePanelsByTagInternal(tag);
+            var root = Root;
+            if (root == default) return;
+            root.ClosePanelsByTagInternal(tag);
         }
 
         /// <summary>
@@ -140,7 +150,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelLoader(IPanelLoaderPool loaderPool)
         {
-            Root?.SetPanelLoader(loaderPool);
+            var root = Root;
+            if (root == default) return;
+            root.SetPanelLoader(loaderPool);
         }
 
         #endregion

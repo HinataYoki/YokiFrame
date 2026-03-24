@@ -15,7 +15,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelLevel(IPanel panel, UILevel level, int subLevel = 0)
         {
-            Root?.SetPanelLevel(panel, level, subLevel);
+            var root = Root;
+            if (root == default) return;
+            root.SetPanelLevel(panel, level, subLevel);
         }
 
         /// <summary>
@@ -23,7 +25,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelSubLevel(IPanel panel, int subLevel)
         {
-            Root?.SetPanelSubLevel(panel, subLevel);
+            var root = Root;
+            if (root == default) return;
+            root.SetPanelSubLevel(panel, subLevel);
         }
 
         /// <summary>
@@ -31,7 +35,9 @@ namespace YokiFrame
         /// </summary>
         public static IPanel GetTopPanelAtLevel(UILevel level)
         {
-            return Root?.GetTopPanelAtLevel(level);
+            var root = Root;
+            if (root == default) return null;
+            return root.GetTopPanelAtLevel(level);
         }
 
         /// <summary>
@@ -39,7 +45,9 @@ namespace YokiFrame
         /// </summary>
         public static IPanel GetGlobalTopPanel()
         {
-            return Root?.GetGlobalTopPanel();
+            var root = Root;
+            if (root == default) return null;
+            return root.GetGlobalTopPanel();
         }
 
         /// <summary>
@@ -47,7 +55,8 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyList<IPanel> GetPanelsAtLevel(UILevel level)
         {
-            return Root?.GetPanelsAtLevel(level) ?? Array.Empty<IPanel>();
+            var root = Root;
+            return root != default ? root.GetPanelsAtLevel(level) : Array.Empty<IPanel>();
         }
 
         /// <summary>
@@ -55,7 +64,9 @@ namespace YokiFrame
         /// </summary>
         public static void SetPanelModal(IPanel panel, bool isModal)
         {
-            Root?.SetPanelModal(panel, isModal);
+            var root = Root;
+            if (root == default) return;
+            root.SetPanelModal(panel, isModal);
         }
 
         /// <summary>
@@ -63,7 +74,8 @@ namespace YokiFrame
         /// </summary>
         public static bool HasModalBlocker()
         {
-            return Root?.HasModalBlocker() ?? false;
+            var root = Root;
+            return root != default ? root.HasModalBlocker() : false;
         }
 
         #endregion
