@@ -10,6 +10,9 @@ namespace YokiFrame
     public class UIRootConfig
     {
         [Header("缓存配置")]
+        [Tooltip("是否启用热度缓存机制（关闭后面板关闭即销毁，不做热度保留）")]
+        public bool EnableHotCache = true;
+
         [Tooltip("缓存容量")]
         public int CacheCapacity = 10;
 

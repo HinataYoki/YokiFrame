@@ -43,6 +43,12 @@ namespace YokiFrame
 
         #region 缓存配置
 
+        public bool HotCacheEnabled
+        {
+            get => mConfig.EnableHotCache;
+            set => mConfig.EnableHotCache = value;
+        }
+
         public int CacheCapacity
         {
             get => mConfig.CacheCapacity;
@@ -197,6 +203,7 @@ namespace YokiFrame
         /// </summary>
         internal void UpdateHotWeaken(float deltaTime)
         {
+            if (!HotCacheEnabled) return;
             mWeakenTimer += deltaTime;
             if (mWeakenTimer < WEAKEN_INTERVAL) return;
             mWeakenTimer = 0f;
@@ -208,6 +215,7 @@ namespace YokiFrame
         /// </summary>
         internal void WeakenAllHot()
         {
+            if (!HotCacheEnabled) return;
             Pool.List<Type>(toRemove =>
             {
                 foreach (var kvp in mOpenedCache)
@@ -248,11 +256,15 @@ namespace YokiFrame
         {
             if (handler == default) return true;
 
+            // 热度机制关闭时，Hot 模式视同 Temporary（关闭即销毁）
+            if (!HotCacheEnabled && handler.CacheMode == PanelCacheMode.Hot)
+                return true;
+
             return handler.CacheMode switch
             {
-                PanelCacheMode.Temporary => true,  // 立即销毁
-                PanelCacheMode.Persistent => false, // 永不销毁
-                PanelCacheMode.Hot => handler.Hot <= 0, // 热度决定
+                PanelCacheMode.Temporary => true,
+                PanelCacheMode.Persistent => false,
+                PanelCacheMode.Hot => handler.Hot <= 0,
                 _ => handler.Hot <= 0
             };
         }

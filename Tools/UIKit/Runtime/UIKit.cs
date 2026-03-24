@@ -20,6 +20,15 @@
         #region 配置
 
         /// <summary>
+        /// 是否启用热度缓存机制（关闭后 Hot 模式面板关闭即销毁，不做热度保留）
+        /// </summary>
+        public static bool HotCacheEnabled
+        {
+            get => Root?.HotCacheEnabled ?? true;
+            set { if (Root != default) Root.HotCacheEnabled = value; }
+        }
+
+        /// <summary>
         /// 创建界面时赋予的热度值
         /// </summary>
         public static int OpenHot

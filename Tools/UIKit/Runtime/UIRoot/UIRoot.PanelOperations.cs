@@ -27,6 +27,7 @@ namespace YokiFrame
             {
                 handler.Data = data;
                 handler.Hot += OpenHot;
+                ApplyCachedHandlerParams(handler, level, tag);
                 OpenAndShowPanelInternal(handler.Panel, data);
                 return handler.Panel;
             }
@@ -61,6 +62,7 @@ namespace YokiFrame
             {
                 handler.Data = data;
                 handler.Hot += OpenHot;
+                ApplyCachedHandlerParams(handler, level, tag);
                 OpenAndShowPanelInternal(handler.Panel, data);
                 callback?.Invoke(handler.Panel);
                 return;
@@ -110,6 +112,7 @@ namespace YokiFrame
             {
                 handler.Data = data;
                 handler.Hot += OpenHot;
+                ApplyCachedHandlerParams(handler, level, tag);
                 OpenAndShowPanelInternal(handler.Panel, data);
                 return handler.Panel;
             }
@@ -143,6 +146,46 @@ namespace YokiFrame
             return null;
         }
 #endif
+
+        /// <summary>
+        /// 缓存命中时，将新传入的参数（Level、Tag）应用到已有 Handler
+        /// </summary>
+        private void ApplyCachedHandlerParams(PanelHandler handler, UILevel level, string tag)
+        {
+            // 更新 Tag（同步 TagIndex）
+            if (handler.Tag != tag)
+            {
+                // 先从旧 Tag 索引移除
+                if (!string.IsNullOrEmpty(handler.Tag) && mTagIndex.TryGetValue(handler.Tag, out var oldSet))
+                {
+                    oldSet.Remove(handler.Type);
+                    if (oldSet.Count == 0) mTagIndex.Remove(handler.Tag);
+                }
+                handler.Tag = tag;
+                // 添加到新 Tag 索引
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    if (!mTagIndex.TryGetValue(tag, out var newSet))
+                    {
+                        newSet = new System.Collections.Generic.HashSet<Type>();
+                        mTagIndex[tag] = newSet;
+                    }
+                    newSet.Add(handler.Type);
+                }
+            }
+
+            // 更新 Level（需要重新注册层级和移动 Transform 父节点）
+            if (handler.Level != level)
+            {
+                UnregisterPanelFromLevel(handler.Panel);
+                handler.Level = level;
+                if (UnityEngine.Application.isPlaying)
+                {
+                    SetLevelOfPanel(level, handler.Panel);
+                }
+                RegisterPanelToLevel(handler.Panel);
+            }
+        }
 
         private void SetupPanelInternal(PanelHandler handler, IPanel panel)
         {
