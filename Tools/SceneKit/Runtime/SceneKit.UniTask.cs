@@ -7,12 +7,14 @@ using UnityEngine.SceneManagement;
 namespace YokiFrame
 {
     /// <summary>
-    /// SceneKit UniTask 扩展方法
+    /// SceneKit - UniTask 异步方法
     /// </summary>
-    public static class SceneKitUniTask
+    public static partial class SceneKit
     {
+        #region UniTask 加载
+
         /// <summary>
-        /// 异步加载场景（UniTask 版本）
+        /// [UniTask] 异步加载场景
         /// </summary>
         /// <param name="sceneName">场景名称</param>
         /// <param name="mode">加载模式</param>
@@ -32,7 +34,7 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.LoadSceneAsync(sceneName, mode,
+            LoadSceneAsync(sceneName, mode,
                 handler => tcs.TrySetResult(handler),
                 p => progress?.Report(p),
                 suspendAtProgress,
@@ -42,7 +44,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 异步加载场景（通过 BuildIndex，UniTask 版本）
+        /// [UniTask] 异步加载场景（通过 BuildIndex）
         /// </summary>
         public static async UniTask<SceneHandler> LoadSceneUniTaskAsync(
             int buildIndex,
@@ -56,7 +58,7 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.LoadSceneAsync(buildIndex, mode,
+            LoadSceneAsync(buildIndex, mode,
                 handler => tcs.TrySetResult(handler),
                 p => progress?.Report(p),
                 suspendAtProgress,
@@ -65,8 +67,12 @@ namespace YokiFrame
             return await tcs.Task;
         }
 
+        #endregion
+
+        #region UniTask 卸载
+
         /// <summary>
-        /// 异步卸载场景（UniTask 版本）
+        /// [UniTask] 异步卸载场景
         /// </summary>
         /// <param name="sceneName">场景名称</param>
         /// <param name="cancellationToken">取消令牌</param>
@@ -78,13 +84,13 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.UnloadSceneAsync(sceneName, () => tcs.TrySetResult());
+            UnloadSceneAsync(sceneName, () => tcs.TrySetResult());
 
             await tcs.Task;
         }
 
         /// <summary>
-        /// 异步卸载场景（通过句柄，UniTask 版本）
+        /// [UniTask] 异步卸载场景（通过句柄）
         /// </summary>
         public static async UniTask UnloadSceneUniTaskAsync(
             SceneHandler handler,
@@ -94,13 +100,17 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.UnloadSceneAsync(handler, () => tcs.TrySetResult());
+            UnloadSceneAsync(handler, () => tcs.TrySetResult());
 
             await tcs.Task;
         }
 
+        #endregion
+
+        #region UniTask 切换
+
         /// <summary>
-        /// 异步切换场景（UniTask 版本）
+        /// [UniTask] 异步切换场景
         /// </summary>
         /// <param name="sceneName">目标场景名称</param>
         /// <param name="transition">过渡效果</param>
@@ -116,14 +126,18 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.SwitchSceneAsync(sceneName, transition, data,
+            SwitchSceneAsync(sceneName, transition, data,
                 handler => tcs.TrySetResult(handler));
 
             return await tcs.Task;
         }
 
+        #endregion
+
+        #region UniTask 预加载
+
         /// <summary>
-        /// 异步预加载场景（UniTask 版本）
+        /// [UniTask] 异步预加载场景
         /// </summary>
         public static async UniTask<SceneHandler> PreloadSceneUniTaskAsync(
             string sceneName,
@@ -135,7 +149,7 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.PreloadSceneAsync(sceneName,
+            PreloadSceneAsync(sceneName,
                 handler => tcs.TrySetResult(handler),
                 p => progress?.Report(p),
                 suspendAtProgress);
@@ -143,8 +157,12 @@ namespace YokiFrame
             return await tcs.Task;
         }
 
+        #endregion
+
+        #region UniTask 清理
+
         /// <summary>
-        /// 异步清理所有场景（UniTask 版本）
+        /// [UniTask] 异步清理所有场景
         /// </summary>
         public static async UniTask ClearAllScenesUniTaskAsync(
             bool preserveActive = true,
@@ -154,10 +172,12 @@ namespace YokiFrame
             
             cancellationToken.Register(() => tcs.TrySetCanceled());
 
-            SceneKit.ClearAllScenes(preserveActive, () => tcs.TrySetResult());
+            ClearAllScenes(preserveActive, () => tcs.TrySetResult());
 
             await tcs.Task;
         }
+
+        #endregion
     }
 }
 #endif
