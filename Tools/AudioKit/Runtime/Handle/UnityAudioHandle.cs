@@ -15,6 +15,7 @@ namespace YokiFrame
         private float mFadeSpeed;
         private bool mIsFadingIn;
         private bool mIsFadingOut;
+        private bool mIsStopped;
         private Transform mFollowTarget;
 
         public string Path => mPath;
@@ -83,6 +84,7 @@ namespace YokiFrame
             mFadeSpeed = 0f;
             mIsFadingIn = false;
             mIsFadingOut = false;
+            mIsStopped = false;
             IsPaused = false;
         }
 
@@ -113,10 +115,10 @@ namespace YokiFrame
         /// <returns>true 表示播放完成，需要回收</returns>
         internal bool UpdateFade(float deltaTime)
         {
-            if (mSource == null) return true;
+            if (mSource == default || mIsStopped) return true;
 
             // 更新跟随目标位置
-            if (mFollowTarget != null)
+            if (mFollowTarget != default)
             {
                 mSource.transform.position = mFollowTarget.position;
             }
@@ -140,13 +142,15 @@ namespace YokiFrame
                     mSource.volume = 0f;
                     mSource.Stop();
                     mIsFadingOut = false;
+                    mIsStopped = true;
                     return true;
                 }
             }
 
-            // 检查播放完成（非循环）
-            if (!mSource.isPlaying && !IsPaused && !mSource.loop)
+            // 检查播放完成（非暂停状态下停止播放）
+            if (!mSource.isPlaying && !IsPaused)
             {
+                mIsStopped = true;
                 return true;
             }
 
@@ -173,11 +177,12 @@ namespace YokiFrame
 
         public void Stop()
         {
-            if (mSource != null)
+            if (mSource != null && !mIsStopped)
             {
                 mSource.Stop();
                 mIsFadingIn = false;
                 mIsFadingOut = false;
+                mIsStopped = true;
                 IsPaused = false;
             }
         }
@@ -236,6 +241,7 @@ namespace YokiFrame
             mFadeSpeed = 0f;
             mIsFadingIn = false;
             mIsFadingOut = false;
+            mIsStopped = false;
             mFollowTarget = null;
             IsPaused = false;
         }
