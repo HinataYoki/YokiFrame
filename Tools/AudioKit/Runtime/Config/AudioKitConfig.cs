@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace YokiFrame
 {
     /// <summary>
@@ -21,29 +23,16 @@ namespace YokiFrame
         public int PoolMaxSize { get; set; } = 32;
 
         /// <summary>
-        /// BGM 通道最大并发数（0 表示无限制，1 表示单曲模式）
+        /// 通道最大并发数配置（key: 通道 ID，value: 最大并发数，0 表示无限制）
         /// </summary>
-        public int BgmMaxConcurrent { get; set; } = 1;
-
-        /// <summary>
-        /// 音效通道最大并发数（0 表示无限制）
-        /// </summary>
-        public int SfxMaxConcurrent { get; set; } = 0;
-
-        /// <summary>
-        /// 语音通道最大并发数（0 表示无限制，1 表示单曲模式）
-        /// </summary>
-        public int VoiceMaxConcurrent { get; set; } = 1;
-
-        /// <summary>
-        /// 环境音通道最大并发数（0 表示无限制）
-        /// </summary>
-        public int AmbientMaxConcurrent { get; set; } = 0;
-
-        /// <summary>
-        /// UI 音效通道最大并发数（0 表示无限制）
-        /// </summary>
-        public int UIMaxConcurrent { get; set; } = 0;
+        private readonly Dictionary<int, int> mChannelMaxConcurrent = new()
+        {
+            { (int)AudioChannel.Bgm, 1 },      // BGM 默认单曲模式
+            { (int)AudioChannel.Sfx, 0 },      // SFX 默认无限制
+            { (int)AudioChannel.Voice, 1 },    // Voice 默认单曲模式
+            { (int)AudioChannel.Ambient, 0 },  // Ambient 默认无限制
+            { (int)AudioChannel.UI, 0 }        // UI 默认无限制
+        };
 
         /// <summary>
         /// 全局音量
@@ -97,34 +86,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取指定通道的最大并发数（0 表示无限制）
-        /// </summary>
-        public int GetChannelMaxConcurrent(AudioChannel channel)
-        {
-            return channel switch
-            {
-                AudioChannel.Bgm => BgmMaxConcurrent,
-                AudioChannel.Sfx => SfxMaxConcurrent,
-                AudioChannel.Voice => VoiceMaxConcurrent,
-                AudioChannel.Ambient => AmbientMaxConcurrent,
-                AudioChannel.UI => UIMaxConcurrent,
-                _ => 0
-            };
-        }
-
-        /// <summary>
-        /// 获取指定通道 ID 的最大并发数（支持自定义通道）
-        /// </summary>
-        public int GetChannelMaxConcurrent(int channelId)
-        {
-            if (channelId >= 0 && channelId <= 4)
-            {
-                return GetChannelMaxConcurrent((AudioChannel)channelId);
-            }
-            return 0; // 自定义通道默认无限制
-        }
-
-        /// <summary>
         /// 设置指定通道的默认音量
         /// </summary>
         public void SetChannelVolume(AudioChannel channel, float volume)
@@ -147,6 +108,30 @@ namespace YokiFrame
                     UIVolume = volume;
                     break;
             }
+        }
+
+        /// <summary>
+        /// 获取指定通道的最大并发数（0 表示无限制）
+        /// </summary>
+        public int GetChannelMaxConcurrent(int channelId)
+        {
+            return mChannelMaxConcurrent.TryGetValue(channelId, out var max) ? max : 0;
+        }
+
+        /// <summary>
+        /// 设置指定通道的最大并发数（0 表示无限制，支持自定义通道）
+        /// </summary>
+        public void SetChannelMaxConcurrent(int channelId, int maxConcurrent)
+        {
+            mChannelMaxConcurrent[channelId] = maxConcurrent;
+        }
+
+        /// <summary>
+        /// 设置指定通道的最大并发数（内置通道便捷方法）
+        /// </summary>
+        public void SetChannelMaxConcurrent(AudioChannel channel, int maxConcurrent)
+        {
+            SetChannelMaxConcurrent((int)channel, maxConcurrent);
         }
     }
 }
