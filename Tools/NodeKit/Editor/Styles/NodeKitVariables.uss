@@ -1,0 +1,32 @@
+/* NodeKit 样式变量 */
+
+:root {
+    /* 颜色 */
+    --nodekit-bg-primary: #1a1a1a;
+    --nodekit-bg-secondary: #2d2d2d;
+    --nodekit-bg-tertiary: #3c3c3c;
+    
+    --nodekit-border-dark: #1a1a1a;
+    --nodekit-border-light: #4a4a4a;
+    
+    --nodekit-text-primary: #e0e0e0;
+    --nodekit-text-secondary: #b0b0b0;
+    --nodekit-text-muted: #808080;
+    
+    --nodekit-accent: #44bfff;
+    --nodekit-accent-hover: #66cfff;
+    --nodekit-warning: #ffaa44;
+    --nodekit-error: #ff4444;
+    --nodekit-success: #44ff88;
+    
+    /* 尺寸 */
+    --nodekit-node-min-width: 150px;
+    --nodekit-node-border-radius: 6px;
+    --nodekit-port-size: 10px;
+    --nodekit-edge-width: 3px;
+    
+    /* 字体 */
+    --nodekit-font-size-small: 10px;
+    --nodekit-font-size-normal: 12px;
+    --nodekit-font-size-large: 14px;
+}

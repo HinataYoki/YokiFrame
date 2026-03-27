@@ -107,6 +107,36 @@ namespace YokiFrame
                 return null;
             }
 
+            var channelId = config.ChannelId;
+
+            // 检查通道并发限制，超出时停止最早的音频
+            var maxConcurrent = mConfig.GetChannelMaxConcurrent(channelId);
+            if (maxConcurrent > 0)
+            {
+                var channelHandleCount = 0;
+                UnityAudioHandle oldestHandle = null;
+
+                foreach (var h in mPlayingHandles)
+                {
+                    if (h.ChannelId == channelId)
+                    {
+                        channelHandleCount++;
+                        if (oldestHandle == default)
+                        {
+                            oldestHandle = h;
+                        }
+                    }
+                }
+
+                // 超出通道并发限制，停止最早的音频
+                if (channelHandleCount >= maxConcurrent && oldestHandle != default)
+                {
+                    oldestHandle.Stop();
+                    mPlayingHandles.Remove(oldestHandle);
+                    RecycleHandle(oldestHandle);
+                }
+            }
+
             // 从池中分配 AudioSource
             var source = AllocateSource();
 
@@ -115,7 +145,6 @@ namespace YokiFrame
 
             // 获取句柄
             var handle = SafePoolKit<UnityAudioHandle>.Instance.Allocate();
-            var channelId = config.ChannelId;
             var channelVolume = GetChannelVolume(channelId);
             var effectiveVolume = config.Volume * channelVolume * mGlobalVolume;
 

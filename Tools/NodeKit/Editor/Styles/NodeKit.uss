@@ -1,0 +1,184 @@
+/* NodeKit 主样式表 - BEM 命名规范 */
+
+/* === Graph View === */
+.yoki-graph-view {
+    flex-grow: 1;
+}
+
+.yoki-graph-view GridBackground {
+    --grid-background-color: #1a1a1a;
+    --line-color: rgba(255, 255, 255, 0.05);
+    --thick-line-color: rgba(255, 255, 255, 0.1);
+    --spacing: 20;
+}
+
+/* === Toolbar === */
+.yoki-toolbar {
+    flex-direction: row;
+    background-color: #3c3c3c;
+    border-bottom-width: 1px;
+    border-bottom-color: #232323;
+    padding: 2px 4px;
+}
+
+/* === Node === */
+.yoki-node {
+    min-width: 150px;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: #1a1a1a;
+    background-color: #2d2d2d;
+    overflow: hidden;
+}
+
+.yoki-node:selected {
+    border-color: #44bfff;
+    border-width: 2px;
+}
+
+.yoki-node__header {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
+}
+
+.yoki-node__title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: #e0e0e0;
+}
+
+.yoki-node__body {
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* === Port === */
+.yoki-port {
+    height: 20px;
+    padding: 2px 4px;
+}
+
+.yoki-port--input {
+    flex-direction: row;
+}
+
+.yoki-port--output {
+    flex-direction: row-reverse;
+}
+
+.yoki-port > #connector {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: #1a1a1a;
+    margin: 2px;
+}
+
+.yoki-port > #connector:hover {
+    border-color: #44bfff;
+}
+
+.yoki-port > #type {
+    font-size: 10px;
+    color: #b0b0b0;
+    margin: 0 4px;
+}
+
+/* === Edge === */
+.yoki-edge {
+    --edge-width: 3;
+}
+
+.yoki-edge:selected {
+    --edge-color: #44bfff;
+}
+
+/* === Search Window === */
+.yoki-search-window {
+    background-color: #2d2d2d;
+    border-radius: 4px;
+}
+
+/* === Dynamic Port List === */
+.yoki-dynamic-port-list {
+    margin: 4px 0;
+    padding: 4px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+
+.yoki-dynamic-port-list__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.yoki-dynamic-port-list__label {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: #c0c0c0;
+}
+
+.yoki-dynamic-port-list__add-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    padding: 0;
+    margin: 0;
+    border-radius: 3px;
+}
+
+.yoki-dynamic-port-list__items {
+    flex-direction: column;
+}
+
+/* === Dynamic Port Item === */
+.yoki-dynamic-port-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 0;
+    margin: 1px 0;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 2px;
+}
+
+.yoki-dynamic-port-item__drag-handle {
+    width: 12px;
+    height: 16px;
+    margin-right: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: move-arrow;
+}
+
+.yoki-dynamic-port-item__drag-handle:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.yoki-dynamic-port-item__content {
+    flex-grow: 1;
+}
+
+.yoki-dynamic-port-item__label {
+    font-size: 10px;
+    color: #a0a0a0;
+}
+
+.yoki-dynamic-port-item__remove-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    padding: 0;
+    margin: 0 2px;
+    border-radius: 2px;
+}
+
+/* === Rename Popup === */
+.yoki-rename-popup {
+    background-color: #3c3c3c;
+    border-radius: 4px;
+}
