@@ -107,10 +107,8 @@ namespace YokiFrame
                 return null;
             }
 
-            // 创建 AudioSource
-            var sourceGo = new GameObject($"Audio_{path.GetHashCode():X8}");
-            sourceGo.transform.SetParent(mAudioRoot.transform);
-            var source = sourceGo.AddComponent<AudioSource>();
+            // 从池中分配 AudioSource
+            var source = AllocateSource();
 
             // 配置 AudioSource
             ConfigureAudioSource(source, clip, config);
