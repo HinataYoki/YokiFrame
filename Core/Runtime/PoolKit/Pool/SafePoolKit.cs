@@ -103,7 +103,10 @@ namespace YokiFrame
             }
             
 #if UNITY_EDITOR
-            if (PoolDebugger.EnableTracking)
+            // 只有当对象曾被借出过时才追踪回收
+            // Init 预创建的对象从未被 Allocate，不应追踪
+            // 通过检查 sObjectToPool 字典判断对象是否曾被借出
+            if (PoolDebugger.EnableTracking && PoolDebugger.IsObjectTracked(obj))
             {
                 PoolDebugger.TrackRecycle(this, obj);
             }

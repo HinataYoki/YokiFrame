@@ -179,6 +179,17 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 检查对象是否被追踪（是否曾被 Allocate 过）
+        /// </summary>
+        /// <param name="obj">要检查的对象</param>
+        /// <returns>true 表示对象在追踪字典中（曾被借出），false 表示不在（如 Init 预创建的对象）</returns>
+        public static bool IsObjectTracked(object obj)
+        {
+            if (obj == default || !EnableTracking) return false;
+            return sObjectToPool.ContainsKey(obj);
+        }
+
+        /// <summary>
         /// 更新池的最大缓存容量
         /// </summary>
         public static void UpdateMaxCacheCount(object pool, int maxCacheCount)

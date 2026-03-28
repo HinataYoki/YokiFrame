@@ -107,50 +107,15 @@ namespace YokiFrame
                 return null;
             }
 
-            // 检查通道并发限制
-            var channelId = config.ChannelId;
-            var maxConcurrent = mConfig.GetChannelMaxConcurrent(channelId);
-            if (maxConcurrent > 0)
-            {
-                // 统计当前通道正在播放的音频数量
-                var currentCount = 0;
-                foreach (var h in mPlayingHandles)
-                {
-                    if (h.ChannelId == channelId)
-                    {
-                        currentCount++;
-                    }
-                }
-
-                // 如果达到上限，停止最早的音频
-                if (currentCount >= maxConcurrent)
-                {
-                    UnityAudioHandle oldestHandle = null;
-                    foreach (var h in mPlayingHandles)
-                    {
-                        if (h.ChannelId == channelId)
-                        {
-                            oldestHandle = h as UnityAudioHandle;
-                            break;
-                        }
-                    }
-
-                    if (oldestHandle != null)
-                    {
-                        // 只调用 Stop，让 Update 循环自动回收
-                        oldestHandle.Stop();
-                    }
-                }
-            }
-
             // 从池中分配 AudioSource
             var source = AllocateSource();
 
             // 配置 AudioSource
             ConfigureAudioSource(source, clip, config);
 
-            // 获取句柄
+            // 获取句柄（先 Allocate，确保 PoolDebugger 正确追踪）
             var handle = SafePoolKit<UnityAudioHandle>.Instance.Allocate();
+            var channelId = config.ChannelId;
             var channelVolume = GetChannelVolume(channelId);
             var effectiveVolume = config.Volume * channelVolume * mGlobalVolume;
 
@@ -169,6 +134,43 @@ namespace YokiFrame
             // 开始播放
             source.Play();
             mPlayingHandles.Add(handle);
+
+            // 检查通道并发限制（在新 Handle 添加到列表后）
+            var maxConcurrent = mConfig.GetChannelMaxConcurrent(channelId);
+            if (maxConcurrent > 0)
+            {
+                // 统计当前通道正在播放的音频数量
+                var currentCount = 0;
+                foreach (var h in mPlayingHandles)
+                {
+                    if (h.ChannelId == channelId)
+                    {
+                        currentCount++;
+                    }
+                }
+
+                // 如果超过上限，停止最早的音频（跳过刚添加的新 Handle）
+                if (currentCount > maxConcurrent)
+                {
+                    UnityAudioHandle oldestHandle = null;
+                    foreach (var h in mPlayingHandles)
+                    {
+                        if (h.ChannelId == channelId && h != handle)
+                        {
+                            oldestHandle = h as UnityAudioHandle;
+                            break;
+                        }
+                    }
+
+                    if (oldestHandle != null)
+                    {
+                        // 立即停止、移除并回收
+                        oldestHandle.Stop();
+                        mPlayingHandles.Remove(oldestHandle);
+                        RecycleHandle(oldestHandle);
+                    }
+                }
+            }
 
             // 报告播放事件
             AudioMonitorService.ReportPlay(path, channelId, config.Volume, config.Pitch, clip.length);

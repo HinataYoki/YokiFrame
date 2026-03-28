@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-03-28
+
+### Added
+
+- **AudioKit** Handler 生命周期管理和状态检测
+  - 新增 `IAudioHandle.IsValid` 属性，检测 Handle 是否已回收
+  - 新增 `IAudioHandle.IsManualLifecycle` 属性，查询当前生命周期模式
+  - 新增 `IAudioHandle.SetManualLifecycle(bool)` 方法，运行时切换生命周期模式
+  - 新增 `IAudioHandle.Release()` 方法，手动释放 Handle
+  - 新增 `AudioPlayConfig.ManualLifecycle` 字段，配置时声明手动生命周期
+  - 新增 `AudioPlayConfig.WithManualLifecycle(bool)` 链式配置方法
+  - 所有 Handle 操作方法（Pause/Resume/Stop/StopWithFade/SetPosition）增加 `IsValid` 检测和警告日志
+  - 手动生命周期模式下，音频播放完成不会自动回收，需调用 `Release()` 手动释放
+  - 适用场景：需要在音频播放完成后保留 Handle 进行状态查询
+
+### Changed
+
+- **AudioKit** 优化自动回收逻辑
+  - `UnityAudioHandle.UpdateFade()` 和 `FmodAudioHandle.UpdateFade()` 在播放完成和淡出完成时检查手动模式标记
+  - 手动模式下返回 `false` 阻止自动回收，自动模式下返回 `true` 触发回收
+  - `UnityAudioHandle.Initialize()` 和 `FmodAudioHandle.Initialize()` 新增 `manualLifecycle` 参数
+  - `UnityAudioBackend.PlayInternal()` 传递 `config.ManualLifecycle` 参数到 Handle
+
+### Fixed
+
+- **AudioKit** 修复用户持有 Handle 引用但内部已回收导致的空引用问题
+  - 所有属性访问（Volume/Pitch/Time/Duration）增加 `IsValid` 检测
+  - 失效 Handle 操作时输出警告日志，避免静默失败
+
+### Documentation
+
+- **AudioKit** 编辑器文档更新
+  - 更新"句柄控制"章节，修正 API 示例（`FadeOut` → `StopWithFade`，`SetVolume` → `Volume` 属性）
+  - 新增"手动生命周期管理"章节，包含完整使用示例和场景说明
+  - 补充 `IsValid` 和 `IsManualLifecycle` 属性使用示例
+
 ## [1.8.0] - 2026-03-20
 
 ### Added
