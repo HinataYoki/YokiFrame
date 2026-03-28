@@ -107,33 +107,39 @@ namespace YokiFrame
                 return null;
             }
 
+            // 检查通道并发限制
             var channelId = config.ChannelId;
-
-            // 检查通道并发限制，超出时停止最早的音频
             var maxConcurrent = mConfig.GetChannelMaxConcurrent(channelId);
             if (maxConcurrent > 0)
             {
-                var channelHandleCount = 0;
-                UnityAudioHandle oldestHandle = null;
-
+                // 统计当前通道正在播放的音频数量
+                var currentCount = 0;
                 foreach (var h in mPlayingHandles)
                 {
                     if (h.ChannelId == channelId)
                     {
-                        channelHandleCount++;
-                        if (oldestHandle == default)
-                        {
-                            oldestHandle = h;
-                        }
+                        currentCount++;
                     }
                 }
 
-                // 超出通道并发限制，停止最早的音频
-                if (channelHandleCount >= maxConcurrent && oldestHandle != default)
+                // 如果达到上限，停止最早的音频
+                if (currentCount >= maxConcurrent)
                 {
-                    oldestHandle.Stop();
-                    mPlayingHandles.Remove(oldestHandle);
-                    RecycleHandle(oldestHandle);
+                    UnityAudioHandle oldestHandle = null;
+                    foreach (var h in mPlayingHandles)
+                    {
+                        if (h.ChannelId == channelId)
+                        {
+                            oldestHandle = h as UnityAudioHandle;
+                            break;
+                        }
+                    }
+
+                    if (oldestHandle != null)
+                    {
+                        // 只调用 Stop，让 Update 循环自动回收
+                        oldestHandle.Stop();
+                    }
                 }
             }
 
@@ -148,7 +154,7 @@ namespace YokiFrame
             var channelVolume = GetChannelVolume(channelId);
             var effectiveVolume = config.Volume * channelVolume * mGlobalVolume;
 
-            handle.Initialize(path, source, channelId, config.Volume, config.FollowTarget);
+            handle.Initialize(path, source, channelId, config.Volume, config.ManualLifecycle, config.FollowTarget);
 
             // 淡入处理
             if (config.FadeInDuration > 0f)

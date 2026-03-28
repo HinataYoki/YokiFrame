@@ -33,6 +33,11 @@ namespace YokiFrame
         public bool Loop;
 
         /// <summary>
+        /// 手动生命周期管理（禁用自动回收）
+        /// </summary>
+        public bool ManualLifecycle;
+
+        /// <summary>
         /// 淡入时长（秒）
         /// </summary>
         public float FadeInDuration;
@@ -81,6 +86,7 @@ namespace YokiFrame
             Volume = 1f,
             Pitch = 1f,
             Loop = false,
+            ManualLifecycle = false,
             FadeInDuration = 0f,
             FadeOutDuration = 0f,
             Is3D = false,
@@ -159,6 +165,15 @@ namespace YokiFrame
         public AudioPlayConfig WithLoop(bool loop)
         {
             Loop = loop;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置手动生命周期管理（禁用自动回收）
+        /// </summary>
+        public AudioPlayConfig WithManualLifecycle(bool manual)
+        {
+            ManualLifecycle = manual;
             return this;
         }
 

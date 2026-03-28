@@ -21,7 +21,10 @@ namespace YokiFrame
         private bool mIsFadingOut;
         private Transform mFollowTarget;
         private int mDurationMs;
+        private bool mManualLifecycle; // 手动生命周期管理
 
+        public bool IsValid => mInstance.isValid();
+        public bool IsManualLifecycle => mManualLifecycle;
         public string Path => mPath;
         public bool IsRecycled { get; set; }
         public int ChannelId => mChannelId;
@@ -31,7 +34,7 @@ namespace YokiFrame
         {
             get
             {
-                if (!mInstance.isValid()) return false;
+                if (!IsValid) return false;
                 mInstance.getPlaybackState(out var state);
                 return state == PLAYBACK_STATE.PLAYING || state == PLAYBACK_STATE.STARTING;
             }
@@ -44,8 +47,10 @@ namespace YokiFrame
             get => mBaseVolume;
             set
             {
+                if (!IsValid) return;
+
                 mBaseVolume = Mathf.Clamp01(value);
-                if (mInstance.isValid() && !mIsFadingIn && !mIsFadingOut)
+                if (!mIsFadingIn && !mIsFadingOut)
                 {
                     mInstance.setVolume(mBaseVolume);
                 }
@@ -56,16 +61,14 @@ namespace YokiFrame
         {
             get
             {
-                if (!mInstance.isValid()) return 1f;
+                if (!IsValid) return 1f;
                 mInstance.getPitch(out var pitch);
                 return pitch;
             }
             set
             {
-                if (mInstance.isValid())
-                {
-                    mInstance.setPitch(Mathf.Clamp(value, 0.01f, 3f));
-                }
+                if (!IsValid) return;
+                mInstance.setPitch(Mathf.Clamp(value, 0.01f, 3f));
             }
         }
 
@@ -73,17 +76,15 @@ namespace YokiFrame
         {
             get
             {
-                if (!mInstance.isValid()) return 0f;
+                if (!IsValid) return 0f;
                 mInstance.getTimelinePosition(out var positionMs);
                 return positionMs / 1000f;
             }
             set
             {
-                if (mInstance.isValid())
-                {
-                    var positionMs = Mathf.Clamp((int)(value * 1000f), 0, mDurationMs);
-                    mInstance.setTimelinePosition(positionMs);
-                }
+                if (!IsValid) return;
+                var positionMs = Mathf.Clamp((int)(value * 1000f), 0, mDurationMs);
+                mInstance.setTimelinePosition(positionMs);
             }
         }
 
@@ -97,7 +98,7 @@ namespace YokiFrame
         /// 初始化句柄
         /// </summary>
         internal void Initialize(string path, EventInstance instance, EventDescription description, 
-            int channelId, float baseVolume, Transform followTarget = null)
+            int channelId, float baseVolume, bool manualLifecycle = false, Transform followTarget = null)
         {
             mPath = path;
             mInstance = instance;
@@ -106,6 +107,7 @@ namespace YokiFrame
             mBaseVolume = baseVolume;
             mTargetVolume = baseVolume;
             mFollowTarget = followTarget;
+            mManualLifecycle = manualLifecycle;
             mFadeSpeed = 0f;
             mIsFadingIn = false;
             mIsFadingOut = false;
@@ -149,7 +151,7 @@ namespace YokiFrame
         /// <returns>true 表示播放完成，需要回收</returns>
         internal bool UpdateFade(float deltaTime)
         {
-            if (!mInstance.isValid()) return true;
+            if (!IsValid) return true;
 
             // 更新跟随目标位置
             if (mFollowTarget != null)
@@ -183,6 +185,12 @@ namespace YokiFrame
                     mInstance.setVolume(0f);
                     mInstance.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
                     mIsFadingOut = false;
+                    
+                    // 手动生命周期模式下不自动回收
+                    if (mManualLifecycle)
+                    {
+                        return false;
+                    }
                     return true;
                 }
                 else
@@ -195,6 +203,11 @@ namespace YokiFrame
             mInstance.getPlaybackState(out var state);
             if (state == PLAYBACK_STATE.STOPPED && !IsPaused)
             {
+                // 手动生命周期模式下不自动回收
+                if (mManualLifecycle)
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -203,7 +216,13 @@ namespace YokiFrame
 
         public void Pause()
         {
-            if (mInstance.isValid() && IsPlaying)
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试暂停已失效的音频句柄");
+                return;
+            }
+
+            if (IsPlaying)
             {
                 mInstance.setPaused(true);
                 IsPaused = true;
@@ -212,7 +231,13 @@ namespace YokiFrame
 
         public void Resume()
         {
-            if (mInstance.isValid() && IsPaused)
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试恢复已失效的音频句柄");
+                return;
+            }
+
+            if (IsPaused)
             {
                 mInstance.setPaused(false);
                 IsPaused = false;
@@ -221,18 +246,27 @@ namespace YokiFrame
 
         public void Stop()
         {
-            if (mInstance.isValid())
+            if (!IsValid)
             {
-                mInstance.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
-                mIsFadingIn = false;
-                mIsFadingOut = false;
-                IsPaused = false;
+                KitLogger.Warning("[AudioKit] 尝试停止已失效的音频句柄");
+                return;
             }
+
+            mInstance.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
+            mIsFadingIn = false;
+            mIsFadingOut = false;
+            IsPaused = false;
         }
 
         public void StopWithFade(float fadeDuration)
         {
-            if (!mInstance.isValid() || !IsPlaying) return;
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试淡出已失效的音频句柄");
+                return;
+            }
+
+            if (!IsPlaying) return;
 
             if (fadeDuration <= 0f)
             {
@@ -251,11 +285,38 @@ namespace YokiFrame
 
         public void SetPosition(Vector3 position)
         {
-            if (mInstance.isValid())
+            if (!IsValid)
             {
-                var attributes = RuntimeUtils.To3DAttributes(position);
-                mInstance.set3DAttributes(attributes);
+                KitLogger.Warning("[AudioKit] 尝试设置已失效音频句柄的位置");
+                return;
             }
+
+            var attributes = RuntimeUtils.To3DAttributes(position);
+            mInstance.set3DAttributes(attributes);
+        }
+
+        public void SetManualLifecycle(bool manual)
+        {
+            mManualLifecycle = manual;
+        }
+
+        public void Release()
+        {
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试释放已失效的音频句柄");
+                return;
+            }
+
+            if (!mManualLifecycle)
+            {
+                KitLogger.Warning("[AudioKit] 仅手动生命周期模式下可调用 Release()");
+                return;
+            }
+
+            // 停止播放并标记为已停止，让 Backend 在下一帧回收
+            Stop();
+            mManualLifecycle = false; // 解除手动模式，允许回收
         }
 
         /// <summary>
@@ -263,7 +324,7 @@ namespace YokiFrame
         /// </summary>
         internal void UpdateEffectiveVolume(float channelVolume, float globalVolume)
         {
-            if (!mInstance.isValid()) return;
+            if (!IsValid) return;
 
             var effectiveVolume = mBaseVolume * channelVolume * globalVolume;
 
@@ -282,7 +343,7 @@ namespace YokiFrame
         /// </summary>
         internal void ReleaseInstance()
         {
-            if (mInstance.isValid())
+            if (IsValid)
             {
                 mInstance.release();
             }
@@ -302,6 +363,7 @@ namespace YokiFrame
             mFadeSpeed = 0f;
             mIsFadingIn = false;
             mIsFadingOut = false;
+            mManualLifecycle = false;
             mFollowTarget = null;
             mDurationMs = 0;
             IsPaused = false;

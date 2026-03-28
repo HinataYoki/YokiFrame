@@ -139,50 +139,6 @@ namespace YokiFrame
         /// </summary>
         public static IAudioLoaderPool GetLoaderPool() => sLoaderPool;
 
-        /// <summary>
-        /// 设置指定通道的最大并发数（0 表示无限制，支持自定义通道）
-        /// </summary>
-        /// <param name="channelId">通道 ID（0-4 为内置通道，5+ 为自定义通道）</param>
-        /// <param name="maxConcurrent">最大并发数，0 表示无限制</param>
-        public static void SetChannelMaxConcurrent(int channelId, int maxConcurrent)
-        {
-            if (sConfig == null)
-            {
-                sConfig = AudioKitConfig.Default;
-            }
-            sConfig.SetChannelMaxConcurrent(channelId, maxConcurrent);
-        }
-
-        /// <summary>
-        /// 设置指定通道的最大并发数（内置通道便捷方法）
-        /// </summary>
-        /// <param name="channel">内置通道枚举</param>
-        /// <param name="maxConcurrent">最大并发数，0 表示无限制</param>
-        public static void SetChannelMaxConcurrent(AudioChannel channel, int maxConcurrent)
-        {
-            SetChannelMaxConcurrent((int)channel, maxConcurrent);
-        }
-
-        /// <summary>
-        /// 获取指定通道的最大并发数（0 表示无限制）
-        /// </summary>
-        /// <param name="channelId">通道 ID</param>
-        /// <returns>最大并发数，0 表示无限制</returns>
-        public static int GetChannelMaxConcurrent(int channelId)
-        {
-            return sConfig?.GetChannelMaxConcurrent(channelId) ?? 0;
-        }
-
-        /// <summary>
-        /// 获取指定通道的最大并发数（内置通道便捷方法）
-        /// </summary>
-        /// <param name="channel">内置通道枚举</param>
-        /// <returns>最大并发数，0 表示无限制</returns>
-        public static int GetChannelMaxConcurrent(AudioChannel channel)
-        {
-            return GetChannelMaxConcurrent((int)channel);
-        }
-
         #endregion
 
         #region 更新
@@ -232,6 +188,44 @@ namespace YokiFrame
             {
                 sChannelVolumes[i] = 1f;
             }
+        }
+
+        #endregion
+
+        #region 通道并发控制
+
+        /// <summary>
+        /// 设置指定通道的最大并发数（0 表示无限制，支持自定义通道）
+        /// </summary>
+        public static void SetChannelMaxConcurrent(int channelId, int maxConcurrent)
+        {
+            EnsureInitialized();
+            sConfig.SetChannelMaxConcurrent(channelId, maxConcurrent);
+        }
+
+        /// <summary>
+        /// 设置指定通道的最大并发数（内置通道便捷方法）
+        /// </summary>
+        public static void SetChannelMaxConcurrent(AudioChannel channel, int maxConcurrent)
+        {
+            SetChannelMaxConcurrent((int)channel, maxConcurrent);
+        }
+
+        /// <summary>
+        /// 获取指定通道的最大并发数（0 表示无限制）
+        /// </summary>
+        public static int GetChannelMaxConcurrent(int channelId)
+        {
+            EnsureInitialized();
+            return sConfig.GetChannelMaxConcurrent(channelId);
+        }
+
+        /// <summary>
+        /// 获取指定通道的最大并发数（内置通道便捷方法）
+        /// </summary>
+        public static int GetChannelMaxConcurrent(AudioChannel channel)
+        {
+            return GetChannelMaxConcurrent((int)channel);
         }
 
         #endregion

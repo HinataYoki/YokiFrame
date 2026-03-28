@@ -35,6 +35,22 @@ AudioKit.StopChannel(AudioChannel.Sfx);",
                     },
                     new()
                     {
+                        Title = "通道并发控制",
+                        Code = @"// 设置通道最大并发数（0 表示无限制）
+AudioKit.SetChannelMaxConcurrent(AudioChannel.Bgm, 1);    // BGM 单曲模式
+AudioKit.SetChannelMaxConcurrent(AudioChannel.Voice, 1);  // Voice 单曲模式
+AudioKit.SetChannelMaxConcurrent(AudioChannel.Sfx, 0);    // SFX 无限制
+
+// 自定义通道（channelId >= 5）
+AudioKit.SetChannelMaxConcurrent(10, 3);  // 自定义通道 10 最多 3 个并发
+
+// 查询通道并发限制
+int bgmMax = AudioKit.GetChannelMaxConcurrent(AudioChannel.Bgm);
+int customMax = AudioKit.GetChannelMaxConcurrent(10);",
+                        Explanation = "达到并发上限时，新音频会自动停止最早播放的音频。"
+                    },
+                    new()
+                    {
                         Title = "全局控制",
                         Code = @"// 全局音量
 AudioKit.SetGlobalVolume(0.7f);

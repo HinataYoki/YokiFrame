@@ -23,7 +23,8 @@ namespace YokiFrame.EditorTools
 var config = new AudioKitConfig
 {
     MaxConcurrentSounds = 32,
-    PoolSize = 16,
+    PoolInitialSize = 8,   // 对象池初始大小
+    PoolMaxSize = 32,      // 对象池最大大小
     GlobalVolume = 1f,
     BgmVolume = 0.8f,
     SfxVolume = 1f

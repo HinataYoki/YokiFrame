@@ -15,15 +15,18 @@ namespace YokiFrame
         private float mFadeSpeed;
         private bool mIsFadingIn;
         private bool mIsFadingOut;
-        private bool mIsStopped;
         private Transform mFollowTarget;
+        private bool mIsStopped; // 标记是否已手动停止
+        private bool mManualLifecycle; // 手动生命周期管理
 
+        public bool IsValid => mSource != null;
+        public bool IsManualLifecycle => mManualLifecycle;
         public string Path => mPath;
         public bool IsRecycled { get; set; }
         public int ChannelId => mChannelId;
         public AudioChannel Channel => mChannelId < 5 ? (AudioChannel)mChannelId : AudioChannel.Sfx;
 
-        public bool IsPlaying => mSource != null && mSource.isPlaying && !mIsFadingOut;
+        public bool IsPlaying => IsValid && mSource.isPlaying && !mIsFadingOut;
 
         public bool IsPaused { get; private set; }
 
@@ -32,8 +35,10 @@ namespace YokiFrame
             get => mBaseVolume;
             set
             {
+                if (!IsValid) return;
+
                 mBaseVolume = Mathf.Clamp01(value);
-                if (mSource != null && !mIsFadingIn && !mIsFadingOut)
+                if (!mIsFadingIn && !mIsFadingOut)
                 {
                     mSource.volume = mBaseVolume;
                 }
@@ -42,29 +47,25 @@ namespace YokiFrame
 
         public float Pitch
         {
-            get => mSource != null ? mSource.pitch : 1f;
+            get => IsValid ? mSource.pitch : 1f;
             set
             {
-                if (mSource != null)
-                {
-                    mSource.pitch = Mathf.Clamp(value, 0.01f, 3f);
-                }
+                if (!IsValid) return;
+                mSource.pitch = Mathf.Clamp(value, 0.01f, 3f);
             }
         }
 
         public float Time
         {
-            get => mSource != null ? mSource.time : 0f;
+            get => IsValid ? mSource.time : 0f;
             set
             {
-                if (mSource != null)
-                {
-                    mSource.time = Mathf.Clamp(value, 0f, Duration);
-                }
+                if (!IsValid) return;
+                mSource.time = Mathf.Clamp(value, 0f, Duration);
             }
         }
 
-        public float Duration => mSource != null && mSource.clip != null ? mSource.clip.length : 0f;
+        public float Duration => IsValid && mSource.clip != null ? mSource.clip.length : 0f;
 
         internal AudioSource Source => mSource;
         internal Transform FollowTarget => mFollowTarget;
@@ -73,7 +74,7 @@ namespace YokiFrame
         /// <summary>
         /// 初始化句柄
         /// </summary>
-        internal void Initialize(string path, AudioSource source, int channelId, float baseVolume, Transform followTarget = null)
+        internal void Initialize(string path, AudioSource source, int channelId, float baseVolume, bool manualLifecycle = false, Transform followTarget = null)
         {
             mPath = path;
             mSource = source;
@@ -81,6 +82,7 @@ namespace YokiFrame
             mBaseVolume = baseVolume;
             mTargetVolume = baseVolume;
             mFollowTarget = followTarget;
+            mManualLifecycle = manualLifecycle;
             mFadeSpeed = 0f;
             mIsFadingIn = false;
             mIsFadingOut = false;
@@ -115,10 +117,10 @@ namespace YokiFrame
         /// <returns>true 表示播放完成，需要回收</returns>
         internal bool UpdateFade(float deltaTime)
         {
-            if (mSource == default || mIsStopped) return true;
+            if (mSource == null || mIsStopped) return true;
 
             // 更新跟随目标位置
-            if (mFollowTarget != default)
+            if (mFollowTarget != null)
             {
                 mSource.transform.position = mFollowTarget.position;
             }
@@ -143,14 +145,26 @@ namespace YokiFrame
                     mSource.Stop();
                     mIsFadingOut = false;
                     mIsStopped = true;
+                    
+                    // 手动生命周期模式下不自动回收
+                    if (mManualLifecycle)
+                    {
+                        return false;
+                    }
                     return true;
                 }
             }
 
-            // 检查播放完成（非暂停状态下停止播放）
-            if (!mSource.isPlaying && !IsPaused)
+            // 检查播放完成（非循环）
+            if (!mSource.isPlaying && !IsPaused && !mSource.loop)
             {
                 mIsStopped = true;
+                
+                // 手动生命周期模式下不自动回收
+                if (mManualLifecycle)
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -159,7 +173,13 @@ namespace YokiFrame
 
         public void Pause()
         {
-            if (mSource != null && mSource.isPlaying)
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试暂停已失效的音频句柄");
+                return;
+            }
+
+            if (mSource.isPlaying)
             {
                 mSource.Pause();
                 IsPaused = true;
@@ -168,7 +188,13 @@ namespace YokiFrame
 
         public void Resume()
         {
-            if (mSource != null && IsPaused)
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试恢复已失效的音频句柄");
+                return;
+            }
+
+            if (IsPaused)
             {
                 mSource.UnPause();
                 IsPaused = false;
@@ -177,19 +203,28 @@ namespace YokiFrame
 
         public void Stop()
         {
-            if (mSource != null && !mIsStopped)
+            if (!IsValid)
             {
-                mSource.Stop();
-                mIsFadingIn = false;
-                mIsFadingOut = false;
-                mIsStopped = true;
-                IsPaused = false;
+                KitLogger.Warning("[AudioKit] 尝试停止已失效的音频句柄");
+                return;
             }
+
+            mSource.Stop();
+            mIsFadingIn = false;
+            mIsFadingOut = false;
+            mIsStopped = true;
+            IsPaused = false;
         }
 
         public void StopWithFade(float fadeDuration)
         {
-            if (mSource == null || !mSource.isPlaying) return;
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试淡出已失效的音频句柄");
+                return;
+            }
+
+            if (!mSource.isPlaying) return;
 
             if (fadeDuration <= 0f)
             {
@@ -205,10 +240,37 @@ namespace YokiFrame
 
         public void SetPosition(Vector3 position)
         {
-            if (mSource != null)
+            if (!IsValid)
             {
-                mSource.transform.position = position;
+                KitLogger.Warning("[AudioKit] 尝试设置已失效音频句柄的位置");
+                return;
             }
+
+            mSource.transform.position = position;
+        }
+
+        public void SetManualLifecycle(bool manual)
+        {
+            mManualLifecycle = manual;
+        }
+
+        public void Release()
+        {
+            if (!IsValid)
+            {
+                KitLogger.Warning("[AudioKit] 尝试释放已失效的音频句柄");
+                return;
+            }
+
+            if (!mManualLifecycle)
+            {
+                KitLogger.Warning("[AudioKit] 仅手动生命周期模式下可调用 Release()");
+                return;
+            }
+
+            // 停止播放并标记为已停止，让 Backend 在下一帧回收
+            Stop();
+            mManualLifecycle = false; // 解除手动模式，允许回收
         }
 
         /// <summary>
@@ -216,7 +278,7 @@ namespace YokiFrame
         /// </summary>
         internal void UpdateEffectiveVolume(float channelVolume, float globalVolume)
         {
-            if (mSource == null) return;
+            if (!IsValid) return;
 
             var effectiveVolume = mBaseVolume * channelVolume * globalVolume;
             
@@ -242,6 +304,7 @@ namespace YokiFrame
             mIsFadingIn = false;
             mIsFadingOut = false;
             mIsStopped = false;
+            mManualLifecycle = false;
             mFollowTarget = null;
             IsPaused = false;
         }
