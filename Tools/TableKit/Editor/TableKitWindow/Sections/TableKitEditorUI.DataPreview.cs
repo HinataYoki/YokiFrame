@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using SimpleJSON;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -203,14 +203,15 @@ namespace YokiFrame.TableKit.Editor
 
             try
             {
-                var json = JSON.Parse(File.ReadAllText(jsonPath));
-                if (json == null)
+                var jsonNode = LubanNamespaceDetector.ParseJson(File.ReadAllText(jsonPath));
+                if (jsonNode == null)
                 {
                     AddTreeError(container, "JSON 解析失败");
                     UpdateMatchLabel(0);
                     return;
                 }
 
+                var json = new LubanNamespaceDetector.JSONNodeWrapper(jsonNode);
                 var lowerSearch = string.IsNullOrEmpty(searchText) ? "" : searchText.ToLowerInvariant();
                 BuildJsonTreeWithSearch(json, container, 0, Path.GetFileNameWithoutExtension(jsonPath), lowerSearch);
 
@@ -260,10 +261,10 @@ namespace YokiFrame.TableKit.Editor
             container.Add(label);
         }
 
-        private void BuildJsonTree(JSONNode node, VisualElement parent, int depth, string key = null) =>
+        private void BuildJsonTree(LubanNamespaceDetector.JSONNodeWrapper node, VisualElement parent, int depth, string key = null) =>
             BuildJsonTreeWithSearch(node, parent, depth, key, "");
 
-        private bool BuildJsonTreeWithSearch(JSONNode node, VisualElement parent, int depth, string key, string searchText)
+        private bool BuildJsonTreeWithSearch(LubanNamespaceDetector.JSONNodeWrapper node, VisualElement parent, int depth, string key, string searchText)
         {
             var indent = depth * 16;
             var hasMatch = false;
@@ -283,8 +284,9 @@ namespace YokiFrame.TableKit.Editor
                 parent.Add(foldout);
 
                 int idx = 0;
-                foreach (var item in node.Children)
+                foreach (var itemObj in node.Children)
                 {
+                    var item = itemObj as LubanNamespaceDetector.JSONNodeWrapper ?? new LubanNamespaceDetector.JSONNodeWrapper(itemObj);
                     var childMatch = BuildJsonTreeWithSearch(item, foldout, depth + 1, $"[{idx}]", searchText);
                     if (childMatch)
                     {
@@ -395,7 +397,7 @@ namespace YokiFrame.TableKit.Editor
             }
         }
 
-        private StyleColor GetValueColor(JSONNode node)
+        private StyleColor GetValueColor(LubanNamespaceDetector.JSONNodeWrapper node)
         {
             if (node.IsNumber) return new StyleColor(Design.BrandSuccess);
             if (node.IsBoolean) return new StyleColor(Design.BrandDanger);

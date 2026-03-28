@@ -3,7 +3,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_2022_1_OR_NEWER
 using FloatField = UnityEngine.UIElements.FloatField;
 using IntegerField = UnityEngine.UIElements.IntegerField;
 #else

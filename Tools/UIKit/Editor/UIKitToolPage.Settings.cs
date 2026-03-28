@@ -112,7 +112,7 @@ namespace YokiFrame
             var fieldContainer = new VisualElement();
             fieldContainer.AddToClassList("yoki-ui-settings-field-row__field");
             
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_2022_1_OR_NEWER
             var field = new UnityEngine.UIElements.EnumField(value);
 #else
             var field = new UnityEditor.UIElements.EnumField(value);
@@ -132,7 +132,7 @@ namespace YokiFrame
             var fieldContainer = new VisualElement();
             fieldContainer.AddToClassList("yoki-ui-field--overflow-hidden");
             
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_2022_1_OR_NEWER
             var field = new UnityEngine.UIElements.IntegerField { value = value };
 #else
             var field = new UnityEditor.UIElements.IntegerField { value = value };
@@ -152,7 +152,7 @@ namespace YokiFrame
             var fieldContainer = new VisualElement();
             fieldContainer.AddToClassList("yoki-ui-field--overflow-hidden");
             
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_2022_1_OR_NEWER
             var field = new UnityEngine.UIElements.FloatField { value = value };
 #else
             var field = new UnityEditor.UIElements.FloatField { value = value };

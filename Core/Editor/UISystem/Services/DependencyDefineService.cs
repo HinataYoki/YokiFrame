@@ -139,8 +139,17 @@ namespace YokiFrame.EditorTools
                 // 方式1：通过 PackageInfo API 检测包是否存在（支持 registry / git / local 等所有安装方式）
                 if (!string.IsNullOrEmpty(dep.PackageName))
                 {
-                    var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForPackageName(dep.PackageName);
-                    if (packageInfo != null) return true;
+                    var listRequest = UnityEditor.PackageManager.Client.List(true, false);
+                    while (!listRequest.IsCompleted) { }
+                    
+                    if (listRequest.Status == UnityEditor.PackageManager.StatusCode.Success)
+                    {
+                        foreach (var package in listRequest.Result)
+                        {
+                            if (package.name == dep.PackageName)
+                                return true;
+                        }
+                    }
                 }
 
                 // 方式2：检测 asmdef 是否存在
