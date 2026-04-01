@@ -9,7 +9,7 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// Unity 原生音频后端实现（使用 ResKit 加载资源）
+    /// Unity 原生音频后端实现，使用 ResKit 加载资源。
     /// </summary>
     public sealed partial class UnityAudioBackend : IAudioBackend
     {
@@ -17,23 +17,19 @@ namespace YokiFrame
         private readonly AudioClipCache mClipCache = new();
         private readonly List<UnityAudioHandle> mPlayingHandles = new();
         private readonly List<UnityAudioHandle> mHandlesToRemove = new();
+        private readonly Stack<PlayAsyncLoadRequest> mPlayAsyncRequestPool = new();
+        private readonly Stack<PreloadAsyncLoadRequest> mPreloadAsyncRequestPool = new();
         private GameObject mAudioRoot;
         private float mGlobalVolume = 1f;
+        private int mHandleMutationDepth;
         private bool mIsDisposed;
 
         /// <summary>
-        /// AudioSource GameObject 对象池，避免频繁 new/Destroy
+        /// AudioSource GameObject 对象池，避免频繁 new/Destroy。
         /// </summary>
         private readonly Stack<AudioSource> mSourcePool = new();
 
-        /// <summary>
-        /// 通道音量缓存（支持动态扩展）
-        /// </summary>
         private readonly Dictionary<int, float> mChannelVolumes = new();
-
-        /// <summary>
-        /// 通道静音状态缓存（支持动态扩展）
-        /// </summary>
         private readonly Dictionary<int, bool> mChannelMuted = new();
 
         public void Initialize(AudioKitConfig config)
@@ -41,14 +37,12 @@ namespace YokiFrame
             mConfig = config ?? AudioKitConfig.Default;
             mGlobalVolume = mConfig.GlobalVolume;
 
-            // 初始化内置通道音量
             mChannelVolumes[(int)AudioChannel.Bgm] = mConfig.BgmVolume;
             mChannelVolumes[(int)AudioChannel.Sfx] = mConfig.SfxVolume;
             mChannelVolumes[(int)AudioChannel.Voice] = mConfig.VoiceVolume;
             mChannelVolumes[(int)AudioChannel.Ambient] = mConfig.AmbientVolume;
             mChannelVolumes[(int)AudioChannel.UI] = mConfig.UIVolume;
 
-            // 创建音频根对象
             if (mAudioRoot == null)
             {
                 mAudioRoot = new GameObject("[AudioKit]");
@@ -62,7 +56,6 @@ namespace YokiFrame
 #endif
             }
 
-            // 初始化句柄对象池
             SafePoolKit<UnityAudioHandle>.Instance.Init(mConfig.PoolInitialSize, mConfig.PoolMaxSize);
         }
 
@@ -106,22 +99,8 @@ namespace YokiFrame
             }
 
             var loader = AudioKit.GetLoaderPool().AllocateLoader();
-            loader.LoadAsync(path, clip =>
-            {
-                if (!mIsDisposed && clip != null)
-                {
-                    mClipCache.Add(path, clip, loader);
-                }
-                else
-                {
-                    if (clip == null)
-                    {
-                        KitLogger.Error($"[AudioKit] 预加载失败: {path}");
-                    }
-                    loader.UnloadAndRecycle();
-                }
-                onComplete?.Invoke();
-            });
+            var request = AllocatePreloadAsyncRequest();
+            request.Start(this, loader, path, onComplete);
         }
 
         public void Unload(string path)
@@ -154,11 +133,23 @@ namespace YokiFrame
                 }
             }
 
-            // 移除已完成的句柄
-            foreach (var handle in mHandlesToRemove)
+            BeginHandleMutation();
+            try
             {
-                mPlayingHandles.Remove(handle);
-                RecycleHandle(handle);
+                for (var i = 0; i < mHandlesToRemove.Count; i++)
+                {
+                    var handle = mHandlesToRemove[i];
+                    if (!mPlayingHandles.Remove(handle))
+                    {
+                        continue;
+                    }
+
+                    RecycleHandle(handle);
+                }
+            }
+            finally
+            {
+                EndHandleMutation();
             }
         }
 
@@ -169,9 +160,11 @@ namespace YokiFrame
 
         public void GetPlayingHandles(int channelId, List<IAudioHandle> result)
         {
+            RemoveInactiveHandles();
             result.Clear();
-            foreach (var handle in mPlayingHandles)
+            for (var i = 0; i < mPlayingHandles.Count; i++)
             {
+                var handle = mPlayingHandles[i];
                 if (handle.ChannelId == channelId)
                 {
                     result.Add(handle);
@@ -181,16 +174,15 @@ namespace YokiFrame
 
         public void GetAllPlayingHandles(List<IAudioHandle> result)
         {
+            RemoveInactiveHandles();
             result.Clear();
-            foreach (var handle in mPlayingHandles)
+            for (var i = 0; i < mPlayingHandles.Count; i++)
             {
+                var handle = mPlayingHandles[i];
                 result.Add(handle);
             }
         }
 
-        /// <summary>
-        /// 从池中分配 AudioSource，池空时创建新 GameObject
-        /// </summary>
         internal AudioSource AllocateSource()
         {
             while (mSourcePool.Count > 0)
@@ -208,9 +200,6 @@ namespace YokiFrame
             return go.AddComponent<AudioSource>();
         }
 
-        /// <summary>
-        /// 回收 AudioSource 到池中（清理状态 + 隐藏）
-        /// </summary>
         internal void RecycleSource(AudioSource source)
         {
             if (source == default) return;
@@ -234,15 +223,198 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>
-        /// 当前 AudioSource 池中缓存的数量
-        /// </summary>
         internal int SourcePoolCount => mSourcePool.Count;
+        internal bool IsMutatingHandles => mHandleMutationDepth > 0;
 
         private void RecycleHandle(UnityAudioHandle handle)
         {
+            var path = handle.Path;
+            var channelId = handle.ChannelId;
             RecycleSource(handle.Source);
+            AudioMonitorService.ReportStop(path, channelId);
             SafePoolKit<UnityAudioHandle>.Instance.Recycle(handle);
+        }
+
+        private void BeginHandleMutation()
+        {
+            mHandleMutationDepth++;
+        }
+
+        private void EndHandleMutation()
+        {
+            if (mHandleMutationDepth > 0)
+            {
+                mHandleMutationDepth--;
+            }
+        }
+
+        private PlayAsyncLoadRequest AllocatePlayAsyncRequest()
+        {
+            return mPlayAsyncRequestPool.Count > 0 ? mPlayAsyncRequestPool.Pop() : new PlayAsyncLoadRequest();
+        }
+
+        private void RecyclePlayAsyncRequest(PlayAsyncLoadRequest request)
+        {
+            request.Reset();
+            mPlayAsyncRequestPool.Push(request);
+        }
+
+        private PreloadAsyncLoadRequest AllocatePreloadAsyncRequest()
+        {
+            return mPreloadAsyncRequestPool.Count > 0 ? mPreloadAsyncRequestPool.Pop() : new PreloadAsyncLoadRequest();
+        }
+
+        private void RecyclePreloadAsyncRequest(PreloadAsyncLoadRequest request)
+        {
+            request.Reset();
+            mPreloadAsyncRequestPool.Push(request);
+        }
+
+        private sealed class PlayAsyncLoadRequest
+        {
+            private readonly Action<AudioClip> mCachedCallback;
+            private UnityAudioBackend mBackend;
+            private IAudioLoader mLoader;
+            private string mPath;
+            private AudioPlayConfig mConfig;
+            private Action<IAudioHandle> mOnComplete;
+
+            public PlayAsyncLoadRequest()
+            {
+                mCachedCallback = OnLoaded;
+            }
+
+            public void Start(UnityAudioBackend backend, IAudioLoader loader, string path, AudioPlayConfig config, Action<IAudioHandle> onComplete)
+            {
+                mBackend = backend;
+                mLoader = loader;
+                mPath = path;
+                mConfig = config;
+                mOnComplete = onComplete;
+                loader.LoadAsync(path, mCachedCallback);
+            }
+
+            public void Reset()
+            {
+                mBackend = null;
+                mLoader = null;
+                mPath = null;
+                mConfig = default;
+                mOnComplete = null;
+            }
+
+            private void OnLoaded(AudioClip loadedClip)
+            {
+                var backend = mBackend;
+                var loader = mLoader;
+                var onComplete = mOnComplete;
+                var path = mPath;
+                var config = mConfig;
+
+                try
+                {
+                    if (backend.mIsDisposed)
+                    {
+                        loader.UnloadAndRecycle();
+                        onComplete?.Invoke(null);
+                        return;
+                    }
+
+                    if (loadedClip == null)
+                    {
+                        KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
+                        loader.UnloadAndRecycle();
+                        onComplete?.Invoke(null);
+                        return;
+                    }
+
+                    if (backend.mClipCache.Contains(path))
+                    {
+                        loader.UnloadAndRecycle();
+                        backend.mClipCache.TryGet(path, out loadedClip);
+                    }
+                    else
+                    {
+                        backend.mClipCache.Add(path, loadedClip, loader);
+                    }
+
+                    var audioHandle = backend.PlayInternal(path, loadedClip, config);
+                    onComplete?.Invoke(audioHandle);
+                }
+                finally
+                {
+                    backend.RecyclePlayAsyncRequest(this);
+                }
+            }
+        }
+
+        private sealed class PreloadAsyncLoadRequest
+        {
+            private readonly Action<AudioClip> mCachedCallback;
+            private UnityAudioBackend mBackend;
+            private IAudioLoader mLoader;
+            private string mPath;
+            private Action mOnComplete;
+
+            public PreloadAsyncLoadRequest()
+            {
+                mCachedCallback = OnLoaded;
+            }
+
+            public void Start(UnityAudioBackend backend, IAudioLoader loader, string path, Action onComplete)
+            {
+                mBackend = backend;
+                mLoader = loader;
+                mPath = path;
+                mOnComplete = onComplete;
+                loader.LoadAsync(path, mCachedCallback);
+            }
+
+            public void Reset()
+            {
+                mBackend = null;
+                mLoader = null;
+                mPath = null;
+                mOnComplete = null;
+            }
+
+            private void OnLoaded(AudioClip clip)
+            {
+                var backend = mBackend;
+                var loader = mLoader;
+                var path = mPath;
+                var onComplete = mOnComplete;
+
+                try
+                {
+                    if (!backend.mIsDisposed && clip != null)
+                    {
+                        if (backend.mClipCache.Contains(path))
+                        {
+                            loader.UnloadAndRecycle();
+                        }
+                        else
+                        {
+                            backend.mClipCache.Add(path, clip, loader);
+                        }
+                    }
+                    else
+                    {
+                        if (clip == null)
+                        {
+                            KitLogger.Error($"[AudioKit] 预加载失败: {path}");
+                        }
+
+                        loader.UnloadAndRecycle();
+                    }
+
+                    onComplete?.Invoke();
+                }
+                finally
+                {
+                    backend.RecyclePreloadAsyncRequest(this);
+                }
+            }
         }
 
         private static void DestroyGameObject(GameObject go)

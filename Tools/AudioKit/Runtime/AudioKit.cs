@@ -90,6 +90,7 @@ namespace YokiFrame
 
             sBackend = backend;
             sBackend.Initialize(sConfig ?? AudioKitConfig.Default);
+            SyncBackendState();
             sIsInitialized = true;
 
             KitLogger.Log($"[AudioKit] 后端已切换为: {backend.GetType().Name}");
@@ -114,6 +115,7 @@ namespace YokiFrame
             if (sBackend != null)
             {
                 sBackend.Initialize(sConfig);
+                SyncBackendState();
             }
         }
 
@@ -282,6 +284,42 @@ namespace YokiFrame
         private static float GetEffectiveGlobalVolume()
         {
             return sGlobalMuted ? 0f : sGlobalVolume;
+        }
+
+        private static void SyncBackendState()
+        {
+            if (sBackend == null)
+            {
+                return;
+            }
+
+            sBackend.SetGlobalVolume(GetEffectiveGlobalVolume());
+
+            if (sBackend is UnityAudioBackend unityBackend)
+            {
+                SyncBackendChannels(unityBackend.SetChannelVolume, unityBackend.SetChannelMuted);
+                return;
+            }
+
+#if YOKIFRAME_FMOD_SUPPORT
+            if (sBackend is FmodAudioBackend fmodBackend)
+            {
+                SyncBackendChannels(fmodBackend.SetChannelVolume, fmodBackend.SetChannelMuted);
+            }
+#endif
+        }
+
+        private static void SyncBackendChannels(Action<int, float> setChannelVolume, Action<int, bool> setChannelMuted)
+        {
+            foreach (var pair in sChannelVolumes)
+            {
+                setChannelVolume(pair.Key, pair.Value);
+            }
+
+            foreach (var pair in sChannelMuted)
+            {
+                setChannelMuted(pair.Key, pair.Value);
+            }
         }
 
         #endregion

@@ -104,6 +104,8 @@ namespace YokiFrame
 
         private IAudioHandle PlayInternal(string path, EventDescription description, AudioPlayConfig config)
         {
+            RemoveInactiveHandles();
+
             // 检查是否超出最大并发数
             if (mPlayingHandles.Count >= mConfig.MaxConcurrentSounds)
             {
@@ -272,6 +274,7 @@ namespace YokiFrame
 
         public void GetPlayingHandles(int channelId, List<IAudioHandle> result)
         {
+            RemoveInactiveHandles();
             result.Clear();
             foreach (var handle in mPlayingHandles)
             {
@@ -284,6 +287,7 @@ namespace YokiFrame
 
         public void GetAllPlayingHandles(List<IAudioHandle> result)
         {
+            RemoveInactiveHandles();
             result.Clear();
             foreach (var handle in mPlayingHandles)
             {
@@ -393,8 +397,35 @@ namespace YokiFrame
             }
         }
 
+        private void RemoveInactiveHandles()
+        {
+            mHandlesToRemove.Clear();
+
+            foreach (var handle in mPlayingHandles)
+            {
+                if (handle.IsManualLifecycle)
+                {
+                    continue;
+                }
+
+                if (!handle.IsPlaying && !handle.IsPaused && !handle.IsFading)
+                {
+                    mHandlesToRemove.Add(handle);
+                }
+            }
+
+            foreach (var handle in mHandlesToRemove)
+            {
+                mPlayingHandles.Remove(handle);
+                RecycleHandle(handle);
+            }
+        }
+
         private void RecycleHandle(FmodAudioHandle handle)
         {
+            var path = handle.Path;
+            var channelId = handle.ChannelId;
+            AudioMonitorService.ReportStop(path, channelId);
             SafePoolKit<FmodAudioHandle>.Instance.Recycle(handle);
         }
 

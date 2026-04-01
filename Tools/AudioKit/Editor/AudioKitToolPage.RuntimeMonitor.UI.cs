@@ -15,6 +15,11 @@ namespace YokiFrame
 
         private void CreateChannelPanel(int channelId)
         {
+            if (mChannelContainer == null)
+            {
+                return;
+            }
+
             var accentColor = Design.GetChannelColor(channelId);
             var channelName = Design.GetChannelName(channelId);
             
@@ -297,6 +302,11 @@ namespace YokiFrame
 
         private void RefreshMonitorData()
         {
+            if (mGlobalVolumeLabel == null || mGlobalVolumeSlider == null || mChannelContainer == null)
+            {
+                return;
+            }
+
             if (!Application.isPlaying)
             {
                 mGlobalVolumeLabel.text = "N/A";

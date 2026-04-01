@@ -101,7 +101,7 @@ namespace YokiFrame
             if (!mAutoRefresh) return;
 
             // 使用节流器延迟刷新
-            mRefreshThrottle.Execute(RefreshMonitorData);
+            mRefreshThrottle.Execute(RefreshActiveRuntimeView);
         }
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace YokiFrame
             if (!mAutoRefresh) return;
 
             // 使用节流器延迟刷新
-            mRefreshThrottle.Execute(RefreshMonitorData);
+            mRefreshThrottle.Execute(RefreshActiveRuntimeView);
         }
 
         #endregion
@@ -188,7 +188,21 @@ namespace YokiFrame
             base.OnActivate();
 
             // 切换回页面时刷新数据
-            if (mCurrentTab == TabType.RuntimeMonitor && Application.isPlaying && mChannelPanels.Count > 0)
+            if (mCurrentTab == TabType.RuntimeMonitor && Application.isPlaying)
+            {
+                RefreshActiveRuntimeView();
+            }
+        }
+
+        private void RefreshActiveRuntimeView()
+        {
+            if (mChannelStrips.Count > 0)
+            {
+                RefreshConsoleData();
+                return;
+            }
+
+            if (mChannelPanels.Count > 0)
             {
                 RefreshMonitorData();
             }

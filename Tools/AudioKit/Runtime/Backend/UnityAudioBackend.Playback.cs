@@ -24,7 +24,6 @@ namespace YokiFrame
                 return null;
             }
 
-            // 获取或加载音频剪辑
             if (!mClipCache.TryGet(path, out var clip))
             {
                 var loader = AudioKit.GetLoaderPool().AllocateLoader();
@@ -35,6 +34,7 @@ namespace YokiFrame
                     loader.UnloadAndRecycle();
                     return null;
                 }
+
                 mClipCache.Add(path, clip, loader);
             }
 
@@ -56,7 +56,6 @@ namespace YokiFrame
                 return;
             }
 
-            // 检查缓存
             if (mClipCache.TryGet(path, out var clip))
             {
                 var handle = PlayInternal(path, clip, config);
@@ -64,56 +63,24 @@ namespace YokiFrame
                 return;
             }
 
-            // 使用加载池异步加载
             var loader = AudioKit.GetLoaderPool().AllocateLoader();
-            loader.LoadAsync(path, loadedClip =>
-            {
-                if (mIsDisposed)
-                {
-                    loader.UnloadAndRecycle();
-                    onComplete?.Invoke(null);
-                    return;
-                }
-
-                if (loadedClip == null)
-                {
-                    KitLogger.Error($"[AudioKit] 音频加载失败: {path}");
-                    loader.UnloadAndRecycle();
-                    onComplete?.Invoke(null);
-                    return;
-                }
-
-                // 防止并发加载同一路径导致 loader 泄漏
-                if (mClipCache.Contains(path))
-                {
-                    loader.UnloadAndRecycle();
-                    mClipCache.TryGet(path, out loadedClip);
-                }
-                else
-                {
-                    mClipCache.Add(path, loadedClip, loader);
-                }
-                var audioHandle = PlayInternal(path, loadedClip, config);
-                onComplete?.Invoke(audioHandle);
-            });
+            var request = AllocatePlayAsyncRequest();
+            request.Start(this, loader, path, config, onComplete);
         }
 
         private IAudioHandle PlayInternal(string path, AudioClip clip, AudioPlayConfig config)
         {
-            // 检查是否超出最大并发数
+            RemoveInactiveHandles();
+
             if (mPlayingHandles.Count >= mConfig.MaxConcurrentSounds)
             {
                 KitLogger.Warning($"[AudioKit] 超出最大并发数 {mConfig.MaxConcurrentSounds}，跳过播放");
                 return null;
             }
 
-            // 从池中分配 AudioSource
             var source = AllocateSource();
-
-            // 配置 AudioSource
             ConfigureAudioSource(source, clip, config);
 
-            // 获取句柄（先 Allocate，确保 PoolDebugger 正确追踪）
             var handle = SafePoolKit<UnityAudioHandle>.Instance.Allocate();
             var channelId = config.ChannelId;
             var channelVolume = GetChannelVolume(channelId);
@@ -121,7 +88,6 @@ namespace YokiFrame
 
             handle.Initialize(path, source, channelId, config.Volume, config.ManualLifecycle, config.FollowTarget);
 
-            // 淡入处理
             if (config.FadeInDuration > 0f)
             {
                 handle.SetFadeIn(config.FadeInDuration, effectiveVolume);
@@ -131,15 +97,12 @@ namespace YokiFrame
                 source.volume = effectiveVolume;
             }
 
-            // 开始播放
             source.Play();
             mPlayingHandles.Add(handle);
 
-            // 检查通道并发限制（在新 Handle 添加到列表后）
             var maxConcurrent = mConfig.GetChannelMaxConcurrent(channelId);
             if (maxConcurrent > 0)
             {
-                // 统计当前通道正在播放的音频数量
                 var currentCount = 0;
                 foreach (var h in mPlayingHandles)
                 {
@@ -149,32 +112,42 @@ namespace YokiFrame
                     }
                 }
 
-                // 如果超过上限，停止最早的音频（跳过刚添加的新 Handle）
                 if (currentCount > maxConcurrent)
                 {
                     UnityAudioHandle oldestHandle = null;
-                    foreach (var h in mPlayingHandles)
+                    for (var i = 0; i < mPlayingHandles.Count; i++)
                     {
+                        var h = mPlayingHandles[i];
                         if (h.ChannelId == channelId && h != handle)
                         {
-                            oldestHandle = h as UnityAudioHandle;
+                            oldestHandle = h;
                             break;
                         }
                     }
 
                     if (oldestHandle != null)
                     {
-                        // 立即停止、移除并回收
-                        oldestHandle.Stop();
-                        mPlayingHandles.Remove(oldestHandle);
-                        RecycleHandle(oldestHandle);
+                        BeginHandleMutation();
+                        try
+                        {
+                            if (mPlayingHandles.Remove(oldestHandle))
+                            {
+                                if (oldestHandle.IsValid)
+                                {
+                                    oldestHandle.Stop();
+                                }
+                                RecycleHandle(oldestHandle);
+                            }
+                        }
+                        finally
+                        {
+                            EndHandleMutation();
+                        }
                     }
                 }
             }
 
-            // 报告播放事件
             AudioMonitorService.ReportPlay(path, channelId, config.Volume, config.Pitch, clip.length);
-
             return handle;
         }
 
@@ -185,7 +158,6 @@ namespace YokiFrame
             source.pitch = Mathf.Clamp(config.Pitch, 0.01f, 3f);
             source.playOnAwake = false;
 
-            // 3D 音效配置
             if (config.Is3D)
             {
                 source.spatialBlend = 1f;
@@ -214,12 +186,24 @@ namespace YokiFrame
 
         public void StopAll()
         {
-            foreach (var handle in mPlayingHandles)
+            BeginHandleMutation();
+            try
             {
-                handle.Stop();
-                RecycleHandle(handle);
+                for (var i = mPlayingHandles.Count - 1; i >= 0; i--)
+                {
+                    var handle = mPlayingHandles[i];
+                    mPlayingHandles.RemoveAt(i);
+                    if (handle.IsValid)
+                    {
+                        handle.Stop();
+                    }
+                    RecycleHandle(handle);
+                }
             }
-            mPlayingHandles.Clear();
+            finally
+            {
+                EndHandleMutation();
+            }
         }
 
         public void PauseAll()
@@ -248,91 +232,124 @@ namespace YokiFrame
 
         #region 通道控制
 
-        /// <summary>
-        /// 设置通道音量（内置通道）
-        /// </summary>
         internal void SetChannelVolume(AudioChannel channel, float volume)
         {
             SetChannelVolume((int)channel, volume);
         }
 
-        /// <summary>
-        /// 设置通道音量（支持自定义通道 ID）
-        /// </summary>
         internal void SetChannelVolume(int channelId, float volume)
         {
             mChannelVolumes[channelId] = Mathf.Clamp01(volume);
             UpdateChannelHandleVolumes(channelId);
         }
 
-        /// <summary>
-        /// 获取通道音量（内置通道）
-        /// </summary>
         internal float GetChannelVolume(AudioChannel channel)
         {
             return GetChannelVolume((int)channel);
         }
 
-        /// <summary>
-        /// 获取通道音量（支持自定义通道 ID）
-        /// </summary>
         internal float GetChannelVolume(int channelId)
         {
             if (mChannelMuted.TryGetValue(channelId, out var muted) && muted) return 0f;
             return mChannelVolumes.TryGetValue(channelId, out var volume) ? volume : 1f;
         }
 
-        /// <summary>
-        /// 设置通道静音（内置通道）
-        /// </summary>
         internal void SetChannelMuted(AudioChannel channel, bool muted)
         {
             SetChannelMuted((int)channel, muted);
         }
 
-        /// <summary>
-        /// 设置通道静音（支持自定义通道 ID）
-        /// </summary>
         internal void SetChannelMuted(int channelId, bool muted)
         {
             mChannelMuted[channelId] = muted;
             UpdateChannelHandleVolumes(channelId);
         }
 
-        /// <summary>
-        /// 停止指定通道的所有音频（内置通道）
-        /// </summary>
         internal void StopChannel(AudioChannel channel)
         {
             StopChannel((int)channel);
         }
 
-        /// <summary>
-        /// 停止指定通道的所有音频（支持自定义通道 ID）
-        /// </summary>
         internal void StopChannel(int channelId)
         {
-            mHandlesToRemove.Clear();
-            foreach (var handle in mPlayingHandles)
+            BeginHandleMutation();
+            try
             {
-                if (handle.ChannelId == channelId)
+                for (var i = mPlayingHandles.Count - 1; i >= 0; i--)
                 {
-                    handle.Stop();
+                    var handle = mPlayingHandles[i];
+                    if (handle.ChannelId != channelId)
+                    {
+                        continue;
+                    }
+
+                    mPlayingHandles.RemoveAt(i);
+                    if (handle.IsValid)
+                    {
+                        handle.Stop();
+                    }
+                    RecycleHandle(handle);
+                }
+            }
+            finally
+            {
+                EndHandleMutation();
+            }
+        }
+
+        private void RemoveInactiveHandles()
+        {
+            if (IsMutatingHandles)
+            {
+                return;
+            }
+
+            mHandlesToRemove.Clear();
+
+            for (var i = mPlayingHandles.Count - 1; i >= 0; i--)
+            {
+                var handle = mPlayingHandles[i];
+                if (handle.IsManualLifecycle)
+                {
+                    continue;
+                }
+
+                if (!handle.IsPlaying && !handle.IsPaused && !handle.IsFading)
+                {
                     mHandlesToRemove.Add(handle);
                 }
             }
 
-            foreach (var handle in mHandlesToRemove)
+            if (mHandlesToRemove.Count == 0)
             {
-                mPlayingHandles.Remove(handle);
-                RecycleHandle(handle);
+                return;
+            }
+
+            BeginHandleMutation();
+            try
+            {
+                for (var i = 0; i < mHandlesToRemove.Count; i++)
+                {
+                    var handle = mHandlesToRemove[i];
+                    if (!mPlayingHandles.Remove(handle))
+                    {
+                        continue;
+                    }
+
+                    RecycleHandle(handle);
+                }
+            }
+            finally
+            {
+                EndHandleMutation();
             }
         }
 
         private void UpdateAllHandleVolumes()
         {
-            foreach (var handle in mPlayingHandles)
+            for (var i = 0; i < mPlayingHandles.Count; i++)
             {
+                var handle = mPlayingHandles[i];
                 var channelVolume = GetChannelVolume(handle.ChannelId);
                 handle.UpdateEffectiveVolume(channelVolume, mGlobalVolume);
             }
@@ -341,8 +358,9 @@ namespace YokiFrame
         private void UpdateChannelHandleVolumes(int channelId)
         {
             var channelVolume = GetChannelVolume(channelId);
-            foreach (var handle in mPlayingHandles)
+            for (var i = 0; i < mPlayingHandles.Count; i++)
             {
+                var handle = mPlayingHandles[i];
                 if (handle.ChannelId == channelId)
                 {
                     handle.UpdateEffectiveVolume(channelVolume, mGlobalVolume);
@@ -365,13 +383,11 @@ namespace YokiFrame
                 return null;
             }
 
-            // 检查缓存
             if (mClipCache.TryGet(path, out var clip))
             {
                 return PlayInternal(path, clip, config);
             }
 
-            // 使用加载池 UniTask 异步加载
             var loader = AudioKit.GetLoaderPool().AllocateLoader();
             if (loader is IAudioLoaderUniTask uniTaskLoader)
             {
@@ -379,7 +395,6 @@ namespace YokiFrame
             }
             else
             {
-                // 回退到同步加载
                 clip = loader.Load(path);
             }
 
@@ -396,7 +411,6 @@ namespace YokiFrame
                 return null;
             }
 
-            // 防止并发加载同一路径导致 loader 泄漏
             if (mClipCache.Contains(path))
             {
                 loader.UnloadAndRecycle();
@@ -435,7 +449,6 @@ namespace YokiFrame
 
             if (clip != null)
             {
-                // 防止并发加载同一路径导致 loader 泄漏
                 if (mClipCache.Contains(path))
                 {
                     loader.UnloadAndRecycle();
