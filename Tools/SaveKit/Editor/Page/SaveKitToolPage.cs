@@ -63,8 +63,9 @@ namespace YokiFrame
                 KitIcons.SAVEKIT,
                 "存档工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
-            scaffold.Toolbar.Add(CreateToolbarSection());
+            scaffold.Content.Add(CreateToolbarSection());
             SetStatusContent(scaffold.StatusBar, CreateKitStatusBanner(
                 "目录监听",
                 "页面会持续监听存档目录变化，外部写入、删除或覆盖存档后会自动刷新。"));
@@ -96,6 +97,7 @@ namespace YokiFrame
         private VisualElement CreateToolbarSection()
         {
             var toolbar = YokiFrameUIComponents.CreateToolbar();
+            toolbar.AddToClassList("yoki-kit-inline-toolbar");
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshSlots));
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.FOLDER_DOCS, "打开目录", OpenSaveFolder));
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());

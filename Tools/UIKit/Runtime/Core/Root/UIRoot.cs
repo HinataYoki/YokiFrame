@@ -13,6 +13,7 @@ namespace YokiFrame
 
         private static UIRoot sInstance;
         internal static UIRoot sInstanceInternal => sInstance;
+        public static UIRoot ExistingInstance => sInstance;
         private static bool sIsInitialized;
         private static bool sIsQuitting; // 防止退出时重新创建
 

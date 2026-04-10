@@ -62,8 +62,9 @@ namespace YokiFrame
                 KitIcons.SCENEKIT,
                 "场景工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
-            scaffold.Toolbar.Add(CreateToolbarSection());
+            scaffold.Content.Add(CreateToolbarSection());
             SetStatusContent(scaffold.StatusBar, CreateKitStatusBanner(
                 "数据来源",
                 "如果 SceneKit 当前没有接管场景，本页会自动回退为显示 Unity 当前已加载的场景。"));
@@ -94,6 +95,7 @@ namespace YokiFrame
         private VisualElement CreateToolbarSection()
         {
             var toolbar = YokiFrameUIComponents.CreateToolbar();
+            toolbar.AddToClassList("yoki-kit-inline-toolbar");
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshScenes));
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.DELETE, "卸载全部", UnloadAllScenes));
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());

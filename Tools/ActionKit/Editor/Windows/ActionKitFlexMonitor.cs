@@ -66,6 +66,7 @@ namespace YokiFrame.EditorTools
                 KitIcons.ACTIONKIT,
                 "动作工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
             mStatusContainer = scaffold.StatusBar;
             RefreshStatusBanner();

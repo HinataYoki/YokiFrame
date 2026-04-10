@@ -291,7 +291,12 @@
     flex-grow: 1;
     flex-direction: column;
     padding: 14px;
-    gap: 10px;
+}
+
+.yoki-kit-page__toolbar,
+.yoki-kit-page__status,
+.yoki-kit-page__content {
+    margin-top: 10px;
 }
 
 .yoki-kit-hero {
@@ -377,13 +382,36 @@
 
 .yoki-kit-page__status {
     flex-direction: column;
-    gap: 6px;
+}
+
+.yoki-kit-page__status .yoki-kit-banner {
+    margin-top: 6px;
 }
 
 .yoki-kit-page__content {
     flex-grow: 1;
     flex-direction: column;
     min-height: 0;
+}
+
+.yoki-kit-inline-toolbar {
+    flex-wrap: wrap;
+    align-items: center;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: transparent;
+    border-bottom-width: 0;
+}
+
+.yoki-kit-inline-toolbar > * {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.yoki-kit-inline-toolbar .toolbar-label {
+    margin-left: 0;
 }
 
 .yoki-kit-banner {
@@ -428,7 +456,13 @@
 .yoki-kit-metric-strip {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 10px;
+    margin-right: -10px;
+    margin-bottom: -10px;
+}
+
+.yoki-kit-metric-strip > * {
+    margin-right: 10px;
+    margin-bottom: 10px;
 }
 
 .yoki-kit-metric-card {
@@ -592,7 +626,13 @@
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 8px;
+    margin-right: -8px;
+    margin-bottom: -8px;
+}
+
+.yoki-kit-hero-tools > * {
+    margin-right: 8px;
+    margin-bottom: 8px;
 }
 
 .yoki-monitor-layout__detail {
@@ -600,8 +640,13 @@
 }
 
 .yoki-monitor-dashboard {
-    gap: 10px;
     min-height: 0;
+}
+
+.yoki-monitor-dashboard__split,
+.yoki-monitor-primary-panel,
+.yoki-monitor-secondary-panel {
+    margin-top: 10px;
 }
 
 .yoki-monitor-dashboard__split {

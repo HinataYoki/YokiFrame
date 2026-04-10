@@ -35,11 +35,9 @@ namespace YokiFrame.EditorTools
         private WorkspaceTab mCurrentTab;
         private VisualElement mStatusContainer;
         private VisualElement mMonitorContent;
-        private Button mResourceMonitorTabBtn;
 
 #if YOKIFRAME_YOOASSET_SUPPORT
         private VisualElement mYooAssetContent;
-        private Button mYooAssetTabBtn;
 #endif
 
         private TextField mSearchField;
@@ -103,25 +101,9 @@ namespace YokiFrame.EditorTools
                 KitIcons.RESKIT,
                 "资源工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
             mStatusContainer = scaffold.StatusBar;
-
-            var tabBar = YokiFrameUIComponents.CreateTabBar();
-            scaffold.Toolbar.Add(tabBar);
-
-            mResourceMonitorTabBtn = YokiFrameUIComponents.CreateTabButton(
-                "资源监控",
-                mCurrentTab == WorkspaceTab.ResourceMonitor,
-                () => SwitchWorkspace(WorkspaceTab.ResourceMonitor));
-            tabBar.Add(mResourceMonitorTabBtn);
-
-#if YOKIFRAME_YOOASSET_SUPPORT
-            mYooAssetTabBtn = YokiFrameUIComponents.CreateTabButton(
-                "YooAsset 采集器",
-                mCurrentTab == WorkspaceTab.YooAssetCollector,
-                () => SwitchWorkspace(WorkspaceTab.YooAssetCollector));
-            tabBar.Add(mYooAssetTabBtn);
-#endif
 
 #if YOKIFRAME_YOOASSET_SUPPORT
             mMonitorContent = new VisualElement { style = { flexGrow = 1 } };
@@ -133,6 +115,8 @@ namespace YokiFrame.EditorTools
             mTabView = YokiFrameUIComponents.CreateTabView(
                 ("资源监控", mMonitorContent),
                 ("YooAsset 采集器", mYooAssetContent));
+            mTabView.OnTabChanged += OnWorkspaceTabChanged;
+            mTabView.Root.Insert(1, scaffold.StatusBar);
             scaffold.Content.Add(mTabView.Root);
 #else
             mMonitorContent = new VisualElement { style = { flexGrow = 1 } };
@@ -148,25 +132,36 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void SwitchWorkspace(WorkspaceTab tab)
         {
+            if (mCurrentTab == tab)
+            {
+                return;
+            }
+
             mCurrentTab = tab;
-            RefreshWorkspaceTabStyles();
             RefreshStatusBanner();
 
 #if YOKIFRAME_YOOASSET_SUPPORT
-            mTabView?.SwitchTo(tab == WorkspaceTab.ResourceMonitor ? 0 : 1);
+            int targetIndex = tab == WorkspaceTab.ResourceMonitor ? 0 : 1;
+            if (mTabView != null && mTabView.SelectedIndex != targetIndex)
+            {
+                mTabView.SwitchTo(targetIndex);
+            }
 #endif
         }
 
-        /// <summary>
-        /// 刷新顶部页签样式。
-        /// </summary>
-        private void RefreshWorkspaceTabStyles()
-        {
-            YokiFrameUIComponents.UpdateTabButtonStyle(mResourceMonitorTabBtn, mCurrentTab == WorkspaceTab.ResourceMonitor);
 #if YOKIFRAME_YOOASSET_SUPPORT
-            YokiFrameUIComponents.UpdateTabButtonStyle(mYooAssetTabBtn, mCurrentTab == WorkspaceTab.YooAssetCollector);
-#endif
+        private void OnWorkspaceTabChanged(int index)
+        {
+            var nextTab = index == 0 ? WorkspaceTab.ResourceMonitor : WorkspaceTab.YooAssetCollector;
+            if (mCurrentTab == nextTab)
+            {
+                return;
+            }
+
+            mCurrentTab = nextTab;
+            RefreshStatusBanner();
         }
+#endif
 
         /// <summary>
         /// 根据当前工作区刷新顶部状态说明。

@@ -42,14 +42,13 @@ namespace YokiFrame
                 KitIcons.BUFFKIT,
                 "Buff 工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
             SetStatusContent(scaffold.StatusBar, CreateKitStatusBanner(
                 "运行时监控",
                 IsPlaying
                     ? "Buff 监控已连接运行时数据，容器变化会通过编辑器桥接事件自动刷新。"
                     : "Buff 监控建议在 PlayMode 下查看，当前可先预览工具布局。"));
-
-            scaffold.Toolbar.Add(BuildToolbar());
 
             var metricStrip = CreateKitMetricStrip();
             scaffold.Content.Add(metricStrip);
@@ -344,7 +343,7 @@ namespace YokiFrame
             {
                 mCachedContainers.Clear();
                 mSelectedContainer = null;
-                mContainerCountLabel.text = "容器: 0";
+                if (mContainerCountLabel != null) mContainerCountLabel.text = "容器: 0";
                 mContainerMetricLabel.text = "0";
                 mContainerListView.itemsSource = mCachedContainers;
                 mContainerListView.RefreshItems();
@@ -366,7 +365,7 @@ namespace YokiFrame
                 }
             }
 
-            mContainerCountLabel.text = $"容器: {mCachedContainers.Count}";
+            if (mContainerCountLabel != null) mContainerCountLabel.text = $"容器: {mCachedContainers.Count}";
             mContainerMetricLabel.text = mCachedContainers.Count.ToString();
             mContainerListView.itemsSource = mCachedContainers;
             mContainerListView.RefreshItems();

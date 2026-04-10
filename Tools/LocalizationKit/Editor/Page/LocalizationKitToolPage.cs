@@ -40,12 +40,13 @@ namespace YokiFrame.EditorTools
                 KitIcons.LOCALIZATIONKIT,
                 "本地化工作台");
             root.Add(scaffold.Root);
+            scaffold.Toolbar.style.display = DisplayStyle.None;
 
             SetStatusContent(scaffold.StatusBar, CreateKitStatusBanner(
                 "数据来源",
                 "本页面基于当前 Localization Provider 读取文本数据，支持在编辑器中快速预览多语言内容。"));
 
-            scaffold.Toolbar.Add(BuildToolbar());
+            scaffold.Content.Add(BuildToolbar());
 
             var metricStrip = CreateKitMetricStrip();
             scaffold.Content.Add(metricStrip);
@@ -83,6 +84,7 @@ namespace YokiFrame.EditorTools
         {
             var toolbar = CreateToolbar();
             toolbar.AddToClassList("yoki-localization-selector");
+            toolbar.AddToClassList("yoki-kit-inline-toolbar");
 
             mLanguageDropdown = new DropdownField("预览语言");
             mLanguageDropdown.AddToClassList("yoki-localization-selector__dropdown");
@@ -95,6 +97,7 @@ namespace YokiFrame.EditorTools
             toolbar.Add(mLanguageDropdown);
 
             mSearchField = new TextField("搜索");
+            mSearchField.AddToClassList("yoki-localization-selector__search");
             mSearchField.RegisterValueChangedCallback(OnSearchChanged);
             toolbar.Add(mSearchField);
 

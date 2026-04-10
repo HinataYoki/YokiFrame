@@ -4,13 +4,19 @@
 /* ========== 语言选择器样式 ========== */
 .yoki-localization-selector {
     flex-direction: row;
-    padding: var(--yoki-spacing-md);
-    background-color: var(--yoki-layer-toolbar);
+    flex-wrap: wrap;
+    align-items: flex-end;
 }
 
 .yoki-localization-selector__dropdown {
-    width: 200px;
-    margin-left: var(--yoki-spacing-sm);
+    width: 180px;
+    min-width: 180px;
+    margin-left: 0;
+}
+
+.yoki-localization-selector__search {
+    flex-grow: 1;
+    min-width: 220px;
 }
 
 /* ========== 翻译条目样式 ========== */

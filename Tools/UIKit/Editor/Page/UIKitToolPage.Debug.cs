@@ -147,23 +147,28 @@ namespace YokiFrame
 
             mDebugContent.Clear();
 
+            if (!EditorApplication.isPlaying)
+            {
+                mDebugActivePanelMetric.text = "0";
+                mDebugStackMetric.text = "0";
+                mDebugFocusMetric.text = "无";
+                mDebugCacheMetric.text = "0";
+                mDebugContent.Add(CreateHelpBox("运行时监控用于观察当前 UIKit 的全局面板栈、焦点和缓存状态。请进入 PlayMode 后查看实时数据；单个 UIPanel 的绑定树与校验结果请在 Inspector 中查看。"));
+                return;
+            }
+
             var activePanels = GetActivePanels();
             var stackNames = UIKit.GetAllStackNames();
             var cachedPanels = UIKit.GetCachedPanels();
-            var focusName = UIRoot.Instance != default && UIRoot.Instance.CurrentFocus != default
-                ? UIRoot.Instance.CurrentFocus.name
+            var uiRoot = UIRoot.ExistingInstance;
+            var focusName = uiRoot != default && uiRoot.CurrentFocus != default
+                ? uiRoot.CurrentFocus.name
                 : "无";
 
             mDebugActivePanelMetric.text = activePanels.Count.ToString();
             mDebugStackMetric.text = stackNames.Count.ToString();
             mDebugFocusMetric.text = focusName;
             mDebugCacheMetric.text = cachedPanels.Count.ToString();
-
-            if (!EditorApplication.isPlaying)
-            {
-                mDebugContent.Add(CreateHelpBox("运行时监控用于观察当前 UIKit 的全局面板栈、焦点和缓存状态。请进入 PlayMode 后查看实时数据；单个 UIPanel 的绑定树与校验结果请在 Inspector 中查看。"));
-                return;
-            }
 
             if (mShowActivePanels)
             {
@@ -302,15 +307,16 @@ namespace YokiFrame
             var (panel, body) = CreateKitSectionPanel("焦点信息", "查看当前焦点对象与输入模式。", KitIcons.TARGET);
             mDebugContent.Add(panel);
 
-            if (UIRoot.Instance == default)
+            var uiRoot = UIRoot.ExistingInstance;
+            if (uiRoot == default)
             {
                 body.Add(new Label("UIRoot 尚未初始化。") { style = { color = new StyleColor(Colors.TextTertiary) } });
                 return;
             }
 
-            var currentFocus = UIRoot.Instance.CurrentFocus;
+            var currentFocus = uiRoot.CurrentFocus;
             var focusName = currentFocus != default ? currentFocus.name : "无";
-            var inputMode = UIRoot.Instance.CurrentInputMode.ToString();
+            var inputMode = uiRoot.CurrentInputMode.ToString();
 
             var (focusRow, _) = CreateInfoRow("当前焦点:", focusName);
             body.Add(focusRow);
@@ -389,12 +395,18 @@ namespace YokiFrame
         {
             var result = new List<IPanel>();
 
-            if (UIRoot.Instance == null)
+            if (!EditorApplication.isPlaying)
             {
                 return result;
             }
 
-            var panels = UIRoot.Instance.GetComponentsInChildren<UIPanel>(true);
+            var uiRoot = UIRoot.ExistingInstance;
+            if (uiRoot == null)
+            {
+                return result;
+            }
+
+            var panels = uiRoot.GetComponentsInChildren<UIPanel>(true);
             foreach (var panel in panels)
             {
                 if (panel.State != PanelState.Close)
