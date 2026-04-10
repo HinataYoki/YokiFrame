@@ -1,48 +1,55 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// 单例管理核心类：负责单例的持有、创建与生命周期管理
-    /// 统一管理普通 C# 单例和 MonoBehaviour 单例
+    /// Central singleton manager responsible for instance creation, caching, and lifecycle control.
     /// </summary>
+    /// <remarks>
+    /// This class supports both plain C# singletons and <see cref="MonoBehaviour"/>-based singletons through one
+    /// shared access path. Plain C# singletons are created with reflection, while Mono singletons are located or
+    /// created in the scene hierarchy and marked as <c>DontDestroyOnLoad</c> when needed.
+    /// </remarks>
     public static class SingletonKit<T> where T : class, ISingleton
     {
-        #region 实例持有
+        #region Instance State
 
         /// <summary>
-        /// 静态实例
+        /// Cached singleton instance.
         /// </summary>
         private static T mInstance;
 
         /// <summary>
-        /// 是否正在销毁（防止 OnDestroy 中重新创建）
+        /// Whether the application is quitting.
         /// </summary>
+        /// <remarks>
+        /// This prevents <see cref="MonoBehaviour"/> singletons from being recreated during teardown.
+        /// </remarks>
         private static bool mIsQuitting;
 
         /// <summary>
-        /// 线程锁
+        /// Synchronization lock used during lazy initialization.
         /// </summary>
         private static readonly object mLock = new();
 
         /// <summary>
-        /// 创建策略委托（静态构造器中确定）
+        /// Cached creation strategy selected by the static constructor.
         /// </summary>
         private static readonly Func<T> mCreator;
 
         /// <summary>
-        /// 是否是 MonoBehaviour 类型（缓存）
+        /// Whether <typeparamref name="T"/> derives from <see cref="MonoBehaviour"/>.
         /// </summary>
         private static readonly bool mIsMonoBehaviour;
 
         /// <summary>
-        /// 缓存的路径属性
+        /// Cached hierarchy-path attribute for Mono singletons.
         /// </summary>
         private static readonly MonoSingletonPathAttribute mCachedPathAttribute;
 
         /// <summary>
-        /// 静态构造器：一次性确定创建策略
+        /// Initializes the singleton creation strategy.
         /// </summary>
         static SingletonKit()
         {
@@ -52,9 +59,7 @@ namespace YokiFrame
             if (mIsMonoBehaviour)
             {
                 mCreator = CreateMonoSingleton;
-                // 缓存路径属性
                 mCachedPathAttribute = Attribute.GetCustomAttribute(type, typeof(MonoSingletonPathAttribute), true) as MonoSingletonPathAttribute;
-                // 监听应用退出事件
                 Application.quitting += OnApplicationQuitting;
             }
             else
@@ -64,7 +69,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 应用退出时标记
+        /// Marks Mono singleton creation as disabled during application shutdown.
         /// </summary>
         private static void OnApplicationQuitting()
         {
@@ -72,13 +77,12 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取单例实例（线程安全，懒加载）
+        /// Gets the singleton instance using lazy, thread-safe initialization.
         /// </summary>
         public static T Instance
         {
             get
             {
-                // 如果正在退出，不再创建新实例
                 if (mIsQuitting && mIsMonoBehaviour)
                 {
                     return null;
@@ -91,12 +95,13 @@ namespace YokiFrame
                         mInstance ??= mCreator();
                     }
                 }
+
                 return mInstance;
             }
         }
 
         /// <summary>
-        /// 资源释放
+        /// Clears the cached instance reference.
         /// </summary>
         public static void Dispose()
         {
@@ -105,16 +110,18 @@ namespace YokiFrame
 
         #endregion
 
-        #region 创建逻辑
+        #region Creation
 
         /// <summary>
-        /// 创建普通 C# 单例（使用 Activator，AOT 需要确保类型被引用）
+        /// Creates a plain C# singleton instance through reflection.
         /// </summary>
+        /// <remarks>
+        /// For IL2CPP or AOT environments, the singleton type still needs to be preserved and reachable.
+        /// </remarks>
         private static T CreateNormalSingleton()
         {
             var type = typeof(T);
-            
-            // 尝试使用 Activator.CreateInstance（AOT 兼容，前提是类型被显式引用）
+
             T instance;
             try
             {
@@ -132,30 +139,26 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建 MonoBehaviour 单例
+        /// Creates or locates a <see cref="MonoBehaviour"/> singleton instance.
         /// </summary>
         private static T CreateMonoSingleton()
         {
-            // 非运行时或正在退出时不创建
             if (!Application.isPlaying || mIsQuitting) return null;
 
             var type = typeof(T);
 
-            // 尝试查找场景中已存在的实例
             if (UnityEngine.Object.FindFirstObjectByType(type) is T instance)
             {
                 instance.OnSingletonInit();
                 return instance;
             }
 
-            // 根据缓存的属性或默认逻辑创建 GameObject
             if (mCachedPathAttribute is not null)
             {
                 instance = CreateComponentOnGameObject(mCachedPathAttribute);
             }
             else
             {
-                // 默认创建
                 var obj = new GameObject(type.Name);
                 UnityEngine.Object.DontDestroyOnLoad(obj);
                 instance = obj.AddComponent(type) as T;
@@ -166,14 +169,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 根据路径属性创建组件
+        /// Creates or finds the GameObject defined by <see cref="MonoSingletonPathAttribute"/> and attaches the component.
         /// </summary>
         private static T CreateComponentOnGameObject(MonoSingletonPathAttribute pathAttr)
         {
             var obj = FindOrCreateGameObjectPath(pathAttr.PathInHierarchy);
-            if (obj == default)
+            if (obj == null)
             {
-                // 兜底创建
                 obj = pathAttr.IsRectTransform
                     ? new GameObject(typeof(T).Name, typeof(RectTransform))
                     : new GameObject(typeof(T).Name);
@@ -181,16 +183,20 @@ namespace YokiFrame
             }
 
             var instance = obj.GetComponent(typeof(T)) as T;
-            if (instance == default)
+            if (instance == null)
             {
                 instance = obj.AddComponent(typeof(T)) as T;
             }
+
             return instance;
         }
 
         /// <summary>
-        /// 查找或创建 GameObject 路径（使用 Span 优化字符串分割）
+        /// Finds or creates a GameObject hierarchy path.
         /// </summary>
+        /// <remarks>
+        /// Uses span-based parsing to avoid allocating intermediate string arrays during path splitting.
+        /// </remarks>
         private static GameObject FindOrCreateGameObjectPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -210,6 +216,7 @@ namespace YokiFrame
                         current = FindOrCreateChild(current, segment, depth == 0);
                         depth++;
                     }
+
                     start = i + 1;
                 }
             }
@@ -218,13 +225,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 查找或创建子物体
+        /// Finds or creates one child GameObject in the hierarchy path.
         /// </summary>
         private static GameObject FindOrCreateChild(GameObject parent, string name, bool isRoot)
         {
             GameObject child;
 
-            if (parent == default)
+            if (parent == null)
             {
                 child = GameObject.Find(name);
             }
@@ -234,13 +241,14 @@ namespace YokiFrame
                 child = childTransform != null ? childTransform.gameObject : null;
             }
 
-            if (child == default)
+            if (child == null)
             {
                 child = new GameObject(name);
-                if (parent != default)
+                if (parent != null)
                 {
                     child.transform.SetParent(parent.transform);
                 }
+
                 if (isRoot)
                 {
                     UnityEngine.Object.DontDestroyOnLoad(child);

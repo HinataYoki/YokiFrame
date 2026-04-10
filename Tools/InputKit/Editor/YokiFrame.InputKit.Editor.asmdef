@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.InputKit.Editor",
+    "rootNamespace": "YokiFrame.InputKit.Editor",
+    "references": [
+        "YokiFrame.InputKit",
+        "YokiFrame.Core.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

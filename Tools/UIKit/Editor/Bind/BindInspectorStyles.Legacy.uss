@@ -1,0 +1,218 @@
+﻿/* 自动生成的 Unity 2021.3 兼容样式表。保留低版本可解析属性，移除高版本 USS 特性。 */
+/* AbstractBind Inspector 样式 - v2 */
+/* 使用全局设计令牌，遵循 BEM 命名规范 */
+
+.bind-inspector {
+    padding: var(--spacing-xs);
+}
+
+.bind-container {
+    background-color: var(--layer-card);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+}
+
+.bind-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    min-height: 22px;
+}
+
+.bind-label {
+    width: 80px;
+    min-width: 80px;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    -unity-text-align: middle-left;
+}
+
+.bind-field {
+    flex-grow: 1;
+    min-height: 20px;
+}
+
+.bind-field > EnumField {
+    margin: 0;
+}
+
+.bind-field > TextField {
+    margin: 0;
+}
+
+.bind-type-field {
+    margin-bottom: var(--spacing-xs);
+}
+
+.bind-no-component {
+    color: var(--brand-warning);
+    font-size: var(--font-xs);
+    -unity-font-style: italic;
+}
+
+
+/* 验证提示 - 使用全局变量 */
+.validation-label {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-sm);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    font-size: var(--font-xs);
+    white-space: normal;
+}
+
+.validation-error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: var(--brand-danger);
+    border-width: 1px;
+    border-color: var(--brand-danger);
+}
+
+.validation-success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--brand-success);
+    border-width: 1px;
+    border-color: var(--brand-success);
+}
+
+/* PopupField 样式调整 */
+.bind-field PopupField {
+    margin: 0;
+}
+
+/* TextField 输入框样式 */
+.bind-field TextField > TextInput {
+    background-color: var(--layer-elevated);
+    border-color: var(--border-default);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    padding: 2px var(--spacing-xs);
+}
+
+.bind-field TextField > TextInput:focus {
+    border-color: var(--brand-primary);
+}
+
+/* EnumField 样式 */
+.bind-field EnumField > VisualElement {
+    background-color: var(--layer-elevated);
+    border-color: var(--border-default);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+}
+
+/* 类型快速转换按钮 */
+.type-convert-row {
+    margin-top: var(--spacing-xs);
+}
+
+.type-convert-buttons {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.type-convert-btn {
+    margin-right: var(--spacing-xs);
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-xs);
+    background-color: var(--layer-hover);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: var(--border-strong);
+}
+
+.type-convert-btn:hover {
+    background-color: var(--layer-elevated);
+}
+
+.type-convert-btn:disabled {
+    opacity: 0.5;
+}
+
+
+/* 命名建议行 - 使用全局变量 */
+.suggestion-row {
+    background-color: rgba(33, 150, 243, 0.1);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.suggestion-content {
+    flex-direction: row;
+    align-items: center;
+}
+
+.suggestion-text {
+    flex-grow: 1;
+    color: var(--brand-primary);
+    font-size: var(--font-xs);
+    -unity-font-style: italic;
+}
+
+.suggestion-apply-btn {
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-xs);
+    background-color: var(--brand-primary);
+    color: var(--text-on-brand);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    border-width: 0;
+    margin-left: var(--spacing-sm);
+}
+
+.suggestion-apply-btn:hover {
+    background-color: var(--brand-primary-hover);
+}
+
+/* 绑定路径显示 */
+.bind-path-row {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top-width: 1px;
+    border-top-color: var(--border-subtle);
+}
+
+.bind-path-text {
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+    -unity-font-style: italic;
+}
+
+/* 代码预览区域 */
+.code-preview-foldout {
+    margin-top: var(--spacing-sm);
+}
+
+.code-preview-foldout > Toggle {
+    background-color: var(--layer-elevated);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    padding: var(--spacing-xs);
+}
+
+.code-preview-text {
+    background-color: var(--layer-base);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-xs);
+    color: var(--brand-success);
+    white-space: normal;
+}
+
+/* 跳转到代码按钮 */
+.jump-to-code-btn {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(33, 150, 243, 0.15);
+    border-top-left-radius: var(--radius-sm);     border-top-right-radius: var(--radius-sm);     border-bottom-right-radius: var(--radius-sm);     border-bottom-left-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: rgba(33, 150, 243, 0.3);
+}
+
+.jump-to-code-btn:hover {
+    background-color: rgba(33, 150, 243, 0.25);
+}
+
+.jump-to-code-btn:disabled {
+    opacity: 0.5;
+    background-color: var(--layer-card);
+}

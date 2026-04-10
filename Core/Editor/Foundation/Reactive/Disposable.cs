@@ -4,28 +4,42 @@ using System;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 空 Disposable 单例 - 用于表示无需清理的订阅
+    /// No-op disposable singleton used when no cleanup is required.
     /// </summary>
     public sealed class EmptyDisposable : IDisposable
     {
+        /// <summary>
+        /// Shared singleton instance.
+        /// </summary>
         public static readonly EmptyDisposable Instance = new();
+
         private EmptyDisposable() { }
+
+        /// <summary>
+        /// Performs no action.
+        /// </summary>
         public void Dispose() { }
     }
 
     /// <summary>
-    /// 委托 Disposable - 执行指定的清理动作
+    /// Disposable wrapper that executes a delegate once.
     /// </summary>
     public sealed class ActionDisposable : IDisposable
     {
         private Action mDisposeAction;
         private bool mIsDisposed;
 
+        /// <summary>
+        /// Creates a delegate-backed disposable.
+        /// </summary>
         public ActionDisposable(Action disposeAction)
         {
             mDisposeAction = disposeAction;
         }
 
+        /// <summary>
+        /// Executes the stored cleanup delegate once.
+        /// </summary>
         public void Dispose()
         {
             if (mIsDisposed) return;
@@ -36,17 +50,17 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
-    /// Disposable 工具类
+    /// Helper factory for common disposable patterns.
     /// </summary>
     public static class Disposable
     {
         /// <summary>
-        /// 空 Disposable 单例
+        /// Shared no-op disposable.
         /// </summary>
         public static IDisposable Empty => EmptyDisposable.Instance;
 
         /// <summary>
-        /// 创建执行指定动作的 Disposable
+        /// Creates a disposable that runs the supplied cleanup action.
         /// </summary>
         public static IDisposable Create(Action disposeAction)
         {

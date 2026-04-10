@@ -25,6 +25,9 @@ namespace YokiFrame.EditorTools
             public static readonly Color BrandSuccess = new(0.30f, 0.69f, 0.31f);       // #4CAF50
             public static readonly Color BrandDanger = new(0.96f, 0.26f, 0.21f);        // #F44336
             public static readonly Color BrandWarning = new(1f, 0.60f, 0f);             // #FF9800
+            public static readonly Color WorkbenchPrimary = BrandPrimary;
+            public static readonly Color WorkbenchPrimarySoft = new(0.13f, 0.59f, 0.95f, 0.18f);
+            public static readonly Color WorkbenchPrimaryText = new(0.56f, 0.70f, 0.85f);
             
             // 层级背景色
             public static readonly Color LayerCard = new(0.18f, 0.18f, 0.21f);

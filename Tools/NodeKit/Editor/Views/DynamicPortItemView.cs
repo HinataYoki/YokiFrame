@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace YokiFrame.NodeKit.Editor
 {
     /// <summary>
-    /// 动态端口列表项视图
+    /// Dynamic port list item view.
     /// </summary>
     public class DynamicPortItemView : VisualElement
     {
@@ -19,9 +19,6 @@ namespace YokiFrame.NodeKit.Editor
             AddToClassList("yoki-dynamic-port-item");
         }
 
-        /// <summary>
-        /// 初始化列表项
-        /// </summary>
         public void Initialize(
             DynamicPortListView listView,
             NodePort port,
@@ -40,18 +37,10 @@ namespace YokiFrame.NodeKit.Editor
         {
             Clear();
 
-            // 拖拽手柄
-            var dragHandle = new VisualElement();
-            dragHandle.AddToClassList("yoki-dynamic-port-item__drag-handle");
-            dragHandle.RegisterCallback<PointerDownEvent>(OnDragStart);
-            Add(dragHandle);
-
-            // 内容区域
             var content = new VisualElement();
             content.AddToClassList("yoki-dynamic-port-item__content");
             content.style.flexGrow = 1;
 
-            // 如果有数组属性，显示属性字段
             if (mArrayProperty != default && mArrayProperty.isArray && mArrayProperty.arraySize > mIndex)
             {
                 var itemProperty = mArrayProperty.GetArrayElementAtIndex(mIndex);
@@ -68,16 +57,18 @@ namespace YokiFrame.NodeKit.Editor
 
             Add(content);
 
-            // 删除按钮
+            var moveUpButton = new Button(() => mListView.MoveItem(mIndex, mIndex - 1)) { text = "^" };
+            moveUpButton.SetEnabled(mIndex > 0);
+            Add(moveUpButton);
+
+            var moveDownButton = new Button(() => mListView.MoveItem(mIndex, mIndex + 1)) { text = "v" };
+            bool canMoveDown = mArrayProperty == default || !mArrayProperty.isArray || mIndex < mArrayProperty.arraySize - 1;
+            moveDownButton.SetEnabled(canMoveDown);
+            Add(moveDownButton);
+
             var removeButton = new Button(() => mListView.RemoveItem(mIndex)) { text = "-" };
             removeButton.AddToClassList("yoki-dynamic-port-item__remove-btn");
             Add(removeButton);
-        }
-
-        private void OnDragStart(PointerDownEvent evt)
-        {
-            // TODO: 实现拖拽排序
-            // 当前简化实现，后续可添加完整拖拽功能
         }
     }
 }

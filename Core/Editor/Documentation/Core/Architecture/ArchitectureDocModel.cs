@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// Architecture 实现数据模型文档
+    /// Architecture 模块中的“实现数据模型”章节。
     /// </summary>
     internal static class ArchitectureDocModel
     {
@@ -13,7 +13,7 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "实现数据模型",
-                Description = "继承 AbstractModel 实现数据模型，用于存储游戏状态数据。IModel 继承 ISerializable，支持与 SaveKit 集成。",
+                Description = "继承 AbstractModel 实现数据模型，用于存储游戏状态。IModel 继承 ISerializable，因此也可以和 SaveKit 集成。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
@@ -25,13 +25,12 @@ namespace YokiFrame.EditorTools
     public int Exp = 0;
     public int Gold = 0;
     public List<int> UnlockedSkills = new();
-    
+
     protected override void OnInit()
     {
         // 可以在这里加载初始数据
     }
-    
-    // 实现 ISerializable（SaveKit 集成需要）
+
     public override void GetObjectData(SerializationInfo info, StreamingContext context)
     {
         info.AddValue(""Level"", Level);
@@ -39,7 +38,7 @@ namespace YokiFrame.EditorTools
         info.AddValue(""Gold"", Gold);
     }
 }",
-                        Explanation = "数据模型与业务逻辑分离，便于存档和测试。"
+                        Explanation = "数据模型与业务逻辑分离后，更利于测试、存档与后续扩展。"
                     }
                 }
             };

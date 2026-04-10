@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System;
 using System.IO;
 using System.Text;
@@ -6,18 +6,18 @@ using System.Text;
 namespace YokiFrame.TableKit.Editor
 {
     /// <summary>
-    /// TableKitCodeGenerator - 代码模板生成
+    /// TableKitCodeGenerator - 浠ｇ爜妯℃澘鐢熸垚
     /// </summary>
     public static partial class TableKitCodeGenerator
     {
         /// <summary>
-        /// 生成 TableKit.cs 主文件
+        /// 鐢熸垚 TableKit.cs 涓绘枃浠?
         /// </summary>
         private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame,
             string runtimePathPattern, string editorDataPath,
             bool useAsyncLoading = false, string[] tableFileNames = null)
         {
-            // 转义路径中的特殊字符
+            // 杞箟璺緞涓殑鐗规畩瀛楃
             var escapedRuntimePath = runtimePathPattern.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var escapedEditorPath = editorDataPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
@@ -69,8 +69,8 @@ namespace YokiFrame.TableKit.Editor
             }
             sb.AppendLine();
             sb.AppendLine("/// <summary>");
-            sb.AppendLine("/// 配置表系统入口类");
-            sb.AppendLine("/// 由 TableKit 工具自动生成，路径配置已嵌入代码");
+            sb.AppendLine("/// 閰嶇疆琛ㄧ郴缁熷叆鍙ｇ被");
+            sb.AppendLine("/// 鐢?TableKit 宸ュ叿鑷姩鐢熸垚锛岃矾寰勯厤缃凡宓屽叆浠ｇ爜");
             sb.AppendLine("/// </summary>");
             sb.AppendLine("public static class TableKit");
             sb.AppendLine("{");
@@ -79,17 +79,17 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    private static Func<string, string> sJsonLoader;");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 是否已初始化");
+            sb.AppendLine("    /// 鏄惁宸插垵濮嬪寲");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static bool Initialized { get; private set; }");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 运行时路径模式（生成时嵌入）");
+            sb.AppendLine("    /// 杩愯鏃惰矾寰勬ā寮忥紙鐢熸垚鏃跺祵鍏ワ級");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static string RuntimePathPattern {{ get; set; }} = \"{escapedRuntimePath}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 获取配置表实例");
+            sb.AppendLine("    /// Gets the loaded table instance.");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static {tablesNamespace}.Tables Tables");
             sb.AppendLine("    {");
@@ -105,7 +105,7 @@ namespace YokiFrame.TableKit.Editor
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置二进制数据加载器");
+            sb.AppendLine("    /// 璁剧疆浜岃繘鍒舵暟鎹姞杞藉櫒");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void SetBinaryLoader(Func<string, byte[]> loader)");
             sb.AppendLine("    {");
@@ -113,7 +113,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置 JSON 数据加载器");
+            sb.AppendLine("    /// Sets the JSON data loader.");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void SetJsonLoader(Func<string, string> loader)");
             sb.AppendLine("    {");
@@ -125,7 +125,7 @@ namespace YokiFrame.TableKit.Editor
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 初始化配置表");
+            sb.AppendLine("    /// 鍒濆鍖栭厤缃〃");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void Init()");
             sb.AppendLine("    {");
@@ -164,7 +164,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var json = sJsonLoader(fileName);");
             sb.AppendLine("        if (string.IsNullOrEmpty(json))");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 鍔犺浇閰嶇疆琛ㄥけ璐? {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -176,7 +176,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
             sb.AppendLine();
             sb.AppendLine("            if (jsonType == null)");
-            sb.AppendLine("                throw new InvalidOperationException(\"无法找到 JSON 类型\");");
+            sb.AppendLine("                throw new InvalidOperationException(\"鏃犳硶鎵惧埌 JSON 绫诲瀷\");");
             sb.AppendLine();
             sb.AppendLine("            sJsonParseMethod = jsonType.GetMethod(\"Parse\", BindingFlags.Public | BindingFlags.Static,");
             sb.AppendLine("                null, new[] { typeof(string) }, null);");
@@ -190,7 +190,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var bytes = sBinaryLoader(fileName);");
             sb.AppendLine("        if (bytes == null || bytes.Length == 0)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 鍔犺浇閰嶇疆琛ㄥけ璐? {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(bytes);");
@@ -200,19 +200,19 @@ namespace YokiFrame.TableKit.Editor
         private static void AppendDefaultLoaders(StringBuilder sb, bool hasYokiFrame)
         {
             sb.AppendLine();
-            sb.AppendLine("    #region 默认加载器");
+            sb.AppendLine("    #region Default Loaders");
             sb.AppendLine();
 
             if (hasYokiFrame)
             {
-                sb.AppendLine("    // 默认加载器：使用 YokiFrame.ResKit");
+                sb.AppendLine("    // 榛樿鍔犺浇鍣細浣跨敤 YokiFrame.ResKit");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
                 sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 鍔犺浇澶辫触: {path}\");");
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
@@ -227,7 +227,7 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 鍔犺浇澶辫触: {path}\");");
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
@@ -238,7 +238,7 @@ namespace YokiFrame.TableKit.Editor
             }
             else
             {
-                sb.AppendLine("    // 默认加载器：使用 Resources");
+                sb.AppendLine("    // 榛樿鍔犺浇鍣細浣跨敤 Resources");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
                 sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
@@ -262,7 +262,7 @@ namespace YokiFrame.TableKit.Editor
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 重新加载配置表");
+            sb.AppendLine("    /// Reloads all table data.");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void Reload(Action onComplete = null)");
             sb.AppendLine("    {");
@@ -284,7 +284,7 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine();
                 sb.AppendLine("#if YOKIFRAME_UNITASK_SUPPORT");
                 sb.AppendLine("    /// <summary>");
-                sb.AppendLine("    /// 异步重新加载配置表");
+                sb.AppendLine("    /// Reloads all table data asynchronously.");
                 sb.AppendLine("    /// </summary>");
                 sb.AppendLine("    public static async UniTask ReloadAsync(CancellationToken cancellationToken = default)");
                 sb.AppendLine("    {");
@@ -297,7 +297,7 @@ namespace YokiFrame.TableKit.Editor
 
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 清理所有数据");
+            sb.AppendLine("    /// Clears all loaded table data.");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void Clear()");
             sb.AppendLine("    {");
@@ -316,12 +316,12 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine($"    private static {tablesNamespace}.Tables sTablesEditor;");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 编辑器数据路径（生成时嵌入）");
+            sb.AppendLine("    /// 缂栬緫鍣ㄦ暟鎹矾寰勶紙鐢熸垚鏃跺祵鍏ワ級");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static string EditorDataPath {{ get; set; }} = \"{escapedEditorPath}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 获取编辑器模式下的配置表实例");
+            sb.AppendLine("    /// 鑾峰彇缂栬緫鍣ㄦā寮忎笅鐨勯厤缃〃瀹炰緥");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static {tablesNamespace}.Tables TablesEditor");
             sb.AppendLine("    {");
@@ -360,7 +360,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 缂栬緫鍣ㄥ姞杞介厤缃〃澶辫触: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -372,7 +372,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
             sb.AppendLine();
             sb.AppendLine("            if (jsonType == null)");
-            sb.AppendLine("                throw new InvalidOperationException(\"无法找到 JSON 类型\");");
+            sb.AppendLine("                throw new InvalidOperationException(\"鏃犳硶鎵惧埌 JSON 绫诲瀷\");");
             sb.AppendLine();
             sb.AppendLine("            sJsonParseMethod = jsonType.GetMethod(\"Parse\", BindingFlags.Public | BindingFlags.Static,");
             sb.AppendLine("                null, new[] { typeof(string) }, null);");
@@ -387,274 +387,22 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 缂栬緫鍣ㄥ姞杞介厤缃〃澶辫触: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(asset.bytes);");
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 刷新编辑器缓存");
+            sb.AppendLine("    /// Refreshes the editor-side table cache.");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void RefreshEditor() => sTablesEditor = null;");
             sb.AppendLine("#endif");
         }
 
         /// <summary>
-        /// 生成异步加载代码区块
+        /// 鐢熸垚寮傛鍔犺浇浠ｇ爜鍖哄潡
         /// </summary>
-        private static void AppendAsyncLoadingSection(StringBuilder sb, string tablesNamespace, bool hasYokiFrame,
-            string[] tableFileNames)
-        {
-            sb.AppendLine();
-            sb.AppendLine("#if YOKIFRAME_UNITASK_SUPPORT");
-            sb.AppendLine();
-            sb.AppendLine("    #region 异步加载");
-            sb.AppendLine();
-
-            // 表文件名数组
-            AppendTableFileNames(sb, tableFileNames);
-
-            // 异步加载器委托
-            AppendAsyncLoaderSetters(sb);
-
-            // InitAsync 方法
-            AppendInitAsync(sb, tablesNamespace);
-
-            // 缓存辅助方法
-            AppendAsyncCacheHelpers(sb);
-
-            // 默认异步加载器
-            AppendDefaultAsyncLoaders(sb, hasYokiFrame);
-
-            sb.AppendLine();
-            sb.AppendLine("    #endregion");
-            sb.AppendLine();
-            sb.AppendLine("#endif");
-        }
-
-        private static void AppendTableFileNames(StringBuilder sb, string[] tableFileNames)
-        {
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 表文件名列表（生成时嵌入，用于异步预加载，可通过 SetTableFileNames 覆盖）");
-            sb.AppendLine("    /// </summary>");
-
-            if (tableFileNames == null || tableFileNames.Length == 0)
-            {
-                sb.AppendLine("    private static string[] TABLE_FILE_NAMES = System.Array.Empty<string>();");
-            }
-            else
-            {
-                sb.Append("    private static string[] TABLE_FILE_NAMES = { ");
-                for (int i = 0; i < tableFileNames.Length; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    sb.Append($"\"{tableFileNames[i]}\"");
-                }
-                sb.AppendLine(" };");
-            }
-            sb.AppendLine("    private static string[] sCustomTableFileNames;");
-            sb.AppendLine();
-        }
-
-        private static void AppendAsyncLoaderSetters(StringBuilder sb)
-        {
-            sb.AppendLine("    private static Func<string, CancellationToken, UniTask<byte[]>> sAsyncBinaryLoader;");
-            sb.AppendLine("    private static Func<string, CancellationToken, UniTask<string>> sAsyncJsonLoader;");
-            sb.AppendLine();
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置异步二进制数据加载器");
-            sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static void SetAsyncBinaryLoader(Func<string, CancellationToken, UniTask<byte[]>> loader)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        sAsyncBinaryLoader = loader ?? throw new ArgumentNullException(nameof(loader));");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置异步 JSON 数据加载器");
-            sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static void SetAsyncJsonLoader(Func<string, CancellationToken, UniTask<string>> loader)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        sAsyncJsonLoader = loader ?? throw new ArgumentNullException(nameof(loader));");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 设置表文件名列表（覆盖生成时嵌入的默认列表）");
-            sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static void SetTableFileNames(string[] fileNames)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        sCustomTableFileNames = fileNames ?? throw new ArgumentNullException(nameof(fileNames));");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
-
-        private static void AppendInitAsync(StringBuilder sb, string tablesNamespace)
-        {
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 异步初始化配置表（预缓存策略：先异步加载所有数据，再同步构造 Tables）");
-            sb.AppendLine("    /// </summary>");
-            sb.AppendLine("    public static async UniTask InitAsync(CancellationToken cancellationToken = default)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        if (Initialized) return;");
-            sb.AppendLine();
-            sb.AppendLine("        if (sAsyncBinaryLoader == null) sAsyncBinaryLoader = DefaultAsyncBinaryLoader;");
-            sb.AppendLine("        if (sAsyncJsonLoader == null) sAsyncJsonLoader = DefaultAsyncJsonLoader;");
-            sb.AppendLine();
-            sb.AppendLine($"        var tablesCtor = typeof({tablesNamespace}.Tables).GetConstructors()[0];");
-            sb.AppendLine("        var loaderReturnType = tablesCtor.GetParameters()[0].ParameterType.GetGenericArguments()[1];");
-            sb.AppendLine("        var isBinary = loaderReturnType == typeof(ByteBuf);");
-            sb.AppendLine();
-            sb.AppendLine("        var fileNames = sCustomTableFileNames ?? TABLE_FILE_NAMES;");
-            sb.AppendLine();
-            sb.AppendLine("        // Phase 1: 并发异步加载所有表数据到缓存");
-            sb.AppendLine("        if (isBinary)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            var cache = new Dictionary<string, byte[]>(fileNames.Length);");
-            sb.AppendLine("            var tasks = new UniTask[fileNames.Length];");
-            sb.AppendLine("            for (int i = 0; i < fileNames.Length; i++)");
-            sb.AppendLine("            {");
-            sb.AppendLine("                var fileName = fileNames[i];");
-            sb.AppendLine("                tasks[i] = LoadAndCacheBinaryAsync(fileName, cache, cancellationToken);");
-            sb.AppendLine("            }");
-            sb.AppendLine("            await UniTask.WhenAll(tasks);");
-            sb.AppendLine();
-            sb.AppendLine("            // Phase 2: 用缓存数据同步构造 Tables");
-            sb.AppendLine($"            sTables = ({tablesNamespace}.Tables)tablesCtor.Invoke(new object[]");
-            sb.AppendLine("            {");
-            sb.AppendLine("                new Func<string, ByteBuf>(name =>");
-            sb.AppendLine("                {");
-            sb.AppendLine("                    if (!cache.TryGetValue(name, out var bytes) || bytes == null)");
-            sb.AppendLine("                    {");
-            sb.AppendLine("                        Debug.LogError($\"[TableKit] 异步缓存未命中: {name}\");");
-            sb.AppendLine("                        return null;");
-            sb.AppendLine("                    }");
-            sb.AppendLine("                    return new ByteBuf(bytes);");
-            sb.AppendLine("                })");
-            sb.AppendLine("            });");
-            sb.AppendLine("        }");
-            sb.AppendLine("        else");
-            sb.AppendLine("        {");
-            sb.AppendLine("            var cache = new Dictionary<string, string>(fileNames.Length);");
-            sb.AppendLine("            var tasks = new UniTask[fileNames.Length];");
-            sb.AppendLine("            for (int i = 0; i < fileNames.Length; i++)");
-            sb.AppendLine("            {");
-            sb.AppendLine("                var fileName = fileNames[i];");
-            sb.AppendLine("                tasks[i] = LoadAndCacheJsonAsync(fileName, cache, cancellationToken);");
-            sb.AppendLine("            }");
-            sb.AppendLine("            await UniTask.WhenAll(tasks);");
-            sb.AppendLine();
-            sb.AppendLine("            // 创建动态委托");
-            sb.AppendLine("            var funcType = typeof(Func<,>).MakeGenericType(typeof(string), loaderReturnType);");
-            sb.AppendLine("            var delegateMethod = new Func<string, object>(name =>");
-            sb.AppendLine("            {");
-            sb.AppendLine("                if (!cache.TryGetValue(name, out var json) || string.IsNullOrEmpty(json))");
-            sb.AppendLine("                {");
-            sb.AppendLine("                    Debug.LogError($\"[TableKit] 异步缓存未命中: {name}\");");
-            sb.AppendLine("                    return null;");
-            sb.AppendLine("                }");
-            sb.AppendLine();
-            sb.AppendLine("                if (sJsonParseMethod == null)");
-            sb.AppendLine("                {");
-            sb.AppendLine("                    var jsonType = AppDomain.CurrentDomain.GetAssemblies()");
-            sb.AppendLine("                        .Where(a => !a.IsDynamic)");
-            sb.AppendLine("                        .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })");
-            sb.AppendLine("                        .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
-            sb.AppendLine();
-            sb.AppendLine("                    if (jsonType == null)");
-            sb.AppendLine("                        throw new InvalidOperationException(\"无法找到 JSON 类型\");");
-            sb.AppendLine();
-            sb.AppendLine("                    sJsonParseMethod = jsonType.GetMethod(\"Parse\", BindingFlags.Public | BindingFlags.Static,");
-            sb.AppendLine("                        null, new[] { typeof(string) }, null);");
-            sb.AppendLine("                }");
-            sb.AppendLine();
-            sb.AppendLine("                return sJsonParseMethod.Invoke(null, new object[] { json });");
-            sb.AppendLine("            });");
-            sb.AppendLine();
-            sb.AppendLine("            var loaderDelegate = Delegate.CreateDelegate(funcType, delegateMethod.Target, delegateMethod.Method);");
-            sb.AppendLine($"            sTables = ({tablesNamespace}.Tables)tablesCtor.Invoke(new object[] {{ loaderDelegate }});");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        Initialized = true;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
-
-        private static void AppendAsyncCacheHelpers(StringBuilder sb)
-        {
-            sb.AppendLine("    private static async UniTask LoadAndCacheBinaryAsync(");
-            sb.AppendLine("        string fileName, Dictionary<string, byte[]> cache, CancellationToken ct)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var bytes = await sAsyncBinaryLoader(fileName, ct);");
-            sb.AppendLine("        cache[fileName] = bytes;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-            sb.AppendLine("    private static async UniTask LoadAndCacheJsonAsync(");
-            sb.AppendLine("        string fileName, Dictionary<string, string> cache, CancellationToken ct)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        var json = await sAsyncJsonLoader(fileName, ct);");
-            sb.AppendLine("        cache[fileName] = json;");
-            sb.AppendLine("    }");
-        }
-
-        private static void AppendDefaultAsyncLoaders(StringBuilder sb, bool hasYokiFrame)
-        {
-            sb.AppendLine();
-            if (hasYokiFrame)
-            {
-                sb.AppendLine("    // 默认异步加载器：使用 YokiFrame.ResKit");
-                sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = await YokiFrame.ResKit.LoadAssetUniTaskAsync<TextAsset>(path, ct);");
-                sb.AppendLine("        if (handler == default)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 异步加载失败: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var bytes = textAsset != null ? textAsset.bytes : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return bytes;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = await YokiFrame.ResKit.LoadAssetUniTaskAsync<TextAsset>(path, ct);");
-                sb.AppendLine("        if (handler == default)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 异步加载失败: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var text = textAsset != null ? textAsset.text : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return text;");
-                sb.AppendLine("    }");
-            }
-            else
-            {
-                sb.AppendLine("    // 默认异步加载器：使用 Resources.LoadAsync");
-                sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var request = Resources.LoadAsync<TextAsset>(path);");
-                sb.AppendLine("        await request.ToUniTask(cancellationToken: ct);");
-                sb.AppendLine("        var textAsset = request.asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.bytes : null;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var request = Resources.LoadAsync<TextAsset>(path);");
-                sb.AppendLine("        await request.ToUniTask(cancellationToken: ct);");
-                sb.AppendLine("        var textAsset = request.asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.text : null;");
-                sb.AppendLine("    }");
-            }
-        }
-
     }
 }
 #endif

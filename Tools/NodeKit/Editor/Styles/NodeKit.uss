@@ -47,9 +47,33 @@
     color: #e0e0e0;
 }
 
+.yoki-node__start-badge {
+    margin-left: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 8px;
+    background-color: rgba(120, 200, 120, 0.35);
+    color: #eaffea;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
 .yoki-node__body {
     padding: 10px;
     background-color: rgba(0, 0, 0, 0.2);
+}
+
+.yoki-node__property {
+    margin-top: 1px;
+    margin-bottom: 1px;
+}
+
+.yoki-node__port-label {
+    min-height: 18px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    color: #c7c7c7;
+    font-size: 11px;
 }
 
 /* === Port === */
@@ -92,6 +116,20 @@
 
 .yoki-edge:selected {
     --edge-color: #44bfff;
+}
+
+.yoki-reroute {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background-color: #d8d8d8;
+    border-width: 1px;
+    border-color: #1a1a1a;
+}
+
+.yoki-reroute:hover {
+    background-color: #44bfff;
 }
 
 /* === Search Window === */
@@ -160,6 +198,14 @@
 
 .yoki-dynamic-port-item__content {
     flex-grow: 1;
+}
+
+.yoki-dynamic-port-item Button {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    margin: 0 2px;
+    border-radius: 2px;
 }
 
 .yoki-dynamic-port-item__label {

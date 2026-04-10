@@ -7,15 +7,19 @@ using UnityEngine;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 编辑器专用事件中心 - 不依赖运行时 EventKit
-    /// 特点：类型安全、零 GC、自动清理
+    /// Editor-only event hub for editor windows, tool pages, and editor services.
     /// </summary>
+    /// <remarks>
+    /// This event center is intentionally independent from runtime EventKit so editor communication can evolve
+    /// without introducing player-build dependencies. It supports strongly typed events, enum-keyed events,
+    /// owner-based cleanup, and low-allocation subscription reuse.
+    /// </remarks>
     public static class EditorEventCenter
     {
-        #region 内部数据结构
+        #region Internal Types
 
         /// <summary>
-        /// 订阅信息 - 记录订阅者和回调
+        /// Single subscription record stored inside an event channel.
         /// </summary>
         private sealed class Subscription
         {
@@ -25,7 +29,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 事件通道 - 管理同一类型的所有订阅
+        /// Per-channel container that owns active subscriptions and a small reusable pool.
         /// </summary>
         private sealed class EventChannel
         {
@@ -49,69 +53,77 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 静态字段
+        #region Storage
 
-        // 类型事件通道：Type -> EventChannel
+        /// <summary>
+        /// Typed event channels keyed by payload type.
+        /// </summary>
         private static readonly Dictionary<Type, EventChannel> sTypeChannels = new(16);
 
-        // 枚举键事件通道：(EnumType, EnumValue) -> EventChannel
+        /// <summary>
+        /// Enum-keyed event channels keyed by <c>(enum type, enum value)</c>.
+        /// </summary>
         private static readonly Dictionary<(Type, int), EventChannel> sEnumChannels = new(32);
 
-        // 订阅 ID 到通道的映射（用于快速取消订阅）
+        /// <summary>
+        /// Maps subscription id to its owning channel for fast unregistration.
+        /// </summary>
         private static readonly Dictionary<int, (EventChannel Channel, Subscription Sub)> sSubscriptionMap = new(64);
 
-        // 全局订阅 ID 计数器
+        /// <summary>
+        /// Global incrementing id source for subscriptions.
+        /// </summary>
         private static int sNextGlobalId = 1;
 
-        // 临时列表（避免遍历时修改集合）
+        /// <summary>
+        /// Temporary list used to avoid mutating subscription collections while iterating.
+        /// </summary>
         private static readonly List<Subscription> sTempList = new(16);
 
         #endregion
 
-        #region 类型事件 API
+        #region Typed Events
 
         /// <summary>
-        /// 注册类型事件（无 Owner）
+        /// Registers a typed event handler without an explicit owner.
         /// </summary>
-        /// <typeparam name="T">事件数据类型</typeparam>
-        /// <param name="handler">事件处理器</param>
-        /// <returns>用于取消订阅的 IDisposable</returns>
+        /// <typeparam name="T">Event payload type.</typeparam>
+        /// <param name="handler">Handler invoked when the event is sent.</param>
+        /// <returns>A disposable used to unregister the handler.</returns>
         public static IDisposable Register<T>(Action<T> handler)
         {
-            return RegisterInternal<T>(null, handler);
+            return RegisterInternal(null, handler);
         }
 
         /// <summary>
-        /// 注册类型事件（带 Owner，用于批量清理）
+        /// Registers a typed event handler with an owner for batch cleanup.
         /// </summary>
-        /// <typeparam name="T">事件数据类型</typeparam>
-        /// <param name="owner">订阅者对象（通常是 EditorWindow 或 ToolPage）</param>
-        /// <param name="handler">事件处理器</param>
-        /// <returns>用于取消订阅的 IDisposable</returns>
+        /// <typeparam name="T">Event payload type.</typeparam>
+        /// <param name="owner">Subscription owner, usually an editor window or tool page.</param>
+        /// <param name="handler">Handler invoked when the event is sent.</param>
+        /// <returns>A disposable used to unregister the handler.</returns>
         public static IDisposable Register<T>(object owner, Action<T> handler)
         {
-            return RegisterInternal<T>(owner, handler);
+            return RegisterInternal(owner, handler);
         }
 
         /// <summary>
-        /// 发送类型事件
+        /// Sends a typed editor event.
         /// </summary>
-        /// <typeparam name="T">事件数据类型</typeparam>
-        /// <param name="args">事件数据</param>
+        /// <typeparam name="T">Event payload type.</typeparam>
+        /// <param name="args">Event payload.</param>
         public static void Send<T>(T args)
         {
             var type = typeof(T);
             if (!sTypeChannels.TryGetValue(type, out var channel)) return;
             if (channel.Subscriptions.Count == 0) return;
 
-            // 复制到临时列表，避免遍历时修改
             sTempList.Clear();
             for (int i = 0; i < channel.Subscriptions.Count; i++)
             {
                 sTempList.Add(channel.Subscriptions[i]);
             }
 
-            // 遍历执行
             for (int i = 0; i < sTempList.Count; i++)
             {
                 var sub = sTempList[i];
@@ -123,7 +135,7 @@ namespace YokiFrame.EditorTools
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogError($"[EditorEventCenter] 类型事件 '{type.Name}' 处理器异常: {ex}");
+                        Debug.LogError($"[EditorEventCenter] Typed event '{type.Name}' handler failed: {ex}");
                     }
                 }
             }
@@ -133,50 +145,54 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 枚举键事件 API
+        #region Enum-Keyed Events
 
         /// <summary>
-        /// 注册枚举键事件（无 Owner）
+        /// Registers an enum-keyed event handler without an explicit owner.
         /// </summary>
-        /// <typeparam name="TKey">枚举键类型</typeparam>
-        /// <typeparam name="TValue">事件数据类型</typeparam>
-        /// <param name="key">枚举键</param>
-        /// <param name="handler">事件处理器</param>
-        /// <returns>用于取消订阅的 IDisposable</returns>
+        /// <typeparam name="TKey">Enum type used as the channel key.</typeparam>
+        /// <typeparam name="TValue">Event payload type.</typeparam>
+        /// <param name="key">Enum key.</param>
+        /// <param name="handler">Handler invoked when the matching event is sent.</param>
+        /// <returns>A disposable used to unregister the handler.</returns>
         public static IDisposable Register<TKey, TValue>(TKey key, Action<TValue> handler) where TKey : Enum
         {
-            return RegisterEnumInternal<TKey, TValue>(null, key, handler);
+            return RegisterEnumInternal(null, key, handler);
         }
 
         /// <summary>
-        /// 注册枚举键事件（带 Owner）
+        /// Registers an enum-keyed event handler with an owner for batch cleanup.
         /// </summary>
+        /// <typeparam name="TKey">Enum type used as the channel key.</typeparam>
+        /// <typeparam name="TValue">Event payload type.</typeparam>
+        /// <param name="owner">Subscription owner, usually an editor window or tool page.</param>
+        /// <param name="key">Enum key.</param>
+        /// <param name="handler">Handler invoked when the matching event is sent.</param>
+        /// <returns>A disposable used to unregister the handler.</returns>
         public static IDisposable Register<TKey, TValue>(object owner, TKey key, Action<TValue> handler) where TKey : Enum
         {
-            return RegisterEnumInternal<TKey, TValue>(owner, key, handler);
+            return RegisterEnumInternal(owner, key, handler);
         }
 
         /// <summary>
-        /// 发送枚举键事件
+        /// Sends an enum-keyed editor event.
         /// </summary>
-        /// <typeparam name="TKey">枚举键类型</typeparam>
-        /// <typeparam name="TValue">事件数据类型</typeparam>
-        /// <param name="key">枚举键</param>
-        /// <param name="args">事件数据</param>
+        /// <typeparam name="TKey">Enum type used as the channel key.</typeparam>
+        /// <typeparam name="TValue">Event payload type.</typeparam>
+        /// <param name="key">Enum key.</param>
+        /// <param name="args">Event payload.</param>
         public static void Send<TKey, TValue>(TKey key, TValue args) where TKey : Enum
         {
             var channelKey = (typeof(TKey), Convert.ToInt32(key));
             if (!sEnumChannels.TryGetValue(channelKey, out var channel)) return;
             if (channel.Subscriptions.Count == 0) return;
 
-            // 复制到临时列表
             sTempList.Clear();
             for (int i = 0; i < channel.Subscriptions.Count; i++)
             {
                 sTempList.Add(channel.Subscriptions[i]);
             }
 
-            // 遍历执行
             for (int i = 0; i < sTempList.Count; i++)
             {
                 var sub = sTempList[i];
@@ -188,7 +204,7 @@ namespace YokiFrame.EditorTools
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogError($"[EditorEventCenter] 枚举事件 '{typeof(TKey).Name}.{key}' 处理器异常: {ex}");
+                        Debug.LogError($"[EditorEventCenter] Enum event '{typeof(TKey).Name}.{key}' handler failed: {ex}");
                     }
                 }
             }
@@ -198,18 +214,19 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 批量清理 API
+        #region Cleanup
 
         /// <summary>
-        /// 取消指定 Owner 的所有订阅
-        /// 通常在 EditorWindow.OnDisable 或 ToolPage.OnDeactivate 中调用
+        /// Unregisters every subscription owned by the specified object.
         /// </summary>
-        /// <param name="owner">订阅者对象</param>
+        /// <param name="owner">Subscription owner.</param>
+        /// <remarks>
+        /// Typically called from <c>EditorWindow.OnDisable</c> or <c>IYokiToolPage.OnDeactivate</c>.
+        /// </remarks>
         public static void UnregisterAll(object owner)
         {
             if (owner is null) return;
 
-            // 收集要移除的订阅 ID
             var toRemove = ListPool<int>.Get();
             try
             {
@@ -221,7 +238,6 @@ namespace YokiFrame.EditorTools
                     }
                 }
 
-                // 移除订阅
                 for (int i = 0; i < toRemove.Count; i++)
                 {
                     UnregisterById(toRemove[i]);
@@ -234,8 +250,11 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 清理所有订阅（PlayMode 退出时自动调用）
+        /// Clears all editor event subscriptions.
         /// </summary>
+        /// <remarks>
+        /// This is automatically called when exiting Play Mode.
+        /// </remarks>
         public static void ClearAll()
         {
             sTypeChannels.Clear();
@@ -245,7 +264,7 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 内部实现
+        #region Internal Implementation
 
         private static IDisposable RegisterInternal<T>(object owner, Action<T> handler)
         {
@@ -254,7 +273,7 @@ namespace YokiFrame.EditorTools
             var type = typeof(T);
             if (!sTypeChannels.TryGetValue(type, out var channel))
             {
-                channel = new();
+                channel = new EventChannel();
                 sTypeChannels[type] = channel;
             }
 
@@ -277,7 +296,7 @@ namespace YokiFrame.EditorTools
             var channelKey = (typeof(TKey), Convert.ToInt32(key));
             if (!sEnumChannels.TryGetValue(channelKey, out var channel))
             {
-                channel = new();
+                channel = new EventChannel();
                 sEnumChannels[channelKey] = channel;
             }
 
@@ -304,12 +323,14 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 初始化
+        #region Initialization
 
+        /// <summary>
+        /// Hooks Play Mode cleanup.
+        /// </summary>
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
-            // PlayMode 退出时清理所有订阅
             EditorApplication.playModeStateChanged += static state =>
             {
                 if (state == PlayModeStateChange.ExitingPlayMode)
@@ -321,10 +342,10 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 调试 API
+        #region Diagnostics
 
         /// <summary>
-        /// 获取类型事件订阅数量（调试用）
+        /// Gets the current subscriber count for a typed event.
         /// </summary>
         public static int GetSubscriberCount<T>()
         {
@@ -332,7 +353,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 获取枚举键事件订阅数量（调试用）
+        /// Gets the current subscriber count for a specific enum-keyed event.
         /// </summary>
         public static int GetSubscriberCount<TKey>(TKey key) where TKey : Enum
         {
@@ -344,28 +365,28 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
-    /// 编辑器事件类型枚举
+    /// Legacy editor event keys used by older monitor implementations.
     /// </summary>
+    /// <remarks>
+    /// New shared editor communication should prefer explicit payload types or
+    /// <see cref="EditorChannelRegistry"/>-based metadata contracts. This enum remains for
+    /// compatibility with existing monitors during the migration period.
+    /// </remarks>
     public enum EditorEventType
     {
-        // PoolKit 事件
         PoolListChanged,
         PoolActiveChanged,
         PoolEventLogged,
 
-        // EventKit 事件
         EventTriggered,
         EventRegistered,
         EventUnregistered,
 
-        // FsmKit 事件
         FsmStateChanged,
         FsmRegistered,
 
-        // ResKit 事件
         ResLoaded,
         ResUnloaded
     }
-
 }
 #endif

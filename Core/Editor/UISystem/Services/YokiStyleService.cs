@@ -192,14 +192,18 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 添加样式表（去重）
         /// </summary>
-        private static void AddStyleSheetIfNotExists(VisualElement root, StyleSheet sheet)
-        {
-            int id = sheet.GetInstanceID();
-            if (sAppliedStyleIds.Contains(id)) return;
+   private static void AddStyleSheetIfNotExists(VisualElement root, StyleSheet sheet)
+   {
+#if UNITY_6000_0_OR_NEWER
+       int id = sheet.GetEntityId().GetHashCode();
+#else
+       int id = sheet.GetInstanceID();
+#endif
+       if (sAppliedStyleIds.Contains(id)) return;
 
-            root.styleSheets.Add(sheet);
-            sAppliedStyleIds.Add(id);
-        }
+       root.styleSheets.Add(sheet);
+       sAppliedStyleIds.Add(id);
+   }
 
         private static string ResolveStyleSheetPath(string path)
         {
@@ -208,17 +212,17 @@ namespace YokiFrame.EditorTools
             // Already an AssetDatabase path
             if (path.StartsWith("Assets/") || path.StartsWith("Packages/"))
             {
-                return path;
+                return YokiStyleCompatibility.ResolveStyleSheetPath(path);
             }
 
             // Relative to EditorTools root
             if (path.StartsWith("Styling/"))
             {
-                return YokiEditorPaths.CombineWithEditorToolsRoot(path);
+                return YokiStyleCompatibility.ResolveStyleSheetPath(YokiEditorPaths.CombineWithEditorToolsRoot(path));
             }
 
             // Relative to Styling root
-            return YokiEditorPaths.CombineWithStylingRoot(path);
+            return YokiStyleCompatibility.ResolveStyleSheetPath(YokiEditorPaths.CombineWithStylingRoot(path));
         }
 
         #endregion
@@ -229,7 +233,7 @@ namespace YokiFrame.EditorTools
         {
             if (sCachedTokens == default)
             {
-                sCachedTokens = AssetDatabase.LoadAssetAtPath<StyleSheet>(TOKENS_PATH);
+                sCachedTokens = AssetDatabase.LoadAssetAtPath<StyleSheet>(YokiStyleCompatibility.ResolveStyleSheetPath(TOKENS_PATH));
             }
             return sCachedTokens;
         }
@@ -238,7 +242,7 @@ namespace YokiFrame.EditorTools
         {
             if (sCachedCore == default)
             {
-                sCachedCore = AssetDatabase.LoadAssetAtPath<StyleSheet>(CORE_PATH);
+                sCachedCore = AssetDatabase.LoadAssetAtPath<StyleSheet>(YokiStyleCompatibility.ResolveStyleSheetPath(CORE_PATH));
             }
             return sCachedCore;
         }
@@ -247,7 +251,7 @@ namespace YokiFrame.EditorTools
         {
             if (sCachedShell == default)
             {
-                sCachedShell = AssetDatabase.LoadAssetAtPath<StyleSheet>(SHELL_PATH);
+                sCachedShell = AssetDatabase.LoadAssetAtPath<StyleSheet>(YokiStyleCompatibility.ResolveStyleSheetPath(SHELL_PATH));
             }
             return sCachedShell;
         }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 #if UNITY_EDITOR
@@ -8,69 +7,74 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 对象池调试器 - 运行时数据收集
-    /// 仅在编辑器模式下启用追踪功能
+    /// Shared reflection publisher used by runtime-safe monitor code to push data into the Editor bus
+    /// without directly referencing the Editor assembly.
     /// </summary>
-    public static partial class PoolDebugger
+    public static class EditorBridgeReflectionUtility
     {
 #if UNITY_EDITOR
-        #region 事件通道常量
-
-        /// <summary>
-        /// 池列表变化事件通道
-        /// </summary>
-        public const string CHANNEL_POOL_LIST_CHANGED = "PoolKit.PoolListChanged";
-
-        /// <summary>
-        /// 活跃对象变化事件通道
-        /// </summary>
-        public const string CHANNEL_POOL_ACTIVE_CHANGED = "PoolKit.PoolActiveChanged";
-
-        /// <summary>
-        /// 事件日志事件通道
-        /// </summary>
-        public const string CHANNEL_POOL_EVENT_LOGGED = "PoolKit.PoolEventLogged";
-
-        #endregion
-
-        #region 反射缓存（避免重复查找）
-
         private static System.Reflection.MethodInfo sCachedNotifyMethodDefinition;
-        private static readonly Dictionary<Type, System.Reflection.MethodInfo> sCachedGenericMethods = new();
+        private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> sCachedGenericMethods = new();
         private static bool sReflectionInitialized;
-        
-        // 参数数组缓存（避免每次分配）
         private static readonly object[] sInvokeParams = new object[2];
+#endif
 
         /// <summary>
-        /// 初始化反射缓存（仅执行一次）
+        /// Publishes a payload to <c>EditorDataBridge</c> through reflection.
+        /// </summary>
+        [Conditional("UNITY_EDITOR")]
+        public static void NotifyDataChanged<T>(string channel, T data)
+        {
+#if UNITY_EDITOR
+            InitializeReflectionCache();
+            var genericMethod = GetCachedGenericMethod(typeof(T));
+            if (genericMethod is null) return;
+
+            try
+            {
+                sInvokeParams[0] = channel;
+                sInvokeParams[1] = data;
+                genericMethod.Invoke(null, sInvokeParams);
+            }
+            finally
+            {
+                sInvokeParams[0] = null;
+                sInvokeParams[1] = null;
+            }
+#endif
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Initializes the reflection cache for <c>EditorDataBridge.NotifyDataChanged&lt;T&gt;</c>.
         /// </summary>
         private static void InitializeReflectionCache()
         {
             if (sReflectionInitialized) return;
             sReflectionInitialized = true;
 
-            var bridgeType = Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
+            var bridgeType = System.Type.GetType("YokiFrame.EditorTools.EditorDataBridge, YokiFrame.Core.Editor");
             if (bridgeType is null) return;
 
             var methods = bridgeType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             for (int i = 0; i < methods.Length; i++)
             {
-                var m = methods[i];
-                if (m.Name != "Notify DataChanged" || !m.IsGenericMethodDefinition) continue;
-                var parameters = m.GetParameters();
+                var method = methods[i];
+                if (method.Name != "NotifyDataChanged" || !method.IsGenericMethodDefinition) continue;
+
+                var parameters = method.GetParameters();
                 if (parameters.Length == 2 && parameters[0].ParameterType == typeof(string))
                 {
-                    sCachedNotifyMethodDefinition = m;
+                    sCachedNotifyMethodDefinition = method;
                     break;
                 }
             }
         }
 
         /// <summary>
-        /// 获取缓存的泛型方法实例
+        /// Returns the cached generic publish method for the specified payload type.
         /// </summary>
-        private static System.Reflection.MethodInfo GetCachedGenericMethod(Type dataType)
+        private static System.Reflection.MethodInfo GetCachedGenericMethod(System.Type dataType)
         {
             if (sCachedGenericMethods.TryGetValue(dataType, out var method))
             {
@@ -83,85 +87,104 @@ namespace YokiFrame
             sCachedGenericMethods[dataType] = genericMethod;
             return genericMethod;
         }
+#endif
+    }
+
+    /// <summary>
+    /// PoolKit runtime monitor publisher.
+    /// Collects object-pool diagnostics and forwards relevant changes to the shared Editor bus.
+    /// </summary>
+    public static partial class PoolDebugger
+    {
+#if UNITY_EDITOR
+        #region Channels
+
+        /// <summary>
+        /// Published when the pool list changes.
+        /// Payload type: <see cref="PoolDebugInfo"/>.
+        /// </summary>
+        public const string CHANNEL_POOL_LIST_CHANGED = "PoolKit.PoolListChanged";
+
+        /// <summary>
+        /// Published when active objects in a pool change.
+        /// Payload type: <see cref="PoolDebugInfo"/>.
+        /// </summary>
+        public const string CHANNEL_POOL_ACTIVE_CHANGED = "PoolKit.PoolActiveChanged";
+
+        /// <summary>
+        /// Published when a pool event log entry is appended.
+        /// Payload type: <see cref="PoolEvent"/>.
+        /// </summary>
+        public const string CHANNEL_POOL_EVENT_LOGGED = "PoolKit.PoolEventLogged";
 
         #endregion
 
         /// <summary>
-        /// 通知编辑器数据变化（通过反射调用 EditorDataBridge）
-        /// 避免运行时程序集直接引用编辑器程序集
+        /// Forwards a pool-monitor message to the Editor bus.
+        /// Publishing is skipped when tracking is disabled.
         /// </summary>
         [Conditional("UNITY_EDITOR")]
         private static void NotifyEditorDataChanged<T>(string channel, T data)
         {
             if (!EnableTracking) return;
-
-            InitializeReflectionCache();
-            var genericMethod = GetCachedGenericMethod(typeof(T));
-            if (genericMethod is null) return;
-
-            try
-            {
-                // 复用参数数组，避免每次分配
-                sInvokeParams[0] = channel;
-                sInvokeParams[1] = data;
-                genericMethod.Invoke(null, sInvokeParams);
-                // 清空引用，避免持有对象
-                sInvokeParams[0] = null;
-                sInvokeParams[1] = null;
-            }
-            catch
-            {
-                // 静默失败，避免影响运行时性能
-            }
+            EditorBridgeReflectionUtility.NotifyDataChanged(channel, data);
         }
 
+        #region Runtime Snapshot State
+
         /// <summary>
-        /// 事件历史最大记录数
+        /// Maximum number of event-history entries retained in memory.
         /// </summary>
         public const int MAX_EVENT_HISTORY = 200;
 
         /// <summary>
-        /// 池调试信息字典
+        /// Map from pool instance to runtime debug info.
         /// </summary>
         private static readonly Dictionary<object, PoolDebugInfo> sPools = new();
 
         /// <summary>
-        /// 对象到池的映射（用于快速查找）
+        /// Map from active object to owning pool, used for quick tracked-object checks.
         /// </summary>
         private static readonly Dictionary<object, object> sObjectToPool = new();
 
         /// <summary>
-        /// 事件历史队列
+        /// Queue of recent pool events.
         /// </summary>
         private static readonly Queue<PoolEvent> sEventHistory = new(MAX_EVENT_HISTORY);
 
         /// <summary>
-        /// 是否启用追踪
+        /// Whether pool tracking is enabled.
         /// </summary>
         public static bool EnableTracking { get; set; } = true;
 
         /// <summary>
-        /// 是否记录堆栈（性能开销较大）
+        /// Whether stack traces should be recorded for tracked actions.
+        /// This improves diagnostics but increases runtime cost.
         /// </summary>
-        public static bool EnableStackTrace { get; set; } = true;
+        public static bool EnableStackTrace { get; set; } = false;
 
         /// <summary>
-        /// 是否记录事件历史
+        /// Whether pool events should be recorded into history.
         /// </summary>
         public static bool EnableEventHistory { get; set; } = true;
 
         /// <summary>
-        /// 获取池数量
+        /// Number of currently tracked pools.
         /// </summary>
         public static int PoolCount => sPools.Count;
 
         /// <summary>
-        /// 事件历史数量
+        /// Number of retained event-history entries.
         /// </summary>
         public static int EventHistoryCount => sEventHistory.Count;
 
+        #endregion
+
+        #region Lifecycle
+
         /// <summary>
-        /// 清空所有追踪数据
+        /// Clears all runtime pool-monitor caches.
+        /// This method remains the legacy public reset entry for existing callers.
         /// </summary>
         public static void Clear()
         {
@@ -169,19 +192,26 @@ namespace YokiFrame
             sObjectToPool.Clear();
             sEventHistory.Clear();
         }
+
+        /// <summary>
+        /// Clears all runtime state retained by the pool monitor publisher.
+        /// This is the unified lifecycle reset entry used by the legacy monitor contract.
+        /// </summary>
+        public static void ClearRuntimeMonitorState() => Clear();
+
+        #endregion
 #else
-        // 非编辑器模式下的空实现
         public const int MAX_EVENT_HISTORY = 200;
         public const string CHANNEL_POOL_LIST_CHANGED = "PoolKit.PoolListChanged";
         public const string CHANNEL_POOL_ACTIVE_CHANGED = "PoolKit.PoolActiveChanged";
         public const string CHANNEL_POOL_EVENT_LOGGED = "PoolKit.PoolEventLogged";
-        
+
         public static bool EnableTracking { get; set; }
         public static bool EnableStackTrace { get; set; }
         public static bool EnableEventHistory { get; set; }
         public static int PoolCount => 0;
         public static int EventHistoryCount => 0;
-        
+
         public static void RegisterPool(object pool, string name) { }
         public static void RegisterPool(object pool, string name, int maxCacheCount) { }
         public static void UnregisterPool(object pool) { }
@@ -194,6 +224,7 @@ namespace YokiFrame
         public static bool ForceReturn(object pool, object obj) => false;
         public static void ClearEventHistory() { }
         public static void Clear() { }
+        public static void ClearRuntimeMonitorState() { }
 #endif
     }
 }

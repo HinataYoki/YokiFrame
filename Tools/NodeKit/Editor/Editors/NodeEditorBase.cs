@@ -7,9 +7,6 @@ using UnityEngine.UIElements;
 
 namespace YokiFrame.NodeKit.Editor
 {
-    /// <summary>
-    /// 节点编辑器基类
-    /// </summary>
     public class NodeEditorBase
     {
         private Node mTarget;
@@ -22,9 +19,6 @@ namespace YokiFrame.NodeKit.Editor
         public NodeGraphView GraphView => mGraphView;
         public NodeView NodeView => mNodeView;
 
-        /// <summary>
-        /// 初始化编辑器
-        /// </summary>
         internal void Initialize(Node target, NodeGraphView graphView)
         {
             mTarget = target;
@@ -33,19 +27,10 @@ namespace YokiFrame.NodeKit.Editor
             OnEnable();
         }
 
-        /// <summary>
-        /// 设置节点视图引用
-        /// </summary>
         internal void SetNodeView(NodeView nodeView) => mNodeView = nodeView;
 
-        /// <summary>
-        /// 编辑器启用回调
-        /// </summary>
         protected virtual void OnEnable() { }
 
-        /// <summary>
-        /// 构建头部 UI
-        /// </summary>
         public virtual void OnHeaderGUI(VisualElement container)
         {
             var label = new Label(mTarget.name);
@@ -53,37 +38,44 @@ namespace YokiFrame.NodeKit.Editor
             container.Add(label);
         }
 
-        /// <summary>
-        /// 构建主体 UI
-        /// </summary>
         public virtual void OnBodyGUI(VisualElement container)
         {
             mSerializedObject.Update();
             var iterator = mSerializedObject.GetIterator();
-            iterator.NextVisible(true); // 跳过 m_Script
+            iterator.NextVisible(true);
 
             while (iterator.NextVisible(false))
             {
-                // 跳过内部字段
                 if (iterator.name is "mGraph" or "mPosition" or "mPorts" or "mPortKeys")
                     continue;
 
-                // 检查是否为动态端口列表
                 if (IsDynamicPortListField(iterator.name, out var portInfo))
                 {
                     AddDynamicPortList(container, iterator.name, portInfo);
                     continue;
                 }
 
+                if (!ShouldDrawBackingField(iterator.name))
+                {
+                    AddPortLabel(container, iterator.Copy());
+                    continue;
+                }
+
                 var field = new PropertyField(iterator.Copy());
                 field.Bind(mSerializedObject);
+                field.AddToClassList("yoki-node__property");
                 container.Add(field);
+            }
+
+            foreach (var dynamicPort in mTarget.DynamicPorts)
+            {
+                if (IsDynamicPortListPort(dynamicPort))
+                    continue;
+
+                AddDynamicPortLabel(container, dynamicPort);
             }
         }
 
-        /// <summary>
-        /// 添加动态端口列表
-        /// </summary>
         protected void AddDynamicPortList(VisualElement container, string fieldName, PortFieldInfo portInfo)
         {
             var arrayProperty = mSerializedObject.FindProperty(fieldName);
@@ -100,11 +92,63 @@ namespace YokiFrame.NodeKit.Editor
             container.Add(listView);
         }
 
+        public virtual void BuildContextMenu(ContextualMenuPopulateEvent evt) { }
+
+        public virtual Color GetTint()
+        {
+            var attr = mTarget.GetType().GetCustomAttributes(typeof(NodeTintAttribute), true);
+            if (attr.Length > 0 && attr[0] is NodeTintAttribute tint)
+                return new Color(tint.R, tint.G, tint.B);
+            return NodePreferences.TintColor;
+        }
+
+        public virtual int GetWidth()
+        {
+            var attr = mTarget.GetType().GetCustomAttributes(typeof(NodeWidthAttribute), true);
+            if (attr.Length > 0 && attr[0] is NodeWidthAttribute width)
+                return width.Width;
+            return 200;
+        }
+
+        public virtual string GetHeaderTooltip() => mTarget?.GetType().FullName;
+
+        public virtual void OnRename() { }
+
+        protected virtual void AddPortLabel(VisualElement container, SerializedProperty property)
+        {
+            var label = new Label(property.displayName);
+            label.AddToClassList("yoki-node__port-label");
+            container.Add(label);
+        }
+
+        protected virtual void AddDynamicPortLabel(VisualElement container, NodePort dynamicPort)
+        {
+            var label = new Label(ObjectNames.NicifyVariableName(dynamicPort.FieldName));
+            label.AddToClassList("yoki-node__port-label");
+            container.Add(label);
+        }
+
+        private bool IsDynamicPortListPort(NodePort dynamicPort)
+        {
+            if (dynamicPort == default || string.IsNullOrWhiteSpace(dynamicPort.FieldName))
+                return false;
+
+            int separatorIndex = dynamicPort.FieldName.LastIndexOf(' ');
+            if (separatorIndex <= 0 || separatorIndex >= dynamicPort.FieldName.Length - 1)
+                return false;
+
+            string fieldName = dynamicPort.FieldName[..separatorIndex];
+            string suffix = dynamicPort.FieldName[(separatorIndex + 1)..];
+            if (!int.TryParse(suffix, out _))
+                return false;
+
+            return IsDynamicPortListField(fieldName, out _);
+        }
+
         private bool IsDynamicPortListField(string fieldName, out PortFieldInfo info)
         {
             info = default;
-            var field = mTarget.GetType().GetField(fieldName,
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var field = mTarget.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             if (field == default) return false;
 
             var inputAttr = field.GetCustomAttribute<InputAttribute>();
@@ -138,6 +182,33 @@ namespace YokiFrame.NodeKit.Editor
             return false;
         }
 
+        private bool ShouldDrawBackingField(string fieldName)
+        {
+            var field = mTarget.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field == default) return true;
+
+            var inputAttr = field.GetCustomAttribute<InputAttribute>();
+            if (inputAttr != default)
+                return ShouldShowBackingValue(fieldName, inputAttr.BackingValue);
+
+            var outputAttr = field.GetCustomAttribute<OutputAttribute>();
+            if (outputAttr != default)
+                return ShouldShowBackingValue(fieldName, outputAttr.BackingValue);
+
+            return true;
+        }
+
+        private bool ShouldShowBackingValue(string fieldName, ShowBackingValue backingValue)
+        {
+            return backingValue switch
+            {
+                ShowBackingValue.Always => true,
+                ShowBackingValue.Never => false,
+                ShowBackingValue.Unconnected => !(mTarget.GetPort(fieldName)?.IsConnected ?? false),
+                _ => true
+            };
+        }
+
         private static Type GetElementType(Type type)
         {
             if (type.IsArray)
@@ -147,41 +218,6 @@ namespace YokiFrame.NodeKit.Editor
             return type;
         }
 
-        /// <summary>
-        /// 构建右键菜单
-        /// </summary>
-        public virtual void BuildContextMenu(ContextualMenuPopulateEvent evt) { }
-
-        /// <summary>
-        /// 获取节点着色
-        /// </summary>
-        public virtual Color GetTint()
-        {
-            var attr = mTarget.GetType().GetCustomAttributes(typeof(NodeTintAttribute), true);
-            if (attr.Length > 0 && attr[0] is NodeTintAttribute tint)
-                return new Color(tint.R, tint.G, tint.B);
-            return new Color(0.35f, 0.35f, 0.35f);
-        }
-
-        /// <summary>
-        /// 获取节点宽度
-        /// </summary>
-        public virtual int GetWidth()
-        {
-            var attr = mTarget.GetType().GetCustomAttributes(typeof(NodeWidthAttribute), true);
-            if (attr.Length > 0 && attr[0] is NodeWidthAttribute width)
-                return width.Width;
-            return 200;
-        }
-
-        /// <summary>
-        /// 重命名回调
-        /// </summary>
-        public virtual void OnRename() { }
-
-        /// <summary>
-        /// 端口字段信息
-        /// </summary>
         protected struct PortFieldInfo
         {
             public Type ValueType;

@@ -85,6 +85,7 @@
 /* ========== 调试页面样式 ========== */
 .yoki-ui-debug-toolbar {
     flex-direction: row;
+    align-items: center;
     padding-left: var(--yoki-spacing-sm);
     padding-right: var(--yoki-spacing-sm);
     padding-top: var(--yoki-spacing-xs);
@@ -92,6 +93,70 @@
     background-color: var(--yoki-layer-toolbar);
     border-bottom-width: 1px;
     border-bottom-color: var(--yoki-border-light);
+}
+
+.yoki-ui-debug-toolbar__filters {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.yoki-ui-debug-toolbar__actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.yoki-ui-debug-toolbar__toggle {
+    margin-left: var(--yoki-spacing-sm);
+}
+
+.yoki-ui-debug-toolbar__refresh {
+    margin-left: var(--yoki-spacing-sm);
+}
+
+.yoki-ui-debug-toolbar__status {
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-top-left-radius: var(--yoki-radius-pill);
+    border-top-right-radius: var(--yoki-radius-pill);
+    border-bottom-left-radius: var(--yoki-radius-pill);
+    border-bottom-right-radius: var(--yoki-radius-pill);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+}
+
+.yoki-ui-debug-toolbar__status--active {
+    background-color: rgba(77, 140, 111, 0.16);
+    border-top-color: rgba(110, 170, 132, 0.35);
+    border-right-color: rgba(110, 170, 132, 0.35);
+    border-bottom-color: rgba(110, 170, 132, 0.35);
+    border-left-color: rgba(110, 170, 132, 0.35);
+}
+
+.yoki-ui-debug-toolbar__status--inactive {
+    background-color: rgba(122, 131, 145, 0.12);
+    border-top-color: rgba(122, 131, 145, 0.28);
+    border-right-color: rgba(122, 131, 145, 0.28);
+    border-bottom-color: rgba(122, 131, 145, 0.28);
+    border-left-color: rgba(122, 131, 145, 0.28);
+}
+
+.yoki-ui-debug-toolbar__status-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+}
+
+.yoki-ui-debug-toolbar__status-label {
+    font-size: 11px;
+    color: var(--yoki-text-secondary);
 }
 
 .yoki-ui-debug-toggle {

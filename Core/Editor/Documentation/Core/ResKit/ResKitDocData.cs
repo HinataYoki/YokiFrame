@@ -4,40 +4,49 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// ResKit 文档数据 - 按功能模块拆分
+    /// ResKit 文档模块入口。
     /// </summary>
     internal static class ResKitDocData
     {
         /// <summary>
-        /// 获取所有 ResKit 文档模块
+        /// 获取 ResKit 的全部文档章节。
         /// </summary>
         internal static List<DocSection> GetAllSections()
         {
             var sections = new List<DocSection>
             {
-                // ResKit 基础
                 ResKitDocSync.CreateSection(),
                 ResKitDocAsync.CreateSection(),
                 ResKitDocCustomLoader.CreateSection(),
                 ResKitDocRawFile.CreateSection(),
                 ResKitDocRawFileInterface.CreateSection(),
-                
-                // YooAsset 集成
                 ResKitDocYooAssetOverview.CreateSection(),
                 ResKitDocYooAssetEditor.CreateSection(),
                 ResKitDocYooAssetOffline.CreateSection(),
                 ResKitDocYooAssetHost.CreateSection(),
                 ResKitDocYooAssetUpdate.CreateSection(),
                 ResKitDocYooAssetUsage.CreateSection(),
-                
-                // 批量与子资源加载
                 ResKitDocAllAssetsAndSubAssets.CreateSection()
             };
-            
-            // YooInit 完整初始化示例（包含多个子章节）
+
             sections.AddRange(ResKitDocYooAssetComplete.GetAllSections());
-            
             return sections;
+        }
+    }
+
+    internal sealed class ResKitDocumentationProvider : IDocumentationModuleProvider
+    {
+        public IEnumerable<DocModule> GetModules()
+        {
+            yield return new DocModule
+            {
+                Name = "ResKit",
+                Icon = KitIcons.RESKIT,
+                Category = "CORE KIT",
+                Description = "统一资源加载工具，覆盖同步、异步、原始文件、场景以及 YooAsset 集成等能力。",
+                Keywords = new List<string> { "资源", "异步", "引用计数", "YooAsset" },
+                Sections = ResKitDocData.GetAllSections()
+            };
         }
     }
 }

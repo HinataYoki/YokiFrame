@@ -6,14 +6,17 @@ using UnityEngine.UIElements;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// YokiToolPageBase - 响应式数据绑定
+    /// Binding and subscription helpers shared by all tool pages.
+    /// These helpers centralize lifecycle-safe subscriptions so page implementations do not need
+    /// to manually track every disposable in common scenarios.
     /// </summary>
     public abstract partial class YokiToolPageBase
     {
-        #region 事件订阅
+        #region Event Subscription
 
         /// <summary>
-        /// 订阅 EditorEventCenter 类型事件（自动管理生命周期）
+        /// Subscribes to an <see cref="EditorEventCenter"/> type-based event and automatically
+        /// attaches the subscription to the page lifecycle.
         /// </summary>
         protected void SubscribeEvent<T>(Action<T> handler)
         {
@@ -21,7 +24,8 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 订阅 EditorEventCenter 枚举键事件（自动管理生命周期）
+        /// Subscribes to an <see cref="EditorEventCenter"/> keyed event and automatically
+        /// attaches the subscription to the page lifecycle.
         /// </summary>
         protected void SubscribeEvent<TKey, TValue>(TKey key, Action<TValue> handler) where TKey : Enum
         {
@@ -29,7 +33,8 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 订阅数据通道（自动管理生命周期）
+        /// Subscribes to an <see cref="EditorDataBridge"/> channel and automatically disposes
+        /// the subscription when the page deactivates.
         /// </summary>
         protected void SubscribeChannel<T>(string channel, Action<T> callback)
         {
@@ -37,7 +42,8 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 订阅数据通道（带节流，自动管理生命周期）
+        /// Subscribes to an <see cref="EditorDataBridge"/> channel with throttling and automatically
+        /// disposes the subscription when the page deactivates.
         /// </summary>
         protected void SubscribeChannelThrottled<T>(string channel, Action<T> callback, float intervalSeconds)
         {
@@ -46,16 +52,16 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region Label 绑定
+        #region Label Binding
 
         /// <summary>
-        /// 绑定 Label 到 ReactiveProperty（自动管理生命周期）
+        /// Binds a label to a string reactive property.
         /// </summary>
         protected IDisposable BindToLabel(Label label, ReactiveProperty<string> property)
         {
             if (label == default)
             {
-                Debug.LogWarning("[YokiToolPage] BindToLabel: Label 为 null，绑定已跳过");
+                Debug.LogWarning("[YokiToolPage] BindToLabel: label is null, binding skipped.");
                 return Disposable.Empty;
             }
 
@@ -66,13 +72,13 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 绑定 Label 到 ReactiveProperty（带格式化）
+        /// Binds a label to a reactive property with a custom formatter.
         /// </summary>
         protected IDisposable BindToLabel<T>(Label label, ReactiveProperty<T> property, Func<T, string> formatter)
         {
             if (label == default)
             {
-                Debug.LogWarning("[YokiToolPage] BindToLabel: Label 为 null，绑定已跳过");
+                Debug.LogWarning("[YokiToolPage] BindToLabel: label is null, binding skipped.");
                 return Disposable.Empty;
             }
 
@@ -84,16 +90,16 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 可见性绑定
+        #region Visibility Binding
 
         /// <summary>
-        /// 绑定 VisualElement 可见性到 ReactiveProperty
+        /// Binds a visual element's display state to a boolean reactive property.
         /// </summary>
         protected IDisposable BindToVisibility(VisualElement element, ReactiveProperty<bool> property)
         {
             if (element == default)
             {
-                Debug.LogWarning("[YokiToolPage] BindToVisibility: Element 为 null，绑定已跳过");
+                Debug.LogWarning("[YokiToolPage] BindToVisibility: element is null, binding skipped.");
                 return Disposable.Empty;
             }
 
@@ -108,10 +114,11 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region ListView 绑定
+        #region ListView Binding
 
         /// <summary>
-        /// 绑定 ListView 到 ReactiveCollection
+        /// Binds a <see cref="ListView"/> to a reactive collection and refreshes the view whenever
+        /// the collection changes.
         /// </summary>
         protected IDisposable BindToListView<T>(
             ListView listView,
@@ -121,7 +128,7 @@ namespace YokiFrame.EditorTools
         {
             if (listView == default)
             {
-                Debug.LogWarning("[YokiToolPage] BindToListView: ListView 为 null，绑定已跳过");
+                Debug.LogWarning("[YokiToolPage] BindToListView: ListView is null, binding skipped.");
                 return Disposable.Empty;
             }
 
@@ -129,7 +136,6 @@ namespace YokiFrame.EditorTools
             listView.bindItem = bindItem;
             listView.itemsSource = collection;
 
-            // 使用闭包捕获 listView（ReactiveCollection.Subscribe 不支持 context 参数）
             var subscription = collection.Subscribe(_ => listView.RefreshItems());
             Subscriptions.Add(subscription);
             return subscription;
@@ -137,10 +143,10 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 防抖/节流
+        #region Debounce And Throttle
 
         /// <summary>
-        /// 创建防抖器（自动管理生命周期）
+        /// Creates a debounce helper bound to the page lifecycle.
         /// </summary>
         protected Debounce CreateDebounce(float delaySeconds)
         {
@@ -150,7 +156,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 创建节流器（自动管理生命周期）
+        /// Creates a throttle helper bound to the page lifecycle.
         /// </summary>
         protected Throttle CreateThrottle(float intervalSeconds)
         {

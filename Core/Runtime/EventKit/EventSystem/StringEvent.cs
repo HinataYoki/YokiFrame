@@ -1,22 +1,34 @@
-﻿using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// Runtime event hub keyed by strings.
+    /// </summary>
+    /// <remarks>
+    /// This API is kept for compatibility, but new systems should prefer <see cref="TypeEvent"/> or
+    /// <see cref="EnumEvent"/> because they are easier to refactor and provide better type safety.
+    /// </remarks>
     [Obsolete("StringEvent 存在类型安全隐患且重构困难，建议优先使用 TypeEvent 或 EnumEvent。")]
     public class StringEvent
     {
         private readonly Dictionary<string, EasyEvents> mEventDic = new();
+
+        /// <summary>
+        /// Gets or creates the event container for a specific string key.
+        /// </summary>
         private void GetEvents(string key, out EasyEvents stringEvent)
         {
             if (!mEventDic.TryGetValue(key, out stringEvent))
             {
-                stringEvent = new();
+                stringEvent = new EasyEvents();
                 mEventDic.Add(key, stringEvent);
             }
         }
+
         /// <summary>
-        /// 触发无参方法
+        /// Sends a parameterless string-keyed event.
         /// </summary>
         public void Send(string key)
         {
@@ -26,8 +38,9 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent>()?.Trigger();
         }
+
         /// <summary>
-        /// 触发有参方法
+        /// Sends a typed string-keyed event.
         /// </summary>
         public void Send<T>(string key, T args)
         {
@@ -37,13 +50,14 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent<T>>()?.Trigger(args);
         }
+
         /// <summary>
-        /// 触发可变参数方法
+        /// Sends a variadic string-keyed event.
         /// </summary>
         public void Send(string key, params object[] args) => Send<object[]>(key, args);
 
         /// <summary>
-        /// 注册无参方法
+        /// Registers a parameterless string-keyed listener.
         /// </summary>
         public LinkUnRegister Register(string key, Action onEvent)
         {
@@ -53,8 +67,9 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             return stringEvent.GetOrAddEvent<EasyEvent>().Register(onEvent);
         }
+
         /// <summary>
-        /// 注册有参方法
+        /// Registers a typed string-keyed listener.
         /// </summary>
         public LinkUnRegister<T> Register<T>(string key, Action<T> onEvent)
         {
@@ -64,21 +79,23 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             return stringEvent.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
         }
+
         /// <summary>
-        /// 注册可变参数方法
+        /// Registers a variadic string-keyed listener.
         /// </summary>
         public LinkUnRegister<object[]> Register(string key, Action<object[]> onEvent) => Register<object[]>(key, onEvent);
 
         /// <summary>
-        /// 注销此字符串所有方法
+        /// Clears all listeners bound to one string key.
         /// </summary>
         public void UnRegister(string key)
         {
             GetEvents(key, out var stringEvent);
             stringEvent.Clear();
         }
+
         /// <summary>
-        /// 注销无参方法
+        /// Unregisters one parameterless string-keyed listener.
         /// </summary>
         public void UnRegister(string key, Action onEvent)
         {
@@ -88,8 +105,9 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent>()?.UnRegister(onEvent);
         }
+
         /// <summary>
-        /// 注销有参方法
+        /// Unregisters one typed string-keyed listener.
         /// </summary>
         public void UnRegister<T>(string key, Action<T> onEvent)
         {
@@ -99,15 +117,19 @@ namespace YokiFrame
             GetEvents(key, out var stringEvent);
             stringEvent.GetEvent<EasyEvent<T>>()?.UnRegister(onEvent);
         }
+
         /// <summary>
-        /// 注销可变参数方法
+        /// Unregisters one variadic string-keyed listener.
         /// </summary>
         public void UnRegister(string key, Action<object[]> onEvent) => UnRegister<object[]>(key, onEvent);
 
-        public void Clear() => mEventDic.Clear();
-        
         /// <summary>
-        /// 获取所有已注册的字符串事件（用于编辑器可视化）
+        /// Clears all string-keyed event containers.
+        /// </summary>
+        public void Clear() => mEventDic.Clear();
+
+        /// <summary>
+        /// Returns all string-keyed events for editor inspection.
         /// </summary>
         public IReadOnlyDictionary<string, EasyEvents> GetAllEvents() => mEventDic;
     }

@@ -1,0 +1,8 @@
+using UnityEngine;
+using YokiFrame.NodeKit;
+
+[CreateAssetMenu(fileName = "#SCRIPTNAME#", menuName = "YokiFrame/NodeKit/#SCRIPTNAME#")]
+public class #SCRIPTNAME# : NodeGraph
+{
+    #NOTRIM#
+}

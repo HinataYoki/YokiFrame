@@ -8,7 +8,7 @@
 
 | 需求场景 | 目标位置 | 说明 |
 |---------|---------|------|
-| 查看 Kit 文档 | `Documentation/Core/` 或 `Documentation/Tools/` | 20+ Kit 文档，按框架分层 |
+| 查看 Kit 文档 | `Documentation/Core/` 或 `Assets/YokiFrame/Tools/*/Editor/Documentation/` | 文档内容分散在各 Kit，由 `DocumentationModuleRegistry` 自动收集 |
 | 打开编辑器窗口 | `ToolsWindow/EntryPoints/YokiToolsMenu.cs` | 快捷键: `Ctrl+E` |
 | 添加新页面 | `ToolsWindow/Pages/Kits/` | 使用 `[YokiToolPage]` 特性 |
 | 使用 UI 组件 | `UISystem/Components/YokiFrameUIComponents.*.cs` | 20+ 组件文件 |
@@ -99,11 +99,8 @@ Core/Editor/
 │       ├── YokiEditorPaths.cs             - 路径服务
 │       └── DependencyDefineService.cs     - 依赖管理服务
 │
-├── Documentation/                 ← 文档系统（应用层）
-│   ├── Infrastructure/            ← 文档基础设施
-│   │   ├── IDocumentationPage.cs
-│   │   └── DocumentationPageBase.cs
-│   │
+├── Documentation/                 ← 文档注册与 Core 文档内容
+│   ├── DocumentationModuleRegistry.cs - 文档模块发现与排序
 │   ├── Core/                      ← 核心层文档（10 个 Kit）
 │   │   ├── EventKit/              - 事件系统文档
 │   │   ├── PoolKit/               - 对象池文档
@@ -116,17 +113,18 @@ Core/Editor/
 │   │   ├── ToolClass/             - 工具类文档
 │   │   └── CodeGenKit/            - 代码生成文档
 │   │
-│   └── Tools/                     ← 工具层文档（10 个 Kit）
-│       ├── UIKit/                 - UI 管理文档
-│       ├── AudioKit/              - 音频管理文档
-│       ├── ActionKit/             - 动作序列文档
-│       ├── TableKit/              - 配置表文档
-│       ├── SaveKit/               - 存档系统文档
-│       ├── SceneKit/              - 场景管理文档
-│       ├── InputKit/              - 输入系统文档
-│       ├── LocalizationKit/       - 本地化文档
-│       ├── BuffKit/               - Buff 系统文档
-│       └── SpatialKit/            - 空间查询文档
+│
+├── Tools/*/Editor/Documentation/  ← 工具层文档内容（按 Kit 分散存放）
+│   ├── UIKit/                     - UI 管理文档
+│   ├── AudioKit/                  - 音频管理文档
+│   ├── ActionKit/                 - 动作序列文档
+│   ├── TableKit/                  - 配置表文档
+│   ├── SaveKit/                   - 存档系统文档
+│   ├── SceneKit/                  - 场景管理文档
+│   ├── InputKit/                  - 输入系统文档
+│   ├── LocalizationKit/           - 本地化文档
+│   ├── BuffKit/                   - Buff 系统文档
+│   └── SpatialKit/                - 空间查询文档
 │
 └── ToolsWindow/                   ← 编辑器窗口（应用层）
     ├── EntryPoints/               ← 菜单入口
@@ -182,7 +180,7 @@ ToolsWindow ──┐
 | 索引文件 | `AI_NAVIGATION.md` | `Core/Editor/AI_NAVIGATION.md` | `AI_NAVIGATION` |
 | 基础设施 | `Foundation/*` | `Foundation/Reactive/` | `Foundation` |
 | UI 系统 | `UISystem/*` | `UISystem/Components/` | `UISystem` |
-| 文档系统 | `Documentation/*` | `Documentation/Core/EventKit/` | `Documentation` |
+| 文档系统 | `Documentation/*` + `Tools/*/Editor/Documentation/*` | `Documentation/Core/EventKit/` | `Documentation` |
 | 窗口系统 | `ToolsWindow/*` | `ToolsWindow/Pages/` | `ToolsWindow` |
 | 注册中心 | `*Registry*` | `YokiToolPageRegistry.cs` | `Registry` |
 | 服务层 | `*Service*` | `YokiStyleService.cs` | `Service` |
@@ -217,7 +215,7 @@ ToolsWindow ──┐
 **使用方式**：
 ```csharp
 var card = YokiFrameUIComponents.CreateCard("标题", "内容");
-var button = YokiFrameUIComponents.CreateButton("点击", OnClick);
+var button = YokiFrameUIComponents.CreatePrimaryButton("点击", OnClick);
 ```
 
 ### 3. 样式系统（UISystem/Styling）
@@ -270,9 +268,9 @@ var(--yoki-radius-lg)          /* 8px */
 element.AddToClassList("yoki-pool-card");
 element.AddToClassList("yoki-pool-card--warning");
 
-// 禁止内联样式（违反框架规范）
-// ❌ element.style.backgroundColor = new StyleColor(Color.red);
-// ✅ element.AddToClassList("yoki-pool-card--error");
+// 优先使用共享样式类，局部动态状态可接受少量内联样式
+// 首选：element.AddToClassList("yoki-pool-card--error");
+// 次选：element.style.backgroundColor = new StyleColor(Color.red);
 ```
 
 ### 4. 页面注册（ToolsWindow/Registry）
@@ -280,15 +278,15 @@ element.AddToClassList("yoki-pool-card--warning");
 **页面特性**：
 ```csharp
 [YokiToolPage(
-    id: "EventKit",
-    displayName: "事件系统",
-    category: "Core",
-    order: 100
+    kit: "EventKit",
+    name: "EventKit",
+    icon: KitIcons.EVENTKIT,
+    priority: 30,
+    category: YokiPageCategory.Tool
 )]
 public class EventKitToolPage : YokiToolPageBase
 {
-    protected override void OnActivate() { }
-    protected override void OnDeactivate() { }
+    protected override void BuildUI(VisualElement root) { }
 }
 ```
 
@@ -301,16 +299,18 @@ public class EventKitToolPage : YokiToolPageBase
 1. 创建页面类：`ToolsWindow/Pages/Kits/{KitName}/{KitName}ToolPage.cs`
 2. 添加 `[YokiToolPage]` 特性
 3. 继承 `YokiToolPageBase`
-4. 实现 `OnActivate()` 和 `OnDeactivate()`
+4. 实现 `BuildUI(root)`，按需重写 `OnActivate()` / `OnDeactivate()`
 5. （可选）创建样式：`UISystem/Styling/Kits/{KitName}/{KitName}.uss`
 6. （可选）注册样式：`[assembly: YokiEditorStyle("{KitName}", "Kits/{KitName}/{KitName}.uss")]`
 
 ### 添加新的文档页面
 
-1. 创建文档类：`Documentation/Core/{KitName}/{KitName}Doc{Topic}.cs`
-2. 继承 `DocumentationPageBase`
-3. 添加 `[YokiToolPage]` 特性（category 设为文档分类）
-4. 使用 `YokiFrameUIComponents` 构建文档 UI
+1. 在对应 Kit 的文档目录创建 `*Doc*.cs`
+   Core Kit: `Documentation/Core/{KitName}/`
+   Tool Kit: `Assets/YokiFrame/Tools/{KitName}/Editor/Documentation/`
+2. 在对应 `*DocData.cs` 中汇总 section
+3. 让该 Kit 自己的 `IDocumentationModuleProvider` 返回模块元数据
+4. 文档页统一由 `DocumentationToolPage` 渲染，无需为每篇文档单独创建 `[YokiToolPage]`
 
 ### 使用响应式数据
 
@@ -347,17 +347,14 @@ count.Value = 10; // 触发订阅
 
 **常用路径常量**：
 ```csharp
-// 编辑器根路径
-YokiEditorPaths.GetEditorRoot()
+// 窗口根路径
+YokiEditorPaths.GetEditorToolsRoot()
 
 // 样式根路径
 YokiEditorPaths.GetStylingRoot()
 
-// 窗口根路径
-YokiEditorPaths.GetEditorToolsRoot()
-
-// 文档根路径
-YokiEditorPaths.GetDocumentationRoot()
+// 组合子路径
+YokiEditorPaths.CombineWithEditorToolsRoot("Pages/Kits")
 ```
 
 ---
@@ -367,7 +364,7 @@ YokiEditorPaths.GetDocumentationRoot()
 | 类型 | 数量 | 位置 |
 |------|------|------|
 | 核心层 Kit | 10 | `Documentation/Core/` |
-| 工具层 Kit | 10 | `Documentation/Tools/` |
+| 工具层 Kit | 10 | `Assets/YokiFrame/Tools/*/Editor/Documentation/` |
 | UI 组件类型 | 20+ | `UISystem/Components/` |
 | 样式文件 | 3 层 | `UISystem/Styling/` (Tokens/Core/Kits) |
 | 编辑器服务 | 3 | `UISystem/Services/` |
@@ -378,7 +375,7 @@ YokiEditorPaths.GetDocumentationRoot()
 ## 🐛 常见问题
 
 ### Q: 页面没有出现在窗口中？
-A: 检查 `[YokiToolPage]` 特性参数，确保 id 唯一，类继承 `YokiToolPageBase`
+A: 检查 `[YokiToolPage]` 特性参数，确保 `kit + name + category` 配置正确，并且类实现了 `IYokiToolPage`（通常继承 `YokiToolPageBase`）
 
 ### Q: 样式没有生效？
 A: 检查 `[YokiEditorStyle]` 特性，确保 stylePath 相对于 `UISystem/Styling/`

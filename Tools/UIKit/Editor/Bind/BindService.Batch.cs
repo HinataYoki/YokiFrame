@@ -6,20 +6,15 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 绑定服务 - 批量绑定逻辑
+    /// BindService 中负责批量添加 Bind 的逻辑。
     /// </summary>
     public static partial class BindService
     {
         #region 批量绑定
 
         /// <summary>
-        /// 批量添加 Bind 组件
+        /// 为一组对象批量添加 Bind 组件。
         /// </summary>
-        /// <param name="gameObjects">目标 GameObject 列表</param>
-        /// <param name="recursive">是否递归处理子物体</param>
-        /// <param name="defaultType">默认绑定类型</param>
-        /// <param name="autoSuggestName">是否自动设置建议名称</param>
-        /// <returns>添加结果报告</returns>
         public static BatchBindResult BatchAddBind(
             IEnumerable<GameObject> gameObjects,
             bool recursive = false,
@@ -43,7 +38,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 处理单个 GameObject 的绑定添加
+        /// 处理单个对象的绑定添加流程。
         /// </summary>
         private static void ProcessGameObjectForBind(
             GameObject go,
@@ -52,7 +47,6 @@ namespace YokiFrame
             bool autoSuggestName,
             BatchBindResult result)
         {
-            // 检查是否已有 Bind 组件
             var existingBind = go.GetComponent<AbstractBind>();
             if (existingBind != null)
             {
@@ -60,7 +54,6 @@ namespace YokiFrame
             }
             else
             {
-                // 添加 Bind 组件
                 var bind = AddBindComponent(go, defaultType, autoSuggestName);
                 if (bind != null)
                 {
@@ -72,7 +65,6 @@ namespace YokiFrame
                 }
             }
 
-            // 递归处理子物体
             if (recursive)
             {
                 int childCount = go.transform.childCount;
@@ -85,29 +77,25 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 添加 Bind 组件到 GameObject
+        /// 在指定对象上添加 Bind 组件。
         /// </summary>
         private static AbstractBind AddBindComponent(
             GameObject go,
             BindType bindType,
             bool autoSuggestName)
         {
-            // 使用 Undo 支持撤销
             var bind = Undo.AddComponent<Bind>(go);
             if (bind == null)
                 return null;
 
             bind.bind = bindType;
 
-            // 自动设置建议名称
             if (autoSuggestName)
             {
-                // 尝试获取主要 UI 组件类型
                 var componentType = GetPrimaryUIComponentType(go);
                 string suggestedName = BindNameSuggester.SuggestName(go, bindType, componentType);
                 bind.mName = suggestedName;
 
-                // 设置组件类型
                 if (componentType != null)
                 {
                     bind.type = componentType.FullName;
@@ -120,14 +108,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取 GameObject 上的主要 UI 组件类型
+        /// 获取对象上最适合作为绑定类型的 UI 组件类型。
         /// </summary>
         private static System.Type GetPrimaryUIComponentType(GameObject go)
         {
             if (go == null)
                 return null;
 
-            // 按优先级检查常用 UI 组件
             var priorityTypes = new[]
             {
                 typeof(UnityEngine.UI.Button),
@@ -149,7 +136,6 @@ namespace YokiFrame
                     return type;
             }
 
-            // 检查 TMP 组件（通过名称避免硬依赖）
             var components = go.GetComponents<Component>();
             foreach (var comp in components)
             {
@@ -163,7 +149,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取 GameObject 的层级路径
+        /// 获取对象的层级路径。
         /// </summary>
         private static string GetGameObjectPath(GameObject go)
         {

@@ -117,12 +117,10 @@ namespace YokiFrame.EditorTools
                 if (exists && !newDefines.Contains(dep.Define))
                 {
                     newDefines.Add(dep.Define);
-                    Debug.Log($"[YokiFrame] 添加宏定义: {dep.Define}");
                 }
                 else if (!exists && newDefines.Contains(dep.Define))
                 {
                     newDefines.Remove(dep.Define);
-                    Debug.Log($"[YokiFrame] 移除宏定义: {dep.Define}");
                 }
             }
 

@@ -8,13 +8,13 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// PoolDebugger - 事件历史和堆栈追踪
+    /// Event-history and stack-trace helpers for <see cref="PoolDebugger"/>.
     /// </summary>
     public static partial class PoolDebugger
     {
 #if UNITY_EDITOR
         /// <summary>
-        /// 记录事件到历史队列
+        /// Writes a pool event into history and publishes it to the Editor monitor channel.
         /// </summary>
         private static void RecordEvent(PoolEventType eventType, string poolName, object obj, string stackTrace)
         {
@@ -41,12 +41,11 @@ namespace YokiFrame
             };
 
             sEventHistory.Enqueue(evt);
-
             NotifyEditorDataChanged(CHANNEL_POOL_EVENT_LOGGED, evt);
         }
 
         /// <summary>
-        /// 解析堆栈追踪获取调用来源
+        /// Extracts a user-facing source string from a raw stack trace.
         /// </summary>
         private static string ParseStackTraceSource(string stackTrace)
         {
@@ -87,7 +86,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取调用者堆栈（跳过对象池内部帧）
+        /// Captures a business-facing caller stack trace while skipping framework-internal frames.
         /// </summary>
         private static string GetCallerStackTrace()
         {
@@ -110,7 +109,6 @@ namespace YokiFrame
                 var typeName = declaringType.FullName ?? declaringType.Name;
                 var methodName = method.Name;
 
-                // 跳过框架内部帧
                 if (ShouldSkipFrame(typeName, methodName))
                 {
                     continue;
@@ -118,20 +116,15 @@ namespace YokiFrame
 
                 foundCaller = true;
 
-                // 处理 UniTask 异步状态机（如 <CreateRoleAsync>d__22）
                 var displayTypeName = typeName;
                 var displayMethodName = methodName;
-                
                 if (methodName == "MoveNext" && typeName.Contains("+<") && typeName.Contains(">d__"))
                 {
-                    // 提取原始类名和方法名
                     var plusIndex = typeName.LastIndexOf('+');
                     if (plusIndex > 0)
                     {
                         var outerType = typeName.Substring(0, plusIndex);
                         var innerType = typeName.Substring(plusIndex + 1);
-                        
-                        // 提取异步方法名（如 <CreateRoleAsync>d__22 -> CreateRoleAsync）
                         var startIndex = innerType.IndexOf('<');
                         var endIndex = innerType.IndexOf('>');
                         if (startIndex >= 0 && endIndex > startIndex)
@@ -143,7 +136,6 @@ namespace YokiFrame
                     }
                 }
 
-                // 构建堆栈帧字符串
                 sb.Append(displayTypeName);
                 sb.Append('.');
                 sb.Append(displayMethodName);
@@ -166,40 +158,27 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 判断是否应该跳过该堆栈帧
+        /// Determines whether a stack frame should be hidden from the business-facing trace.
         /// </summary>
         private static bool ShouldSkipFrame(string typeName, string methodName)
         {
-            // 跳过对象池相关
             if (typeName.Contains("PoolDebugger")) return true;
             if (typeName.Contains("SafePoolKit")) return true;
             if (typeName.Contains("SimplePoolKit")) return true;
             if (typeName.Contains("System.Environment")) return true;
 
-            // 跳过 UniTask 内部实现
             if (typeName.StartsWith("Cysharp.Threading.Tasks"))
             {
-                // 保留 MoveNext（异步状态机的实际业务逻辑）
                 if (methodName == "MoveNext") return false;
                 return true;
             }
 
-            // 跳过 YokiFrame 框架内部实现（保留业务代码和测试代码）
             if (typeName.StartsWith("YokiFrame."))
             {
-                // 保留测试代码
                 if (typeName.Contains("Test")) return false;
-                
-                // 跳过 ActionKit 所有内部实现
                 if (typeName.Contains("ActionKit") || typeName.Contains("Action.")) return true;
-                
-                // 跳过 ResKit 内部实现
                 if (typeName.Contains("ResKit")) return true;
-                
-                // 跳过 UIKit 内部实现
                 if (typeName.Contains("UIKit")) return true;
-                
-                // 跳过其他 Kit 内部实现
                 if (typeName.Contains("Kit")) return true;
             }
 
@@ -207,8 +186,11 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取事件历史（最新的在前）
+        /// Returns pool event history in reverse chronological order.
         /// </summary>
+        /// <param name="result">Target list that will be cleared first.</param>
+        /// <param name="filterType">Optional event type filter.</param>
+        /// <param name="poolName">Optional pool-name filter.</param>
         public static void GetEventHistory(List<PoolEvent> result, PoolEventType? filterType = null, string poolName = null)
         {
             result.Clear();
@@ -226,7 +208,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 清空事件历史
+        /// Clears the retained event history.
         /// </summary>
         public static void ClearEventHistory()
         {

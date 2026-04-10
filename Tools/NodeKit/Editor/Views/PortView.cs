@@ -1,12 +1,10 @@
+using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame.NodeKit.Editor
 {
-    /// <summary>
-    /// 端口视图
-    /// </summary>
     public class PortView : Port
     {
         private NodePort mNodePort;
@@ -18,17 +16,11 @@ namespace YokiFrame.NodeKit.Editor
         private PortView(Orientation orientation, Direction direction, Capacity capacity, System.Type type)
             : base(orientation, direction, capacity, type) { }
 
-        /// <summary>
-        /// 创建端口视图
-        /// </summary>
         public static PortView Create(NodePort nodePort, NodeView nodeView)
         {
             var direction = nodePort.IsInput ? Direction.Input : Direction.Output;
-            var capacity = nodePort.ConnectionType == ConnectionType.Multiple 
-                ? Capacity.Multi 
-                : Capacity.Single;
+            var capacity = nodePort.ConnectionType == ConnectionType.Multiple ? Capacity.Multi : Capacity.Single;
 
-            // 使用默认 EdgeConnectorListener
             var listener = new DefaultEdgeConnectorListener();
             var port = new PortView(Orientation.Horizontal, direction, capacity, nodePort.ValueType)
             {
@@ -37,37 +29,24 @@ namespace YokiFrame.NodeKit.Editor
                 portName = nodePort.FieldName
             };
 
-            // 设置 EdgeConnector 以支持拖拽连线
             port.m_EdgeConnector = new EdgeConnector<EdgeView>(listener);
             port.AddManipulator(port.m_EdgeConnector);
 
             port.AddToClassList("yoki-port");
             port.AddToClassList(nodePort.IsInput ? "yoki-port--input" : "yoki-port--output");
 
-            // 设置端口颜色
             var graphView = nodeView.GraphView;
             if (graphView != default)
-            {
-                var color = graphView.GraphEditor.GetPortColor(nodePort);
-                port.portColor = color;
-            }
+                port.portColor = graphView.GraphEditor.GetPortColor(nodePort);
 
-            // 设置提示
-            if (NodePreferences.PortTooltips)
-            {
-                var typeName = nodePort.ValueType == default ? "object" : nodePort.ValueType.Name;
-                port.tooltip = $"{nodePort.FieldName} ({typeName})";
-            }
+            if (NodePreferences.PortTooltips && graphView != default)
+                port.tooltip = graphView.GraphEditor.GetPortTooltip(nodePort);
 
-            // 注册右键菜单
             port.RegisterCallback<ContextualMenuPopulateEvent>(port.OnContextMenu);
-
+            port.RegisterCallback<MouseEnterEvent>(port.OnMouseEnter);
             return port;
         }
 
-        /// <summary>
-        /// 刷新端口颜色
-        /// </summary>
         public void RefreshColor()
         {
             var graphView = mNodeView.GraphView;
@@ -75,51 +54,120 @@ namespace YokiFrame.NodeKit.Editor
             portColor = graphView.GraphEditor.GetPortColor(mNodePort);
         }
 
+        private void OnMouseEnter(MouseEnterEvent evt)
+        {
+            var graphView = mNodeView?.GraphView;
+            if (graphView == default)
+                return;
+
+            tooltip = NodePreferences.PortTooltips
+                ? graphView.GraphEditor.GetPortTooltip(mNodePort)
+                : string.Empty;
+        }
+
         private void OnContextMenu(ContextualMenuPopulateEvent evt)
         {
             if (mNodePort == default) return;
 
-            // 断开所有连接
             if (mNodePort.IsConnected)
             {
+                for (int i = 0; i < mNodePort.ConnectionCount; i++)
+                {
+                    var connectedPort = mNodePort.GetConnection(i);
+                    if (connectedPort == default) continue;
+
+                    evt.menu.AppendAction($"Disconnect/{connectedPort.Node.name}", _ =>
+                    {
+                        NodeEditorUtility.RecordUndo(new UnityEngine.Object[] { mNodePort.Node, connectedPort.Node, mNodeView.GraphView.Graph }, "Disconnect Port");
+                        mNodePort.Disconnect(connectedPort);
+                        mNodeView.GraphView.RefreshNodeView(mNodePort.Node);
+                        mNodeView.GraphView.RefreshNodeView(connectedPort.Node);
+                        mNodeView.GraphView.RefreshConnections(mNodePort.Node, connectedPort.Node);
+                        mNodeView.GraphView.SaveGraph();
+                    });
+                }
+
                 evt.menu.AppendAction("Disconnect All", _ =>
                 {
-                    NodeEditorUtility.RecordUndo(mNodePort.Node, "Disconnect All");
+                    NodeEditorUtility.RecordUndo(new UnityEngine.Object[] { mNodePort.Node, mNodeView.GraphView.Graph }, "Disconnect All");
+                    var connectedNodes = new List<Node>();
+                    for (int i = 0; i < mNodePort.ConnectionCount; i++)
+                    {
+                        var connectedPort = mNodePort.GetConnection(i);
+                        if (connectedPort?.Node != default && !connectedNodes.Contains(connectedPort.Node))
+                            connectedNodes.Add(connectedPort.Node);
+                    }
+
                     mNodePort.ClearConnections();
-                    mNodeView.GraphView.LoadGraph(mNodeView.GraphView.Graph);
+                    mNodeView.GraphView.RefreshNodeView(mNodePort.Node);
+                    for (int i = 0; i < connectedNodes.Count; i++)
+                    {
+                        mNodeView.GraphView.RefreshNodeView(connectedNodes[i]);
+                    }
+                    var refreshNodes = new Node[connectedNodes.Count + 1];
+                    refreshNodes[0] = mNodePort.Node;
+                    for (int i = 0; i < connectedNodes.Count; i++)
+                        refreshNodes[i + 1] = connectedNodes[i];
+                    mNodeView.GraphView.RefreshConnections(refreshNodes);
+                    mNodeView.GraphView.SaveGraph();
                 });
             }
 
-            // 动态端口可移除
             if (mNodePort.IsDynamic)
             {
                 evt.menu.AppendAction("Remove Port", _ =>
                 {
-                    NodeEditorUtility.RecordUndo(mNodePort.Node, "Remove Port");
+                    NodeEditorUtility.RecordUndo(new UnityEngine.Object[] { mNodePort.Node, mNodeView.GraphView.Graph }, "Remove Port");
                     mNodePort.Node.RemoveDynamicPort(mNodePort.FieldName);
                     mNodeView.RefreshAllPorts();
+                    mNodeView.GraphView.SaveGraph();
                 });
             }
+
+            evt.menu.AppendSeparator();
+            evt.menu.AppendAction("Create Node", _ =>
+            {
+                var graphView = mNodeView.GraphView;
+                if (graphView == default) return;
+                graphView.HandleDropOutsidePort(CreateEdgeStub(), evt.mousePosition);
+            });
+        }
+
+        private Edge CreateEdgeStub()
+        {
+            var edge = new Edge();
+            if (direction == Direction.Output) edge.output = this;
+            else edge.input = this;
+            return edge;
         }
     }
 
-    /// <summary>
-    /// 默认边连接监听器
-    /// </summary>
     internal class DefaultEdgeConnectorListener : IEdgeConnectorListener
     {
-        private GraphViewChange mGraphViewChange;
-        private System.Collections.Generic.List<Edge> mEdgesToCreate;
-        private System.Collections.Generic.List<GraphElement> mEdgesToDelete;
+        private readonly GraphViewChange mGraphViewChange;
+        private readonly List<Edge> mEdgesToCreate;
+        private readonly List<GraphElement> mEdgesToDelete;
 
         public DefaultEdgeConnectorListener()
         {
-            mEdgesToCreate = new();
-            mEdgesToDelete = new();
+            mEdgesToCreate = new List<Edge>();
+            mEdgesToDelete = new List<GraphElement>();
             mGraphViewChange.edgesToCreate = mEdgesToCreate;
         }
 
-        public void OnDropOutsidePort(Edge edge, Vector2 position) { }
+        public void OnDropOutsidePort(Edge edge, Vector2 position)
+        {
+            if (edge.parent is NodeGraphView graphView)
+            {
+                graphView.HandleDropOutsidePort(edge, position);
+                return;
+            }
+
+            if (edge.output is PortView outputPort)
+                outputPort.NodeView.GraphView.HandleDropOutsidePort(edge, position);
+            else if (edge.input is PortView inputPort)
+                inputPort.NodeView.GraphView.HandleDropOutsidePort(edge, position);
+        }
 
         public void OnDrop(GraphView graphView, Edge edge)
         {
@@ -129,18 +177,19 @@ namespace YokiFrame.NodeKit.Editor
             mEdgesToDelete.Clear();
             if (edge.input.capacity == Port.Capacity.Single)
             {
-                foreach (var conn in edge.input.connections)
+                foreach (var connection in edge.input.connections)
                 {
-                    if (conn != edge)
-                        mEdgesToDelete.Add(conn);
+                    if (connection != edge)
+                        mEdgesToDelete.Add(connection);
                 }
             }
+
             if (edge.output.capacity == Port.Capacity.Single)
             {
-                foreach (var conn in edge.output.connections)
+                foreach (var connection in edge.output.connections)
                 {
-                    if (conn != edge)
-                        mEdgesToDelete.Add(conn);
+                    if (connection != edge)
+                        mEdgesToDelete.Add(connection);
                 }
             }
 
@@ -148,15 +197,15 @@ namespace YokiFrame.NodeKit.Editor
                 graphView.DeleteElements(mEdgesToDelete);
 
             var edgesToCreate = mEdgesToCreate;
-            if (graphView.graphViewChanged != null)
+            if (graphView.graphViewChanged != default)
                 edgesToCreate = graphView.graphViewChanged(mGraphViewChange).edgesToCreate;
 
             for (int i = 0; i < edgesToCreate.Count; i++)
             {
-                var e = edgesToCreate[i];
-                graphView.AddElement(e);
-                edge.input.Connect(e);
-                edge.output.Connect(e);
+                var createdEdge = edgesToCreate[i];
+                graphView.AddElement(createdEdge);
+                createdEdge.input.Connect(createdEdge);
+                createdEdge.output.Connect(createdEdge);
             }
         }
     }

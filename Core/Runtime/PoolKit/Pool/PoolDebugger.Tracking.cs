@@ -7,21 +7,20 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// PoolDebugger - 追踪功能（注册、借出、归还）
+    /// Pool registration and borrow/return tracking for <see cref="PoolDebugger"/>.
     /// </summary>
     public static partial class PoolDebugger
     {
 #if UNITY_EDITOR
         /// <summary>
-        /// 注册池到调试器
+        /// Registers a pool instance with the debugger.
         /// </summary>
-        /// <param name="pool">池实例</param>
-        /// <param name="name">池名称</param>
-        /// <param name="maxCacheCount">最大缓存容量（-1 表示无限制）</param>
+        /// <param name="pool">Pool instance.</param>
+        /// <param name="name">Display name for the pool.</param>
+        /// <param name="maxCacheCount">Configured max cache count, or -1 if unlimited.</param>
         public static void RegisterPool(object pool, string name, int maxCacheCount = -1)
         {
             if (pool == default) return;
-
             if (sPools.ContainsKey(pool)) return;
 
             var info = new PoolDebugInfo
@@ -40,7 +39,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 注销池
+        /// Unregisters a pool instance and removes all tracked active-object mappings for it.
         /// </summary>
         public static void UnregisterPool(object pool)
         {
@@ -55,31 +54,29 @@ namespace YokiFrame
                         sObjectToPool.Remove(activeObj.Obj);
                     }
                 }
-                sPools.Remove(pool);
 
+                sPools.Remove(pool);
                 NotifyEditorDataChanged(CHANNEL_POOL_LIST_CHANGED, info);
             }
         }
 
         /// <summary>
-        /// 记录对象借出
+        /// Records that an object was borrowed from a pool.
         /// </summary>
         public static void TrackAllocate(object pool, object obj)
         {
             if (pool == default || obj == default || !EnableTracking) return;
-
             if (!sPools.TryGetValue(pool, out var info)) return;
 
-            // 检查对象是否已经在活跃列表中（避免重复添加）
             var objHash = obj.GetHashCode();
             for (int i = 0; i < info.ActiveObjects.Count; i++)
             {
                 var storedObj = info.ActiveObjects[i].Obj;
-                if (ReferenceEquals(storedObj, obj) || 
+                if (ReferenceEquals(storedObj, obj) ||
                     (storedObj.GetHashCode() == objHash && Equals(storedObj, obj)))
                 {
-                    UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackAllocate 检测到重复: Pool={info.Name}, HashCode={objHash}, 已存在于索引 {i}");
-                    return; // 已存在，不重复添加
+                    UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackAllocate duplicate detected: Pool={info.Name}, HashCode={objHash}, Index={i}");
+                    return;
                 }
             }
 
@@ -109,23 +106,20 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 记录对象归还
+        /// Records that an object was returned to a pool.
         /// </summary>
         public static void TrackRecycle(object pool, object obj)
         {
             if (pool == default || obj == default || !EnableTracking) return;
-
             if (!sPools.TryGetValue(pool, out var info)) return;
 
             var found = false;
             var objHash = obj.GetHashCode();
-            
+
             for (int i = info.ActiveObjects.Count - 1; i >= 0; i--)
             {
                 var storedObj = info.ActiveObjects[i].Obj;
-                
-                // 优先使用 ReferenceEquals，如果失败则使用 Equals 和 HashCode
-                if (ReferenceEquals(storedObj, obj) || 
+                if (ReferenceEquals(storedObj, obj) ||
                     (storedObj.GetHashCode() == objHash && Equals(storedObj, obj)))
                 {
                     info.ActiveObjects.RemoveAt(i);
@@ -136,7 +130,7 @@ namespace YokiFrame
 
             if (!found)
             {
-                UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackRecycle 未找到匹配: Pool={info.Name}, HashCode={objHash}, ActiveCount={info.ActiveObjects.Count}");
+                UnityEngine.Debug.LogWarning($"[PoolDebugger] TrackRecycle target not found: Pool={info.Name}, HashCode={objHash}, ActiveCount={info.ActiveObjects.Count}");
             }
 
             info.ActiveCount = info.ActiveObjects.Count;
@@ -152,7 +146,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 更新池的总容量
+        /// Updates the total object count for a pool.
         /// </summary>
         public static void UpdateTotalCount(object pool, int totalCount)
         {
@@ -165,7 +159,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取池的活跃对象数量
+        /// Returns the number of currently active objects for a pool.
         /// </summary>
         public static int GetActiveCount(object pool)
         {
@@ -175,14 +169,13 @@ namespace YokiFrame
             {
                 return info.ActiveCount;
             }
+
             return 0;
         }
 
         /// <summary>
-        /// 检查对象是否被追踪（是否曾被 Allocate 过）
+        /// Returns whether an object is currently known to the debugger as tracked.
         /// </summary>
-        /// <param name="obj">要检查的对象</param>
-        /// <returns>true 表示对象在追踪字典中（曾被借出），false 表示不在（如 Init 预创建的对象）</returns>
         public static bool IsObjectTracked(object obj)
         {
             if (obj == default || !EnableTracking) return false;
@@ -190,7 +183,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 更新池的最大缓存容量
+        /// Updates the configured max cache count for a pool.
         /// </summary>
         public static void UpdateMaxCacheCount(object pool, int maxCacheCount)
         {
@@ -203,8 +196,9 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取所有池的调试信息
+        /// Returns debug info for all tracked pools.
         /// </summary>
+        /// <param name="result">Target list that will be cleared first.</param>
         public static void GetAllPools(List<PoolDebugInfo> result)
         {
             result.Clear();
@@ -215,7 +209,8 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 强制归还对象
+        /// Forces an object back into a pool through reflection.
+        /// Intended for Editor debugging workflows.
         /// </summary>
         public static bool ForceReturn(object pool, object obj)
         {
@@ -229,7 +224,6 @@ namespace YokiFrame
 
             var poolType = pool.GetType();
             var recycleMethod = poolType.GetMethod("Recycle");
-
             if (recycleMethod == default) return false;
 
             try
@@ -245,7 +239,7 @@ namespace YokiFrame
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogWarning($"[PoolDebugger] 强制归还失败: {e.Message}");
+                UnityEngine.Debug.LogWarning($"[PoolDebugger] ForceReturn failed: {e.Message}");
                 return false;
             }
         }

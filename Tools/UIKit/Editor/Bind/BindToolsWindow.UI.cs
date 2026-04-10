@@ -7,14 +7,14 @@ using UnityEngine.UIElements;
 namespace YokiFrame
 {
     /// <summary>
-    /// BindToolsWindow - UI 构建和逻辑
+    /// BindToolsWindow 的 UI 构建和批量绑定执行逻辑。
     /// </summary>
     public partial class BindToolsWindow
     {
         #region UI 构建
 
         /// <summary>
-        /// 创建选中对象信息区域
+        /// 创建当前选中对象信息区块。
         /// </summary>
         private void CreateSelectionSection()
         {
@@ -29,7 +29,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建配置选项区域
+        /// 创建批量绑定选项区块。
         /// </summary>
         private void CreateOptionsSection()
         {
@@ -37,7 +37,6 @@ namespace YokiFrame
             section.AddToClassList("section");
             section.AddToClassList("options-section");
 
-            // 递归处理子物体
             var recursiveToggle = new Toggle("递归处理子物体") { value = mRecursive };
             recursiveToggle.AddToClassList("option-toggle");
             recursiveToggle.RegisterValueChangedCallback(evt =>
@@ -47,7 +46,6 @@ namespace YokiFrame
             });
             section.Add(recursiveToggle);
 
-            // 默认绑定类型
             var typeRow = new VisualElement();
             typeRow.AddToClassList("option-row");
 
@@ -66,7 +64,6 @@ namespace YokiFrame
 
             section.Add(typeRow);
 
-            // 自动建议名称
             var suggestToggle = new Toggle("使用组件类型前缀") { value = mAutoSuggestName };
             suggestToggle.AddToClassList("option-toggle");
             suggestToggle.RegisterValueChangedCallback(evt =>
@@ -80,7 +77,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建预览区域
+        /// 创建预览区块。
         /// </summary>
         private void CreatePreviewSection()
         {
@@ -100,7 +97,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建操作按钮
+        /// 创建底部操作按钮。
         /// </summary>
         private void CreateActionButtons()
         {
@@ -123,7 +120,7 @@ namespace YokiFrame
         #region 预览逻辑
 
         /// <summary>
-        /// 选择变化时刷新预览
+        /// 选中对象变化时刷新预览。
         /// </summary>
         private void OnSelectionChanged()
         {
@@ -131,7 +128,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 刷新预览
+        /// 根据当前选择和选项重新生成批量绑定预览。
         /// </summary>
         private void RefreshPreview()
         {
@@ -143,7 +140,6 @@ namespace YokiFrame
             var selectedObjects = Selection.gameObjects;
             int count = selectedObjects?.Length ?? 0;
 
-            // 更新选中数量
             if (mSelectionCountLabel != null)
             {
                 mSelectionCountLabel.text = $"选中对象: {count} 个 GameObject";
@@ -151,7 +147,7 @@ namespace YokiFrame
 
             if (count == 0)
             {
-                var emptyLabel = new Label("请在 Hierarchy 中选择 GameObject");
+                var emptyLabel = new Label("请先在 Hierarchy 中选择 GameObject");
                 emptyLabel.AddToClassList("preview-empty");
                 mPreviewContainer.Add(emptyLabel);
 
@@ -160,16 +156,15 @@ namespace YokiFrame
                     mExecuteBtn.SetEnabled(false);
                     mExecuteBtn.text = "添加绑定";
                 }
+
                 return;
             }
 
-            // 收集预览项
             foreach (var go in selectedObjects)
             {
                 CollectPreviewItems(go, mRecursive);
             }
 
-            // 显示预览
             int addCount = 0;
             foreach (var item in mPreviewItems)
             {
@@ -180,16 +175,15 @@ namespace YokiFrame
                     addCount++;
             }
 
-            // 更新执行按钮
             if (mExecuteBtn != null)
             {
                 mExecuteBtn.SetEnabled(addCount > 0);
-                mExecuteBtn.text = addCount > 0 ? $"添加 {addCount} 个绑定" : "无可添加的绑定";
+                mExecuteBtn.text = addCount > 0 ? $"添加 {addCount} 个绑定" : "没有可添加的绑定";
             }
         }
 
         /// <summary>
-        /// 收集预览项
+        /// 收集单个对象及其子层级的绑定预览项。
         /// </summary>
         private void CollectPreviewItems(GameObject go, bool recursive)
         {
@@ -222,7 +216,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建预览行
+        /// 创建单条预览行。
         /// </summary>
         private VisualElement CreatePreviewRow(BindPreviewItem item)
         {
@@ -234,22 +228,18 @@ namespace YokiFrame
                 row.AddToClassList("preview-row-skipped");
             }
 
-            // 原始名称
             var originalLabel = new Label(item.OriginalName);
             originalLabel.AddToClassList("preview-original");
             row.Add(originalLabel);
 
-            // 箭头
-            var arrow = new Label("→");
+            var arrow = new Label("->");
             arrow.AddToClassList("preview-arrow");
             row.Add(arrow);
 
-            // 建议名称
             var suggestedLabel = new Label(item.SuggestedName);
             suggestedLabel.AddToClassList("preview-suggested");
             row.Add(suggestedLabel);
 
-            // 组件类型
             if (!string.IsNullOrEmpty(item.ComponentType))
             {
                 var typeLabel = new Label($"({item.ComponentType})");
@@ -257,7 +247,6 @@ namespace YokiFrame
                 row.Add(typeLabel);
             }
 
-            // 已有绑定标记
             if (item.AlreadyHasBind)
             {
                 var skipLabel = new Label("[已有绑定]");
@@ -269,7 +258,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取主要组件类型名称
+        /// 获取预览中优先显示的主要组件类型名。
         /// </summary>
         private static string GetPrimaryComponentTypeName(GameObject go)
         {
@@ -294,7 +283,6 @@ namespace YokiFrame
                     return type.Name;
             }
 
-            // 检查 TMP 组件
             var components = go.GetComponents<Component>();
             foreach (var comp in components)
             {
@@ -312,7 +300,7 @@ namespace YokiFrame
         #region 执行逻辑
 
         /// <summary>
-        /// 执行批量绑定
+        /// 执行批量添加 Bind 组件。
         /// </summary>
         private void ExecuteBatchBind()
         {
@@ -329,7 +317,6 @@ namespace YokiFrame
                 mDefaultType,
                 mAutoSuggestName);
 
-            // 显示结果
             string message = $"添加完成: {result.SuccessCount} 成功";
             if (result.SkippedCount > 0)
                 message += $", {result.SkippedCount} 跳过";
@@ -337,13 +324,11 @@ namespace YokiFrame
                 message += $", {result.FailedCount} 失败";
 
             ShowResult(message, result.FailedCount == 0);
-
-            // 刷新预览
             RefreshPreview();
         }
 
         /// <summary>
-        /// 显示结果
+        /// 显示批量绑定执行结果。
         /// </summary>
         private void ShowResult(string message, bool success)
         {

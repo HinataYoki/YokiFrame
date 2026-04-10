@@ -1,12 +1,10 @@
 using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame.NodeKit.Editor
 {
-    /// <summary>
-    /// 图编辑器基类
-    /// </summary>
     public class NodeGraphEditorBase
     {
         private NodeGraph mTarget;
@@ -15,9 +13,6 @@ namespace YokiFrame.NodeKit.Editor
         public NodeGraph Target => mTarget;
         public NodeGraphView GraphView => mGraphView;
 
-        /// <summary>
-        /// 初始化编辑器
-        /// </summary>
         internal void Initialize(NodeGraph target, NodeGraphView graphView)
         {
             mTarget = target;
@@ -25,48 +20,90 @@ namespace YokiFrame.NodeKit.Editor
             OnEnable();
         }
 
-        /// <summary>
-        /// 编辑器启用回调
-        /// </summary>
         protected virtual void OnEnable() { }
 
-        /// <summary>
-        /// 创建节点
-        /// </summary>
+        public virtual void OnGUI() { }
+
+        public virtual void OnOpen() { }
+
+        public virtual void OnWindowFocus() { }
+
+        public virtual void OnWindowFocusLost() { }
+
+        public virtual void OnDropObjects(UnityEngine.Object[] objects) { }
+
         public virtual Node CreateNode(Type type, Vector2 position)
         {
             var node = mTarget.AddNode(type);
             if (node != default)
+            {
                 node.Position = position;
+                if (string.IsNullOrWhiteSpace(node.name))
+                    node.name = NodeEditorUtility.NodeDefaultName(type);
+            }
+
             return node;
         }
 
-        /// <summary>
-        /// 检查是否可以连接
-        /// </summary>
         public virtual bool CanConnect(NodePort output, NodePort input)
         {
             if (output == default || input == default) return false;
             return output.CanConnectTo(input);
         }
 
-        /// <summary>
-        /// 构建右键菜单
-        /// </summary>
         public virtual void BuildContextMenu(ContextualMenuPopulateEvent evt) { }
 
-        /// <summary>
-        /// 获取端口颜色
-        /// </summary>
+        public virtual string GetNodeMenuName(Type type)
+        {
+            var attr = type.GetCustomAttributes(typeof(CreateNodeMenuAttribute), true).FirstOrDefault() as CreateNodeMenuAttribute;
+            return string.IsNullOrWhiteSpace(attr?.MenuName) ? NodeEditorUtility.NodeDefaultPath(type) : attr.MenuName;
+        }
+
+        public virtual int GetNodeMenuOrder(Type type)
+        {
+            var attr = type.GetCustomAttributes(typeof(CreateNodeMenuAttribute), true).FirstOrDefault() as CreateNodeMenuAttribute;
+            return attr?.Order ?? 0;
+        }
+
         public virtual Color GetPortColor(NodePort port)
         {
             if (port == default) return Color.gray;
             return NodeEditorUtility.GetTypeColor(port.ValueType);
         }
 
-        /// <summary>
-        /// 获取类型颜色
-        /// </summary>
+        public virtual NoodlePath GetNoodlePath(NodePort output, NodePort input)
+        {
+            return NodePreferences.NoodlePath;
+        }
+
+        public virtual NoodleStroke GetNoodleStroke(NodePort output, NodePort input)
+        {
+            return NodePreferences.NoodleStroke;
+        }
+
+        public virtual float GetNoodleThickness(NodePort output, NodePort input)
+        {
+            return NodePreferences.NoodleThickness;
+        }
+
+        public virtual string GetPortTooltip(NodePort port)
+        {
+            if (port == default) return string.Empty;
+            var tooltip = NodeEditorUtility.PrettyName(port.ValueType);
+            if (!port.IsOutput) return tooltip;
+
+            var value = port.Node.GetValue(port);
+            return $"{tooltip} = {(value != default ? value : "null")}";
+        }
+
+        public virtual bool CanRemove(Node node) => mTarget != default && mTarget.CanRemoveNode(node);
+
+        public virtual void RemoveNode(Node node)
+        {
+            if (!CanRemove(node)) return;
+            mTarget.RemoveNode(node);
+        }
+
         public virtual Color GetTypeColor(Type type) => NodeEditorUtility.GetTypeColor(type);
     }
 }

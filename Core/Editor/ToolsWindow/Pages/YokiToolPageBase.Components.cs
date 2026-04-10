@@ -1,20 +1,18 @@
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// YokiToolPageBase - UI 组件创建
+    /// Shared UI helpers for editor tool pages.
     /// </summary>
     public abstract partial class YokiToolPageBase
     {
-        #region 工具栏
+        #region Toolbar
 
-        /// <summary>
-        /// 创建工具栏容器
-        /// </summary>
         protected VisualElement CreateToolbar()
         {
             var toolbar = new VisualElement();
@@ -22,47 +20,43 @@ namespace YokiFrame.EditorTools
             return toolbar;
         }
 
-        /// <summary>
-        /// 创建工具栏主按钮（品牌色填充）
-        /// </summary>
         protected Button CreateToolbarPrimaryButton(string text, Action onClick)
             => YokiFrameUIComponents.CreateToolbarPrimaryButton(text, onClick);
 
-        /// <summary>
-        /// 创建工具栏次要按钮
-        /// </summary>
         protected Button CreateToolbarButton(string text, Action onClick)
             => YokiFrameUIComponents.CreateToolbarButton(text, onClick);
 
-        /// <summary>
-        /// 创建工具栏 Toggle
-        /// </summary>
         protected VisualElement CreateToolbarToggle(string text, bool value, Action<bool> onChanged)
         {
             var container = new VisualElement();
             container.AddToClassList("toolbar-toggle");
-            if (value) container.AddToClassList("checked");
+            if (value)
+            {
+                container.AddToClassList("checked");
+            }
 
             var label = new Label(text);
             label.AddToClassList("toolbar-toggle-label");
             container.Add(label);
 
-            container.RegisterCallback<ClickEvent>(evt =>
+            container.RegisterCallback<ClickEvent>(_ =>
             {
                 bool isChecked = container.ClassListContains("checked");
                 if (isChecked)
+                {
                     container.RemoveFromClassList("checked");
+                }
                 else
+                {
                     container.AddToClassList("checked");
+                }
+
                 onChanged?.Invoke(!isChecked);
             });
 
             return container;
         }
 
-        /// <summary>
-        /// 创建工具栏弹性空间
-        /// </summary>
         protected VisualElement CreateToolbarSpacer()
         {
             var spacer = new VisualElement();
@@ -72,48 +66,97 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 卡片与布局
+        #region Layout
 
-        /// <summary>
-        /// 创建现代化卡片
-        /// </summary>
         protected (VisualElement card, VisualElement body) CreateCard(string title = null, string icon = null)
             => YokiFrameUIComponents.CreateCard(title, icon);
 
-        /// <summary>
-        /// 创建分割面板
-        /// </summary>
-        protected TwoPaneSplitView CreateSplitView(float initialLeftWidth = 280f)
+        protected YokiFrameUIComponents.KitPageScaffold CreateKitPageScaffold(
+            string title,
+            string summary,
+            string iconId = null,
+            string eyebrow = null,
+            VisualElement headerActions = null)
+            => YokiFrameUIComponents.CreateKitPageScaffold(title, summary, iconId, eyebrow, headerActions);
+
+        protected (VisualElement panel, VisualElement body) CreateKitSectionPanel(
+            string title,
+            string summary = null,
+            string iconId = null,
+            VisualElement trailing = null)
+            => YokiFrameUIComponents.CreateKitSectionPanel(title, summary, iconId, trailing);
+
+        protected VisualElement CreateKitMetricStrip()
+            => YokiFrameUIComponents.CreateKitMetricStrip();
+
+        protected (VisualElement card, Label valueLabel) CreateKitMetricCard(
+            string title,
+            string value,
+            string hint = null,
+            Color? accentColor = null)
+            => YokiFrameUIComponents.CreateKitMetricCard(title, value, hint, accentColor);
+
+        protected VisualElement CreateContentArea(bool padded = false)
         {
-            var splitView = new TwoPaneSplitView(0, initialLeftWidth, TwoPaneSplitViewOrientation.Horizontal);
-            splitView.AddToClassList("split-view");
-            splitView.style.flexGrow = 1;
-            return splitView;
+            var content = new VisualElement();
+            content.AddToClassList("content-area");
+            if (padded)
+            {
+                content.AddToClassList("content-area--padded");
+            }
+
+            content.style.flexGrow = 1;
+            return content;
         }
 
-        /// <summary>
-        /// 创建分割面板（带 EditorPrefs 持久化）
-        /// </summary>
+        protected TwoPaneSplitView CreateSplitView(float initialLeftWidth = 280f)
+            => CreateSplitView(initialLeftWidth, null);
+
         protected TwoPaneSplitView CreateSplitView(float initialLeftWidth, string prefsKey)
         {
             float savedWidth = string.IsNullOrEmpty(prefsKey)
                 ? initialLeftWidth
                 : EditorPrefs.GetFloat(prefsKey, initialLeftWidth);
 
-            var splitView = new TwoPaneSplitView(0, savedWidth, TwoPaneSplitViewOrientation.Horizontal);
+            return CreatePersistentSplitView(TwoPaneSplitViewOrientation.Horizontal, savedWidth, prefsKey, true);
+        }
+
+        protected TwoPaneSplitView CreateVerticalSplitView(float initialTopHeight, string prefsKey = null)
+        {
+            float savedHeight = string.IsNullOrEmpty(prefsKey)
+                ? initialTopHeight
+                : EditorPrefs.GetFloat(prefsKey, initialTopHeight);
+
+            return CreatePersistentSplitView(TwoPaneSplitViewOrientation.Vertical, savedHeight, prefsKey, false);
+        }
+
+        private static TwoPaneSplitView CreatePersistentSplitView(
+            TwoPaneSplitViewOrientation orientation,
+            float initialDimension,
+            string prefsKey,
+            bool isHorizontal)
+        {
+            var splitView = new TwoPaneSplitView(0, initialDimension, orientation);
             splitView.AddToClassList("split-view");
             splitView.style.flexGrow = 1;
 
             if (!string.IsNullOrEmpty(prefsKey))
             {
-                // 使用闭包捕获变量（RegisterCallback 不支持带 context 的静态 lambda）
                 string capturedKey = prefsKey;
-                splitView.RegisterCallback<GeometryChangedEvent>(evt =>
+                splitView.RegisterCallback<GeometryChangedEvent>(_ =>
                 {
-                    float currentWidth = splitView.fixedPane?.resolvedStyle.width ?? 0;
-                    if (currentWidth > 0)
+                    if (splitView.fixedPane == null)
                     {
-                        EditorPrefs.SetFloat(capturedKey, currentWidth);
+                        return;
+                    }
+
+                    float currentSize = isHorizontal
+                        ? splitView.fixedPane.resolvedStyle.width
+                        : splitView.fixedPane.resolvedStyle.height;
+
+                    if (currentSize > 0f)
+                    {
+                        EditorPrefs.SetFloat(capturedKey, currentSize);
                     }
                 });
             }
@@ -121,9 +164,6 @@ namespace YokiFrame.EditorTools
             return splitView;
         }
 
-        /// <summary>
-        /// 创建面板头部
-        /// </summary>
         protected VisualElement CreatePanelHeader(string title)
         {
             var header = new VisualElement();
@@ -136,115 +176,216 @@ namespace YokiFrame.EditorTools
             return header;
         }
 
+        protected VisualElement CreateSectionHeader(string title, string icon = null, VisualElement trailing = null)
+        {
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.alignItems = Align.Center;
+
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var iconElement = new Image { image = KitIcons.GetTexture(icon) };
+                iconElement.style.width = 16;
+                iconElement.style.height = 16;
+                iconElement.style.marginRight = 6;
+                header.Add(iconElement);
+            }
+
+            var titleLabel = new Label(title);
+            titleLabel.style.fontSize = 14;
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleLabel.style.flexGrow = 1;
+            header.Add(titleLabel);
+
+            if (trailing != null)
+            {
+                header.Add(trailing);
+            }
+
+            return header;
+        }
+
+        protected VisualElement CreateHeaderRow(VisualElement leading, VisualElement trailing = null)
+        {
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.alignItems = Align.Center;
+
+            if (leading != null)
+            {
+                leading.style.flexGrow = 1;
+                header.Add(leading);
+            }
+
+            if (trailing != null)
+            {
+                header.Add(trailing);
+            }
+
+            return header;
+        }
+
+        protected VisualElement CreateAccentTitle(string title, Color accentColor, float markerWidth = 4f, float markerHeight = 24f)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+
+            var marker = new VisualElement();
+            marker.style.width = markerWidth;
+            marker.style.height = markerHeight;
+            marker.style.backgroundColor = new StyleColor(accentColor);
+            marker.style.borderTopLeftRadius = 2;
+            marker.style.borderTopRightRadius = 2;
+            marker.style.borderBottomLeftRadius = 2;
+            marker.style.borderBottomRightRadius = 2;
+            marker.style.marginRight = 14;
+            row.Add(marker);
+
+            var titleLabel = new Label(title);
+            titleLabel.style.fontSize = 19;
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleLabel.style.color = new StyleColor(new Color(0.95f, 0.95f, 0.95f));
+            row.Add(titleLabel);
+
+            return row;
+        }
+
+        protected VisualElement CreateTitledPanel(string title, out VisualElement body, string panelClass = null)
+        {
+            var panel = new VisualElement();
+            if (!string.IsNullOrEmpty(panelClass))
+            {
+                panel.AddToClassList(panelClass);
+            }
+
+            panel.style.flexGrow = 1;
+            panel.style.flexDirection = FlexDirection.Column;
+            panel.Add(CreatePanelHeader(title));
+
+            body = new VisualElement();
+            body.style.flexGrow = 1;
+            body.style.flexDirection = FlexDirection.Column;
+            panel.Add(body);
+
+            return panel;
+        }
+
+        protected VisualElement CreateScrollableTitledPanel(string title, out ScrollView scrollView, string panelClass = null)
+        {
+            var panel = new VisualElement();
+            if (!string.IsNullOrEmpty(panelClass))
+            {
+                panel.AddToClassList(panelClass);
+            }
+
+            panel.style.flexGrow = 1;
+            panel.style.flexDirection = FlexDirection.Column;
+            panel.Add(CreatePanelHeader(title));
+
+            scrollView = new ScrollView();
+            scrollView.style.flexGrow = 1;
+            panel.Add(scrollView);
+
+            return panel;
+        }
+
         #endregion
 
-        #region 表单与信息
+        #region Forms
 
-        /// <summary>
-        /// 创建现代化 Toggle 开关
-        /// </summary>
         protected VisualElement CreateModernToggle(string label, bool value, Action<bool> onChanged)
             => YokiFrameUIComponents.CreateModernToggle(label, value, onChanged);
 
-        /// <summary>
-        /// 创建信息行
-        /// </summary>
         protected (VisualElement row, Label valueLabel) CreateInfoRow(string label, string initialValue = "-")
             => YokiFrameUIComponents.CreateInfoRow(label, initialValue);
 
-        /// <summary>
-        /// 创建整数配置行
-        /// </summary>
         protected (VisualElement row, TextField field) CreateIntConfigRow(
-            string label, int value, Action<int> onChanged, int minValue = int.MinValue)
+            string label,
+            int value,
+            Action<int> onChanged,
+            int minValue = int.MinValue)
             => YokiFrameUIComponents.CreateIntConfigRow(label, value, onChanged, minValue);
 
         #endregion
 
-        #region 按钮
+        #region Buttons
 
-        /// <summary>
-        /// 创建主按钮
-        /// </summary>
         protected Button CreatePrimaryButton(string text, Action onClick)
             => YokiFrameUIComponents.CreatePrimaryButton(text, onClick);
 
-        /// <summary>
-        /// 创建次要按钮
-        /// </summary>
         protected Button CreateSecondaryButton(string text, Action onClick)
             => YokiFrameUIComponents.CreateSecondaryButton(text, onClick);
 
-        /// <summary>
-        /// 创建危险按钮
-        /// </summary>
         protected Button CreateDangerButton(string text, Action onClick)
             => YokiFrameUIComponents.CreateDangerButton(text, onClick);
 
-        /// <summary>
-        /// 创建带图标的工具栏按钮
-        /// </summary>
         protected Button CreateToolbarButtonWithIcon(string iconId, string text, Action onClick)
             => YokiFrameUIComponents.CreateToolbarButtonWithIcon(iconId, text, onClick);
 
-        /// <summary>
-        /// 创建带图标的操作按钮
-        /// </summary>
         protected Button CreateActionButtonWithIcon(string iconId, string text, Action onClick, bool isDanger = false)
             => YokiFrameUIComponents.CreateActionButtonWithIcon(iconId, text, onClick, isDanger);
 
         #endregion
 
-        #region 提示与状态
+        #region State
 
-        /// <summary>
-        /// 创建帮助框
-        /// </summary>
         protected VisualElement CreateHelpBox(string message)
             => YokiFrameUIComponents.CreateHelpBox(message);
 
-        /// <summary>
-        /// 创建帮助框（带类型）
-        /// </summary>
         protected VisualElement CreateHelpBox(string message, YokiFrameUIComponents.HelpBoxType type)
             => YokiFrameUIComponents.CreateHelpBox(message, type);
 
-        /// <summary>
-        /// 创建空状态提示
-        /// </summary>
         protected VisualElement CreateEmptyState(string message)
             => YokiFrameUIComponents.CreateEmptyState(KitIcons.INFO, message);
 
-        /// <summary>
-        /// 创建空状态提示（带图标和提示）
-        /// </summary>
         protected VisualElement CreateEmptyState(string icon, string message, string hint = null)
             => YokiFrameUIComponents.CreateEmptyState(icon, message, hint);
 
-        /// <summary>
-        /// 创建分隔线
-        /// </summary>
+        protected VisualElement CreateKitStatusBanner(
+            string title,
+            string message,
+            YokiFrameUIComponents.HelpBoxType type = YokiFrameUIComponents.HelpBoxType.Info)
+            => YokiFrameUIComponents.CreateKitStatusBanner(title, message, type);
+
+        protected void SetStatusContent(VisualElement statusContainer, VisualElement content)
+        {
+            if (statusContainer == null)
+            {
+                return;
+            }
+
+            statusContainer.Clear();
+            if (content != null)
+            {
+                statusContainer.Add(content);
+            }
+        }
+
+        protected void SetStatusBanner(
+            VisualElement statusContainer,
+            string title,
+            string message,
+            YokiFrameUIComponents.HelpBoxType type = YokiFrameUIComponents.HelpBoxType.Info)
+            => SetStatusContent(statusContainer, CreateKitStatusBanner(title, message, type));
+
         protected VisualElement CreateDivider()
             => YokiFrameUIComponents.CreateDivider();
 
         #endregion
 
-        #region 动画
+        #region Animation
 
-        /// <summary>
-        /// 为元素添加淡入动画
-        /// </summary>
         protected void AddFadeInAnimation(VisualElement element, int delayMs = 0)
             => YokiFrameUIComponents.AddFadeInAnimation(element, delayMs);
 
-        /// <summary>
-        /// 为元素添加滑入动画
-        /// </summary>
-        protected void AddSlideInAnimation(VisualElement element, YokiFrameUIComponents.SlideDirection direction, int delayMs = 0)
+        protected void AddSlideInAnimation(
+            VisualElement element,
+            YokiFrameUIComponents.SlideDirection direction,
+            int delayMs = 0)
             => YokiFrameUIComponents.AddSlideInAnimation(element, direction, delayMs);
 
         #endregion
     }
 }
 #endif
-/// 

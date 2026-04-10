@@ -82,8 +82,12 @@ namespace YokiFrame.NodeKit
         {
             EnsurePortDict();
             var toRemove = new List<string>();
-            foreach (var kvp in mPortDict)
-                if (kvp.Value.IsDynamic) toRemove.Add(kvp.Key);
+            for (int i = 0; i < mPorts.Count && i < mPortKeys.Count; i++)
+            {
+                var port = mPorts[i];
+                if (port is { IsDynamic: true })
+                    toRemove.Add(mPortKeys[i]);
+            }
             for (int i = 0; i < toRemove.Count; i++)
                 RemoveDynamicPort(toRemove[i]);
         }
@@ -131,8 +135,12 @@ namespace YokiFrame.NodeKit
         internal void ClearAllConnections()
         {
             EnsurePortDict();
-            foreach (var port in mPortDict.Values)
-                port.ClearConnections();
+            for (int i = 0; i < mPorts.Count; i++)
+            {
+                var port = mPorts[i];
+                if (port != default)
+                    port.ClearConnections();
+            }
         }
     }
 }

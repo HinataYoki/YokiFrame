@@ -5,27 +5,26 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 可池化对象接口
-    /// 实现此接口的对象在归还池时会调用 OnReturn 进行重置
+    /// Implemented by pooled objects that need reset logic before returning to the pool.
     /// </summary>
     public interface IPoolable
     {
         /// <summary>
-        /// 对象归还池时调用，用于重置状态
+        /// Called before the object is pushed back into the pool.
         /// </summary>
         void OnReturn();
     }
 
     /// <summary>
-    /// 编辑器专用 List 池 - 用于减少 GC 分配
+    /// Small editor-only list pool used to reduce transient allocations.
     /// </summary>
-    /// <typeparam name="T">元素类型</typeparam>
+    /// <typeparam name="T">Element type.</typeparam>
     public static class ListPool<T>
     {
         private static readonly Stack<List<T>> sPool = new(8);
 
         /// <summary>
-        /// 从池中获取 List
+        /// Gets a list instance from the pool.
         /// </summary>
         public static List<T> Get()
         {
@@ -33,7 +32,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 将 List 归还池中
+        /// Returns a list instance to the pool.
         /// </summary>
         public static void Return(List<T> list)
         {
@@ -43,7 +42,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 清空对象池
+        /// Clears all cached list instances.
         /// </summary>
         public static void Clear()
         {
@@ -51,43 +50,47 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 当前池中对象数量
+        /// Number of cached list instances.
         /// </summary>
         public static int Count => sPool.Count;
     }
 
     /// <summary>
-    /// 编辑器专用泛型对象池 - 用于减少 GC 分配
-    /// 适用于需要频繁创建/销毁的对象
+    /// Generic editor-only object pool used to reduce transient allocations.
     /// </summary>
-    /// <typeparam name="T">对象类型，必须是引用类型且有无参构造函数</typeparam>
+    /// <typeparam name="T">Reference type with a parameterless constructor.</typeparam>
     public static class EditorPool<T> where T : class, new()
     {
         private static readonly Stack<T> sPool = new(16);
 
         /// <summary>
-        /// 从池中获取对象，如果池为空则创建新对象
+        /// Gets an object from the pool or creates one when the pool is empty.
         /// </summary>
-        /// <returns>可用对象实例</returns>
         public static T Get()
         {
             return sPool.Count > 0 ? sPool.Pop() : new T();
         }
 
         /// <summary>
-        /// 将对象归还池中
-        /// 如果对象实现了 IPoolable 接口，会自动调用 OnReturn
+        /// Returns an object to the pool.
         /// </summary>
-        /// <param name="item">要归还的对象</param>
+        /// <remarks>
+        /// If the object implements <see cref="IPoolable"/>, <see cref="IPoolable.OnReturn"/> is invoked first.
+        /// </remarks>
         public static void Return(T item)
         {
             if (item is null) return;
-            if (item is IPoolable poolable) poolable.OnReturn();
+
+            if (item is IPoolable poolable)
+            {
+                poolable.OnReturn();
+            }
+
             sPool.Push(item);
         }
 
         /// <summary>
-        /// 清空对象池
+        /// Clears all cached object instances.
         /// </summary>
         public static void Clear()
         {
@@ -95,22 +98,20 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 当前池中对象数量
+        /// Number of cached object instances.
         /// </summary>
         public static int Count => sPool.Count;
     }
 
     /// <summary>
-    /// 编辑器专用 Dictionary 池 - 用于减少 GC 分配
+    /// Small editor-only dictionary pool used to reduce transient allocations.
     /// </summary>
-    /// <typeparam name="TKey">键类型</typeparam>
-    /// <typeparam name="TValue">值类型</typeparam>
     public static class DictionaryPool<TKey, TValue>
     {
         private static readonly Stack<Dictionary<TKey, TValue>> sPool = new(4);
 
         /// <summary>
-        /// 从池中获取 Dictionary
+        /// Gets a dictionary instance from the pool.
         /// </summary>
         public static Dictionary<TKey, TValue> Get()
         {
@@ -118,7 +119,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 将 Dictionary 归还池中
+        /// Returns a dictionary instance to the pool.
         /// </summary>
         public static void Return(Dictionary<TKey, TValue> dict)
         {
@@ -128,7 +129,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 清空对象池
+        /// Clears all cached dictionary instances.
         /// </summary>
         public static void Clear()
         {
@@ -137,15 +138,14 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
-    /// 编辑器专用 HashSet 池 - 用于减少 GC 分配
+    /// Small editor-only hash set pool used to reduce transient allocations.
     /// </summary>
-    /// <typeparam name="T">元素类型</typeparam>
     public static class HashSetPool<T>
     {
         private static readonly Stack<HashSet<T>> sPool = new(4);
 
         /// <summary>
-        /// 从池中获取 HashSet
+        /// Gets a hash set instance from the pool.
         /// </summary>
         public static HashSet<T> Get()
         {
@@ -153,7 +153,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 将 HashSet 归还池中
+        /// Returns a hash set instance to the pool.
         /// </summary>
         public static void Return(HashSet<T> set)
         {
@@ -163,7 +163,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 清空对象池
+        /// Clears all cached hash set instances.
         /// </summary>
         public static void Clear()
         {
@@ -172,83 +172,85 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
-    /// 池化对象包装器 - 使用 using 语句自动归还
+    /// <see langword="using"/> helper that returns a pooled object automatically.
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
     public readonly struct PooledObject<T> : IDisposable where T : class, new()
     {
         /// <summary>
-        /// 池化的对象实例
+        /// Pooled object instance.
         /// </summary>
         public readonly T Value;
 
+        /// <summary>
+        /// Creates a pooled object wrapper.
+        /// </summary>
         public PooledObject(T value)
         {
             Value = value;
         }
 
         /// <summary>
-        /// 释放时自动归还池
+        /// Returns the wrapped object to the pool.
         /// </summary>
         public void Dispose()
         {
             EditorPool<T>.Return(Value);
         }
 
+        /// <summary>
+        /// Implicitly unwraps the pooled value.
+        /// </summary>
         public static implicit operator T(PooledObject<T> pooled) => pooled.Value;
     }
 
     /// <summary>
-    /// 池化 List 包装器 - 使用 using 语句自动归还
+    /// <see langword="using"/> helper that returns a pooled list automatically.
     /// </summary>
-    /// <typeparam name="T">元素类型</typeparam>
     public readonly struct PooledList<T> : IDisposable
     {
         /// <summary>
-        /// 池化的 List 实例
+        /// Pooled list instance.
         /// </summary>
         public readonly List<T> Value;
 
+        /// <summary>
+        /// Creates a pooled list wrapper.
+        /// </summary>
         public PooledList(List<T> value)
         {
             Value = value;
         }
 
         /// <summary>
-        /// 释放时自动归还池
+        /// Returns the wrapped list to the pool.
         /// </summary>
         public void Dispose()
         {
             ListPool<T>.Return(Value);
         }
 
+        /// <summary>
+        /// Implicitly unwraps the pooled value.
+        /// </summary>
         public static implicit operator List<T>(PooledList<T> pooled) => pooled.Value;
     }
 
     /// <summary>
-    /// 对象池扩展方法
+    /// Convenience helpers for acquiring pooled editor objects with <see langword="using"/>.
     /// </summary>
     public static class EditorPoolExtensions
     {
         /// <summary>
-        /// 获取池化对象，使用 using 语句自动归还
+        /// Gets a pooled object wrapper.
         /// </summary>
-        /// <example>
-        /// using var pooled = EditorPoolExtensions.GetPooled&lt;MyClass&gt;();
-        /// pooled.Value.DoSomething();
-        /// </example>
         public static PooledObject<T> GetPooled<T>() where T : class, new()
         {
             return new PooledObject<T>(EditorPool<T>.Get());
         }
 
         /// <summary>
-        /// 获取池化 List，使用 using 语句自动归还
+        /// Gets a pooled list wrapper.
         /// </summary>
-        /// <example>
-        /// using var pooled = EditorPoolExtensions.GetPooledList&lt;int&gt;();
-        /// pooled.Value.Add(1);
-        /// </example>
         public static PooledList<T> GetPooledList<T>()
         {
             return new PooledList<T>(ListPool<T>.Get());

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// Architecture 概述文档
+    /// Architecture 模块的概览章节。
     /// </summary>
     internal static class ArchitectureDocOverview
     {
@@ -12,14 +12,14 @@ namespace YokiFrame.EditorTools
         {
             return new DocSection
             {
-                Title = "概述",
-                Description = "Architecture 是整个框架的基础，负责管理所有服务（Service）和数据模型（Model）的生命周期。服务通过依赖注入实现松耦合调用。",
+                Title = "概览",
+                Description = "Architecture 是 YokiFrame 的基础。它负责管理服务与模型、协调它们的生命周期，并通过清晰的注册与获取规则维持框架的模块化。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "核心接口",
-                        Code = @"// IArchitecture - 架构接口
+                        Title = "核心契约",
+                        Code = @"// IArchitecture
 public interface IArchitecture : ICanInit
 {
     static IArchitecture Interface { get; }
@@ -28,23 +28,23 @@ public interface IArchitecture : ICanInit
     IEnumerable<IService> GetAllServices();
 }
 
-// IService - 服务接口
+// IService
 public interface IService : ICanInit
 {
     IArchitecture Architecture { get; }
     void SetArchitecture(IArchitecture architecture);
 }
 
-// IModel - 数据模型接口（支持序列化）
+// IModel
 public interface IModel : IService, ISerializable { }
 
-// ICanInit - 初始化生命周期接口
+// ICanInit
 public interface ICanInit : IDisposable
 {
     bool Initialized { get; }
     void Init();
 }",
-                        Explanation = "Architecture 提供服务注册、获取和生命周期管理。"
+                        Explanation = "Architecture 通过少量稳定契约完成服务注册、获取与生命周期管理。"
                     }
                 }
             };

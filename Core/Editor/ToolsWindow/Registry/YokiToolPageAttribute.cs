@@ -4,68 +4,64 @@ using System;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 页面分类枚举
+    /// Category for registered tool pages.
     /// </summary>
     public enum YokiPageCategory
     {
-        /// <summary>文档页面</summary>
+        /// <summary>
+        /// Documentation page.
+        /// </summary>
         Documentation = 0,
-        /// <summary>工具页面</summary>
+
+        /// <summary>
+        /// Interactive tool page.
+        /// </summary>
         Tool = 1
     }
 
     /// <summary>
-    /// YokiFrame 工具页面注册特性
-    /// 
-    /// 使用此特性标记页面类，Registry 会自动收集并注册。
-    /// AI 可通过搜索 [YokiToolPage( 找到所有页面入口。
-    /// 
-    /// 示例:
-    /// [YokiToolPage(
-    ///     kit: "EventKit",
-    ///     name: "事件监控",
-    ///     icon: KitIcons.EVENT,
-    ///     priority: 30,
-    ///     category: YokiPageCategory.Tool
-    /// )]
-    /// public class EventKitToolPage : YokiToolPageBase { }
+    /// Declarative registration metadata for a YokiFrame tool page.
     /// </summary>
+    /// <remarks>
+    /// Types marked with this attribute are discovered automatically by <see cref="YokiToolPageRegistry"/>.
+    /// This attribute is the canonical entry point for kit-owned editor pages under the shared tools window.
+    /// </remarks>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public sealed class YokiToolPageAttribute : Attribute
     {
         /// <summary>
-        /// 所属 Kit 名称（如 "EventKit", "PoolKit"）
+        /// Owning kit name, such as <c>EventKit</c> or <c>AudioKit</c>.
         /// </summary>
         public string Kit { get; }
 
         /// <summary>
-        /// 页面显示名称
+        /// Display name shown in the tools window.
         /// </summary>
         public string Name { get; }
 
         /// <summary>
-        /// 页面图标 ID（使用 KitIcons 常量）
+        /// Icon id used by the page. Prefer constants from <c>KitIcons</c>.
         /// </summary>
         public string Icon { get; }
 
         /// <summary>
-        /// 排序优先级（越小越靠前）
+        /// Sorting priority, lower values appear first.
         /// </summary>
         public int Priority { get; }
 
         /// <summary>
-        /// 页面分类
+        /// Page category.
         /// </summary>
         public YokiPageCategory Category { get; }
 
         /// <summary>
-        /// 创建页面注册特性
+        /// Creates page registration metadata.
         /// </summary>
-        /// <param name="kit">所属 Kit 名称</param>
-        /// <param name="name">页面显示名称</param>
-        /// <param name="icon">页面图标 ID</param>
-        /// <param name="priority">排序优先级（默认 100）</param>
-        /// <param name="category">页面分类（默认 Tool）</param>
+        /// <param name="kit">Owning kit name.</param>
+        /// <param name="name">Display name.</param>
+        /// <param name="icon">Icon id.</param>
+        /// <param name="priority">Sorting priority. Default is 100.</param>
+        /// <param name="category">Page category. Default is <see cref="YokiPageCategory.Tool"/>.</param>
         public YokiToolPageAttribute(
             string kit,
             string name,

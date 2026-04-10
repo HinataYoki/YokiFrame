@@ -285,3 +285,334 @@
 .unity-two-pane-split-view__content-container {
     flex-grow: 1;
 }
+
+/* ========== 标准 Kit 页面骨架 ========== */
+.yoki-kit-page {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+}
+
+.yoki-kit-hero {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 78px;
+    padding: 14px 16px;
+    background-color: rgba(33, 150, 243, 0.06);
+    border-width: 1px;
+    border-color: rgba(33, 150, 243, 0.14);
+    border-radius: 14px;
+}
+
+.yoki-kit-hero__leading {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.yoki-kit-hero__icon-wrap {
+    width: 44px;
+    height: 44px;
+    margin-right: 14px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(33, 150, 243, 0.12);
+    border-radius: 13px;
+    border-width: 1px;
+    border-color: rgba(33, 150, 243, 0.16);
+}
+
+.yoki-kit-hero__icon {
+    width: 22px;
+    height: 22px;
+    -unity-background-image-tint-color: var(--yoki-brand-primary);
+}
+
+.yoki-kit-hero__text {
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.yoki-kit-hero__eyebrow {
+    margin-bottom: 2px;
+    color: var(--yoki-brand-primary);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+    letter-spacing: 0.8px;
+}
+
+.yoki-kit-hero__title {
+    margin-bottom: 2px;
+    color: var(--yoki-text-primary);
+    font-size: 17px;
+    -unity-font-style: bold;
+}
+
+.yoki-kit-hero__summary {
+    max-width: 640px;
+    color: var(--yoki-text-secondary);
+    font-size: 12px;
+    white-space: normal;
+}
+
+.yoki-kit-hero__actions {
+    min-width: 220px;
+    margin-left: 12px;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.yoki-kit-page__toolbar {
+    flex-direction: row;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-navigation);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    border-radius: var(--yoki-radius-lg);
+}
+
+.yoki-kit-page__status {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.yoki-kit-page__content {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.yoki-kit-banner {
+    padding: 8px 12px;
+    border-left-width: 3px;
+    border-radius: 10px;
+}
+
+.yoki-kit-banner--info {
+    background-color: var(--yoki-brand-info-muted);
+    border-left-color: var(--yoki-brand-info);
+}
+
+.yoki-kit-banner--success {
+    background-color: var(--yoki-brand-success-muted);
+    border-left-color: var(--yoki-brand-success);
+}
+
+.yoki-kit-banner--warning {
+    background-color: var(--yoki-brand-warning-muted);
+    border-left-color: var(--yoki-brand-warning);
+}
+
+.yoki-kit-banner--error {
+    background-color: var(--yoki-brand-danger-muted);
+    border-left-color: var(--yoki-brand-danger);
+}
+
+.yoki-kit-banner__title {
+    margin-bottom: 2px;
+    color: var(--yoki-text-primary);
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.yoki-kit-banner__message {
+    color: var(--yoki-text-secondary);
+    font-size: 11px;
+    white-space: normal;
+}
+
+.yoki-kit-metric-strip {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.yoki-kit-metric-card {
+    min-width: 150px;
+    padding: 12px 14px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    border-radius: 12px;
+}
+
+.yoki-kit-metric-card__title {
+    margin-bottom: 6px;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-kit-metric-card__value {
+    margin-bottom: 2px;
+    color: var(--yoki-text-primary);
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.yoki-kit-metric-card__hint {
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-xs);
+    white-space: normal;
+}
+
+.yoki-kit-panel {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.025);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.yoki-kit-panel__header {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    background-color: rgba(255, 255, 255, 0.018);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-kit-panel__header-text {
+    flex-grow: 1;
+}
+
+.yoki-kit-panel__title-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-kit-panel__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+}
+
+.yoki-kit-panel__title {
+    color: var(--yoki-text-primary);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.yoki-kit-panel__summary {
+    margin-top: 2px;
+    color: var(--yoki-text-tertiary);
+    font-size: 11px;
+    white-space: normal;
+}
+
+.yoki-kit-panel__trailing {
+    margin-left: var(--yoki-spacing-lg);
+    align-items: center;
+    justify-content: center;
+}
+
+.yoki-kit-panel__body {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.yoki-kit-panel--slate {
+    background-color: rgba(90, 102, 120, 0.08);
+    border-color: rgba(102, 116, 136, 0.22);
+}
+
+.yoki-kit-panel--slate > .yoki-kit-panel__header {
+    background-color: rgba(90, 102, 120, 0.1);
+}
+
+.yoki-kit-panel--blue {
+    background-color: rgba(66, 108, 156, 0.10);
+    border-color: rgba(88, 126, 168, 0.22);
+}
+
+.yoki-kit-panel--blue > .yoki-kit-panel__header {
+    background-color: rgba(66, 108, 156, 0.12);
+}
+
+.yoki-kit-panel--blue .yoki-kit-panel__icon,
+.yoki-kit-panel--blue .yoki-kit-panel__title {
+    color: rgb(144, 179, 216);
+    -unity-background-image-tint-color: rgb(144, 179, 216);
+}
+
+.yoki-kit-panel--green {
+    background-color: rgba(76, 118, 92, 0.10);
+    border-color: rgba(96, 134, 110, 0.22);
+}
+
+.yoki-kit-panel--green > .yoki-kit-panel__header {
+    background-color: rgba(76, 118, 92, 0.12);
+}
+
+.yoki-kit-panel--green .yoki-kit-panel__icon,
+.yoki-kit-panel--green .yoki-kit-panel__title {
+    color: rgb(154, 196, 162);
+    -unity-background-image-tint-color: rgb(154, 196, 162);
+}
+
+.yoki-kit-panel--cyan {
+    background-color: rgba(63, 113, 124, 0.10);
+    border-color: rgba(82, 130, 140, 0.22);
+}
+
+.yoki-kit-panel--cyan > .yoki-kit-panel__header {
+    background-color: rgba(63, 113, 124, 0.12);
+}
+
+.yoki-kit-panel--cyan .yoki-kit-panel__icon,
+.yoki-kit-panel--cyan .yoki-kit-panel__title {
+    color: rgb(141, 194, 204);
+    -unity-background-image-tint-color: rgb(141, 194, 204);
+}
+
+.yoki-kit-panel--amber {
+    background-color: rgba(126, 108, 70, 0.09);
+    border-color: rgba(142, 121, 80, 0.2);
+}
+
+.yoki-kit-panel--amber > .yoki-kit-panel__header {
+    background-color: rgba(126, 108, 70, 0.11);
+}
+
+.yoki-kit-panel--amber .yoki-kit-panel__icon,
+.yoki-kit-panel--amber .yoki-kit-panel__title {
+    color: rgb(208, 188, 138);
+    -unity-background-image-tint-color: rgb(208, 188, 138);
+}
+
+.yoki-kit-hero-tools {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.yoki-monitor-layout__detail {
+    padding-left: 10px;
+}
+
+.yoki-monitor-dashboard {
+    gap: 10px;
+    min-height: 0;
+}
+
+.yoki-monitor-dashboard__split {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.yoki-monitor-primary-panel {
+    flex-grow: 1;
+}
+
+.yoki-monitor-secondary-panel {
+    flex-grow: 1;
+}

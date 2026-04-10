@@ -174,7 +174,7 @@ namespace YokiFrame.EditorTools
         [System.Obsolete("使用 YokiStyleService.Apply() 替代")]
         public static string GetMainStyleSheetPath()
         {
-            return YokiEditorPaths.CombineWithStylingRoot("Core/YokiCoreComponents.uss");
+            return YokiStyleCompatibility.ResolveStyleSheetPath(YokiEditorPaths.CombineWithStylingRoot("Core/YokiCoreComponents.uss"));
         }
 
         /// <summary>
@@ -219,10 +219,13 @@ namespace YokiFrame.EditorTools
         /// <param name="ussFileName">USS 文件名（不含路径，如 "BindInspectorStyles"）</param>
         public static StyleSheet LoadStyleSheetByName(string ussFileName)
         {
+            ussFileName = YokiStyleCompatibility.ResolveStyleSheetName(ussFileName);
+
             var guids = AssetDatabase.FindAssets($"{ussFileName} t:StyleSheet");
             if (guids.Length > 0)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                path = YokiStyleCompatibility.ResolveStyleSheetPath(path);
                 return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
             }
 

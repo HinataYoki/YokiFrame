@@ -1,22 +1,22 @@
-﻿namespace YokiFrame
+namespace YokiFrame
 {
     /// <summary>
-    /// 普通 C# 单例基类
+    /// Base class for plain C# singletons managed by <see cref="SingletonKit{T}"/>.
     /// </summary>
     public abstract class Singleton<T> : ISingleton where T : Singleton<T>
     {
         /// <summary>
-        /// 获取单例实例（委托给 SingletonKit 管理）
+        /// Gets the singleton instance.
         /// </summary>
         public static T Instance => SingletonKit<T>.Instance;
 
         /// <summary>
-        /// 释放单例实例
+        /// Clears the current singleton instance reference.
         /// </summary>
         public static void Dispose() => SingletonKit<T>.Dispose();
 
         /// <summary>
-        /// 单例初始化方法
+        /// Called after the singleton instance has been created.
         /// </summary>
         public virtual void OnSingletonInit()
         {

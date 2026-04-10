@@ -30,7 +30,6 @@ namespace YokiFrame.EditorTools
             EditorApplication.delayCall += () =>
             {
                 YokiToolsWindow.Open();
-                Debug.Log("[ForceRefreshWindow] YokiFrame Tools Window 已强制刷新");
             };
         }
 
@@ -43,8 +42,10 @@ namespace YokiFrame.EditorTools
                 try
                 {
                     System.IO.Directory.Delete(libraryPath, true);
-                    Debug.Log($"[ForceRefreshWindow] 已删除 UIElements 缓存：{libraryPath}");
-                    Debug.Log("[ForceRefreshWindow] 请重启 Unity 编辑器以应用更改");
+                    EditorUtility.DisplayDialog(
+                        "清理完成",
+                        "UIElements 缓存已删除，请重启 Unity 编辑器以应用更改。",
+                        "确定");
                 }
                 catch (System.Exception e)
                 {
@@ -53,7 +54,10 @@ namespace YokiFrame.EditorTools
             }
             else
             {
-                Debug.Log("[ForceRefreshWindow] UIElements 缓存目录不存在");
+                EditorUtility.DisplayDialog(
+                    "无需清理",
+                    "未找到 UIElements 缓存目录。",
+                    "确定");
             }
         }
     }

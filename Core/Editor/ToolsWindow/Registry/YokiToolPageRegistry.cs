@@ -7,19 +7,48 @@ using UnityEngine;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 页面注册信息
+    /// Immutable registration info for a discovered tool page.
     /// </summary>
     public readonly struct YokiPageInfo
     {
+        /// <summary>
+        /// Page implementation type.
+        /// </summary>
         public Type PageType { get; }
+
+        /// <summary>
+        /// Declarative page metadata from <see cref="YokiToolPageAttribute"/>.
+        /// </summary>
         public YokiToolPageAttribute Attribute { get; }
 
+        /// <summary>
+        /// Owning kit name.
+        /// </summary>
         public string Kit => Attribute.Kit;
+
+        /// <summary>
+        /// Display name shown in the tools window.
+        /// </summary>
         public string Name => Attribute.Name;
+
+        /// <summary>
+        /// Icon id used by the page.
+        /// </summary>
         public string Icon => Attribute.Icon;
+
+        /// <summary>
+        /// Sorting priority, lower values appear first.
+        /// </summary>
         public int Priority => Attribute.Priority;
+
+        /// <summary>
+        /// Page category.
+        /// </summary>
         public YokiPageCategory Category => Attribute.Category;
 
+        /// <summary>
+        /// Creates a page info record.
+        /// </summary>
         public YokiPageInfo(Type pageType, YokiToolPageAttribute attribute)
         {
             PageType = pageType;
@@ -28,71 +57,89 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
-    /// YokiFrame 工具页面注册表
-    /// 
-    /// 使用 TypeCache 收集所有带 [YokiToolPage] 特性的页面类型。
-    /// 提供页面发现、排序、过滤、实例化功能。
-    /// 
-    /// 依赖方向: Window → Registry → Page
+    /// Registry that discovers and instantiates YokiFrame tool pages.
     /// </summary>
+    /// <remarks>
+    /// The registry collects all types decorated with <see cref="YokiToolPageAttribute"/> through
+    /// <see cref="TypeCache"/>, validates them against <see cref="IYokiToolPage"/>, sorts them by priority,
+    /// and caches page instances for reuse.
+    /// </remarks>
     public static class YokiToolPageRegistry
     {
         private static List<YokiPageInfo> sPageInfos;
         private static readonly Dictionary<Type, IYokiToolPage> sPageInstances = new();
 
         /// <summary>
-        /// 获取所有已注册的页面信息（已排序）
+        /// Gets all discovered page metadata in sorted order.
         /// </summary>
         public static IReadOnlyList<YokiPageInfo> PageInfos
         {
             get
             {
-                if (sPageInfos == default)
+                if (sPageInfos == null)
                 {
                     Collect();
                 }
+
                 return sPageInfos;
             }
         }
 
         /// <summary>
-        /// 收集所有带 [YokiToolPage] 特性的页面
+        /// Collects all page types marked with <see cref="YokiToolPageAttribute"/>.
         /// </summary>
         public static void Collect()
         {
             sPageInfos = new List<YokiPageInfo>(16);
             sPageInstances.Clear();
 
-            // 使用 TypeCache 高效收集（Unity 2019.2+）
+            var pageKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var typesWithAttribute = TypeCache.GetTypesWithAttribute<YokiToolPageAttribute>();
 
             foreach (var type in typesWithAttribute)
             {
-                // 跳过抽象类和接口
-                if (type.IsAbstract || type.IsInterface)
-                    continue;
-
-                // 必须实现 IYokiToolPage
-                if (!typeof(IYokiToolPage).IsAssignableFrom(type))
+                try
                 {
-                    Debug.LogWarning($"[YokiToolPageRegistry] {type.Name} 标记了 [YokiToolPage] 但未实现 IYokiToolPage");
-                    continue;
-                }
+                    if (type.IsAbstract || type.IsInterface)
+                    {
+                        continue;
+                    }
 
-                var attribute = (YokiToolPageAttribute)Attribute.GetCustomAttribute(type, typeof(YokiToolPageAttribute));
-                if (attribute != default)
-                {
+                    if (!typeof(IYokiToolPage).IsAssignableFrom(type))
+                    {
+                        Debug.LogWarning($"[YokiToolPageRegistry] {type.Name} is marked with [YokiToolPage] but does not implement IYokiToolPage.");
+                        continue;
+                    }
+
+                    var attribute = (YokiToolPageAttribute)Attribute.GetCustomAttribute(type, typeof(YokiToolPageAttribute));
+                    if (attribute == null)
+                    {
+                        continue;
+                    }
+
+                    string pageKey = $"{attribute.Category}|{attribute.Kit}|{attribute.Name}";
+                    if (!pageKeys.Add(pageKey))
+                    {
+                        Debug.LogWarning($"[YokiToolPageRegistry] Duplicate page key skipped: {pageKey} ({type.FullName})");
+                        continue;
+                    }
+
                     sPageInfos.Add(new YokiPageInfo(type, attribute));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[YokiToolPageRegistry] Failed to collect page type: {type.FullName}\n{ex}");
                 }
             }
 
-            // 按优先级排序
             sPageInfos.Sort((a, b) => a.Priority.CompareTo(b.Priority));
         }
 
         /// <summary>
-        /// 获取或创建页面实例
+        /// Gets or creates a page instance for the specified type.
         /// </summary>
+        /// <param name="pageType">Concrete page type.</param>
+        /// <returns>The cached or newly created page instance.</returns>
         public static IYokiToolPage GetOrCreatePage(Type pageType)
         {
             if (sPageInstances.TryGetValue(pageType, out var existing))
@@ -100,13 +147,21 @@ namespace YokiFrame.EditorTools
                 return existing;
             }
 
-            var instance = (IYokiToolPage)Activator.CreateInstance(pageType);
-            sPageInstances[pageType] = instance;
-            return instance;
+            try
+            {
+                var instance = (IYokiToolPage)Activator.CreateInstance(pageType);
+                sPageInstances[pageType] = instance;
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[YokiToolPageRegistry] Failed to create page instance: {pageType.FullName}\n{ex}");
+                return null;
+            }
         }
 
         /// <summary>
-        /// 获取或创建页面实例
+        /// Gets or creates a page instance for the specified generic type.
         /// </summary>
         public static T GetOrCreatePage<T>() where T : class, IYokiToolPage
         {
@@ -114,7 +169,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 按分类筛选页面
+        /// Enumerates pages by category.
         /// </summary>
         public static IEnumerable<YokiPageInfo> GetPagesByCategory(YokiPageCategory category)
         {
@@ -128,7 +183,7 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 按 Kit 名称筛选页面
+        /// Enumerates pages by kit name.
         /// </summary>
         public static IEnumerable<YokiPageInfo> GetPagesByKit(string kit)
         {
@@ -142,11 +197,11 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 清除缓存（用于热重载）
+        /// Clears registry caches so page metadata can be rebuilt.
         /// </summary>
         public static void ClearCache()
         {
-            sPageInfos = default;
+            sPageInfos = null;
             sPageInstances.Clear();
         }
     }

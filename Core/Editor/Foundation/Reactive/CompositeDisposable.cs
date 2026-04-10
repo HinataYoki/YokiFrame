@@ -5,33 +5,37 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// 组合 Disposable - 统一管理多个订阅的生命周期
-    /// 适用于需要同时清理多个订阅的场景
+    /// Aggregates multiple disposables and manages them as a single lifecycle unit.
     /// </summary>
     public sealed class CompositeDisposable : IDisposable
     {
         private readonly List<IDisposable> mDisposables;
         private bool mIsDisposed;
 
+        /// <summary>
+        /// Creates a composite container with the desired initial capacity.
+        /// </summary>
         public CompositeDisposable(int capacity = 8)
         {
-            mDisposables = new(capacity);
+            mDisposables = new List<IDisposable>(capacity);
         }
 
         /// <summary>
-        /// 当前管理的订阅数量
+        /// Current number of tracked disposables.
         /// </summary>
         public int Count => mDisposables.Count;
 
         /// <summary>
-        /// 是否已释放
+        /// Whether the composite itself has been disposed.
         /// </summary>
         public bool IsDisposed => mIsDisposed;
 
         /// <summary>
-        /// 添加订阅到管理列表
-        /// 如果已释放，则立即释放传入的订阅
+        /// Adds a disposable to the composite.
         /// </summary>
+        /// <remarks>
+        /// If the composite has already been disposed, the incoming disposable is disposed immediately.
+        /// </remarks>
         public void Add(IDisposable disposable)
         {
             if (disposable is null) return;
@@ -46,8 +50,9 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 移除并释放指定订阅
+        /// Removes and disposes a tracked disposable.
         /// </summary>
+        /// <returns><see langword="true"/> when the item existed and was removed.</returns>
         public bool Remove(IDisposable disposable)
         {
             if (disposable is null || mIsDisposed) return false;
@@ -57,13 +62,16 @@ namespace YokiFrame.EditorTools
             {
                 disposable.Dispose();
             }
+
             return removed;
         }
 
         /// <summary>
-        /// 清空所有订阅（释放但不标记为已释放）
-        /// 可继续添加新订阅
+        /// Disposes all tracked items without marking the composite itself as disposed.
         /// </summary>
+        /// <remarks>
+        /// New disposables can still be added after calling this method.
+        /// </remarks>
         public void Clear()
         {
             if (mIsDisposed) return;
@@ -72,18 +80,18 @@ namespace YokiFrame.EditorTools
             {
                 mDisposables[i]?.Dispose();
             }
+
             mDisposables.Clear();
         }
 
         /// <summary>
-        /// 释放所有订阅并标记为已释放
-        /// 之后添加的订阅会被立即释放
+        /// Disposes all tracked items and permanently closes the composite.
         /// </summary>
         public void Dispose()
         {
             if (mIsDisposed) return;
-            mIsDisposed = true;
             Clear();
+            mIsDisposed = true;
         }
     }
 }

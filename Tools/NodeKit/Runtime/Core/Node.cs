@@ -10,6 +10,8 @@ namespace YokiFrame.NodeKit
     /// </summary>
     public abstract partial class Node : ScriptableObject
     {
+        public static NodeGraph GraphHotfix;
+
         [SerializeField] private NodeGraph mGraph;
         [SerializeField] private Vector2 mPosition;
         [SerializeField] private List<NodePort> mPorts = new();
@@ -37,7 +39,12 @@ namespace YokiFrame.NodeKit
             get
             {
                 EnsurePortDict();
-                return mPortDict.Values;
+                for (int i = 0; i < mPorts.Count; i++)
+                {
+                    var port = mPorts[i];
+                    if (port != default)
+                        yield return port;
+                }
             }
         }
 
@@ -49,8 +56,12 @@ namespace YokiFrame.NodeKit
             get
             {
                 EnsurePortDict();
-                foreach (var port in mPortDict.Values)
-                    if (port.IsInput) yield return port;
+                for (int i = 0; i < mPorts.Count; i++)
+                {
+                    var port = mPorts[i];
+                    if (port is { IsInput: true })
+                        yield return port;
+                }
             }
         }
 
@@ -62,8 +73,12 @@ namespace YokiFrame.NodeKit
             get
             {
                 EnsurePortDict();
-                foreach (var port in mPortDict.Values)
-                    if (port.IsOutput) yield return port;
+                for (int i = 0; i < mPorts.Count; i++)
+                {
+                    var port = mPorts[i];
+                    if (port is { IsOutput: true })
+                        yield return port;
+                }
             }
         }
 
@@ -75,8 +90,12 @@ namespace YokiFrame.NodeKit
             get
             {
                 EnsurePortDict();
-                foreach (var port in mPortDict.Values)
-                    if (port.IsDynamic) yield return port;
+                for (int i = 0; i < mPorts.Count; i++)
+                {
+                    var port = mPorts[i];
+                    if (port is { IsDynamic: true })
+                        yield return port;
+                }
             }
         }
 
@@ -86,6 +105,16 @@ namespace YokiFrame.NodeKit
             mPortDict = new();
             for (int i = 0; i < mPorts.Count && i < mPortKeys.Count; i++)
                 mPortDict[mPortKeys[i]] = mPorts[i];
+        }
+
+        protected virtual void OnEnable()
+        {
+            if (GraphHotfix != default)
+                mGraph = GraphHotfix;
+
+            GraphHotfix = null;
+            UpdatePorts();
+            Init();
         }
 
         /// <summary>
@@ -130,8 +159,12 @@ namespace YokiFrame.NodeKit
         public void VerifyConnections()
         {
             EnsurePortDict();
-            foreach (var port in mPortDict.Values)
-                port.VerifyConnections();
+            for (int i = 0; i < mPorts.Count; i++)
+            {
+                var port = mPorts[i];
+                if (port != default)
+                    port.VerifyConnections();
+            }
         }
 
         /// <summary>

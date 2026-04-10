@@ -8,7 +8,8 @@ using YokiFrame.EditorTools;
 namespace YokiFrame
 {
     /// <summary>
-    /// 批量绑定工具窗口 - 提供批量添加 Bind 组件的功能
+    /// 批量绑定工具窗口。
+    /// 用于对当前选择的 GameObject 集合批量添加 Bind 组件，并在执行前给出预览结果。
     /// </summary>
     public partial class BindToolsWindow : EditorWindow
     {
@@ -22,19 +23,16 @@ namespace YokiFrame
 
         #region 字段
 
-        // 配置选项
         private bool mRecursive = true;
         private BindType mDefaultType = BindType.Member;
         private bool mAutoSuggestName = true;
 
-        // UI 元素
         private VisualElement mRoot;
         private Label mSelectionCountLabel;
         private VisualElement mPreviewContainer;
         private Button mExecuteBtn;
         private Label mResultLabel;
 
-        // 预览数据
         private readonly List<BindPreviewItem> mPreviewItems = new(32);
 
         #endregion
@@ -42,7 +40,7 @@ namespace YokiFrame
         #region 窗口生命周期
 
         /// <summary>
-        /// 打开批量绑定工具窗口
+        /// 打开批量绑定工具窗口。
         /// </summary>
         public static void ShowWindow()
         {
@@ -67,36 +65,25 @@ namespace YokiFrame
             mRoot = rootVisualElement;
             mRoot.AddToClassList("bind-tools-window");
 
-            // 加载样式
             var styleSheet = YokiFrameEditorUtility.LoadStyleSheetByName("BindToolsWindowStyles");
             if (styleSheet != null)
             {
                 mRoot.styleSheets.Add(styleSheet);
             }
 
-            // 标题
             var title = new Label(WINDOW_TITLE);
             title.AddToClassList("window-title");
             mRoot.Add(title);
 
-            // 选中对象信息
             CreateSelectionSection();
-
-            // 配置选项
             CreateOptionsSection();
-
-            // 预览区域
             CreatePreviewSection();
-
-            // 操作按钮
             CreateActionButtons();
 
-            // 结果显示
             mResultLabel = new Label();
             mResultLabel.AddToClassList("result-label");
             mRoot.Add(mResultLabel);
 
-            // 初始化
             RefreshPreview();
         }
 
@@ -105,7 +92,7 @@ namespace YokiFrame
         #region 数据结构
 
         /// <summary>
-        /// 绑定预览项
+        /// 单个绑定候选项的预览数据。
         /// </summary>
         private struct BindPreviewItem
         {

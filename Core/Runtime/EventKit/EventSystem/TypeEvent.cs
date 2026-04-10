@@ -1,14 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace YokiFrame
 {
+    /// <summary>
+    /// Runtime event hub keyed by payload type.
+    /// </summary>
     public class TypeEvent
     {
         private readonly EasyEvents mEventDic = new();
 
         /// <summary>
-        /// 触发方法
+        /// Sends an event keyed by payload type.
         /// </summary>
         public void Send<T>(T args = default)
         {
@@ -17,10 +20,10 @@ namespace YokiFrame
 #endif
             mEventDic.GetEvent<EasyEvent<T>>()?.Trigger(args);
         }
+
         /// <summary>
-        /// 注册方法
+        /// Registers a typed listener.
         /// </summary>
-        /// <returns></returns>
         public LinkUnRegister<T> Register<T>(Action<T> onEvent)
         {
 #if UNITY_EDITOR
@@ -28,8 +31,9 @@ namespace YokiFrame
 #endif
             return mEventDic.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
         }
+
         /// <summary>
-        /// 注销方法
+        /// Unregisters one typed listener.
         /// </summary>
         public void UnRegister<T>(Action<T> onEvent)
         {
@@ -39,10 +43,13 @@ namespace YokiFrame
             mEventDic.GetEvent<EasyEvent<T>>()?.UnRegister(onEvent);
         }
 
-        public void Clear() => mEventDic.Clear();
-        
         /// <summary>
-        /// 获取所有已注册的类型事件（用于编辑器可视化）
+        /// Clears all registered typed events.
+        /// </summary>
+        public void Clear() => mEventDic.Clear();
+
+        /// <summary>
+        /// Returns all registered typed events for editor inspection.
         /// </summary>
         public IReadOnlyDictionary<Type, IEasyEvent> GetAllEvents() => mEventDic.GetAllEvents();
     }

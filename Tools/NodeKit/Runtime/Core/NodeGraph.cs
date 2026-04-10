@@ -1,26 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace YokiFrame.NodeKit
 {
-    /// <summary>
-    /// 节点图基类
-    /// </summary>
     public abstract class NodeGraph : ScriptableObject
     {
         [SerializeField] protected List<Node> mNodes = new();
+        [SerializeField] private Node mStartNode;
+        [NonSerialized] private bool mEnsuringRequiredNodes;
 
         public IReadOnlyList<Node> Nodes => mNodes;
+        public Node StartNode => GetStartNode();
+        public bool HasExplicitStartNode => mStartNode != default && mStartNode.Graph == this;
+        public Node ExplicitStartNode => HasExplicitStartNode ? mStartNode : null;
 
-        /// <summary>
-        /// 添加节点
-        /// </summary>
         public T AddNode<T>() where T : Node => AddNode(typeof(T)) as T;
 
-        /// <summary>
-        /// 添加节点
-        /// </summary>
         public virtual Node AddNode(Type type)
         {
             if (!typeof(Node).IsAssignableFrom(type))
@@ -29,27 +26,31 @@ namespace YokiFrame.NodeKit
                 return null;
             }
 
+            Node.GraphHotfix = this;
             var node = CreateInstance(type) as Node;
             if (node == default) return null;
 
             node.Graph = this;
-            node.name = type.Name;
+            node.name = type.Name.EndsWith("Node") ? type.Name[..^4] : type.Name;
             node.UpdatePorts();
             mNodes.Add(node);
+            if (mStartNode == default)
+                mStartNode = node;
 
 #if UNITY_EDITOR
             UnityEditor.AssetDatabase.AddObjectToAsset(node, this);
 #endif
+            EnsureRequiredNodes();
             return node;
         }
 
-        /// <summary>
-        /// 移除节点
-        /// </summary>
         public virtual void RemoveNode(Node node)
         {
             if (node == default) return;
+            if (!CanRemoveNode(node)) return;
             node.ClearAllConnections();
+            if (mStartNode == node)
+                mStartNode = null;
             mNodes.Remove(node);
 
 #if UNITY_EDITOR
@@ -58,9 +59,6 @@ namespace YokiFrame.NodeKit
             DestroyImmediate(node, true);
         }
 
-        /// <summary>
-        /// 复制节点
-        /// </summary>
         public virtual Node CopyNode(Node original)
         {
             if (original == default) return null;
@@ -68,7 +66,10 @@ namespace YokiFrame.NodeKit
             copy.Graph = this;
             copy.name = original.name;
             copy.ClearAllConnections();
+            copy.UpdatePorts();
             mNodes.Add(copy);
+            if (mStartNode == original)
+                mStartNode = copy;
 
 #if UNITY_EDITOR
             UnityEditor.AssetDatabase.AddObjectToAsset(copy, this);
@@ -76,15 +77,50 @@ namespace YokiFrame.NodeKit
             return copy;
         }
 
-        /// <summary>
-        /// 深拷贝整个图
-        /// </summary>
+        public virtual bool MoveNodeToFront(Node node)
+        {
+            if (node == default) return false;
+
+            int index = mNodes.IndexOf(node);
+            if (index < 0 || index == mNodes.Count - 1)
+                return false;
+
+            mNodes.RemoveAt(index);
+            mNodes.Add(node);
+            return true;
+        }
+
+        public virtual void SetStartNode(Node node)
+        {
+            if (node == default || node.Graph != this) return;
+            mStartNode = node;
+        }
+
+        public virtual void ClearStartNode()
+        {
+            mStartNode = null;
+        }
+
+        public virtual Node GetStartNode()
+        {
+            if (HasExplicitStartNode)
+                return mStartNode;
+
+            for (int i = 0; i < mNodes.Count; i++)
+            {
+                var node = mNodes[i];
+                if (node != default && node.GetType().Name == "StartNode")
+                    return node;
+            }
+
+            return mNodes.Count > 0 ? mNodes[0] : null;
+        }
+
         public virtual NodeGraph Copy()
         {
             var copy = Instantiate(this);
             copy.name = name + " (Copy)";
 
-            // 建立原节点到新节点的映射
             var nodeMap = new Dictionary<Node, Node>();
             for (int i = 0; i < mNodes.Count; i++)
             {
@@ -94,7 +130,9 @@ namespace YokiFrame.NodeKit
                 newNode.Graph = copy;
             }
 
-            // 重建连接
+            if (mStartNode != default && nodeMap.TryGetValue(mStartNode, out var copiedStartNode))
+                copy.mStartNode = copiedStartNode;
+
             for (int i = 0; i < mNodes.Count; i++)
             {
                 var original = mNodes[i];
@@ -113,6 +151,11 @@ namespace YokiFrame.NodeKit
                         var targetPort = targetNode.GetPort(conn.FieldName);
                         if (targetPort == default) continue;
                         newPort.Connect(targetPort);
+                        var reroutePoints = port.GetReroutePoints(j);
+                        var newConnectionIndex = newPort.GetConnectionIndex(targetPort);
+                        var newReroutePoints = newPort.GetReroutePoints(newConnectionIndex);
+                        if (reroutePoints != default && newReroutePoints != default)
+                            newReroutePoints.AddRange(reroutePoints);
                     }
                 }
             }
@@ -120,18 +163,30 @@ namespace YokiFrame.NodeKit
             return copy;
         }
 
-        /// <summary>
-        /// 清空所有节点
-        /// </summary>
         public virtual void Clear()
         {
             for (int i = mNodes.Count - 1; i >= 0; i--)
                 RemoveNode(mNodes[i]);
         }
 
-        /// <summary>
-        /// 获取指定类型的节点
-        /// </summary>
+        public virtual bool CanRemoveNode(Node node)
+        {
+            if (node == default) return false;
+
+            var attribs = GetType().GetCustomAttributes(typeof(RequireNodeAttribute), true);
+            for (int i = 0; i < attribs.Length; i++)
+            {
+                if (attribs[i] is not RequireNodeAttribute require || !require.Requires(node.GetType()))
+                    continue;
+
+                int count = mNodes.Count(x => x != default && x.GetType() == node.GetType());
+                if (count <= 1)
+                    return false;
+            }
+
+            return true;
+        }
+
         public T GetNode<T>() where T : Node
         {
             for (int i = 0; i < mNodes.Count; i++)
@@ -139,14 +194,53 @@ namespace YokiFrame.NodeKit
             return null;
         }
 
-        /// <summary>
-        /// 获取所有指定类型的节点
-        /// </summary>
         public void GetNodes<T>(List<T> result) where T : Node
         {
             result.Clear();
             for (int i = 0; i < mNodes.Count; i++)
                 if (mNodes[i] is T t) result.Add(t);
+        }
+
+        protected virtual void OnEnable()
+        {
+            EnsureRequiredNodes();
+        }
+
+        private void EnsureRequiredNodes()
+        {
+            if (mEnsuringRequiredNodes) return;
+            mEnsuringRequiredNodes = true;
+            var attribs = GetType().GetCustomAttributes(typeof(RequireNodeAttribute), true);
+            try
+            {
+                for (int i = 0; i < attribs.Length; i++)
+                {
+                    if (attribs[i] is not RequireNodeAttribute require)
+                        continue;
+
+                    EnsureRequiredNode(require.Type0);
+                    EnsureRequiredNode(require.Type1);
+                    EnsureRequiredNode(require.Type2);
+                }
+            }
+            finally
+            {
+                mEnsuringRequiredNodes = false;
+            }
+        }
+
+        private void EnsureRequiredNode(Type requiredType)
+        {
+            if (requiredType == default || !typeof(Node).IsAssignableFrom(requiredType))
+                return;
+
+            for (int i = 0; i < mNodes.Count; i++)
+            {
+                if (mNodes[i] != default && mNodes[i].GetType() == requiredType)
+                    return;
+            }
+
+            AddNode(requiredType);
         }
     }
 }

@@ -2,33 +2,31 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// YokiFrame 工具页面基类
-    /// 
-    /// 提供现代化 UI 组件的便捷创建方法和响应式数据绑定支持。
-    /// 按功能拆分为多个 partial class 文件：
-    /// - YokiToolPageBase.cs          ← 核心生命周期（你在这里）
-    /// - YokiToolPageBase.Binding.cs  ← 响应式数据绑定
-    /// - YokiToolPageBase.Components.cs ← UI 组件创建
-    /// 
-    /// 页面元数据通过 [YokiToolPage] 特性声明，无需重写属性。
+    /// Shared base class for YokiFrame tool pages.
     /// </summary>
+    /// <remarks>
+    /// This class provides the editor page lifecycle, metadata lookup, query caching, and shared subscription
+    /// cleanup. Concrete page UI and page-specific editor logic should stay inside each kit's own editor code.
+    /// Other helper capabilities are split into partial files such as binding helpers and component builders.
+    /// </remarks>
     public abstract partial class YokiToolPageBase : IYokiToolPage
     {
-        #region 元数据（从 Attribute 自动获取）
+        #region Metadata
 
         private YokiToolPageAttribute mCachedAttribute;
 
         /// <summary>
-        /// 获取页面特性（缓存）
+        /// Gets the cached <see cref="YokiToolPageAttribute"/> on the current page type.
         /// </summary>
         private YokiToolPageAttribute GetAttribute()
         {
-            if (mCachedAttribute == default)
+            if (mCachedAttribute == null)
             {
                 var attrs = GetType().GetCustomAttributes(typeof(YokiToolPageAttribute), false);
                 if (attrs.Length > 0)
@@ -36,55 +34,60 @@ namespace YokiFrame.EditorTools
                     mCachedAttribute = (YokiToolPageAttribute)attrs[0];
                 }
             }
+
             return mCachedAttribute;
         }
 
         /// <summary>
-        /// 页面名称（从 [YokiToolPage] 特性获取）
+        /// Display name shown in the tools window.
         /// </summary>
         public virtual string PageName => GetAttribute()?.Name ?? GetType().Name;
 
         /// <summary>
-        /// 页面图标（从 [YokiToolPage] 特性获取）
+        /// Icon id used by the page.
         /// </summary>
         public virtual string PageIcon => GetAttribute()?.Icon ?? KitIcons.DOCUMENT;
 
         /// <summary>
-        /// 排序优先级（从 [YokiToolPage] 特性获取）
+        /// Sorting priority, lower values appear first.
         /// </summary>
         public virtual int Priority => GetAttribute()?.Priority ?? 100;
 
         #endregion
-        #region 保护属性
+
+        #region Protected Properties
 
         /// <summary>
-        /// 当前是否处于 PlayMode
+        /// Indicates whether the editor is currently in Play Mode.
         /// </summary>
         protected bool IsPlaying => EditorApplication.isPlaying;
 
         /// <summary>
-        /// 页面根元素
+        /// Root visual element of the page.
         /// </summary>
         protected VisualElement Root { get; private set; }
 
         /// <summary>
-        /// 订阅管理器 - 自动在 OnDeactivate 时清理所有订阅
+        /// Subscription container cleared automatically when the page deactivates.
         /// </summary>
         protected CompositeDisposable Subscriptions { get; } = new(8);
 
         #endregion
 
-        #region 私有字段
+        #region Private Fields
 
         /// <summary>
-        /// VisualElement 查询缓存 - 避免重复查询
+        /// Cached element queries to avoid repeated <c>Q&lt;T&gt;()</c> lookups.
         /// </summary>
         private readonly Dictionary<string, VisualElement> mQueryCache = new(16);
 
         #endregion
 
-        #region 生命周期
+        #region Lifecycle
 
+        /// <summary>
+        /// Creates the page root UI and delegates layout construction to <see cref="BuildUI"/>.
+        /// </summary>
         public VisualElement CreateUI()
         {
             Root = new VisualElement();
@@ -94,35 +97,43 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// 构建页面 UI（子类实现）
+        /// Builds the page UI.
         /// </summary>
+        /// <param name="root">Page root element.</param>
         protected abstract void BuildUI(VisualElement root);
 
+        /// <summary>
+        /// Called when the page becomes active.
+        /// </summary>
         public virtual void OnActivate()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
+        /// <summary>
+        /// Called when the page is deactivated.
+        /// </summary>
         public virtual void OnDeactivate()
         {
-            // 清理所有订阅
             Subscriptions.Clear();
-            // 清理查询缓存
             mQueryCache.Clear();
-            // 清理 EditorEventCenter 中属于此页面的订阅
             EditorEventCenter.UnregisterAll(this);
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         }
 
         /// <summary>
-        /// 轮询更新（已废弃，请使用响应式订阅）
+        /// Legacy polling update hook.
         /// </summary>
-        [Obsolete("使用响应式订阅替代轮询。此方法将在未来版本中移除。")]
+        /// <remarks>
+        /// Prefer reactive subscriptions instead of per-frame polling.
+        /// </remarks>
+        [Obsolete("Use reactive subscriptions instead of polling. This method will be removed in a future version.")]
         public virtual void OnUpdate() { }
 
         /// <summary>
-        /// PlayMode 状态变化回调，子类可重写
+        /// Called when Play Mode state changes.
         /// </summary>
+        /// <param name="state">Current Play Mode state.</param>
         protected virtual void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
@@ -133,45 +144,245 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
-        #region 查询缓存
+        #region Query Cache
 
         /// <summary>
-        /// 缓存查询 VisualElement - 避免重复调用 Q&lt;T&gt;()
+        /// Queries an element by name and caches the result.
         /// </summary>
+        /// <typeparam name="T">Expected element type.</typeparam>
+        /// <param name="name">Element name.</param>
+        /// <returns>The matching element or <see langword="null"/>.</returns>
         protected T QueryCached<T>(string name) where T : VisualElement
         {
-            if (Root == default) return default;
+            if (Root == null) return null;
 
             if (!mQueryCache.TryGetValue(name, out var element))
             {
                 element = Root.Q<T>(name);
-                if (element != default) mQueryCache[name] = element;
+                if (element != null)
+                {
+                    mQueryCache[name] = element;
+                }
             }
+
             return element as T;
         }
 
         /// <summary>
-        /// 缓存查询 VisualElement（通过类名）
+        /// Queries an element by USS class name and caches the result.
         /// </summary>
+        /// <typeparam name="T">Expected element type.</typeparam>
+        /// <param name="className">USS class name.</param>
+        /// <returns>The matching element or <see langword="null"/>.</returns>
         protected T QueryCachedByClass<T>(string className) where T : VisualElement
         {
-            if (Root == default) return default;
+            if (Root == null) return null;
 
             var cacheKey = $"class:{className}";
             if (!mQueryCache.TryGetValue(cacheKey, out var element))
             {
                 element = Root.Q<T>(className: className);
-                if (element != default) mQueryCache[cacheKey] = element;
+                if (element != null)
+                {
+                    mQueryCache[cacheKey] = element;
+                }
             }
+
             return element as T;
         }
 
         /// <summary>
-        /// 清除查询缓存
+        /// Clears cached element query results.
         /// </summary>
-        /// protected void ClearQueryCache() => mQueryCache.Clear();
+        protected void ClearQueryCache()
+        {
+            mQueryCache.Clear();
+        }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Shared base window for standalone monitor-style editor windows.
+    /// </summary>
+    /// <remarks>
+    /// This skeleton keeps common monitor behavior inside Core while leaving concrete UI, refresh logic, and kit
+    /// semantics inside each kit's editor implementation.
+    /// </remarks>
+    public abstract class YokiMonitorWindowBase : EditorWindow
+    {
+        private double mLastRefreshTime;
+
+        /// <summary>
+        /// Opens or focuses a monitor window with standard title and minimum size setup.
+        /// </summary>
+        protected static TWindow OpenMonitorWindow<TWindow>(string windowTitle, Vector2 minSize)
+            where TWindow : EditorWindow
+        {
+            var window = GetWindow<TWindow>(false, windowTitle);
+            window.titleContent = new GUIContent(windowTitle);
+            window.minSize = minSize;
+            window.Show();
+            window.Focus();
+            return window;
+        }
+
+        /// <summary>
+        /// Refresh interval in seconds while the editor is in Play Mode.
+        /// </summary>
+        protected abstract float RefreshIntervalSeconds { get; }
+
+        /// <summary>
+        /// Owning kit name used for style lookup.
+        /// </summary>
+        protected abstract string MonitorKitName { get; }
+
+        /// <summary>
+        /// Builds the concrete monitor UI.
+        /// </summary>
+        protected abstract void BuildMonitorUI(VisualElement root);
+
+        /// <summary>
+        /// Called when the monitor window is enabled.
+        /// </summary>
+        protected virtual void OnMonitorEnabled() { }
+
+        /// <summary>
+        /// Called when the monitor window is disabled.
+        /// </summary>
+        protected virtual void OnMonitorDisabled() { }
+
+        /// <summary>
+        /// Called when Play Mode state changes.
+        /// </summary>
+        protected virtual void OnMonitorPlayModeStateChanged(PlayModeStateChange state) { }
+
+        /// <summary>
+        /// Refreshes monitor data when the update interval elapses.
+        /// </summary>
+        protected virtual void RefreshMonitorData() { }
+
+        /// <summary>
+        /// Initializes the shared monitor root styles and delegates content construction.
+        /// </summary>
+        protected void InitializeMonitorWindowUI(VisualElement root)
+        {
+            root.style.flexDirection = FlexDirection.Column;
+            root.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
+
+            YokiStyleService.Apply(root, YokiStyleProfile.Full);
+
+            if (!string.IsNullOrEmpty(MonitorKitName))
+            {
+                YokiStyleService.ApplyKitStyleToElement(root, MonitorKitName);
+            }
+
+            BuildMonitorUI(root);
+        }
+
+        /// <summary>
+        /// Hooks shared lifecycle behavior for <c>OnEnable</c>.
+        /// </summary>
+        protected void HandleMonitorWindowEnable()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChangedInternal;
+            OnMonitorEnabled();
+        }
+
+        /// <summary>
+        /// Hooks shared lifecycle behavior for <c>OnDisable</c>.
+        /// </summary>
+        protected void HandleMonitorWindowDisable()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChangedInternal;
+            OnMonitorDisabled();
+        }
+
+        /// <summary>
+        /// Handles throttled monitor refreshes from <c>Update</c>.
+        /// </summary>
+        protected void HandleMonitorWindowUpdate()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                return;
+            }
+
+            if (EditorApplication.timeSinceStartup - mLastRefreshTime <= RefreshIntervalSeconds)
+            {
+                return;
+            }
+
+            mLastRefreshTime = EditorApplication.timeSinceStartup;
+            RefreshMonitorData();
+        }
+
+        /// <summary>
+        /// Resets the internal refresh timer.
+        /// </summary>
+        protected void ResetMonitorRefreshTimer()
+        {
+            mLastRefreshTime = 0d;
+        }
+
+        /// <summary>
+        /// Creates a lightweight monitor header row with optional icon and trailing element.
+        /// </summary>
+        protected VisualElement CreateMonitorHeaderRow(string title, string icon = null, VisualElement trailing = null)
+        {
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.alignItems = Align.Center;
+
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var iconElement = new Image { image = KitIcons.GetTexture(icon) };
+                iconElement.style.width = 16;
+                iconElement.style.height = 16;
+                iconElement.style.marginRight = 6;
+                header.Add(iconElement);
+            }
+
+            var titleLabel = new Label(title);
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleLabel.style.color = new StyleColor(new Color(0.8f, 0.8f, 0.8f));
+            titleLabel.style.flexGrow = 1;
+            header.Add(titleLabel);
+
+            if (trailing != null)
+            {
+                header.Add(trailing);
+            }
+
+            return header;
+        }
+
+        /// <summary>
+        /// Creates a monitor panel header with built-in padding and divider styling.
+        /// </summary>
+        protected VisualElement CreateMonitorPanelHeader(string title, string icon = null, VisualElement trailing = null)
+        {
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.alignItems = Align.Center;
+            header.style.paddingTop = 8;
+            header.style.paddingBottom = 8;
+            header.style.paddingLeft = 12;
+            header.style.paddingRight = 12;
+            header.style.borderBottomWidth = 1;
+            header.style.borderBottomColor = new StyleColor(new Color(0.15f, 0.15f, 0.15f));
+            header.Add(CreateMonitorHeaderRow(title, icon, trailing));
+            return header;
+        }
+
+        /// <summary>
+        /// Resets shared timer state before delegating Play Mode changes to the derived window.
+        /// </summary>
+        private void OnPlayModeStateChangedInternal(PlayModeStateChange state)
+        {
+            ResetMonitorRefreshTimer();
+            OnMonitorPlayModeStateChanged(state);
+        }
     }
 }
 #endif

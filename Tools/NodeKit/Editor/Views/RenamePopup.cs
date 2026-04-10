@@ -94,6 +94,8 @@ namespace YokiFrame.NodeKit.Editor
                 }
 
                 mOnRename?.Invoke(newName);
+                if (mTarget is NodeGraph graph)
+                    NodeGraphWindow.ShowGraph(graph);
             }
             Close();
         }

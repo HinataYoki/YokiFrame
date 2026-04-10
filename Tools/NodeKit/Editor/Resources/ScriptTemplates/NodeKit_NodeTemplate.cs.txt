@@ -1,0 +1,15 @@
+using YokiFrame.NodeKit;
+
+public class #SCRIPTNAME# : Node
+{
+    protected override void Init()
+    {
+        base.Init();
+        #NOTRIM#
+    }
+
+    public override object GetValue(NodePort port)
+    {
+        return null;
+    }
+}

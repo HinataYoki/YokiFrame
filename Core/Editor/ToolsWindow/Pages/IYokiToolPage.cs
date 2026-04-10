@@ -4,46 +4,47 @@ using UnityEngine.UIElements;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// YokiFrame 工具页面接口
-    /// 
-    /// 所有工具页面必须实现此接口。
-    /// 推荐继承 YokiToolPageBase 获得更多便捷功能。
+    /// Contract implemented by every YokiFrame tool page.
     /// </summary>
+    /// <remarks>
+    /// New pages should usually inherit from <see cref="YokiToolPageBase"/> so they automatically get the
+    /// shared lifecycle, query cache, and subscription cleanup behavior.
+    /// </remarks>
     public interface IYokiToolPage
     {
         /// <summary>
-        /// 页面名称（显示在侧边栏）
+        /// Display name shown in the tools window.
         /// </summary>
         string PageName { get; }
-        
+
         /// <summary>
-        /// 页面图标 ID（使用 KitIcons 常量）
+        /// Icon id used by the page. Prefer constants from <c>KitIcons</c>.
         /// </summary>
         string PageIcon { get; }
-        
+
         /// <summary>
-        /// 排序优先级（越小越靠前）
+        /// Sorting priority, lower values appear first.
         /// </summary>
         int Priority { get; }
-        
+
         /// <summary>
-        /// 创建页面 UI
+        /// Creates the page root UI.
         /// </summary>
-        /// <returns>页面根元素</returns>
+        /// <returns>Root visual element for the page.</returns>
         VisualElement CreateUI();
-        
+
         /// <summary>
-        /// 页面激活时调用
+        /// Called when the page becomes active.
         /// </summary>
         void OnActivate();
-        
+
         /// <summary>
-        /// 页面停用时调用
+        /// Called when the page is deactivated.
         /// </summary>
         void OnDeactivate();
-        
+
         /// <summary>
-        /// 定时更新（已废弃，请使用响应式订阅）
+        /// Legacy polling update hook.
         /// </summary>
         void OnUpdate();
     }

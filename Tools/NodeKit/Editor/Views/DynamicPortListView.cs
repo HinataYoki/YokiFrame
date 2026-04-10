@@ -157,7 +157,9 @@ namespace YokiFrame.NodeKit.Editor
             }
 
             NodeEditorUtility.SetDirty(mNode);
+            NodeEditorUtility.SetDirty(mNode.Graph);
             RefreshItems();
+            mNodeView.GraphView.SaveGraph();
         }
 
         internal void RemoveItem(int index)
@@ -202,7 +204,9 @@ namespace YokiFrame.NodeKit.Editor
             }
 
             NodeEditorUtility.SetDirty(mNode);
+            NodeEditorUtility.SetDirty(mNode.Graph);
             RefreshItems();
+            mNodeView.GraphView.SaveGraph();
         }
 
         internal void MoveItem(int fromIndex, int toIndex)
@@ -234,7 +238,9 @@ namespace YokiFrame.NodeKit.Editor
             }
 
             NodeEditorUtility.SetDirty(mNode);
+            NodeEditorUtility.SetDirty(mNode.Graph);
             RefreshItems();
+            mNodeView.GraphView.SaveGraph();
         }
     }
 }

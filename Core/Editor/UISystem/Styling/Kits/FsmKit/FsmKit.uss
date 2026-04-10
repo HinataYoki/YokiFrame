@@ -83,25 +83,29 @@
 
 /* ========== HUD 区域 ========== */
 .yoki-fsm-hud {
-    padding: var(--yoki-spacing-md);
+    padding: 18px 20px;
     background-color: var(--yoki-layer-navigation);
     border-bottom-width: 1px;
     border-bottom-color: var(--yoki-border-subtle);
-    min-height: 80px;
+    min-height: 92px;
 }
 
 .yoki-fsm-hud__content {
     flex-direction: row;
     justify-content: space-between;
+    align-items: flex-start;
 }
 
 .yoki-fsm-hud__left {
     flex-direction: column;
+    padding-right: 18px;
 }
 
 .yoki-fsm-hud__right {
     flex-direction: column;
     align-items: flex-end;
+    min-width: 96px;
+    padding-left: 12px;
 }
 
 .yoki-fsm-hud__label {
@@ -162,7 +166,6 @@
     padding: var(--yoki-spacing-md);
     background-color: var(--yoki-layer-card);
     border-radius: var(--yoki-radius-md);
-    margin: var(--yoki-spacing-sm);
 }
 
 .yoki-state-matrix__header {
@@ -294,7 +297,6 @@
     padding: var(--yoki-spacing-md);
     background-color: var(--yoki-layer-card);
     border-radius: var(--yoki-radius-md);
-    margin: var(--yoki-spacing-sm);
     min-height: 120px;
 }
 
@@ -391,6 +393,12 @@
     flex-direction: row;
     align-items: center;
     flex-grow: 1;
+}
+
+.yoki-transition-item__fsm-name {
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-tertiary);
+    min-width: 92px;
 }
 
 .yoki-transition-item__from-state {

@@ -12,6 +12,9 @@ namespace YokiFrame.NodeKit.Editor
     {
         private NodeGraphView mGraphView;
         private Vector2 mMousePosition;
+        private Type mCompatibleType;
+        private PortIO? mRequiredDirection;
+        private NodePort mSourcePort;
 
         /// <summary>
         /// 初始化
@@ -29,6 +32,20 @@ namespace YokiFrame.NodeKit.Editor
             mMousePosition = position;
         }
 
+        public void SetCompatibility(NodePort sourcePort)
+        {
+            mSourcePort = sourcePort;
+            if (sourcePort == default)
+            {
+                mCompatibleType = null;
+                mRequiredDirection = null;
+                return;
+            }
+
+            mCompatibleType = sourcePort.ValueType;
+            mRequiredDirection = sourcePort.IsOutput ? PortIO.Input : PortIO.Output;
+        }
+
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {
             var tree = new List<SearchTreeEntry>
@@ -38,19 +55,35 @@ namespace YokiFrame.NodeKit.Editor
 
             var nodeTypes = NodeReflection.GetNodeTypes();
             var groups = new HashSet<string>();
+            var graphEditor = mGraphView.GraphEditor;
 
             // 按菜单路径排序
             var sorted = new List<NodeReflection.NodeTypeInfo>(nodeTypes);
             sorted.Sort((a, b) =>
             {
-                var cmp = a.Order.CompareTo(b.Order);
-                return cmp != 0 ? cmp : string.Compare(a.MenuPath, b.MenuPath, StringComparison.Ordinal);
+                string menuA = graphEditor?.GetNodeMenuName(a.Type) ?? a.MenuPath;
+                string menuB = graphEditor?.GetNodeMenuName(b.Type) ?? b.MenuPath;
+                int orderA = graphEditor?.GetNodeMenuOrder(a.Type) ?? a.Order;
+                int orderB = graphEditor?.GetNodeMenuOrder(b.Type) ?? b.Order;
+                var cmp = orderA.CompareTo(orderB);
+                return cmp != 0 ? cmp : string.Compare(menuA, menuB, StringComparison.Ordinal);
             });
 
             for (int i = 0; i < sorted.Count; i++)
             {
                 var info = sorted[i];
-                var path = info.MenuPath;
+                var path = graphEditor?.GetNodeMenuName(info.Type) ?? info.MenuPath;
+                if (string.IsNullOrWhiteSpace(path))
+                    continue;
+                if (!mGraphView.CanCreateNodeType(info.Type, info.MaxCount))
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(mCompatibleType?.Name) && NodePreferences.CreateFilter && mRequiredDirection.HasValue)
+                {
+                    if (!NodeEditorUtility.HasCompatiblePortType(info.Type, mCompatibleType, mRequiredDirection.Value))
+                        continue;
+                }
+
                 var parts = path.Split('/');
 
                 // 添加分组
@@ -80,11 +113,11 @@ namespace YokiFrame.NodeKit.Editor
         {
             if (entry.userData is not Type type) return false;
 
-            var worldPos = mMousePosition - 
-                new Vector2(mGraphView.viewTransform.position.x, mGraphView.viewTransform.position.y);
-            worldPos /= mGraphView.viewTransform.scale.x;
+            var node = mGraphView.CreateNode(type, mMousePosition);
+            if (node != default && mSourcePort != default)
+                mGraphView.AutoConnect(node, mSourcePort);
 
-            mGraphView.CreateNode(type, worldPos);
+            SetCompatibility(null);
             return true;
         }
     }

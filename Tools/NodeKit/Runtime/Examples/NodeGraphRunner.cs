@@ -2,9 +2,6 @@ using UnityEngine;
 
 namespace YokiFrame.NodeKit.Examples
 {
-    /// <summary>
-    /// 节点图运行器，用于测试图的执行
-    /// </summary>
     public class NodeGraphRunner : MonoBehaviour
     {
         [SerializeField] private NodeGraph mGraph;
@@ -22,9 +19,6 @@ namespace YokiFrame.NodeKit.Examples
                 Run();
         }
 
-        /// <summary>
-        /// 运行节点图
-        /// </summary>
         [ContextMenu("Run Graph")]
         public void Run()
         {
@@ -36,13 +30,23 @@ namespace YokiFrame.NodeKit.Examples
 
             Debug.Log($"[NodeKit] Running graph: {mGraph.name}");
 
+            var startNode = mGraph.StartNode;
+            if (startNode != default)
+            {
+                Debug.Log($"[NodeKit] Start node: {startNode.name}");
+                foreach (var port in startNode.Outputs)
+                {
+                    var value = startNode.GetValue(port);
+                    Debug.Log($"[NodeKit] Node '{startNode.name}' Port '{port.FieldName}' = {value}");
+                }
+            }
+
             var nodes = mGraph.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
                 var node = nodes[i];
-                if (node == default) continue;
+                if (node == default || node == startNode) continue;
 
-                // 查找输出端口并获取值
                 foreach (var port in node.Outputs)
                 {
                     var value = node.GetValue(port);
@@ -53,9 +57,6 @@ namespace YokiFrame.NodeKit.Examples
             Debug.Log("[NodeKit] Graph execution completed.");
         }
 
-        /// <summary>
-        /// 获取指定类型的节点
-        /// </summary>
         public T GetNode<T>() where T : Node
         {
             if (mGraph == default) return null;
@@ -67,9 +68,6 @@ namespace YokiFrame.NodeKit.Examples
             return null;
         }
 
-        /// <summary>
-        /// 获取所有指定类型的节点
-        /// </summary>
         public void GetNodes<T>(System.Collections.Generic.List<T> result) where T : Node
         {
             result.Clear();
