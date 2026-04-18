@@ -79,6 +79,8 @@ namespace YokiFrame.TableKit.Editor
                     if (allSuccess)
                     {
                         EnsureRequiredFiles(logBuilder);
+                        AssetDatabase.Refresh();
+                        logBuilder.AppendLine("\n[OK] 已刷新 Unity 资源数据库");
                     }
                 }
 
@@ -203,6 +205,8 @@ namespace YokiFrame.TableKit.Editor
 
                 if (success)
                 {
+                    AssetDatabase.Refresh();
+                    logBuilder.AppendLine("\n[OK] 已刷新 Unity 资源数据库");
                 }
 
                 UpdateStatusBanner(success ? BuildStatus.Success : BuildStatus.Failed);
