@@ -6,18 +6,18 @@ using System.Text;
 namespace YokiFrame.TableKit.Editor
 {
     /// <summary>
-    /// TableKitCodeGenerator - 浠ｇ爜妯℃澘鐢熸垚
+    /// TableKitCodeGenerator - 代码模板生成
     /// </summary>
     public static partial class TableKitCodeGenerator
     {
         /// <summary>
-        /// 鐢熸垚 TableKit.cs 涓绘枃浠?
+        /// 生成 TableKit.cs 主文件
         /// </summary>
         private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame,
             string runtimePathPattern, string editorDataPath,
             bool useAsyncLoading = false, string[] tableFileNames = null)
         {
-            // 杞箟璺緞涓殑鐗规畩瀛楃
+            // 转义路径中的特殊字符
             var escapedRuntimePath = runtimePathPattern.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var escapedEditorPath = editorDataPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
@@ -67,8 +67,8 @@ namespace YokiFrame.TableKit.Editor
             }
             sb.AppendLine();
             sb.AppendLine("/// <summary>");
-            sb.AppendLine("/// 閰嶇疆琛ㄧ郴缁熷叆鍙ｇ被");
-            sb.AppendLine("/// 鐢?TableKit 宸ュ叿鑷姩鐢熸垚锛岃矾寰勯厤缃凡宓屽叆浠ｇ爜");
+            sb.AppendLine("/// 配置表系统入口类");
+            sb.AppendLine("/// 由 TableKit 工具自动生成，路径配置已嵌入代码");
             sb.AppendLine("/// </summary>");
             sb.AppendLine("public static class TableKit");
             sb.AppendLine("{");
@@ -77,12 +77,12 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    private static Func<string, string> sJsonLoader;");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 鏄惁宸插垵濮嬪寲");
+            sb.AppendLine("    /// 是否已初始化");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static bool Initialized { get; private set; }");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 杩愯鏃惰矾寰勬ā寮忥紙鐢熸垚鏃跺祵鍏ワ級");
+            sb.AppendLine("    /// 运行时路径模式（生成时嵌入）");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static string RuntimePathPattern {{ get; set; }} = \"{escapedRuntimePath}\";");
             sb.AppendLine();
@@ -103,7 +103,7 @@ namespace YokiFrame.TableKit.Editor
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 璁剧疆浜岃繘鍒舵暟鎹姞杞藉櫒");
+            sb.AppendLine("    /// 设置二进制数据加载器");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void SetBinaryLoader(Func<string, byte[]> loader)");
             sb.AppendLine("    {");
@@ -123,7 +123,7 @@ namespace YokiFrame.TableKit.Editor
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 鍒濆鍖栭厤缃〃");
+            sb.AppendLine("    /// 初始化配置表");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static void Init()");
             sb.AppendLine("    {");
@@ -162,7 +162,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var json = sJsonLoader(fileName);");
             sb.AppendLine("        if (string.IsNullOrEmpty(json))");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 鍔犺浇閰嶇疆琛ㄥけ璐? {fileName}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -174,7 +174,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
             sb.AppendLine();
             sb.AppendLine("            if (jsonType == null)");
-            sb.AppendLine("                throw new InvalidOperationException(\"鏃犳硶鎵惧埌 JSON 绫诲瀷\");");
+            sb.AppendLine("                throw new InvalidOperationException(\"无法找到 JSON 类型\");");
             sb.AppendLine();
             sb.AppendLine("            sJsonParseMethod = jsonType.GetMethod(\"Parse\", BindingFlags.Public | BindingFlags.Static,");
             sb.AppendLine("                null, new[] { typeof(string) }, null);");
@@ -188,7 +188,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var bytes = sBinaryLoader(fileName);");
             sb.AppendLine("        if (bytes == null || bytes.Length == 0)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 鍔犺浇閰嶇疆琛ㄥけ璐? {fileName}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(bytes);");
@@ -203,14 +203,14 @@ namespace YokiFrame.TableKit.Editor
 
             if (hasYokiFrame)
             {
-                sb.AppendLine("    // 榛樿鍔犺浇鍣細浣跨敤 YokiFrame.ResKit");
+                sb.AppendLine("    // 默认加载器：使用 YokiFrame.ResKit");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
                 sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 鍔犺浇澶辫触: {path}\");");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
@@ -225,7 +225,7 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
                 sb.AppendLine("        if (handler == null)");
                 sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 鍔犺浇澶辫触: {path}\");");
+                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
                 sb.AppendLine("            return null;");
                 sb.AppendLine("        }");
                 sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
@@ -236,7 +236,7 @@ namespace YokiFrame.TableKit.Editor
             }
             else
             {
-                sb.AppendLine("    // 榛樿鍔犺浇鍣細浣跨敤 Resources");
+                sb.AppendLine("    // 默认加载器：使用 Resources");
                 sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
                 sb.AppendLine("    {");
                 sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
@@ -314,12 +314,12 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine($"    private static {tablesNamespace}.Tables sTablesEditor;");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 缂栬緫鍣ㄦ暟鎹矾寰勶紙鐢熸垚鏃跺祵鍏ワ級");
+            sb.AppendLine("    /// 编辑器数据路径（生成时嵌入）");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static string EditorDataPath {{ get; set; }} = \"{escapedEditorPath}\";");
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 鑾峰彇缂栬緫鍣ㄦā寮忎笅鐨勯厤缃〃瀹炰緥");
+            sb.AppendLine("    /// 获取编辑器模式下的配置表实例");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine($"    public static {tablesNamespace}.Tables TablesEditor");
             sb.AppendLine("    {");
@@ -358,7 +358,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 缂栬緫鍣ㄥ姞杞介厤缃〃澶辫触: {path}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -370,7 +370,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
             sb.AppendLine();
             sb.AppendLine("            if (jsonType == null)");
-            sb.AppendLine("                throw new InvalidOperationException(\"鏃犳硶鎵惧埌 JSON 绫诲瀷\");");
+            sb.AppendLine("                throw new InvalidOperationException(\"无法找到 JSON 类型\");");
             sb.AppendLine();
             sb.AppendLine("            sJsonParseMethod = jsonType.GetMethod(\"Parse\", BindingFlags.Public | BindingFlags.Static,");
             sb.AppendLine("                null, new[] { typeof(string) }, null);");
@@ -385,7 +385,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 缂栬緫鍣ㄥ姞杞介厤缃〃澶辫触: {path}\");");
+            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(asset.bytes);");
@@ -399,7 +399,7 @@ namespace YokiFrame.TableKit.Editor
         }
 
         /// <summary>
-        /// 鐢熸垚寮傛鍔犺浇浠ｇ爜鍖哄潡
+        /// 生成异步加载代码区块
         /// </summary>
     }
 }
