@@ -114,11 +114,21 @@ namespace YokiFrame
         {
             var container = sContainerPool.Allocate();
             container.IsRecycled = false;
-            
+
 #if UNITY_EDITOR
             sActiveContainers.Add(container);
 #endif
-            
+
+            return container;
+        }
+
+        /// <summary>
+        /// 创建 BuffContainer 并绑定 Owner
+        /// </summary>
+        public static BuffContainer CreateContainer(object owner)
+        {
+            var container = CreateContainer();
+            container.SetOwner(owner);
             return container;
         }
 

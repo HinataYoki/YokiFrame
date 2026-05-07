@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -7,35 +8,43 @@ namespace YokiFrame
     /// </summary>
     public class BuffInstance : IPoolable
     {
+        // 全局自增，用于生成 InstanceSourceId（运行时临时 id，不持久化）
+        private static int sNextSourceId;
+
         /// <summary>
         /// Buff ID
         /// </summary>
         public int BuffId { get; internal set; }
-        
+
         /// <summary>
         /// Buff 定义引用
         /// </summary>
         public IBuff Buff { get; internal set; }
-        
+
         /// <summary>
         /// 剩余持续时间（秒），负数表示永久
         /// </summary>
         public float RemainingDuration { get; internal set; }
-        
+
         /// <summary>
         /// 已经过的 Tick 时间（秒）
         /// </summary>
         public float ElapsedTickTime { get; internal set; }
-        
+
         /// <summary>
         /// 当前堆叠层数
         /// </summary>
         public int StackCount { get; internal set; }
-        
+
         /// <summary>
         /// 是否为永久 Buff
         /// </summary>
         public bool IsPermanent => RemainingDuration < 0;
+
+        /// <summary>
+        /// 实例运行时来源 id，每次从池分配递增。不跨存档稳定，仅用于外部属性系统定位修饰器来源。
+        /// </summary>
+        public int InstanceSourceId { get; private set; }
 
         /// <summary>
         /// 原始持续时间（用于刷新）
@@ -57,6 +66,7 @@ namespace YokiFrame
             ElapsedTickTime = 0;
             StackCount = 0;
             OriginalDuration = 0;
+            InstanceSourceId = 0;
             mCustomData?.Clear();
         }
 
@@ -128,6 +138,7 @@ namespace YokiFrame
             OriginalDuration = duration;
             ElapsedTickTime = 0;
             StackCount = stackCount;
+            InstanceSourceId = Interlocked.Increment(ref sNextSourceId);
             IsRecycled = false;
         }
 

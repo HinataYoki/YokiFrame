@@ -9,28 +9,34 @@ namespace YokiFrame
         /// 属性 ID（配置表 ID）
         /// </summary>
         public int AttributeId;
-        
+
         /// <summary>
         /// 修改类型
         /// </summary>
         public ModifierType Type;
-        
+
         /// <summary>
         /// 修改值
         /// </summary>
         public float Value;
-        
+
         /// <summary>
         /// 优先级（同类型内排序，数值越大优先级越高）
         /// </summary>
         public int Priority;
 
-        public BuffModifier(int attributeId, ModifierType type, float value, int priority = 0)
+        /// <summary>
+        /// 使用方自定义来源标识（运行时可覆盖为 BuffInstance.InstanceSourceId），默认 0
+        /// </summary>
+        public int SourceId;
+
+        public BuffModifier(int attributeId, ModifierType type, float value, int priority = 0, int sourceId = 0)
         {
             AttributeId = attributeId;
             Type = type;
             Value = value;
             Priority = priority;
+            SourceId = sourceId;
         }
     }
 }

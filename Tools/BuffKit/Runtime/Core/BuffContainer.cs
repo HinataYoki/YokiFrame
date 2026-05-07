@@ -33,6 +33,19 @@ namespace YokiFrame
         /// </summary>
         public bool IsDisposed { get; private set; }
 
+        /// <summary>
+        /// 容器挂载者（使用方自定义类型，读取时强转）
+        /// </summary>
+        public object Owner { get; private set; }
+
+        /// <summary>
+        /// 设置容器挂载者
+        /// </summary>
+        public void SetOwner(object owner)
+        {
+            Owner = owner;
+        }
+
         #region 对象池接口
 
         public bool IsRecycled { get; set; }
@@ -41,6 +54,7 @@ namespace YokiFrame
         {
             ClearInternal(triggerCallbacks: false);
             mImmuneTags.Clear();
+            Owner = null;
             IsDisposed = false;
         }
 
@@ -95,11 +109,20 @@ namespace YokiFrame
                 if (tickInterval > 0)
                 {
                     instance.ElapsedTickTime += deltaTime;
-                    
+
                     while (instance.ElapsedTickTime >= tickInterval)
                     {
                         instance.ElapsedTickTime -= tickInterval;
                         instance.Buff?.OnTick(this, instance);
+
+                        var effects = instance.Buff?.Effects;
+                        if (effects != null)
+                        {
+                            for (int j = 0; j < effects.Count; j++)
+                            {
+                                effects[j].OnTick(this, instance);
+                            }
+                        }
                     }
                 }
             }

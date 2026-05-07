@@ -9,41 +9,48 @@ namespace YokiFrame
         /// Buff ID（配置表 ID）
         /// </summary>
         public int BuffId;
-        
+
         /// <summary>
         /// 持续时间（秒），-1 表示永久
         /// </summary>
         public float Duration;
-        
+
         /// <summary>
         /// 最大堆叠数
         /// </summary>
         public int MaxStack;
-        
+
         /// <summary>
         /// 堆叠模式
         /// </summary>
         public StackMode StackMode;
-        
+
         /// <summary>
         /// 周期触发间隔（秒），0 表示不触发
         /// </summary>
         public float TickInterval;
-        
+
         /// <summary>
         /// Buff 标签数组
         /// </summary>
         public int[] Tags;
-        
+
         /// <summary>
         /// 排斥标签数组（添加此 Buff 时会移除带有这些标签的 Buff）
         /// </summary>
         public int[] ExclusionTags;
 
         /// <summary>
+        /// 强度比较器（仅 StackMode.StrongestWins 模式使用）。
+        /// 返回值语义：>0 表示新实例更强（覆盖旧实例），==0 相同（刷新），&lt;0 旧实例更强（丢弃新实例）。
+        /// 参数顺序：(newCandidate, existing)。null 时 StrongestWins 回退为 Refresh 行为。
+        /// </summary>
+        public System.Func<BuffInstance, BuffInstance, int> StrengthComparer;
+
+        /// <summary>
         /// 创建一个基础的 BuffData
         /// </summary>
-        public static BuffData Create(int buffId, float duration = -1f, int maxStack = 1, 
+        public static BuffData Create(int buffId, float duration = -1f, int maxStack = 1,
             StackMode stackMode = StackMode.Refresh, float tickInterval = 0f)
         {
             return new BuffData
@@ -54,7 +61,8 @@ namespace YokiFrame
                 StackMode = stackMode,
                 TickInterval = tickInterval,
                 Tags = null,
-                ExclusionTags = null
+                ExclusionTags = null,
+                StrengthComparer = null
             };
         }
 
@@ -73,6 +81,24 @@ namespace YokiFrame
         public BuffData WithExclusionTags(params int[] exclusionTags)
         {
             ExclusionTags = exclusionTags;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置堆叠模式
+        /// </summary>
+        public BuffData WithStackMode(StackMode mode)
+        {
+            StackMode = mode;
+            return this;
+        }
+
+        /// <summary>
+        /// 设置强度比较器（用于 StackMode.StrongestWins）
+        /// </summary>
+        public BuffData WithStrengthComparer(System.Func<BuffInstance, BuffInstance, int> comparer)
+        {
+            StrengthComparer = comparer;
             return this;
         }
 

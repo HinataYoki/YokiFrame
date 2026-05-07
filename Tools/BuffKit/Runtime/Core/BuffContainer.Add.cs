@@ -32,13 +32,13 @@ namespace YokiFrame
         public bool Add(int buffId, int stackCount)
         {
             ThrowIfDisposed();
-            
+
             var data = BuffKit.GetBuffData(buffId);
             if (data.BuffId == 0 && buffId != 0)
             {
                 return false;
             }
-            
+
             // 对于 Stack 模式，多次添加
             if (data.StackMode == StackMode.Stack)
             {
@@ -52,7 +52,7 @@ namespace YokiFrame
                 }
                 return anyAdded;
             }
-            
+
             return AddInternal(data, null);
         }
 
@@ -71,20 +71,27 @@ namespace YokiFrame
         public bool Add(IBuff buff)
         {
             ThrowIfDisposed();
-            
+
             if (buff == null) return false;
-            
-            var data = new BuffData
+
+            // 优先从注册表查询 BuffData（保留 StrengthComparer 等配置）
+            var data = BuffKit.GetBuffData(buff.BuffId);
+
+            // 未注册时构造临时 BuffData
+            if (data.BuffId == 0 && buff.BuffId != 0)
             {
-                BuffId = buff.BuffId,
-                Duration = buff.Duration,
-                MaxStack = buff.MaxStack,
-                StackMode = buff.StackMode,
-                TickInterval = buff.TickInterval,
-                Tags = buff.Tags,
-                ExclusionTags = buff.ExclusionTags
-            };
-            
+                data = new BuffData
+                {
+                    BuffId = buff.BuffId,
+                    Duration = buff.Duration,
+                    MaxStack = buff.MaxStack,
+                    StackMode = buff.StackMode,
+                    TickInterval = buff.TickInterval,
+                    Tags = buff.Tags,
+                    ExclusionTags = buff.ExclusionTags
+                };
+            }
+
             return AddInternal(data, buff);
         }
 
@@ -101,7 +108,7 @@ namespace YokiFrame
                     }
                 }
             }
-            
+
             // 处理排斥标签
             if (data.ExclusionTags != null && data.ExclusionTags.Length > 0)
             {
@@ -110,19 +117,22 @@ namespace YokiFrame
                     RemoveByTag(data.ExclusionTags[i], BuffRemoveReason.Excluded);
                 }
             }
-            
+
             // 根据堆叠模式处理
             switch (data.StackMode)
             {
                 case StackMode.Independent:
                     return AddNewInstance(data, buff);
-                    
+
                 case StackMode.Refresh:
                     return AddOrRefresh(data, buff);
-                    
+
                 case StackMode.Stack:
                     return AddOrStack(data, buff);
-                    
+
+                case StackMode.StrongestWins:
+                    return AddOrStrongest(data, buff);
+
                 default:
                     return AddNewInstance(data, buff);
             }
@@ -155,7 +165,7 @@ namespace YokiFrame
             if (mBuffsByIdDict.TryGetValue(data.BuffId, out var list) && list.Count > 0)
             {
                 var instance = list[0];
-                
+
                 if (instance.StackCount < data.MaxStack)
                 {
                     // 增加堆叠
@@ -172,9 +182,55 @@ namespace YokiFrame
                     return true;
                 }
             }
-            
+
             // 创建新实例
             return AddNewInstance(data, buff);
+        }
+
+        private bool AddOrStrongest(BuffData data, IBuff buff)
+        {
+            // 没有现存实例 → 直接新建
+            if (!mBuffsByIdDict.TryGetValue(data.BuffId, out var list) || list.Count == 0)
+            {
+                return AddNewInstance(data, buff);
+            }
+
+            var existing = list[0];
+            var comparer = data.StrengthComparer;
+
+            // 未提供比较器 → 回退为 Refresh
+            if (comparer == null)
+            {
+                existing.RefreshDuration();
+                return true;
+            }
+
+            // 构造临时 candidate 用于比较（不加入集合/不触发回调）
+            var candidate = BuffKit.AllocateInstance();
+            candidate.Initialize(data.BuffId, buff, data.Duration, 1);
+
+            var result = comparer(candidate, existing);
+
+            if (result > 0)
+            {
+                // 新更强：移除旧（Excluded），启用 candidate
+                RemoveInstanceInternal(existing, BuffRemoveReason.Excluded);
+                AddToCollections(candidate);
+                InvokeOnAdd(candidate);
+                return true;
+            }
+
+            if (result == 0)
+            {
+                // 强度相同：刷新旧实例，丢弃 candidate
+                existing.RefreshDuration();
+                BuffKit.RecycleInstance(candidate);
+                return true;
+            }
+
+            // 旧更强：丢弃 candidate
+            BuffKit.RecycleInstance(candidate);
+            return false;
         }
 
         private BuffInstance CreateInstance(BuffData data, IBuff buff)
