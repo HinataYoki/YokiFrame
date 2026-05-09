@@ -12,6 +12,8 @@ namespace YokiFrame.TableKit.Editor
     {
         #region 使用指南
 
+        private const string PREF_GUIDE_EXPANDED = "TableKit_GuideExpanded";
+
         private VisualElement mGuideFoldout;
 
         /// <summary>

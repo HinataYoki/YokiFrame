@@ -13,6 +13,8 @@ namespace YokiFrame.TableKit.Editor
     {
         #region 可折叠配置区
 
+        private const string PREF_CONFIG_EXPANDED = "TableKit_ConfigExpanded";
+
         private VisualElement BuildConfigFoldout()
         {
             var container = new VisualElement();

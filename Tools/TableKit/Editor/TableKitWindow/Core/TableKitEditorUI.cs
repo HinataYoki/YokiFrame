@@ -112,28 +112,6 @@ namespace YokiFrame.TableKit.Editor
 
         #endregion
 
-        #region EditorPrefs 键
-
-        private const string PREF_EDITOR_DATA_PATH = "TableKit_EditorDataPath";
-        private const string PREF_RUNTIME_PATH_PATTERN = "TableKit_RuntimePathPattern";
-        private const string PREF_LUBAN_WORK_DIR = "TableKit_LubanWorkDir";
-        private const string PREF_LUBAN_DLL_PATH = "TableKit_LubanDllPath";
-        private const string PREF_TARGET = "TableKit_Target";
-        private const string PREF_CODE_TARGET = "TableKit_CodeTarget";
-        private const string PREF_DATA_TARGET = "TableKit_DataTarget";
-        private const string PREF_OUTPUT_DATA_DIR = "TableKit_OutputDataDir";
-        private const string PREF_OUTPUT_CODE_DIR = "TableKit_OutputCodeDir";
-        private const string PREF_USE_ASSEMBLY = "TableKit_UseAssembly";
-        private const string PREF_ASSEMBLY_NAME = "TableKit_AssemblyName";
-        private const string PREF_GENERATE_EXTERNAL_TYPE_UTIL = "TableKit_GenerateExternalTypeUtil";
-        private const string PREF_USE_ASYNC_LOADING = "TableKit_UseAsyncLoading";
-        private const string PREF_CUSTOM_EDITOR_DATA_PATH = "TableKit_CustomEditorDataPath";
-        private const string PREF_CONFIG_EXPANDED = "TableKit_ConfigExpanded";
-        private const string PREF_GUIDE_EXPANDED = "TableKit_GuideExpanded";
-        private const string PREF_CONSOLE_LOG = "TableKit_ConsoleLog";
-
-        #endregion
-
         #region 下拉选项
 
         private static readonly string[] TARGET_OPTIONS = { "client", "server", "all" };
@@ -188,68 +166,77 @@ namespace YokiFrame.TableKit.Editor
 
         private void LoadPrefs()
         {
-            mEditorDataPath = EditorPrefs.GetString(PREF_EDITOR_DATA_PATH, "Assets/Resources/Art/Table/");
-            mRuntimePathPattern = EditorPrefs.GetString(PREF_RUNTIME_PATH_PATTERN, "Art/Table/{0}");
-            mLubanWorkDir = EditorPrefs.GetString(PREF_LUBAN_WORK_DIR, "Luban/MiniTemplate");
-            mLubanDllPath = EditorPrefs.GetString(PREF_LUBAN_DLL_PATH, "Luban/Tools/Luban/Luban.dll");
-            mTarget = EditorPrefs.GetString(PREF_TARGET, "client");
-            mCodeTarget = EditorPrefs.GetString(PREF_CODE_TARGET, "cs-bin");
-            mDataTarget = EditorPrefs.GetString(PREF_DATA_TARGET, "bin");
-            mOutputDataDir = EditorPrefs.GetString(PREF_OUTPUT_DATA_DIR, "Assets/Resources/Art/Table/");
-            mOutputCodeDir = EditorPrefs.GetString(PREF_OUTPUT_CODE_DIR, "Assets/Scripts/TableKit/");
-            mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
-            mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.TableKit");
-            mGenerateExternalTypeUtil = EditorPrefs.GetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, false);
-            mUseAsyncLoading = EditorPrefs.GetBool(PREF_USE_ASYNC_LOADING, false);
-            mCustomEditorDataPath = EditorPrefs.GetBool(PREF_CUSTOM_EDITOR_DATA_PATH, false);
+            LoadUserPrefs();
+
+            mEditorDataPath = mUserPrefs.editorDataPath;
+            mRuntimePathPattern = mUserPrefs.runtimePathPattern;
+            mLubanWorkDir = mUserPrefs.lubanWorkDir;
+            mLubanDllPath = mUserPrefs.lubanDllPath;
+            mTarget = mUserPrefs.target;
+            mCodeTarget = mUserPrefs.codeTarget;
+            mDataTarget = mUserPrefs.dataTarget;
+            mOutputDataDir = mUserPrefs.outputDataDir;
+            mOutputCodeDir = mUserPrefs.outputCodeDir;
+            mUseAssemblyDefinition = mUserPrefs.useAssemblyDefinition;
+            mAssemblyName = mUserPrefs.assemblyName;
+            mGenerateExternalTypeUtil = mUserPrefs.generateExternalTypeUtil;
+            mUseAsyncLoading = mUserPrefs.useAsyncLoading;
+            mCustomEditorDataPath = mUserPrefs.customEditorDataPath;
 
             // 未开启自定义编辑器数据路径时，跟随数据输出目录
             if (!mCustomEditorDataPath)
             {
                 mEditorDataPath = mOutputDataDir;
             }
-            
+
             // 加载多目标输出配置
             LoadExtraOutputTargets();
         }
-        
+
         /// <summary>
         /// 加载持久化的控制台日志
         /// </summary>
-        private string LoadConsoleLog() => EditorPrefs.GetString(PREF_CONSOLE_LOG, "等待操作...");
+        private string LoadConsoleLog() => mUserPrefs?.consoleLog ?? "等待操作...";
 
         public void SavePrefs()
         {
-            EditorPrefs.SetString(PREF_EDITOR_DATA_PATH, mEditorDataPath);
-            EditorPrefs.SetString(PREF_RUNTIME_PATH_PATTERN, mRuntimePathPattern);
-            EditorPrefs.SetString(PREF_LUBAN_WORK_DIR, mLubanWorkDir);
-            EditorPrefs.SetString(PREF_LUBAN_DLL_PATH, mLubanDllPath);
-            EditorPrefs.SetString(PREF_TARGET, mTarget);
-            EditorPrefs.SetString(PREF_CODE_TARGET, mCodeTarget);
-            EditorPrefs.SetString(PREF_DATA_TARGET, mDataTarget);
-            EditorPrefs.SetString(PREF_OUTPUT_DATA_DIR, mOutputDataDir);
-            EditorPrefs.SetString(PREF_OUTPUT_CODE_DIR, mOutputCodeDir);
-            EditorPrefs.SetBool(PREF_USE_ASSEMBLY, mUseAssemblyDefinition);
-            EditorPrefs.SetString(PREF_ASSEMBLY_NAME, mAssemblyName);
-            EditorPrefs.SetBool(PREF_GENERATE_EXTERNAL_TYPE_UTIL, mGenerateExternalTypeUtil);
-            EditorPrefs.SetBool(PREF_USE_ASYNC_LOADING, mUseAsyncLoading);
-            EditorPrefs.SetBool(PREF_CUSTOM_EDITOR_DATA_PATH, mCustomEditorDataPath);
-            
-            // 持久化控制台日志
-            if (mLogContent != default)
-            {
-                EditorPrefs.SetString(PREF_CONSOLE_LOG, mLogContent.value);
-            }
+            SyncToUserPrefs();
+            SaveUserPrefs();
         }
-        
+
         /// <summary>
         /// 保存控制台日志（独立方法，供生成/验证后调用）
         /// </summary>
         private void SaveConsoleLog()
         {
+            if (mUserPrefs == default || mLogContent == default) return;
+            mUserPrefs.consoleLog = mLogContent.value;
+            SaveUserPrefs();
+        }
+
+        /// <summary>
+        /// 将当前 m* 字段同步到持久化数据容器
+        /// </summary>
+        private void SyncToUserPrefs()
+        {
+            if (mUserPrefs == default) return;
+            mUserPrefs.editorDataPath = mEditorDataPath;
+            mUserPrefs.runtimePathPattern = mRuntimePathPattern;
+            mUserPrefs.lubanWorkDir = mLubanWorkDir;
+            mUserPrefs.lubanDllPath = mLubanDllPath;
+            mUserPrefs.target = mTarget;
+            mUserPrefs.codeTarget = mCodeTarget;
+            mUserPrefs.dataTarget = mDataTarget;
+            mUserPrefs.outputDataDir = mOutputDataDir;
+            mUserPrefs.outputCodeDir = mOutputCodeDir;
+            mUserPrefs.useAssemblyDefinition = mUseAssemblyDefinition;
+            mUserPrefs.assemblyName = mAssemblyName;
+            mUserPrefs.generateExternalTypeUtil = mGenerateExternalTypeUtil;
+            mUserPrefs.useAsyncLoading = mUseAsyncLoading;
+            mUserPrefs.customEditorDataPath = mCustomEditorDataPath;
             if (mLogContent != default)
             {
-                EditorPrefs.SetString(PREF_CONSOLE_LOG, mLogContent.value);
+                mUserPrefs.consoleLog = mLogContent.value;
             }
         }
 

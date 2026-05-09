@@ -46,7 +46,6 @@ namespace YokiFrame.TableKit.Editor
         #region 多目标输出字段
 
         private List<ExtraOutputTarget> mExtraOutputTargets = new();
-        private const string PREF_EXTRA_OUTPUT_TARGETS = "TableKit_ExtraOutputTargets";
 
         // 所有可用的代码生成器选项（包含客户端和服务端）
         private static readonly string[] ALL_CODE_TARGET_OPTIONS =
@@ -84,30 +83,14 @@ namespace YokiFrame.TableKit.Editor
 
         private void LoadExtraOutputTargets()
         {
-            var json = EditorPrefs.GetString(PREF_EXTRA_OUTPUT_TARGETS, "");
-            if (!string.IsNullOrEmpty(json))
-            {
-                try
-                {
-                    var wrapper = JsonUtility.FromJson<ExtraOutputTargetListWrapper>(json);
-                    mExtraOutputTargets = wrapper?.targets ?? new List<ExtraOutputTarget>();
-                }
-                catch
-                {
-                    mExtraOutputTargets = new List<ExtraOutputTarget>();
-                }
-            }
-            else
-            {
-                mExtraOutputTargets = new List<ExtraOutputTarget>();
-            }
+            mExtraOutputTargets = mUserPrefs?.extraOutputTargets ?? new List<ExtraOutputTarget>();
         }
 
         private void SaveExtraOutputTargets()
         {
-            var wrapper = new ExtraOutputTargetListWrapper { targets = mExtraOutputTargets };
-            var json = JsonUtility.ToJson(wrapper);
-            EditorPrefs.SetString(PREF_EXTRA_OUTPUT_TARGETS, json);
+            if (mUserPrefs == default) return;
+            mUserPrefs.extraOutputTargets = mExtraOutputTargets;
+            SaveUserPrefs();
         }
 
         #endregion
