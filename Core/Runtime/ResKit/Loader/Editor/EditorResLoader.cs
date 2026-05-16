@@ -39,7 +39,7 @@ namespace YokiFrame
                 foreach (var guid in guids)
                 {
                     var foundPath = AssetDatabase.GUIDToAssetPath(guid);
-                    if (foundPath.Contains(path.Replace("\\", "/")))
+                    if (IsRequestedPathMatch(foundPath, path))
                     {
                         mAsset = AssetDatabase.LoadAssetAtPath<T>(foundPath);
                         if (mAsset != default) break;
@@ -132,6 +132,56 @@ namespace YokiFrame
             
             // 否则添加 Assets/ 前缀
             return "Assets/" + path;
+        }
+
+        /// <summary>
+        /// 判断 AssetDatabase 搜索结果是否匹配请求路径。
+        /// 只接受完整路径或路径段后缀匹配，避免 "UI" 误命中 "UI-3XXX" 这类同名前缀资源。
+        /// </summary>
+        private static bool IsRequestedPathMatch(string foundPath, string requestedPath)
+        {
+            var found = NormalizeSearchPath(foundPath);
+            var requested = NormalizeSearchPath(requestedPath);
+
+            if (string.IsNullOrEmpty(found) || string.IsNullOrEmpty(requested))
+            {
+                return false;
+            }
+
+            if (PathEquals(found, requested))
+            {
+                return true;
+            }
+
+            var foundWithoutExtension = System.IO.Path.ChangeExtension(found, null) ?? found;
+            var requestedWithoutExtension = System.IO.Path.ChangeExtension(requested, null) ?? requested;
+
+            return PathEquals(foundWithoutExtension, requestedWithoutExtension)
+                   || IsPathSegmentSuffix(found, requested)
+                   || IsPathSegmentSuffix(foundWithoutExtension, requestedWithoutExtension);
+        }
+
+        private static string NormalizeSearchPath(string path)
+        {
+            return string.IsNullOrEmpty(path)
+                ? path
+                : path.Replace("\\", "/").Trim('/');
+        }
+
+        private static bool PathEquals(string left, string right)
+        {
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPathSegmentSuffix(string foundPath, string requestedPath)
+        {
+            if (!foundPath.EndsWith(requestedPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return foundPath.Length == requestedPath.Length
+                   || foundPath[foundPath.Length - requestedPath.Length - 1] == '/';
         }
     }
 }

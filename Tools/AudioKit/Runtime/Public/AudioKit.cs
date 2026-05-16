@@ -269,19 +269,11 @@ namespace YokiFrame
 
         /// <summary>
         /// 确保 AudioKit 已完成后端初始化。
-        /// 在 Editor 下会尽量补齐默认依赖，在 Player 下要求业务层先完成配置。
+        /// 加载池由业务层显式配置，AudioKit 只补齐默认播放后端。
         /// </summary>
         private static void EnsureInitialized()
         {
             if (sIsInitialized) return;
-
-#if UNITY_EDITOR
-            // 编辑器模式下使用 EditorResLoaderPool，支持从 Assets 路径直接加载
-            if (!(ResKit.GetLoaderPool() is EditorResLoaderPool))
-            {
-                ResKit.SetLoaderPool(new EditorResLoaderPool());
-            }
-#endif
 
             // 自动初始化默认后端
             SetBackend(new UnityAudioBackend());
