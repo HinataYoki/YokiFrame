@@ -17,7 +17,7 @@ namespace YokiFrame
         public string Name;
 
         /// <summary>
-        /// 相对路径，不含扩展名。
+        /// 相对路径，含扩展名。
         /// </summary>
         public string Path;
 

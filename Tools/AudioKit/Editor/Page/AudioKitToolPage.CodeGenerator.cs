@@ -23,6 +23,8 @@ namespace YokiFrame
         private const string PREF_START_ID = "AudioIdGenerator_StartId";
         private const string PREF_GENERATE_PATH_MAP = "AudioIdGenerator_GeneratePathMap";
         private const string PREF_GROUP_BY_FOLDER = "AudioIdGenerator_GroupByFolder";
+        private const string PREF_USE_ASSEMBLY = "AudioIdGenerator_UseAssembly";
+        private const string PREF_ASSEMBLY_NAME = "AudioIdGenerator_AssemblyName";
 
         #endregion
 
@@ -35,6 +37,8 @@ namespace YokiFrame
         private int mStartId = 1001;
         private bool mGeneratePathMap = true;
         private bool mGroupByFolder = true;
+        private bool mUseAssemblyDefinition;
+        private string mAssemblyName = "YokiFrame.AudioKit";
 
         private TextField mScanFolderField;
         private TextField mOutputPathField;
@@ -43,6 +47,8 @@ namespace YokiFrame
         private TextField mStartIdField;
         private VisualElement mGeneratePathMapToggle;
         private VisualElement mGroupByFolderToggle;
+        private VisualElement mUseAssemblyToggle;
+        private TextField mAssemblyNameField;
         private ListView mResultsListView;
         private Label mResultsCountLabel;
         private Button mGenerateButton;
@@ -115,6 +121,31 @@ namespace YokiFrame
                 RefreshGeneratorMetrics();
             });
             optionBody.Add(mGroupByFolderToggle);
+
+            var (buildSection, buildBody) = CreateKitSectionPanel("构建选项", "控制生成代码的程序集隔离策略。", KitIcons.SETTINGS);
+            scrollView.Add(buildSection);
+
+            var asmRow = YokiFrameUIComponents.CreateRow();
+            asmRow.style.alignItems = Align.Center;
+            buildBody.Add(asmRow);
+
+            mUseAssemblyToggle = YokiFrameUIComponents.CreateModernToggle("使用独立程序集", mUseAssemblyDefinition, value =>
+            {
+                mUseAssemblyDefinition = value;
+                mAssemblyNameField?.SetEnabled(value);
+            });
+            asmRow.Add(mUseAssemblyToggle);
+
+            var asmLabel = new Label("程序集名称:");
+            asmLabel.style.marginLeft = 16;
+            asmRow.Add(asmLabel);
+
+            mAssemblyNameField = new TextField { value = mAssemblyName };
+            mAssemblyNameField.style.width = 200;
+            mAssemblyNameField.style.marginLeft = 4;
+            mAssemblyNameField.SetEnabled(mUseAssemblyDefinition);
+            mAssemblyNameField.RegisterValueChangedCallback(evt => mAssemblyName = evt.newValue);
+            asmRow.Add(mAssemblyNameField);
 
             var actionRow = YokiFrameUIComponents.CreateRow();
             actionRow.AddToClassList("yoki-audio-generator__button-row");
@@ -280,6 +311,8 @@ namespace YokiFrame
             mStartId = EditorPrefs.GetInt(PREF_START_ID, 1001);
             mGeneratePathMap = EditorPrefs.GetBool(PREF_GENERATE_PATH_MAP, true);
             mGroupByFolder = EditorPrefs.GetBool(PREF_GROUP_BY_FOLDER, true);
+            mUseAssemblyDefinition = EditorPrefs.GetBool(PREF_USE_ASSEMBLY, false);
+            mAssemblyName = EditorPrefs.GetString(PREF_ASSEMBLY_NAME, "YokiFrame.AudioKit");
         }
 
         /// <summary>
@@ -294,6 +327,8 @@ namespace YokiFrame
             EditorPrefs.SetInt(PREF_START_ID, mStartId);
             EditorPrefs.SetBool(PREF_GENERATE_PATH_MAP, mGeneratePathMap);
             EditorPrefs.SetBool(PREF_GROUP_BY_FOLDER, mGroupByFolder);
+            EditorPrefs.SetBool(PREF_USE_ASSEMBLY, mUseAssemblyDefinition);
+            EditorPrefs.SetString(PREF_ASSEMBLY_NAME, mAssemblyName);
         }
 
         #endregion
@@ -333,14 +368,13 @@ namespace YokiFrame
                     relativePath = relativePath[assetsIndex..];
                 }
 
-                var pathWithoutExt = relativePath[..^ext.Length];
                 var fileName = Path.GetFileNameWithoutExtension(file);
                 var folderName = GetFolderCategory(relativePath);
 
                 mScannedFiles.Add(new AudioFileInfo
                 {
                     Name = fileName,
-                    Path = pathWithoutExt,
+                    Path = relativePath,
                     Id = currentId++,
                     ConstantName = GenerateConstantName(fileName, folderName),
                     FolderCategory = folderName
@@ -455,8 +489,37 @@ namespace YokiFrame
                 mGroupByFolder);
 
             File.WriteAllText(mOutputPath, code);
+
+            if (mUseAssemblyDefinition && !string.IsNullOrEmpty(mAssemblyName))
+            {
+                GenerateAssemblyDefinition(directory, mAssemblyName);
+            }
+
             AssetDatabase.Refresh();
             EditorUtility.DisplayDialog("成功", $"代码已生成到:\n{mOutputPath}", "确定");
+        }
+
+        /// <summary>
+        /// 在输出目录生成程序集定义文件。
+        /// </summary>
+        private static void GenerateAssemblyDefinition(string outputDir, string assemblyName)
+        {
+            var content = $@"{{
+    ""name"": ""{assemblyName}"",
+    ""rootNamespace"": """",
+    ""references"": [],
+    ""includePlatforms"": [],
+    ""excludePlatforms"": [],
+    ""allowUnsafeCode"": false,
+    ""overrideReferences"": false,
+    ""precompiledReferences"": [],
+    ""autoReferenced"": true,
+    ""defineConstraints"": [],
+    ""versionDefines"": [],
+    ""noEngineReferences"": false
+}}";
+            var filePath = Path.Combine(outputDir, $"{assemblyName}.asmdef");
+            File.WriteAllText(filePath, content, System.Text.Encoding.UTF8);
         }
 
         #endregion
