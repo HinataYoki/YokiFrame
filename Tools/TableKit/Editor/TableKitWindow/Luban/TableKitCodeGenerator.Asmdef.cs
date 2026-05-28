@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace YokiFrame.TableKit.Editor
 {
@@ -13,27 +15,64 @@ namespace YokiFrame.TableKit.Editor
         /// <summary>
         /// 生成 ExternalTypeUtil.cs
         /// </summary>
-        private static void GenerateExternalTypeUtil(string outputDir)
+        private static void GenerateExternalTypeUtil(string outputDir, string tablesNamespace)
         {
-            var content = @"using UnityEngine;
+            var content = $@"using UnityEngine;
 
-namespace cfg
-{
+namespace {tablesNamespace}
+{{
     /// <summary>
     /// Luban 外部类型转换工具
     /// 由 TableKit 工具自动生成
     /// </summary>
     public static class ExternalTypeUtil
-    {
+    {{
         public static Vector2 NewVector2(vector2 v) => new(v.X, v.Y);
         public static Vector2Int NewVector2Int(vector2int v) => new(v.X, v.Y);
         public static Vector3 NewVector3(vector3 v) => new(v.X, v.Y, v.Z);
         public static Vector3Int NewVector3Int(vector3int v) => new(v.X, v.Y, v.Z);
         public static Vector4 NewVector4(vector4 v) => new(v.X, v.Y, v.Z, v.W);
-    }
-}
+    }}
+}}
 ";
             File.WriteAllText(Path.Combine(outputDir, "ExternalTypeUtil.cs"), content, Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// 同步已存在的 ExternalTypeUtil.cs 命名空间至 tablesNamespace
+        /// 仅替换包裹 ExternalTypeUtil 类的 namespace 声明行，方法体不变，保留用户自定义
+        /// </summary>
+        /// <returns>是否实际进行了替换</returns>
+        private static bool SyncExternalTypeUtilNamespace(string utilPath, string tablesNamespace)
+        {
+            var content = File.ReadAllText(utilPath);
+
+            var classMatch = Regex.Match(content, @"\bclass\s+ExternalTypeUtil\b");
+            if (!classMatch.Success)
+            {
+                Debug.LogWarning($"[TableKit] {utilPath} 未找到 ExternalTypeUtil 类声明，跳过命名空间同步");
+                return false;
+            }
+
+            // 在 class 之前定位最近的一处 namespace 声明
+            var contentBefore = content.Substring(0, classMatch.Index);
+            var nsMatches = Regex.Matches(contentBefore, @"\bnamespace\s+([\w\.]+)");
+            if (nsMatches.Count == 0)
+            {
+                Debug.LogWarning($"[TableKit] {utilPath} 未找到命名空间声明，跳过同步");
+                return false;
+            }
+
+            var lastNs = nsMatches[nsMatches.Count - 1];
+            var currentNs = lastNs.Groups[1].Value;
+            if (currentNs == tablesNamespace) return false;
+
+            var newContent = content.Substring(0, lastNs.Index)
+                + $"namespace {tablesNamespace}"
+                + content.Substring(lastNs.Index + lastNs.Length);
+            File.WriteAllText(utilPath, newContent, Encoding.UTF8);
+            Debug.Log($"[TableKit] ExternalTypeUtil.cs 命名空间已从 \"{currentNs}\" 同步至 \"{tablesNamespace}\"");
+            return true;
         }
 
         /// <summary>

@@ -282,8 +282,10 @@ namespace YokiFrame.TableKit.Editor
             if (!Directory.Exists(lubanCodeDir)) Directory.CreateDirectory(lubanCodeDir);
 
             logBuilder.AppendLine("正在生成 TableKit 运行时代码...");
+            var tablesNamespace = TableKitCodeGenerator.ResolveTopModule(mLubanWorkDir, mTarget);
+            logBuilder.AppendLine($"[INFO] Tables 命名空间：{tablesNamespace}");
             TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil,
-                mAssemblyName, "cfg", mRuntimePathPattern, mEditorDataPath, mCodeTarget,
+                mAssemblyName, tablesNamespace, mRuntimePathPattern, mEditorDataPath, mCodeTarget,
                 mUseAsyncLoading, mOutputDataDir, mDataTarget);
             logBuilder.AppendLine("[OK] TableKit 运行时代码生成完成");
             if (mUseAsyncLoading) logBuilder.AppendLine("[OK] 已生成异步加载代码 (InitAsync/ReloadAsync)");

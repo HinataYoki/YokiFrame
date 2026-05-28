@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -75,8 +77,12 @@ namespace YokiFrame.TableKit.Editor
                 var utilPath = Path.Combine(outputDir, "ExternalTypeUtil.cs");
                 if (!File.Exists(utilPath))
                 {
-                    GenerateExternalTypeUtil(outputDir);
+                    GenerateExternalTypeUtil(outputDir, tablesNamespace);
                     Debug.Log("[TableKit] 已生成 ExternalTypeUtil.cs");
+                }
+                else
+                {
+                    SyncExternalTypeUtilNamespace(utilPath, tablesNamespace);
                 }
             }
 
@@ -95,6 +101,58 @@ namespace YokiFrame.TableKit.Editor
         }
 
         #region 检测与清理
+
+        /// <summary>
+        /// 解析 luban.conf 中指定 target 的 topModule 作为 Tables 命名空间
+        /// </summary>
+        /// <param name="lubanWorkDir">Luban 工作目录（含 luban.conf），可为相对路径</param>
+        /// <param name="target">target 名称（如 client/server/all）</param>
+        /// <returns>解析成功返回 topModule；任一环节失败回退 "cfg" 并发出警告</returns>
+        public static string ResolveTopModule(string lubanWorkDir, string target)
+        {
+            const string defaultTopModule = "cfg";
+
+            if (string.IsNullOrEmpty(lubanWorkDir) || string.IsNullOrEmpty(target))
+                return defaultTopModule;
+
+            var projectRoot = Path.GetDirectoryName(Application.dataPath);
+            var workDir = Path.IsPathRooted(lubanWorkDir)
+                ? lubanWorkDir
+                : Path.Combine(projectRoot, lubanWorkDir);
+            var confPath = Path.Combine(workDir, "luban.conf");
+
+            if (!File.Exists(confPath))
+            {
+                Debug.LogWarning($"[TableKit] luban.conf 不存在，命名空间回退至 \"{defaultTopModule}\"：{confPath}");
+                return defaultTopModule;
+            }
+
+            try
+            {
+                var conf = JObject.Parse(File.ReadAllText(confPath));
+                if (conf["targets"] is not JArray targets)
+                {
+                    Debug.LogWarning($"[TableKit] luban.conf 缺少 targets 数组，命名空间回退至 \"{defaultTopModule}\"");
+                    return defaultTopModule;
+                }
+
+                foreach (var t in targets)
+                {
+                    if ((string)t["name"] != target) continue;
+
+                    var topModule = (string)t["topModule"];
+                    return string.IsNullOrEmpty(topModule) ? defaultTopModule : topModule;
+                }
+
+                Debug.LogWarning($"[TableKit] luban.conf 中未找到 target=\"{target}\"，命名空间回退至 \"{defaultTopModule}\"");
+                return defaultTopModule;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[TableKit] 解析 luban.conf 失败，命名空间回退至 \"{defaultTopModule}\"：{ex.Message}");
+                return defaultTopModule;
+            }
+        }
 
         /// <summary>
         /// 检测 YokiFrame 是否存在（作为 Package 或 Assets 文件夹）
