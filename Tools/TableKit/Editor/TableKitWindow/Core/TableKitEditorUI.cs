@@ -193,24 +193,29 @@ namespace YokiFrame.TableKit.Editor
             LoadExtraOutputTargets();
         }
 
+        #region 控制台日志持久化（SessionState）
+
+        private const string SESSION_KEY_CONSOLE_LOG = "TableKit_ConsoleLog";
+
         /// <summary>
-        /// 加载持久化的控制台日志
+        /// 加载控制台日志（从 SessionState 恢复，域重载后仍保留）
         /// </summary>
-        private string LoadConsoleLog() => mUserPrefs?.consoleLog ?? "等待操作...";
+        private string LoadConsoleLog() => SessionState.GetString(SESSION_KEY_CONSOLE_LOG, "等待操作...");
+
+        /// <summary>
+        /// 保存控制台日志到 SessionState（域重载后仍保留，Editor 关闭自动清空）
+        /// </summary>
+        private void SaveConsoleLog()
+        {
+            if (mLogContent == default) return;
+            SessionState.SetString(SESSION_KEY_CONSOLE_LOG, mLogContent.value);
+        }
+
+        #endregion
 
         public void SavePrefs()
         {
             SyncToUserPrefs();
-            SaveUserPrefs();
-        }
-
-        /// <summary>
-        /// 保存控制台日志（独立方法，供生成/验证后调用）
-        /// </summary>
-        private void SaveConsoleLog()
-        {
-            if (mUserPrefs == default || mLogContent == default) return;
-            mUserPrefs.consoleLog = mLogContent.value;
             SaveUserPrefs();
         }
 
@@ -234,10 +239,6 @@ namespace YokiFrame.TableKit.Editor
             mUserPrefs.generateExternalTypeUtil = mGenerateExternalTypeUtil;
             mUserPrefs.useAsyncLoading = mUseAsyncLoading;
             mUserPrefs.customEditorDataPath = mCustomEditorDataPath;
-            if (mLogContent != default)
-            {
-                mUserPrefs.consoleLog = mLogContent.value;
-            }
         }
 
         /// <summary>

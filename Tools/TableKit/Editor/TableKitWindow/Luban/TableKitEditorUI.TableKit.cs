@@ -42,16 +42,13 @@ namespace YokiFrame.TableKit.Editor
 
                 mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] [OK] 编辑器缓存已刷新";
                 UpdateStatusBanner(BuildStatus.Success);
-                SaveConsoleLog(); // 持久化刷新日志
+                SaveConsoleLog();
             }
             catch (Exception ex)
             {
                 mLogContent.value = $"[{DateTime.Now:HH:mm:ss}] [FAIL] 加载配置表失败:\n{ex.Message}";
                 UpdateStatusBanner(BuildStatus.Failed);
-            }
-            finally
-            {
-                SaveConsoleLog(); // 持久化刷新日志
+                SaveConsoleLog();
             }
         }
 

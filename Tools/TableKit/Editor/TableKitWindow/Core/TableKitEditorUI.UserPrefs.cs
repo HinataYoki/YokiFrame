@@ -32,7 +32,6 @@ namespace YokiFrame.TableKit.Editor
             public bool generateExternalTypeUtil;
             public bool useAsyncLoading;
             public bool customEditorDataPath;
-            public string consoleLog = "等待操作...";
             public List<ExtraOutputTarget> extraOutputTargets = new();
         }
 
@@ -56,7 +55,6 @@ namespace YokiFrame.TableKit.Editor
         private const string LEGACY_PREF_GENERATE_EXTERNAL_TYPE_UTIL = "TableKit_GenerateExternalTypeUtil";
         private const string LEGACY_PREF_USE_ASYNC_LOADING = "TableKit_UseAsyncLoading";
         private const string LEGACY_PREF_CUSTOM_EDITOR_DATA_PATH = "TableKit_CustomEditorDataPath";
-        private const string LEGACY_PREF_CONSOLE_LOG = "TableKit_ConsoleLog";
         private const string LEGACY_PREF_EXTRA_OUTPUT_TARGETS = "TableKit_ExtraOutputTargets";
 
         #endregion
@@ -142,7 +140,6 @@ namespace YokiFrame.TableKit.Editor
                 generateExternalTypeUtil = EditorPrefs.GetBool(LEGACY_PREF_GENERATE_EXTERNAL_TYPE_UTIL, false),
                 useAsyncLoading = EditorPrefs.GetBool(LEGACY_PREF_USE_ASYNC_LOADING, false),
                 customEditorDataPath = EditorPrefs.GetBool(LEGACY_PREF_CUSTOM_EDITOR_DATA_PATH, false),
-                consoleLog = EditorPrefs.GetString(LEGACY_PREF_CONSOLE_LOG, "等待操作..."),
             };
 
             var extraJson = EditorPrefs.GetString(LEGACY_PREF_EXTRA_OUTPUT_TARGETS, "");

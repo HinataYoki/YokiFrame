@@ -135,7 +135,7 @@ namespace YokiFrame.TableKit.Editor
         {
             mLogContent.value = "日志已清除";
             UpdateStatusBanner(BuildStatus.Ready);
-            SaveConsoleLog(); // 持久化清除状态
+            SaveConsoleLog();
         }
 
         #endregion
