@@ -101,7 +101,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 创建分组列表项。
         /// </summary>
-        private VisualElement CreateYooGroupItem(AssetBundleCollectorGroup group, int index)
+        private VisualElement CreateYooGroupItem(BundleCollectorGroup group, int index)
         {
             bool isGroupActive = group.ActiveRuleName != nameof(DisableGroup);
             int capturedIndex = index;
@@ -130,7 +130,7 @@ namespace YokiFrame.EditorTools
             var activeToggle = YokiFrameUIComponents.CreateModernToggle("", isGroupActive, newValue =>
             {
                 capturedGroup.ActiveRuleName = newValue ? nameof(EnableGroup) : nameof(DisableGroup);
-                AssetBundleCollectorSettingData.ModifyGroup(YooCurrentPackage, capturedGroup);
+                BundleCollectorSettingData.ModifyGroup(YooCurrentPackage, capturedGroup);
                 MarkYooDirty();
                 RefreshYooGroupNav();
             });
@@ -260,7 +260,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 显示分组右键菜单。
         /// </summary>
-        private void ShowYooGroupContextMenu(VisualElement item, AssetBundleCollectorGroup group, int index)
+        private void ShowYooGroupContextMenu(VisualElement item, BundleCollectorGroup group, int index)
         {
             var menu = new GenericMenu();
 
@@ -285,7 +285,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 进入分组重命名模式。
         /// </summary>
-        private void EnterYooGroupEditMode(VisualElement item, AssetBundleCollectorGroup group, int index)
+        private void EnterYooGroupEditMode(VisualElement item, BundleCollectorGroup group, int index)
         {
             var nameLabel = item.Q<Label>("group-name-label");
             var nameInput = item.Q<TextField>("group-name-input");
@@ -311,7 +311,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 保存分组重命名。
         /// </summary>
-        private void SaveYooGroupRename(VisualElement item, AssetBundleCollectorGroup group, string newName)
+        private void SaveYooGroupRename(VisualElement item, BundleCollectorGroup group, string newName)
         {
             var nameLabel = item.Q<Label>("group-name-label");
             var nameInput = item.Q<TextField>("group-name-input");
@@ -319,7 +319,7 @@ namespace YokiFrame.EditorTools
             if (!string.IsNullOrWhiteSpace(newName) && newName != group.GroupName)
             {
                 group.GroupName = newName;
-                AssetBundleCollectorSettingData.ModifyGroup(YooCurrentPackage, group);
+                BundleCollectorSettingData.ModifyGroup(YooCurrentPackage, group);
                 MarkYooDirty();
             }
 
@@ -332,7 +332,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 取消分组重命名。
         /// </summary>
-        private void CancelYooGroupRename(VisualElement item, AssetBundleCollectorGroup group)
+        private void CancelYooGroupRename(VisualElement item, BundleCollectorGroup group)
         {
             var nameLabel = item.Q<Label>("group-name-label");
             var nameInput = item.Q<TextField>("group-name-input");

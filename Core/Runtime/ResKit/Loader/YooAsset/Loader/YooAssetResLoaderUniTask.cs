@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using YooAsset;
@@ -42,7 +42,7 @@ namespace YokiFrame
             mAllAssetsHandle = mPackage.LoadAllAssetsAsync<T>(path);
             await mAllAssetsHandle.ToUniTask(cancellationToken: cancellationToken);
 
-            if (mAllAssetsHandle.Status != EOperationStatus.Succeed)
+            if (mAllAssetsHandle.Status != EOperationStatus.Succeeded)
                 return System.Array.Empty<T>();
 
             var objects = mAllAssetsHandle.AllAssetObjects;
@@ -58,7 +58,7 @@ namespace YokiFrame
             mSubAssetsHandle = mPackage.LoadSubAssetsAsync<T>(path);
             await mSubAssetsHandle.ToUniTask(cancellationToken: cancellationToken);
 
-            if (mSubAssetsHandle.Status != EOperationStatus.Succeed)
+            if (mSubAssetsHandle.Status != EOperationStatus.Succeeded)
                 return default;
 
             var objects = mSubAssetsHandle.SubAssetObjects;

@@ -4,13 +4,23 @@ using YooAsset;
 
 namespace YokiFrame
 {
+#if YOOASSET_3_0_OR_NEWER
     /// <summary>
-    /// 自定义初始化模式委托
+    /// 自定义初始化模式委托（3.x 版本）
     /// </summary>
     /// <param name="package">资源包</param>
     /// <param name="config">初始化配置</param>
     /// <returns>初始化操作</returns>
-    public delegate InitializationOperation CustomInitModeHandler(ResourcePackage package, YooInitConfig config);
+    public delegate InitializePackageOperation CustomInitModeHandler(ResourcePackage package, YooInitConfig config);
+#elif YOOASSET_2_3_OR_NEWER
+    /// <summary>
+    /// 自定义初始化模式委托（2.x 版本 — 无 ResourcePackage）
+    /// </summary>
+    /// <param name="packageName">资源包名称</param>
+    /// <param name="config">初始化配置</param>
+    /// <returns>初始化操作</returns>
+    public delegate InitializationOperation CustomInitModeHandler(string packageName, YooInitConfig config);
+#endif
 
     /// <summary>
     /// YooAsset 初始化器
@@ -25,6 +35,7 @@ namespace YokiFrame
         /// </summary>
         public static bool Initialized { get; private set; }
 
+#if YOOASSET_3_0_OR_NEWER
         /// <summary>
         /// 默认资源包（第一个包，用于 ResKit）
         /// </summary>
@@ -35,26 +46,39 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyDictionary<string, ResourcePackage> Packages => sPackages;
         private static readonly Dictionary<string, ResourcePackage> sPackages = new();
+#elif YOOASSET_2_3_OR_NEWER
+        /// <summary>
+        /// 默认资源包名称（2.x 无 ResourcePackage 类型）
+        /// </summary>
+        public static string DefaultPackageName { get; private set; }
+
+        /// <summary>
+        /// 所有已初始化的资源包名称
+        /// </summary>
+        public static IReadOnlyList<string> PackageNames => sPackageNames;
+        internal static readonly List<string> sPackageNames = new();
+#endif
 
         #endregion
 
         #region 自定义初始化模式
 
+#if YOOASSET_3_0_OR_NEWER
         /// <summary>
-        /// HostPlayMode 自定义初始化处理器
-        /// 用户需要在调用 InitAsync 前设置此委托
+        /// HostPlayMode 自定义初始化处理器（3.x 版本）
         /// </summary>
         /// <example>
         /// YooInit.HostModeHandler = (package, config) =>
         /// {
-        ///     var remoteServices = new RemoteServices("http://cdn.example.com", "http://cdn-fallback.example.com");
-        ///     var cacheParams = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices, config.CreateDecryptionServices());
-        ///     var buildinParams = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(config.CreateDecryptionServices());
-        ///     return package.InitializeAsync(new HostPlayModeParameters
+        ///     IRemoteService remoteService = new MyRemoteService("http://cdn.example.com", "http://fallback.example.com");
+        ///     var builtinParams = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();
+        ///     var cacheParams = FileSystemParameters.CreateDefaultSandboxFileSystemParameters(remoteService);
+        ///     var options = new HostPlayModeOptions
         ///     {
-        ///         BuildinFileSystemParameters = buildinParams,
+        ///         BuiltinFileSystemParameters = builtinParams,
         ///         CacheFileSystemParameters = cacheParams
-        ///     });
+        ///     };
+        ///     return package.InitializePackageAsync(options);
         /// };
         /// </example>
         public static CustomInitModeHandler HostModeHandler { get; set; }
@@ -66,9 +90,35 @@ namespace YokiFrame
 
         /// <summary>
         /// 通用自定义初始化处理器（优先级最高）
-        /// 设置后将覆盖所有模式的默认实现
         /// </summary>
         public static CustomInitModeHandler CustomHandler { get; set; }
+#elif YOOASSET_2_3_OR_NEWER
+        /// <summary>
+        /// HostPlayMode 自定义初始化处理器（2.x 版本）
+        /// </summary>
+        /// <example>
+        /// YooInit.HostModeHandler = (packageName, config) =>
+        /// {
+        ///     var hostParams = new HostPlayModeParameters
+        ///     {
+        ///         DefaultHostServer = "http://cdn.example.com",
+        ///         FallbackHostServer = "http://fallback.example.com"
+        ///     };
+        ///     return YooAssets.Initialize(hostParams);
+        /// };
+        /// </example>
+        public static CustomInitModeHandler HostModeHandler { get; set; }
+
+        /// <summary>
+        /// WebPlayMode 自定义初始化处理器
+        /// </summary>
+        public static CustomInitModeHandler WebModeHandler { get; set; }
+
+        /// <summary>
+        /// 通用自定义初始化处理器（优先级最高）
+        /// </summary>
+        public static CustomInitModeHandler CustomHandler { get; set; }
+#endif
 
         #endregion
 
@@ -82,8 +132,13 @@ namespace YokiFrame
             if (!Initialized) return;
 
             ResKit.ClearAll();
+#if YOOASSET_3_0_OR_NEWER
             sPackages.Clear();
             DefaultPackage = null;
+#elif YOOASSET_2_3_OR_NEWER
+            sPackageNames.Clear();
+            DefaultPackageName = null;
+#endif
             Initialized = false;
 
             // 不重置委托，允许复用
@@ -97,9 +152,11 @@ namespace YokiFrame
         public static void Reset()
         {
             Dispose();
+#if YOOASSET_3_0_OR_NEWER || YOOASSET_2_3_OR_NEWER
             HostModeHandler = null;
             WebModeHandler = null;
             CustomHandler = null;
+#endif
         }
 
         /// <summary>
@@ -107,6 +164,7 @@ namespace YokiFrame
         /// </summary>
         internal static void SetInitialized(bool value) => Initialized = value;
 
+#if YOOASSET_3_0_OR_NEWER
         /// <summary>
         /// 设置默认包（内部使用）
         /// </summary>
@@ -116,6 +174,17 @@ namespace YokiFrame
         /// 获取内部包字典（内部使用）
         /// </summary>
         internal static Dictionary<string, ResourcePackage> GetPackagesInternal() => sPackages;
+#elif YOOASSET_2_3_OR_NEWER
+        /// <summary>
+        /// 设置默认包名称（内部使用）
+        /// </summary>
+        internal static void SetDefaultPackageName(string name) => DefaultPackageName = name;
+
+        /// <summary>
+        /// 获取内部包名称列表（内部使用）
+        /// </summary>
+        internal static List<string> GetPackageNamesInternal() => sPackageNames;
+#endif
 
         #endregion
     }

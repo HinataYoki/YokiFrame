@@ -87,32 +87,24 @@ namespace YokiFrame.EditorTools
         {
             mYooToolbar = BuildYooToolbar();
             root.Add(mYooToolbar);
-
             mYooGlobalSettingsPanel = BuildYooGlobalSettingsPanel();
             mYooGlobalSettingsPanel.style.display = DisplayStyle.None;
             root.Add(mYooGlobalSettingsPanel);
-
             mYooPackageSettingsPanel = BuildYooPackageSettingsPanel();
             mYooPackageSettingsPanel.style.display = DisplayStyle.None;
             root.Add(mYooPackageSettingsPanel);
-
             var mainSplitView = CreateSplitView(250f, "YokiFrame.ResKit.GroupNavWidth");
             mainSplitView.style.flexGrow = 1;
             root.Add(mainSplitView);
-
             mYooGroupNavContainer = BuildYooGroupNav();
             mainSplitView.Add(mYooGroupNavContainer);
-
             var rightSplitView = CreateSplitView(400f, "YokiFrame.ResKit.PreviewWidth");
             rightSplitView.style.flexGrow = 1;
             mainSplitView.Add(rightSplitView);
-
             mYooCollectorCanvas = BuildYooCollectorCanvas();
             rightSplitView.Add(mYooCollectorCanvas);
-
             mYooAssetPreviewPanel = BuildYooAssetPreviewPanel();
             rightSplitView.Add(mYooAssetPreviewPanel);
-
             InitYooData();
         }
 
@@ -134,8 +126,13 @@ namespace YokiFrame.EditorTools
 
             if (setting.Packages == default || setting.Packages.Count == 0)
             {
-                YooAsset.Editor.AssetBundleCollectorSettingData.CreatePackage("DefaultPackage");
-                YooAsset.Editor.AssetBundleCollectorSettingData.SaveFile();
+#if YOOASSET_3_0_OR_NEWER
+                YooAsset.Editor.BundleCollectorSettingData.CreatePackage("DefaultPackage");
+                YooAsset.Editor.BundleCollectorSettingData.SaveFile();
+#else
+                YooAsset.Editor.BundleCollectorSettingData.CreatePackage("DefaultPackage");
+                YooAsset.Editor.BundleCollectorSettingData.SaveFile();
+#endif
             }
 
             mYooSelectedPackageIndex = 0;

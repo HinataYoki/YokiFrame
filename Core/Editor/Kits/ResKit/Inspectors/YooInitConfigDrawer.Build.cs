@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && UNITY_2022_1_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER && UNITY_2022_1_OR_NEWER
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -41,7 +41,7 @@ namespace YokiFrame.EditorTools
             var state = new BuildSelectionState
             {
                 Package = packageNames[0],
-                Pipeline = AssetBundleBuilderSetting.GetPackageBuildPipeline(packageNames[0])
+                Pipeline = BundleBuilderSetting.GetPackageBuildPipeline(packageNames[0])
             };
 
             var dynamicContainer = new VisualElement();
@@ -87,7 +87,7 @@ namespace YokiFrame.EditorTools
             body.Add(CreateLabeledDropdown("资源包", packageNames, state.Package, newValue =>
             {
                 state.Package = newValue;
-                state.Pipeline = AssetBundleBuilderSetting.GetPackageBuildPipeline(state.Package);
+                state.Pipeline = BundleBuilderSetting.GetPackageBuildPipeline(state.Package);
                 RefreshBuildDynamicSection(dynamicContainer, state);
             }));
 
@@ -97,28 +97,28 @@ namespace YokiFrame.EditorTools
             body.Add(CreateLabeledDropdown("构建管线", sBuildPipelineChoices, sBuildPipelineChoices[pipelineIndex], newValue =>
             {
                 state.Pipeline = newValue;
-                AssetBundleBuilderSetting.SetPackageBuildPipeline(state.Package, newValue);
+                BundleBuilderSetting.SetPackageBuildPipeline(state.Package, newValue);
                 RefreshBuildDynamicSection(dynamicContainer, state);
             }));
 
-            var compressOption = AssetBundleBuilderSetting.GetPackageCompressOption(state.Package, state.Pipeline);
+            var compressOption = BundleBuilderSetting.GetPackageCompressOption(state.Package, state.Pipeline);
             body.Add(CreateLabeledDropdown("压缩方式", sCompressChoices, sCompressChoices[(int)compressOption], newValue =>
             {
                 int idx = sCompressChoices.IndexOf(newValue);
-                AssetBundleBuilderSetting.SetPackageCompressOption(state.Package, state.Pipeline, (ECompressOption)idx);
+                BundleBuilderSetting.SetPackageCompressOption(state.Package, state.Pipeline, (ECompressOption)idx);
             }));
 
-            var copyOption = AssetBundleBuilderSetting.GetPackageBuildinFileCopyOption(state.Package, state.Pipeline);
+            var copyOption = BundleBuilderSetting.GetPackageBundledCopyOption(state.Package, state.Pipeline);
             body.Add(CreateLabeledDropdown("首包拷贝", sCopyOptionDisplayNames, sCopyOptionDisplayNames[(int)copyOption], newValue =>
             {
                 int idx = sCopyOptionDisplayNames.IndexOf(newValue);
-                AssetBundleBuilderSetting.SetPackageBuildinFileCopyOption(state.Package, state.Pipeline, (EBuildinFileCopyOption)idx);
+                BundleBuilderSetting.SetPackageBundledCopyOption(state.Package, state.Pipeline, (EBundledCopyOption)idx);
             }));
 
-            var copyParams = AssetBundleBuilderSetting.GetPackageBuildinFileCopyParams(state.Package, state.Pipeline);
+            var copyParams = BundleBuilderSetting.GetPackageBundledCopyParams(state.Package, state.Pipeline);
             body.Add(CreateLabeledTextField("拷贝标签", copyParams, "多个标签用分号分隔", newValue =>
             {
-                AssetBundleBuilderSetting.SetPackageBuildinFileCopyParams(state.Package, state.Pipeline, newValue);
+                BundleBuilderSetting.SetPackageBundledCopyParams(state.Package, state.Pipeline, newValue);
             }));
         }
 
@@ -142,25 +142,25 @@ namespace YokiFrame.EditorTools
             advancedFoldout.style.marginTop = Spacing.SM;
             body.Add(advancedFoldout);
 
-            var clearCache = AssetBundleBuilderSetting.GetPackageClearBuildCache(state.Package, state.Pipeline);
+            var clearCache = BundleBuilderSetting.GetPackageClearBuildCache(state.Package, state.Pipeline);
             advancedFoldout.Add(CreateModernToggle("清空构建缓存", clearCache, newValue =>
             {
-                AssetBundleBuilderSetting.SetPackageClearBuildCache(state.Package, state.Pipeline, newValue);
+                BundleBuilderSetting.SetPackageClearBuildCache(state.Package, state.Pipeline, newValue);
             }));
 
-            var useDepDB = AssetBundleBuilderSetting.GetPackageUseAssetDependencyDB(state.Package, state.Pipeline);
+            var useDepDB = BundleBuilderSetting.GetPackageUseAssetDependencyDB(state.Package, state.Pipeline);
             advancedFoldout.Add(CreateModernToggle("使用依赖缓存", useDepDB, newValue =>
             {
-                AssetBundleBuilderSetting.SetPackageUseAssetDependencyDB(state.Package, state.Pipeline, newValue);
+                BundleBuilderSetting.SetPackageUseAssetDependencyDB(state.Package, state.Pipeline, newValue);
             }));
 
-            var encryptClass = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(state.Package, state.Pipeline);
+            var encryptClass = BundleBuilderSetting.GetPackageBundleEncryptorClassName(state.Package, state.Pipeline);
             var encryptionClasses = GetEncryptionServiceClassNames();
             int encryptIndex = encryptionClasses.IndexOf(encryptClass);
             if (encryptIndex < 0) encryptIndex = 0;
             advancedFoldout.Add(CreateLabeledDropdown("加密服务", encryptionClasses, encryptionClasses[encryptIndex], newValue =>
             {
-                AssetBundleBuilderSetting.SetPackageEncyptionServicesClassName(state.Package, state.Pipeline, newValue);
+                BundleBuilderSetting.SetPackageBundleEncryptorClassName(state.Package, state.Pipeline, newValue);
             }));
         }
 

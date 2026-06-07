@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -53,7 +53,8 @@ namespace YokiFrame
             mIsAdditive = isAdditive;
             
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, suspendLoad);
+            // 3.0.2+: allowSceneActivation 替代 suspendLoad (语义取反)
+            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == default)
             {
@@ -88,7 +89,7 @@ namespace YokiFrame
         {
             if (mHandle != default && mHandle.SceneObject.IsValid())
             {
-                var unloadOp = mHandle.UnloadAsync();
+                var unloadOp = mHandle.UnloadSceneAsync();
                 while (!unloadOp.IsDone)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

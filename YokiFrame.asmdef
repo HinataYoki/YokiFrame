@@ -12,6 +12,22 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "",
+            "define": "YOOASSET_3"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "3.0.0-beta",
+            "define": "YOOASSET_3_0"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "3.0.0-beta",
+            "define": "YOOASSET_3_0_OR_NEWER"
+        }
+    ],
     "noEngineReferences": false
 }

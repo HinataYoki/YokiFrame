@@ -131,11 +131,22 @@ namespace YokiFrame
         /// </summary>
         private bool ValidateCustomConfig(out string errorMessage)
         {
+#if YOOASSET_3_0_OR_NEWER
+            if (CustomDecryptorFactory == null)
+            {
+                errorMessage = "使用自定义加密时，必须设置 CustomDecryptorFactory";
+                return false;
+            }
+#elif YOOASSET_2_3_OR_NEWER
             if (CustomEncryptionFactory == null && CustomDecryptionFactory == null)
             {
                 errorMessage = "使用自定义加密时，必须设置 CustomEncryptionFactory 或 CustomDecryptionFactory";
                 return false;
             }
+#else
+            errorMessage = "当前 YooAsset 版本不支持自定义加密";
+            return false;
+#endif
 
             errorMessage = null;
             return true;

@@ -169,7 +169,7 @@ namespace YokiFrame.EditorTools
                     return;
                 }
 
-                IIgnoreRule ignoreRule = AssetBundleCollectorSettingData.GetIgnoreRuleInstance(package.IgnoreRuleName);
+                IAssetIgnoreRule ignoreRule = BundleCollectorSettingData.GetAssetIgnoreRuleInstance(package.IgnoreRuleName);
                 var command = new CollectCommand(package.PackageName, ignoreRule);
                 command.SetFlag(ECollectFlags.IgnoreGetDependencies, true);
                 command.UniqueBundleName = YooSetting.UniqueBundleName;

@@ -283,7 +283,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.PackageName = newName;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
             RefreshYooPackageDropdown();
         }
@@ -297,7 +297,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.EnableAddressable = value;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -310,7 +310,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.LocationToLower = value;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -323,7 +323,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.IncludeAssetGUID = value;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -336,7 +336,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.AutoCollectShaders = value;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -349,7 +349,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.SupportExtensionless = value;
-            AssetBundleCollectorSettingData.ModifyPackage(package);
+            BundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -359,19 +359,19 @@ namespace YokiFrame.EditorTools
 
         private void OnYooUniqueBundleNameChanged(bool value)
         {
-            AssetBundleCollectorSettingData.ModifyUniqueBundleName(value);
+            BundleCollectorSettingData.ModifyUniqueBundleName(value);
             MarkYooDirty();
         }
 
         private void OnYooShowPackageViewChanged(bool value)
         {
-            AssetBundleCollectorSettingData.ModifyShowPackageView(value);
+            BundleCollectorSettingData.ModifyShowPackageView(value);
             MarkYooDirty();
         }
 
         private void OnYooShowEditorAliasChanged(bool value)
         {
-            AssetBundleCollectorSettingData.ModifyShowEditorAlias(value);
+            BundleCollectorSettingData.ModifyShowEditorAlias(value);
             MarkYooDirty();
         }
 

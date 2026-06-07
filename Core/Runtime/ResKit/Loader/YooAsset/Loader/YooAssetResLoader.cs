@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 using Object = UnityEngine.Object;
@@ -76,7 +76,7 @@ namespace YokiFrame
 
         private static T[] ConvertAllAssets<T>(AllAssetsHandle handle) where T : Object
         {
-            if (handle == default || handle.Status != EOperationStatus.Succeed)
+            if (handle == default || handle.Status != EOperationStatus.Succeeded)
                 return System.Array.Empty<T>();
 
             var objects = handle.AllAssetObjects;
@@ -108,7 +108,7 @@ namespace YokiFrame
 
         private static SubAssetsResult<T> ConvertSubAssets<T>(SubAssetsHandle handle) where T : Object
         {
-            if (handle == default || handle.Status != EOperationStatus.Succeed)
+            if (handle == default || handle.Status != EOperationStatus.Succeeded)
                 return default;
 
             var objects = handle.SubAssetObjects;

@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 
@@ -14,11 +14,12 @@ namespace YokiFrame
 
     /// <summary>
     /// YooAsset 原始文件加载器（智能查找包）
+    /// 3.x 使用 LoadAssetSync&lt;RawFileObject&gt; 加载原始文件
     /// </summary>
     public class YooAssetRawFileLoader : IRawFileLoader
     {
         protected readonly IRawFileLoaderPool mPool;
-        protected RawFileHandle mHandle;
+        protected AssetHandle mHandle;
 
         public YooAssetRawFileLoader(IRawFileLoaderPool pool) => mPool = pool;
 
@@ -27,47 +28,53 @@ namespace YokiFrame
         /// </summary>
         protected static ResourcePackage FindPackage(string path)
         {
-            // 优先使用 YooInit 的智能查找
             if (YooInit.Initialized)
                 return YooInit.FindPackageForPath(path);
 
-            // 回退到默认包
             return YooAssets.GetPackage("DefaultPackage");
         }
 
         public string LoadRawFileText(string path)
         {
             var package = FindPackage(path);
-            mHandle = package.LoadRawFileSync(path);
-            return mHandle.GetRawFileText();
+            mHandle = package.LoadAssetSync<RawFileObject>(path);
+            return mHandle.GetAssetObject<RawFileObject>().GetText();
         }
 
         public byte[] LoadRawFileData(string path)
         {
             var package = FindPackage(path);
-            mHandle = package.LoadRawFileSync(path);
-            return mHandle.GetRawFileData();
+            mHandle = package.LoadAssetSync<RawFileObject>(path);
+            return mHandle.GetAssetObject<RawFileObject>().GetBytes();
         }
 
         public string GetRawFilePath(string path)
         {
             var package = FindPackage(path);
-            mHandle = package.LoadRawFileSync(path);
-            return mHandle.GetRawFilePath();
+            mHandle = package.LoadAssetSync<RawFileObject>(path);
+            return mHandle.GetAssetInfo().AssetPath;
         }
 
         public void LoadRawFileTextAsync(string path, Action<string> onComplete)
         {
             var package = FindPackage(path);
-            mHandle = package.LoadRawFileAsync(path);
-            mHandle.Completed += handle => onComplete?.Invoke(handle.GetRawFileText());
+            mHandle = package.LoadAssetAsync<RawFileObject>(path);
+            mHandle.Completed += handle =>
+            {
+                var rawObj = handle.GetAssetObject<RawFileObject>();
+                onComplete?.Invoke(rawObj != default ? rawObj.GetText() : null);
+            };
         }
 
         public void LoadRawFileDataAsync(string path, Action<byte[]> onComplete)
         {
             var package = FindPackage(path);
-            mHandle = package.LoadRawFileAsync(path);
-            mHandle.Completed += handle => onComplete?.Invoke(handle.GetRawFileData());
+            mHandle = package.LoadAssetAsync<RawFileObject>(path);
+            mHandle.Completed += handle =>
+            {
+                var rawObj = handle.GetAssetObject<RawFileObject>();
+                onComplete?.Invoke(rawObj != default ? rawObj.GetBytes() : null);
+            };
         }
 
         public void UnloadAndRecycle()

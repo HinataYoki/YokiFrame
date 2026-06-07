@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -41,36 +41,40 @@ namespace YokiFrame
 
         /// <summary>
         /// 同步加载原始文件数据（智能查找包）
+        /// 3.x 使用 LoadAssetSync&lt;RawFileObject&gt; 加载原始文件
         /// </summary>
         public static byte[] LoadRawFileData(string path, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == default || !package.CheckLocationValid(path))
+            if (package == default || !package.IsLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 return null;
             }
 
-            var handle = package.LoadRawFileSync(path);
-            var data = handle.GetRawFileData();
+            var handle = package.LoadAssetSync<RawFileObject>(path);
+            var rawObj = handle.GetAssetObject<RawFileObject>();
+            var data = rawObj != default ? rawObj.GetBytes() : null;
             handle.Release();
             return data;
         }
 
         /// <summary>
         /// 同步加载原始文件文本（智能查找包）
+        /// 3.x 使用 LoadAssetSync&lt;RawFileObject&gt; 加载原始文件
         /// </summary>
         public static string LoadRawFileText(string path, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == default || !package.CheckLocationValid(path))
+            if (package == default || !package.IsLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 return null;
             }
 
-            var handle = package.LoadRawFileSync(path);
-            var text = handle.GetRawFileText();
+            var handle = package.LoadAssetSync<RawFileObject>(path);
+            var rawObj = handle.GetAssetObject<RawFileObject>();
+            var text = rawObj != default ? rawObj.GetText() : null;
             handle.Release();
             return text;
         }
@@ -78,35 +82,37 @@ namespace YokiFrame
 #if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
         /// 异步加载原始文件（智能查找包）
+        /// 3.x 使用 LoadAssetAsync&lt;RawFileObject&gt; 加载原始文件
         /// </summary>
-        public static async UniTask<RawFileHandle> LoadRawAsync(string path, ResourcePackage package = null, CancellationToken ct = default)
+        public static async UniTask<AssetHandle> LoadRawAsync(string path, ResourcePackage package = null, CancellationToken ct = default)
         {
             package ??= FindPackageForPath(path);
-            if (package == null || !package.CheckLocationValid(path))
+            if (package == null || !package.IsLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 return default;
             }
 
-            var handle = package.LoadRawFileAsync(path);
+            var handle = package.LoadAssetAsync<RawFileObject>(path);
             await handle.ToUniTask(cancellationToken: ct);
             return handle;
         }
 #else
         /// <summary>
         /// 异步加载原始文件（智能查找包）
+        /// 3.x 使用 LoadAssetAsync&lt;RawFileObject&gt; 加载原始文件
         /// </summary>
-        public static IEnumerator LoadRawAsync(string path, Action<RawFileHandle> onComplete, ResourcePackage package = null)
+        public static IEnumerator LoadRawAsync(string path, Action<AssetHandle> onComplete, ResourcePackage package = null)
         {
             package ??= FindPackageForPath(path);
-            if (package == default || !package.CheckLocationValid(path))
+            if (package == default || !package.IsLocationValid(path))
             {
                 KitLogger.Error($"[YooInit] 无效路径: {path}");
                 onComplete?.Invoke(default);
                 yield break;
             }
 
-            var handle = package.LoadRawFileAsync(path);
+            var handle = package.LoadAssetAsync<RawFileObject>(path);
             yield return handle;
             onComplete?.Invoke(handle);
         }

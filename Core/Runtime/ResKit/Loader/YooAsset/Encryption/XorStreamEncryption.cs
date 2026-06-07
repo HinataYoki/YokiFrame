@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
 using System;
 using System.IO;
 using System.Text;

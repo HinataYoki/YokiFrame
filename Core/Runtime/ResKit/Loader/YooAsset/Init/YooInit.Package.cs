@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using YooAsset;
 
 namespace YokiFrame
@@ -30,7 +30,7 @@ namespace YokiFrame
         {
             foreach (var package in sPackages.Values)
             {
-                if (package.CheckLocationValid(path))
+                if (package.IsLocationValid(path))
                     return package;
             }
             return DefaultPackage;
@@ -43,7 +43,7 @@ namespace YokiFrame
         {
             foreach (var pkg in sPackages.Values)
             {
-                if (pkg.CheckLocationValid(path))
+                if (pkg.IsLocationValid(path))
                 {
                     package = pkg;
                     return true;
@@ -59,11 +59,11 @@ namespace YokiFrame
         public static bool CheckPathValid(string path, ResourcePackage package = null)
         {
             if (package != default)
-                return package.CheckLocationValid(path);
+                return package.IsLocationValid(path);
 
             foreach (var pkg in sPackages.Values)
             {
-                if (pkg.CheckLocationValid(path))
+                if (pkg.IsLocationValid(path))
                     return true;
             }
             return false;

@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -11,7 +11,7 @@ using System.Collections;
 namespace YokiFrame
 {
     /// <summary>
-    /// YooInit 初始化逻辑
+    /// YooInit 初始化逻辑 — 3.x 版本（适配 3.0.2-beta+）
     /// </summary>
     public static partial class YooInit
     {
@@ -46,14 +46,16 @@ namespace YokiFrame
                     var packageName = config.PackageNames[i];
                     if (string.IsNullOrEmpty(packageName)) continue;
 
-                    var package = YooAssets.CreatePackage(packageName);
+                    // 3.0.2+: TryGetPackage 检查已存在包，避免重复创建
+                    if (!YooAssets.TryGetPackage(packageName, out var package))
+                        package = YooAssets.CreatePackage(packageName);
+
                     packages[packageName] = package;
 
                     // 第一个包设为默认包
                     if (i == 0)
                     {
                         SetDefaultPackage(package);
-                        YooAssets.SetDefaultPackage(package);
                     }
 
                     await InitPackageAsync(package, config, ct);
@@ -70,30 +72,31 @@ namespace YokiFrame
 
         private static async UniTask InitPackageAsync(ResourcePackage package, YooInitConfig config, CancellationToken ct)
         {
-            InitializationOperation operation = CreateInitOperation(package, config);
+            InitializePackageOperation operation = CreateInitOperation(package, config);
 
             await operation.ToUniTask(cancellationToken: ct);
 
-            if (operation.Status != EOperationStatus.Succeed)
+            if (operation.Status != EOperationStatus.Succeeded)
             {
                 throw new Exception($"[YooInit] 包初始化失败: {package.PackageName}, 错误: {operation.Error}");
             }
 
-            // 请求版本
+            // 3.0.2+: RequestPackageVersionAsync 返回 RequestPackageVersionOperation
             var versionOp = package.RequestPackageVersionAsync();
             await versionOp.ToUniTask(cancellationToken: ct);
 
-            if (versionOp.Status != EOperationStatus.Succeed)
+            if (versionOp.Status != EOperationStatus.Succeeded)
             {
                 KitLogger.Warning($"[YooInit] 请求版本失败: {versionOp.Error}");
                 return;
             }
 
-            // 更新清单
-            var manifestOp = package.UpdatePackageManifestAsync(versionOp.PackageVersion);
+            // 3.0.2+: LoadPackageManifestAsync(options) 替代 UpdatePackageManifestAsync
+            var manifestOptions = new LoadPackageManifestOptions(versionOp.PackageVersion, 60);
+            var manifestOp = package.LoadPackageManifestAsync(manifestOptions);
             await manifestOp.ToUniTask(cancellationToken: ct);
 
-            if (manifestOp.Status != EOperationStatus.Succeed)
+            if (manifestOp.Status != EOperationStatus.Succeeded)
             {
                 KitLogger.Warning($"[YooInit] 更新清单失败: {manifestOp.Error}");
             }
@@ -136,14 +139,15 @@ namespace YokiFrame
                     var packageName = config.PackageNames[i];
                     if (string.IsNullOrEmpty(packageName)) continue;
 
-                    var package = YooAssets.CreatePackage(packageName);
+                    if (!YooAssets.TryGetPackage(packageName, out var package))
+                        package = YooAssets.CreatePackage(packageName);
+
                     packages[packageName] = package;
 
                     // 第一个包设为默认包
                     if (i == 0)
                     {
                         SetDefaultPackage(package);
-                        YooAssets.SetDefaultPackage(package);
                     }
 
                     yield return InitPackageCoroutine(package, config);
@@ -161,11 +165,11 @@ namespace YokiFrame
 
         private static IEnumerator InitPackageCoroutine(ResourcePackage package, YooInitConfig config)
         {
-            InitializationOperation operation = CreateInitOperation(package, config);
+            InitializePackageOperation operation = CreateInitOperation(package, config);
 
             yield return operation;
 
-            if (operation.Status != EOperationStatus.Succeed)
+            if (operation.Status != EOperationStatus.Succeeded)
             {
                 throw new Exception($"[YooInit] 包初始化失败: {package.PackageName}, 错误: {operation.Error}");
             }
@@ -174,17 +178,18 @@ namespace YokiFrame
             var versionOp = package.RequestPackageVersionAsync();
             yield return versionOp;
 
-            if (versionOp.Status != EOperationStatus.Succeed)
+            if (versionOp.Status != EOperationStatus.Succeeded)
             {
                 KitLogger.Warning($"[YooInit] 请求版本失败: {versionOp.Error}");
                 yield break;
             }
 
             // 更新清单
-            var manifestOp = package.UpdatePackageManifestAsync(versionOp.PackageVersion);
+            var manifestOptions = new LoadPackageManifestOptions(versionOp.PackageVersion, 60);
+            var manifestOp = package.LoadPackageManifestAsync(manifestOptions);
             yield return manifestOp;
 
-            if (manifestOp.Status != EOperationStatus.Succeed)
+            if (manifestOp.Status != EOperationStatus.Succeeded)
             {
                 KitLogger.Warning($"[YooInit] 更新清单失败: {manifestOp.Error}");
             }
@@ -193,59 +198,62 @@ namespace YokiFrame
         #endregion
 #endif
 
-        #region 初始化模式
+        #region 初始化模式（3.x API）
 
-        private static InitializationOperation InitEditorSimulateMode(ResourcePackage package)
+        private static InitializePackageOperation InitEditorSimulateMode(ResourcePackage package)
         {
-            var buildResult = EditorSimulateModeHelper.SimulateBuild(package.PackageName);
+            // 3.0.2+: EditorSimulateBuildInvoker.Build() 替代 EditorSimulateModeHelper.SimulateBuild()
+            var buildResult = EditorSimulateBuildInvoker.Build(package.PackageName, (int)EBundleType.VirtualAssetBundle);
             var fileSystemParams = FileSystemParameters.CreateDefaultEditorFileSystemParameters(buildResult.PackageRootDirectory);
-            return package.InitializeAsync(new EditorSimulateModeParameters
+            var options = new EditorSimulateModeOptions
             {
                 EditorFileSystemParameters = fileSystemParams
-            });
+            };
+            return package.InitializePackageAsync(options);
         }
 
-        private static InitializationOperation InitOfflineMode(ResourcePackage package, YooInitConfig config)
+        private static InitializePackageOperation InitOfflineMode(ResourcePackage package, YooInitConfig config)
         {
-            var decryption = config.CreateDecryptionServices();
-            var fileSystemParams = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(decryption);
-            return package.InitializeAsync(new OfflinePlayModeParameters
+            var fileSystemParams = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();
+            ApplyDecryptor(fileSystemParams, config);
+            var options = new OfflinePlayModeOptions
             {
-                BuildinFileSystemParameters = fileSystemParams
-            });
+                BuiltinFileSystemParameters = fileSystemParams
+            };
+            return package.InitializePackageAsync(options);
         }
 
-        private static InitializationOperation InitHostMode(ResourcePackage package, YooInitConfig config)
+        private static InitializePackageOperation InitHostMode(ResourcePackage package, YooInitConfig config)
         {
-            if (HostModeHandler is null)
-            {
-                throw new InvalidOperationException(
-                    "[YooInit] HostPlayMode 需要配置远程服务。请在调用 InitAsync 前设置 YooInit.HostModeHandler 委托。\n" +
-                    "示例:\n" +
-                    "YooInit.HostModeHandler = (pkg, cfg) => {\n" +
-                    "    var remoteServices = new RemoteServices(\"http://cdn.example.com\", \"http://fallback.example.com\");\n" +
-                    "    var cacheParams = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices, cfg.CreateDecryptionServices());\n" +
-                    "    var buildinParams = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(cfg.CreateDecryptionServices());\n" +
-                    "    return pkg.InitializeAsync(new HostPlayModeParameters {\n" +
-                    "        BuildinFileSystemParameters = buildinParams,\n" +
-                    "        CacheFileSystemParameters = cacheParams\n" +
-                    "    });\n" +
-                    "};");
-            }
-            return HostModeHandler(package, config);
+            if (HostModeHandler is not null)
+                return HostModeHandler(package, config);
+
+            throw new InvalidOperationException(
+                "[YooInit] HostPlayMode 需要配置远程服务。请在调用 InitAsync 前设置 YooInit.HostModeHandler 委托。\n" +
+                "3.x 示例:\n" +
+                "YooInit.HostModeHandler = (pkg, cfg) => {\n" +
+                "    // 实现 IRemoteService 接口\n" +
+                "    IRemoteService remoteService = new MyRemoteService(\"http://cdn.example.com\", \"http://fallback.example.com\");\n" +
+                "    var builtinParams = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();\n" +
+                "    var cacheParams = FileSystemParameters.CreateDefaultSandboxFileSystemParameters(remoteService);\n" +
+                "    var options = new HostPlayModeOptions {\n" +
+                "        BuiltinFileSystemParameters = builtinParams,\n" +
+                "        CacheFileSystemParameters = cacheParams\n" +
+                "    };\n" +
+                "    return pkg.InitializePackageAsync(options);\n" +
+                "};");
         }
 
-        private static InitializationOperation InitWebMode(ResourcePackage package, YooInitConfig config)
+        private static InitializePackageOperation InitWebMode(ResourcePackage package, YooInitConfig config)
         {
-            if (WebModeHandler is null)
-            {
-                throw new InvalidOperationException(
-                    "[YooInit] WebPlayMode 需要配置 WebGL 远程服务。请在调用 InitAsync 前设置 YooInit.WebModeHandler 委托。");
-            }
-            return WebModeHandler(package, config);
+            if (WebModeHandler is not null)
+                return WebModeHandler(package, config);
+
+            throw new InvalidOperationException(
+                "[YooInit] WebPlayMode 需要配置 WebGL 远程服务。请在调用 InitAsync 前设置 YooInit.WebModeHandler 委托。");
         }
 
-        private static InitializationOperation CreateInitOperation(ResourcePackage package, YooInitConfig config)
+        private static InitializePackageOperation CreateInitOperation(ResourcePackage package, YooInitConfig config)
         {
             // 优先使用通用自定义处理器
             if (CustomHandler is not null)
@@ -262,22 +270,32 @@ namespace YokiFrame
             };
         }
 
-        private static InitializationOperation InitCustomMode(ResourcePackage package, YooInitConfig config)
+        private static InitializePackageOperation InitCustomMode(ResourcePackage package, YooInitConfig config)
         {
             if (CustomHandler is null)
             {
                 throw new InvalidOperationException(
                     "[YooInit] CustomPlayMode 需要配置自定义初始化逻辑。请在调用 InitAsync 前设置 YooInit.CustomHandler 委托。\n" +
-                    "示例:\n" +
+                    "3.x 示例:\n" +
                     "YooInit.CustomHandler = (pkg, cfg) => {\n" +
-                    "    // 自定义初始化逻辑\n" +
-                    "    var buildinParams = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(cfg.CreateDecryptionServices());\n" +
-                    "    return pkg.InitializeAsync(new OfflinePlayModeParameters {\n" +
-                    "        BuildinFileSystemParameters = buildinParams\n" +
-                    "    });\n" +
+                    "    var builtinParams = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();\n" +
+                    "    var options = new OfflinePlayModeOptions { BuiltinFileSystemParameters = builtinParams };\n" +
+                    "    return pkg.InitializePackageAsync(options);\n" +
                     "};");
             }
             return CustomHandler(package, config);
+        }
+
+        /// <summary>
+        /// 将配置中的解密器应用到 FileSystemParameters
+        /// </summary>
+        private static void ApplyDecryptor(FileSystemParameters parameters, YooInitConfig config)
+        {
+            var decryptor = config.CreateBundleDecryptor();
+            if (decryptor is not null)
+            {
+                parameters.AddParameter(EFileSystemParameter.AssetBundleDecryptor, decryptor);
+            }
         }
 
         private static void ConfigureResKit()

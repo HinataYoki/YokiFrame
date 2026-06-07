@@ -48,7 +48,11 @@ namespace YokiFrame.EditorTools
                 case YooEncryptionType.Custom:
                     container.Add(CreateEncryptionCard(
                         "自定义加密",
+#if YOOASSET_3_0_OR_NEWER
+                        "需要在代码中设置 YooInitConfig.CustomDecryptorFactory 委托（3.x 使用 IBundleEncryptor）。",
+#else
                         "需要在代码中设置 YooInitConfig.CustomEncryptionFactory 和 CustomDecryptionFactory 委托。",
+#endif
                         Colors.BrandPrimary,
                         null
                     ));

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -39,7 +39,7 @@ namespace YokiFrame.EditorTools
             var result = new List<string>();
             try
             {
-                foreach (var package in AssetBundleCollectorSettingData.Setting.Packages)
+                foreach (var package in BundleCollectorSettingData.Setting.Packages)
                     result.Add(package.PackageName);
             }
             catch { }
@@ -54,7 +54,7 @@ namespace YokiFrame.EditorTools
             var result = new List<string> { typeof(EncryptionNone).FullName };
             try
             {
-                var types = TypeCache.GetTypesDerivedFrom<IEncryptionServices>();
+                var types = TypeCache.GetTypesDerivedFrom<IBundleEncryptor>();
                 foreach (var type in types)
                 {
                     if (type.IsAbstract || type.IsInterface) continue;
@@ -74,14 +74,14 @@ namespace YokiFrame.EditorTools
             try
             {
                 var buildTarget = EditorUserBuildSettings.activeBuildTarget;
-                var compressOption = AssetBundleBuilderSetting.GetPackageCompressOption(packageName, pipelineName);
-                var copyOption = AssetBundleBuilderSetting.GetPackageBuildinFileCopyOption(packageName, pipelineName);
-                var copyParams = AssetBundleBuilderSetting.GetPackageBuildinFileCopyParams(packageName, pipelineName);
-                var encryptClassName = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(packageName, pipelineName);
-                var clearCache = AssetBundleBuilderSetting.GetPackageClearBuildCache(packageName, pipelineName);
-                var useDepDB = AssetBundleBuilderSetting.GetPackageUseAssetDependencyDB(packageName, pipelineName);
+                var compressOption = BundleBuilderSetting.GetPackageCompressOption(packageName, pipelineName);
+                var copyOption = BundleBuilderSetting.GetPackageBundledCopyOption(packageName, pipelineName);
+                var copyParams = BundleBuilderSetting.GetPackageBundledCopyParams(packageName, pipelineName);
+                var encryptClassName = BundleBuilderSetting.GetPackageBundleEncryptorClassName(packageName, pipelineName);
+                var clearCache = BundleBuilderSetting.GetPackageClearBuildCache(packageName, pipelineName);
+                var useDepDB = BundleBuilderSetting.GetPackageUseAssetDependencyDB(packageName, pipelineName);
 
-                IEncryptionServices encryptionServices = CreateEncryptionService(encryptClassName);
+                IBundleEncryptor encryptionServices = CreateEncryptionService(encryptClassName);
 
                 string buildOutputRoot = AssetBundleBuilderHelper.GetDefaultBuildOutputRoot();
                 string buildinFileRoot = AssetBundleBuilderHelper.GetStreamingAssetsRoot();
@@ -106,13 +106,13 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 创建加密服务实例
         /// </summary>
-        private static IEncryptionServices CreateEncryptionService(string encryptClassName)
+        private static IBundleEncryptor CreateEncryptionService(string encryptClassName)
         {
             if (!string.IsNullOrEmpty(encryptClassName))
             {
                 var encryptType = Type.GetType(encryptClassName);
                 if (encryptType != null)
-                    return Activator.CreateInstance(encryptType) as IEncryptionServices ?? new EncryptionNone();
+                    return Activator.CreateInstance(encryptType) as IBundleEncryptor ?? new EncryptionNone();
             }
             return new EncryptionNone();
         }
@@ -122,8 +122,8 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private static (bool success, string error, string outputDir) ExecuteScriptableBuild(
             string packageName, string pipelineName, BuildTarget buildTarget,
-            ECompressOption compressOption, EBuildinFileCopyOption copyOption, string copyParams,
-            IEncryptionServices encryptionServices, bool clearCache, bool useDepDB,
+            ECompressOption compressOption, EBundledCopyOption copyOption, string copyParams,
+            IBundleEncryptor encryptionServices, bool clearCache, bool useDepDB,
             string buildOutputRoot, string buildinFileRoot)
         {
             var buildParameters = new ScriptableBuildParameters
@@ -154,8 +154,8 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private static (bool success, string error, string outputDir) ExecuteBuiltinBuild(
             string packageName, string pipelineName, BuildTarget buildTarget,
-            ECompressOption compressOption, EBuildinFileCopyOption copyOption, string copyParams,
-            IEncryptionServices encryptionServices, bool clearCache, bool useDepDB,
+            ECompressOption compressOption, EBundledCopyOption copyOption, string copyParams,
+            IBundleEncryptor encryptionServices, bool clearCache, bool useDepDB,
             string buildOutputRoot, string buildinFileRoot)
         {
             var buildParameters = new BuiltinBuildParameters
@@ -186,8 +186,8 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private static (bool success, string error, string outputDir) ExecuteRawFileBuild(
             string packageName, string pipelineName, BuildTarget buildTarget,
-            EBuildinFileCopyOption copyOption, string copyParams,
-            IEncryptionServices encryptionServices, bool clearCache, bool useDepDB,
+            EBundledCopyOption copyOption, string copyParams,
+            IBundleEncryptor encryptionServices, bool clearCache, bool useDepDB,
             string buildOutputRoot, string buildinFileRoot)
         {
             var buildParameters = new RawFileBuildParameters

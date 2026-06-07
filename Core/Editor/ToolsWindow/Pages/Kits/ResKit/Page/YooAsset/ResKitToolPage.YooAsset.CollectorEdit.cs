@@ -27,7 +27,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 创建收集器编辑面板
         /// </summary>
-        private VisualElement CreateYooCollectorEditPanel(AssetBundleCollector collector)
+        private VisualElement CreateYooCollectorEditPanel(BundleCollector collector)
         {
             var panel = new VisualElement();
             panel.style.marginTop = 12;
@@ -62,7 +62,7 @@ namespace YokiFrame.EditorTools
             return panel;
         }
 
-        private VisualElement CreateYooPathEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooPathEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("收集路径");
             var pathField = new TextField { value = collector.CollectPath };
@@ -80,7 +80,7 @@ namespace YokiFrame.EditorTools
                         path = "Assets" + path[Application.dataPath.Length..];
                     collector.CollectPath = path;
                     pathField.value = path;
-                    AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                    BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                     MarkYooDirty();
                     RefreshYooCollectorCanvas();
                 }
@@ -93,7 +93,7 @@ namespace YokiFrame.EditorTools
             return row;
         }
 
-        private VisualElement CreateYooTypeEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooTypeEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("收集类型");
             var choices = new List<string> { "MainAssetCollector", "StaticAssetCollector", "DependAssetCollector" };
@@ -103,7 +103,7 @@ namespace YokiFrame.EditorTools
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 collector.CollectorType = (ECollectorType)choices.IndexOf(evt.newValue);
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
                 RefreshYooCollectorCanvas();
             });
@@ -111,7 +111,7 @@ namespace YokiFrame.EditorTools
             return row;
         }
 
-        private VisualElement CreateYooAddressEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooAddressEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("寻址规则");
             var choices = GetYooAddressRuleNames();
@@ -122,7 +122,7 @@ namespace YokiFrame.EditorTools
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 collector.AddressRuleName = evt.newValue;
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
                 RefreshYooCollectorCanvas();
             });
@@ -130,7 +130,7 @@ namespace YokiFrame.EditorTools
             return row;
         }
 
-        private VisualElement CreateYooPackEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooPackEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("打包规则");
             var choices = GetYooPackRuleNames();
@@ -141,7 +141,7 @@ namespace YokiFrame.EditorTools
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 collector.PackRuleName = evt.newValue;
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
                 RefreshYooCollectorCanvas();
             });
@@ -149,7 +149,7 @@ namespace YokiFrame.EditorTools
             return row;
         }
 
-        private VisualElement CreateYooFilterEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooFilterEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("过滤规则");
             var choices = GetYooFilterRuleNames();
@@ -160,7 +160,7 @@ namespace YokiFrame.EditorTools
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 collector.FilterRuleName = evt.newValue;
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
                 RefreshYooCollectorCanvas();
             });
@@ -168,7 +168,7 @@ namespace YokiFrame.EditorTools
             return row;
         }
 
-        private VisualElement CreateYooTagsEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooTagsEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("资源标签");
             var field = new TextField { value = collector.AssetTags ?? "" };
@@ -177,14 +177,14 @@ namespace YokiFrame.EditorTools
             field.RegisterValueChangedCallback(evt =>
             {
                 collector.AssetTags = evt.newValue;
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
             });
             row.Add(field);
             return row;
         }
 
-        private VisualElement CreateYooUserDataEditRow(AssetBundleCollector collector)
+        private VisualElement CreateYooUserDataEditRow(BundleCollector collector)
         {
             var row = CreateYooEditRow("用户数据");
             var field = new TextField { value = collector.UserData ?? "" };
@@ -193,7 +193,7 @@ namespace YokiFrame.EditorTools
             field.RegisterValueChangedCallback(evt =>
             {
                 collector.UserData = evt.newValue;
-                AssetBundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
+                BundleCollectorSettingData.ModifyCollector(YooCurrentGroup, collector);
                 MarkYooDirty();
             });
             row.Add(field);

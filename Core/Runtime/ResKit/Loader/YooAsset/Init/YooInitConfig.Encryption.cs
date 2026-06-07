@@ -19,7 +19,7 @@ namespace YokiFrame
 
         #endregion
 
-        #region 密钥生成
+        #region 密钥生成（版本通用）
 
         /// <summary>
         /// 获取 XOR 密钥（32 字节）
@@ -55,7 +55,6 @@ namespace YokiFrame
         private void InitAesKeyIV()
         {
             var saltBytes = Encoding.UTF8.GetBytes(AesSalt);
-            // 确保盐值至少 8 字节
             if (saltBytes.Length < 8)
             {
                 var padded = new byte[8];
@@ -85,22 +84,58 @@ namespace YokiFrame
 
         #endregion
 
-        #region 服务创建
+#if YOOASSET_3_0_OR_NEWER
+        #region 解密服务（3.x — IBundleDecryptor）
+
+        /// <summary>
+        /// 自定义解密器工厂（运行时解密，选择 Custom 类型时使用）
+        /// </summary>
+        public static Func<YooInitConfig, IBundleDecryptor> CustomDecryptorFactory { get; set; }
+
+        /// <summary>
+        /// 自定义加密器工厂（构建时加密，选择 Custom 类型时使用）
+        /// </summary>
+        public static Func<YooInitConfig, IBundleEncryptor> CustomEncryptorFactory { get; set; }
+
+        /// <summary>
+        /// 创建 Bundle 解密器实例（运行时 — 3.x 使用 IBundleDecryptor 接口族）
+        /// </summary>
+        public IBundleDecryptor CreateBundleDecryptor() => EncryptionType switch
+        {
+            YooEncryptionType.XorStream => new XorStreamDecryption(GetXorKey()),
+            YooEncryptionType.FileOffset => new FileOffsetDecryption(FileOffset),
+            YooEncryptionType.Aes => new AesDecryption(GetAesKey(), GetAesIV()),
+            YooEncryptionType.Custom => CustomDecryptorFactory?.Invoke(this)
+                ?? throw new InvalidOperationException("[YooInitConfig] 使用 Custom 加密类型时必须设置 CustomDecryptorFactory"),
+            _ => null
+        };
+
+        /// <summary>
+        /// 创建 Bundle 加密器实例（构建时 — 3.x 使用 IBundleEncryptor）
+        /// 返回的加密器可赋值到 BuildParameters.BundleEncryptor 供构建管线使用
+        /// </summary>
+        public IBundleEncryptor CreateBundleEncryptor() => EncryptionType switch
+        {
+            YooEncryptionType.XorStream => new XorBundleEncryptor(GetXorKey()),
+            YooEncryptionType.FileOffset => new FileOffsetBundleEncryptor(FileOffset),
+            YooEncryptionType.Aes => new AesBundleEncryptor(GetAesKey(), GetAesIV()),
+            YooEncryptionType.Custom => CustomEncryptorFactory?.Invoke(this)
+                ?? throw new InvalidOperationException("[YooInitConfig] 使用 Custom 加密类型时必须设置 CustomEncryptorFactory"),
+            _ => null
+        };
+
+        #endregion
+#elif YOOASSET_2_3_OR_NEWER
+        #region 加密/解密服务（2.x — IEncryptionServices / IDecryptionServices）
 
         /// <summary>
         /// 自定义加密服务工厂（选择 Custom 类型时使用）
         /// </summary>
-        /// <example>
-        /// YooInitConfig.CustomEncryptionFactory = config => new MyCustomEncryption();
-        /// </example>
         public static Func<YooInitConfig, IEncryptionServices> CustomEncryptionFactory { get; set; }
 
         /// <summary>
         /// 自定义解密服务工厂（选择 Custom 类型时使用）
         /// </summary>
-        /// <example>
-        /// YooInitConfig.CustomDecryptionFactory = config => new MyCustomDecryption();
-        /// </example>
         public static Func<YooInitConfig, IDecryptionServices> CustomDecryptionFactory { get; set; }
 
         /// <summary>
@@ -111,7 +146,7 @@ namespace YokiFrame
             YooEncryptionType.XorStream => new XorStreamDecryption(GetXorKey()),
             YooEncryptionType.FileOffset => new FileOffsetDecryption(FileOffset),
             YooEncryptionType.Aes => new AesDecryption(GetAesKey(), GetAesIV()),
-            YooEncryptionType.Custom => CustomDecryptionFactory?.Invoke(this) 
+            YooEncryptionType.Custom => CustomDecryptionFactory?.Invoke(this)
                 ?? throw new InvalidOperationException("[YooInitConfig] 使用 Custom 加密类型时必须设置 CustomDecryptionFactory"),
             _ => null
         };
@@ -130,6 +165,7 @@ namespace YokiFrame
         };
 
         #endregion
+#endif
     }
 }
 #endif

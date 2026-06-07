@@ -370,7 +370,7 @@ namespace YokiFrame.EditorTools
             y += LINE_HEIGHT + SPACING;
 
             // 构建管线
-            string currentPipeline = AssetBundleBuilderSetting.GetPackageBuildPipeline(selectedPackage);
+            string currentPipeline = BundleBuilderSetting.GetPackageBuildPipeline(selectedPackage);
             sSelectedPipelineIndex = sBuildPipelineChoices.IndexOf(currentPipeline);
             if (sSelectedPipelineIndex < 0) sSelectedPipelineIndex = 0;
 
@@ -379,33 +379,33 @@ namespace YokiFrame.EditorTools
             if (newPipelineIndex != sSelectedPipelineIndex)
             {
                 sSelectedPipelineIndex = newPipelineIndex;
-                AssetBundleBuilderSetting.SetPackageBuildPipeline(selectedPackage, sBuildPipelineChoices[newPipelineIndex]);
+                BundleBuilderSetting.SetPackageBuildPipeline(selectedPackage, sBuildPipelineChoices[newPipelineIndex]);
             }
             string selectedPipeline = sBuildPipelineChoices[sSelectedPipelineIndex];
             y += LINE_HEIGHT + SPACING;
 
             // 压缩方式
-            var compressOption = AssetBundleBuilderSetting.GetPackageCompressOption(selectedPackage, selectedPipeline);
+            var compressOption = BundleBuilderSetting.GetPackageCompressOption(selectedPackage, selectedPipeline);
             var compRect = new Rect(contentX, y, contentWidth, LINE_HEIGHT);
             int newCompressIndex = EditorGUI.Popup(compRect, "压缩方式", (int)compressOption, sCompressChoices.ToArray());
             if (newCompressIndex != (int)compressOption)
-                AssetBundleBuilderSetting.SetPackageCompressOption(selectedPackage, selectedPipeline, (ECompressOption)newCompressIndex);
+                BundleBuilderSetting.SetPackageCompressOption(selectedPackage, selectedPipeline, (ECompressOption)newCompressIndex);
             y += LINE_HEIGHT + SPACING;
 
             // 首包拷贝
-            var copyOption = AssetBundleBuilderSetting.GetPackageBuildinFileCopyOption(selectedPackage, selectedPipeline);
+            var copyOption = BundleBuilderSetting.GetPackageBundledCopyOption(selectedPackage, selectedPipeline);
             var copyRect = new Rect(contentX, y, contentWidth, LINE_HEIGHT);
             int newCopyIndex = EditorGUI.Popup(copyRect, "首包拷贝", (int)copyOption, sCopyOptionDisplayNames.ToArray());
             if (newCopyIndex != (int)copyOption)
-                AssetBundleBuilderSetting.SetPackageBuildinFileCopyOption(selectedPackage, selectedPipeline, (EBuildinFileCopyOption)newCopyIndex);
+                BundleBuilderSetting.SetPackageBundledCopyOption(selectedPackage, selectedPipeline, (EBundledCopyOption)newCopyIndex);
             y += LINE_HEIGHT + SPACING;
 
             // 拷贝标签
-            var copyParams = AssetBundleBuilderSetting.GetPackageBuildinFileCopyParams(selectedPackage, selectedPipeline);
+            var copyParams = BundleBuilderSetting.GetPackageBundledCopyParams(selectedPackage, selectedPipeline);
             var paramsRect = new Rect(contentX, y, contentWidth, LINE_HEIGHT);
             string newCopyParams = EditorGUI.TextField(paramsRect, "拷贝标签", copyParams);
             if (newCopyParams != copyParams)
-                AssetBundleBuilderSetting.SetPackageBuildinFileCopyParams(selectedPackage, selectedPipeline, newCopyParams);
+                BundleBuilderSetting.SetPackageBundledCopyParams(selectedPackage, selectedPipeline, newCopyParams);
             y += LINE_HEIGHT + SPACING;
 
             // 高级选项
@@ -429,23 +429,23 @@ namespace YokiFrame.EditorTools
             float innerWidth = width - INDENT;
 
             // 清空构建缓存
-            var clearCache = AssetBundleBuilderSetting.GetPackageClearBuildCache(selectedPackage, selectedPipeline);
+            var clearCache = BundleBuilderSetting.GetPackageClearBuildCache(selectedPackage, selectedPipeline);
             var clearRect = new Rect(innerX, y, innerWidth, LINE_HEIGHT);
             bool newClearCache = EditorGUI.Toggle(clearRect, "清空构建缓存", clearCache);
             if (newClearCache != clearCache)
-                AssetBundleBuilderSetting.SetPackageClearBuildCache(selectedPackage, selectedPipeline, newClearCache);
+                BundleBuilderSetting.SetPackageClearBuildCache(selectedPackage, selectedPipeline, newClearCache);
             y += LINE_HEIGHT + SPACING;
 
             // 使用依赖缓存
-            var useDepDB = AssetBundleBuilderSetting.GetPackageUseAssetDependencyDB(selectedPackage, selectedPipeline);
+            var useDepDB = BundleBuilderSetting.GetPackageUseAssetDependencyDB(selectedPackage, selectedPipeline);
             var depRect = new Rect(innerX, y, innerWidth, LINE_HEIGHT);
             bool newUseDepDB = EditorGUI.Toggle(depRect, "使用依赖缓存", useDepDB);
             if (newUseDepDB != useDepDB)
-                AssetBundleBuilderSetting.SetPackageUseAssetDependencyDB(selectedPackage, selectedPipeline, newUseDepDB);
+                BundleBuilderSetting.SetPackageUseAssetDependencyDB(selectedPackage, selectedPipeline, newUseDepDB);
             y += LINE_HEIGHT + SPACING;
 
             // 加密服务
-            var encryptClass = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(selectedPackage, selectedPipeline);
+            var encryptClass = BundleBuilderSetting.GetPackageBundleEncryptorClassName(selectedPackage, selectedPipeline);
             var encryptionClasses = GetEncryptionServiceClassNames();
             int encryptIndex = encryptionClasses.IndexOf(encryptClass);
             if (encryptIndex < 0) encryptIndex = 0;
@@ -453,7 +453,7 @@ namespace YokiFrame.EditorTools
             var encryptRect = new Rect(innerX, y, innerWidth, LINE_HEIGHT);
             int newEncryptIndex = EditorGUI.Popup(encryptRect, "加密服务", encryptIndex, encryptionClasses.ToArray());
             if (newEncryptIndex != encryptIndex)
-                AssetBundleBuilderSetting.SetPackageEncyptionServicesClassName(selectedPackage, selectedPipeline, encryptionClasses[newEncryptIndex]);
+                BundleBuilderSetting.SetPackageBundleEncryptorClassName(selectedPackage, selectedPipeline, encryptionClasses[newEncryptIndex]);
             y += LINE_HEIGHT + SPACING;
 
             return y;

@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
 using System;
 using System.Collections;
 using UnityEngine;
@@ -53,7 +53,8 @@ namespace YokiFrame
             mIsAdditive = isAdditive;
 
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, suspendLoad);
+            // 3.0.2+: LoadSceneAsync 参数变为 allowSceneActivation (suspendLoad 的反逻辑)
+            mHandle = mPackage.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == null)
             {
@@ -76,7 +77,7 @@ namespace YokiFrame
         {
             if (mHandle != default && mHandle.SceneObject.IsValid())
             {
-                var unloadOp = mHandle.UnloadAsync();
+                var unloadOp = mHandle.UnloadSceneAsync();
                 unloadOp.Completed += _ => onComplete?.Invoke();
             }
             else if (scene.IsValid() && scene.isLoaded)
