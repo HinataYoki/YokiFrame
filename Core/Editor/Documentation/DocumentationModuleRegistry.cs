@@ -131,6 +131,23 @@ namespace YokiFrame.EditorTools
     }
 
     /// <summary>
+    /// External plugin reference shown as a link button in the documentation header.
+    /// Used when a kit depends on an optional plugin that the user may need to install separately.
+    /// </summary>
+    public class PluginLink
+    {
+        /// <summary>
+        /// Display text shown on the button (e.g. "FMOD Unity Integration").
+        /// </summary>
+        public string Name;
+
+        /// <summary>
+        /// URL opened when the button is clicked (official site or GitHub).
+        /// </summary>
+        public string Url;
+    }
+
+    /// <summary>
     /// Documentation module metadata and content container.
     /// </summary>
     public class DocModule
@@ -140,6 +157,7 @@ namespace YokiFrame.EditorTools
         public string Category;
         public string Description;
         public List<string> Keywords = new();
+        public List<PluginLink> PluginLinks = new();
         public List<DocSection> Sections = new();
     }
 
@@ -150,6 +168,7 @@ namespace YokiFrame.EditorTools
     {
         public string Title;
         public string Description;
+        public List<PluginLink> Links = new();
         public List<CodeExample> CodeExamples = new();
     }
 

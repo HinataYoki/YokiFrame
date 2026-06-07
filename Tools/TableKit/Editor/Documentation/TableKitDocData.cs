@@ -36,6 +36,10 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "Luban-based table workflow for editor configuration, preview, and code generation.",
                 Keywords = new List<string> { "Table", "Luban", "Excel", "Data" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "Luban（必需）", Url = "https://github.com/focus-creative-games/luban" },
+                },
                 Sections = TableKitDocData.GetAllSections()
             };
         }

@@ -37,6 +37,11 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "音频管理工具，覆盖声道、3D 播放、资源加载以及可选 FMOD 集成。",
                 Keywords = new List<string> { "音频", "BGM", "音效", "3D", "FMOD" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "FMOD Unity（可选）", Url = "https://www.fmod.com/download#fmodforunity" },
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                },
                 Sections = AudioKitDocData.GetAllSections()
             };
         }

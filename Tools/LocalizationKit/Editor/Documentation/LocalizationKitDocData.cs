@@ -40,6 +40,10 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "本地化系统，支持语言切换、格式化、复数规则、UI 绑定（文本/图片/音频等自定义 Binder）以及异步 Provider。",
                 Keywords = new List<string> { "本地化", "i18n", "语言", "文本", "binder", "绑定", "扩展" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                },
                 Sections = LocalizationKitDocData.GetAllSections()
             };
         }

@@ -40,6 +40,11 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "场景工作流工具，覆盖加载、卸载、预加载、切换以及自定义加载器集成。",
                 Keywords = new List<string> { "场景", "切换", "预加载", "异步" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                    new() { Name = "YooAsset（推荐）", Url = "https://github.com/tuyoogame/YooAsset" },
+                },
                 Sections = SceneKitDocData.GetAllSections()
             };
         }

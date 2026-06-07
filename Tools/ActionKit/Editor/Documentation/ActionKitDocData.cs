@@ -37,6 +37,11 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "轻量级行为编排系统，支持延迟、回调、序列、并行与重复等流程控制。",
                 Keywords = new List<string> { "行为", "序列", "延迟", "回调" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                    new() { Name = "DOTween（可选）", Url = "https://dotween.demigiant.com/download.php" },
+                },
                 Sections = ActionKitDocData.GetAllSections()
             };
         }

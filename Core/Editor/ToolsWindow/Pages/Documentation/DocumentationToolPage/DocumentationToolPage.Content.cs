@@ -185,6 +185,11 @@ namespace YokiFrame.EditorTools
                 header.Add(desc);
             }
 
+            if (module.PluginLinks != null && module.PluginLinks.Count > 0)
+            {
+                header.Add(CreatePluginLinkRow(module.PluginLinks));
+            }
+
             return header;
         }
 
@@ -255,6 +260,135 @@ namespace YokiFrame.EditorTools
             return badge;
         }
 
+        /// <summary>
+        /// Creates a row of plugin link buttons shown below the module description.
+        /// Each button opens the plugin's official website or GitHub page.
+        /// </summary>
+        private VisualElement CreatePluginLinkRow(List<PluginLink> pluginLinks)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginTop = 20;
+            row.style.marginLeft = 68;
+
+            var label = new Label("可选插件：");
+            label.style.fontSize = 13;
+            label.style.color = new StyleColor(Theme.TextMuted);
+            label.style.marginRight = 10;
+            row.Add(label);
+
+            foreach (var link in pluginLinks)
+            {
+                if (link == null || string.IsNullOrEmpty(link.Name) || string.IsNullOrEmpty(link.Url))
+                {
+                    continue;
+                }
+
+                row.Add(CreatePluginLinkButton(link));
+            }
+
+            return row;
+        }
+
+        /// <summary>
+        /// Creates a single plugin link button that opens the URL in the default browser.
+        /// </summary>
+        private Button CreatePluginLinkButton(PluginLink link)
+        {
+            var button = new Button(() => UnityEngine.Application.OpenURL(link.Url));
+            button.style.flexDirection = FlexDirection.Row;
+            button.style.alignItems = Align.Center;
+            button.style.fontSize = 12;
+            button.style.paddingLeft = 12;
+            button.style.paddingRight = 12;
+            button.style.paddingTop = 6;
+            button.style.paddingBottom = 6;
+            button.style.marginRight = 10;
+            button.style.borderTopLeftRadius = 6;
+            button.style.borderTopRightRadius = 6;
+            button.style.borderBottomLeftRadius = 6;
+            button.style.borderBottomRightRadius = 6;
+            button.style.backgroundColor = new StyleColor(new Color(0.14f, 0.17f, 0.22f));
+            button.style.borderLeftWidth = 1;
+            button.style.borderRightWidth = 1;
+            button.style.borderTopWidth = 1;
+            button.style.borderBottomWidth = 1;
+            button.style.borderLeftColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+            button.style.borderRightColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+            button.style.borderTopColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+            button.style.borderBottomColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+            button.style.color = new StyleColor(new Color(0.55f, 0.75f, 0.95f));
+
+            var icon = new Image { image = KitIcons.GetTexture(KitIcons.POPOUT) };
+            icon.style.width = 13;
+            icon.style.height = 13;
+            icon.style.marginRight = 6;
+            button.Add(icon);
+
+            var label = new Label(link.Name);
+            label.style.fontSize = 12;
+            button.Add(label);
+
+            button.RegisterCallback<MouseEnterEvent>(_ =>
+            {
+                button.style.backgroundColor = new StyleColor(new Color(0.18f, 0.23f, 0.30f));
+                button.style.borderLeftColor = new StyleColor(new Color(0.4f, 0.65f, 0.9f));
+                button.style.borderRightColor = new StyleColor(new Color(0.4f, 0.65f, 0.9f));
+                button.style.borderTopColor = new StyleColor(new Color(0.4f, 0.65f, 0.9f));
+                button.style.borderBottomColor = new StyleColor(new Color(0.4f, 0.65f, 0.9f));
+            });
+
+            button.RegisterCallback<MouseLeaveEvent>(_ =>
+            {
+                button.style.backgroundColor = new StyleColor(new Color(0.14f, 0.17f, 0.22f));
+                button.style.borderLeftColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+                button.style.borderRightColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+                button.style.borderTopColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+                button.style.borderBottomColor = new StyleColor(new Color(0.3f, 0.5f, 0.7f));
+            });
+
+            return button;
+        }
+
+        /// <summary>
+        /// Creates a compact row of link buttons shown below a section description.
+        /// </summary>
+        private VisualElement CreateSectionLinkRow(List<PluginLink> links)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginBottom = 20;
+            row.style.marginLeft = 18;
+
+            foreach (var link in links)
+            {
+                if (link == null || string.IsNullOrEmpty(link.Name) || string.IsNullOrEmpty(link.Url))
+                {
+                    continue;
+                }
+
+                var linkButton = CreatePluginLinkButton(link);
+                linkButton.style.fontSize = 11;
+                linkButton.style.paddingLeft = 10;
+                linkButton.style.paddingRight = 10;
+                linkButton.style.paddingTop = 4;
+                linkButton.style.paddingBottom = 4;
+
+                var icon = linkButton.Q<Image>();
+                if (icon != null)
+                {
+                    icon.style.width = 11;
+                    icon.style.height = 11;
+                }
+
+                row.Add(linkButton);
+            }
+
+            return row;
+        }
+
         #endregion
 
         #region Sections
@@ -280,6 +414,12 @@ namespace YokiFrame.EditorTools
                 desc.style.color = new StyleColor(Theme.TextMuted);
                 desc.style.whiteSpace = WhiteSpace.Normal;
                 container.Add(desc);
+            }
+
+            if (section.Links != null && section.Links.Count > 0)
+            {
+                var linkRow = CreateSectionLinkRow(section.Links);
+                container.Add(linkRow);
             }
 
             if (section.CodeExamples != null)

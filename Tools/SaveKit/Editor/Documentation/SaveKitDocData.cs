@@ -36,6 +36,11 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "存档系统，支持槽位、迁移、加密、自动保存以及异步友好的工作流。",
                 Keywords = new List<string> { "存档", "持久化", "加密", "迁移" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                    new() { Name = "Nino（可选）", Url = "https://github.com/JasonXuDeveloper/Nino" },
+                },
                 Sections = SaveKitDocData.GetAllSections()
             };
         }

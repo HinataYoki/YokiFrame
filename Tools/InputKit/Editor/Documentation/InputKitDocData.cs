@@ -40,6 +40,11 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "输入工作流工具，覆盖重绑、输入缓冲、连招、上下文、触屏、震动与调试支持。",
                 Keywords = new List<string> { "输入", "重绑", "连招", "触屏", "震动" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "Unity Input System（可选）", Url = "https://docs.unity3d.com/Packages/com.unity.inputsystem@1.0/manual/Installation.html" },
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                },
                 Sections = InputKitDocData.GetAllSections()
             };
         }

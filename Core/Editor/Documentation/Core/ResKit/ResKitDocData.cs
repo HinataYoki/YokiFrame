@@ -45,6 +45,11 @@ namespace YokiFrame.EditorTools
                 Category = "CORE KIT",
                 Description = "统一资源加载工具，覆盖同步、异步、原始文件、场景以及 YooAsset 集成等能力。",
                 Keywords = new List<string> { "资源", "异步", "引用计数", "YooAsset" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "YooAsset（推荐）", Url = "https://github.com/tuyoogame/YooAsset" },
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                },
                 Sections = ResKitDocData.GetAllSections()
             };
         }

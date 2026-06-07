@@ -46,6 +46,12 @@ namespace YokiFrame.EditorTools
                 Category = "TOOLS",
                 Description = "UI 框架工具，覆盖面板生命周期、缓存、动画、异步加载、对话框与导航能力。",
                 Keywords = new List<string> { "UI", "面板", "缓存", "动画", "对话框" },
+                PluginLinks = new List<PluginLink>
+                {
+                    new() { Name = "UniTask（推荐）", Url = "https://github.com/Cysharp/UniTask" },
+                    new() { Name = "YooAsset（推荐）", Url = "https://github.com/tuyoogame/YooAsset" },
+                    new() { Name = "DOTween（可选）", Url = "https://dotween.demigiant.com/download.php" },
+                },
                 Sections = UIKitDocData.GetAllSections()
             };
         }
