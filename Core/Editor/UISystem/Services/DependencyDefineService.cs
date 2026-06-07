@@ -71,36 +71,6 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// YooAsset 版本宏（通过 package.json 检测，比 asmdef versionDefines 更可靠）
-        /// </summary>
-        private static void RefreshYooAssetVersionDefines(HashSet<string> defines)
-        {
-            try
-            {
-                var listRequest = UnityEditor.PackageManager.Client.List(true, false);
-                while (!listRequest.IsCompleted) { }
-
-                if (listRequest.Status == UnityEditor.PackageManager.StatusCode.Success)
-                {
-                    foreach (var package in listRequest.Result)
-                    {
-                        if (package.name == "com.tuyoogame.yooasset")
-                        {
-                            var version = package.version;
-                            // 3.0.0-beta 及以上
-                            if (version.StartsWith("3.") || version.Contains("3.0"))
-                            {
-                                defines.Add("YOOASSET_3_0_OR_NEWER");
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            catch { /* 非关键，静默忽略 */ }
-        }
-
-        /// <summary>
         /// 监听资源导入/删除事件，自动刷新宏定义
         /// </summary>
         private class AssetPostprocessorHook : AssetPostprocessor
@@ -153,9 +123,6 @@ namespace YokiFrame.EditorTools
                     newDefines.Remove(dep.Define);
                 }
             }
-
-            // YooAsset 版本宏检测
-            RefreshYooAssetVersionDefines(newDefines);
 
             if (newDefines.Count != currentDefines.Count || !newDefines.SetEquals(currentDefines))
             {

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER && !YOOASSET_3_0_OR_NEWER
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -126,7 +126,7 @@ namespace YokiFrame.EditorTools
 
             if (setting.Packages == default || setting.Packages.Count == 0)
             {
-#if !YOOASSET_3_0_OR_NEWER
+#if YOOASSET_2_3_OR_NEWER && !YOOASSET_3_0_OR_NEWER
                 YooAsset.Editor.AssetBundleCollectorSettingData.CreatePackage("DefaultPackage");
                 YooAsset.Editor.AssetBundleCollectorSettingData.SaveFile();
 #else

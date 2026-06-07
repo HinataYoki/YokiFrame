@@ -152,11 +152,9 @@ namespace YokiFrame
         public static void Reset()
         {
             Dispose();
-#if YOOASSET_3_0_OR_NEWER || !YOOASSET_3_0_OR_NEWER
             HostModeHandler = null;
             WebModeHandler = null;
             CustomHandler = null;
-#endif
         }
 
         /// <summary>
