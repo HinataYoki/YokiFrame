@@ -21,18 +21,18 @@ namespace YokiFrame.EditorTools
                         Title = "保存/加载语言设置",
                         Code = @"// 保存当前语言设置
 var saveData = SaveKit.CreateSaveData();
-LocalizationKitSaveIntegration.SaveLanguagePreference(saveData);
+saveData.RegisterModule(LocalizationSaveData.FromCurrentSettings());
 SaveKit.Save(slotId, saveData);
 
 // 加载语言设置
 var loadedData = SaveKit.Load(slotId);
-if (LocalizationKitSaveIntegration.HasLanguagePreference(loadedData))
+if (loadedData.HasModule<LocalizationSaveData>())
 {
-    LocalizationKitSaveIntegration.LoadLanguagePreference(loadedData);
+    loadedData.GetModule<LocalizationSaveData>()?.Apply();
 }
 
 // 清除语言设置
-LocalizationKitSaveIntegration.ClearLanguagePreference(saveData);",
+saveData.RemoveModule<LocalizationSaveData>();",
                         Explanation = "语言偏好会保存到 SaveData 中，下次启动时自动恢复。"
                     }
                 }

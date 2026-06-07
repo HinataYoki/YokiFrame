@@ -60,14 +60,14 @@ public class GameInitializer
         var saveData = SaveKit.Load(0);
         if (saveData != null)
         {
-            LocalizationKitSaveIntegration.LoadLanguagePreference(saveData);
+            saveData.GetModule<LocalizationSaveData>()?.Apply();
         }
 
         // 4. 监听语言切换，保存偏好
         LocalizationKit.OnLanguageChanged += _ =>
         {
             var data = SaveKit.Load(0) ?? SaveKit.CreateSaveData();
-            LocalizationKitSaveIntegration.SaveLanguagePreference(data);
+            data.RegisterModule(LocalizationSaveData.FromCurrentSettings());
             SaveKit.Save(0, data);
         };
     }
