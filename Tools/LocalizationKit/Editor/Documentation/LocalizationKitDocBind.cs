@@ -13,7 +13,7 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "UI 绑定",
-                Description = "自动响应语言切换的 UI 文本绑定。",
+                Description = "自动响应语言切换的 UI 文本绑定。支持文本组件（TextMeshProUGUI/Text），也可扩展支持图片、音频等组件，详见「自定义 Binder」章节。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
@@ -50,6 +50,19 @@ var binder2 = new LocalizedTextBinder(TextId.MSG, tmpText, args);
 
 // 获取绑定器数量
 int count = LocalizationKit.GetBinderCount();"
+                    },
+                    new()
+                    {
+                        Title = "扩展到其他组件类型",
+                        Code = @"// 支持自定义文本组件、图片、音频等
+// 详见「自定义 Binder」文档
+
+// 示例：绑定图片组件（需用户实现扩展方法）
+var imageBinder = myImage.BindLocalizedSprite(spriteId: 2001);
+
+// 示例：绑定音频组件
+var audioBinder = myAudioSource.BindLocalizedAudio(audioId: 3001);",
+                        Explanation = "LocalizationKit 基于依赖倒置原则设计，用户可通过实现 ILocalizationBinder 或使用泛型 LocalizedBinder<T> 扩展任意组件类型。"
                     }
                 }
             };

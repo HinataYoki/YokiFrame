@@ -7,20 +7,15 @@ using UnityEngine.UI;
 namespace YokiFrame
 {
     /// <summary>
-    /// 本地化文本绑定器
-    /// 非 MonoBehaviour 实现，用于绑定 UI 文本组件
+    /// 本地化文本绑定器（兼容层）
+    /// 基于泛型 LocalizedBinder 实现，保持现有 API 兼容
     /// </summary>
     public sealed class LocalizedTextBinder : ILocalizationBinder, IDisposable
     {
-        private readonly int mTextId;
+        private readonly ILocalizationBinder mInternalBinder;
         private readonly object[] mArgs;
         private readonly IReadOnlyDictionary<string, object> mNamedArgs;
-
-        // 支持的文本组件类型
-        private TextMeshProUGUI mTmpText;
-        private Text mLegacyText;
-
-        private bool mIsDisposed;
+        private readonly int mTextId;
 
         /// <summary>
         /// 绑定的文本ID
@@ -30,7 +25,7 @@ namespace YokiFrame
         /// <summary>
         /// 绑定器是否有效
         /// </summary>
-        public bool IsValid => !mIsDisposed && (mTmpText != null || mLegacyText != null);
+        public bool IsValid => mInternalBinder?.IsValid ?? false;
 
         /// <summary>
         /// 创建绑定器（绑定 TextMeshProUGUI）
@@ -40,13 +35,34 @@ namespace YokiFrame
         /// <param name="args">格式化参数</param>
         public LocalizedTextBinder(int textId, TextMeshProUGUI tmpText, params object[] args)
         {
+            if (tmpText == default)
+                throw new ArgumentNullException(nameof(tmpText));
+
             mTextId = textId;
-            mTmpText = tmpText ?? throw new ArgumentNullException(nameof(tmpText));
             mArgs = args;
             mNamedArgs = null;
 
-            LocalizationKit.RegisterBinder(this);
-            Refresh();
+            if (args != null && args.Length > 0)
+            {
+                mInternalBinder = new LocalizedBinder<TextMeshProUGUI, object[]>(
+                    resourceId: textId,
+                    component: tmpText,
+                    args: args,
+                    resourceGetter: (id, parameters) => LocalizationKit.Get(id, parameters),
+                    setter: static (tmp, text) => tmp.text = text,
+                    validityChecker: static tmp => tmp != default
+                );
+            }
+            else
+            {
+                mInternalBinder = new LocalizedBinder<TextMeshProUGUI>(
+                    resourceId: textId,
+                    component: tmpText,
+                    resourceGetter: LocalizationKit.Get,
+                    setter: static (tmp, text) => tmp.text = text,
+                    validityChecker: static tmp => tmp != default
+                );
+            }
         }
 
         /// <summary>
@@ -57,13 +73,34 @@ namespace YokiFrame
         /// <param name="args">格式化参数</param>
         public LocalizedTextBinder(int textId, Text legacyText, params object[] args)
         {
+            if (legacyText == default)
+                throw new ArgumentNullException(nameof(legacyText));
+
             mTextId = textId;
-            mLegacyText = legacyText ?? throw new ArgumentNullException(nameof(legacyText));
             mArgs = args;
             mNamedArgs = null;
 
-            LocalizationKit.RegisterBinder(this);
-            Refresh();
+            if (args != null && args.Length > 0)
+            {
+                mInternalBinder = new LocalizedBinder<Text, object[]>(
+                    resourceId: textId,
+                    component: legacyText,
+                    args: args,
+                    resourceGetter: (id, parameters) => LocalizationKit.Get(id, parameters),
+                    setter: static (text, str) => text.text = str,
+                    validityChecker: static text => text != default
+                );
+            }
+            else
+            {
+                mInternalBinder = new LocalizedBinder<Text>(
+                    resourceId: textId,
+                    component: legacyText,
+                    resourceGetter: LocalizationKit.Get,
+                    setter: static (text, str) => text.text = str,
+                    validityChecker: static text => text != default
+                );
+            }
         }
 
         /// <summary>
@@ -74,13 +111,21 @@ namespace YokiFrame
         /// <param name="namedArgs">命名参数</param>
         public LocalizedTextBinder(int textId, TextMeshProUGUI tmpText, IReadOnlyDictionary<string, object> namedArgs)
         {
+            if (tmpText == default)
+                throw new ArgumentNullException(nameof(tmpText));
+
             mTextId = textId;
-            mTmpText = tmpText ?? throw new ArgumentNullException(nameof(tmpText));
             mArgs = null;
             mNamedArgs = namedArgs;
 
-            LocalizationKit.RegisterBinder(this);
-            Refresh();
+            mInternalBinder = new LocalizedBinder<TextMeshProUGUI, IReadOnlyDictionary<string, object>>(
+                resourceId: textId,
+                component: tmpText,
+                args: namedArgs,
+                resourceGetter: (id, parameters) => LocalizationKit.Get(id, parameters),
+                setter: static (tmp, text) => tmp.text = text,
+                validityChecker: static tmp => tmp != default
+            );
         }
 
         /// <summary>
@@ -88,30 +133,7 @@ namespace YokiFrame
         /// </summary>
         public void Refresh()
         {
-            if (!IsValid) return;
-
-            string text;
-            if (mNamedArgs != null)
-            {
-                text = LocalizationKit.Get(mTextId, mNamedArgs);
-            }
-            else if (mArgs != null && mArgs.Length > 0)
-            {
-                text = LocalizationKit.Get(mTextId, mArgs);
-            }
-            else
-            {
-                text = LocalizationKit.Get(mTextId);
-            }
-
-            if (mTmpText != null)
-            {
-                mTmpText.text = text;
-            }
-            else if (mLegacyText != null)
-            {
-                mLegacyText.text = text;
-            }
+            mInternalBinder?.Refresh();
         }
 
         /// <summary>
@@ -119,10 +141,15 @@ namespace YokiFrame
         /// </summary>
         public void UpdateArgs(params object[] newArgs)
         {
-            if (mArgs != null && newArgs != null)
+            if (mArgs != null && newArgs != null && mInternalBinder is LocalizedBinder<TextMeshProUGUI, object[]> tmpBinder)
             {
                 Array.Copy(newArgs, mArgs, Math.Min(newArgs.Length, mArgs.Length));
-                Refresh();
+                tmpBinder.UpdateArgs(mArgs);
+            }
+            else if (mArgs != null && newArgs != null && mInternalBinder is LocalizedBinder<Text, object[]> textBinder)
+            {
+                Array.Copy(newArgs, mArgs, Math.Min(newArgs.Length, mArgs.Length));
+                textBinder.UpdateArgs(mArgs);
             }
         }
 
@@ -131,12 +158,7 @@ namespace YokiFrame
         /// </summary>
         public void Dispose()
         {
-            if (mIsDisposed) return;
-
-            mIsDisposed = true;
-            LocalizationKit.UnregisterBinder(this);
-            mTmpText = null;
-            mLegacyText = null;
+            (mInternalBinder as IDisposable)?.Dispose();
         }
     }
 
