@@ -1,4 +1,4 @@
-#if YOKIFRAME_UNITASK_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Object = UnityEngine.Object;

@@ -1,3 +1,4 @@
+#if YOKIFRAME_YOOASSET_SUPPORT
 using UnityEngine.SceneManagement;
 using YooAsset;
 
@@ -14,3 +15,4 @@ namespace YokiFrame
         void ReleaseHandle();
     }
 }
+#endif

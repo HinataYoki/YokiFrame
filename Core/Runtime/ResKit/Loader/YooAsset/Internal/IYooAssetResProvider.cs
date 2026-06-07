@@ -1,3 +1,4 @@
+#if YOKIFRAME_YOOASSET_SUPPORT
 using System;
 using Object = UnityEngine.Object;
 
@@ -23,3 +24,4 @@ namespace YokiFrame
         void ReleaseHandles();
     }
 }
+#endif

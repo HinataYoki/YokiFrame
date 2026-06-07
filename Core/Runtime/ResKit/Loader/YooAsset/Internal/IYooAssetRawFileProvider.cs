@@ -1,3 +1,4 @@
+#if YOKIFRAME_YOOASSET_SUPPORT
 using System;
 
 namespace YokiFrame
@@ -17,3 +18,4 @@ namespace YokiFrame
         void ReleaseHandle();
     }
 }
+#endif
