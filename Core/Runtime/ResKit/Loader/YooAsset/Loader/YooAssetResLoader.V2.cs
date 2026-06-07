@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
+#if YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 using Object = UnityEngine.Object;
@@ -23,9 +23,9 @@ namespace YokiFrame
     public class YooAssetResLoader : IResLoader, IAllAssetsLoader, ISubAssetsLoader
     {
         private readonly IResLoaderPool mPool;
-        protected AssetOperationHandle mHandle;
-        protected AllAssetsOperationHandle mAllAssetsHandle;
-        protected SubAssetsOperationHandle mSubAssetsHandle;
+        protected AssetHandle mHandle;
+        protected AllAssetsHandle mAllAssetsHandle;
+        protected SubAssetsHandle mSubAssetsHandle;
 
         public YooAssetResLoader(IResLoaderPool pool)
         {
@@ -64,12 +64,12 @@ namespace YokiFrame
             mAllAssetsHandle = YooAssets.LoadAllAssetsAsync<T>(path);
             mAllAssetsHandle.Completed += handle =>
             {
-                var result = ConvertAllAssets<T>(handle as AllAssetsOperationHandle);
+                var result = ConvertAllAssets<T>(handle as AllAssetsHandle);
                 onComplete?.Invoke(result);
             };
         }
 
-        private static T[] ConvertAllAssets<T>(AllAssetsOperationHandle handle) where T : Object
+        private static T[] ConvertAllAssets<T>(AllAssetsHandle handle) where T : Object
         {
             if (handle == default || handle.Status != EOperationStatus.Succeed)
                 return System.Array.Empty<T>();
@@ -96,12 +96,12 @@ namespace YokiFrame
             mSubAssetsHandle = YooAssets.LoadSubAssetsAsync<T>(path);
             mSubAssetsHandle.Completed += handle =>
             {
-                var result = ConvertSubAssets<T>(handle as SubAssetsOperationHandle);
+                var result = ConvertSubAssets<T>(handle as SubAssetsHandle);
                 onComplete?.Invoke(result);
             };
         }
 
-        private static SubAssetsResult<T> ConvertSubAssets<T>(SubAssetsOperationHandle handle) where T : Object
+        private static SubAssetsResult<T> ConvertSubAssets<T>(SubAssetsHandle handle) where T : Object
         {
             if (handle == default || handle.Status != EOperationStatus.Succeed)
                 return default;

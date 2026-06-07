@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace YokiFrame
     public class YooAssetSceneLoaderUniTask : ISceneResLoaderUniTask
     {
         private readonly ISceneResLoaderPool mPool;
-        private SceneOperationHandle mHandle;
+        private YooAsset.SceneHandle mHandle;
         private bool mIsSuspended;
         private string mScenePath;
         private bool mIsAdditive;
@@ -52,9 +52,8 @@ namespace YokiFrame
             mIsAdditive = isAdditive;
 
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            // 2.x: LoadSceneAsync(path, loadMode, activateOnLoad)
-            bool activateOnLoad = !suspendLoad;
-            mHandle = YooAssets.LoadSceneAsync(scenePath, loadMode, activateOnLoad);
+            // 2.3.x: LoadSceneAsync(path, loadMode, physicsMode, allowSceneActivation)
+            mHandle = YooAssets.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == default)
             {

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -61,12 +61,12 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 获取 YooAsset 配置数据
         /// </summary>
-        private static BundleCollectorSetting YooSetting => BundleCollectorSettingData.Setting;
+        private static AssetBundleCollectorSetting YooSetting => AssetBundleCollectorSettingData.Setting;
 
         /// <summary>
         /// 获取当前选中的 Package
         /// </summary>
-        private BundleCollectorPackage YooCurrentPackage
+        private AssetBundleCollectorPackage YooCurrentPackage
         {
             get
             {
@@ -83,7 +83,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 获取当前选中的 Group
         /// </summary>
-        private BundleCollectorGroup YooCurrentGroup
+        private AssetBundleCollectorGroup YooCurrentGroup
         {
             get
             {
@@ -123,7 +123,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void SaveYooSettings()
         {
-            BundleCollectorSettingData.SaveFile();
+            AssetBundleCollectorSettingData.SaveFile();
             mYooHasUnsavedChanges = false;
             RefreshYooUnsavedLabel();
 
@@ -161,8 +161,8 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void FixYooSettings()
         {
-            BundleCollectorSettingData.FixFile();
-            if (BundleCollectorSettingData.IsDirty)
+            AssetBundleCollectorSettingData.FixFile();
+            if (AssetBundleCollectorSettingData.IsDirty)
             {
                 MarkYooDirty();
             }
@@ -179,7 +179,7 @@ namespace YokiFrame.EditorTools
             if (package == default)
                 return;
 
-            BundleCollectorSettingData.CreateGroup(package, groupName);
+            AssetBundleCollectorSettingData.CreateGroup(package, groupName);
             MarkYooDirty();
             RefreshYooGroupNav();
 
@@ -191,13 +191,13 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 删除分组
         /// </summary>
-        private void DeleteYooGroup(BundleCollectorGroup group)
+        private void DeleteYooGroup(AssetBundleCollectorGroup group)
         {
             var package = YooCurrentPackage;
             if (package == default || group == default)
                 return;
 
-            BundleCollectorSettingData.RemoveGroup(package, group);
+            AssetBundleCollectorSettingData.RemoveGroup(package, group);
             MarkYooDirty();
 
             // 调整选中索引
@@ -219,7 +219,7 @@ namespace YokiFrame.EditorTools
             if (group == default)
                 return;
 
-            var collector = new BundleCollector
+            var collector = new AssetBundleCollector
             {
                 CollectPath = collectPath,
                 CollectorType = ECollectorType.MainAssetCollector,
@@ -228,7 +228,7 @@ namespace YokiFrame.EditorTools
                 FilterRuleName = nameof(CollectAll)
             };
 
-            BundleCollectorSettingData.CreateCollector(group, collector);
+            AssetBundleCollectorSettingData.CreateCollector(group, collector);
             MarkYooDirty();
             RefreshYooCollectorCanvas();
         }
@@ -236,13 +236,13 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 删除收集器
         /// </summary>
-        private void DeleteYooCollector(BundleCollector collector)
+        private void DeleteYooCollector(AssetBundleCollector collector)
         {
             var group = YooCurrentGroup;
             if (group == default || collector == default)
                 return;
 
-            BundleCollectorSettingData.RemoveCollector(group, collector);
+            AssetBundleCollectorSettingData.RemoveCollector(group, collector);
             MarkYooDirty();
             RefreshYooCollectorCanvas();
         }
@@ -252,7 +252,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void CreateYooNewPackage(string packageName)
         {
-            BundleCollectorSettingData.CreatePackage(packageName);
+            AssetBundleCollectorSettingData.CreatePackage(packageName);
             MarkYooDirty();
             RefreshYooPackageDropdown();
 
@@ -274,7 +274,7 @@ namespace YokiFrame.EditorTools
             if (package == default)
                 return;
 
-            BundleCollectorSettingData.RemovePackage(package);
+            AssetBundleCollectorSettingData.RemovePackage(package);
             MarkYooDirty();
 
             // 调整选中索引

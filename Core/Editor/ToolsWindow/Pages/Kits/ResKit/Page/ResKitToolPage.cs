@@ -20,10 +20,11 @@ namespace YokiFrame.EditorTools
     {
         private const float THROTTLE_INTERVAL = 0.5f;
 
+        // 版本守卫统一入口 → YooAssetEditorCapabilities
         private enum WorkspaceTab
         {
             ResourceMonitor,
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT // V2 & V3 均有 Collector 页面
             YooAssetCollector
 #endif
         }
@@ -369,7 +370,7 @@ namespace YokiFrame.EditorTools
         [System.Obsolete("Polling is retained only for unload detection and YooAsset tab refresh fallback.")]
         public override void OnUpdate()
         {
-#if YOKIFRAME_YOOASSET_SUPPORT
+#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER // YooAssetEditorCapabilities.IsV3
             OnYooAssetUpdate();
 #endif
 

@@ -7,14 +7,16 @@ namespace YokiFrame.EditorTools
     public partial class ResKitToolPage
     {
         /// <summary>
-        /// 切换到 YooAsset 资源收集标签页
-        /// </summary>
-        public void SwitchToYooAssetCollector() => mTabView?.SwitchTo(1);
-
-        /// <summary>
         /// 切换到资源监控标签页
         /// </summary>
         public void SwitchToResourceMonitor() => mTabView?.SwitchTo(0);
+
+#if YOOASSET_3_0_OR_NEWER // ← YooAssetEditorCapabilities.HasCollectorUI
+        /// <summary>
+        /// 切换到 YooAsset 资源收集标签页（仅 3.x）
+        /// </summary>
+        public void SwitchToYooAssetCollector() => mTabView?.SwitchTo(1);
+#endif
     }
 }
 #endif

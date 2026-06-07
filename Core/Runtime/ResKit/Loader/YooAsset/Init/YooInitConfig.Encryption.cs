@@ -125,7 +125,7 @@ namespace YokiFrame
         };
 
         #endregion
-#elif YOOASSET_2_3_OR_NEWER
+#else
         #region 加密/解密服务（2.x — IEncryptionServices / IDecryptionServices）
 
         /// <summary>

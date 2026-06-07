@@ -50,8 +50,10 @@ namespace YokiFrame.EditorTools
             // 加密配置
             y = DrawEncryptionConfigIMGUI(position.x, y, width, property);
 
+#if YOOASSET_3_0_OR_NEWER
             // 打包配置
             y = DrawBuildConfigIMGUI(position.x, y, width, property);
+#endif
 
             EditorGUI.EndProperty();
         }
@@ -334,6 +336,7 @@ namespace YokiFrame.EditorTools
 
         #endregion
 
+#if YOOASSET_3_0_OR_NEWER
         #region 打包配置 IMGUI
 
         private static float DrawBuildConfigIMGUI(float x, float y, float width, SerializedProperty property)
@@ -494,6 +497,7 @@ namespace YokiFrame.EditorTools
         }
 
         #endregion
+#endif
     }
 }
 #endif

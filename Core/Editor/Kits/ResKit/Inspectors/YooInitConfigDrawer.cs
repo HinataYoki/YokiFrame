@@ -122,17 +122,12 @@ namespace YokiFrame.EditorTools
                 UpdateEncryptionUI(dynamicContainer, property, (YooEncryptionType)prop.enumValueIndex);
             });
 
-#if YOOASSET_2_3_OR_NEWER
-            // 打包配置卡片（2.x）
-            var buildCard = CreateBuildConfigCard(property);
-            buildCard.style.marginTop = Spacing.MD;
-            root.Add(buildCard);
-#elif YOOASSET_3_0_OR_NEWER
-            // 打包配置卡片（3.x）
-            var buildCard = CreateBuildConfigCardV3(property);
-            buildCard.style.marginTop = Spacing.MD;
-            root.Add(buildCard);
-#endif
+            var buildCard = YooAssetEditorCapabilities.CreateBuildConfigCard(property);
+            if (buildCard != null)
+            {
+                buildCard.style.marginTop = Spacing.MD;
+                root.Add(buildCard);
+            }
 
             return root;
         }

@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
+#if YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System;
 using System.Collections;
 using UnityEngine;
@@ -24,7 +24,7 @@ namespace YokiFrame
     public class YooAssetSceneLoader : ISceneResLoader
     {
         private readonly ISceneResLoaderPool mPool;
-        private SceneOperationHandle mHandle;
+        private YooAsset.SceneHandle mHandle;
         private Action<Scene> mOnComplete;
         private Action<float> mOnProgress;
         private bool mIsSuspended;
@@ -50,10 +50,9 @@ namespace YokiFrame
             mIsAdditive = isAdditive;
 
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-            // 2.x: LoadSceneAsync(path, loadMode, activateOnLoad)
-            // suspendLoad=true 时 activateOnLoad=false，场景加载完成后需手动 ActivateScene()
-            bool activateOnLoad = !suspendLoad;
-            mHandle = YooAssets.LoadSceneAsync(scenePath, loadMode, activateOnLoad);
+            // 2.3.x: LoadSceneAsync(path, loadMode, physicsMode, allowSceneActivation)
+            // suspendLoad 时 allowSceneActivation=false，加载完成后需手动 ActivateScene()
+            mHandle = YooAssets.LoadSceneAsync(scenePath, loadMode, LocalPhysicsMode.None, !suspendLoad);
 
             if (mHandle == default)
             {
@@ -126,7 +125,7 @@ namespace YokiFrame
             mOnProgress?.Invoke(1f);
         }
 
-        private void OnLoadCompleted(SceneOperationHandle handle)
+        private void OnLoadCompleted(YooAsset.SceneHandle handle)
         {
             var scene = handle.SceneObject;
             SceneLoadTracker.OnLoad(this, mScenePath, scene, mIsAdditive);

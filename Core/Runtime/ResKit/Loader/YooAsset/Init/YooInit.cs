@@ -12,7 +12,7 @@ namespace YokiFrame
     /// <param name="config">初始化配置</param>
     /// <returns>初始化操作</returns>
     public delegate InitializePackageOperation CustomInitModeHandler(ResourcePackage package, YooInitConfig config);
-#elif YOOASSET_2_3_OR_NEWER
+#else
     /// <summary>
     /// 自定义初始化模式委托（2.x 版本 — 无 ResourcePackage）
     /// </summary>
@@ -46,7 +46,7 @@ namespace YokiFrame
         /// </summary>
         public static IReadOnlyDictionary<string, ResourcePackage> Packages => sPackages;
         private static readonly Dictionary<string, ResourcePackage> sPackages = new();
-#elif YOOASSET_2_3_OR_NEWER
+#else
         /// <summary>
         /// 默认资源包名称（2.x 无 ResourcePackage 类型）
         /// </summary>
@@ -92,7 +92,7 @@ namespace YokiFrame
         /// 通用自定义初始化处理器（优先级最高）
         /// </summary>
         public static CustomInitModeHandler CustomHandler { get; set; }
-#elif YOOASSET_2_3_OR_NEWER
+#else
         /// <summary>
         /// HostPlayMode 自定义初始化处理器（2.x 版本）
         /// </summary>
@@ -135,7 +135,7 @@ namespace YokiFrame
 #if YOOASSET_3_0_OR_NEWER
             sPackages.Clear();
             DefaultPackage = null;
-#elif YOOASSET_2_3_OR_NEWER
+#else
             sPackageNames.Clear();
             DefaultPackageName = null;
 #endif
@@ -152,7 +152,7 @@ namespace YokiFrame
         public static void Reset()
         {
             Dispose();
-#if YOOASSET_3_0_OR_NEWER || YOOASSET_2_3_OR_NEWER
+#if YOOASSET_3_0_OR_NEWER || !YOOASSET_3_0_OR_NEWER
             HostModeHandler = null;
             WebModeHandler = null;
             CustomHandler = null;
@@ -174,7 +174,7 @@ namespace YokiFrame
         /// 获取内部包字典（内部使用）
         /// </summary>
         internal static Dictionary<string, ResourcePackage> GetPackagesInternal() => sPackages;
-#elif YOOASSET_2_3_OR_NEWER
+#else
         /// <summary>
         /// 设置默认包名称（内部使用）
         /// </summary>

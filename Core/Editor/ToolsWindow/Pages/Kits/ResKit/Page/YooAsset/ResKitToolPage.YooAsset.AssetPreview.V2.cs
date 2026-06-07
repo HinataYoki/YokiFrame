@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -169,7 +169,7 @@ namespace YokiFrame.EditorTools
                     return;
                 }
 
-                IAssetIgnoreRule ignoreRule = BundleCollectorSettingData.GetAssetIgnoreRuleInstance(package.IgnoreRuleName);
+                IIgnoreRule ignoreRule = AssetBundleCollectorSettingData.GetIgnoreRuleInstance(package.IgnoreRuleName);
                 var command = new CollectCommand(package.PackageName, ignoreRule);
                 command.SetFlag(ECollectFlags.IgnoreGetDependencies, true);
                 command.UniqueBundleName = YooSetting.UniqueBundleName;

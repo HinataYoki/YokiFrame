@@ -1,5 +1,6 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
+#if YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System;
+using UnityEngine;
 using YooAsset;
 #if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
@@ -56,7 +57,7 @@ namespace YokiFrame
         /// <summary>
         /// 异步加载原始文件
         /// </summary>
-        public static async UniTask<RawFileOperationHandle> LoadRawAsync(string path, CancellationToken ct = default)
+        public static async UniTask<RawFileHandle> LoadRawAsync(string path, CancellationToken ct = default)
         {
             var handle = YooAssets.LoadRawFileAsync(path);
             await handle.ToUniTask(cancellationToken: ct);
@@ -66,7 +67,7 @@ namespace YokiFrame
         /// <summary>
         /// 异步加载原始文件
         /// </summary>
-        public static IEnumerator LoadRawAsync(string path, Action<RawFileOperationHandle> onComplete)
+        public static IEnumerator LoadRawAsync(string path, Action<RawFileHandle> onComplete)
         {
             var handle = YooAssets.LoadRawFileAsync(path);
             yield return handle;
@@ -80,20 +81,20 @@ namespace YokiFrame
 
 #if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
-        /// 卸载未使用资源
+        /// 卸载未使用资源（所有包）
         /// </summary>
         public static async UniTask UnloadUnusedAssetsAsync()
         {
-            var op = YooAssets.UnloadUnusedAssets();
-            await op.ToUniTask();
+            await Resources.UnloadUnusedAssets().ToUniTask();
         }
 #else
         /// <summary>
-        /// 卸载未使用资源
+        /// 卸载未使用资源（所有包）
         /// </summary>
         public static IEnumerator UnloadUnusedAssetsAsync()
         {
-            yield return YooAssets.UnloadUnusedAssets();
+            var op = Resources.UnloadUnusedAssets();
+            yield return op;
         }
 #endif
 

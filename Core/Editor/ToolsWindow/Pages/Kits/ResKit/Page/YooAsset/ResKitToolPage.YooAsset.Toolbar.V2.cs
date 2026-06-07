@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;

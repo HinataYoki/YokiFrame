@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -283,7 +283,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.PackageName = newName;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
             RefreshYooPackageDropdown();
         }
@@ -297,7 +297,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.EnableAddressable = value;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -310,7 +310,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.LocationToLower = value;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -323,7 +323,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.IncludeAssetGUID = value;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -336,7 +336,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.AutoCollectShaders = value;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -349,7 +349,7 @@ namespace YokiFrame.EditorTools
             }
 
             package.SupportExtensionless = value;
-            BundleCollectorSettingData.ModifyPackage(package);
+            AssetBundleCollectorSettingData.ModifyPackage(package);
             MarkYooDirty();
         }
 
@@ -359,19 +359,19 @@ namespace YokiFrame.EditorTools
 
         private void OnYooUniqueBundleNameChanged(bool value)
         {
-            BundleCollectorSettingData.ModifyUniqueBundleName(value);
+            AssetBundleCollectorSettingData.ModifyUniqueBundleName(value);
             MarkYooDirty();
         }
 
         private void OnYooShowPackageViewChanged(bool value)
         {
-            BundleCollectorSettingData.ModifyShowPackageView(value);
+            AssetBundleCollectorSettingData.ModifyShowPackageView(value);
             MarkYooDirty();
         }
 
         private void OnYooShowEditorAliasChanged(bool value)
         {
-            BundleCollectorSettingData.ModifyShowEditorAlias(value);
+            AssetBundleCollectorSettingData.ModifyShowEditorAlias(value);
             MarkYooDirty();
         }
 

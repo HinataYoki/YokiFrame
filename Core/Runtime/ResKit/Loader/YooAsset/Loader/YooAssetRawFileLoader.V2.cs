@@ -1,4 +1,4 @@
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_2_3_OR_NEWER
+#if YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using System;
 using YooAsset;
 
@@ -19,7 +19,7 @@ namespace YokiFrame
     public class YooAssetRawFileLoader : IRawFileLoader
     {
         protected readonly IRawFileLoaderPool mPool;
-        protected RawFileOperationHandle mHandle;
+        protected RawFileHandle mHandle;
 
         public YooAssetRawFileLoader(IRawFileLoaderPool pool) => mPool = pool;
 

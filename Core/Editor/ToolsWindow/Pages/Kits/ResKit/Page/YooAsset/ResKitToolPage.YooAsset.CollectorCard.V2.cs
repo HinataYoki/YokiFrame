@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
+#if UNITY_EDITOR && YOKIFRAME_YOOASSET_SUPPORT && !YOOASSET_3_0_OR_NEWER
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -140,7 +140,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 创建收集器卡片
         /// </summary>
-        private VisualElement CreateYooCollectorCard(BundleCollector collector, int index)
+        private VisualElement CreateYooCollectorCard(AssetBundleCollector collector, int index)
         {
             var card = new VisualElement();
             card.style.backgroundColor = new StyleColor(new Color(0.22f, 0.22f, 0.24f));
@@ -310,7 +310,7 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// 删除收集器
         /// </summary>
-        private void OnYooDeleteCollector(BundleCollector collector)
+        private void OnYooDeleteCollector(AssetBundleCollector collector)
         {
             if (EditorUtility.DisplayDialog("确认删除", $"确定要删除收集器 \"{collector.CollectPath}\" 吗？", "删除", "取消"))
             {
