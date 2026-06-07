@@ -66,6 +66,15 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
+        /// Clears the saved scroll offset so the next page starts at the top.
+        /// Called when the user manually switches to a different documentation module.
+        /// </summary>
+        private static void ClearSavedScrollOffset()
+        {
+            SessionState.EraseString(SESSION_KEY_SCROLL_OFFSET);
+        }
+
+        /// <summary>
         /// Debounced scroll save — postpones the save until scrolling pauses for 500 ms.
         /// Call from <see cref="OnContentScrollChanged"/>.
         /// </summary>

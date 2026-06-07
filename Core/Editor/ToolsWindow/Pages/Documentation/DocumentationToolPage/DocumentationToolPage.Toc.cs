@@ -268,7 +268,11 @@ namespace YokiFrame.EditorTools
                 }
             });
 
-            item.RegisterCallback<ClickEvent>(_ => SelectModule(index));
+            item.RegisterCallback<ClickEvent>(_ =>
+            {
+                ClearSavedScrollOffset();
+                SelectModule(index);
+            });
             return item;
         }
 
@@ -313,7 +317,6 @@ namespace YokiFrame.EditorTools
             RenderContent(mModules[index]);
 
             SaveSelectedModule(GetModuleKey(mModules[index]));
-            RestoreScrollOffset();
         }
 
         /// <summary>

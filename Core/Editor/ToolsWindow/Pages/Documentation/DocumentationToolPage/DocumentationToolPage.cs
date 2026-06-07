@@ -95,6 +95,7 @@ namespace YokiFrame.EditorTools
             {
                 int restoredIndex = GetRestoredModuleIndex();
                 SelectModule(restoredIndex);
+                RestoreScrollOffset();
             }
         }
 
