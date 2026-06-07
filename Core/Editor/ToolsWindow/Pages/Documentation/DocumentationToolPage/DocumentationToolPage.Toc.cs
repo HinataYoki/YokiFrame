@@ -311,6 +311,9 @@ namespace YokiFrame.EditorTools
 
             mContentScrollView.scrollOffset = Vector2.zero;
             RenderContent(mModules[index]);
+
+            SaveSelectedModule(GetModuleKey(mModules[index]));
+            RestoreScrollOffset();
         }
 
         /// <summary>

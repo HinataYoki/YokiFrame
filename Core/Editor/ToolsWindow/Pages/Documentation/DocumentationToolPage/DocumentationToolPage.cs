@@ -93,7 +93,8 @@ namespace YokiFrame.EditorTools
 
             if (mModules.Count > 0)
             {
-                SelectModule(0);
+                int restoredIndex = GetRestoredModuleIndex();
+                SelectModule(restoredIndex);
             }
         }
 

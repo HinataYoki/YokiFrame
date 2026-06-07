@@ -118,6 +118,8 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private void OnContentScrollChanged(float scrollValue)
         {
+            ScheduleScrollSave();
+
             if (mIsScrollingByClick || mHeadingNavMap.Count == 0) return;
 
             var scrollViewRect = mContentScrollView.contentContainer.worldBound;
