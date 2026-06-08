@@ -10,19 +10,17 @@ namespace YokiFrame.NodeKit.Editor
 {
     public partial class NodeGraphView : GraphView
     {
-        private static Node[] sCopyBuffer;
         private bool mSuppressGraphViewChanges;
-        private readonly GraphGridBackground mGridBackground;
+        private bool mCtrlHeld;
         private NodeGraph mGraph;
         private NodeGraphEditorBase mGraphEditor;
         private Dictionary<Node, NodeView> mNodeViews = new();
         private NodeSearchWindow mSearchWindow;
-        private Vector2 mLastMouseGraphPosition;
-        private bool mHasMouseGraphPosition;
 
         public NodeGraph Graph => mGraph;
         public NodeGraphEditorBase GraphEditor => mGraphEditor;
         internal bool SuppressGraphViewChanges => mSuppressGraphViewChanges;
+        internal bool IsCtrlHeld => mCtrlHeld;
 
         public NodeGraphView()
         {
@@ -33,14 +31,47 @@ namespace YokiFrame.NodeKit.Editor
 
             SetupZoom(NodePreferences.MinZoom, NodePreferences.MaxZoom);
 
-            mGridBackground = new GraphGridBackground(this);
-            Insert(0, mGridBackground);
-            mGridBackground.StretchToParentSize();
-
             AddToClassList("yoki-graph-view");
+
+            // Dot-grid overlay inside contentViewContainer.
+            // The viewTransform (pan/zoom) on contentViewContainer automatically moves
+            // the grid with the nodes. Large fixed size ensures coverage in all directions.
+            var gridTex = NodeGridTexture.GetOrCreate();
+            if (gridTex != default)
+            {
+                const float overlayExtent = 5000f;
+                var gridOverlay = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style =
+                    {
+                        position = Position.Absolute,
+                        width = overlayExtent * 2f,
+                        height = overlayExtent * 2f,
+                        left = -overlayExtent,
+                        top = -overlayExtent,
+                        backgroundImage = new StyleBackground(gridTex)
+                    }
+                };
+                contentViewContainer.Insert(0, gridOverlay);
+            }
+
             graphViewChanged = OnGraphViewChanged;
-            viewTransformChanged += _ => mGridBackground.MarkDirtyRepaint();
             RegisterCallback<MouseMoveEvent>(OnMouseMove);
+            RegisterCallback<KeyDownEvent>(OnCtrlKeyDown);
+            RegisterCallback<KeyUpEvent>(OnCtrlKeyUp);
+        }
+
+        private void OnCtrlKeyDown(KeyDownEvent evt)
+        {
+            if (evt.keyCode is KeyCode.LeftControl or KeyCode.RightControl)
+                mCtrlHeld = true;
+        }
+
+        private void OnCtrlKeyUp(KeyUpEvent evt)
+        {
+            if (evt.keyCode is KeyCode.LeftControl or KeyCode.RightControl)
+                mCtrlHeld = false;
         }
 
         public void SetSearchWindow(NodeSearchWindow searchWindow)
@@ -245,53 +276,6 @@ namespace YokiFrame.NodeKit.Editor
             return result;
         }
 
-        public void CopySelectionNodes()
-        {
-            sCopyBuffer = selection.OfType<NodeView>()
-                .Select(view => view.Target)
-                .Where(node => node != default && node.Graph == mGraph)
-                .ToArray();
-        }
-
-        public void CopyNode(NodeView nodeView)
-        {
-            if (nodeView == default || nodeView.Target == default) return;
-            sCopyBuffer = new[] { nodeView.Target };
-        }
-
-        public void PasteNodes(Vector2 position)
-        {
-            InsertDuplicateNodes(sCopyBuffer, position);
-        }
-
-        public Vector2 GetPreferredPastePosition()
-        {
-            if (mHasMouseGraphPosition)
-                return mLastMouseGraphPosition;
-
-            return contentViewContainer.WorldToLocal(contentRect.center);
-        }
-
-        public void DuplicateSelectionNodes()
-        {
-            var selectedNodes = selection.OfType<NodeView>()
-                .Select(view => view.Target)
-                .Where(node => node != default && node.Graph == mGraph)
-                .ToArray();
-            if (selectedNodes.Length == 0) return;
-
-            var topLeft = selectedNodes
-                .Select(node => node.Position)
-                .Aggregate((a, b) => new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y)));
-
-            InsertDuplicateNodes(selectedNodes, topLeft + new Vector2(30f, 30f));
-        }
-
-        public bool HasCopyBuffer()
-        {
-            return sCopyBuffer != default && sCopyBuffer.Length > 0;
-        }
-
         public void HandleDropOutsidePort(Edge edge, Vector2 position)
         {
             if (!NodePreferences.DragToCreate || mSearchWindow == default) return;
@@ -332,82 +316,6 @@ namespace YokiFrame.NodeKit.Editor
             SaveGraph();
         }
 
-        private void InsertDuplicateNodes(Node[] nodes, Vector2 topLeft)
-        {
-            if (nodes == default || nodes.Length == 0 || mGraph == default) return;
-
-            var validNodes = nodes.Where(node => node != default && node.Graph == mGraph).ToArray();
-            if (validNodes.Length == 0) return;
-
-            var topLeftNode = validNodes
-                .Select(node => node.Position)
-                .Aggregate((a, b) => new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y)));
-
-            var offset = topLeft - topLeftNode;
-            var substitutes = new Dictionary<Node, Node>();
-            var createdViews = new List<NodeView>();
-
-            for (int i = 0; i < validNodes.Length; i++)
-            {
-                var sourceNode = validNodes[i];
-                if (HasDisallowMultipleNodes(sourceNode.GetType())) continue;
-
-                var copy = mGraph.CopyNode(sourceNode);
-                if (copy == default) continue;
-
-                copy.Position = sourceNode.Position + offset;
-                substitutes[sourceNode] = copy;
-                var view = CreateNodeView(copy);
-                if (view != default) createdViews.Add(view);
-            }
-
-            foreach (var pair in substitutes)
-            {
-                var original = pair.Key;
-                var duplicate = pair.Value;
-                foreach (var port in original.Ports)
-                {
-                    if (!port.IsOutput) continue;
-                    var duplicatePort = duplicate.GetOutputPort(port.FieldName);
-                    if (duplicatePort == default) continue;
-
-                    for (int i = 0; i < port.ConnectionCount; i++)
-                    {
-                        var targetPort = port.GetConnection(i);
-                        if (targetPort == default) continue;
-                        if (!substitutes.TryGetValue(targetPort.Node, out var duplicateTargetNode)) continue;
-
-                        var duplicateInputPort = duplicateTargetNode.GetInputPort(targetPort.FieldName);
-                        if (duplicateInputPort == default) continue;
-                        if (!duplicatePort.IsConnectedTo(duplicateInputPort))
-                        {
-                            duplicatePort.Connect(duplicateInputPort);
-                            var sourceReroutePoints = port.GetReroutePoints(i);
-                            var duplicateConnectionIndex = duplicatePort.GetConnectionIndex(duplicateInputPort);
-                            var duplicateReroutePoints = duplicatePort.GetReroutePoints(duplicateConnectionIndex);
-                            if (sourceReroutePoints != default && duplicateReroutePoints != default)
-                                duplicateReroutePoints.AddRange(sourceReroutePoints);
-                        }
-                    }
-                }
-            }
-
-            ClearSelection();
-            for (int i = 0; i < createdViews.Count; i++)
-            {
-                var view = createdViews[i];
-                if (view == default)
-                    continue;
-
-                RefreshNodeView(view.Target);
-                AddToSelection(view);
-            }
-
-            RefreshConnections(validNodes);
-            RefreshConnections(substitutes.Values.ToArray());
-            SaveGraph();
-        }
-
         public void MoveNodeToFront(NodeView nodeView)
         {
             if (nodeView == default) return;
@@ -424,54 +332,5 @@ namespace YokiFrame.NodeKit.Editor
             SaveGraph();
         }
 
-        private void OnMouseMove(MouseMoveEvent evt)
-        {
-            mLastMouseGraphPosition = contentViewContainer.WorldToLocal(evt.mousePosition);
-            mHasMouseGraphPosition = true;
-        }
-
-        private sealed class GraphGridBackground : ImmediateModeElement
-        {
-            private readonly NodeGraphView mOwner;
-
-            public GraphGridBackground(NodeGraphView owner)
-            {
-                mOwner = owner;
-                pickingMode = PickingMode.Ignore;
-            }
-
-            protected override void ImmediateRepaint()
-            {
-                var rect = contentRect;
-                EditorGUI.DrawRect(rect, NodePreferences.GridBgColor);
-
-                Handles.BeginGUI();
-                var oldColor = Handles.color;
-
-                DrawGrid(rect, 20f, NodePreferences.GridLineColor);
-                DrawGrid(rect, 100f, NodePreferences.GridMajorLineColor);
-
-                Handles.color = oldColor;
-                Handles.EndGUI();
-            }
-
-            private void DrawGrid(Rect rect, float spacing, Color color)
-            {
-                var offset = mOwner.contentViewContainer.transform.position;
-                var scale = mOwner.scale;
-                float scaledSpacing = spacing * scale;
-                if (scaledSpacing < 8f) return;
-
-                Handles.color = color;
-
-                float startX = Mathf.Repeat(offset.x, scaledSpacing);
-                for (float x = startX; x < rect.width; x += scaledSpacing)
-                    Handles.DrawLine(new Vector3(x, 0f), new Vector3(x, rect.height));
-
-                float startY = Mathf.Repeat(offset.y, scaledSpacing);
-                for (float y = startY; y < rect.height; y += scaledSpacing)
-                    Handles.DrawLine(new Vector3(0f, y), new Vector3(rect.width, y));
-            }
-        }
     }
 }

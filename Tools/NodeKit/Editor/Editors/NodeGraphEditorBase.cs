@@ -22,6 +22,7 @@ namespace YokiFrame.NodeKit.Editor
 
         protected virtual void OnEnable() { }
 
+        [Obsolete("OnGUI() is a legacy IMGUI callback. Use OnHeaderGUI/OnBodyGUI for UIToolkit-based extensions.")]
         public virtual void OnGUI() { }
 
         public virtual void OnOpen() { }

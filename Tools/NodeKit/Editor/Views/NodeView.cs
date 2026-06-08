@@ -28,6 +28,7 @@ namespace YokiFrame.NodeKit.Editor
             style.borderBottomLeftRadius = 12;
             style.borderBottomRightRadius = 12;
             style.overflow = Overflow.Hidden;
+            RegisterCallback<PointerDownEvent>(OnPointerDown);
             RegisterCallback<PointerUpEvent>(OnPointerUp);
             RegisterCallback<MouseCaptureOutEvent>(OnMouseCaptureOut);
         }
@@ -101,7 +102,7 @@ namespace YokiFrame.NodeKit.Editor
         public override void SetPosition(Rect newPos)
         {
             var position = new Vector2(newPos.x, newPos.y);
-            if (mTarget != default && mGraphView != default && !mGraphView.SuppressGraphViewChanges && NodePreferences.GridSnap)
+            if (mTarget != default && mGraphView != default && !mGraphView.SuppressGraphViewChanges && NodePreferences.GridSnap && !mGraphView.IsCtrlHeld)
             {
                 float snap = NodePreferences.GridSnapSize;
                 position.x = Mathf.Round(position.x / snap) * snap;
@@ -124,6 +125,12 @@ namespace YokiFrame.NodeKit.Editor
                 NodeEditorUtility.SetDirty(mGraphView.Graph);
                 mPositionChanged = true;
             }
+        }
+
+        private void OnPointerDown(PointerDownEvent evt)
+        {
+            if (evt.clickCount == 2 && mGraphView != default && mTarget != default)
+                mGraphView.Home(mTarget);
         }
 
         private void OnPointerUp(PointerUpEvent evt)

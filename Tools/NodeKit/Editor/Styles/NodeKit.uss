@@ -3,13 +3,11 @@
 /* === Graph View === */
 .yoki-graph-view {
     flex-grow: 1;
+    background-color: #1a1a1a;
 }
 
-.yoki-graph-view GridBackground {
-    --grid-background-color: #1a1a1a;
-    --line-color: rgba(255, 255, 255, 0.05);
-    --thick-line-color: rgba(255, 255, 255, 0.1);
-    --spacing: 20;
+.yoki-grid-overlay {
+    background-color: rgba(0, 0, 0, 0);
 }
 
 /* === Toolbar === */

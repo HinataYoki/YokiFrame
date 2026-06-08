@@ -78,5 +78,5 @@ crashlytics-build.properties
 .kiro/
 AssemblyInfo.cs
 AssemblyInfo.cs.meta
-Tests
-/Tests.meta
+**/Tests/
+**/Tests.meta

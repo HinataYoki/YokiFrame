@@ -117,9 +117,12 @@ namespace YokiFrame.NodeKit.Editor
             set => EditorPrefs.SetBool(KeyPrefix + "GridSnap", value);
         }
 
+        // TODO: ZoomToMouse requires replacing ContentZoomer with a custom implementation
+        // that adjusts viewTransform.position based on mouse position during zoom.
+        // The current ContentZoomer is a black-box manipulator that cannot be easily extended.
         public static bool ZoomToMouse
         {
-            get => EditorPrefs.GetBool(KeyPrefix + "ZoomToMouse", true);
+            get => EditorPrefs.GetBool(KeyPrefix + "ZoomToMouse", false);
             set => EditorPrefs.SetBool(KeyPrefix + "ZoomToMouse", value);
         }
 

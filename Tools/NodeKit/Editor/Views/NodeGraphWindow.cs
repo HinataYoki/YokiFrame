@@ -15,7 +15,6 @@ namespace YokiFrame.NodeKit.Editor
         private NodeGraphView mGraphView;
         private NodeSearchWindow mSearchWindow;
         private NodeGraph mCurrentGraph;
-        private IMGUIContainer mOverlayGui;
 
         static NodeGraphWindow()
         {
@@ -92,8 +91,6 @@ public static bool OnOpenAsset(int instanceId, int line)
             EditorApplication.projectChanged -= OnProjectChanged;
             if (mGraphView != default)
                 rootVisualElement.Remove(mGraphView);
-            if (mOverlayGui != default)
-                rootVisualElement.Remove(mOverlayGui);
         }
 
         private void OnFocus()
@@ -120,13 +117,6 @@ public static bool OnOpenAsset(int instanceId, int line)
             mGraphView.RegisterCallback<DragPerformEvent>(OnDragPerform);
             rootVisualElement.Add(mGraphView);
             mGraphView.RegisterCallback<KeyDownEvent>(OnKeyDown);
-
-            mOverlayGui = new IMGUIContainer(DrawOverlayGUI)
-            {
-                pickingMode = PickingMode.Ignore
-            };
-            mOverlayGui.StretchToParentSize();
-            rootVisualElement.Add(mOverlayGui);
         }
 
         private void CreateToolbar()
@@ -249,14 +239,6 @@ public static bool OnOpenAsset(int instanceId, int line)
                 mGraphView.SaveGraph();
                 evt.StopPropagation();
             }
-        }
-
-        private void DrawOverlayGUI()
-        {
-            if (mGraphView?.GraphEditor == default)
-                return;
-
-            mGraphView.GraphEditor.OnGUI();
         }
 
         private void OnDragUpdated(DragUpdatedEvent evt)
