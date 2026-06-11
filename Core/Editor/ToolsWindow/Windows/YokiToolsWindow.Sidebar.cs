@@ -89,14 +89,23 @@ namespace YokiFrame.EditorTools
         {
             var docPages = new List<(int index, YokiPageInfo info)>();
             var toolPages = new List<(int index, YokiPageInfo info)>();
+            var systemPages = new List<(int index, YokiPageInfo info)>();
 
             for (int i = 0; i < mPageInfos.Count; i++)
             {
                 var info = mPageInfos[i];
-                if (info.Category == YokiPageCategory.Documentation)
-                    docPages.Add((i, info));
-                else
-                    toolPages.Add((i, info));
+                switch (info.Category)
+                {
+                    case YokiPageCategory.Documentation:
+                        docPages.Add((i, info));
+                        break;
+                    case YokiPageCategory.System:
+                        systemPages.Add((i, info));
+                        break;
+                    default:
+                        toolPages.Add((i, info));
+                        break;
+                }
             }
 
             // 文档分组
@@ -123,6 +132,19 @@ namespace YokiFrame.EditorTools
                     toolsGroup.Add(item);
                 }
                 mSidebarListContainer.Add(toolsGroup);
+            }
+
+            // 系统分组
+            if (systemPages.Count > 0)
+            {
+                var systemGroup = CreateSidebarGroup(KitIcons.SETTINGS, "系统", systemPages.Count, "system");
+                for (int i = 0; i < systemPages.Count; i++)
+                {
+                    var (index, info) = systemPages[i];
+                    var item = CreateSidebarItem(info, index, "system");
+                    systemGroup.Add(item);
+                }
+                mSidebarListContainer.Add(systemGroup);
             }
         }
 

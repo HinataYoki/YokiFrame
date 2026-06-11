@@ -16,7 +16,12 @@ namespace YokiFrame.EditorTools
         /// <summary>
         /// Interactive tool page.
         /// </summary>
-        Tool = 1
+        Tool = 1,
+
+        /// <summary>
+        /// System / global function page (e.g. skill installer, settings).
+        /// </summary>
+        System = 2
     }
 
     /// <summary>
