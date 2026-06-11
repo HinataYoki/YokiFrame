@@ -19,10 +19,10 @@ namespace YokiFrame
     {
         private const string SKILL_FILE = "SKILL.md";
 
-        private static readonly (string skillName, string srcPath, string label)[] sSkills =
+        private static readonly (string skillName, string label)[] sSkills =
         {
-            ("yokiframe",         "Assets/YokiFrame/Core/Editor/Skills/yokiframe/SKILL.md",         "框架 Skill"),
-            ("yokiframe-editor",  "Assets/YokiFrame/Core/Editor/Skills/yokiframe-editor/SKILL.md",   "编辑器 Skill"),
+            ("yokiframe",         "框架 Skill"),
+            ("yokiframe-editor",  "编辑器 Skill"),
         };
 
         private static readonly (string name, string dir, string icon)[] sTools =
@@ -54,9 +54,52 @@ namespace YokiFrame
 
         // ---- 便利属性 ----
         private string CurrentSkillName => sSkills[mSelectedSkillIndex].skillName;
-        private string CurrentTemplateFullPath =>
-            Path.GetFullPath(Path.Combine(Application.dataPath,
-                sSkills[mSelectedSkillIndex].srcPath.Replace("Assets/", ""))).Replace("\\", "/");
+
+        /// <summary>
+        /// 通过脚本自身位置推导模板路径（兼容 Assets/ 和 Packages/ 两种安装方式）。
+        /// </summary>
+        private string CurrentTemplateFullPath
+        {
+            get
+            {
+                var skillsDir = GetSkillsDirectory();
+                var fileName = $"{CurrentSkillName}/{SKILL_FILE}";
+                return Path.GetFullPath(Path.Combine(skillsDir, fileName)).Replace("\\", "/");
+            }
+        }
+
+        private static string sCachedSkillsDir;
+
+        /// <summary>
+        /// 通过 AssetDatabase 定位本脚本，推导 Core/Editor/Skills 目录。
+        /// 结果缓存于静态字段，仅首次调用时执行 AssetDatabase 查找。
+        /// </summary>
+        private static string GetSkillsDirectory()
+        {
+            if (!string.IsNullOrEmpty(sCachedSkillsDir))
+                return sCachedSkillsDir;
+
+            var guids = AssetDatabase.FindAssets("AISkillToolPage t:MonoScript");
+            if (guids.Length > 0)
+            {
+                var scriptPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                // scriptPath:  .../Core/Editor/ToolsWindow/Pages/System/AISkillToolPage/AISkillToolPage.cs
+                var scriptDir = Path.GetDirectoryName(scriptPath);
+                // 上溯 4 级到 Core/Editor
+                var editorDir = Path.GetDirectoryName(Path.GetDirectoryName(
+                    Path.GetDirectoryName(Path.GetDirectoryName(scriptDir))));
+                if (!string.IsNullOrEmpty(editorDir))
+                {
+                    sCachedSkillsDir = Path.GetFullPath(Path.Combine(editorDir, "Skills")).Replace("\\", "/");
+                    return sCachedSkillsDir;
+                }
+            }
+
+            // 最终 fallback（不应到达）
+            sCachedSkillsDir = Path.GetFullPath(Path.Combine(Application.dataPath,
+                "YokiFrame/Core/Editor/Skills")).Replace("\\", "/");
+            return sCachedSkillsDir;
+        }
 
         protected override void BuildUI(VisualElement root)
         {
