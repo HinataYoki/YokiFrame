@@ -13,7 +13,7 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "状态消息系统",
-                Description = "状态机支持向当前状态发送消息，实现状态间通信。",
+                Description = "状态机支持向当前状态发送消息，实现状态间通信。状态通过重写 OnMessage<TMsg> 处理消息。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
@@ -27,10 +27,10 @@ public struct DamageMessage
 }
 
 // 向当前状态发送消息
-mFsm.SendMessage(new DamageMessage 
-{ 
-    Damage = 50, 
-    Source = attacker 
+mFsm.SendMessage(new DamageMessage
+{
+    Damage = 50,
+    Source = attacker
 });
 
 // 发送简单消息
@@ -41,10 +41,13 @@ mFsm.SendMessage(100); // int 消息",
                     new()
                     {
                         Title = "状态接收消息",
-                        Code = @"public class CombatState : AbstractState<PlayerState, Player>
+                        Code = @"public class CombatState : AbstractState<PlayerState, PlayerController>
 {
-    // 重写 SendMessage 处理消息
-    public override void SendMessage<TMsg>(TMsg message)
+    public CombatState(FSM<PlayerState> fsm, PlayerController black)
+        : base(fsm, black) { }
+
+    // 重写 OnMessage 处理消息
+    protected override void OnMessage<TMsg>(TMsg message)
     {
         switch (message)
         {
@@ -56,17 +59,17 @@ mFsm.SendMessage(100); // int 消息",
                 break;
         }
     }
-    
+
     private void HandleDamage(DamageMessage msg)
     {
-        mTarget.Health -= msg.Damage;
-        if (mTarget.Health <= 0)
+        mBlack.Health -= msg.Damage;
+        if (mBlack.Health <= 0)
         {
-            mFsm.Change(PlayerState.Dead);
+            mFSM.Change(PlayerState.Dead);
         }
     }
 }",
-                        Explanation = "状态通过重写 SendMessage 方法接收并处理消息。"
+                        Explanation = "状态通过重写 OnMessage<TMsg> 方法接收并处理消息。注意：基类中 SendMessage 为非虚方法，应重写 OnMessage。"
                     },
                     new()
                     {
@@ -75,16 +78,14 @@ mFsm.SendMessage(100); // int 消息",
 public class EnemyAI
 {
     private FSM<AIState> mFsm;
-    
+
     public void OnPlayerDetected(Player player)
     {
-        // 通知当前状态发现玩家
         mFsm.SendMessage(new PlayerDetectedMsg { Player = player });
     }
-    
+
     public void OnDamaged(int damage)
     {
-        // 通知当前状态受到伤害
         mFsm.SendMessage(new DamageMsg { Amount = damage });
     }
 }
@@ -92,16 +93,18 @@ public class EnemyAI
 // 巡逻状态处理消息
 public class PatrolState : AbstractState<AIState, EnemyAI>
 {
-    public override void SendMessage<TMsg>(TMsg message)
+    public PatrolState(FSM<AIState> fsm, EnemyAI black)
+        : base(fsm, black) { }
+
+    protected override void OnMessage<TMsg>(TMsg message)
     {
-        if (message is PlayerDetectedMsg detected)
+        if (message is PlayerDetectedMsg)
         {
-            // 发现玩家，切换到追击状态
-            mFsm.Change(AIState.Chase);
+            mFSM.Change(AIState.Chase);
         }
     }
 }",
-                        Explanation = "消息系统适合处理外部事件触发的状态转换。"
+                        Explanation = "消息系统适合处理外部事件触发的状态转换。使用 SendMessage 发送，OnMessage 接收。"
                     }
                 }
             };

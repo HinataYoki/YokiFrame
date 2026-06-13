@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// Advanced EventKit documentation.
+    /// EventKit 高级用法文档。
     /// </summary>
     internal static class EventKitDocAdvanced
     {
@@ -12,13 +12,13 @@ namespace YokiFrame.EditorTools
         {
             return new DocSection
             {
-                Title = "Advanced Usage",
-                Description = "Variadic events, bulk unregister flows, and the editor-side communication layer.",
+                Title = "高级用法",
+                Description = "可变参数事件、批量注销以及生命周期绑定。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "Variadic Event",
+                        Title = "可变参数事件",
                         Code = @"EventKit.Enum.Send(GameEvent.Custom, ""arg1"", 100, true);
 
 EventKit.Enum.Register<GameEvent>(GameEvent.Custom, args =>
@@ -27,66 +27,32 @@ EventKit.Enum.Register<GameEvent>(GameEvent.Custom, args =>
     int num = (int)args[1];
     bool flag = (bool)args[2];
 });",
-                        Explanation = "Variadic events pass payloads through object arrays and require manual casting."
+                        Explanation = "可变参数事件通过 object[] 传递参数，接收方需手动转型。"
                     },
                     new()
                     {
-                        Title = "Bulk Unregister",
-                        Code = @"EventKit.Enum.UnRegister(GameEvent.PlayerDied);
+                        Title = "批量注销",
+                        Code = @"// 注销指定事件的所有监听者
+EventKit.Enum.UnRegister(GameEvent.PlayerDied);
+
+// 清空全部枚举事件
 EventKit.Enum.Clear();
+
+// 清空全部类型事件
 EventKit.Type.Clear();",
-                        Explanation = "Clear-style APIs remove all registered handlers and should be used carefully."
+                        Explanation = "Clear 类 API 会移除所有已注册的处理者，应谨慎使用。"
                     },
                     new()
                     {
-                        Title = "LinkUnRegister",
-                        Code = @"var unregister = EventKit.Type.Register<PlayerData>(OnPlayerDataChanged);
-unregister.UnRegister();
-
+                        Title = "生命周期绑定",
+                        Code = @"// 注册事件并绑定到 GameObject 生命周期
 EventKit.Type.Register<PlayerData>(OnPlayerDataChanged)
-    .UnRegisterWhenGameObjectDestroyed(gameObject);",
-                        Explanation = "LinkUnRegister helps tie event subscriptions to object lifetime."
-                    },
-                    new()
-                    {
-                        Title = "EditorEventCenter",
-                        Code = @"#if UNITY_EDITOR
-using YokiFrame.EditorTools;
+    .UnRegisterWhenGameObjectDestroyed(gameObject);
 
-var subscription = EditorEventCenter.Register<MyEditorEvent>(OnMyEvent);
-
-EditorEventCenter.Register<EditorEventType, string>(
-    EditorEventType.PoolListChanged,
-    OnPoolListChanged);
-
-EditorEventCenter.Send(new MyEditorEvent { Data = ""test"" });
-EditorEventCenter.Send(EditorEventType.PoolListChanged, ""poolName"");
-
-subscription.Dispose();
-EditorEventCenter.UnregisterAll(this);
-#endif",
-                        Explanation = "EditorEventCenter is the editor-only typed event hub and stays independent from runtime EventKit."
-                    },
-                    new()
-                    {
-                        Title = "EditorDataBridge",
-                        Code = @"#if UNITY_EDITOR
-using YokiFrame.EditorTools;
-
-var subscription = EditorDataBridge.Subscribe<PoolDebugInfo>(
-    DataChannels.POOL_LIST_CHANGED,
-    OnPoolListChanged);
-
-EditorDataBridge.NotifyDataChanged(DataChannels.POOL_LIST_CHANGED, poolInfo);
-
-// Example shared channels:
-// DataChannels.POOL_LIST_CHANGED
-// DataChannels.POOL_ACTIVE_CHANGED
-// DataChannels.POOL_EVENT_LOGGED
-// DataChannels.FSM_STATE_CHANGED
-// DataChannels.RES_LIST_CHANGED
-#endif",
-                        Explanation = "EditorDataBridge is the shared editor data bus used by runtime debug publishers and tool pages."
+// 手动注销
+var unregister = EventKit.Type.Register<PlayerData>(OnPlayerDataChanged);
+unregister.UnRegister();",
+                        Explanation = "UnRegisterWhenGameObjectDestroyed 在 GameObject 销毁时自动注销，避免空引用。"
                     }
                 }
             };

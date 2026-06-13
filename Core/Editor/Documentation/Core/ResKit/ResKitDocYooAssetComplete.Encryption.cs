@@ -16,15 +16,14 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "  YooInit 加密配置",
-                Description = "Inspector 会根据加密类型动态显示对应配置项。",
+                Description = "YooInitConfig 内置 XOR / FileOffset / AES 三种加密方案（版本无关），Inspector 会根据加密类型动态显示对应配置项。自定义加密的 API 在 2.x 和 3.x 中不同。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "内置加密类型",
+                        Title = "内置加密类型（版本无关）",
                         Code = @"// ---------- XOR 流式加密（推荐）----------
-// 性能好，安全性适中
-// 密钥种子通过 SHA256 生成 32 字节密钥
+// 性能好，安全性适中，密钥种子通过 SHA256 生成 32 字节密钥
 var xorConfig = new YooInitConfig
 {
     EncryptionType = YooEncryptionType.XorStream,
@@ -32,17 +31,15 @@ var xorConfig = new YooInitConfig
 };
 
 // ---------- 文件偏移 ----------
-// 仅防止直接打开，无实际加密
-// 适合简单防护场景
+// 仅防止直接打开，无实际加密，适合简单防护
 var offsetConfig = new YooInitConfig
 {
     EncryptionType = YooEncryptionType.FileOffset,
-    FileOffset = 64  // 可选：16/32/64/128/256/512/1024（2 的幂）
+    FileOffset = 64  // 可选：16/32/64/128/256/512/1024
 };
 
 // ---------- AES 加密 ----------
-// 安全性高，但性能开销大
-// 密码和盐值通过 PBKDF2 派生密钥
+// 安全性高，性能开销较大，密码和盐值通过 PBKDF2 派生密钥
 var aesConfig = new YooInitConfig
 {
     EncryptionType = YooEncryptionType.Aes,
@@ -50,196 +47,131 @@ var aesConfig = new YooInitConfig
     AesSalt = ""MySalt88""  // 至少 8 字节
 };
 
-// ---------- 获取加密/解密服务 ----------
-IEncryptionServices encryptor = config.CreateEncryptionServices();
-IDecryptionServices decryptor = config.CreateDecryptionServices();",
-                        Explanation = "Inspector 使用 UIToolkit 绘制，FileOffset 使用下拉选择确保值为 2 的幂。"
+// 以上三种方案直接传入 InitAsync 即可，无需手写加密类
+await YooInit.InitAsync(xorConfig);",
+                        Explanation = "内置方案无需关心 YooAsset 版本差异，YooInitConfig 自动处理 2.x 和 3.x 的加密服务创建。"
                     },
                     new()
                     {
-                        Title = "自定义加密",
-                        Code = @"// ============================================================
-// 自定义加密方案
-// 通过静态委托注册自定义加密/解密服务
-// ============================================================
-
-// ---------- 1. 配置使用自定义加密类型 ----------
+                        Title = "自定义加密（YooAsset 3.x — IBundleEncryptor / IBundleDecryptor）",
+                        Code = @"// 3.x 使用 IBundleEncryptor（构建时）和 IBundleDecryptor（运行时）
 var config = new YooInitConfig
 {
     EncryptionType = YooEncryptionType.Custom
 };
 
-// ---------- 2. 注册自定义加密服务工厂（构建时使用）----------
-YooInitConfig.CustomEncryptionFactory = cfg => new MyCustomEncryption();
+// 注册自定义解密器工厂（运行时）
+YooInitConfig.CustomDecryptorFactory = cfg => new MyBundleDecryptor();
 
-// ---------- 3. 注册自定义解密服务工厂（运行时使用）----------
-YooInitConfig.CustomDecryptionFactory = cfg => new MyCustomDecryption();
+// 注册自定义加密器工厂（构建时，仅 Editor 需要）
+YooInitConfig.CustomEncryptorFactory = cfg => new MyBundleEncryptor();
 
-// ---------- 4. 初始化 YooAsset ----------
-await YooInit.InitAsync(config);",
-                        Explanation = "自定义加密需要在调用 InitAsync 或 CreateEncryptionServices/CreateDecryptionServices 前注册工厂委托。"
-                    },
-                    new()
-                    {
-                        Title = "自定义加密类实现",
-                        Code = @"using System.IO;
-using YooAsset;
+await YooInit.InitAsync(config);
 
-/// <summary>
-/// 自定义加密服务（构建时使用）
-/// </summary>
-public class MyCustomEncryption : IEncryptionServices
+// ---------- 自定义解密器实现示例 ----------
+public class MyBundleDecryptor : IBundleDecryptor
 {
-    /// <summary>
-    /// 加密文件
-    /// </summary>
-    public EncryptResult Encrypt(EncryptFileInfo fileInfo)
-    {
-        // 读取原始文件数据
-        var fileData = File.ReadAllBytes(fileInfo.FilePath);
-        
-        // 执行自定义加密算法
-        var encryptedData = MyEncryptAlgorithm(fileData);
-        
-        // 返回加密结果
-        return new EncryptResult
-        {
-            Encrypted = true,
-            EncryptedData = encryptedData
-        };
-    }
-    
-    private byte[] MyEncryptAlgorithm(byte[] data)
-    {
-        // 实现自定义加密逻辑
-        // 示例：简单的字节翻转
-        var result = new byte[data.Length];
-        for (int i = 0; i < data.Length; i++)
-        {
-            result[i] = (byte)(data[i] ^ 0xFF);
-        }
-        return result;
-    }
-}
-
-/// <summary>
-/// 自定义解密服务（运行时使用）
-/// </summary>
-public class MyCustomDecryption : IDecryptionServices
-{
-    /// <summary>
-    /// 获取 Bundle 文件的加载方法
-    /// </summary>
     public AssetBundle LoadAssetBundle(DecryptFileInfo fileInfo, out Stream managedStream)
     {
-        // 读取加密文件
-        var encryptedData = File.ReadAllBytes(fileInfo.FileLoadPath);
-        
-        // 执行解密
-        var decryptedData = MyDecryptAlgorithm(encryptedData);
-        
-        // 从内存加载 AssetBundle
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
         managedStream = null;
-        return AssetBundle.LoadFromMemory(decryptedData);
+        return AssetBundle.LoadFromMemory(data);
     }
-    
-    /// <summary>
-    /// 异步获取 Bundle 文件的加载方法
-    /// </summary>
-    public AssetBundleCreateRequest LoadAssetBundleAsync(DecryptFileInfo fileInfo, out Stream managedStream)
+
+    public AssetBundleCreateRequest LoadAssetBundleAsync(
+        DecryptFileInfo fileInfo, out Stream managedStream)
     {
-        var encryptedData = File.ReadAllBytes(fileInfo.FileLoadPath);
-        var decryptedData = MyDecryptAlgorithm(encryptedData);
-        
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
         managedStream = null;
-        return AssetBundle.LoadFromMemoryAsync(decryptedData);
+        return AssetBundle.LoadFromMemoryAsync(data);
     }
-    
-    /// <summary>
-    /// 获取原始文件的字节数据
-    /// </summary>
+
     public byte[] ReadFileData(DecryptFileInfo fileInfo)
     {
-        var encryptedData = File.ReadAllBytes(fileInfo.FileLoadPath);
-        return MyDecryptAlgorithm(encryptedData);
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
+        return data;
     }
-    
-    /// <summary>
-    /// 获取原始文件的文本数据
-    /// </summary>
+
     public string ReadFileText(DecryptFileInfo fileInfo)
+        => Encoding.UTF8.GetString(ReadFileData(fileInfo));
+
+    private void DecryptInPlace(byte[] data)
     {
-        var data = ReadFileData(fileInfo);
-        return System.Text.Encoding.UTF8.GetString(data);
-    }
-    
-    private byte[] MyDecryptAlgorithm(byte[] data)
-    {
-        // 实现自定义解密逻辑（与加密算法对应）
-        var result = new byte[data.Length];
         for (int i = 0; i < data.Length; i++)
-        {
-            result[i] = (byte)(data[i] ^ 0xFF);
-        }
-        return result;
+            data[i] ^= 0xFF;
     }
 }",
-                        Explanation = "IEncryptionServices 用于构建时加密资源，IDecryptionServices 用于运行时解密资源。两者的算法必须对应。"
+                        Explanation = "3.x 工厂属性名为 CustomDecryptorFactory / CustomEncryptorFactory，接口名为 IBundleDecryptor / IBundleEncryptor。注意与 2.x 的命名区别。"
                     },
                     new()
                     {
-                        Title = "自定义加密完整流程",
-                        Code = @"// ============================================================
-// 自定义加密完整流程示例
-// ============================================================
-
-public class GameBoot : MonoBehaviour
+                        Title = "自定义加密（YooAsset 2.3.x — IEncryptionServices / IDecryptionServices）",
+                        Code = @"// 2.3.x 使用 IEncryptionServices（构建时）和 IDecryptionServices（运行时）
+var config = new YooInitConfig
 {
-    [SerializeField] private YooInitConfig mConfig;
-    
-    private async void Start()
+    EncryptionType = YooEncryptionType.Custom
+};
+
+// 注册自定义解密服务工厂（运行时）
+YooInitConfig.CustomDecryptionFactory = cfg => new MyDecryptionService();
+
+// 注册自定义加密服务工厂（构建时，仅 Editor 需要）
+YooInitConfig.CustomEncryptionFactory = cfg => new MyEncryptionService();
+
+await YooInit.InitAsync(config);
+
+// ---------- 自定义加密服务实现示例 ----------
+public class MyEncryptionService : IEncryptionServices
+{
+    public EncryptResult Encrypt(EncryptFileInfo fileInfo)
     {
-        // 1. 注册自定义解密服务（运行时只需要解密）
-        YooInitConfig.CustomDecryptionFactory = cfg => new MyCustomDecryption();
-        
-        // 2. 初始化 YooAsset
-        await YooInit.InitAsync(mConfig);
-        
-        // 3. 正常使用资源加载
-        YooInitUIKitExt.ConfigureUIKit();
-        YooInitSceneKitExt.ConfigureSceneKit();
+        var data = File.ReadAllBytes(fileInfo.FilePath);
+        for (int i = 0; i < data.Length; i++)
+            data[i] ^= 0xFF;
+        return new EncryptResult { Encrypted = true, EncryptedData = data };
     }
 }
 
-// ============================================================
-// 构建管线中使用自定义加密
-// ============================================================
-#if UNITY_EDITOR
-public static class BuildPipelineHelper
+public class MyDecryptionService : IDecryptionServices
 {
-    public static void BuildWithCustomEncryption()
+    public AssetBundle LoadAssetBundle(DecryptFileInfo fileInfo,
+        out Stream managedStream)
     {
-        var config = new YooInitConfig
-        {
-            EncryptionType = YooEncryptionType.Custom
-        };
-        
-        // 注册自定义加密服务
-        YooInitConfig.CustomEncryptionFactory = cfg => new MyCustomEncryption();
-        
-        // 获取加密服务用于构建
-        var encryptionServices = config.CreateEncryptionServices();
-        
-        // 在 YooAsset 构建参数中使用
-        var buildParams = new BuildParameters
-        {
-            // ... 其他参数
-            EncryptionServices = encryptionServices
-        };
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
+        managedStream = null;
+        return AssetBundle.LoadFromMemory(data);
     }
-}
-#endif",
-                        Explanation = "运行时只需注册 CustomDecryptionFactory，构建时需要注册 CustomEncryptionFactory。"
+
+    public AssetBundleCreateRequest LoadAssetBundleAsync(
+        DecryptFileInfo fileInfo, out Stream managedStream)
+    {
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
+        managedStream = null;
+        return AssetBundle.LoadFromMemoryAsync(data);
+    }
+
+    public byte[] ReadFileData(DecryptFileInfo fileInfo)
+    {
+        var data = File.ReadAllBytes(fileInfo.FileLoadPath);
+        DecryptInPlace(data);
+        return data;
+    }
+
+    public string ReadFileText(DecryptFileInfo fileInfo)
+        => Encoding.UTF8.GetString(ReadFileData(fileInfo));
+
+    private void DecryptInPlace(byte[] data)
+    {
+        for (int i = 0; i < data.Length; i++)
+            data[i] ^= 0xFF;
+    }
+}",
+                        Explanation = "2.3.x 工厂属性名为 CustomEncryptionFactory / CustomDecryptionFactory，接口名为 IEncryptionServices / IDecryptionServices。与 3.x 的命名不同但功能对等。"
                     }
                 }
             };

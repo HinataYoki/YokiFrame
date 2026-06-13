@@ -22,7 +22,6 @@ namespace YokiFrame.EditorTools
                         Code = @"// 创建独立的事件实例
 private readonly EasyEvent mOnDeath = new();
 private readonly EasyEvent<int> mOnHealthChanged = new();
-private readonly EasyEvent<int, string> mOnItemAdded = new();
 
 // 注册
 mOnDeath.Register(OnDeath);
@@ -31,12 +30,11 @@ mOnHealthChanged.Register(OnHealthChanged);
 // 触发
 mOnDeath.Trigger();
 mOnHealthChanged.Trigger(currentHealth);
-mOnItemAdded.Trigger(itemId, itemName);
 
 // 注销
 mOnDeath.UnRegister(OnDeath);
 mOnDeath.UnRegisterAll(); // 注销所有监听者",
-                        Explanation = "EasyEvent 适合在类内部使用，不需要全局事件总线的场景。"
+                        Explanation = "EasyEvent 适合在类内部使用，不需要全局事件总线的场景。EasyEvent 无泛型参数，EasyEvent<T> 支持单个参数。"
                     }
                 }
             };

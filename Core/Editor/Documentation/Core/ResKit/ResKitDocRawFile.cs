@@ -74,10 +74,9 @@ ResKit.SetRawFileLoaderPool(new CustomRawFileLoaderPool());
 // 获取当前原始文件加载池
 var pool = ResKit.GetRawFileLoaderPool();
 
-#if YOKIFRAME_YOOASSET_SUPPORT
-// 使用 YooAsset 原始文件加载池
-var package = YooAssets.GetPackage(""DefaultPackage"");
-ResKit.SetRawFileLoaderPool(new YooAssetRawFileLoaderUniTaskPool(package));
+#if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
+// 使用 YooAsset 原始文件加载池（UniTask 版本，无参构造）
+ResKit.SetRawFileLoaderPool(new YooAssetRawFileLoaderUniTaskPool());
 
 // YooAsset 方式加载原始文件
 var jsonText = ResKit.LoadRawFileText(""Assets/GameRes/Config/settings.json"");

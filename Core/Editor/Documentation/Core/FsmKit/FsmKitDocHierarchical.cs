@@ -13,7 +13,7 @@ namespace YokiFrame.EditorTools
             return new DocSection
             {
                 Title = "层级状态机",
-                Description = "HierarchicalSM 支持状态嵌套和状态机嵌套。可以管理 IState 状态和 IFSM 子状态机，父状态的逻辑会在子状态之前执行。",
+                Description = "HierarchicalSM<TEnum> 支持状态嵌套。所有已注册的状态并行运行，通过 Change(id, state) 控制各状态的生命周期。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
@@ -21,81 +21,69 @@ namespace YokiFrame.EditorTools
                         Title = "创建层级状态机",
                         Code = @"public enum CharacterState
 {
-    // 父状态
     Grounded,
     Airborne,
-    
-    // Grounded 的子状态
     Idle,
     Walk,
     Run,
-    
-    // Airborne 的子状态
     Jump,
-    Fall
+    Fall,
+    Combat
 }
 
 var hsm = new HierarchicalSM<CharacterState>();
 
-// 添加父状态（可以是 IState 或 IFSM）
-hsm.AddState(CharacterState.Grounded, new GroundedState());
-hsm.AddState(CharacterState.Airborne, new AirborneState());
+// 添加状态，所有状态并行运行
+hsm.Add(CharacterState.Grounded, new GroundedState(hsm, this));
+hsm.Add(CharacterState.Airborne, new AirborneState(hsm, this));
+hsm.Add(CharacterState.Idle, new IdleState(hsm, this));
+hsm.Add(CharacterState.Walk, new WalkState(hsm, this));
+hsm.Add(CharacterState.Jump, new JumpState(hsm, this));
 
-// 添加子状态（指定父状态）
-hsm.AddState(CharacterState.Idle, new IdleState(), CharacterState.Grounded);
-hsm.AddState(CharacterState.Walk, new WalkState(), CharacterState.Grounded);
-hsm.AddState(CharacterState.Run, new RunState(), CharacterState.Grounded);
+// 启动层级状态机
+hsm.Start();
 
-hsm.AddState(CharacterState.Jump, new JumpState(), CharacterState.Airborne);
-hsm.AddState(CharacterState.Fall, new FallState(), CharacterState.Airborne);
-
-// 启动
-hsm.Start(CharacterState.Idle);",
-                        Explanation = "层级状态机可以管理 IState 和 IFSM，子状态会继承父状态的行为。"
+// 控制各状态运行/挂起/停止
+hsm.Change(CharacterState.Idle, MachineState.Running);
+hsm.Change(CharacterState.Walk, MachineState.Suspend);",
+                        Explanation = "层级状态机中所有状态并行运行。Change(id, MachineState) 控制每个状态的生命周期状态（Running/Suspend/End）。"
                     },
                     new()
                     {
-                        Title = "父状态实现",
-                        Code = @"public class GroundedState : AbstractState<CharacterState>
+                        Title = "状态实现",
+                        Code = @"public class GroundedState : AbstractState<CharacterState, PlayerController>
 {
-    public override void OnEnter()
+    public GroundedState(IFSM<CharacterState> fsm, PlayerController black)
+        : base(fsm, black) { }
+
+    protected override void OnUpdate()
     {
-        // 所有地面状态共享的进入逻辑
-        EnableGroundedPhysics();
-    }
-    
-    public override void OnUpdate()
-    {
-        // 所有地面状态共享的更新逻辑
-        // 例如：检测是否离开地面
         if (!IsGrounded())
         {
-            FSM.ChangeState(CharacterState.Fall);
+            // 挂起地面状态，启动空中状态
+            mFSM.Change(CharacterState.Grounded, MachineState.Suspend);
+            mFSM.Change(CharacterState.Airborne, MachineState.Running);
         }
     }
-    
-    public override void OnExit()
-    {
-        // 离开地面状态组时调用
-    }
 }",
-                        Explanation = "父状态的 OnUpdate 会在子状态之前执行。"
+                        Explanation = "层级状态机中通过 Change(key, MachineState) 控制各并行状态的生命周期。"
                     },
                     new()
                     {
                         Title = "嵌套子状态机",
-                        Code = @"// 创建独立的战斗状态机
+                        Code = @"// 创建独立的战斗子状态机
 var combatFsm = new FSM<CombatState>();
-combatFsm.AddState(CombatState.Attacking, new AttackingState());
-combatFsm.AddState(CombatState.Blocking, new BlockingState());
-combatFsm.AddState(CombatState.Dodging, new DodgingState());
+combatFsm.Add(CombatState.Attacking, new AttackingState(combatFsm, this));
+combatFsm.Add(CombatState.Blocking, new BlockingState(combatFsm, this));
+combatFsm.Add(CombatState.Dodging, new DodgingState(combatFsm, this));
 
-// 将战斗状态机作为子状态机添加到主状态机
-hsm.AddState(CharacterState.Combat, combatFsm, CharacterState.Grounded);
+// 将子状态机作为状态添加到层级状态机
+hsm.Add(CharacterState.Combat, combatFsm);
 
-// 切换到战斗状态时，会自动启动子状态机
-hsm.ChangeState(CharacterState.Combat);",
-                        Explanation = "层级状态机支持嵌套 IFSM，实现复杂的状态层次结构。"
+// 启动战斗状态
+hsm.Change(CharacterState.Idle, MachineState.Suspend);
+hsm.Change(CharacterState.Combat, MachineState.Running);",
+                        Explanation = "层级状态机支持嵌套 IFSM，通过 MachineState 管理各子状态机的生命周期。"
                     }
                 }
             };

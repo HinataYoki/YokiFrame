@@ -39,7 +39,6 @@ var rotated = v3.ZXY();  // (3, 1, 2)
 
 // 提取 2D 分量
 Vector2 xz = v3.XZ();  // (1, 3) - 俯视图
-Vector2 xy = v3.XY();  // (1, 2) - 正视图
 Vector2 yz = v3.YZ();  // (2, 3) - 侧视图
 
 // 重复分量

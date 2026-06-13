@@ -36,34 +36,6 @@ bulletPool.Recycle(bullet);",
                     },
                     new()
                     {
-                        Title = "ActionKit 内部实现",
-                        Code = @"// ActionKit 的动作池实现示例
-internal class Delay : ActionBase
-{
-    // 静态对象池
-    private static readonly SimplePoolKit<Delay> mPool = 
-        new(() => new Delay());
-
-    public static Delay Allocate(float seconds, Action callback)
-    {
-        var delay = mPool.Allocate();
-        delay.mSeconds = seconds;
-        delay.mCallback = callback;
-        delay.OnInit();
-        return delay;
-    }
-
-    public override void OnDeinit()
-    {
-        base.OnDeinit();
-        mCallback = null;
-        mPool.Recycle(this);
-    }
-}",
-                        Explanation = "SimplePoolKit 常用于框架内部实现零 GC 的对象复用。"
-                    },
-                    new()
-                    {
                         Title = "与 SafePoolKit 对比",
                         Code = @"// SimplePoolKit - 局部使用，手动管理
 var localPool = new SimplePoolKit<MyClass>(() => new MyClass());
@@ -79,7 +51,7 @@ public class MyPoolable : IPoolable
 // 使用单例访问
 var obj = SafePoolKit<MyPoolable>.Instance.Allocate();
 SafePoolKit<MyPoolable>.Instance.Recycle(obj);",
-                        Explanation = "SimplePoolKit 更灵活，SafePoolKit 更安全（防止重复回收）。"
+                        Explanation = "SimplePoolKit 更灵活，适合局部使用；SafePoolKit 更安全，防止重复回收，适合全局单例场景。"
                     }
                 }
             };

@@ -27,10 +27,12 @@ var clip = ResKit.Load<AudioClip>(""Audio/BGM"");
 // 加载并实例化
 var player = ResKit.Instantiate(""Prefabs/Player"", parent);
 
-// 获取句柄（需要手动管理引用计数）
+// 获取句柄 — LoadAsset 内部已自动 Retain（RefCount=1）
 var handler = ResKit.LoadAsset<GameObject>(""Prefabs/Enemy"");
-handler.Retain();  // 增加引用
-handler.Release(); // 减少引用，引用为0时自动卸载"
+// 需要更长时间持有时可额外 Retain（RefCount+1）
+handler.Retain();
+// 每次 Release 使 RefCount-1，归零时自动卸载
+handler.Release();"
                     }
                 }
             };

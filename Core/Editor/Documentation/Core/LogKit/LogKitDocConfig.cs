@@ -25,9 +25,6 @@ KitLogger.Level = KitLogger.LogLevel.Warning; // 只输出 Warning 和 Error
 KitLogger.Level = KitLogger.LogLevel.Error;   // 只输出 Error
 KitLogger.Level = KitLogger.LogLevel.None;    // 关闭所有日志
 
-// 启用文件写入（自动异步写入）
-KitLogger.AutoEnableWriteLogToFile = true;
-
 // 启用加密（保护敏感信息）
 KitLogger.EnableEncryption = true;
 

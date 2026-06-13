@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace YokiFrame.EditorTools
 {
     /// <summary>
-    /// Basic FsmKit documentation.
+    /// FsmKit 基础用法文档。
     /// </summary>
     internal static class FsmKitDocBasic
     {
@@ -12,13 +12,13 @@ namespace YokiFrame.EditorTools
         {
             return new DocSection
             {
-                Title = "Basic FSM",
-                Description = "Use enums to define states and build a simple, efficient finite state machine with FSM<TState>.",
+                Title = "基础状态机",
+                Description = "用枚举定义状态，通过 FSM<TEnum> 构建简洁高效的有限状态机。",
                 CodeExamples = new List<CodeExample>
                 {
                     new()
                     {
-                        Title = "Define States",
+                        Title = "定义状态枚举",
                         Code = @"public enum PlayerState
 {
     Idle,
@@ -28,74 +28,59 @@ namespace YokiFrame.EditorTools
     Attack,
     Dead
 }",
-                        Explanation = "Use enums to define state ids and avoid magic strings."
+                        Explanation = "用枚举定义状态标识，避免魔法字符串。"
                     },
                     new()
                     {
-                        Title = "Create And Use FSM",
+                        Title = "创建并使用状态机",
                         Code = @"public class PlayerController
 {
     private FSM<PlayerState> mFsm;
-    
+
     public void Init()
     {
         mFsm = new FSM<PlayerState>();
-        mFsm.AddState(PlayerState.Idle, new IdleState());
-        mFsm.AddState(PlayerState.Walk, new WalkState());
-        mFsm.AddState(PlayerState.Run, new RunState());
-        mFsm.AddState(PlayerState.Jump, new JumpState());
-        mFsm.AddState(PlayerState.Attack, new AttackState());
+        mFsm.Add(PlayerState.Idle, new IdleState(mFsm, this));
+        mFsm.Add(PlayerState.Walk, new WalkState(mFsm, this));
+        mFsm.Add(PlayerState.Run, new RunState(mFsm, this));
+        mFsm.Add(PlayerState.Jump, new JumpState(mFsm, this));
+        mFsm.Add(PlayerState.Attack, new AttackState(mFsm, this));
         mFsm.Start(PlayerState.Idle);
     }
-    
-    public void Update()
+
+    private void Update()
     {
         mFsm.Update();
     }
-    
-    public PlayerState CurrentState => mFsm.CurrentStateId;
+
+    public PlayerState CurrentState => mFsm.CurEnum;
 }",
-                        Explanation = "FSM instances are driven from Update and expose the current state id."
+                        Explanation = "通过 Add() 注册状态后调用 Start() 启动。每帧调用 Update() 驱动当前状态的逻辑。CurEnum 获取当前状态枚举。"
                     },
                     new()
                     {
-                        Title = "Editor Monitor",
-                        Code = @"// Open: Tools > YokiFrame > YokiFrame Tools > FsmKit
-//
-// Main monitor areas:
-// - HUD cards: runtime summary
-// - State matrix: transition relationships
-// - Timeline: transition history
-//
-// Reactive flow:
-// FsmDebugger
-//   -> EditorDataBridge.NotifyDataChanged()
-//   -> FsmKitToolPage subscriptions
-//   -> FsmKitViewModel / page state
-//   -> UI refresh
-//
-// Shared channels:
-// DataChannels.FSM_LIST_CHANGED
-// DataChannels.FSM_STATE_CHANGED
-// DataChannels.FSM_HISTORY_LOGGED",
-                        Explanation = "The FsmKit monitor uses shared editor channels instead of per-frame polling for structural data changes."
-                    },
-                    new()
-                    {
-                        Title = "Custom Editor Subscription",
-                        Code = @"#if UNITY_EDITOR
-using YokiFrame.EditorTools;
+                        Title = "运行时状态切换",
+                        Code = @"// 从外部触发状态切换
+public void OnJumpPressed()
+{
+    mFsm.Change(PlayerState.Jump);
+}
 
-var subscription = EditorDataBridge.Subscribe<IFSM>(
-    DataChannels.FSM_STATE_CHANGED,
-    fsm =>
+public void OnAttackPressed()
+{
+    mFsm.Change(PlayerState.Attack);
+}
+
+// 条件切换
+public void OnDamaged(int damage)
+{
+    mCurrentHp -= damage;
+    if (mCurrentHp <= 0)
     {
-        Debug.Log($""FSM {fsm.Name} changed state to {fsm.CurrentStateId}"");
-    });
-
-subscription.Dispose();
-#endif",
-                        Explanation = "Custom editor tooling can subscribe to the shared FsmKit state-change channel."
+        mFsm.Change(PlayerState.Dead);
+    }
+}",
+                        Explanation = "Change() 方法切换当前状态，自动调用旧状态的 OnExit 和新状态的 OnEnter。"
                     }
                 }
             };
