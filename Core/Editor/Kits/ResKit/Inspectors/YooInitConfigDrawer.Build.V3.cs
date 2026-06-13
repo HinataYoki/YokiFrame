@@ -83,7 +83,7 @@ namespace YokiFrame.EditorTools
 
             var emptyOpenCollectorBtn = CreateActionButton("打开资源收集器", Colors.BrandPrimary, () =>
             {
-                EditorApplication.ExecuteMenuItem("YooAsset/AssetBundle Collector");
+                EditorApplication.ExecuteMenuItem("YooAsset/Bundle Collector");
             });
             emptyOpenCollectorBtn.style.marginTop = Spacing.SM;
             body.Add(emptyOpenCollectorBtn);
@@ -208,7 +208,7 @@ namespace YokiFrame.EditorTools
 
             var openOriginalCollectorBtn = CreateActionButton("打开原始收集器", Colors.TextSecondary, () =>
             {
-                EditorApplication.ExecuteMenuItem("YooAsset/AssetBundle Collector");
+                EditorApplication.ExecuteMenuItem("YooAsset/Bundle Collector");
             });
             openOriginalCollectorBtn.style.flexGrow = 1;
             buttonRow.Add(openOriginalCollectorBtn);

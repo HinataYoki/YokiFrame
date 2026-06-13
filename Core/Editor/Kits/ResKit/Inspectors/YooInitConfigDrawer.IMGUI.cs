@@ -359,7 +359,11 @@ namespace YokiFrame.EditorTools
 
                 var btnRect = new Rect(contentX, y, contentWidth, LINE_HEIGHT);
                 if (GUI.Button(btnRect, "打开资源收集器"))
+                    #if YOOASSET_3_0_OR_NEWER
+                    EditorApplication.ExecuteMenuItem("YooAsset/Bundle Collector");
+#else
                     EditorApplication.ExecuteMenuItem("YooAsset/AssetBundle Collector");
+#endif
                 y += LINE_HEIGHT + SPACING;
 
                 return y + SPACING;
@@ -475,7 +479,11 @@ namespace YokiFrame.EditorTools
             var btn2Rect = new Rect(x + halfWidth + 5, y, halfWidth, LINE_HEIGHT);
             if (GUI.Button(btn2Rect, "打开原始收集器"))
             {
-                EditorApplication.ExecuteMenuItem("YooAsset/AssetBundle Collector");
+                #if YOOASSET_3_0_OR_NEWER
+                    EditorApplication.ExecuteMenuItem("YooAsset/Bundle Collector");
+#else
+                    EditorApplication.ExecuteMenuItem("YooAsset/AssetBundle Collector");
+#endif
             }
             y += LINE_HEIGHT + SPACING;
 
