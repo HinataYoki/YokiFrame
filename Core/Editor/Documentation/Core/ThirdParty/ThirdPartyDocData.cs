@@ -250,9 +250,9 @@ namespace YokiFrame.EditorTools
                 {
                     new()
                     {
-                        Title = "安装方式（Package Manager）",
-                        Code = "// Package Manager → Add package from git URL\nhttps://github.com/Cysharp/ZString.git\n\n// DependecyDefineService 自动添加 YOKIFRAME_ZSTRING_SUPPORT 宏",
-                        Explanation = "推荐所有项目安装，显著降低字符串相关 GC 分配。"
+                        Title = "安装方式（UnityPackage，推荐）",
+                        Code = "// 1. 前往 GitHub Releases 下载 ZString.Unity.unitypackage\n//    https://github.com/Cysharp/ZString/releases\n// 2. 双击 .unitypackage 导入项目\n// 3. DependecyDefineService 自动添加 YOKIFRAME_ZSTRING_SUPPORT 宏\n\n// 注意：UPM git URL 方式不包含原生 DLL（System.Runtime.CompilerServices.Unsafe），\n// 会导致运行时 MissingMethodException，推荐使用 UnityPackage 安装。",
+                        Explanation = "UnityPackage 自带 System.Runtime.CompilerServices.Unsafe DLL，开箱即用。UPM git 方式缺少该 DLL，需手动从 NuGet 提取。"
                     }
                 }
             };
