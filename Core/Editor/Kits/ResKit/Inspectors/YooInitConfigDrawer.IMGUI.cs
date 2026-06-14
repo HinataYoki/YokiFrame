@@ -18,10 +18,12 @@ namespace YokiFrame.EditorTools
 
         private static bool sBasicFoldout = true;
         private static bool sEncryptFoldout = true;
+#if YOOASSET_3_0_OR_NEWER
         private static bool sBuildFoldout = false;
         private static bool sAdvancedFoldout = false;
         private static int sSelectedPackageIndex;
         private static int sSelectedPipelineIndex;
+#endif
 
         private const float LINE_HEIGHT = 18f;
         private const float SPACING = 2f;
@@ -84,11 +86,12 @@ namespace YokiFrame.EditorTools
             }
             height += SPACING * 2;
 
+#if YOOASSET_3_0_OR_NEWER
             // 打包配置
             height += LINE_HEIGHT + SPACING; // foldout
             if (sBuildFoldout)
             {
-                var packageNames = GetBuildPackageNames();
+                var packageNames = GetBuildPackageNamesV3();
                 if (packageNames.Count == 0)
                     height += LINE_HEIGHT * 3; // 提示 + 按钮
                 else
@@ -100,6 +103,7 @@ namespace YokiFrame.EditorTools
                     height += (LINE_HEIGHT + SPACING) * 3; // 按钮
                 }
             }
+#endif
 
             return height + 20f;
         }

@@ -30,10 +30,15 @@ namespace YokiFrame.EditorTools
         /// <returns>Build 配置 VisualElement，不支持时返回 null</returns>
         public static VisualElement CreateBuildConfigCard(SerializedProperty property)
         {
+#if UNITY_2022_1_OR_NEWER
 #if YOOASSET_3_0_OR_NEWER
             return YooInitConfigDrawer.CreateBuildConfigCardV3(property);
 #else
             return YooInitConfigDrawer.CreateBuildConfigCardV2(property);
+#endif
+#else
+            // 2021.3 使用 IMGUI 路径（YooInitConfigDrawer.IMGUI.cs），不经过此分发器
+            return null;
 #endif
         }
     }
