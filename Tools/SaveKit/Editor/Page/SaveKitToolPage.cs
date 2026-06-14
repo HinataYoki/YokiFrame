@@ -98,6 +98,7 @@ namespace YokiFrame
         {
             var toolbar = YokiFrameUIComponents.CreateToolbar();
             toolbar.AddToClassList("yoki-kit-inline-toolbar");
+            YokiFrameUIComponents.ApplyWrapCompat(toolbar);
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshSlots));
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.FOLDER_DOCS, "打开目录", OpenSaveFolder));
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());

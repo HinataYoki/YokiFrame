@@ -191,7 +191,23 @@ namespace YokiFrame.EditorTools
         {
             var strip = new VisualElement();
             strip.AddToClassList("yoki-kit-metric-strip");
+            ApplyWrapCompat(strip);
             return strip;
+        }
+
+        /// <summary>
+        /// 应用 flex-wrap 兼容处理。
+        /// Unity 2022 及更早版本的 Yoga 布局引擎对 flex-wrap: wrap 行容器的 cross-axis（高度）
+        /// 计算存在缺陷：容器换行后高度塌陷为单行高，导致其下方兄弟元素发生垂直重叠。
+        /// 故低版本回退为 NoWrap（单行布局，高度可被正确计算）；Unity 6+ 的 Yoga 已修复，保留 wrap 响应式换行。
+        /// </summary>
+        /// <param name="element">需要应用 wrap 兼容处理的容器元素。</param>
+        public static void ApplyWrapCompat(VisualElement element)
+        {
+            if (element == default) return;
+#if !UNITY_6000_0_OR_NEWER
+            element.style.flexWrap = Wrap.NoWrap;
+#endif
         }
 
         /// <summary>

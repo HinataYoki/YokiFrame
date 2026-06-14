@@ -96,6 +96,7 @@ namespace YokiFrame
         {
             var toolbar = YokiFrameUIComponents.CreateToolbar();
             toolbar.AddToClassList("yoki-kit-inline-toolbar");
+            YokiFrameUIComponents.ApplyWrapCompat(toolbar);
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.REFRESH, "刷新", RefreshScenes));
             toolbar.Add(YokiFrameUIComponents.CreateToolbarButtonWithIcon(KitIcons.DELETE, "卸载全部", UnloadAllScenes));
             toolbar.Add(YokiFrameUIComponents.CreateFlexSpacer());

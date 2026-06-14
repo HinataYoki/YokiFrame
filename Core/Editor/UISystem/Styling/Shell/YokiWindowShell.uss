@@ -456,8 +456,6 @@
 .yoki-kit-metric-strip {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-right: -10px;
-    margin-bottom: -10px;
 }
 
 .yoki-kit-metric-strip > * {
@@ -626,8 +624,6 @@
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
-    margin-right: -8px;
-    margin-bottom: -8px;
 }
 
 .yoki-kit-hero-tools > * {

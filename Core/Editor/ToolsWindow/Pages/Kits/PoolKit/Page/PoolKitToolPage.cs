@@ -370,6 +370,7 @@ namespace YokiFrame.EditorTools
                 }
             };
             legend.AddToClassList("yoki-kit-hero-tools");
+            YokiFrameUIComponents.ApplyWrapCompat(legend);
 
             legend.Add(CreateLegendItem("健康", new Color(0.13f, 0.59f, 0.95f), "使用率低于 50%"));
             legend.Add(CreateLegendItem("正常", new Color(0.71f, 0.73f, 0.76f), "使用率位于 50% 到 80%"));
@@ -430,6 +431,7 @@ namespace YokiFrame.EditorTools
         {
             var container = new VisualElement();
             container.AddToClassList("yoki-kit-hero-tools");
+            YokiFrameUIComponents.ApplyWrapCompat(container);
 
             container.Add(CreateColorLegend());
 

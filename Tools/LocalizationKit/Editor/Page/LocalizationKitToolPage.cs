@@ -85,6 +85,7 @@ namespace YokiFrame.EditorTools
             var toolbar = CreateToolbar();
             toolbar.AddToClassList("yoki-localization-selector");
             toolbar.AddToClassList("yoki-kit-inline-toolbar");
+            YokiFrameUIComponents.ApplyWrapCompat(toolbar);
 
             mLanguageDropdown = new DropdownField("预览语言");
             mLanguageDropdown.AddToClassList("yoki-localization-selector__dropdown");
