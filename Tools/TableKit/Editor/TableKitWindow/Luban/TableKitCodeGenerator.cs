@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using System;
 using System.IO;
-using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -129,19 +128,18 @@ namespace YokiFrame.TableKit.Editor
 
             try
             {
-                var conf = JObject.Parse(File.ReadAllText(confPath));
-                if (conf["targets"] is not JArray targets)
+                var conf = JsonUtility.FromJson<LubanConf>(File.ReadAllText(confPath));
+                if (conf == default || conf.targets == default || conf.targets.Length == 0)
                 {
                     Debug.LogWarning($"[TableKit] luban.conf 缺少 targets 数组，命名空间回退至 \"{defaultTopModule}\"");
                     return defaultTopModule;
                 }
 
-                foreach (var t in targets)
+                foreach (var t in conf.targets)
                 {
-                    if ((string)t["name"] != target) continue;
+                    if (t.name != target) continue;
 
-                    var topModule = (string)t["topModule"];
-                    return string.IsNullOrEmpty(topModule) ? defaultTopModule : topModule;
+                    return string.IsNullOrEmpty(t.topModule) ? defaultTopModule : t.topModule;
                 }
 
                 Debug.LogWarning($"[TableKit] luban.conf 中未找到 target=\"{target}\"，命名空间回退至 \"{defaultTopModule}\"");
@@ -152,6 +150,25 @@ namespace YokiFrame.TableKit.Editor
                 Debug.LogWarning($"[TableKit] 解析 luban.conf 失败，命名空间回退至 \"{defaultTopModule}\"：{ex.Message}");
                 return defaultTopModule;
             }
+        }
+
+        /// <summary>
+        /// luban.conf 反序列化结构（仅解析命名空间所需字段）
+        /// </summary>
+        [Serializable]
+        private sealed class LubanConf
+        {
+            public LubanTarget[] targets;
+        }
+
+        /// <summary>
+        /// luban.conf 中单个 target 配置（仅解析命名空间所需字段）
+        /// </summary>
+        [Serializable]
+        private sealed class LubanTarget
+        {
+            public string name;
+            public string topModule;
         }
 
         /// <summary>
