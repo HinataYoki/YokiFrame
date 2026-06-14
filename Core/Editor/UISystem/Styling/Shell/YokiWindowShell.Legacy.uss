@@ -412,9 +412,33 @@
     white-space: normal;
 }
 
+.yoki-kit-inline-toolbar {
+    align-items: center;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: transparent;
+    border-bottom-width: 0;
+}
+
+.yoki-kit-inline-toolbar > * {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.yoki-kit-inline-toolbar .toolbar-label {
+    margin-left: 0;
+}
+
 .yoki-kit-metric-strip {
     flex-direction: row;
     flex-wrap: wrap;
+}
+
+.yoki-kit-metric-strip > * {
+    margin-right: 10px;
+    margin-bottom: 10px;
 }
 
 .yoki-kit-metric-card {
@@ -578,6 +602,11 @@
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.yoki-kit-hero-tools > * {
+    margin-right: 8px;
+    margin-bottom: 8px;
 }
 
 .yoki-monitor-layout__detail {

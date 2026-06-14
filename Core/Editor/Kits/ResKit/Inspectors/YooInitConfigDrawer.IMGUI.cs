@@ -354,7 +354,7 @@ namespace YokiFrame.EditorTools
             float contentX = x + INDENT;
             float contentWidth = width - INDENT;
 
-            var packageNames = GetBuildPackageNames();
+            var packageNames = GetBuildPackageNamesV3();
             if (packageNames.Count == 0)
             {
                 var helpRect = new Rect(contentX, y, contentWidth, LINE_HEIGHT * 2);
@@ -457,7 +457,7 @@ namespace YokiFrame.EditorTools
 
             // 加密服务
             var encryptClass = BundleBuilderSetting.GetPackageBundleEncryptorClassName(selectedPackage, selectedPipeline);
-            var encryptionClasses = GetEncryptionServiceClassNames();
+            var encryptionClasses = GetEncryptionServiceClassNamesV3();
             int encryptIndex = encryptionClasses.IndexOf(encryptClass);
             if (encryptIndex < 0) encryptIndex = 0;
 
@@ -477,7 +477,7 @@ namespace YokiFrame.EditorTools
             var btn1Rect = new Rect(x, y, halfWidth, LINE_HEIGHT);
             if (GUI.Button(btn1Rect, "打开收集器"))
             {
-                OpenYooAssetCollector();
+                EditorApplication.ExecuteMenuItem("YooAsset/Bundle Collector");
             }
 
             var btn2Rect = new Rect(x + halfWidth + 5, y, halfWidth, LINE_HEIGHT);
@@ -500,7 +500,7 @@ namespace YokiFrame.EditorTools
                     $"平台: {EditorUserBuildSettings.activeBuildTarget}",
                     "确定", "取消"))
                 {
-                    ExecuteBuild(selectedPackage, selectedPipeline);
+                    ExecuteBuildV3(selectedPackage, selectedPipeline);
                 }
             }
             y += LINE_HEIGHT + 8 + SPACING;
