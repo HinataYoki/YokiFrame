@@ -194,7 +194,7 @@ namespace YokiFrame.EditorTools
         /// </summary>
    private static void AddStyleSheetIfNotExists(VisualElement root, StyleSheet sheet)
    {
-#if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_3_OR_NEWER
        int id = sheet.GetEntityId().GetHashCode();
 #else
        int id = sheet.GetInstanceID();

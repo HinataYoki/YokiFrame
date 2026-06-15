@@ -23,7 +23,7 @@ namespace YokiFrame.NodeKit.Editor
         }
 
 [OnOpenAsset]
-#if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_3_OR_NEWER
 public static bool OnOpenAsset(UnityEngine.EntityId entityId, int line)
 {
     var asset = EditorUtility.EntityIdToObject(entityId);
@@ -368,7 +368,7 @@ public static bool OnOpenAsset(int instanceId, int line)
             var activeObject = Selection.activeObject;
             if (activeObject is not NodeGraph graph) return;
 
-    #if UNITY_6000_0_OR_NEWER
+    #if UNITY_6000_3_OR_NEWER
     int currentInstanceId = activeObject.GetEntityId().GetHashCode();
     #else
     int currentInstanceId = activeObject.GetInstanceID();
