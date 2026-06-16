@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -82,6 +83,11 @@ namespace YokiFrame
             ApplyRefreshButtonStyle(refreshBtn);
             content.Add(refreshBtn);
 
+            var genCodeBtn = new Button(() => OnGenerateUICode(panel));
+            genCodeBtn.AddToClassList("uipanel-gencode-btn");
+            ApplyActionButtonStyle(genCodeBtn, KitIcons.CODEGEN, "生成 UI 代码");
+            content.Add(genCodeBtn);
+
             mRoot.Add(section);
             mLastSection = section;
 
@@ -92,6 +98,12 @@ namespace YokiFrame
         /// 应用刷新按钮的统一样式。
         /// </summary>
         private void ApplyRefreshButtonStyle(Button btn)
+            => ApplyActionButtonStyle(btn, KitIcons.REFRESH, "刷新绑定树");
+
+        /// <summary>
+        /// 应用带图标和文字的通用操作按钮样式。
+        /// </summary>
+        private static void ApplyActionButtonStyle(Button btn, string iconId, string labelText)
         {
             btn.style.flexDirection = FlexDirection.Row;
             btn.style.alignItems = Align.Center;
@@ -99,13 +111,13 @@ namespace YokiFrame
             btn.style.height = 28;
             btn.style.marginTop = 4;
 
-            var icon = new Image { image = KitIcons.GetTexture(KitIcons.REFRESH) };
+            var icon = new Image { image = KitIcons.GetTexture(iconId) };
             icon.style.width = 14;
             icon.style.height = 14;
             icon.style.marginRight = 6;
             btn.Add(icon);
 
-            var label = new Label("刷新绑定树");
+            var label = new Label(labelText);
             label.style.fontSize = 12;
             btn.Add(label);
         }
@@ -291,6 +303,63 @@ namespace YokiFrame
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 点击「生成 UI 代码」时触发，解决到预制体资源后调用代码生成器。
+        /// </summary>
+        private void OnGenerateUICode(UIPanel panel)
+        {
+            var prefabAsset = GetPrefabAssetForCodeGen(panel);
+            if (prefabAsset == default)
+            {
+                EditorUtility.DisplayDialog("无法生成",
+                    "无法定位到此 Panel 的预制体资源。\n请在 Project 窗口中选中预制体后再试。", "确定");
+                return;
+            }
+
+            var config = UIKitCreateConfig.Instance;
+            var designerPath = $"{config.ScriptGeneratePath}/{prefabAsset.name}/{prefabAsset.name}{UICodeGenConstants.DESIGNER_SUFFIX}";
+
+            if (File.Exists(designerPath))
+            {
+                if (!EditorUtility.DisplayDialog("确认覆盖",
+                    $"Designer 文件已存在，重新生成将覆盖：\n{designerPath}\n\n绑定字段会被刷新，手动修改将丢失。\n是否继续？",
+                    "继续", "取消"))
+                {
+                    return;
+                }
+            }
+
+            var ns = config.ScriptNamespace;
+
+            UICodeGenerator.DoCreateCode(prefabAsset, ns);
+            RefreshBindTree();
+        }
+
+        /// <summary>
+        /// 从 UIPanel 获取可用于代码生成的预制体资源。
+        /// 优先使用 PrefabStage 中的实时层级，否则回退到磁盘上的预制体资源。
+        /// </summary>
+        private static GameObject GetPrefabAssetForCodeGen(UIPanel panel)
+        {
+            var go = panel.gameObject;
+
+            // Prefab Mode 中正在编辑的实时根节点（包含未保存的修改）
+            var prefabStage = UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStage(go);
+            if (prefabStage != null)
+            {
+                return prefabStage.prefabContentsRoot;
+            }
+
+            // 从场景实例或直接选中的预制体获取资源路径
+            var prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(go);
+            if (!string.IsNullOrEmpty(prefabPath))
+            {
+                return AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            }
+
+            return default;
         }
     }
 }
