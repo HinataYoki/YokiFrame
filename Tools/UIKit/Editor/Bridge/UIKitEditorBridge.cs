@@ -35,7 +35,7 @@ namespace YokiFrame.EditorTools
             /// <summary>
             /// 退出 PlayMode 前停止动画并销毁临时 UIRoot，避免编辑器侧残留运行时对象。
             /// </summary>
-            protected override void OnExitingPlayMode()
+            protected override void OnExitingPlayModeCore()
             {
                 ForceStopAllUIAnimations();
                 CleanupUIKit();

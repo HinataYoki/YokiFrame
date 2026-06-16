@@ -22,8 +22,6 @@ namespace YokiFrame.EditorTools
         /// </summary>
         private sealed class Bridge : EasyEventSendHookBridgeBase
         {
-            private System.Action<System.Delegate> mOriginalOnRegister;
-            private System.Action<System.Delegate> mOriginalOnUnRegister;
             private bool mRegisterHooksInstalled;
 
             /// <summary>
@@ -46,6 +44,14 @@ namespace YokiFrame.EditorTools
             }
 
             /// <summary>
+            /// 退出 PlayMode 时卸载注册 Hook，避免关闭 Domain Reload 时残留订阅累积。
+            /// </summary>
+            protected override void OnExitingPlayModeCore()
+            {
+                UninstallRegisterHooks();
+            }
+
+            /// <summary>
             /// 将运行时触发事件转发为编辑器数据通道消息。
             /// </summary>
             protected override void HandleEvent(string eventType, string eventKey, object args)
@@ -57,6 +63,10 @@ namespace YokiFrame.EditorTools
             /// <summary>
             /// 安装监听器注册与注销 Hook。
             /// </summary>
+            /// <remarks>
+            /// 采用多播订阅（先 -= 再 +=）而非 "快照旧值 → 设为自身" 的链式包装，
+            /// 关闭 Domain Reload 时多次重入不会叠加包装层或形成委托环。
+            /// </remarks>
             private void InstallRegisterHooks()
             {
                 if (mRegisterHooksInstalled)
@@ -65,20 +75,28 @@ namespace YokiFrame.EditorTools
                 }
 
                 mRegisterHooksInstalled = true;
-                mOriginalOnRegister = EasyEventEditorHook.OnRegister;
-                mOriginalOnUnRegister = EasyEventEditorHook.OnUnRegister;
 
-                EasyEventEditorHook.OnRegister = del =>
-                {
-                    mOriginalOnRegister?.Invoke(del);
-                    OnEventRegistered(del);
-                };
+                EasyEventEditorHook.OnRegister -= OnEventRegistered;
+                EasyEventEditorHook.OnRegister += OnEventRegistered;
 
-                EasyEventEditorHook.OnUnRegister = del =>
+                EasyEventEditorHook.OnUnRegister -= OnEventUnregistered;
+                EasyEventEditorHook.OnUnRegister += OnEventUnregistered;
+            }
+
+            /// <summary>
+            /// 卸载监听器注册与注销 Hook。
+            /// </summary>
+            private void UninstallRegisterHooks()
+            {
+                if (!mRegisterHooksInstalled)
                 {
-                    mOriginalOnUnRegister?.Invoke(del);
-                    OnEventUnregistered(del);
-                };
+                    return;
+                }
+
+                mRegisterHooksInstalled = false;
+
+                EasyEventEditorHook.OnRegister -= OnEventRegistered;
+                EasyEventEditorHook.OnUnRegister -= OnEventUnregistered;
             }
 
             /// <summary>

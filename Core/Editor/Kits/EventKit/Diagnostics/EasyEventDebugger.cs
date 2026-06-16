@@ -78,9 +78,14 @@ namespace YokiFrame
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
-            EasyEventEditorHook.OnRegister = OnRegister;
-            EasyEventEditorHook.OnUnRegister = OnUnRegister;
-            EasyEventEditorHook.OnSend = OnSend;
+            // 多播订阅而非覆盖赋值：关闭 Domain Reload 时静态委托跨 PlayMode 残留，
+            // 覆盖会破坏其它桥接已注册的订阅。先 -= 再 += 保证恰好挂接一次。
+            EasyEventEditorHook.OnRegister -= OnRegister;
+            EasyEventEditorHook.OnRegister += OnRegister;
+            EasyEventEditorHook.OnUnRegister -= OnUnRegister;
+            EasyEventEditorHook.OnUnRegister += OnUnRegister;
+            EasyEventEditorHook.OnSend -= OnSend;
+            EasyEventEditorHook.OnSend += OnSend;
 
             EditorApplication.playModeStateChanged += state =>
             {

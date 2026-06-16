@@ -303,7 +303,6 @@ namespace YokiFrame.EditorTools
     /// </remarks>
     public abstract class EasyEventSendHookBridgeBase : PlayModeEditorBridgeBase
     {
-        private Action<string, string, object> mOriginalOnSend;
         private bool mIsHookInstalled;
 
         /// <summary>
@@ -361,24 +360,61 @@ namespace YokiFrame.EditorTools
         }
 
         /// <summary>
-        /// Installs the wrapped send hook and preserves the original callback chain.
+        /// Subscribes this bridge's handler to the shared send hook exactly once.
         /// </summary>
+        /// <remarks>
+        /// 关闭 Domain Reload 时静态委托与桥接实例跨 PlayMode 残留。多个独立桥接若沿用
+        /// "快照旧值 → 设为自身 → 还原" 的链式包装模式，重入时会互相捕获对方 wrapper，
+        /// 形成跨桥接委托环并触发 StackOverflow。改用多播订阅：先 -= 再 += 保证幂等，
+        /// 调用列表为扁平的 (target, method) 数组，结构上不可能成环或重复。
+        /// </remarks>
         private void InstallHook()
         {
             if (mIsHookInstalled) return;
             mIsHookInstalled = true;
 
-            mOriginalOnSend = EasyEventEditorHook.OnSend;
-            EasyEventEditorHook.OnSend = OnSendWrapped;
+            EasyEventEditorHook.OnSend -= OnSendHandler;
+            EasyEventEditorHook.OnSend += OnSendHandler;
         }
 
         /// <summary>
-        /// Invokes the original hook first, then forwards eligible events to the derived bridge.
+        /// Unsubscribes the handler when leaving Play Mode so a stale bridge instance does not
+        /// stay attached to the shared static delegate across runs when Domain Reload is disabled.
         /// </summary>
-        private void OnSendWrapped(string eventType, string eventKey, object args)
+        /// <remarks>
+        /// Sealed so derived bridges cannot skip hook teardown by forgetting <c>base</c>; override
+        /// <see cref="OnExitingPlayModeCore"/> for derived cleanup instead.
+        /// </remarks>
+        protected sealed override void OnExitingPlayMode()
         {
-            mOriginalOnSend?.Invoke(eventType, eventKey, args);
+            UninstallHook();
+            OnExitingPlayModeCore();
+        }
 
+        /// <summary>
+        /// Derived bridges override this for their own exit-Play-Mode cleanup.
+        /// Hook teardown is already guaranteed by the sealed base method.
+        /// </summary>
+        protected virtual void OnExitingPlayModeCore() { }
+
+        /// <summary>
+        /// Unsubscribes this bridge's handler from the shared send hook.
+        /// </summary>
+        private void UninstallHook()
+        {
+            if (!mIsHookInstalled) return;
+            mIsHookInstalled = false;
+
+            EasyEventEditorHook.OnSend -= OnSendHandler;
+        }
+
+        /// <summary>
+        /// Forwards eligible events to the derived bridge. The shared hook is a multicast
+        /// delegate, so every subscribed bridge is invoked independently; this handler must
+        /// not re-invoke the hook (doing so would form a cycle).
+        /// </summary>
+        private void OnSendHandler(string eventType, string eventKey, object args)
+        {
             if (!ShouldHandleEvent(eventType, eventKey, args)) return;
             HandleEvent(eventType, eventKey, args);
         }
