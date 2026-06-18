@@ -154,8 +154,8 @@ namespace YokiFrame
                         }
                     }
 
-                    // 反序列化
-                    var data = DeserializeSaveData(dataBytes);
+                    // 反序列化（立即注入序列化器，保证迁移阶段可访问模块）
+                    var data = DeserializeSaveData(dataBytes, serializer);
                     if (data == null)
                     {
                         KitLogger.Error("[SaveKit] 反序列化失败");
@@ -169,11 +169,19 @@ namespace YokiFrame
                         data = MigrateData(data, meta.Version, currentVersion);
                         if (data != null)
                         {
+                            // 迁移器可能返回新实例，重新注入序列化器
+                            data.SetSerializer(serializer);
                             Save(slotId, data);
                         }
                     }
 
-                    data.SetSerializer(serializer);
+                    if (data == null)
+                    {
+                        KitLogger.Error("[SaveKit] 迁移后数据为空");
+                        onComplete(null);
+                        return;
+                    }
+
                     KitLogger.Log($"[SaveKit] 异步存档加载成功: 槽位 {slotId}");
                     onComplete(data);
                 }
@@ -307,8 +315,8 @@ namespace YokiFrame
                         dataBytes = encryptor.Decrypt(dataBytes);
                     }
 
-                    // 反序列化
-                    var saveData = DeserializeSaveData(dataBytes);
+                    // 反序列化（立即注入序列化器，保证迁移阶段可访问模块）
+                    var saveData = DeserializeSaveData(dataBytes, serializer);
                     return (saveData, meta.Version);
                 }, cancellationToken: cancellationToken);
 
@@ -326,11 +334,18 @@ namespace YokiFrame
                     saveData = MigrateData(saveData, fileVersion, currentVersion);
                     if (saveData != null)
                     {
+                        // 迁移器可能返回新实例，重新注入序列化器
+                        saveData.SetSerializer(serializer);
                         await SaveUniTaskAsync(slotId, saveData, cancellationToken);
                     }
                 }
 
-                saveData.SetSerializer(serializer);
+                if (saveData == null)
+                {
+                    KitLogger.Error("[SaveKit] 迁移后数据为空");
+                    return null;
+                }
+
                 KitLogger.Log($"[SaveKit] UniTask 异步存档加载成功: 槽位 {slotId}");
                 return saveData;
             }

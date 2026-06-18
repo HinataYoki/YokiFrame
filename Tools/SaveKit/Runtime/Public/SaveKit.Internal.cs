@@ -100,9 +100,13 @@ namespace YokiFrame
         /// <summary>
         /// 反序列化字节数组为 SaveData（unsafe 优化版本，带越界保护）
         /// </summary>
-        internal static unsafe SaveData DeserializeSaveData(byte[] bytes)
+        /// <param name="bytes">原始字节数组</param>
+        /// <param name="serializer">序列化器，立即注入以保证迁移阶段可访问模块</param>
+        internal static unsafe SaveData DeserializeSaveData(byte[] bytes, ISaveSerializer serializer)
         {
             var data = new SaveData();
+            // 创建时立即注入序列化器，避免迁移器内 GetModule 时序列化器为空
+            data.SetSerializer(serializer);
             var totalLength = bytes.Length;
 
             if (totalLength < 4)

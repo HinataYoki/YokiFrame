@@ -115,8 +115,8 @@ namespace YokiFrame
                     }
                 }
 
-                // 反序列化
-                var data = DeserializeSaveData(dataBytes);
+                // 反序列化（立即注入序列化器，保证迁移阶段可访问模块）
+                var data = DeserializeSaveData(dataBytes, sSerializer);
                 if (data == null)
                 {
                     KitLogger.Error("[SaveKit] 反序列化失败");
@@ -129,11 +129,18 @@ namespace YokiFrame
                     data = MigrateData(data, meta.Version, sCurrentVersion);
                     if (data != null)
                     {
+                        // 迁移器可能返回新实例，重新注入序列化器
+                        data.SetSerializer(sSerializer);
                         Save(slotId, data);
                     }
                 }
 
-                data.SetSerializer(sSerializer);
+                if (data == null)
+                {
+                    KitLogger.Error("[SaveKit] 迁移后数据为空");
+                    return null;
+                }
+
                 KitLogger.Log($"[SaveKit] 存档加载成功: 槽位 {slotId}");
                 return data;
             }
