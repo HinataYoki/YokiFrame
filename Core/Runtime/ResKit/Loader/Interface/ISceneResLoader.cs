@@ -20,8 +20,10 @@ namespace YokiFrame
         /// <param name="suspendLoad">是否暂停加载（用于预加载）</param>
         /// <param name="onComplete">加载完成回调</param>
         /// <param name="onProgress">进度回调</param>
+        /// <param name="onSuspended">加载到挂起阈值（约 0.9）并挂起时触发一次（仅 suspendLoad 为 true 时）</param>
         void LoadAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            Action<Scene> onComplete, Action<float> onProgress = null);
+            Action<Scene> onComplete, Action<float> onProgress = null,
+            Action onSuspended = null);
 
         /// <summary>
         /// 异步卸载场景
@@ -81,8 +83,10 @@ namespace YokiFrame
         /// <summary>
         /// [UniTask] 异步加载场景
         /// </summary>
+        /// <param name="onSuspended">加载到挂起阈值（约 0.9）并挂起时触发一次（仅 suspendLoad 为 true 时）</param>
         UniTask<Scene> LoadUniTaskAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            IProgress<float> progress = null, CancellationToken cancellationToken = default);
+            IProgress<float> progress = null, CancellationToken cancellationToken = default,
+            Action onSuspended = null);
 
         /// <summary>
         /// [UniTask] 异步卸载场景

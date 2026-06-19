@@ -31,15 +31,18 @@ namespace YokiFrame
         public DefaultSceneResLoaderUniTask(ISceneResLoaderPool pool) => mPool = pool;
 
         public void LoadAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            Action<Scene> onComplete, Action<float> onProgress = null)
+            Action<Scene> onComplete, Action<float> onProgress = null,
+            Action onSuspended = null)
         {
             LoadUniTaskAsync(scenePath, isAdditive, suspendLoad,
-                onProgress != null ? new Progress<float>(onProgress) : null)
+                onProgress != null ? new Progress<float>(onProgress) : null,
+                onSuspended: onSuspended)
                 .ContinueWith(scene => onComplete?.Invoke(scene)).Forget();
         }
 
         public async UniTask<Scene> LoadUniTaskAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            IProgress<float> progress = null, CancellationToken cancellationToken = default)
+            IProgress<float> progress = null, CancellationToken cancellationToken = default,
+            Action onSuspended = null)
         {
             mIsSuspended = false;
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
@@ -58,14 +61,20 @@ namespace YokiFrame
             }
 
             // 使用 UniTask 等待加载完成
+            bool suspendedNotified = false;
             while (!mAsyncOp.isDone)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report(mAsyncOp.progress);
 
-                // 如果暂停了，等待恢复
+                // 如果暂停了，到达阈值时通知一次「已就绪」，随后等待恢复
                 if (mIsSuspended && mAsyncOp.progress >= 0.9f)
                 {
+                    if (!suspendedNotified)
+                    {
+                        suspendedNotified = true;
+                        onSuspended?.Invoke();
+                    }
                     await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
                     continue;
                 }

@@ -16,10 +16,12 @@ namespace YokiFrame
         /// <param name="onComplete">加载完成回调</param>
         /// <param name="onProgress">进度回调</param>
         /// <param name="suspendAtProgress">暂停加载的进度阈值（0-1），1表示不暂停</param>
+        /// <param name="onSuspended">加载到挂起阈值并挂起时触发一次（仅 suspendAtProgress &lt; 1 时）</param>
         void LoadAsync(string sceneName, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f);
+            float suspendAtProgress = 1f,
+            Action onSuspended = null);
 
         /// <summary>
         /// 异步加载场景（通过 BuildIndex）
@@ -29,10 +31,12 @@ namespace YokiFrame
         /// <param name="onComplete">加载完成回调</param>
         /// <param name="onProgress">进度回调</param>
         /// <param name="suspendAtProgress">暂停加载的进度阈值（0-1），1表示不暂停</param>
+        /// <param name="onSuspended">加载到挂起阈值并挂起时触发一次（仅 suspendAtProgress &lt; 1 时）</param>
         void LoadAsync(int buildIndex, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f);
+            float suspendAtProgress = 1f,
+            Action onSuspended = null);
 
         /// <summary>
         /// 异步卸载场景

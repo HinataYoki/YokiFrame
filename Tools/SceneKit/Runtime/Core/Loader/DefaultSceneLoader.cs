@@ -14,6 +14,8 @@ namespace YokiFrame
         private AsyncOperation mAsyncOp;
         private Action<Scene> mOnComplete;
         private Action<float> mOnProgress;
+        private Action mOnSuspended;
+        private bool mSuspendedNotified;
         private float mSuspendAtProgress;
         private bool mIsSuspended;
         private Scene mLoadedScene;
@@ -40,15 +42,18 @@ namespace YokiFrame
         public void LoadAsync(string sceneName, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f)
+            float suspendAtProgress = 1f,
+            Action onSuspended = null)
         {
             mOnComplete = onComplete;
             mOnProgress = onProgress;
+            mOnSuspended = onSuspended;
+            mSuspendedNotified = false;
             mSuspendAtProgress = Mathf.Clamp01(suspendAtProgress);
             mIsSuspended = false;
 
-            var loadMode = mode == SceneLoadMode.Single 
-                ? LoadSceneMode.Single 
+            var loadMode = mode == SceneLoadMode.Single
+                ? LoadSceneMode.Single
                 : LoadSceneMode.Additive;
 
             mAsyncOp = SceneManager.LoadSceneAsync(sceneName, loadMode);
@@ -74,10 +79,13 @@ namespace YokiFrame
         public void LoadAsync(int buildIndex, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f)
+            float suspendAtProgress = 1f,
+            Action onSuspended = null)
         {
             mOnComplete = onComplete;
             mOnProgress = onProgress;
+            mOnSuspended = onSuspended;
+            mSuspendedNotified = false;
             mSuspendAtProgress = Mathf.Clamp01(suspendAtProgress);
             mIsSuspended = false;
 
@@ -157,6 +165,8 @@ namespace YokiFrame
             mAsyncOp = null;
             mOnComplete = null;
             mOnProgress = null;
+            mOnSuspended = null;
+            mSuspendedNotified = false;
             mSuspendAtProgress = 1f;
             mIsSuspended = false;
             mLoadedScene = default;
@@ -209,6 +219,13 @@ namespace YokiFrame
                 {
                     mIsSuspended = true;
                     mOnProgress?.Invoke(mSuspendAtProgress);
+
+                    // 到达挂起阈值时，通知一次「已就绪」，随后等待 ResumeLoad
+                    if (!mSuspendedNotified)
+                    {
+                        mSuspendedNotified = true;
+                        mOnSuspended?.Invoke();
+                    }
                 }
 
                 yield return null;

@@ -36,7 +36,9 @@ namespace YokiFrame
         private AsyncOperation mAsyncOp;
         private Action<Scene> mOnComplete;
         private Action<float> mOnProgress;
+        private Action mOnSuspended;
         private bool mIsSuspended;
+        private bool mSuspendedNotified;
         private Scene mLoadedScene;
         private static SceneResCoroutineRunner sCoroutineRunner;
 
@@ -46,11 +48,14 @@ namespace YokiFrame
         public DefaultSceneResLoader(ISceneResLoaderPool pool) => mPool = pool;
 
         public void LoadAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            Action<Scene> onComplete, Action<float> onProgress = null)
+            Action<Scene> onComplete, Action<float> onProgress = null,
+            Action onSuspended = null)
         {
             mOnComplete = onComplete;
             mOnProgress = onProgress;
+            mOnSuspended = onSuspended;
             mIsSuspended = false;
+            mSuspendedNotified = false;
 
             var loadMode = isAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
             mAsyncOp = SceneManager.LoadSceneAsync(scenePath, loadMode);
@@ -118,7 +123,9 @@ namespace YokiFrame
             mAsyncOp = null;
             mOnComplete = null;
             mOnProgress = null;
+            mOnSuspended = null;
             mIsSuspended = false;
+            mSuspendedNotified = false;
             mLoadedScene = default;
             mPool?.Recycle(this);
         }
@@ -138,6 +145,14 @@ namespace YokiFrame
             while (mAsyncOp != null && !mAsyncOp.isDone)
             {
                 mOnProgress?.Invoke(mAsyncOp.progress);
+
+                // 到达挂起阈值时，通知一次「已就绪」，随后等待 ResumeLoad
+                if (mIsSuspended && !mSuspendedNotified && mAsyncOp.progress >= 0.9f)
+                {
+                    mSuspendedNotified = true;
+                    mOnSuspended?.Invoke();
+                }
+
                 yield return null;
             }
             mOnProgress?.Invoke(1f);

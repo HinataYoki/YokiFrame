@@ -20,7 +20,8 @@ namespace YokiFrame
         public static SceneHandler PreloadSceneAsync(string sceneName,
             Action<SceneHandler> onComplete = null,
             Action<float> onProgress = null,
-            float suspendAtProgress = 0.9f)
+            float suspendAtProgress = 0.9f,
+            Action<SceneHandler> onSuspended = null)
         {
             if (string.IsNullOrEmpty(sceneName))
             {
@@ -61,9 +62,30 @@ namespace YokiFrame
             handler.Loader.LoadAsync(sceneName, SceneLoadMode.Additive,
                 scene => OnPreloadComplete(handler, scene, onComplete),
                 progress => OnSceneProgress(handler, progress, onProgress),
-                suspendAtProgress);
+                suspendAtProgress,
+                () => OnPreloadSuspended(handler, onSuspended));
 
             return handler;
+        }
+
+        /// <summary>
+        /// 预加载到达挂起阈值（约 0.9）回调：场景已就绪但未激活，
+        /// 此时可加载 UI 动效 / timeline 等资源，准备好后调用
+        /// <see cref="ActivatePreloadedScene"/> 或 <see cref="ResumeLoad"/> 激活补完。
+        /// </summary>
+        private static void OnPreloadSuspended(SceneHandler handler, Action<SceneHandler> onSuspended)
+        {
+            handler.IsSuspended = true;
+            handler.UpdateProgress(0.9f);
+
+            // 发送进度事件（已就绪）
+            EventKit.Type.Send(new SceneLoadProgressEvent
+            {
+                SceneName = handler.SceneName,
+                Progress = 0.9f
+            });
+
+            onSuspended?.Invoke(handler);
         }
 
         /// <summary>
@@ -89,7 +111,9 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 激活预加载的场景
+        /// 激活预加载的场景。
+        /// 若场景仍在挂起阈值（约 0.9）等待，会先恢复加载，待场景真正加载完成后再激活，
+        /// 因此激活是异步完成的（不在本方法返回时同步生效）。
         /// </summary>
         /// <param name="handler">预加载的场景句柄</param>
         public static void ActivatePreloadedScene(SceneHandler handler)
@@ -106,25 +130,48 @@ namespace YokiFrame
                 return;
             }
 
-            // 如果加载器还在暂停状态，先恢复
+            // 场景已加载完成（已过挂起点）：直接激活
+            if (handler.State == SceneState.Loaded && handler.Scene.IsValid())
+            {
+                DoActivatePreloaded(handler);
+                return;
+            }
+
+            // 仍在挂起：恢复加载，待加载真正完成后（OnPreloadComplete）再激活
             if (handler.IsSuspended && handler.Loader != null)
             {
+                handler.AddLoadedCallback(DoActivatePreloaded);
                 handler.Loader.ResumeLoad();
                 handler.IsSuspended = false;
             }
+            else
+            {
+                KitLogger.Warning($"[SceneKit] 场景无法激活（既未加载完成也未挂起）: {handler.SceneName}");
+            }
+        }
 
-            // 设置为活动场景
+        /// <summary>
+        /// 执行预加载场景的激活（设为活动场景并派发事件）。
+        /// 调用前 handler.Scene 必须已有效。
+        /// </summary>
+        private static void DoActivatePreloaded(SceneHandler handler)
+        {
             if (handler.Scene.IsValid())
             {
+                var previousScene = GetActiveScene();
                 SceneManager.SetActiveScene(handler.Scene);
                 sActiveSceneHandler = handler;
-                
+
                 // 发送活动场景切换事件
                 EventKit.Type.Send(new ActiveSceneChangedEvent
                 {
-                    PreviousScene = GetActiveScene(),
+                    PreviousScene = previousScene,
                     NewScene = handler.Scene
                 });
+            }
+            else
+            {
+                KitLogger.Warning($"[SceneKit] 激活时场景无效: {handler.SceneName}");
             }
 
             handler.IsPreloaded = false;

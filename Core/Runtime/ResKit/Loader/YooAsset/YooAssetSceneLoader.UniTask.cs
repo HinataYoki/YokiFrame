@@ -30,15 +30,18 @@ namespace YokiFrame
         }
 
         public void LoadAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            Action<Scene> onComplete, Action<float> onProgress = null)
+            Action<Scene> onComplete, Action<float> onProgress = null,
+            Action onSuspended = null)
         {
             LoadUniTaskAsync(scenePath, isAdditive, suspendLoad,
-                onProgress != null ? new Progress<float>(onProgress) : null)
+                onProgress != null ? new Progress<float>(onProgress) : null,
+                onSuspended: onSuspended)
                 .ContinueWith(scene => onComplete?.Invoke(scene)).Forget();
         }
 
         public async UniTask<Scene> LoadUniTaskAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            IProgress<float> progress = null, CancellationToken cancellationToken = default)
+            IProgress<float> progress = null, CancellationToken cancellationToken = default,
+            Action onSuspended = null)
         {
             mIsSuspended = false;
             mScenePath = scenePath;
@@ -55,12 +58,19 @@ namespace YokiFrame
 
             if (suspendLoad) mIsSuspended = true;
 
+            bool suspendedNotified = false;
             while (!mHandle.IsDone)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report(mHandle.Progress);
                 if (mIsSuspended && mHandle.Progress >= 0.9f)
                 {
+                    // 到达挂起阈值，通知一次「已就绪」，随后等待 ResumeLoad
+                    if (!suspendedNotified)
+                    {
+                        suspendedNotified = true;
+                        onSuspended?.Invoke();
+                    }
                     await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
                     continue;
                 }
@@ -103,7 +113,8 @@ namespace YokiFrame
         {
             if (mHandle != default && mIsSuspended)
             {
-                mHandle.ActivateScene();
+                // 解除挂起，让加载操作跑完（而非 ActivateScene，后者要求场景已 loaded）
+                mHandle.AllowSceneActivation();
                 mIsSuspended = false;
             }
         }

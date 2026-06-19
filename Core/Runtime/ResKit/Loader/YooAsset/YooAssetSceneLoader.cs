@@ -19,7 +19,9 @@ namespace YokiFrame
         private YooAsset.SceneHandle mHandle;
         private Action<Scene> mOnComplete;
         private Action<float> mOnProgress;
+        private Action mOnSuspended;
         private bool mIsSuspended;
+        private bool mSuspendedNotified;
         private string mScenePath;
         private bool mIsAdditive;
         private static SceneResCoroutineRunner sCoroutineRunner;
@@ -34,11 +36,14 @@ namespace YokiFrame
         }
 
         public void LoadAsync(string scenePath, bool isAdditive, bool suspendLoad,
-            Action<Scene> onComplete, Action<float> onProgress = null)
+            Action<Scene> onComplete, Action<float> onProgress = null,
+            Action onSuspended = null)
         {
             mOnComplete = onComplete;
             mOnProgress = onProgress;
+            mOnSuspended = onSuspended;
             mIsSuspended = false;
+            mSuspendedNotified = false;
             mScenePath = scenePath;
             mIsAdditive = isAdditive;
 
@@ -55,7 +60,8 @@ namespace YokiFrame
             if (suspendLoad) mIsSuspended = true;
             mHandle.Completed += OnLoadCompleted;
 
-            if (mOnProgress != null)
+            // 需要进度回调，或处于挂起态（需追踪到达阈值以触发 onSuspended）时启动协程
+            if (mOnProgress != null || suspendLoad)
             {
                 EnsureCoroutineRunner();
                 sCoroutineRunner.StartCoroutine(TrackProgress());
@@ -87,7 +93,8 @@ namespace YokiFrame
         {
             if (mHandle != default && mIsSuspended)
             {
-                mHandle.ActivateScene();
+                // 解除挂起，让加载操作跑完（而非 ActivateScene，后者要求场景已 loaded）
+                mHandle.AllowSceneActivation();
                 mIsSuspended = false;
             }
         }
@@ -98,7 +105,9 @@ namespace YokiFrame
             mHandle = default;
             mOnComplete = null;
             mOnProgress = null;
+            mOnSuspended = null;
             mIsSuspended = false;
+            mSuspendedNotified = false;
             mScenePath = null;
             mIsAdditive = false;
             mProvider.ReleaseHandle();
@@ -119,6 +128,14 @@ namespace YokiFrame
             while (mHandle != default && !mHandle.IsDone)
             {
                 mOnProgress?.Invoke(mHandle.Progress);
+
+                // 到达挂起阈值时，通知一次「已就绪」，随后等待 ResumeLoad
+                if (mIsSuspended && !mSuspendedNotified && mHandle.Progress >= 0.9f)
+                {
+                    mSuspendedNotified = true;
+                    mOnSuspended?.Invoke();
+                }
+
                 yield return null;
             }
             mOnProgress?.Invoke(1f);

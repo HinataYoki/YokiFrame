@@ -50,7 +50,8 @@ namespace YokiFrame
         public void LoadAsync(string sceneName, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f)
+            float suspendAtProgress = 1f,
+            Action onSuspended = null)
         {
             mOnComplete = onComplete;
             mOnProgress = onProgress;
@@ -64,19 +65,21 @@ namespace YokiFrame
 
             mResLoader.LoadAsync(sceneName, isAdditive, suspendLoad,
                 OnSceneLoaded,
-                OnProgressUpdate);
+                OnProgressUpdate,
+                onSuspended);
         }
 
         public void LoadAsync(int buildIndex, SceneLoadMode mode,
             Action<Scene> onComplete,
             Action<float> onProgress = null,
-            float suspendAtProgress = 1f)
+            float suspendAtProgress = 1f,
+            Action onSuspended = null)
         {
             // 通过 BuildIndex 获取场景路径
             string scenePath = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(buildIndex);
             string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
 
-            LoadAsync(sceneName, mode, onComplete, onProgress, suspendAtProgress);
+            LoadAsync(sceneName, mode, onComplete, onProgress, suspendAtProgress, onSuspended);
         }
 
         public void UnloadAsync(Scene scene, Action onComplete)
