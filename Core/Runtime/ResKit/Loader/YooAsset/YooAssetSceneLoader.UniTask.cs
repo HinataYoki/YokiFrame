@@ -114,7 +114,8 @@ namespace YokiFrame
             if (mHandle != default && mIsSuspended)
             {
                 // 解除挂起，让加载操作跑完（而非 ActivateScene，后者要求场景已 loaded）
-                mHandle.AllowSceneActivation();
+                // 走 provider 隔离 V2（UnSuspend）/ V3（AllowSceneActivation）API 差异
+                mProvider.ResumeSuspendedScene(mHandle);
                 mIsSuspended = false;
             }
         }

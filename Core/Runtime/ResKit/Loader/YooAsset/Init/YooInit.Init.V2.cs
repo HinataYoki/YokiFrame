@@ -43,7 +43,6 @@ namespace YokiFrame
                 }
             }
 
-            // 2.3.x: YooAssets.Initialize(parameters) 用静态 API 一步完成初始化
             InitializationOperation operation = CreateInitOperation(config);
             await operation.ToUniTask(cancellationToken: ct);
 
@@ -52,7 +51,7 @@ namespace YokiFrame
                 throw new Exception($"[YooInit] 初始化失败: {operation.Error}");
             }
 
-            // 2.3.x: 版本/清单在 Initialize 内部处理（不需要额外调用）
+            await LoadDefaultPackageManifestAsync(ct);
 
             ConfigureResKit();
 
@@ -102,6 +101,8 @@ namespace YokiFrame
                 throw new Exception($"[YooInit] 初始化失败: {operation.Error}");
             }
 
+            yield return LoadDefaultPackageManifestCoroutine();
+
             ConfigureResKit();
 
             SetInitialized(true);
@@ -110,6 +111,50 @@ namespace YokiFrame
         }
 
         #endregion
+#endif
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static async UniTask LoadDefaultPackageManifestAsync(CancellationToken ct)
+        {
+            var package = YooAssets.GetPackage(DefaultPackageName);
+
+            var versionOp = package.RequestPackageVersionAsync();
+            await versionOp.ToUniTask(cancellationToken: ct);
+
+            if (versionOp.Status != EOperationStatus.Succeed)
+            {
+                throw new Exception($"[YooInit] 请求版本失败: {versionOp.Error}");
+            }
+
+            var manifestOp = package.UpdatePackageManifestAsync(versionOp.PackageVersion);
+            await manifestOp.ToUniTask(cancellationToken: ct);
+
+            if (manifestOp.Status != EOperationStatus.Succeed)
+            {
+                throw new Exception($"[YooInit] 更新清单失败: {manifestOp.Error}");
+            }
+        }
+#else
+        private static IEnumerator LoadDefaultPackageManifestCoroutine()
+        {
+            var package = YooAssets.GetPackage(DefaultPackageName);
+
+            var versionOp = package.RequestPackageVersionAsync();
+            yield return versionOp;
+
+            if (versionOp.Status != EOperationStatus.Succeed)
+            {
+                throw new Exception($"[YooInit] 请求版本失败: {versionOp.Error}");
+            }
+
+            var manifestOp = package.UpdatePackageManifestAsync(versionOp.PackageVersion);
+            yield return manifestOp;
+
+            if (manifestOp.Status != EOperationStatus.Succeed)
+            {
+                throw new Exception($"[YooInit] 更新清单失败: {manifestOp.Error}");
+            }
+        }
 #endif
 
         #region 初始化模式

@@ -26,6 +26,9 @@ namespace YokiFrame
         public AsyncOperationBase UnloadSceneAsync(YooAsset.SceneHandle handle)
             => handle.UnloadSceneAsync();
 
+        public void ResumeSuspendedScene(YooAsset.SceneHandle handle)
+            => handle.AllowSceneActivation();
+
         public void ReleaseHandle()
         {
             mHandle = default;
