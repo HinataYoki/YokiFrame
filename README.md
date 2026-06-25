@@ -86,7 +86,7 @@ YokiFrame/
 
 核心抽象包括 `IEngineLogger`、`IEngineTime`、`IEngineObject`、`IResourceProvider`、`ISerializationProvider` 等；上层工具 Kit 也通过 `IAudioBackend`、`IInputBackend`、`ISceneBackend`、`IUIBackend` 等后端接口隔离宿主能力。
 
-Unity Adapter 提供 `UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、Unity CommandBridge Host、Tauri Launcher、事件/快照/遥测发布器，以及 YooAsset、DOTween、FMOD、Unity Input、Unity UI 等可选集成。
+Unity Adapter 提供 `UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、Unity 数学类型转换扩展、Unity CommandBridge Host、Tauri Launcher、事件/快照/遥测发布器、Editor UI Toolkit 组件与样式服务，以及 YooAsset、DOTween、FMOD、Unity Input、Unity UI 等可选集成。
 
 Godot Adapter 提供 `GodotBootstrap`、`GodotAutoBootstrap`、`GodotResourceProvider`、`GodotSingleton<T>`、Godot CommandBridge Host、事件桥、FSM 桥、Kit 快照发布器，以及输入、场景、UI、存档等 Installer 入口。Godot 侧以 Godot 4.7 `.NET / C#` 项目为主要接入对象。
 
@@ -241,7 +241,17 @@ https://github.com/HinataYoki/YokiFrame.git
 
 ### Unity 初始化
 
-运行时最小初始化：
+运行时最小初始化是一句话：
+
+```csharp
+using YokiFrame;
+
+YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+```
+
+`YokiFrameKit` 会通知当前已存在的 Kit installer 根据 Unity 宿主安装默认后端，例如 ResKit 的 `UnityResourceProvider`、LogKit 的 Unity logger，以及可选 Tool Kit 的 Unity 后端。只使用 EventKit、FsmKit、PoolKit 或纯 C# 单例时不强制初始化；使用 ResKit、AudioKit、InputKit、SceneKit、UIKit 等宿主能力时建议在项目启动阶段先调用。
+
+如果希望继续使用场景生命周期自动驱动，可保留一个轻量 MonoBehaviour 外壳：
 
 ```csharp
 using UnityEngine;
@@ -256,7 +266,49 @@ public sealed class GameStartup : MonoBehaviour
 }
 ```
 
-`UnityBootstrap` 会注册 Unity 侧资源、时间、对象、序列化、日志等默认后端。只使用 EventKit、FsmKit、PoolKit 或纯 C# 单例时不强制依赖它；使用 ResKit、AudioKit、InputKit、SceneKit、UIKit 等宿主能力时建议先完成适配器初始化。
+`UnityBootstrap` 内部同样调用统一入口，并在 `Update` / `OnDestroy` 中转发 `YokiFrameKit.Tick` 和 `YokiFrameKit.Shutdown`。它是可选生命周期外壳，不再是唯一初始化本体。
+
+### Unity 常用适配辅助
+
+Unity Adapter 的公共入口位于 `YokiFrame.Unity`。跨引擎 Runtime 继续使用 `YokiVector2`、`YokiVector3`、`YokiRect` 和 `YokiBounds`，Unity 业务代码可以通过扩展方法在 `Vector2`、`Vector3`、`Rect`、`Bounds` 之间双向转换，不需要在调用点手写字段映射。
+
+```csharp
+using UnityEngine;
+using YokiFrame;
+using YokiFrame.Unity;
+
+var bounds = new Bounds(Vector3.zero, Vector3.one * 1000f).ToYokiBounds();
+var octree = SpatialKit.CreateOctree<MySpatialEntity>(bounds);
+
+var position = transform.position.ToYokiVector3();
+mIndex.QueryRadius(position, sensor.Range, mQueryBuffer);
+```
+
+Unity Editor 的 UI Toolkit 模板、设计令牌、图标和样式服务也在 `YokiFrame.Unity`。自定义 Inspector 或 EditorWindow 中使用 `YokiStyleService`、`YokiStyleProfile`、`KitIcons` 时导入该命名空间；需要直接写 `Spacing.SM`、`Colors.TextPrimary`、`Radius.LG` 或 `CreateModernToggle()` 时额外静态导入 `YokiFrameUIComponents`。
+
+从 1.0 升级时，优先看 `TauriRuntime~/dist/docs/quick-start.md` 里的迁移速查。那里已经把 `UIPanel.Data`、SceneKit 事件、YooInit、AudioKit、SaveKit 和 Unity UI Toolkit 入口的实际对应关系整理好了。
+
+```csharp
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEngine.UIElements;
+using YokiFrame.Unity;
+using static YokiFrame.Unity.YokiFrameUIComponents;
+
+public sealed class MyInspector : Editor
+{
+    public override VisualElement CreateInspectorGUI()
+    {
+        var root = new VisualElement();
+        YokiStyleService.Apply(root, YokiStyleProfile.CoreOnly);
+        root.style.marginTop = Spacing.SM;
+
+        root.Add(CreateModernToggle("启用", true, value => { }));
+        return root;
+    }
+}
+#endif
+```
 
 ### Godot
 

@@ -65,6 +65,28 @@ var settings = UIKit.PushOpenPanel<SettingsPanel>(UILevel.Pop);
 UIKit.PopPanel(showPreLevel: true, autoClose: true);
 ```
 
+## 生成面板 Data
+
+2.0 中 `UIPanel` 不再暴露会和生成代码冲突的公开 `Data` 属性，而是显式实现 `IPanel.Data`，用于框架内部保存打开面板时传入的 `IUIData`。UIKit 生成器仍会在 `*.Designer.cs` 中生成面板自己的强类型 `Data` 属性，例如 `LoginPanelData Data`；业务面板直接使用这个强类型属性即可。
+
+```csharp
+public partial class LoginPanel : UIPanel
+{
+    protected override void OnInit(IUIData uiData = null)
+    {
+        // 生成代码会维护 mData 和强类型 Data。
+        mData = uiData as LoginPanelData ?? new LoginPanelData();
+    }
+
+    protected override void OnOpen(IUIData uiData = null)
+    {
+        var loginData = Data;
+    }
+}
+```
+
+需要从通用面板引用读取原始 `IUIData` 时，使用 `((IPanel)panel).Data`。不要在 `UIPanel` 基类上重新加公开 `Data`，否则旧生成代码里的强类型 `Data` 会再次出现 CS0108 隐藏警告。
+
 ## 面板操作 API
 
 ### 打开面板
@@ -72,12 +94,6 @@ UIKit.PopPanel(showPreLevel: true, autoClose: true);
 ```csharp
 // 同步打开
 var panel = UIKit.OpenPanel<MenuPanel>(UILevel.Common, data: null, tag: "main");
-
-// 异步打开（回调风格）
-UIKit.OpenPanelAsync<MenuPanel>(handler =>
-{
-    // 面板已打开
-}, UILevel.Common, data: null, tag: "main");
 
 // 异步打开（Task/UniTask 风格）
 var panel = await UIKit.OpenPanelAsync<MenuPanel>(UILevel.Common, data: null, token: cts.Token);
@@ -119,7 +135,6 @@ UIKit.ClosePanelsByTag("main");
 | `GetCachedPanels()` | 获取已缓存面板列表。 |
 | `GetCacheCapacity()` | 获取缓存容量。 |
 | `SetCacheCapacity(capacity)` | 设置缓存容量。 |
-| `PreloadPanelAsync<T>(level, callback)` | 异步预加载面板（回调风格）。 |
 | `PreloadPanelAsync<T>(level, token)` | 异步预加载面板（Task/UniTask 风格）。 |
 | `ClearPreloadedCache<T>()` | 清除指定面板的预加载缓存。 |
 | `ClearAllPreloadedCache()` | 清除所有预加载缓存。 |
@@ -131,7 +146,6 @@ UIKit.ClosePanelsByTag("main");
 | `PushPanel(panel, hidePreLevel)` | 将面板压入默认栈。 |
 | `PushPanel(panel, stackName, hidePreLevel)` | 将面板压入指定栈。 |
 | `PushOpenPanel<T>(level, data, hidePreLevel)` | 打开并压入默认栈。 |
-| `PushOpenPanelAsync<T>(callback, level, data, hidePreLevel)` | 异步打开并压入（回调风格）。 |
 | `PushOpenPanelAsync<T>(level, data, hidePreLevel, token)` | 异步打开并压入（Task/UniTask 风格）。 |
 | `PopPanel(showPreLevel, autoClose)` | 从默认栈弹出。 |
 | `PopPanel(stackName, showPreLevel, autoClose)` | 从指定栈弹出。 |

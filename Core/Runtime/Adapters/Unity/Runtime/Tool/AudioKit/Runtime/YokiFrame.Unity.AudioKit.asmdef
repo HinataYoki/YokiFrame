@@ -1,12 +1,11 @@
 {
-    "name": "YokiFrame.Unity.AudioKit.FMOD",
+    "name": "YokiFrame.Unity.AudioKit",
     "rootNamespace": "YokiFrame.Unity",
     "references": [
         "YokiFrame",
         "YokiFrame.AudioKit",
-        "YokiFrame.Unity.AudioKit",
         "YokiFrame.Unity.Runtime",
-        "FMODUnity"
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -14,9 +13,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "YOKIFRAME_FMOD_SUPPORT"
-    ],
+    "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
 }

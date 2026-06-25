@@ -9,11 +9,30 @@ namespace YokiFrame.Godot
     /// <summary>
     /// 将 Godot SceneTree 后端注入到 SceneKit，保持 Unity/Godot 共用静态入口。
     /// </summary>
-    public static class GodotSceneKitInstaller
+    [YokiFrameKitDiscoverableInstaller(YokiFrameEngine.Godot)]
+    public sealed class GodotSceneKitInstaller : IYokiFrameKitInstaller
     {
-        public static void Install(IResourceProvider provider)
+        public string KitName
         {
+            get { return "Godot.SceneKit"; }
+        }
+
+        public void Install(YokiFrameEngineContext context)
+        {
+            if (context.Engine != YokiFrameEngine.Godot)
+                return;
+
             ResKit.SetSceneBackend(new GodotSceneBackend());
+        }
+
+        public bool Tick(float deltaSeconds)
+        {
+            return true;
+        }
+
+        public void Shutdown()
+        {
+            ResKit.ClearSceneBackend();
         }
     }
 

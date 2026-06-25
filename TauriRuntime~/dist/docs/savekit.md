@@ -1,6 +1,6 @@
 # SaveKit 存档
 
-SaveKit 是跨引擎存档门面。业务代码统一调用 `YokiFrame.SaveKit` 静态入口，具体文件目录、序列化和引擎生命周期由 Unity、Godot 或项目自定义 Adapter 注入。
+SaveKit 是跨引擎存档门面。业务代码统一调用 `YokiFrame.SaveKit` 静态入口，具体文件目录、序列化和引擎生命周期由 Unity、Godot 或项目自定义 Adapter 注入。迁移 1.x 行为时不要把 `Application.persistentDataPath`、`JsonUtility` 或 Godot API 写进 Tools 层。
 
 ## 核心类型
 
@@ -26,12 +26,12 @@ SaveKit 是跨引擎存档门面。业务代码统一调用 `YokiFrame.SaveKit` 
 
 ## 设置后端
 
-Unity 项目通常由 `UnityBootstrap` 自动安装文件存储和 Unity 序列化 Provider：
+Unity 项目通常由统一初始化入口自动安装文件存储和 Unity 序列化 Provider：
 
 ```csharp
-using YokiFrame.Unity;
+using YokiFrame;
 
-_ = UnityBootstrap.Instance;
+YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ```
 
 Godot 项目由 `GodotBootstrap` 自动安装 `user://` 下的文件存储和 Godot 序列化 Provider。两边业务调用入口一致：
@@ -49,12 +49,6 @@ SaveKit.Save(0, data, "Chapter 1");
 SaveKit.SetStorage(new ProjectSaveStorage());
 SaveKit.SetSerializer(new ProjectSaveSerializer());
 SaveKit.SetEncryptor(new AesSaveEncryptor(projectSaveSecret));
-```
-
-使用内置文件存储时直接安装 `FileSaveStorage`：
-
-```csharp
-SaveKit.SetStorage(new FileSaveStorage(saveRootPath, "slot_", ".sav"));
 ```
 
 `AesSaveEncryptor` 不能使用默认构造函数；项目必须传入自己的密码，或传入 32 字节 key 与 16 字节 IV。
@@ -136,11 +130,43 @@ SaveKit.CollectFromArchitecture<GameArchitecture>(data);
 SaveKit.ApplyToArchitecture<GameArchitecture>(data);
 ```
 
-## 重置
+## 兼容 API
 
 | 方法 | 说明 |
 |------|------|
-| `Reset()` | 重置 SaveKit 状态到默认内存存储、原始序列化器、无加密和无自动保存。 |
+| `SetSavePath(path)` | 设置存档目录路径。 |
+| `GetSavePath()` | 获取存档目录路径。 |
+| `SetFileFormat(prefix, extension)` | 设置文件名前缀和扩展名。 |
+| `GetFileFormat()` | 获取文件名前缀和扩展名。 |
+| `Reset()` | 重置 SaveKit 状态。 |
+
+## 命令桥
+
+SaveKit 已接入文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径：
+
+```json
+{
+  "protocolVersion": 2,
+  "engineId": "unity-editor",
+  "source": "codex",
+  "requestId": "save-001",
+  "kit": "SaveKit",
+  "action": "get_workbench_snapshot",
+  "payload": {}
+}
+```
+
+常用 action：
+
+| action | payload | 说明 |
+|--------|---------|------|
+| `get_workbench_snapshot` | `{}` | 工作台、AI 和 snapshot publisher 共用的完整当前状态。 |
+| `stats` | `{}` | 当前版本、最大槽位、槽位数量、后端类型和加密状态。 |
+| `list_slots` | `{}` | 只读槽位元数据列表。 |
+| `delete_slot` | `{ "slotId": 0 }` | 删除指定槽位。 |
+| `disable_auto_save` | `{}` | 关闭自动保存。 |
+
+命令桥不提供保存/读档 payload action。存档内容属于项目业务数据，不能通过 `.yokiframe` 文件桥随意暴露给 AI 或编辑器。
 
 ## Tauri 工作台
 

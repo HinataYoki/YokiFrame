@@ -95,6 +95,23 @@ ResKit.SetProvider(new ProjectResourceProvider());
 
 `SetProvider()` 会先调用 `ClearAll()`，因此切换 Provider 会清空当前缓存并记录卸载历史。
 
+### YooInit 与资源清单
+
+Unity + YooAsset 项目可以使用 `YokiFrame.Unity.YooInit` 完成 YooAsset 初始化。`YooInit.InitAsync(config)` 成功后会把 ResKit Provider 切换为 `YooAssetResourceProvider`，业务加载仍走 `ResKit.LoadAsset<T>()` / `LoadAssetAsync<T>()`。
+
+```csharp
+using UnityEngine;
+using YokiFrame;
+using YokiFrame.Unity;
+
+await YooInit.InitAsync(yooConfig, token);
+var prefab = await ResKit.LoadAssetAsync<GameObject>("Assets/Game/Items/Drop.prefab", token);
+```
+
+UIKit 如果要用 YooAsset 加载面板，在 `YooInit.InitAsync()` 之后调用 `YooInitUIKitExt.ConfigureUIKit()`。SceneKit 不需要 YooAsset 专属配置；Unity 场景后端由 `UnityBootstrap`、`UnitySceneKitInstaller`、`SceneKit.SetBackend()` 或 `ResKit.SetSceneBackend()` 安装。
+
+2.0 不在 `YooInit` 上提供 `GetAssetInfosByTag()` 这类资源枚举快捷入口。ResKit 负责“按路径加载和释放”，资源清单、tag 查询和筛选属于 YooAsset 自身能力；需要按 tag 找资源时，从 `YooInit.DefaultPackage` / `YooInit.GetPackage(name)` 取得 YooAsset package，使用 YooAsset API 查询 `AssetInfo`，再把 `AssetPath` 交给 ResKit 加载。
+
 ## 同步加载
 
 `Load<T>()` 返回资源对象：

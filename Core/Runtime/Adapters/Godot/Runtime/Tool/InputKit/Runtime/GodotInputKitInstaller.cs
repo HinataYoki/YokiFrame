@@ -10,20 +10,35 @@ namespace YokiFrame.Godot
     /// <summary>
     /// 将 Godot 输入后端注入 InputKit，保持 Unity/Godot 共用静态入口。
     /// </summary>
-    public static class GodotInputKitInstaller
+    [YokiFrameKitDiscoverableInstaller(YokiFrameEngine.Godot)]
+    public sealed class GodotInputKitInstaller : IYokiFrameKitInstaller
     {
         private static GodotInputBackend sBackend;
 
-        public static void Install(IResourceProvider provider)
+        public string KitName
         {
+            get { return "Godot.InputKit"; }
+        }
+
+        public void Install(YokiFrameEngineContext context)
+        {
+            if (context.Engine != YokiFrameEngine.Godot)
+                return;
+
             sBackend = new GodotInputBackend();
             InputKitApi.SetBackend(sBackend);
         }
 
-        public static bool Tick(float deltaSeconds)
+        public bool Tick(float deltaSeconds)
         {
             InputKitApi.Update(Time.GetTicksMsec() / 1000.0f);
             return true;
+        }
+
+        public void Shutdown()
+        {
+            sBackend = null;
+            InputKitApi.ClearBackend();
         }
 
         public static GodotInputBackend GetBackend()

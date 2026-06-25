@@ -49,6 +49,24 @@ grid.QueryRadius(YokiVector3.Zero, 4f, results);
 
 `QueryRadius()`、`QueryBounds()` 会把结果写入调用方传入的 `List<T>`。高频查询时请复用列表并手动 `Clear()`，不要在循环里反复 new。
 
+## Unity 数学类型转换
+
+SpatialKit 的核心 API 只接收 `YokiVector3`、`YokiRect` 和 `YokiBounds`，保持 Unity/Godot 无关。Unity 项目中不要在每个调用点手写 `new YokiVector3(position.x, position.y, position.z)`；Unity Adapter 已在 `YokiFrame.Unity` 中提供双向扩展方法：
+
+```csharp
+using UnityEngine;
+using YokiFrame;
+using YokiFrame.Unity;
+
+var worldBounds = new Bounds(Vector3.zero, Vector3.one * 1000f).ToYokiBounds();
+var octree = SpatialKit.CreateOctree<MySpatialEntity>(worldBounds);
+
+mQueryBuffer.Clear();
+mIndex.QueryRadius(sensor.transform.position.ToYokiVector3(), sensor.Range, mQueryBuffer);
+```
+
+可用转换包括 `Vector2` / `YokiVector2`、`Vector3` / `YokiVector3`、`Rect` / `YokiRect`、`Bounds` / `YokiBounds`。转换 helper 位于 Unity Adapter，Core Runtime 仍不引用 `UnityEngine`。
+
 ## 命令桥
 
 SpatialKit 已接入文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径：

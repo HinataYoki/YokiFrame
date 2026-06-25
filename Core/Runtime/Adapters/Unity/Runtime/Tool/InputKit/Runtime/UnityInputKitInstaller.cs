@@ -10,9 +10,23 @@ namespace YokiFrame.Unity
     /// <summary>
     /// 将 Unity 输入后端注入 InputKit，保持跨引擎静态入口一致。
     /// </summary>
-    public static class UnityInputKitInstaller
+    [YokiFrameKitDiscoverableInstaller(YokiFrameEngine.Unity)]
+    public sealed class UnityInputKitInstaller : IYokiFrameKitInstaller
     {
         private static UnityInputBackend sBackend;
+
+        public string KitName
+        {
+            get { return "Unity.InputKit"; }
+        }
+
+        public void Install(YokiFrameEngineContext context)
+        {
+            if (context.Engine != YokiFrameEngine.Unity)
+                return;
+
+            Install(context.GetService<IResourceProvider>());
+        }
 
         public static void Install(IResourceProvider provider)
         {
@@ -20,10 +34,15 @@ namespace YokiFrame.Unity
             InputKitApi.SetBackend(sBackend);
         }
 
-        public static bool Tick(float deltaSeconds)
+        public bool Tick(float deltaSeconds)
         {
             InputKitApi.Update(UnityEngine.Time.unscaledTime);
             return true;
+        }
+
+        public void Shutdown()
+        {
+            Dispose();
         }
 
         public static void Dispose()

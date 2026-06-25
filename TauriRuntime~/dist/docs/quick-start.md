@@ -27,27 +27,29 @@ using YokiFrame;
 | 程序集 | 用途 |
 |--------|------|
 | `YokiFrame` | EventKit、FsmKit、PoolKit、ResKit、SingletonKit、AudioKit 和接口。 |
-| `YokiFrame.Unity.Runtime` | UnityBootstrap、UnityResourceProvider、MonoSingleton、UnityAudioKitBackend。 |
+| `YokiFrame.Unity.Runtime` | YokiFrameKit Unity 默认注册、UnityBootstrap、UnityResourceProvider、MonoSingleton、UnityAudioKitBackend。 |
 | ActionKit 兼容程序集 | 代码命名空间仍是 `YokiFrame`。 |
 
 ## 2. 初始化 Unity 运行时适配器
 
-如果你要使用默认 Unity 资源和音频后端，先确保项目启动时创建 `UnityBootstrap`。它会调用 `ResKit.SetProvider(new UnityResourceProvider())` 和 `AudioKit.SetBackend(new UnityAudioKitBackend())`。
+如果你要使用默认 Unity 资源、日志、序列化和可选 Tool 后端，在项目启动时调用统一入口即可。
 
 ```csharp
 using UnityEngine;
-using YokiFrame.Unity;
+using YokiFrame;
 
 public sealed class GameStartup : MonoBehaviour
 {
     private void Awake()
     {
-        _ = UnityBootstrap.Instance;
+        YokiFrameKit.Initialize(YokiFrameEngine.Unity);
     }
 }
 ```
 
-只使用 `EventKit`、`FsmKit`、`PoolKit` 或纯 C# 单例时，不强制依赖 `UnityBootstrap`。但只要用到 `ResKit` 或 `AudioKit` 默认 Unity 后端，就应先完成这一步。
+`YokiFrameKit.Initialize(YokiFrameEngine.Unity)` 会通知已存在的 Kit installer 根据 Unity 宿主安装默认后端，例如 `ResKit` 的 `UnityResourceProvider`、`LogKit` 的 Unity logger，以及 AudioKit、InputKit、SceneKit、SaveKit、UIKit 等可选 Tool Kit 的 Unity 后端。只使用 `EventKit`、`FsmKit`、`PoolKit` 或纯 C# 单例时不强制初始化；只要用到宿主后端，就应先完成这一步。
+
+如果希望用场景对象自动转发 tick 和 shutdown，也可以保留 `UnityBootstrap` 外壳；它内部同样调用统一入口。
 
 ## 3. 写一个 EventKit 事件
 
@@ -214,7 +216,7 @@ Pool.List<int>(list =>
 
 ## 6. 使用 ResKit 加载资源
 
-如果已经创建 `UnityBootstrap`，默认 Provider 是 `UnityResourceProvider`，基于 Unity `Resources`。
+如果已经调用 `YokiFrameKit.Initialize(YokiFrameEngine.Unity)`，默认 Provider 是 `UnityResourceProvider`，基于 Unity `Resources`。
 
 ```csharp
 using UnityEngine;
@@ -283,7 +285,7 @@ using YokiFrame.Unity;
 |----------|------|
 | `YokiFrame` | EventKit、FsmKit、PoolKit、ResKit、SingletonKit、AudioKit、ActionKit、InputKit、SceneKit、SpatialKit、UIKit、基础类型和调试信息类型。 |
 | `YokiFrame` | `IResourceProvider`、`IRawResourceProvider`、`IAudioBackend`、`IEngineObject`、`IEngineTime`、`IEngineLogger`、`ISerializationProvider` 等跨引擎接口。 |
-| `YokiFrame.Unity` | Unity 运行时适配器：`UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、`UnityAudioKitBackend` 等。 |
+| `YokiFrame.Unity` | Unity 运行时适配器：`YokiFrameKit` 默认注册、`UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、`UnityAudioKitBackend` 等。 |
 | `YokiFrame.Godot` | Godot 运行时适配器：`GodotBootstrap`、`GodotResourceProvider`、`GodotSingleton<T>` 等。 |
 
 ### Kit API 总览

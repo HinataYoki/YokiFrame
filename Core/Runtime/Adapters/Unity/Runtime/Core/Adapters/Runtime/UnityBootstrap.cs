@@ -1,7 +1,4 @@
 #if !GODOT
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 
 namespace YokiFrame.Unity
@@ -16,7 +13,6 @@ namespace YokiFrame.Unity
         [Header("Logging")]
         [SerializeField] private bool mEnableDebugLog = true;
         [SerializeField] private UnityLogKitOptions mLogKitOptions = UnityLogKitOptions.CreateDefault();
-        private readonly List<Func<float, bool>> mOptionalKitTicks = new();
 
         /// <summary>
         /// 获取当前引擎日志实例。
@@ -46,19 +42,13 @@ namespace YokiFrame.Unity
 
         private void InitializeAdapters()
         {
-            Logger = new UnityEngineLogger();
-            UnityRuntimeSettingsBridge.EnsureInstalled();
-            UnityLogKitRuntimeInstaller.Install(UnityRuntimeSettingsBridge.GetLogKitOptions(mLogKitOptions), Logger);
-            TimeProvider = new UnityEngineTime();
-            ResourceProvider = new UnityResourceProvider();
-            SerializationProvider = new UnityEngineSerializationProvider();
-            ResKit.SetProvider(ResourceProvider);
-            RegisterOptionalKitTick(InstallOptionalKitAdapter("YokiFrame.Unity.UnityActionKitInstaller, YokiFrame.Unity.ActionKit", ResourceProvider));
-            RegisterOptionalKitTick(InstallOptionalKitAdapter("YokiFrame.Unity.UnitySceneKitInstaller, YokiFrame.Unity.SceneKit", ResourceProvider));
-            RegisterOptionalKitTick(InstallOptionalKitAdapter("YokiFrame.Unity.UnityInputKitInstaller, YokiFrame.Unity.InputKit", ResourceProvider));
-            RegisterOptionalKitTick(InstallOptionalKitAdapter("YokiFrame.Unity.UnitySaveKitInstaller, YokiFrame.Unity.SaveKit", ResourceProvider));
-            RegisterOptionalKitTick(InstallOptionalKitAdapter("YokiFrame.Unity.UnityUIKitInstaller, YokiFrame.Unity.UIKit", ResourceProvider));
-            AudioKit.SetBackend(new UnityAudioKitBackend());
+            YokiFrameKit.RegisterInstaller(new UnityCoreKitInstaller(mLogKitOptions, null));
+            var runtime = YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+            var context = runtime.Context;
+            Logger = context.GetService<IEngineLogger>();
+            TimeProvider = context.GetService<IEngineTime>();
+            ResourceProvider = context.GetService<IResourceProvider>();
+            SerializationProvider = context.GetService<ISerializationProvider>();
 
             EventKitErrorHandler.OnError = message =>
             {
@@ -69,76 +59,13 @@ namespace YokiFrame.Unity
 
         private void Update()
         {
-            TickOptionalKits(TimeProvider != null ? TimeProvider.DeltaTime : Time.deltaTime);
-        }
-
-        private void RegisterOptionalKitTick(Func<float, bool> tick)
-        {
-            if (tick != null)
-                mOptionalKitTicks.Add(tick);
-        }
-
-        private void TickOptionalKits(float deltaSeconds)
-        {
-            for (var i = 0; i < mOptionalKitTicks.Count; i++)
-            {
-                mOptionalKitTicks[i](deltaSeconds);
-            }
-        }
-
-        private static Func<float, bool> InstallOptionalKitAdapter(string installerTypeName, IResourceProvider resourceProvider)
-        {
-            var installerType = Type.GetType(installerTypeName);
-            if (installerType == null)
-                return null;
-
-            var installMethod = installerType.GetMethod(
-                "Install",
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                new[] { typeof(IResourceProvider) },
-                null);
-            if (installMethod != null)
-                installMethod.Invoke(null, new object[] { resourceProvider });
-
-            var tickMethod = installerType.GetMethod(
-                "TickAutoSave",
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                new[] { typeof(float) },
-                null);
-            if (tickMethod == null)
-            {
-                tickMethod = installerType.GetMethod(
-                    "TickActionKit",
-                    BindingFlags.Public | BindingFlags.Static,
-                    null,
-                    new[] { typeof(float) },
-                    null);
-            }
-
-            if (tickMethod == null)
-            {
-                tickMethod = installerType.GetMethod(
-                    "Tick",
-                    BindingFlags.Public | BindingFlags.Static,
-                    null,
-                    new[] { typeof(float) },
-                    null);
-            }
-
-            if (tickMethod == null || tickMethod.ReturnType != typeof(bool))
-                return null;
-
-            return (Func<float, bool>)Delegate.CreateDelegate(typeof(Func<float, bool>), tickMethod);
+            YokiFrameKit.Tick(TimeProvider != null ? TimeProvider.DeltaTime : Time.deltaTime);
         }
 
         protected override void OnDestroy()
         {
             EventKitErrorHandler.OnError = null;
-            mOptionalKitTicks.Clear();
-            AudioKit.ClearBackend();
-            UnityLogKitRuntimeInstaller.Shutdown();
+            YokiFrameKit.Shutdown();
             base.OnDestroy();
         }
     }

@@ -9,7 +9,7 @@ AudioKit 是跨引擎音频门面。业务代码统一调用 `YokiFrame.AudioKit
 | `AudioKit` | 静态统一入口，负责播放、停止、音量、资源生命周期、调试状态和历史记录。 |
 | `IAudioBackend` | 跨引擎后端接口，Unity/Godot/项目自定义音频系统都从这里接入。 |
 | `AudioPlayOptions` | 播放参数：Bus、Loop、Volume、Pitch、Fade、3D、FollowTarget、Rolloff。 |
-| `AudioBus` / `AudioChannel` | 默认总线与内置通道：Master、Music、Sfx、Voice、Ambience、UI。 |
+| `AudioBus` / `AudioChannel` | 默认总线与兼容通道：Master、Music、Sfx、Voice、Ambience、UI。 |
 | `AudioVoiceDebugInfo` | 当前活跃 Voice 的调试信息，供命令桥、Tauri 工作台和 AI 读取。 |
 | `AudioHistoryRecord` | 播放、停止、淡出和音量变化历史。 |
 | `AudioKitStats` | 当前后端、活跃数量、历史数量和总线音量。 |
@@ -27,12 +27,12 @@ AudioKit 是跨引擎音频门面。业务代码统一调用 `YokiFrame.AudioKit
 
 ## 设置后端
 
-Unity 项目通常由 `UnityBootstrap` 安装默认后端：
+Unity 项目通常由统一初始化入口安装默认后端：
 
 ```csharp
-using YokiFrame.Unity;
+using YokiFrame;
 
-_ = UnityBootstrap.Instance;
+YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ```
 
 也可以手动设置：
@@ -135,11 +135,12 @@ AudioKit.StopChannel(AudioChannel.Sfx);
 
 ## 资源生命周期
 
-AudioKit 属于 Tool 层，默认资源加载器走 Core 层 `ResKit`。项目需要接入 Addressables、YooAsset、FMOD 事件表或其它加载系统时，实现 `IAudioResourceLoader` 后覆盖即可。已有 `IResourceProvider` 也可以通过 `ResourceProviderAudioResourceLoader` 适配：
+AudioKit 属于 Tool 层，默认资源加载器走 Core 层 `ResKit`。项目需要接入 Addressables、YooAsset、FMOD 事件表或其它加载系统时，实现 `IAudioResourceLoader` 后覆盖即可；旧的 `SetResourceProvider` 仍作为兼容入口：
 
 ```csharp
 AudioKit.SetResourceLoader(projectAudioLoader);
-AudioKit.SetResourceLoader(new ResourceProviderAudioResourceLoader(projectResourceProvider));
+// 或兼容旧项目：
+AudioKit.SetResourceProvider(projectResourceProvider);
 
 AudioKit.Preload("Audio/Click");
 AudioKit.PreloadAsync("Audio/Bgm", () => { });
@@ -154,6 +155,7 @@ AudioKit.UnloadAll();
 | `ResourceLoaderName` | 当前资源加载器名称。 |
 | `SetResourceLoader(loader)` | 设置音频资源加载器。 |
 | `GetResourceLoader()` | 获取当前资源加载器。 |
+| `SetResourceProvider(provider)` | 兼容旧项目，设置资源 Provider。 |
 | `LoadResource<T>(path)` | 同步加载音频资源。 |
 | `LoadResourceAsync<T>(path, token)` | 异步加载音频资源。 |
 | `ReleaseResource(asset)` | 释放音频资源。 |
@@ -206,6 +208,57 @@ AudioKit.StopAll();
 
 `StopWithFade(voiceId)` 会使用播放时的 `AudioPlayOptions.FadeOutDuration`。显式传入时长时，负数会归零。
 
+## 命令桥
+
+AudioKit 已接入 YokiFrame 文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径，通过统一 action 查询当前状态：
+
+```json
+{
+  "protocolVersion": 2,
+  "engineId": "unity-editor",
+  "source": "codex",
+  "requestId": "audio-001",
+  "kit": "AudioKit",
+  "action": "get_workbench_snapshot",
+  "payload": {}
+}
+```
+
+`get_workbench_snapshot` 返回三块数据：
+
+```json
+{
+  "stats": {
+    "backendName": "Unity.AudioSource",
+    "activeVoiceCount": 1,
+    "historyCount": 4,
+    "masterVolume": 1,
+    "musicVolume": 0.8,
+    "sfxVolume": 1,
+    "ambienceVolume": 1
+  },
+  "voices": {
+    "voices": [],
+    "count": 0
+  },
+  "history": {
+    "history": [],
+    "count": 0
+  }
+}
+```
+
+常用 action：
+
+| action | payload | 说明 |
+|--------|---------|------|
+| `get_workbench_snapshot` | `{}` | 工作台、AI 和 snapshot publisher 共用的完整当前状态。 |
+| `stats` | `{}` | 只读统计。 |
+| `list_voices` | `{}` | 当前活跃 Voice。 |
+| `get_history` | `{}` | 播放和停止历史。 |
+| `stop_voice` | `{ "voiceId": 1 }` | 停止指定 Voice。 |
+| `stop_all` | `{}` | 停止全部 Voice。 |
+| `clear_history` | `{}` | 清空历史。 |
 
 ## Tauri 工作台
 
@@ -262,7 +315,7 @@ AudioKit.ClearHistory();
 
 | 问题 | 处理方式 |
 |------|----------|
-| `AudioKit backend is not configured` | 先创建 `UnityBootstrap`，或调用 `AudioKit.SetBackend(...)`。 |
+| `AudioKit backend is not configured` | 先调用 `YokiFrameKit.Initialize(YokiFrameEngine.Unity)`，或调用 `AudioKit.SetBackend(...)`。 |
 | `PlaySfx` 返回 0 | Unity 后端没有找到对应 `AudioClip`，检查 Provider、Resources 路径或手动 `RegisterClip()`。 |
 | FMOD 事件不播放 | 确认已安装 FMOD Unity、启用 `YOKIFRAME_FMOD_SUPPORT`，并使用 `event:/...` 事件路径。 |
 | 3D 音频没有空间效果 | 确认使用 `Play3D`，并检查 `MinDistance/MaxDistance/RolloffMode`。 |
