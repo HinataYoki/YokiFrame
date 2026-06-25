@@ -18,6 +18,17 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 在指定内置通道播放指定路径的音频。
+        /// </summary>
+        /// <param name="path">音频资源路径。</param>
+        /// <param name="channel">播放通道。</param>
+        /// <returns>播放 voice 标识；播放失败时返回 0。</returns>
+        public static int Play(string path, AudioChannel channel)
+        {
+            return Play(path, CreateChannelOptions(channel));
+        }
+
+        /// <summary>
         /// 通过音频 ID 在指定通道播放音频。
         /// </summary>
         /// <param name="audioId">音频资源 ID。</param>
@@ -25,13 +36,7 @@ namespace YokiFrame
         /// <returns>播放 voice 标识；播放失败时返回 0。</returns>
         public static int Play(int audioId, AudioChannel channel = AudioChannel.Sfx)
         {
-            return Play(ResolvePath(audioId), new AudioPlayOptions
-            {
-                Bus = ToBus(channel),
-                Loop = false,
-                Volume = 1f,
-                Pitch = 1f
-            });
+            return Play(ResolvePath(audioId), CreateChannelOptions(channel));
         }
 
         /// <summary>
@@ -42,13 +47,7 @@ namespace YokiFrame
         /// <returns>播放 voice 标识；播放失败时返回 0。</returns>
         public static int Play(string path, int channelId)
         {
-            return Play(path, new AudioPlayOptions
-            {
-                Bus = ToBus(channelId),
-                Loop = false,
-                Volume = 1f,
-                Pitch = 1f
-            });
+            return Play(path, CreateChannelOptions(channelId));
         }
 
         /// <summary>
@@ -121,6 +120,18 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 使用指定内置通道在世界位置播放 3D 音频。
+        /// </summary>
+        /// <param name="path">音频资源路径。</param>
+        /// <param name="position">播放位置。</param>
+        /// <param name="channel">播放通道。</param>
+        /// <returns>播放 voice 标识；播放失败时返回 0。</returns>
+        public static int Play3D(string path, YokiVector3 position, AudioChannel channel)
+        {
+            return Play3D(path, position, CreateChannelOptions(channel));
+        }
+
+        /// <summary>
         /// 使用指定选项在世界位置播放 3D 音频。
         /// </summary>
         /// <param name="path">音频资源路径。</param>
@@ -144,6 +155,18 @@ namespace YokiFrame
         public static int Play3D(string path, IEngineObject followTarget)
         {
             return Play3D(path, followTarget, AudioPlayOptions.Default);
+        }
+
+        /// <summary>
+        /// 使用指定内置通道跟随引擎对象播放 3D 音频。
+        /// </summary>
+        /// <param name="path">音频资源路径。</param>
+        /// <param name="followTarget">跟随目标。</param>
+        /// <param name="channel">播放通道。</param>
+        /// <returns>播放 voice 标识；播放失败时返回 0。</returns>
+        public static int Play3D(string path, IEngineObject followTarget, AudioChannel channel)
+        {
+            return Play3D(path, followTarget, CreateChannelOptions(channel));
         }
 
         /// <summary>
@@ -267,6 +290,28 @@ namespace YokiFrame
         public static void PlayAsync(int audioId, AudioPlayOptions options, Action<int> onComplete)
         {
             PlayAsync(ResolvePath(audioId), options, onComplete);
+        }
+
+        private static AudioPlayOptions CreateChannelOptions(AudioChannel channel)
+        {
+            return new AudioPlayOptions
+            {
+                Bus = ToBus(channel),
+                Loop = false,
+                Volume = 1f,
+                Pitch = 1f
+            };
+        }
+
+        private static AudioPlayOptions CreateChannelOptions(int channelId)
+        {
+            return new AudioPlayOptions
+            {
+                Bus = ToBus(channelId),
+                Loop = false,
+                Volume = 1f,
+                Pitch = 1f
+            };
         }
     }
 }
