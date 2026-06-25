@@ -2861,11 +2861,11 @@ test('docs sidebar uses dependency-layer groups and colorful icon navigation ent
     const toolIds = docsIndex.docs.filter(doc => doc.group === 'Tool').map(doc => doc.id);
     const referenceIds = docsIndex.docs.filter(doc => doc.group === 'Reference').map(doc => doc.id);
 
-    assert.deepEqual(coreIds, ['eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit']);
+    assert.deepEqual(coreIds, ['codegenkit', 'eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit']);
     assert.deepEqual(toolIds, ['actionkit', 'audiokit', 'inputkit', 'localizationkit', 'savekit', 'scenekit', 'spatialkit', 'tablekit', 'uikit']);
     assert.deepEqual(referenceIds, ['third-party-recommendations', 'third-party-index']);
 
-    for (const id of ['eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit']) {
+    for (const id of ['eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit', 'codegenkit']) {
         assert.equal(groupById[id], 'Core');
     }
 

@@ -93,7 +93,6 @@ namespace YokiFrame
                         .WithAttribute("SerializeField"));
                     cls.EmptyLine();
                     cls.Property(request.PanelName + "Data", "Data", property => property
-                        .WithModifiers(MemberModifier.New)
                         .WithGetter(getter => getter.Custom("return mData;")));
                     cls.EmptyLine();
                     cls.ProtectedOverrideVoid("ClearUIComponents", method => method

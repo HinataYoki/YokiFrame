@@ -306,6 +306,7 @@ using YokiFrame.Unity;
 | SingletonKit | `Singleton<T>` | `Instance`、`Dispose()`、`OnSingletonInit()` |
 | Unity Singleton | `MonoSingleton<T>` | `Instance`、`Dispose()`、`OnSingletonInit()`、`OnDestroy()` |
 | Godot Singleton | `GodotSingleton<T>` | `Instance`、`Dispose()`、`OnSingletonInit()`、`_EnterTree()`、`_ExitTree()` |
+| CodeGenKit (Editor) | `CodeGenKit` | `Root()`、`GenerateToString()`、`GenerateToFile()`、`WriteToFile()`、`Lines()` |
 | ActionKit | `ActionKit` | `Sequence()`、`Parallel()`、`Repeat()`、`Delay()`、`DelayFrame()`、`NextFrame()`、`Lerp()`、`Callback()`、`Coroutine()`、`Task()` |
 | ActionKit | `IActionController` | `Pause()`、`Resume()`、`TogglePause()`、`Cancel()`、`UpdateMode` |
 | InputKit | `InputKit` | `SetBackend()`、`Update()`、`IsPressed()`、`WasPressedThisFrame()`、`WasReleasedThisFrame()`、`GetValue()`、`BufferInput()`、`ConsumeBufferedInput()`、`RegisterContext()`、`PushContext()`、`PopContext()` |

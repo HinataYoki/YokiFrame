@@ -9,7 +9,7 @@ AudioKit 是跨引擎音频门面。业务代码统一调用 `YokiFrame.AudioKit
 | `AudioKit` | 静态统一入口，负责播放、停止、音量、资源生命周期、调试状态和历史记录。 |
 | `IAudioBackend` | 跨引擎后端接口，Unity/Godot/项目自定义音频系统都从这里接入。 |
 | `AudioPlayOptions` | 播放参数：Bus、Loop、Volume、Pitch、Fade、3D、FollowTarget、Rolloff。 |
-| `AudioBus` / `AudioChannel` | 默认总线与兼容通道：Master、Music、Sfx、Voice、Ambience、UI。 |
+| `AudioBus` / `AudioChannel` | 默认总线与内置通道：Master、Music、Sfx、Voice、Ambience、UI。 |
 | `AudioVoiceDebugInfo` | 当前活跃 Voice 的调试信息，供命令桥、Tauri 工作台和 AI 读取。 |
 | `AudioHistoryRecord` | 播放、停止、淡出和音量变化历史。 |
 | `AudioKitStats` | 当前后端、活跃数量、历史数量和总线音量。 |
@@ -135,12 +135,11 @@ AudioKit.StopChannel(AudioChannel.Sfx);
 
 ## 资源生命周期
 
-AudioKit 属于 Tool 层，默认资源加载器走 Core 层 `ResKit`。项目需要接入 Addressables、YooAsset、FMOD 事件表或其它加载系统时，实现 `IAudioResourceLoader` 后覆盖即可；旧的 `SetResourceProvider` 仍作为兼容入口：
+AudioKit 属于 Tool 层，默认资源加载器走 Core 层 `ResKit`。项目需要接入 Addressables、YooAsset、FMOD 事件表或其它加载系统时，实现 `IAudioResourceLoader` 后覆盖即可。已有 `IResourceProvider` 也可以通过 `ResourceProviderAudioResourceLoader` 适配：
 
 ```csharp
 AudioKit.SetResourceLoader(projectAudioLoader);
-// 或兼容旧项目：
-AudioKit.SetResourceProvider(projectResourceProvider);
+AudioKit.SetResourceLoader(new ResourceProviderAudioResourceLoader(projectResourceProvider));
 
 AudioKit.Preload("Audio/Click");
 AudioKit.PreloadAsync("Audio/Bgm", () => { });
@@ -155,7 +154,6 @@ AudioKit.UnloadAll();
 | `ResourceLoaderName` | 当前资源加载器名称。 |
 | `SetResourceLoader(loader)` | 设置音频资源加载器。 |
 | `GetResourceLoader()` | 获取当前资源加载器。 |
-| `SetResourceProvider(provider)` | 兼容旧项目，设置资源 Provider。 |
 | `LoadResource<T>(path)` | 同步加载音频资源。 |
 | `LoadResourceAsync<T>(path, token)` | 异步加载音频资源。 |
 | `ReleaseResource(asset)` | 释放音频资源。 |

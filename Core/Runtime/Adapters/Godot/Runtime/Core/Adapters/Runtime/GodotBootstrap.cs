@@ -61,7 +61,7 @@ namespace YokiFrame.Godot
             ResKit.SetProvider(ResourceProvider);
             AudioKit.SetBackend(new GodotAudioKitBackend());
             mAudioBackend = AudioKit.GetBackend() as GodotAudioKitBackend;
-            AudioKit.SetResourceProvider(ResourceProvider);
+            AudioKit.SetResourceLoader(new ResourceProviderAudioResourceLoader(ResourceProvider));
             if (GodotDependencyDefineService.RefreshDefines() && mEnableDebugLog)
                 LogKit.Warning("[YokiFrame] Godot dependency defines changed. Rebuild C# to apply optional Kit compile symbols.");
 

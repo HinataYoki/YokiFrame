@@ -45,7 +45,6 @@ namespace YokiFrame.Godot
         private readonly Stack<AudioStreamPlayer> mPlayer2DPool = new Stack<AudioStreamPlayer>(16);
         private readonly Stack<AudioStreamPlayer3D> mPlayer3DPool = new Stack<AudioStreamPlayer3D>(16);
 
-        private IAudioResourceLoader mResourceLoader;
         private Node mRoot;
         private int mNextVoiceId;
 
@@ -216,11 +215,6 @@ namespace YokiFrame.Godot
         {
             ReleaseAllProviderStreams();
             mStreams.Clear();
-        }
-
-        public void SetResourceProvider(IResourceProvider provider)
-        {
-            mResourceLoader = provider != null ? new ResourceProviderAudioResourceLoader(provider) : null;
         }
 
         public void SetBusVolume(string bus, float volume)
@@ -395,7 +389,7 @@ namespace YokiFrame.Godot
 
         private IAudioResourceLoader GetEffectiveResourceLoader()
         {
-            return mResourceLoader ?? AudioKit.GetResourceLoader();
+            return AudioKit.GetResourceLoader();
         }
 
         private void RegisterStream(string path, AudioStream stream)

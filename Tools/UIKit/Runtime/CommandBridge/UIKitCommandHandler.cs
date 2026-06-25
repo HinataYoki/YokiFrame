@@ -93,7 +93,7 @@ namespace YokiFrame
             {
                 UIStackDiagnosticsSnapshot stack = snapshot.Stacks[i];
                 totalStackDepth += stack.Depth;
-                if (string.Equals(stack.StackName, UIKit.DEFAULT_STACK, StringComparison.Ordinal))
+                if (string.Equals(stack.StackName, UIRoot.DEFAULT_STACK, StringComparison.Ordinal))
                     defaultTopPanelName = stack.TopPanelName;
             }
 
@@ -282,7 +282,7 @@ namespace YokiFrame
 
             for (var i = 0; i < stacks.Count; i++)
             {
-                if (string.Equals(stacks[i].StackName, UIKit.DEFAULT_STACK, StringComparison.Ordinal))
+                if (string.Equals(stacks[i].StackName, UIRoot.DEFAULT_STACK, StringComparison.Ordinal))
                     return stacks[i].Depth;
             }
 

@@ -65,30 +65,6 @@ namespace YokiFrame
         /// <summary>
         /// 异步打开并压入 Panel 到栈中
         /// </summary>
-        public static void PushOpenPanelAsync<T>(Action<IPanel> callback = null,
-            UILevel level = default, IUIData data = null, bool hidePreLevel = true) where T : UIPanel
-        {
-            var root = Root;
-            if (root == default)
-            {
-                callback?.Invoke(null);
-                return;
-            }
-
-            OpenPanelAsync<T>(panel =>
-            {
-                if (panel != default)
-                {
-                    root.PushToStack(panel, UIRoot.DEFAULT_STACK, hidePreLevel);
-                }
-
-                callback?.Invoke(panel);
-            }, level, data);
-        }
-
-        /// <summary>
-        /// 异步打开并压入 Panel 到栈中
-        /// </summary>
 #if YOKIFRAME_UNITASK_SUPPORT
         public static async UniTask<T> PushOpenPanelAsync<T>(UILevel level = default,
             IUIData data = null, bool hidePreLevel = true, CancellationToken ct = default) where T : UIPanel

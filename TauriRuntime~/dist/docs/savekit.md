@@ -51,6 +51,12 @@ SaveKit.SetSerializer(new ProjectSaveSerializer());
 SaveKit.SetEncryptor(new AesSaveEncryptor(projectSaveSecret));
 ```
 
+使用内置文件存储时直接安装 `FileSaveStorage`：
+
+```csharp
+SaveKit.SetStorage(new FileSaveStorage(saveRootPath, "slot_", ".sav"));
+```
+
 `AesSaveEncryptor` 不能使用默认构造函数；项目必须传入自己的密码，或传入 32 字节 key 与 16 字节 IV。
 
 ## 存档与读档
@@ -130,16 +136,11 @@ SaveKit.CollectFromArchitecture<GameArchitecture>(data);
 SaveKit.ApplyToArchitecture<GameArchitecture>(data);
 ```
 
-## 兼容 API
+## 重置
 
 | 方法 | 说明 |
 |------|------|
-| `SetSavePath(path)` | 设置存档目录路径。 |
-| `GetSavePath()` | 获取存档目录路径。 |
-| `SetFileFormat(prefix, extension)` | 设置文件名前缀和扩展名。 |
-| `GetFileFormat()` | 获取文件名前缀和扩展名。 |
-| `Reset()` | 重置 SaveKit 状态。 |
-
+| `Reset()` | 重置 SaveKit 状态到默认内存存储、原始序列化器、无加密和无自动保存。 |
 
 ## Tauri 工作台
 

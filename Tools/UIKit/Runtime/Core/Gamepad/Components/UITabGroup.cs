@@ -48,6 +48,7 @@ namespace YokiFrame
 
         private int mCurrentIndex;
         private bool mIsInitialized;
+        private IUnRegister mTabSwitchUnRegister;
 
         #endregion
 
@@ -86,8 +87,18 @@ namespace YokiFrame
 
         private void OnEnable()
         {
-            // 订阅手柄 Tab 切换事件
-            EventKit.Type.Register<GamepadTabSwitchEvent>(OnGamepadTabSwitch).UnRegisterWhenDisabled(this);
+            UnRegisterTabSwitchEvent();
+            mTabSwitchUnRegister = EventKit.Type.Register<GamepadTabSwitchEvent>(OnGamepadTabSwitch);
+        }
+
+        private void OnDisable()
+        {
+            UnRegisterTabSwitchEvent();
+        }
+
+        private void OnDestroy()
+        {
+            UnRegisterTabSwitchEvent();
         }
 
         #endregion
@@ -275,6 +286,15 @@ namespace YokiFrame
                     content.SetActive(i == mCurrentIndex);
                 }
             }
+        }
+
+        private void UnRegisterTabSwitchEvent()
+        {
+            if (mTabSwitchUnRegister == null)
+                return;
+
+            mTabSwitchUnRegister.UnRegister();
+            mTabSwitchUnRegister = null;
         }
 
         #endregion

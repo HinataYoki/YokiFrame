@@ -55,11 +55,6 @@ namespace YokiFrame.Unity
             mClips.Clear();
         }
 
-        public void SetResourceProvider(IResourceProvider provider)
-        {
-            mResourceLoader = provider != null ? new ResourceProviderAudioResourceLoader(provider) : null;
-        }
-
         private AudioClip ResolveClip(string path)
         {
             var key = Normalize(path);

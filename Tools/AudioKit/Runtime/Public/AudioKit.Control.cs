@@ -190,19 +190,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 设置音频后端使用的资源提供器。
-        /// </summary>
-        /// <param name="provider">资源提供器实例。</param>
-        public static void SetResourceProvider(IResourceProvider provider)
-        {
-            SetResourceLoader(provider != null ? new ResourceProviderAudioResourceLoader(provider) : null);
-
-            var backend = GetBackend();
-            if (backend != null)
-                backend.SetResourceProvider(provider);
-        }
-
-        /// <summary>
         /// 通过音频 ID 预加载资源。
         /// </summary>
         /// <param name="audioId">音频资源 ID。</param>

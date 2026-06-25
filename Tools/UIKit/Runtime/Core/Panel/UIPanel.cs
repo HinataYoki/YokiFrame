@@ -37,7 +37,7 @@ namespace YokiFrame
             }
         }
 
-        public IUIData Data
+        IUIData IPanel.Data
         {
             get { return Handler != default ? Handler.Data : null; }
             set

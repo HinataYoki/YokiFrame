@@ -36,16 +36,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 当前控制器关联的 Action 运行时编号。保留旧拼写以兼容已有调用。
-        /// </summary>
-        [Obsolete("Use CurExecuteActionID. This misspelled alias is kept for source compatibility.", false)]
-        public ulong CurExcuteActionID
-        {
-            get => CurExecuteActionID;
-            set => CurExecuteActionID = value;
-        }
-
-        /// <summary>
         /// 当前控制器驱动的 Action。
         /// </summary>
         public IAction Action { get; set; }

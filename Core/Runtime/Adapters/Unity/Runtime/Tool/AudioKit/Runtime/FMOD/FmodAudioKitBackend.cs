@@ -225,11 +225,6 @@ namespace YokiFrame.Unity
             mDescriptions.Clear();
         }
 
-        public void SetResourceProvider(IResourceProvider provider)
-        {
-            // FMOD 后端使用 Studio 事件路径，不消费 AudioClip 资源提供器。
-        }
-
         public void SetBusVolume(string bus, float volume)
         {
             mBusVolumes[NormalizeBus(bus)] = Mathf.Clamp01(volume);

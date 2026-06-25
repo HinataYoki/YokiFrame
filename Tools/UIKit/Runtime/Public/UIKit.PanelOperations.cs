@@ -43,38 +43,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 异步打开指定类型的 Panel（1.0 callback 兼容入口）。
-        /// </summary>
-        public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
-            UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
-        {
-            var root = Root;
-            if (root == default)
-            {
-                callback?.Invoke(null);
-                return;
-            }
-
-            root.OpenPanelAsyncInternal(typeof(T), level, data, callback, tag);
-        }
-
-        /// <summary>
-        /// 异步打开指定类型的 Panel（1.0 callback 兼容入口）。
-        /// </summary>
-        public static void OpenPanelAsync(Type type, UILevel level, IUIData data,
-            Action<IPanel> callback, string tag = null)
-        {
-            var root = Root;
-            if (root == default)
-            {
-                callback?.Invoke(null);
-                return;
-            }
-
-            root.OpenPanelAsyncInternal(type, level, data, callback, tag);
-        }
-
-        /// <summary>
         /// 异步打开指定类型的 Panel
         /// </summary>
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -203,11 +171,6 @@ namespace YokiFrame
                 root.ClearAllLevels();
             }
         }
-
-        /// <summary>
-        /// 关闭所有面板。与 <see cref="CloseAllPanel"/> 等价，提供复数命名入口。
-        /// </summary>
-        public static void CloseAllPanels() => CloseAllPanel();
 
         /// <summary>
         /// 关闭所有指定 Tag 的面板

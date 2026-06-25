@@ -177,16 +177,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 扫描所有有效保存槽位。
-        /// </summary>
-        /// <returns>按槽位编号排序的保存元数据列表。</returns>
-        [Obsolete("Use GetAllSlots. ScanAllSaves is kept for source compatibility.", false)]
-        public static List<SaveMeta> ScanAllSaves()
-        {
-            return GetAllSlots();
-        }
-
-        /// <summary>
         /// 重置 SaveKit 到默认内存存储状态。
         /// </summary>
         public static void Reset()
@@ -198,7 +188,6 @@ namespace YokiFrame
             sCurrentVersion = DEFAULT_VERSION;
             sMaxSlots = DEFAULT_MAX_SLOTS;
             sMigrators.Clear();
-            ResetCompatibilitySettings();
         }
     }
 }

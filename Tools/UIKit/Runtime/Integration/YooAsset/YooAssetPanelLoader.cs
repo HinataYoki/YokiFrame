@@ -23,7 +23,7 @@ namespace YokiFrame
     }
 
     /// <summary>
-    /// YooAsset 面板加载器。底层复用 2.0 ResKit provider，路径保持 1.0 的面板名约定。
+    /// YooAsset 面板加载器。底层复用 ResKit provider，并按面板类型名构建资源路径。
     /// </summary>
     public class YooAssetPanelLoader : IPanelLoader
     {

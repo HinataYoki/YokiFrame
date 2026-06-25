@@ -354,7 +354,7 @@ controller.Cancel();
 
 ## 技术约束
 
-- Unity 包声明兼容 Unity 2021.3+；当前仓库开发环境覆盖 Unity 6000.x。
+- Unity 包声明兼容 Unity 2022.3+；当前仓库开发环境覆盖 Unity 6000.x。
 - Godot 接入面向 Godot 4.7 `.NET / C#` 项目。
 - C# 代码保持 C# 9.0 兼容，不使用 C# 10+ 语法。
 - Core Runtime 不直接依赖 Tauri；跨进程通信通过 `.yokiframe` 协议和 Adapter 层实现。
@@ -371,7 +371,6 @@ controller.Cancel();
 | Tauri 内置文档源 | `TauriRuntime~/dist/docs` |
 | AI 命令桥 Skill | `Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
 | YokiFrame 使用 Skill | `Core/Editor/Skills/yokiframe-usage/SKILL.md` |
-| 架构速查表 | `../Doc/YOKIFRAME2_ARCHITECTURE_QUICK_REFERENCE.md` |
 
 ---
 

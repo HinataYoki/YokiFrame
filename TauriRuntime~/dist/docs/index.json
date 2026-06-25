@@ -7,7 +7,7 @@
       "icon": "framework",
       "iconTone": "framework",
       "file": "docs/overview.md",
-      "summary": "YokiFrame 的运行时定位、主要 Kit 和推荐使用方式。"
+      "summary": "YokiFrame 2.0 的运行时定位、主要 Kit 和推荐使用方式。"
     },
     {
       "id": "quick-start",
@@ -26,6 +26,16 @@
       "iconTone": "architecture",
       "file": "docs/architecture.md",
       "summary": "YokiFrame Base 层的服务化架构入口、Service / Model 生命周期和跨模块获取方式。"
+    },
+    {
+      "id": "codegenkit",
+      "title": "CodeGenKit 代码生成",
+      "navTitle": "CodeGenKit",
+      "group": "Core",
+      "icon": "code",
+      "iconTone": "codegenkit",
+      "file": "docs/codegenkit.md",
+      "summary": "纯 C# 代码生成工具，支持结构化 AST 和模板式代码构建。"
     },
     {
       "id": "eventkit",
@@ -183,7 +193,7 @@
       "icon": "package",
       "iconTone": "package",
       "file": "docs/third-party-index.md",
-      "summary": "YokiFrame 常见软依赖、适用 Kit、宏定义和安装入口。"
+      "summary": "YokiFrame 2.0 常见软依赖、适用 Kit、宏定义和安装入口。"
     }
   ]
 }

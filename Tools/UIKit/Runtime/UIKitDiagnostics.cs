@@ -89,7 +89,7 @@ namespace YokiFrame
     {
         public UIStackDiagnosticsSnapshot(string stackName, string[] panelNames)
         {
-            StackName = stackName ?? UIKit.DEFAULT_STACK;
+            StackName = stackName ?? UIRoot.DEFAULT_STACK;
             PanelNames = panelNames ?? new string[0];
         }
 

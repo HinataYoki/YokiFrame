@@ -90,38 +90,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 预加载面板（1.0 callback 兼容入口）。
-        /// </summary>
-        public static void PreloadPanelAsync<T>(UILevel level = default,
-            Action<bool> onComplete = null) where T : UIPanel
-        {
-            var root = Root;
-            if (root == default)
-            {
-                onComplete?.Invoke(false);
-                return;
-            }
-
-            root.PreloadPanelAsync<T>(level, onComplete);
-        }
-
-        /// <summary>
-        /// 预加载面板（1.0 callback 兼容入口）。
-        /// </summary>
-        public static void PreloadPanelAsync(Type panelType, UILevel level = default,
-            Action<bool> onComplete = null)
-        {
-            var root = Root;
-            if (root == default)
-            {
-                onComplete?.Invoke(false);
-                return;
-            }
-
-            root.PreloadPanelAsync(panelType, level, onComplete);
-        }
-
-        /// <summary>
         /// 预加载面板
         /// </summary>
 #if YOKIFRAME_UNITASK_SUPPORT

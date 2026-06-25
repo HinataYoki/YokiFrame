@@ -189,6 +189,7 @@ namespace YokiFrame
 
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, mode, data, false);
             RegisterHandler(handler);
+            SendSceneLoadStart(handler);
 
             var request = new SceneLoadRequest(sceneName, INVALID_BUILD_INDEX, mode, suspendAtProgress, data, false);
             handler.Operation = backend.LoadSceneAsync(
@@ -197,17 +198,6 @@ namespace YokiFrame
                 progress => OnSceneProgress(handler, progress, onProgress),
                 () => OnSceneSuspended(handler));
             return handler;
-        }
-
-        /// <summary>
-        /// 以旧版同步加载入口命名发起场景加载。
-        /// </summary>
-        /// <param name="sceneName">场景名称。</param>
-        /// <param name="mode">加载模式。</param>
-        /// <returns>场景处理器。</returns>
-        public static SceneHandler LoadScene(string sceneName, SceneLoadMode mode = SceneLoadMode.Single)
-        {
-            return LoadSceneAsync(sceneName, mode);
         }
 
         /// <summary>
@@ -236,12 +226,29 @@ namespace YokiFrame
             }
 
             var sceneName = BUILD_INDEX_SCENE_PREFIX + buildIndex;
+            var existing = GetSceneHandler(sceneName);
+            if (existing != null && existing.State != SceneState.Unloaded)
+            {
+                if (existing.State == SceneState.Loaded)
+                {
+                    if (onComplete != null)
+                        onComplete(existing);
+                }
+                else
+                {
+                    existing.AddLoadedCallback(onComplete);
+                }
+
+                return existing;
+            }
+
             var backend = EnsureBackend();
             if (mode == SceneLoadMode.Single)
                 ClearScenesForSingleMode(sceneName);
 
             var handler = CreateHandler(sceneName, buildIndex, mode, data, false);
             RegisterHandler(handler);
+            SendSceneLoadStart(handler);
 
             var request = new SceneLoadRequest(sceneName, buildIndex, mode, suspendAtProgress, data, false);
             handler.Operation = backend.LoadSceneAsync(
@@ -250,17 +257,6 @@ namespace YokiFrame
                 progress => OnSceneProgress(handler, progress, onProgress),
                 () => OnSceneSuspended(handler));
             return handler;
-        }
-
-        /// <summary>
-        /// 以旧版同步加载入口命名按构建索引发起场景加载。
-        /// </summary>
-        /// <param name="buildIndex">场景构建索引。</param>
-        /// <param name="mode">加载模式。</param>
-        /// <returns>场景处理器。</returns>
-        public static SceneHandler LoadScene(int buildIndex, SceneLoadMode mode = SceneLoadMode.Single)
-        {
-            return LoadSceneAsync(buildIndex, mode);
         }
 
         /// <summary>
@@ -295,6 +291,7 @@ namespace YokiFrame
 
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, SceneLoadMode.Additive, null, true);
             RegisterHandler(handler);
+            SendSceneLoadStart(handler);
 
             var request = new SceneLoadRequest(sceneName, INVALID_BUILD_INDEX, SceneLoadMode.Additive, suspendAtProgress, null, true);
             handler.Operation = EnsureBackend().LoadSceneAsync(
@@ -501,14 +498,22 @@ namespace YokiFrame
 
         private static void ClearScenesForSingleMode(string newSceneName)
         {
+            if (sLoadedScenes.Count == 0)
+                return;
+
+            var scenesToUnload = new List<SceneHandler>(sLoadedScenes.Count);
             for (int i = sLoadedScenes.Count - 1; i >= 0; i--)
             {
                 var handler = sLoadedScenes[i];
                 if (handler.SceneName == newSceneName)
                     continue;
 
-                UnregisterHandler(handler);
-                handler.MarkUnloaded();
+                scenesToUnload.Add(handler);
+            }
+
+            for (int i = 0; i < scenesToUnload.Count; i++)
+            {
+                UnloadSceneAsync(scenesToUnload[i]);
             }
         }
 
@@ -516,6 +521,12 @@ namespace YokiFrame
         {
             handler.UpdateProgress(progress);
             handler.IsSuspended = handler.Operation != null && handler.Operation.IsSuspended;
+            EventKit.Type.Send(new SceneLoadProgressEvent
+            {
+                SceneName = handler.SceneName,
+                Progress = handler.Progress
+            });
+
             if (onProgress != null)
                 onProgress(handler.Progress);
         }
@@ -547,6 +558,13 @@ namespace YokiFrame
             if (handler.LoadMode == SceneLoadMode.Single || sActiveSceneHandler == null)
                 SetActiveScene(handler);
 
+            EventKit.Type.Send(new SceneLoadCompleteEvent
+            {
+                SceneName = handler.SceneName,
+                Scene = handler.Scene,
+                Handler = handler
+            });
+
             if (onComplete != null)
                 onComplete(handler);
             handler.InvokeLoadedCallbacks();
@@ -554,8 +572,10 @@ namespace YokiFrame
 
         private static void OnSceneUnloaded(SceneHandler handler, Action onComplete)
         {
+            var sceneName = handler.SceneName;
             UnregisterHandler(handler);
             handler.MarkUnloaded();
+            EventKit.Type.Send(new SceneUnloadEvent { SceneName = sceneName });
 
             if (sActiveSceneHandler == null)
                 PromoteFirstLoadedScene();
@@ -566,9 +586,26 @@ namespace YokiFrame
 
         private static void SetActiveScene(SceneHandler handler)
         {
+            var previousScene = sActiveSceneHandler != null ? sActiveSceneHandler.Scene : default(SceneHandle);
             sActiveSceneHandler = handler;
             if (handler != null)
+            {
                 EnsureBackend().SetActiveScene(handler.Scene);
+                EventKit.Type.Send(new ActiveSceneChangedEvent
+                {
+                    PreviousScene = previousScene,
+                    NewScene = handler.Scene
+                });
+            }
+        }
+
+        private static void SendSceneLoadStart(SceneHandler handler)
+        {
+            EventKit.Type.Send(new SceneLoadStartEvent
+            {
+                SceneName = handler.SceneName,
+                Mode = handler.LoadMode
+            });
         }
 
         private static void PromoteFirstLoadedScene()

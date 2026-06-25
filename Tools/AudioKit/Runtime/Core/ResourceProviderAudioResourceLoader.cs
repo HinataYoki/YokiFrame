@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace YokiFrame
 {
     /// <summary>
-    /// 将旧的 IResourceProvider 适配为 AudioKit 资源加载器。
+    /// 将通用 IResourceProvider 适配为 AudioKit 资源加载器。
     /// </summary>
     public sealed class ResourceProviderAudioResourceLoader : IAudioResourceLoader
     {

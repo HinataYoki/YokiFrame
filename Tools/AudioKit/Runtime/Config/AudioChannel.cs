@@ -1,7 +1,7 @@
 namespace YokiFrame
 {
     /// <summary>
-    /// AudioKit 兼容旧 API 的通道枚举。
+    /// AudioKit 内置通道枚举。
     /// </summary>
     public enum AudioChannel
     {

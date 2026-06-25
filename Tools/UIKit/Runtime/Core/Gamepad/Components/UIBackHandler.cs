@@ -29,6 +29,12 @@ namespace YokiFrame
 
         #endregion
 
+        #region 状态
+
+        private IUnRegister mCancelUnRegister;
+
+        #endregion
+
         #region 属性
 
         /// <summary>
@@ -46,7 +52,18 @@ namespace YokiFrame
 
         private void OnEnable()
         {
-            EventKit.Type.Register<GamepadCancelEvent>(HandleCancel).UnRegisterWhenDisabled(this);
+            UnRegisterCancelEvent();
+            mCancelUnRegister = EventKit.Type.Register<GamepadCancelEvent>(HandleCancel);
+        }
+
+        private void OnDisable()
+        {
+            UnRegisterCancelEvent();
+        }
+
+        private void OnDestroy()
+        {
+            UnRegisterCancelEvent();
         }
 
         #endregion
@@ -97,6 +114,15 @@ namespace YokiFrame
                     OnCustomBack?.Invoke();
                     break;
             }
+        }
+
+        private void UnRegisterCancelEvent()
+        {
+            if (mCancelUnRegister == null)
+                return;
+
+            mCancelUnRegister.UnRegister();
+            mCancelUnRegister = null;
         }
 
         #endregion

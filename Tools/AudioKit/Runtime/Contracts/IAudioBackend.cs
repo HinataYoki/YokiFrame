@@ -90,12 +90,6 @@ namespace YokiFrame
         void UnloadAll();
 
         /// <summary>
-        /// 设置后端使用的资源提供器。
-        /// </summary>
-        /// <param name="provider">资源提供器实例。</param>
-        void SetResourceProvider(IResourceProvider provider);
-
-        /// <summary>
         /// 设置指定总线音量。
         /// </summary>
         /// <param name="bus">音频总线名称。</param>

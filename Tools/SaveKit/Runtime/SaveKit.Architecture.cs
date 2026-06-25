@@ -3,7 +3,7 @@ using System;
 namespace YokiFrame
 {
     /// <summary>
-    /// SaveKit 与 Architecture 的 1.x 兼容集成入口。
+    /// SaveKit 与 Architecture 的数据收集和恢复入口。
     /// </summary>
     public static partial class SaveKit
     {
