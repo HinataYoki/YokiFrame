@@ -47,13 +47,12 @@ namespace YokiFrame.Unity
                 if (mGameObject == null)
                     return YokiVector3.Zero;
 
-                var position = mGameObject.transform.position;
-                return new(position.x, position.y, position.z);
+                return mGameObject.transform.position.ToYokiVector3();
             }
             set
             {
                 if (mGameObject != null)
-                    mGameObject.transform.position = new Vector3(value.X, value.Y, value.Z);
+                    mGameObject.transform.position = value.ToUnityVector3();
             }
         }
 

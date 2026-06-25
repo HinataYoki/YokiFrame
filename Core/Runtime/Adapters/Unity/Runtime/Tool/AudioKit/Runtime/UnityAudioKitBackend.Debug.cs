@@ -53,7 +53,7 @@ namespace YokiFrame.Unity
             source.rolloffMode = ToUnityRolloffMode(voice.RolloffMode);
             var position = GetCurrentPosition(voice);
             voice.Position = position;
-            source.transform.position = ToUnityVector3(position);
+            source.transform.position = position.ToUnityVector3();
         }
 
         private static void UpdateFollowTarget(VoiceState voice)
@@ -64,7 +64,7 @@ namespace YokiFrame.Unity
             var position = voice.FollowTarget.Position;
             voice.Position = position;
             if (voice.Source != null)
-                voice.Source.transform.position = ToUnityVector3(position);
+                voice.Source.transform.position = position.ToUnityVector3();
         }
 
         private static YokiVector3 GetCurrentPosition(VoiceState voice)
@@ -73,11 +73,6 @@ namespace YokiFrame.Unity
                 return voice.FollowTarget.Position;
 
             return voice.Position;
-        }
-
-        private static Vector3 ToUnityVector3(YokiVector3 position)
-        {
-            return new Vector3(position.X, position.Y, position.Z);
         }
 
         private static UnityEngine.AudioRolloffMode ToUnityRolloffMode(YokiFrame.AudioRolloffMode mode)

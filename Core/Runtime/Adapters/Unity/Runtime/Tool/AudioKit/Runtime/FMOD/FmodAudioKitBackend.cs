@@ -482,7 +482,7 @@ namespace YokiFrame.Unity
             if (voice.FollowTarget is UnityEngineObject unityObject && unityObject.GameObject != null)
                 return RuntimeUtils.To3DAttributes(unityObject.GameObject.transform);
 
-            return RuntimeUtils.To3DAttributes(ToUnityVector3(GetCurrentPosition(voice)));
+            return RuntimeUtils.To3DAttributes(GetCurrentPosition(voice).ToUnityVector3());
         }
 
         private AudioVoiceDebugInfo BuildDebugInfo(VoiceState voice)
@@ -529,11 +529,6 @@ namespace YokiFrame.Unity
                 return voice.FollowTarget.Position;
 
             return voice.Position;
-        }
-
-        private static Vector3 ToUnityVector3(YokiVector3 position)
-        {
-            return new Vector3(position.X, position.Y, position.Z);
         }
 
         private static string NormalizeBus(string bus)
