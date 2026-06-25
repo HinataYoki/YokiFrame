@@ -4,17 +4,17 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKit 代码生成器
-    /// 在 Luban 生成代码后，生成配套的 TableKit 运行时代码
-    /// 生成的代码完全独立，不依赖任何外部配置文件
+    /// 在 Luban 生成代码后，生成配套的项目侧 TableKit 代码
+    /// 生成的代码优先接入 YokiFrame LogKit，并保留项目侧加载器注入能力。
     /// </summary>
     public static partial class TableKitCodeGenerator
     {
         /// <summary>
-        /// 生成所有 TableKit 运行时代码
+        /// 生成所有项目侧 TableKit 代码
         /// </summary>
         /// <param name="outputDir">输出目录</param>
         /// <param name="useAssemblyDefinition">是否生成 asmdef</param>
@@ -42,7 +42,7 @@ namespace YokiFrame.TableKit.Editor
         {
             if (string.IsNullOrEmpty(outputDir))
             {
-                Debug.LogError("[TableKit] 输出目录不能为空");
+                LogKit.Error("[TableKit] 输出目录不能为空");
                 return;
             }
 
@@ -55,7 +55,8 @@ namespace YokiFrame.TableKit.Editor
             if (string.IsNullOrEmpty(runtimePathPattern)) runtimePathPattern = "{0}";
             if (string.IsNullOrEmpty(editorDataPath)) editorDataPath = "Assets/Art/Table/";
 
-            var hasYokiFrame = DetectYokiFrame();
+            // 生成产物中的错误日志必须走 LogKit；生成 asmdef 时同步补齐 YokiFrame 引用。
+            bool hasYokiFrame = DetectYokiFrame();
 
             // 异步模式：扫描数据目录获取表文件名
             string[] tableFileNames = null;
@@ -64,7 +65,7 @@ namespace YokiFrame.TableKit.Editor
                 tableFileNames = ScanTableFileNames(dataDir, dataTarget);
                 if (tableFileNames.Length == 0)
                 {
-                    Debug.LogWarning("[TableKit] 异步模式已启用但未找到数据文件，将生成空的文件名列表");
+                    LogKit.Warning("[TableKit] 异步模式已启用但未找到数据文件，将生成空的文件名列表");
                 }
             }
 
@@ -77,7 +78,6 @@ namespace YokiFrame.TableKit.Editor
                 if (!File.Exists(utilPath))
                 {
                     GenerateExternalTypeUtil(outputDir, tablesNamespace);
-                    Debug.Log("[TableKit] 已生成 ExternalTypeUtil.cs");
                 }
                 else
                 {
@@ -96,7 +96,6 @@ namespace YokiFrame.TableKit.Editor
             }
             
             CleanupOldFiles(outputDir);
-            Debug.Log($"[TableKit] 代码生成完成: {outputDir}");
         }
 
         #region 检测与清理
@@ -109,10 +108,10 @@ namespace YokiFrame.TableKit.Editor
         /// <returns>解析成功返回 topModule；任一环节失败回退 "cfg" 并发出警告</returns>
         public static string ResolveTopModule(string lubanWorkDir, string target)
         {
-            const string defaultTopModule = "cfg";
+            const string DEFAULT_TOP_MODULE = "cfg";
 
             if (string.IsNullOrEmpty(lubanWorkDir) || string.IsNullOrEmpty(target))
-                return defaultTopModule;
+                return DEFAULT_TOP_MODULE;
 
             var projectRoot = Path.GetDirectoryName(Application.dataPath);
             var workDir = Path.IsPathRooted(lubanWorkDir)
@@ -122,8 +121,8 @@ namespace YokiFrame.TableKit.Editor
 
             if (!File.Exists(confPath))
             {
-                Debug.LogWarning($"[TableKit] luban.conf 不存在，命名空间回退至 \"{defaultTopModule}\"：{confPath}");
-                return defaultTopModule;
+                LogKit.Warning($"[TableKit] luban.conf 不存在，命名空间回退至 \"{DEFAULT_TOP_MODULE}\"：{confPath}");
+                return DEFAULT_TOP_MODULE;
             }
 
             try
@@ -131,24 +130,24 @@ namespace YokiFrame.TableKit.Editor
                 var conf = JsonUtility.FromJson<LubanConf>(File.ReadAllText(confPath));
                 if (conf == default || conf.targets == default || conf.targets.Length == 0)
                 {
-                    Debug.LogWarning($"[TableKit] luban.conf 缺少 targets 数组，命名空间回退至 \"{defaultTopModule}\"");
-                    return defaultTopModule;
+                    LogKit.Warning($"[TableKit] luban.conf 缺少 targets 数组，命名空间回退至 \"{DEFAULT_TOP_MODULE}\"");
+                    return DEFAULT_TOP_MODULE;
                 }
 
                 foreach (var t in conf.targets)
                 {
                     if (t.name != target) continue;
 
-                    return string.IsNullOrEmpty(t.topModule) ? defaultTopModule : t.topModule;
+                    return string.IsNullOrEmpty(t.topModule) ? DEFAULT_TOP_MODULE : t.topModule;
                 }
 
-                Debug.LogWarning($"[TableKit] luban.conf 中未找到 target=\"{target}\"，命名空间回退至 \"{defaultTopModule}\"");
-                return defaultTopModule;
+                LogKit.Warning($"[TableKit] luban.conf 中未找到 target=\"{target}\"，命名空间回退至 \"{DEFAULT_TOP_MODULE}\"");
+                return DEFAULT_TOP_MODULE;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[TableKit] 解析 luban.conf 失败，命名空间回退至 \"{defaultTopModule}\"：{ex.Message}");
-                return defaultTopModule;
+                LogKit.Warning($"[TableKit] 解析 luban.conf 失败，命名空间回退至 \"{DEFAULT_TOP_MODULE}\"：{ex.Message}");
+                return DEFAULT_TOP_MODULE;
             }
         }
 
@@ -247,21 +246,21 @@ namespace YokiFrame.TableKit.Editor
 
             if (!Directory.Exists(fullDataDir))
             {
-                Debug.LogWarning($"[TableKit] 数据目录不存在: {fullDataDir}");
+                LogKit.Warning($"[TableKit] 数据目录不存在: {fullDataDir}");
                 return System.Array.Empty<string>();
             }
 
-            var extension = dataTarget switch
-            {
-                "bin" => "*.bytes",
-                "json" => "*.json",
-                "lua" => "*.lua",
-                _ => "*.*"
-            };
+            var extension = "*.*";
+            if (dataTarget == "bin")
+                extension = "*.bytes";
+            else if (dataTarget == "json")
+                extension = "*.json";
+            else if (dataTarget == "lua")
+                extension = "*.lua";
 
             var files = Directory.GetFiles(fullDataDir, extension, SearchOption.TopDirectoryOnly);
             var fileNames = new string[files.Length];
-            for (int i = 0; i < files.Length; i++)
+            for (var i = 0; i < files.Length; i++)
             {
                 fileNames[i] = Path.GetFileNameWithoutExtension(files[i]);
             }

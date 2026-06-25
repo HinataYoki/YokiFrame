@@ -1,3 +1,4 @@
+#if !GODOT
 #if YOKIFRAME_INPUTSYSTEM_SUPPORT
 using System;
 using UnityEngine;
@@ -271,4 +272,5 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif
 #endif

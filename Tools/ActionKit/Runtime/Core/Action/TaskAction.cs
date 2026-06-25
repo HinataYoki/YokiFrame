@@ -1,59 +1,43 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
 namespace YokiFrame
 {
     internal class TaskAction : ActionBase
     {
-        private Func<Task> mTaskGetter = null;
+        private static readonly YokiFrame.SimplePoolKit<TaskAction> sPool = new(static () => new TaskAction());
+
+        private Func<Task> mTaskGetter;
         private Task mExecutingTask;
-        private static readonly SimplePoolKit<TaskAction> mPool = new(() => new TaskAction());
 
         static TaskAction()
         {
-            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<TaskAction>();
+            ActionKitScheduler.RegisterRecycleProcessor<TaskAction>();
         }
 
-        public static TaskAction Allocate(Func<Task> taskGetter)
+        internal static TaskAction Allocate(Func<Task> taskGetter)
         {
-            var taskAction = mPool.Allocate();
-            taskAction.ActionID = ActionKit.ID_GENERATOR++;
+            var taskAction = sPool.Allocate();
+            taskAction.ActionID = ActionKit.sIdGenerator++;
             taskAction.Deinited = false;
             taskAction.OnInit();
             taskAction.mTaskGetter = taskGetter;
             return taskAction;
         }
 
-        public override void OnStart() => StartTaskSafe();
-
-        /// <summary>
-        /// 安全启动 Task，捕获异常避免 async void 崩溃
-        /// </summary>
-        private async void StartTaskSafe()
+        public override void OnStart()
         {
-            try
-            {
-                mExecutingTask = mTaskGetter();
-                await mExecutingTask;
-                this.Finish();
-            }
-            catch (Exception e)
-            {
-                KitLogger.Error($"[TaskAction] 执行异常: {e.Message}\n{e.StackTrace}");
-                this.Finish();
-            }
+            _ = StartTaskSafe();
         }
 
         public override void OnDeinit()
         {
-            if (!Deinited)
-            {
-                Deinited = true;
-                mTaskGetter = null;
-                mExecutingTask = null;
+            if (Deinited) return;
 
-                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<TaskAction>(mPool, this));
-            }
+            Deinited = true;
+            mTaskGetter = null;
+            mExecutingTask = null;
+            ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<TaskAction>(sPool, this));
         }
 
         public override string GetDebugInfo()
@@ -62,18 +46,23 @@ namespace YokiFrame
                 return $"TaskAction Error: {mExecutingTask.Exception.InnerExceptions}";
             return mTaskGetter != null ? $"TaskAction -> {mTaskGetter.Method.DeclaringType}.{mTaskGetter.Method.Name}" : "TaskAction";
         }
-    }
 
-    public static class TaskExtension
-    {
-        public static ISequence Task(this ISequence self, Func<Task> taskGetter)
+        private async Task StartTaskSafe()
         {
-            return self.Append(TaskAction.Allocate(taskGetter));
-        }
-
-        public static IAction ToAction(this Task self)
-        {
-            return TaskAction.Allocate(() => self);
+            try
+            {
+                if (Deinited || mTaskGetter == null) return;
+                mExecutingTask = mTaskGetter();
+                await mExecutingTask;
+                if (Deinited) return;
+                this.Finish();
+            }
+            catch (Exception e)
+            {
+                ActionKitRuntimeLog.Error("[TaskAction] 执行异常: " + e.Message + "\n" + e.StackTrace);
+                if (Deinited) return;
+                this.Finish();
+            }
         }
     }
 }

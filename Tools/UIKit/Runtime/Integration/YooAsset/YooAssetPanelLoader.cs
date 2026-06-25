@@ -1,68 +1,100 @@
+#if !GODOT
 #if YOKIFRAME_YOOASSET_SUPPORT
 using System;
 using System.Threading;
 #if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// YooAsset 面板加载池
+    /// YooAsset 面板加载池。
     /// </summary>
     public class YooAssetPanelLoaderPool : AbstractPanelLoaderPool
     {
-        protected override IPanelLoader CreatePanelLoader() => new YooAssetPanelLoader(this);
+        protected override IPanelLoader CreatePanelLoader()
+        {
+            return new YooAssetPanelLoader(this);
+        }
     }
 
     /// <summary>
-    /// YooAsset 面板加载器
+    /// YooAsset 面板加载器。底层复用 2.0 ResKit provider，路径保持 1.0 的面板名约定。
     /// </summary>
-    public class YooAssetPanelLoader :
-#if YOKIFRAME_UNITASK_SUPPORT
-        IPanelLoaderUniTask
-#else
-        IPanelLoader
-#endif
+    public class YooAssetPanelLoader : IPanelLoader
     {
         private readonly IPanelLoaderPool mLoaderPool;
-        private ResHandler mHandler;
+        private ResHandle<GameObject> mHandle;
 
-        public YooAssetPanelLoader(YooAssetPanelLoaderPool pool) => mLoaderPool = pool;
+        public YooAssetPanelLoader(YooAssetPanelLoaderPool pool)
+        {
+            mLoaderPool = pool;
+        }
 
         public GameObject Load(PanelHandler handler)
         {
-            mHandler = ResKit.LoadAsset<GameObject>(handler.Type.Name);
-            return mHandler != default ? mHandler.Asset as GameObject : null;
+            mHandle = ResKit.LoadAsset<GameObject>(BuildPath(handler));
+            return mHandle != default ? mHandle.Asset : null;
         }
 
-        public void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
+        public async void LoadAsync(PanelHandler handler, Action<GameObject> onLoadComplete)
         {
-            ResKit.LoadAssetAsync<GameObject>(handler.Type.Name, h =>
+            try
             {
-                mHandler = h;
+#if YOKIFRAME_UNITASK_SUPPORT
+                var prefab = await LoadAsync(handler);
+#else
+                var prefab = await LoadAsync(handler).ConfigureAwait(false);
+#endif
                 if (onLoadComplete != default)
-                {
-                    onLoadComplete(h != default ? h.Asset as GameObject : null);
-                }
-            });
+                    onLoadComplete(prefab);
+            }
+            catch (Exception exception)
+            {
+                LogKit.Exception(exception);
+                if (onLoadComplete != default)
+                    onLoadComplete(null);
+            }
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        public async UniTask<GameObject> LoadUniTaskAsync(PanelHandler handler, CancellationToken cancellationToken = default)
-        {
-            mHandler = await ResKit.LoadAssetUniTaskAsync<GameObject>(handler.Type.Name, cancellationToken);
-            return mHandler != default ? mHandler.Asset as GameObject : null;
-        }
+        public async UniTask<GameObject> LoadAsync(
+            PanelHandler handler,
+            CancellationToken cancellationToken = default)
+#else
+        public async Task<GameObject> LoadAsync(
+            PanelHandler handler,
+            CancellationToken cancellationToken = default)
 #endif
+        {
+#if YOKIFRAME_UNITASK_SUPPORT
+            mHandle = await ResKit.LoadAssetAsync<GameObject>(BuildPath(handler), cancellationToken);
+#else
+            mHandle = await ResKit.LoadAssetAsync<GameObject>(BuildPath(handler), cancellationToken).ConfigureAwait(false);
+#endif
+            return mHandle != default ? mHandle.Asset : null;
+        }
 
         public void UnLoadAndRecycle()
         {
-            if (mHandler != default) mHandler.Release();
-            mHandler = null;
+            if (mHandle != default)
+            {
+                mHandle.Release();
+                mHandle = null;
+            }
+
             mLoaderPool.RecycleLoader(this);
+        }
+
+        private static string BuildPath(PanelHandler handler)
+        {
+            return handler != default && handler.Type != default ? handler.Type.Name : string.Empty;
         }
     }
 }
+#endif
 #endif

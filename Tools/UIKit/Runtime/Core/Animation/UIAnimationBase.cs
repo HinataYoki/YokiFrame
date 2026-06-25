@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using System.Collections;
 using UnityEngine;
@@ -26,6 +27,9 @@ namespace YokiFrame
         protected AnimationCurve mCurve;
         protected Coroutine mCoroutine;
         protected MonoBehaviour mCoroutineRunner;
+#if YOKIFRAME_UNITASK_SUPPORT
+        private CancellationTokenSource mUniTaskCts;
+#endif
         
         /// <summary>自定义曲线采样值（仅非默认曲线时分配）</summary>
         private float[] mCustomCurveSamples;
@@ -151,16 +155,32 @@ namespace YokiFrame
             mOnCompleteWithState = onComplete;
             mCallbackState = state;
             IsPlaying = true;
+#if YOKIFRAME_UNITASK_SUPPORT
+            mUniTaskCts?.Cancel();
+            mUniTaskCts?.Dispose();
+            mUniTaskCts = new CancellationTokenSource();
+            PlayUniTaskInternalAsync(target, mUniTaskCts.Token).Forget();
+#else
             mCoroutine = mCoroutineRunner.StartCoroutine(PlayCoroutine(target));
+#endif
         }
 
         public virtual void Stop()
         {
+#if YOKIFRAME_UNITASK_SUPPORT
+            if (mUniTaskCts != default)
+            {
+                mUniTaskCts.Cancel();
+                mUniTaskCts.Dispose();
+                mUniTaskCts = null;
+            }
+#else
             if (mCoroutine != default && mCoroutineRunner != default)
             {
                 mCoroutineRunner.StopCoroutine(mCoroutine);
                 mCoroutine = null;
             }
+#endif
             IsPlaying = false;
             mOnCompleteWithState = null;
             mCallbackState = null;
@@ -215,6 +235,25 @@ namespace YokiFrame
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
+        private async UniTaskVoid PlayUniTaskInternalAsync(RectTransform target, CancellationToken ct)
+        {
+            try
+            {
+                await PlayUniTaskAsync(target, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消，不调用回调
+                return;
+            }
+
+            var callback = mOnCompleteWithState;
+            var callbackState = mCallbackState;
+            mOnCompleteWithState = null;
+            mCallbackState = null;
+            callback?.Invoke(callbackState);
+        }
+
         public virtual async UniTask PlayUniTaskAsync(RectTransform target, CancellationToken ct = default)
         {
             if (target == default) return;
@@ -267,3 +306,4 @@ namespace YokiFrame
 #endif
     }
 }
+#endif

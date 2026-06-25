@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 
-namespace YokiFrame.EditorTools
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKit 文档数据 - 按功能模块拆分
@@ -25,24 +25,5 @@ namespace YokiFrame.EditorTools
         }
     }
 
-    internal sealed class TableKitDocumentationProvider : IDocumentationModuleProvider
-    {
-        public IEnumerable<DocModule> GetModules()
-        {
-            yield return new DocModule
-            {
-                Name = "TableKit",
-                Icon = KitIcons.TABLEKIT,
-                Category = "TOOLS",
-                Description = "Luban-based table workflow for editor configuration, preview, and code generation.",
-                Keywords = new List<string> { "Table", "Luban", "Excel", "Data" },
-                PluginLinks = new List<PluginLink>
-                {
-                    new() { Name = "Luban（必需）", Url = "https://github.com/focus-creative-games/luban" },
-                },
-                Sections = TableKitDocData.GetAllSections()
-            };
-        }
-    }
 }
 #endif

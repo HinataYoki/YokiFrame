@@ -1,0 +1,17 @@
+{
+    "name": "YokiFrame.Unity.ActionKit",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.ActionKit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

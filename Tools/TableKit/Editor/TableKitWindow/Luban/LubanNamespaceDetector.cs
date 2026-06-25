@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// Luban 命名空间自动检测器

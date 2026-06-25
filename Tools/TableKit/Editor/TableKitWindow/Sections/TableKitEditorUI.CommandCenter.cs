@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 命令中心区块
@@ -36,7 +36,7 @@ namespace YokiFrame.TableKit.Editor
             container.Add(titleRow);
 
             var title = new Label("TableKit 配置表生成");
-            title.style.fontSize = Design.FontSizeTitle;
+            title.style.fontSize = Design.FONT_SIZE_TITLE;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             titleRow.Add(title);
@@ -68,9 +68,9 @@ namespace YokiFrame.TableKit.Editor
             targetLabel.style.marginRight = 4;
             container.Add(targetLabel);
 
-            mTargetDropdown = new DropdownField(new List<string>(TARGET_OPTIONS), 0);
+            mTargetDropdown = new DropdownField(new List<string>(sTargetOptions), 0);
             mTargetDropdown.style.width = 80;
-            mTargetDropdown.value = string.IsNullOrEmpty(mTarget) ? TARGET_OPTIONS[0] : mTarget;
+            mTargetDropdown.value = string.IsNullOrEmpty(mTarget) ? sTargetOptions[0] : mTarget;
             mTargetDropdown.RegisterValueChangedCallback(evt => { mTarget = evt.newValue; SavePrefs(); });
             container.Add(mTargetDropdown);
 
@@ -83,9 +83,9 @@ namespace YokiFrame.TableKit.Editor
             codeLabel.style.marginRight = 4;
             container.Add(codeLabel);
 
-            mCodeTargetDropdown = new DropdownField(new List<string>(CODE_TARGET_OPTIONS), 0);
+            mCodeTargetDropdown = new DropdownField(new List<string>(sCodeTargetOptions), 0);
             mCodeTargetDropdown.style.width = 140;
-            mCodeTargetDropdown.value = string.IsNullOrEmpty(mCodeTarget) ? CODE_TARGET_OPTIONS[0] : mCodeTarget;
+            mCodeTargetDropdown.value = string.IsNullOrEmpty(mCodeTarget) ? sCodeTargetOptions[0] : mCodeTarget;
             mCodeTargetDropdown.RegisterValueChangedCallback(evt =>
             {
                 mCodeTarget = evt.newValue;

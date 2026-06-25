@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 构建选项区块
@@ -28,7 +28,7 @@ namespace YokiFrame.TableKit.Editor
             container.style.marginBottom = 12;
 
             var title = new Label("构建选项");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             title.style.marginBottom = 12;
@@ -74,7 +74,7 @@ namespace YokiFrame.TableKit.Editor
             asmRow.Add(mAssemblyNameField);
 
             var asmHint = new Label("打开后生成的代码会放入独立程序集 (asmdef)");
-            asmHint.style.fontSize = Design.FontSizeSmall;
+            asmHint.style.fontSize = Design.FONT_SIZE_SMALL;
             asmHint.style.color = new StyleColor(Design.TextTertiary);
             asmHint.style.marginBottom = 8;
             toggleGroup.Add(asmHint);
@@ -96,13 +96,13 @@ namespace YokiFrame.TableKit.Editor
             extRow.Add(mGenerateExternalTypeUtilToggle);
 
             var extHint = new Label("Luban vector 转 Unity Vector，如有需要可自行添加代码，不会重复生成覆盖");
-            extHint.style.fontSize = Design.FontSizeSmall;
+            extHint.style.fontSize = Design.FONT_SIZE_SMALL;
             extHint.style.color = new StyleColor(Design.TextTertiary);
             extHint.style.marginBottom = 4;
             toggleGroup.Add(extHint);
 
             var extHint2 = new Label("注意：TableKit.cs 会被重复生成覆盖，请勿在其中添加自定义代码");
-            extHint2.style.fontSize = Design.FontSizeSmall;
+            extHint2.style.fontSize = Design.FONT_SIZE_SMALL;
             extHint2.style.color = new StyleColor(Design.BrandWarning);
             toggleGroup.Add(extHint2);
         }
@@ -124,13 +124,13 @@ namespace YokiFrame.TableKit.Editor
             asyncRow.Add(mUseAsyncLoadingToggle);
 
             var asyncHint = new Label("启用后生成 InitAsync() 方法，使用 UniTask 异步加载配置表数据");
-            asyncHint.style.fontSize = Design.FontSizeSmall;
+            asyncHint.style.fontSize = Design.FONT_SIZE_SMALL;
             asyncHint.style.color = new StyleColor(Design.TextTertiary);
             asyncHint.style.marginBottom = 4;
             toggleGroup.Add(asyncHint);
 
             var asyncHint2 = new Label("需要项目已安装 UniTask 并定义 YOKIFRAME_UNITASK_SUPPORT");
-            asyncHint2.style.fontSize = Design.FontSizeSmall;
+            asyncHint2.style.fontSize = Design.FONT_SIZE_SMALL;
             asyncHint2.style.color = new StyleColor(Design.BrandWarning);
             toggleGroup.Add(asyncHint2);
         }

@@ -8,9 +8,8 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Debug = UnityEngine.Debug;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKit 编辑器 UI 核心逻辑
@@ -23,36 +22,36 @@ namespace YokiFrame.TableKit.Editor
         private static class Design
         {
             // 品牌色
-            public static readonly Color BrandPrimary = new(0.13f, 0.59f, 0.95f);
-            public static readonly Color BrandPrimaryHover = new(0.26f, 0.65f, 0.96f);
-            public static readonly Color BrandSuccess = new(0.30f, 0.69f, 0.31f);
-            public static readonly Color BrandDanger = new(0.96f, 0.26f, 0.21f);
-            public static readonly Color BrandWarning = new(1f, 0.60f, 0f);
+            public static readonly Color BrandPrimary = new Color(0.13f, 0.59f, 0.95f);
+            public static readonly Color BrandPrimaryHover = new Color(0.26f, 0.65f, 0.96f);
+            public static readonly Color BrandSuccess = new Color(0.30f, 0.69f, 0.31f);
+            public static readonly Color BrandDanger = new Color(0.96f, 0.26f, 0.21f);
+            public static readonly Color BrandWarning = new Color(1f, 0.60f, 0f);
 
             // 层级色
-            public static readonly Color LayerCard = new(0.18f, 0.18f, 0.21f);
-            public static readonly Color LayerElevated = new(0.20f, 0.22f, 0.24f);
-            public static readonly Color LayerHover = new(0.23f, 0.24f, 0.27f);
-            public static readonly Color LayerBackground = new(0.12f, 0.12f, 0.14f);
-            public static readonly Color LayerConsole = new(0.08f, 0.08f, 0.10f);
+            public static readonly Color LayerCard = new Color(0.18f, 0.18f, 0.21f);
+            public static readonly Color LayerElevated = new Color(0.20f, 0.22f, 0.24f);
+            public static readonly Color LayerHover = new Color(0.23f, 0.24f, 0.27f);
+            public static readonly Color LayerBackground = new Color(0.12f, 0.12f, 0.14f);
+            public static readonly Color LayerConsole = new Color(0.08f, 0.08f, 0.10f);
 
             // 文本色
-            public static readonly Color TextPrimary = new(0.94f, 0.94f, 0.96f);
-            public static readonly Color TextSecondary = new(0.71f, 0.73f, 0.76f);
-            public static readonly Color TextTertiary = new(0.51f, 0.53f, 0.57f);
+            public static readonly Color TextPrimary = new Color(0.94f, 0.94f, 0.96f);
+            public static readonly Color TextSecondary = new Color(0.71f, 0.73f, 0.76f);
+            public static readonly Color TextTertiary = new Color(0.51f, 0.53f, 0.57f);
 
             // 边框色
-            public static readonly Color BorderDefault = new(0.22f, 0.23f, 0.25f);
-            public static readonly Color BorderLight = new(0.28f, 0.28f, 0.30f);
-            public static readonly Color BorderValid = new(0.30f, 0.69f, 0.31f, 0.6f);
-            public static readonly Color BorderInvalid = new(0.96f, 0.26f, 0.21f, 0.6f);
+            public static readonly Color BorderDefault = new Color(0.22f, 0.23f, 0.25f);
+            public static readonly Color BorderLight = new Color(0.28f, 0.28f, 0.30f);
+            public static readonly Color BorderValid = new Color(0.30f, 0.69f, 0.31f, 0.6f);
+            public static readonly Color BorderInvalid = new Color(0.96f, 0.26f, 0.21f, 0.6f);
 
             // 字体大小
-            public const int FontSizeTitle = 16;        // 主标题
-            public const int FontSizeSection = 14;      // 区块标题
-            public const int FontSizeBody = 13;         // 正文
-            public const int FontSizeSmall = 12;        // 小字/提示
-            public const int FontSizeCode = 11;         // 代码块
+            public const int FONT_SIZE_TITLE = 16;        // 主标题
+            public const int FONT_SIZE_SECTION = 14;      // 区块标题
+            public const int FONT_SIZE_BODY = 13;         // 正文
+            public const int FONT_SIZE_SMALL = 12;        // 小字/提示
+            public const int FONT_SIZE_CODE = 11;         // 代码块
         }
 
         #endregion
@@ -114,9 +113,9 @@ namespace YokiFrame.TableKit.Editor
 
         #region 下拉选项
 
-        private static readonly string[] TARGET_OPTIONS = { "client", "server", "all" };
-        private static readonly string[] CODE_TARGET_OPTIONS = { "cs-bin", "cs-simple-json", "cs-newtonsoft-json" };
-        private static readonly string[] DATA_TARGET_OPTIONS = { "bin", "json", "lua" };
+        private static readonly string[] sTargetOptions = { "client", "server", "all" };
+        private static readonly string[] sCodeTargetOptions = { "cs-bin", "cs-simple-json", "cs-newtonsoft-json" };
+        private static readonly string[] sDataTargetOptions = { "bin", "json", "lua" };
 
         #endregion
 
@@ -213,6 +212,9 @@ namespace YokiFrame.TableKit.Editor
 
         #endregion
 
+        /// <summary>
+        /// 保存 TableKit 编辑器用户配置。
+        /// </summary>
         public void SavePrefs()
         {
             SyncToUserPrefs();

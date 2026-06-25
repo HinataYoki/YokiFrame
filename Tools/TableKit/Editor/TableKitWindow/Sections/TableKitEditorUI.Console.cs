@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 控制台区块
@@ -37,7 +37,7 @@ namespace YokiFrame.TableKit.Editor
             container.Add(header);
 
             var title = new Label("控制台");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             header.Add(title);
@@ -66,7 +66,7 @@ namespace YokiFrame.TableKit.Editor
 
             mStatusBannerLabel = new Label("就绪");
             mStatusBannerLabel.style.color = new StyleColor(Design.TextPrimary);
-            mStatusBannerLabel.style.fontSize = Design.FontSizeBody;
+            mStatusBannerLabel.style.fontSize = Design.FONT_SIZE_BODY;
             mStatusBanner.Add(mStatusBannerLabel);
 
             UpdateStatusBanner(BuildStatus.Ready);
@@ -88,7 +88,7 @@ namespace YokiFrame.TableKit.Editor
             mLogContent.multiline = true;
             mLogContent.isReadOnly = true;
             mLogContent.value = LoadConsoleLog(); // 恢复上次日志
-            mLogContent.style.fontSize = Design.FontSizeSmall;
+            mLogContent.style.fontSize = Design.FONT_SIZE_SMALL;
             mLogContent.style.color = new StyleColor(Design.TextSecondary);
             mLogContent.style.whiteSpace = WhiteSpace.Normal;
             mLogContent.style.flexGrow = 1;
@@ -104,7 +104,7 @@ namespace YokiFrame.TableKit.Editor
         private void UpdateStatusBanner(BuildStatus status)
         {
             mCurrentStatus = status;
-            var icon = mStatusBanner?.Q<Image>("status-icon");
+            var icon = mStatusBanner != default ? mStatusBanner.Q<Image>("status-icon") : default;
 
             switch (status)
             {

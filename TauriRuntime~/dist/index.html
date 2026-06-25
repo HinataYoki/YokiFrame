@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app.title">YokiFrame 工作台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="workspace-shell">
+        <header id="titlebar" class="workspace-topbar">
+            <div class="titlebar-brand" aria-label="YokiFrame">
+                <span class="titlebar-brand__mark" aria-hidden="true">
+                    <img id="titlebar-brand-icon" class="brand-icon brand-icon--image" src="assets/yoki.png" data-runtime-src="../../../../../../Core/Editor/Resources/yoki.png" alt="">
+                </span>
+                <span class="titlebar-brand__name">YokiFrame</span>
+            </div>
+            <div class="titlebar-drag-region" aria-hidden="true"></div>
+            <div class="titlebar-right">
+                <span id="status" class="status-badge disconnected" data-i18n="common.disconnected">未连接</span>
+                <button id="theme-toggle" class="titlebar-tool" type="button" aria-label="切换主题" title="切换到黑夜模式">
+                    <span class="titlebar-tool__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="shell-icon">
+                            <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                            <path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                </button>
+                <select id="language-select" class="language-select" aria-label="语言" data-i18n-aria-label="common.language">
+                    <option value="zh-CN" selected data-i18n="language.zh-CN">中文</option>
+                    <option value="en-US" data-i18n="language.en-US">English</option>
+                </select>
+                <button id="window-close" class="window-close" type="button" aria-label="关闭窗口" title="关闭窗口" data-i18n-aria-label="window.close" data-i18n-title="window.close">
+                    <svg viewBox="0 0 24 24" class="shell-icon" aria-hidden="true">
+                        <path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <div id="body" class="workspace-body">
+            <nav id="sidebar" class="workspace-nav" aria-label="主导航" data-i18n-aria-label="sidebar.main_navigation">
+                <div class="sidebar-scroll-card">
+                    <div class="sidebar-active-indicator" aria-hidden="true"></div>
+
+                    <section class="sidebar-group">
+                        <div class="sidebar-group-header" data-i18n="sidebar.workbench">工作台</div>
+                        <button class="sidebar-item active" data-page="system" type="button">
+                            <span class="item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="shell-icon">
+                                    <rect x="4.5" y="5.5" width="15" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                    <path d="M9 18.5h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="item-label" data-i18n="sidebar.framework">框架</span>
+                        </button>
+                        <button class="sidebar-item" data-page="docs" type="button">
+                            <span class="item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="shell-icon">
+                                    <path d="M7 5.5h10.5a2 2 0 0 1 2 2v11H9a2 2 0 0 0-2 2V7.5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                    <path d="M9.5 9h6M9.5 12h6M9.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="item-label" data-i18n="sidebar.docs">文档</span>
+                        </button>
+                    </section>
+
+                <section class="sidebar-group">
+                    <div class="sidebar-group-header">Architecture</div>
+                    <button class="sidebar-item" data-page="architecture" data-kit="Architecture" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <rect x="5" y="5" width="14" height="14" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M8.5 9h7M8.5 12h7M8.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+                                <path d="M17.5 7.2 20 5M17.5 16.8 20 19M6.5 7.2 4 5M6.5 16.8 4 19" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" opacity="0.62"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">Architecture</span>
+                    </button>
+                </section>
+
+                <section class="sidebar-group">
+                    <div class="sidebar-group-header" data-i18n="sidebar.core">Core</div>
+                    <button class="sidebar-item" data-page="eventkit" data-kit="EventKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M12 4.5v5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                <path d="m8.8 10.2 3.2 8.3 3.2-8.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M6.5 8.2h2.4M15.1 8.2h2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">EventKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="fsmkit" data-kit="FsmKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <circle cx="7" cy="7" r="2.2" fill="currentColor"/>
+                                <circle cx="17" cy="7" r="2.2" fill="currentColor"/>
+                                <circle cx="12" cy="17" r="2.2" fill="currentColor"/>
+                                <path d="M8.9 8.5 10.8 15M15.1 8.5 13.2 15M9.2 7h5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">FsmKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="logkit" data-kit="LogKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M7.5 6.5h9M7.5 11.5h9M7.5 16.5h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                <rect x="4.5" y="4.5" width="15" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">LogKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="poolkit" data-kit="PoolKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M6 7.5h12M7.5 12h9M9 16.5h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                <rect x="5" y="5" width="14" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">PoolKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="reskit" data-kit="ResKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M5.5 8.5 12 5l6.5 3.5v7L12 19l-6.5-3.5v-7Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M5.5 8.5 12 12l6.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">ResKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="singletonkit" data-kit="SingletonKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M6.5 19.2c.9-3 2.9-5 5.5-5s4.6 2 5.5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                <path d="M18.5 6.5h1.8M3.7 6.5h1.8M12 2.8v1.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">SingletonKit</span>
+                    </button>
+                </section>
+
+                <section class="sidebar-group">
+                    <div class="sidebar-group-header" data-i18n="sidebar.tool">Tool</div>
+                    <button class="sidebar-item" data-page="actionkit" data-kit="ActionKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="m13 8 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">ActionKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="audiokit" data-kit="AudioKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M5 10.2h3.2L12.5 6v12l-4.3-4.2H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M15.5 9.2a4 4 0 0 1 0 5.6M17.9 6.8a7.4 7.4 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">AudioKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="inputkit" data-kit="InputKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <rect x="4.5" y="6.5" width="15" height="11" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M8 10h.01M11 10h.01M14 10h.01M17 10h.01M8 13.5h2.2M12 13.5h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                                <path d="M7.5 17.5 5.6 20M16.5 17.5l1.9 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">InputKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="localizationkit" data-kit="LocalizationKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M4.8 12h14.4M12 4.5c2 2.1 3 4.6 3 7.5s-1 5.4-3 7.5M12 4.5c-2 2.1-3 4.6-3 7.5s1 5.4 3 7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">LocalizationKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="savekit" data-kit="SaveKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M6.5 5.5h9.2L18.5 8v10.5h-13v-13Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M8.5 5.5v5h7v-5M8.5 18.5v-4.2h7v4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">SaveKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="scenekit" data-kit="SceneKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M5.5 6.5h13v11h-13v-11Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M8.5 15.5 11 12l2 2.4 1.6-1.9 2.9 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="9" cy="9.2" r="1.1" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">SceneKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="spatialkit" data-kit="SpatialKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <path d="M5.5 7.5h13M5.5 12h13M5.5 16.5h13M7.5 5.5v13M12 5.5v13M16.5 5.5v13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                <circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/>
+                                <circle cx="15.5" cy="13.2" r="1.3" fill="currentColor"/>
+                                <circle cx="11.5" cy="16.2" r="1.3" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">SpatialKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="tablekit" data-kit="TableKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <rect x="5" y="5.5" width="14" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M5 9.5h14M5 13.5h14M9.5 5.5v13M14.5 5.5v13" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">TableKit</span>
+                    </button>
+                    <button class="sidebar-item" data-page="uikit" data-kit="UIKit" type="button">
+                        <span class="item-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="shell-icon">
+                                <rect x="5" y="5.5" width="14" height="12.5" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M8 9h8M8 12.2h4.2M8 15.4h7.2" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+                                <path d="M9.5 18.5h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+                            </svg>
+                        </span>
+                        <span class="item-label">UIKit</span>
+                    </button>
+                </section>
+
+                </div>
+
+                <section class="sidebar-footer" aria-label="版本与 GitHub" data-i18n-aria-label="sidebar.version_and_github">
+                    <div class="sidebar-package-card">
+                        <span class="sidebar-package-version" data-package-version>v--</span>
+                        <a class="sidebar-package-link" data-package-link href="https://github.com/HinataYoki/YokiFrame" target="_blank" rel="noreferrer">
+                            <span class="sidebar-package-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="shell-icon">
+                                    <path d="M12 4.5a7.5 7.5 0 0 0-2.4 14.6c.4.1.5-.2.5-.4v-1.5c-2.1.5-2.6-.9-2.6-.9-.3-.8-.8-1-.8-1-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.7-.2-3.5-.9-3.5-3.7 0-.8.3-1.5.8-2.1-.1-.2-.3-1 .1-2 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1 .2 1.8.1 2 .5.6.8 1.3.8 2.1 0 2.9-1.8 3.5-3.5 3.7.3.2.5.7.5 1.4v2.1c0 .2.1.5.5.4A7.5 7.5 0 0 0 12 4.5Z" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            <span>GitHub</span>
+                        </a>
+                    </div>
+                </section>
+            </nav>
+
+            <main id="content" class="workspace-content">
+                <section id="metric-strip" class="metric-strip" hidden></section>
+                <section id="tab-bar" class="tab-bar" aria-label="页面标签" data-i18n-aria-label="sidebar.page_tabs"></section>
+                <section id="page-body" class="content-body"></section>
+            </main>
+        </div>
+        <div class="window-resize-handle window-resize-handle--north" data-window-resize="north" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--east" data-window-resize="east" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--south" data-window-resize="south" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--west" data-window-resize="west" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--north-east" data-window-resize="north-east" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--north-west" data-window-resize="north-west" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--south-east" data-window-resize="south-east" aria-hidden="true"></div>
+        <div class="window-resize-handle window-resize-handle--south-west" data-window-resize="south-west" aria-hidden="true"></div>
+    </div>
+
+    <script src="markdown.js"></script>
+    <script src="bridge-diagnostics.js"></script>
+    <script src="font-settings.js"></script>
+    <script src="i18n/zh-cn.js"></script>
+    <script src="i18n/en-us.js"></script>
+    <script src="i18n.js"></script>
+    <script src="shell-i18n.js"></script>
+    <script src="core/app.js"></script>
+    <script src="core/window-state.js"></script>
+    <script src="core/log-panel.js"></script>
+    <script src="core/command-bridge.js"></script>
+    <script src="core/ai-skill-installer.js"></script>
+    <script src="core/brand-assets.js"></script>
+    <script src="core/kit-reactive-refresh.js"></script>
+    <script src="shared/dom.js"></script>
+    <script src="shared/kit-ui.js"></script>
+    <script src="pages/system.js"></script>
+    <script src="pages/actionkit.js"></script>
+    <script src="pages/poolkit.js"></script>
+    <script src="pages/fsmkit-graph.js"></script>
+    <script src="pages/fsmkit.js"></script>
+    <script src="pages/eventkit-scan.js"></script>
+    <script src="pages/eventkit.js"></script>
+    <script src="pages/reskit.js"></script>
+    <script src="pages/architecture.js"></script>
+    <script src="pages/singletonkit.js"></script>
+    <script src="pages/logkit.js"></script>
+    <script src="pages/audiokit.js"></script>
+    <script src="pages/savekit.js"></script>
+    <script src="pages/localizationkit.js"></script>
+    <script src="pages/scenekit.js"></script>
+    <script src="pages/spatialkit.js"></script>
+    <script src="pages/inputkit.js"></script>
+    <script src="pages/uikit.js"></script>
+    <script src="pages/tablekit-preview.js"></script>
+    <script src="pages/tablekit.js"></script>
+    <script src="pages/docs.js"></script>
+    <script src="core/router.js"></script>
+    <script src="core/i18n-bindings.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

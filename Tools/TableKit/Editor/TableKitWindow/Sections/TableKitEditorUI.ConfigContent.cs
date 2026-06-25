@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 配置内容区块
@@ -46,7 +46,7 @@ namespace YokiFrame.TableKit.Editor
             header.Add(arrow);
 
             var title = new Label("环境与路径配置");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             title.style.flexGrow = 1;
@@ -112,7 +112,7 @@ namespace YokiFrame.TableKit.Editor
             }, true, "选择包含 luban.conf 的目录"));
 
             var workDirHint = new Label("包含 Datas、Defines、luban.conf 的文件夹");
-            workDirHint.style.fontSize = Design.FontSizeSmall;
+            workDirHint.style.fontSize = Design.FONT_SIZE_SMALL;
             workDirHint.style.color = new StyleColor(Design.TextTertiary);
             workDirHint.style.marginTop = 2;
             workDirHint.style.marginLeft = 80;
@@ -127,7 +127,7 @@ namespace YokiFrame.TableKit.Editor
             }, "dll", "选择 Luban.dll"));
 
             var dllHint = new Label("Luban 代码生成工具的 DLL 路径");
-            dllHint.style.fontSize = Design.FontSizeSmall;
+            dllHint.style.fontSize = Design.FONT_SIZE_SMALL;
             dllHint.style.color = new StyleColor(Design.TextTertiary);
             dllHint.style.marginTop = 2;
             dllHint.style.marginLeft = 80;
@@ -151,9 +151,9 @@ namespace YokiFrame.TableKit.Editor
             dataLabel.style.color = new StyleColor(Design.TextSecondary);
             dataRow.Add(dataLabel);
 
-            mDataTargetDropdown = new DropdownField(new List<string>(DATA_TARGET_OPTIONS), 0);
+            mDataTargetDropdown = new DropdownField(new List<string>(sDataTargetOptions), 0);
             mDataTargetDropdown.style.width = 120;
-            mDataTargetDropdown.value = string.IsNullOrEmpty(mDataTarget) ? DATA_TARGET_OPTIONS[0] : mDataTarget;
+            mDataTargetDropdown.value = string.IsNullOrEmpty(mDataTarget) ? sDataTargetOptions[0] : mDataTarget;
             mDataTargetDropdown.RegisterValueChangedCallback(evt =>
             {
                 mDataTarget = evt.newValue;
@@ -181,7 +181,7 @@ namespace YokiFrame.TableKit.Editor
             }, false, "选择数据输出目录"));
 
             var dataOutputHint = new Label("生成的配置数据文件存放路径，默认 Assets/Resources/Art/Table/");
-            dataOutputHint.style.fontSize = Design.FontSizeSmall;
+            dataOutputHint.style.fontSize = Design.FONT_SIZE_SMALL;
             dataOutputHint.style.color = new StyleColor(Design.TextTertiary);
             dataOutputHint.style.marginTop = 2;
             dataOutputHint.style.marginLeft = 80;
@@ -196,7 +196,7 @@ namespace YokiFrame.TableKit.Editor
             }, false, "选择代码输出目录"));
 
             var codeOutputHint = new Label("生成的 C# 配置表代码存放路径");
-            codeOutputHint.style.fontSize = Design.FontSizeSmall;
+            codeOutputHint.style.fontSize = Design.FONT_SIZE_SMALL;
             codeOutputHint.style.color = new StyleColor(Design.TextTertiary);
             codeOutputHint.style.marginTop = 2;
             codeOutputHint.style.marginLeft = 80;
@@ -233,7 +233,7 @@ namespace YokiFrame.TableKit.Editor
             customEditorPathRow.Add(mCustomEditorDataPathToggle);
 
             var customEditorPathHint = new Label("关闭时编辑器数据路径自动跟随数据输出路径");
-            customEditorPathHint.style.fontSize = Design.FontSizeSmall;
+            customEditorPathHint.style.fontSize = Design.FONT_SIZE_SMALL;
             customEditorPathHint.style.color = new StyleColor(Design.TextTertiary);
             customEditorPathHint.style.marginBottom = 8;
             tkSection.Add(customEditorPathHint);
@@ -250,7 +250,7 @@ namespace YokiFrame.TableKit.Editor
             }, false, "选择编辑器数据路径"));
 
             var editorDataHint = new Label("TableKit.TablesEditor 编辑器访问用的表数据路径");
-            editorDataHint.style.fontSize = Design.FontSizeSmall;
+            editorDataHint.style.fontSize = Design.FONT_SIZE_SMALL;
             editorDataHint.style.color = new StyleColor(Design.TextTertiary);
             editorDataHint.style.marginTop = 2;
             editorDataHint.style.marginLeft = 80;
@@ -281,7 +281,7 @@ namespace YokiFrame.TableKit.Editor
             runtimeFieldContainer.Add(mRuntimePathPatternField);
 
             var hint = new Label("{0} 为文件名占位符 • 可寻址模式填 {0} • 完整路径填 Assets/Art/Table/{0}");
-            hint.style.fontSize = Design.FontSizeSmall;
+            hint.style.fontSize = Design.FONT_SIZE_SMALL;
             hint.style.color = new StyleColor(Design.TextTertiary);
             hint.style.marginTop = 4;
             hint.style.marginLeft = 80;

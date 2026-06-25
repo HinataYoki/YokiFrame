@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 
@@ -111,3 +112,4 @@ namespace YokiFrame
         public override void Recycle() => SafePoolKit<SlideAnimation>.Instance.Recycle(this);
     }
 }
+#endif

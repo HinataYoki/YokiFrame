@@ -1,8 +1,11 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
-#if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 
 namespace YokiFrame
@@ -101,12 +104,16 @@ namespace YokiFrame
             });
         }
 
-#if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
-        /// [UniTask] 异步打开面板（内部使用，直接走原生 UniTask 加载路径）
+        /// 异步打开面板。安装 UniTask 后返回 UniTask，否则返回 Task。
         /// </summary>
-        internal async UniTask<IPanel> OpenPanelUniTaskAsyncInternal(Type type, UILevel level, IUIData data,
-            System.Threading.CancellationToken ct, string tag = null)
+#if YOKIFRAME_UNITASK_SUPPORT
+        internal async UniTask<IPanel> OpenPanelAsyncInternal(Type type, UILevel level, IUIData data,
+            CancellationToken ct, string tag = null)
+#else
+        internal async Task<IPanel> OpenPanelAsyncInternal(Type type, UILevel level, IUIData data,
+            CancellationToken ct, string tag = null)
+#endif
         {
             if (TryGetCachedHandler(type, out var handler))
             {
@@ -131,7 +138,11 @@ namespace YokiFrame
             handler.Data = data;
             handler.Tag = tag;
 
-            var panel = await LoadPanelUniTaskAsync(handler, ct);
+#if YOKIFRAME_UNITASK_SUPPORT
+            var panel = await LoadPanelAsync(handler, ct);
+#else
+            var panel = await LoadPanelAsync(handler, ct);
+#endif
 
             mLoadingPanelTypes.Remove(type);
 
@@ -145,7 +156,6 @@ namespace YokiFrame
             handler.Recycle();
             return null;
         }
-#endif
 
         /// <summary>
         /// 缓存命中时，将新传入的参数（Level、Tag）应用到已有 Handler
@@ -248,3 +258,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

@@ -3,38 +3,29 @@ using System;
 namespace YokiFrame
 {
     /// <summary>
-    /// Contract for a value that supports change binding.
+    /// 支持变化绑定的值契约。
     /// </summary>
     public interface IBindable<T>
     {
-        /// <summary>
-        /// Current value.
-        /// </summary>
         T Value { get; set; }
 
-        /// <summary>
-        /// Registers a value-changed callback.
-        /// </summary>
+        /// <summary>注册值变化回调。</summary>
         LinkUnRegister<T> Bind(Action<T> callback);
 
-        /// <summary>
-        /// Unregisters one value-changed callback.
-        /// </summary>
+        /// <summary>注销一个值变化回调。</summary>
         void UnBind(Action<T> value);
 
-        /// <summary>
-        /// Unregisters all callbacks.
-        /// </summary>
+        /// <summary>注销全部回调。</summary>
         void UnBindAll();
     }
 
     /// <summary>
-    /// Convenience helpers for bindable values.
+    /// 可绑定值的便利扩展。
     /// </summary>
     public static class BindableExtensions
     {
         /// <summary>
-        /// Registers a callback and immediately invokes it with the current value.
+        /// 注册回调，并立即用当前值调用一次。
         /// </summary>
         public static LinkUnRegister<T> BindWithCallback<T>(this IBindable<T> self, Action<T> callback)
         {

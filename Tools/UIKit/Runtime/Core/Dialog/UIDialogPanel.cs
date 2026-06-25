@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -226,3 +227,4 @@ namespace YokiFrame
         public DialogResultData Result;
     }
 }
+#endif

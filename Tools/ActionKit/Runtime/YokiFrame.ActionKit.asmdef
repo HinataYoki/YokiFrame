@@ -1,27 +1,17 @@
-﻿{
-    "name":  "YokiFrame.ActionKit",
-    "rootNamespace":  "YokiFrame.ActionKit",
-    "references":  [
-                       "GUID:224151c835b786a4f8efadaa1799380d",
-                       "UniTask"
-                   ],
-    "includePlatforms":  [
-
-                         ],
-    "excludePlatforms":  [
-
-                         ],
-    "allowUnsafeCode":  false,
-    "overrideReferences":  false,
-    "precompiledReferences":  [
-
-                              ],
-    "autoReferenced":  true,
-    "defineConstraints":  [
-
-                          ],
-    "versionDefines":  [
-
-                       ],
-    "noEngineReferences":  false
+{
+    "name": "YokiFrame.ActionKit",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:33661e06c33d31b4c9223810bf503247"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
 }

@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 
-namespace YokiFrame.EditorTools
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKit ExternalTypeUtil 文档
@@ -16,7 +16,7 @@ namespace YokiFrame.EditorTools
                 Description = "可选的类型转换工具，将 Luban 的 vector 类型转换为 Unity 的 Vector 类型。",
                 CodeExamples = new List<CodeExample>
                 {
-                    new()
+                    new CodeExample()
                     {
                         Title = "类型转换",
                         Code = @"// 在 TableKit 工具中勾选「生成 ExternalTypeUtil」后可用

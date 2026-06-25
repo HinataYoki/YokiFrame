@@ -1,365 +1,425 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
-    /// <summary>
-    /// <see cref="UIPanelInspector"/> 的绑定树区块。
-    /// 用于展示当前面板的绑定层级以及校验汇总结果。
-    /// </summary>
     public partial class UIPanelInspector
     {
-        /// <summary>
-        /// 创建绑定树区块。
-        /// </summary>
-        private void CreateBindTreeSection()
+        private const string BIND_TREE_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.BindTree";
+        private const string BIND_TREE_COLLAPSED_PATHS_KEY = "YokiFrame.UIKit.UIPanelInspector.CollapsedBindPaths";
+
+        private readonly HashSet<string> mCollapsedBindPaths = new();
+
+        private VisualElement mBindTreeContainer;
+        private Label mBindStatsLabel;
+        private Label mBindValidationLabel;
+
+        private void CreateBindTree(VisualElement root)
         {
-            var panel = target as UIPanel;
-            if (panel == null)
-                return;
+            var section = CreateSectionContainer("uipanel-section-bindtree");
 
-            var section = new VisualElement();
-            section.AddToClassList("uipanel-section");
-            section.AddToClassList("uipanel-section-bindtree");
-
-            bool savedFoldoutState = SessionState.GetBool(KEY_BIND_TREE_FOLDOUT, true);
-            mBindTreeFoldout = new Foldout { text = "绑定树", value = savedFoldoutState };
-            mBindTreeFoldout.AddToClassList("uipanel-bindtree-foldout");
-
-            mBindTreeFoldout.RegisterValueChangedCallback(evt =>
+            var foldout = new Foldout
             {
-                SessionState.SetBool(KEY_BIND_TREE_FOLDOUT, evt.newValue);
-            });
-
-            section.Add(mBindTreeFoldout);
+                text = "绑定树",
+                value = SessionState.GetBool(BIND_TREE_FOLDOUT_KEY, true)
+            };
+            foldout.AddToClassList("uipanel-bindtree-foldout");
+            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(BIND_TREE_FOLDOUT_KEY, evt.newValue));
+            section.Add(foldout);
 
             var content = new VisualElement();
             content.AddToClassList("uipanel-section-content");
-            mBindTreeFoldout.Add(content);
+            foldout.Add(content);
 
-            var openCodeBtn = CreateOpenCodeButton(panel);
-            if (openCodeBtn != null)
-            {
-                var btnRow = new VisualElement();
-                btnRow.style.flexDirection = FlexDirection.Row;
-                btnRow.style.justifyContent = Justify.FlexEnd;
-                btnRow.style.marginBottom = 8;
-                btnRow.Add(openCodeBtn);
-                content.Add(btnRow);
-            }
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList("uipanel-bindtree-toolbar");
+            var openButton = new Button(OpenPanelScript) { text = "打开脚本" };
+            openButton.AddToClassList("uipanel-open-code-btn");
+            toolbar.Add(openButton);
+            content.Add(toolbar);
 
             mBindTreeContainer = new VisualElement();
             mBindTreeContainer.AddToClassList("uipanel-bindtree-container");
-            mBindTreeContainer.style.marginBottom = 8;
-            mBindTreeContainer.style.backgroundColor = new StyleColor(new Color(0.15f, 0.15f, 0.15f));
-            mBindTreeContainer.style.borderTopLeftRadius = 6;
-            mBindTreeContainer.style.borderTopRightRadius = 6;
-            mBindTreeContainer.style.borderBottomLeftRadius = 6;
-            mBindTreeContainer.style.borderBottomRightRadius = 6;
-            mBindTreeContainer.style.paddingTop = 8;
-            mBindTreeContainer.style.paddingBottom = 8;
-            mBindTreeContainer.style.paddingLeft = 8;
-            mBindTreeContainer.style.paddingRight = 8;
             content.Add(mBindTreeContainer);
 
-            var legend = CreateBindTreeLegend();
-            content.Add(legend);
+            content.Add(CreateBindTreeLegend());
 
             mBindStatsLabel = new Label();
             mBindStatsLabel.AddToClassList("uipanel-bindtree-stats");
             content.Add(mBindStatsLabel);
 
-            mValidationSummaryLabel = new Label();
-            mValidationSummaryLabel.AddToClassList("uipanel-validation-summary");
-            content.Add(mValidationSummaryLabel);
+            mBindValidationLabel = new Label();
+            mBindValidationLabel.AddToClassList("uipanel-validation-summary");
+            content.Add(mBindValidationLabel);
 
-            var refreshBtn = new Button(RefreshBindTree);
-            refreshBtn.AddToClassList("uipanel-refresh-btn");
-            ApplyRefreshButtonStyle(refreshBtn);
-            content.Add(refreshBtn);
+            var refreshButton = new Button(RefreshBindTree) { text = "刷新绑定树" };
+            refreshButton.AddToClassList("uipanel-refresh-btn");
+            content.Add(refreshButton);
 
-            var genCodeBtn = new Button(() => OnGenerateUICode(panel));
-            genCodeBtn.AddToClassList("uipanel-gencode-btn");
-            ApplyActionButtonStyle(genCodeBtn, KitIcons.CODEGEN, "生成 UI 代码");
-            content.Add(genCodeBtn);
+            var generateButton = new Button(GenerateUICode) { text = "生成 UI 代码" };
+            generateButton.AddToClassList("uipanel-gencode-btn");
+            content.Add(generateButton);
 
-            mRoot.Add(section);
-            mLastSection = section;
-
+            root.Add(section);
             RefreshBindTree();
         }
 
-        /// <summary>
-        /// 应用刷新按钮的统一样式。
-        /// </summary>
-        private void ApplyRefreshButtonStyle(Button btn)
-            => ApplyActionButtonStyle(btn, KitIcons.REFRESH, "刷新绑定树");
-
-        /// <summary>
-        /// 应用带图标和文字的通用操作按钮样式。
-        /// </summary>
-        private static void ApplyActionButtonStyle(Button btn, string iconId, string labelText)
-        {
-            btn.style.flexDirection = FlexDirection.Row;
-            btn.style.alignItems = Align.Center;
-            btn.style.justifyContent = Justify.Center;
-            btn.style.height = 28;
-            btn.style.marginTop = 4;
-
-            var icon = new Image { image = KitIcons.GetTexture(iconId) };
-            icon.style.width = 14;
-            icon.style.height = 14;
-            icon.style.marginRight = 6;
-            btn.Add(icon);
-
-            var label = new Label(labelText);
-            label.style.fontSize = 12;
-            btn.Add(label);
-        }
-
-        /// <summary>
-        /// 创建绑定树图例。
-        /// </summary>
         private VisualElement CreateBindTreeLegend()
         {
             var legend = new VisualElement();
             legend.AddToClassList("uipanel-bindtree-legend");
-            legend.style.flexDirection = FlexDirection.Row;
-            legend.style.flexWrap = Wrap.Wrap;
-            legend.style.marginTop = 8;
-            legend.style.marginBottom = 4;
-
-            var items = new[]
-            {
-                (KitIcons.DIAMOND, "成员", COLOR_MEMBER),
-                (KitIcons.DOT_FILLED, "元素", COLOR_ELEMENT),
-                (KitIcons.DOT_FILLED, "组件", COLOR_COMPONENT),
-                (KitIcons.DOT_EMPTY, "叶子节点", COLOR_LEAF)
-            };
-
-            foreach (var (iconId, label, color) in items)
-            {
-                var item = new VisualElement();
-                item.AddToClassList("uipanel-legend-item");
-                item.style.flexDirection = FlexDirection.Row;
-                item.style.alignItems = Align.Center;
-                item.style.marginRight = 12;
-
-                var iconImg = new Image { image = KitIcons.GetTexture(iconId) };
-                iconImg.style.width = 12;
-                iconImg.style.height = 12;
-                iconImg.tintColor = color;
-                iconImg.style.marginRight = 4;
-                item.Add(iconImg);
-
-                var textLabel = new Label(label);
-                textLabel.AddToClassList("uipanel-legend-text");
-                textLabel.style.fontSize = 11;
-                textLabel.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
-                item.Add(textLabel);
-
-                legend.Add(item);
-            }
-
+            legend.Add(CreateLegendItem(GetBindMarker(BindType.Member), "Member", GetBindColor(BindType.Member)));
+            legend.Add(CreateLegendItem(GetBindMarker(BindType.Element), "Element", GetBindColor(BindType.Element)));
+            legend.Add(CreateLegendItem(GetBindMarker(BindType.Component), "Component", GetBindColor(BindType.Component)));
+            legend.Add(CreateLegendItem(GetBindMarker(BindType.Leaf), "Leaf", GetBindColor(BindType.Leaf)));
             return legend;
         }
 
-        /// <summary>
-        /// 刷新绑定树显示内容。
-        /// </summary>
+        private static VisualElement CreateLegendItem(string markerText, string labelText, Color color)
+        {
+            var item = new VisualElement();
+            item.AddToClassList("uipanel-legend-item");
+
+            var marker = new Label(markerText);
+            marker.AddToClassList("uipanel-legend-icon");
+            marker.style.color = new StyleColor(color);
+            item.Add(marker);
+
+            var label = new Label(labelText);
+            label.AddToClassList("uipanel-legend-text");
+            item.Add(label);
+            return item;
+        }
+
         private void RefreshBindTree()
         {
-            var panel = target as UIPanel;
-            if (panel == null || mBindTreeContainer == null)
+            if (mBindTreeContainer == null)
                 return;
 
             mBindTreeContainer.Clear();
+            var panel = target as UIPanel;
+            if (panel == null)
+                return;
 
-            var tree = BindService.CollectBindTree(panel.gameObject);
-            if (tree != null)
+            var rootInfo = CollectBindInfo(panel.gameObject);
+            var stats = new BindTreeStats();
+            var errors = new List<string>(4);
+            var renderedCount = RenderBindChildren(rootInfo, 0, stats, errors);
+
+            if (renderedCount == 0)
             {
-                BindValidator.ValidateTree(tree);
-            }
-
-            if (tree == null || tree.Children == null || tree.Children.Count == 0)
-            {
-                var emptyLabel = new Label("未找到任何绑定信息");
-                emptyLabel.AddToClassList("uipanel-bindtree-empty");
-                emptyLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
-                emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-                emptyLabel.style.paddingTop = 20;
-                emptyLabel.style.paddingBottom = 20;
-                mBindTreeContainer.Add(emptyLabel);
-
+                var empty = new Label("未找到任何绑定信息");
+                empty.AddToClassList("uipanel-bindtree-empty");
+                mBindTreeContainer.Add(empty);
                 mBindStatsLabel.text = string.Empty;
-                mValidationSummaryLabel.text = string.Empty;
+                mBindValidationLabel.text = string.Empty;
+                mBindValidationLabel.RemoveFromClassList("validation-success");
+                mBindValidationLabel.RemoveFromClassList("validation-has-errors");
                 return;
             }
 
-            var errorNodePaths = new HashSet<string>();
-            CollectErrorNodePaths(tree, errorNodePaths);
+            mBindStatsLabel.text = "共 " + stats.Total + " 个绑定（" +
+                                   stats.Member + " Member, " +
+                                   stats.Element + " Element, " +
+                                   stats.Component + " Component, " +
+                                   stats.Leaf + " Leaf）";
 
-            BuildBindTreeViewNested(tree, mBindTreeContainer, errorNodePaths);
-
-            var stats = BindService.GetBindStatistics(panel.gameObject);
-            mBindStatsLabel.text = stats.ToString();
-
-            UpdateValidationSummary(panel.gameObject);
+            mBindValidationLabel.RemoveFromClassList("validation-success");
+            mBindValidationLabel.RemoveFromClassList("validation-has-errors");
+            if (errors.Count == 0)
+            {
+                mBindValidationLabel.text = "当前绑定定义全部有效。";
+                mBindValidationLabel.AddToClassList("validation-success");
+            }
+            else
+            {
+                mBindValidationLabel.text = string.Join("\n", errors.ToArray());
+                mBindValidationLabel.AddToClassList("validation-has-errors");
+            }
         }
 
-        /// <summary>
-        /// 收集当前存在校验错误的节点路径。
-        /// </summary>
-        private void CollectErrorNodePaths(BindTreeNode node, HashSet<string> errorPaths)
+        private static BindCodeInfo CollectBindInfo(GameObject root)
         {
-            if (node == null)
-                return;
-
-            if (node.HasErrors && !string.IsNullOrEmpty(node.Path))
+            var info = new BindCodeInfo
             {
-                errorPaths.Add(node.Path);
+                Name = root.name,
+                Type = root.name,
+                Bind = BindType.Member,
+                Self = root
+            };
+            BindCollector.SearchBinds(root.transform, root.name, info);
+            return info;
+        }
+
+        private int RenderBindChildren(BindCodeInfo parent, int level, BindTreeStats stats, List<string> errors)
+        {
+            var renderedCount = 0;
+            var children = GetSortedChildren(parent);
+            for (var i = 0; i < children.Count; i++)
+            {
+                var child = children[i];
+                stats.Add(child.Bind);
+                ValidateBindInfo(child, errors);
+
+                var childHasChildren = HasBindChildren(child);
+                mBindTreeContainer.Add(CreateBindRow(child, level, childHasChildren));
+                renderedCount++;
+
+                if (childHasChildren && !mCollapsedBindPaths.Contains(GetBindPathKey(child)))
+                    renderedCount += RenderBindChildren(child, level + 1, stats, errors);
             }
 
-            if (node.Children != null)
+            return renderedCount;
+        }
+
+        private VisualElement CreateBindRow(BindCodeInfo info, int level, bool hasChildren)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("uipanel-bindtree-node");
+            row.AddToClassList("uipanel-bindtree-clickable");
+
+            if (level > 0)
             {
-                foreach (var child in node.Children)
+                var indent = new VisualElement();
+                indent.AddToClassList("uipanel-bindtree-indent");
+                indent.style.width = level * 16;
+                indent.style.minWidth = level * 16;
+                row.Add(indent);
+            }
+
+            var card = new VisualElement();
+            card.AddToClassList("uipanel-bindtree-card");
+            card.style.borderLeftColor = new StyleColor(GetBindColor(info.Bind));
+            row.Add(card);
+
+            if (hasChildren)
+            {
+                var key = GetBindPathKey(info);
+                var foldButton = new Button(() =>
                 {
-                    CollectErrorNodePaths(child, errorPaths);
+                    if (mCollapsedBindPaths.Contains(key))
+                        mCollapsedBindPaths.Remove(key);
+                    else
+                        mCollapsedBindPaths.Add(key);
+                    SaveCollapsedBindPaths();
+                    RefreshBindTree();
+                })
+                {
+                    text = mCollapsedBindPaths.Contains(key) ? ">" : "v"
+                };
+                foldButton.AddToClassList("uipanel-bindtree-fold-btn");
+                card.Add(foldButton);
+            }
+            else
+            {
+                var spacer = new VisualElement();
+                spacer.AddToClassList("uipanel-bindtree-fold-spacer");
+                card.Add(spacer);
+            }
+
+            var marker = new Label(GetBindMarker(info.Bind));
+            marker.AddToClassList("uipanel-bindtree-icon");
+            marker.style.color = new StyleColor(GetBindColor(info.Bind));
+            card.Add(marker);
+
+            var name = new Label(info.Name);
+            name.AddToClassList("uipanel-bindtree-name");
+            card.Add(name);
+
+            var typeName = new Label("(" + ShortTypeName(info.Type) + ")");
+            typeName.AddToClassList("uipanel-bindtree-type");
+            card.Add(typeName);
+
+            var bindType = new Label("- " + info.Bind);
+            bindType.AddToClassList("uipanel-bindtree-bindtype");
+            bindType.style.color = new StyleColor(GetBindColor(info.Bind));
+            card.Add(bindType);
+
+            row.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (info.Self != null)
+                {
+                    Selection.activeGameObject = info.Self;
+                    EditorGUIUtility.PingObject(info.Self);
+                }
+                evt.StopPropagation();
+            });
+
+            return row;
+        }
+
+        private static List<BindCodeInfo> GetSortedChildren(BindCodeInfo parent)
+        {
+            var result = new List<BindCodeInfo>();
+            if (parent == null || parent.MemberDic == null)
+                return result;
+
+            foreach (var pair in parent.MemberDic)
+            {
+                if (pair.Value != null)
+                    result.Add(pair.Value);
+            }
+            result.Sort(CompareBindOrder);
+            return result;
+        }
+
+        private static int CompareBindOrder(BindCodeInfo left, BindCodeInfo right)
+        {
+            return left.Order.CompareTo(right.Order);
+        }
+
+        private static bool HasBindChildren(BindCodeInfo info)
+        {
+            return info != null && info.MemberDic != null && info.MemberDic.Count > 0;
+        }
+
+        private static string GetBindPathKey(BindCodeInfo info)
+        {
+            if (info == null)
+                return string.Empty;
+            return string.IsNullOrEmpty(info.PathToRoot) ? info.Name : info.PathToRoot;
+        }
+
+        private static void ValidateBindInfo(BindCodeInfo info, List<string> errors)
+        {
+            if (info.Bind == BindType.Leaf)
+                return;
+            if (string.IsNullOrEmpty(info.Name))
+                errors.Add(info.PathToRoot + ": 字段名称为空。");
+            if (string.IsNullOrEmpty(info.Type))
+                errors.Add(info.PathToRoot + ": 类型为空。");
+        }
+
+        private void LoadCollapsedBindPaths()
+        {
+            mCollapsedBindPaths.Clear();
+
+            var raw = SessionState.GetString(GetCollapsedBindPathsSessionKey(), string.Empty);
+            if (string.IsNullOrEmpty(raw))
+                return;
+
+            var paths = raw.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < paths.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(paths[i]))
+                    mCollapsedBindPaths.Add(paths[i]);
+            }
+        }
+
+        private void SaveCollapsedBindPaths()
+        {
+            var paths = new List<string>(mCollapsedBindPaths);
+            paths.Sort(StringComparer.Ordinal);
+            SessionState.SetString(GetCollapsedBindPathsSessionKey(), string.Join("\n", paths.ToArray()));
+        }
+
+        private string GetCollapsedBindPathsSessionKey()
+        {
+            var panel = target as UIPanel;
+            if (panel == null)
+                return BIND_TREE_COLLAPSED_PATHS_KEY;
+
+            return BIND_TREE_COLLAPSED_PATHS_KEY + "." + GetPanelSessionKey(panel);
+        }
+
+        private static string GetPanelSessionKey(UIPanel panel)
+        {
+            var assetPath = AssetDatabase.GetAssetPath(panel.gameObject);
+            if (!string.IsNullOrEmpty(assetPath))
+                return assetPath;
+
+            var scene = panel.gameObject.scene;
+            var sceneKey = scene.IsValid() && !string.IsNullOrEmpty(scene.path) ? scene.path : scene.name;
+            if (string.IsNullOrEmpty(sceneKey))
+                sceneKey = "UnsavedScene";
+
+            return sceneKey + "|" + GetTransformPath(panel.transform);
+        }
+
+        private static string GetTransformPath(Transform transform)
+        {
+            var names = new List<string>(8);
+            var current = transform;
+            while (current != null)
+            {
+                names.Add(current.name);
+                current = current.parent;
+            }
+
+            names.Reverse();
+            return string.Join("/", names.ToArray());
+        }
+
+        private static Color GetBindColor(BindType type)
+        {
+            switch (type)
+            {
+                case BindType.Member:
+                    return new Color(0.4f, 0.6f, 0.9f);
+                case BindType.Element:
+                    return new Color(0.4f, 0.8f, 0.4f);
+                case BindType.Component:
+                    return new Color(0.9f, 0.6f, 0.3f);
+                default:
+                    return new Color(0.6f, 0.6f, 0.6f);
+            }
+        }
+
+        private static string GetBindMarker(BindType type)
+        {
+            switch (type)
+            {
+                case BindType.Member:
+                    return "◇";
+                case BindType.Element:
+                    return "●";
+                case BindType.Component:
+                    return "◆";
+                default:
+                    return "○";
+            }
+        }
+
+        private static string ShortTypeName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return string.Empty;
+
+            var index = fullName.LastIndexOf('.');
+            return index >= 0 && index < fullName.Length - 1 ? fullName.Substring(index + 1) : fullName;
+        }
+
+        private sealed class BindTreeStats
+        {
+            public int Total;
+            public int Member;
+            public int Element;
+            public int Component;
+            public int Leaf;
+
+            public void Add(BindType type)
+            {
+                Total++;
+                switch (type)
+                {
+                    case BindType.Member:
+                        Member++;
+                        break;
+                    case BindType.Element:
+                        Element++;
+                        break;
+                    case BindType.Component:
+                        Component++;
+                        break;
+                    case BindType.Leaf:
+                        Leaf++;
+                        break;
                 }
             }
-        }
-
-        /// <summary>
-        /// 递归构建绑定树的扁平显示结构。
-        /// </summary>
-        private void BuildBindTreeViewNested(BindTreeNode node, VisualElement parent, HashSet<string> errorPaths)
-        {
-            if (node == null)
-                return;
-
-            var flatNodes = new List<(BindTreeNode Node, int Level, bool HasChildren)>(16);
-            CollectFlatNodes(node, flatNodes, 0, null);
-
-            foreach (var (bindNode, level, hasChildren) in flatNodes)
-            {
-                var nodeRow = CreateBindTreeNodeRow(bindNode, level, errorPaths, hasChildren);
-                parent.Add(nodeRow);
-            }
-        }
-
-        /// <summary>
-        /// 在考虑折叠状态的前提下，将绑定节点收集为扁平列表。
-        /// </summary>
-        private void CollectFlatNodes(BindTreeNode node, List<(BindTreeNode, int, bool)> result, int level, string parentPath)
-        {
-            if (node == null)
-                return;
-
-            string currentPath = node.Path;
-
-            if (node.Bind != null)
-            {
-                bool hasBindChildren = HasBindChildren(node);
-                result.Add((node, level, hasBindChildren));
-
-                if (mCollapsedNodes.Contains(currentPath))
-                {
-                    return;
-                }
-
-                level++;
-                parentPath = currentPath;
-            }
-
-            if (node.Children != null)
-            {
-                foreach (var child in node.Children)
-                {
-                    CollectFlatNodes(child, result, level, parentPath);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 判断当前节点下是否仍存在绑定子节点。
-        /// </summary>
-        private bool HasBindChildren(BindTreeNode node)
-        {
-            if (node.Children == null)
-                return false;
-
-            foreach (var child in node.Children)
-            {
-                if (child.Bind != null)
-                    return true;
-
-                if (HasBindChildren(child))
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 点击「生成 UI 代码」时触发，解决到预制体资源后调用代码生成器。
-        /// </summary>
-        private void OnGenerateUICode(UIPanel panel)
-        {
-            var prefabAsset = GetPrefabAssetForCodeGen(panel);
-            if (prefabAsset == default)
-            {
-                EditorUtility.DisplayDialog("无法生成",
-                    "无法定位到此 Panel 的预制体资源。\n请在 Project 窗口中选中预制体后再试。", "确定");
-                return;
-            }
-
-            var config = UIKitCreateConfig.Instance;
-            var designerPath = $"{config.ScriptGeneratePath}/{prefabAsset.name}/{prefabAsset.name}{UICodeGenConstants.DESIGNER_SUFFIX}";
-
-            if (File.Exists(designerPath))
-            {
-                if (!EditorUtility.DisplayDialog("确认覆盖",
-                    $"Designer 文件已存在，重新生成将覆盖：\n{designerPath}\n\n绑定字段会被刷新，手动修改将丢失。\n是否继续？",
-                    "继续", "取消"))
-                {
-                    return;
-                }
-            }
-
-            var ns = config.ScriptNamespace;
-
-            UICodeGenerator.DoCreateCode(prefabAsset, ns);
-            RefreshBindTree();
-        }
-
-        /// <summary>
-        /// 从 UIPanel 获取可用于代码生成的预制体资源。
-        /// 优先使用 PrefabStage 中的实时层级，否则回退到磁盘上的预制体资源。
-        /// </summary>
-        private static GameObject GetPrefabAssetForCodeGen(UIPanel panel)
-        {
-            var go = panel.gameObject;
-
-            // Prefab Mode 中正在编辑的实时根节点（包含未保存的修改）
-            var prefabStage = UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStage(go);
-            if (prefabStage != null)
-            {
-                return prefabStage.prefabContentsRoot;
-            }
-
-            // 从场景实例或直接选中的预制体获取资源路径
-            var prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(go);
-            if (!string.IsNullOrEmpty(prefabPath))
-            {
-                return AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            }
-
-            return default;
         }
     }
 }

@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 
 namespace YokiFrame
@@ -30,6 +31,11 @@ namespace YokiFrame
             mHeaderStyle.fontStyle = FontStyle.Bold;
             mHeaderStyle.normal.textColor = new Color(0.3f, 0.8f, 1f);
 
+            // 提示样式
+            mHintStyle = new GUIStyle(mLabelStyle);
+            mHintStyle.fontSize = 10;
+            mHintStyle.normal.textColor = Color.gray;
+
             mStylesInitialized = true;
         }
 
@@ -40,13 +46,13 @@ namespace YokiFrame
             GUILayout.Space(5);
 
             // 面板数量
-            DrawInfoLine("活动面板", mCachedPanelCount.ToString());
+            DrawInfoLine("活动面板", mCachedPanelCountStr);
 
             // 栈深度
-            DrawInfoLine("栈深度", mCachedStackDepth.ToString());
+            DrawInfoLine("栈深度", mCachedStackDepthStr);
 
             // 缓存数量
-            DrawInfoLine("缓存面板", mCachedCacheCount.ToString());
+            DrawInfoLine("缓存面板", mCachedCacheCountStr);
 
             // 当前焦点
             DrawInfoLine("当前焦点", mCachedFocusName);
@@ -57,8 +63,7 @@ namespace YokiFrame
             GUILayout.FlexibleSpace();
 
             // 提示
-            var hotkeyText = mRequireShift ? $"Shift+{mToggleKey}" : mToggleKey.ToString();
-            GUILayout.Label($"按 {hotkeyText} 关闭", new GUIStyle(mLabelStyle) { fontSize = 10, normal = { textColor = Color.gray } });
+            GUILayout.Label(mCachedHotkeyText, mHintStyle);
         }
 
         private void DrawInfoLine(string label, string value)
@@ -77,14 +82,14 @@ namespace YokiFrame
 
         private void UpdateCachedData()
         {
-            // 活动面板数量
+            // 活动面板数量（非分配 GetComponentsInChildren）
             mCachedPanelCount = 0;
-            if (UIRoot.Instance != null)
+            if (UIRoot.Instance != default)
             {
-                var panels = UIRoot.Instance.GetComponentsInChildren<UIPanel>(true);
-                for (int i = 0; i < panels.Length; i++)
+                UIRoot.Instance.GetComponentsInChildren(true, sPanelBuffer);
+                for (int i = 0; i < sPanelBuffer.Count; i++)
                 {
-                    if (panels[i].State != PanelState.Close)
+                    if (sPanelBuffer[i].State != PanelState.Close)
                     {
                         mCachedPanelCount++;
                     }
@@ -97,25 +102,43 @@ namespace YokiFrame
             // 缓存数量
             mCachedCacheCount = UIKit.GetCachedPanels().Count;
 
-            // 当前焦点
-            var currentFocus = UIRoot.Instance.CurrentFocus;
-            if (currentFocus != default)
+            // 缓存 ToString 结果
+            mCachedPanelCountStr = mCachedPanelCount.ToString();
+            mCachedStackDepthStr = mCachedStackDepth.ToString();
+            mCachedCacheCountStr = mCachedCacheCount.ToString();
+
+            // 当前焦点（Substring 替换为 AsSpan 截断，避免分配）
+            if (UIRoot.Instance != default)
             {
-                mCachedFocusName = currentFocus.name;
-                if (mCachedFocusName.Length > 15)
+                var currentFocus = UIRoot.Instance.CurrentFocus;
+                if (currentFocus != default)
                 {
-                    mCachedFocusName = mCachedFocusName.Substring(0, 12) + "...";
+                    var name = currentFocus.name;
+                    mCachedFocusName = name.Length > 15
+                        ? name.Substring(0, 12) + "..."
+                        : name;
                 }
+                else
+                {
+                    mCachedFocusName = "无";
+                }
+
+                // 输入模式
+                mCachedInputMode = UIRoot.Instance.CurrentInputMode.ToString();
             }
             else
             {
                 mCachedFocusName = "无";
+                mCachedInputMode = "Unknown";
             }
 
-            // 输入模式
-            mCachedInputMode = UIRoot.Instance.CurrentInputMode.ToString();
+            // 热键提示文本
+            mCachedHotkeyText = mRequireShift
+                ? string.Concat("按 Shift+", mToggleKey.ToString(), " 关闭")
+                : string.Concat("按 ", mToggleKey.ToString(), " 关闭");
         }
 
         #endregion
     }
 }
+#endif

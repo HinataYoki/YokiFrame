@@ -2,10 +2,10 @@ namespace YokiFrame
 {
     public class EventKit
     {
-        public readonly static TypeEvent Type = new();
-        public readonly static EnumEvent Enum = new();
-        
-        [System.Obsolete("字符串事件已废弃，存在类型安全隐患且重构困难。请迁移到 EventKit.Type（类型事件）或 EventKit.Enum（枚举事件）。详见文档：Assets/YokiFrame/Core/Editor/Documentation/Core/EventKit/")]
-        public readonly static StringEvent String = new();
+        public static readonly TypeEvent Type = new();
+        public static readonly EnumEvent Enum = new();
+
+        [System.Obsolete("StringEvent is deprecated due to type-safety issues. Use EventKit.Type or EventKit.Enum instead.")]
+        public static readonly StringEvent String = new();
     }
 }

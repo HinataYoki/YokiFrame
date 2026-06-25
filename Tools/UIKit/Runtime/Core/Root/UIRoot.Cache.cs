@@ -1,8 +1,11 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
-#if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 
 namespace YokiFrame
@@ -442,14 +445,12 @@ namespace YokiFrame
 
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        public async UniTask<bool> PreloadPanelUniTaskAsync<T>(UILevel level = default,
-            CancellationToken ct = default) where T : UIPanel
-        {
-            return await PreloadPanelUniTaskAsync(typeof(T), level, ct);
-        }
-
-        public async UniTask<bool> PreloadPanelUniTaskAsync(Type panelType, UILevel level,
-            CancellationToken ct)
+        public async UniTask<bool> PreloadPanelAsync(Type panelType, UILevel level,
+            CancellationToken ct = default)
+#else
+        public async Task<bool> PreloadPanelAsync(Type panelType, UILevel level,
+            CancellationToken ct = default)
+#endif
         {
             if (panelType == default) return false;
 
@@ -468,9 +469,13 @@ namespace YokiFrame
             handler.Level = level;
             handler.CacheMode = PanelCacheMode.Hot;
 
-            var panel = await LoadPanelUniTaskAsync(handler, ct);
+#if YOKIFRAME_UNITASK_SUPPORT
+            var panel = await LoadPanelAsync(handler, ct);
+#else
+            var panel = await LoadPanelAsync(handler, ct).ConfigureAwait(false);
+#endif
             return SetupPreloadedPanel(panelType, handler, panel);
         }
-#endif
     }
 }
+#endif

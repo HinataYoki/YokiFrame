@@ -1,3 +1,4 @@
+#if !GODOT
 namespace YokiFrame
 {
     /// <summary>
@@ -102,3 +103,4 @@ namespace YokiFrame
         string ScriptNamespace { get; }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if !GODOT
 namespace YokiFrame
 {
     public class BindCodeInfo
@@ -41,6 +42,7 @@ namespace YokiFrame
         /// <summary>
         /// 顺序
         /// </summary>
-        public int order;
+        public int Order;
     }
 }
+#endif

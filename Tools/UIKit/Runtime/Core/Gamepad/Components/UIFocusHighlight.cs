@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 using UnityEngine.UI;
 #if YOKIFRAME_DOTWEEN_SUPPORT
@@ -106,8 +107,6 @@ namespace YokiFrame
 
             // 获取 Canvas
             mCanvas = GetComponentInParent<Canvas>();
-            
-            Debug.Log($"[UIFocusHighlight] Awake - Image.enabled={mImage.enabled}, sizeDelta={mRectTransform.sizeDelta}, alpha={mCanvasGroup.alpha}");
         }
 
         private void OnDestroy()
@@ -211,8 +210,6 @@ namespace YokiFrame
             
             mIsVisible = true;
             mImage.enabled = true;
-            
-            Debug.Log($"[UIFocusHighlight] Show - target={(mCurrentTarget == default ? "null" : mCurrentTarget.name)}, sizeDelta={mRectTransform.sizeDelta}");
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
             if (mFadeTween != default) mFadeTween.Kill();
@@ -348,3 +345,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

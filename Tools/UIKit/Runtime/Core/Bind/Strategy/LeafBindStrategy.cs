@@ -1,3 +1,4 @@
+#if !GODOT
 namespace YokiFrame
 {
     /// <summary>
@@ -24,3 +25,4 @@ namespace YokiFrame
         }
     }
 }
+#endif

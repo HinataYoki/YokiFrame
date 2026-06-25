@@ -1,8 +1,11 @@
+#if !GODOT
 using System;
 using System.Collections;
-#if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 using UnityEngine;
 
@@ -15,11 +18,7 @@ namespace YokiFrame
     {
         #region 面板加载器
 
-#if YOKIFRAME_UNITASK_SUPPORT
-        private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderUniTaskPool();
-#else
         private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderPool();
-#endif
 
         /// <summary>
         /// 设置面板加载器
@@ -126,24 +125,17 @@ namespace YokiFrame
 #endif
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        public async UniTask<IPanel> LoadPanelUniTaskAsync(PanelHandler handler, CancellationToken ct = default)
+        public async UniTask<IPanel> LoadPanelAsync(PanelHandler handler, CancellationToken ct = default)
+#else
+        public async Task<IPanel> LoadPanelAsync(PanelHandler handler, CancellationToken ct = default)
+#endif
         {
             var loader = mLoaderPool.AllocateLoader();
-
-            GameObject prefab;
-
-            // 优先用原生 UniTask 加载器
-            if (loader is IPanelLoaderUniTask uniTaskLoader)
-            {
-                prefab = await uniTaskLoader.LoadUniTaskAsync(handler, ct);
-            }
-            else
-            {
-                // 回退：TCS 包装回调
-                var tcs = new UniTaskCompletionSource<GameObject>();
-                loader.LoadAsync(handler, p => tcs.TrySetResult(p));
-                prefab = await tcs.Task.AttachExternalCancellation(ct);
-            }
+#if YOKIFRAME_UNITASK_SUPPORT
+            var prefab = await loader.LoadAsync(handler, ct);
+#else
+            var prefab = await loader.LoadAsync(handler, ct).ConfigureAwait(false);
+#endif
 
             if (prefab == default)
             {
@@ -164,6 +156,7 @@ namespace YokiFrame
             handler.Loader = loader;
 
 #if UNITY_2022_3_OR_NEWER
+#if YOKIFRAME_UNITASK_SUPPORT
             var op = InstantiateAsync(prefab);
             await op.ToUniTask(cancellationToken: ct);
             if (op.isDone && op.Result.Length > 0)
@@ -181,8 +174,13 @@ namespace YokiFrame
             SetLevelOfPanel(handler.Level, panel);
             return panel;
 #endif
-        }
+#else
+            var panel = Instantiate(prefab).GetComponent<UIPanel>();
+            SetupPanelHandler(handler, loader, prefab, panel);
+            SetLevelOfPanel(handler.Level, panel);
+            return panel;
 #endif
+        }
 
         private static void SetupPanelHandler(PanelHandler handler, IPanelLoader loader,
             GameObject prefab, UIPanel panel)
@@ -196,3 +194,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

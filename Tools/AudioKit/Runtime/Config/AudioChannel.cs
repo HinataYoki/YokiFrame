@@ -1,32 +1,42 @@
 namespace YokiFrame
 {
     /// <summary>
-    /// 音频通道类型
+    /// AudioKit 兼容旧 API 的通道枚举。
     /// </summary>
     public enum AudioChannel
     {
         /// <summary>
-        /// 背景音乐
+        /// 音乐通道。
         /// </summary>
-        Bgm = 0,
+        Music = 0,
 
         /// <summary>
-        /// 音效
+        /// 背景音乐通道，等同于 Music。
+        /// </summary>
+        Bgm = Music,
+
+        /// <summary>
+        /// 音效通道。
         /// </summary>
         Sfx = 1,
 
         /// <summary>
-        /// 语音
+        /// 语音通道。
         /// </summary>
         Voice = 2,
 
         /// <summary>
-        /// 环境音
+        /// 环境声通道。
         /// </summary>
-        Ambient = 3,
+        Ambience = 3,
 
         /// <summary>
-        /// UI 音效
+        /// 环境声通道别名。
+        /// </summary>
+        Ambient = Ambience,
+
+        /// <summary>
+        /// UI 音频通道。
         /// </summary>
         UI = 4
     }

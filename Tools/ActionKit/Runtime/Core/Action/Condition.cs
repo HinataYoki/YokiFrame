@@ -1,27 +1,22 @@
-﻿using System;
+using System;
 
 namespace YokiFrame
 {
     internal class Condition : ActionBase
     {
-        /// <summary>
-        /// 条件
-        /// </summary>
+        private static readonly YokiFrame.SimplePoolKit<Condition> sPool = new(static () => new Condition());
+
         private Func<bool> mCondition;
-        /// <summary>
-        /// 条件任务池
-        /// </summary>
-        private static readonly SimplePoolKit<Condition> mPool = new(() => new Condition());
 
         static Condition()
         {
-            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Condition>();
+            ActionKitScheduler.RegisterRecycleProcessor<Condition>();
         }
 
-        public static Condition Allocate(Func<bool> callback)
+        internal static Condition Allocate(Func<bool> callback)
         {
-            var condition = mPool.Allocate();
-            condition.ActionID = ActionKit.ID_GENERATOR++;
+            var condition = sPool.Allocate();
+            condition.ActionID = ActionKit.sIdGenerator++;
             condition.Deinited = false;
             condition.OnInit();
             condition.mCondition = callback;
@@ -30,40 +25,24 @@ namespace YokiFrame
 
         public override void OnStart()
         {
-            if (mCondition.Invoke())
-            {
-                this.Finish();
-            }
+            if (mCondition.Invoke()) this.Finish();
         }
 
         public override void OnExecute(float dt)
         {
-            if (mCondition.Invoke())
-            {
-                this.Finish();
-            }
+            if (mCondition.Invoke()) this.Finish();
         }
 
         public override void OnDeinit()
         {
-            if (!Deinited)
-            {
-                Deinited = true;
-                mCondition = null;
+            if (Deinited) return;
 
-                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Condition>(mPool, this));
-            }
+            Deinited = true;
+            mCondition = null;
+            ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Condition>(sPool, this));
         }
 
-        public override string GetDebugInfo() => 
+        public override string GetDebugInfo() =>
             mCondition != null ? $"Condition -> {mCondition.Method.DeclaringType}.{mCondition.Method.Name}" : "Condition";
-    }
-
-    public static class ConditionExtension
-    {
-        public static ISequence Condition(this ISequence self, Func<bool> condition)
-        {
-            return self.Append(YokiFrame.Condition.Allocate(condition));
-        }
     }
 }

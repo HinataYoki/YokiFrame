@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 使用指南区块
@@ -49,7 +49,7 @@ namespace YokiFrame.TableKit.Editor
             header.Add(arrow);
 
             var title = new Label("使用指南");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             title.style.flexGrow = 1;
@@ -86,25 +86,25 @@ namespace YokiFrame.TableKit.Editor
         private void BuildGuideContent(VisualElement container)
         {
             // 基础用法
-            var basicSection = CreateGuideSection("基础用法 (Resources 加载)");
+            var basicSection = CreateGuideSection("基础用法 (ResKit 加载)");
             basicSection.style.marginTop = 12;
             container.Add(basicSection);
 
-            AddGuideDescription(basicSection, "TableKit 默认使用 Resources.Load 加载配置数据，无需额外配置：");
+            AddGuideDescription(basicSection, "TableKit 默认通过 ResKit 加载配置数据，引擎差异由 ResKit Provider 处理：");
             basicSection.Add(CreateCodeBlock(GUIDE_CODE_BASIC));
 
             // 自定义加载器
             var customSection = CreateGuideSection("自定义加载器");
             container.Add(customSection);
 
-            AddGuideDescription(customSection, "如需使用 Addressables 或 YooAsset 等资源管理方案，可实现自定义加载器：");
+            AddGuideDescription(customSection, "如需覆盖默认资源读取，可注入二进制或 JSON 加载函数：");
             customSection.Add(CreateCodeBlock(GUIDE_CODE_CUSTOM_LOADER));
 
-            // YooAsset 示例
-            var yooSection = CreateGuideSection("YooAsset 加载器示例");
+            // ResKit Provider 示例
+            var yooSection = CreateGuideSection("ResKit 后端示例");
             container.Add(yooSection);
 
-            AddGuideDescription(yooSection, "使用 YooAsset 加载配置表的完整实现：");
+            AddGuideDescription(yooSection, "YooAsset、Resources、Godot FileAccess 等差异应放在 ResKit Provider 内，TableKit 无需再区分引擎：");
             yooSection.Add(CreateCodeBlock(GUIDE_CODE_YOOASSET));
 
             // 异步加载
@@ -122,11 +122,11 @@ namespace YokiFrame.TableKit.Editor
             var noteSection = CreateGuideSection("注意事项");
             container.Add(noteSection);
 
-            foreach (var note in GUIDE_NOTES)
+            foreach (var note in sGuideNotes)
             {
                 var noteLabel = new Label(note);
                 noteLabel.style.color = new StyleColor(Design.TextSecondary);
-                noteLabel.style.fontSize = Design.FontSizeBody;
+                noteLabel.style.fontSize = Design.FONT_SIZE_BODY;
                 noteLabel.style.marginTop = 4;
                 noteSection.Add(noteLabel);
             }
@@ -136,7 +136,7 @@ namespace YokiFrame.TableKit.Editor
         {
             var desc = new Label(text);
             desc.style.color = new StyleColor(Design.TextSecondary);
-            desc.style.fontSize = Design.FontSizeBody;
+            desc.style.fontSize = Design.FONT_SIZE_BODY;
             desc.style.marginBottom = 8;
             desc.style.whiteSpace = WhiteSpace.Normal;
             parent.Add(desc);
@@ -149,7 +149,7 @@ namespace YokiFrame.TableKit.Editor
 
             var titleLabel = new Label(title);
             titleLabel.style.color = new StyleColor(Design.BrandPrimary);
-            titleLabel.style.fontSize = Design.FontSizeBody;
+            titleLabel.style.fontSize = Design.FONT_SIZE_BODY;
             titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             titleLabel.style.marginBottom = 6;
             section.Add(titleLabel);
@@ -175,7 +175,7 @@ namespace YokiFrame.TableKit.Editor
 
             var highlightedCode = ApplySyntaxHighlighting(code);
             var codeLabel = new Label(highlightedCode);
-            codeLabel.style.fontSize = Design.FontSizeCode;
+            codeLabel.style.fontSize = Design.FONT_SIZE_CODE;
 #if UNITY_6000_0_OR_NEWER
             codeLabel.style.whiteSpace = WhiteSpace.PreWrap;
 #else

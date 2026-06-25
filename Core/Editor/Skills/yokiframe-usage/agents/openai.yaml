@@ -1,0 +1,7 @@
+interface:
+  display_name: "YokiFrame 使用指南"
+  short_description: "YokiFrame Kit、命令桥与编辑器使用指南"
+  default_prompt: "Use $yokiframe-usage to query YokiFrame kits, command bridge state, snapshots, telemetry, and editor usage steps."
+
+policy:
+  allow_implicit_invocation: true

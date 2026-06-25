@@ -4,10 +4,10 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
-    /// TableKitEditorUI - TableKit 运行时操作
+    /// TableKitEditorUI - 项目侧 TableKit 操作
     /// </summary>
     public partial class TableKitEditorUI
     {
@@ -34,7 +34,12 @@ namespace YokiFrame.TableKit.Editor
                     return;
                 }
 
-                tableKitType.GetMethod("SetEditorDataPath")?.Invoke(null, new object[] { mEditorDataPath });
+                var setEditorDataPath = tableKitType.GetMethod("SetEditorDataPath");
+                if (setEditorDataPath != null)
+                    setEditorDataPath.Invoke(null, new object[] { mEditorDataPath });
+                else
+                    tableKitType.GetProperty("EditorDataPath")?.SetValue(null, mEditorDataPath);
+
                 tableKitType.GetMethod("RefreshEditor")?.Invoke(null, null);
 
                 var tables = tableKitType.GetProperty("TablesEditor")?.GetValue(null);
@@ -124,7 +129,7 @@ namespace YokiFrame.TableKit.Editor
             // 显示统计信息
             var statsLabel = new Label();
             statsLabel.style.marginTop = 8;
-            statsLabel.style.fontSize = Design.FontSizeSmall;
+            statsLabel.style.fontSize = Design.FONT_SIZE_SMALL;
             statsLabel.style.color = new StyleColor(Design.TextTertiary);
 
             if (string.IsNullOrEmpty(searchText))

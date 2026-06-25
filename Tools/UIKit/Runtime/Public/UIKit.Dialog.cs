@@ -1,4 +1,11 @@
+#if !GODOT
 using System;
+using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
+#endif
 
 namespace YokiFrame
 {
@@ -82,6 +89,130 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 异步显示对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<DialogResultData> ShowDialogAsync(DialogConfig config, CancellationToken ct = default)
+#else
+        public static Task<DialogResultData> ShowDialogAsync(DialogConfig config, CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.ShowDialogAsync(config, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#else
+            return Task.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#endif
+        }
+
+        /// <summary>
+        /// 异步显示指定类型的对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<DialogResultData> ShowDialogAsync<T>(DialogConfig config, CancellationToken ct = default)
+            where T : UIDialogPanel
+#else
+        public static Task<DialogResultData> ShowDialogAsync<T>(DialogConfig config, CancellationToken ct = default)
+            where T : UIDialogPanel
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.ShowDialogAsync<T>(config, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#else
+            return Task.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#endif
+        }
+
+        /// <summary>
+        /// 异步显示指定类型的对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<DialogResultData> ShowDialogAsync(Type panelType, DialogConfig config, CancellationToken ct = default)
+#else
+        public static Task<DialogResultData> ShowDialogAsync(Type panelType, DialogConfig config, CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.ShowDialogAsync(panelType, config, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#else
+            return Task.FromResult(new DialogResultData { Result = DialogResult.Cancel });
+#endif
+        }
+
+        /// <summary>
+        /// 异步 Alert 对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask AlertAsync(string message, string title = null, CancellationToken ct = default)
+#else
+        public static Task AlertAsync(string message, string title = null, CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.AlertAsync(message, title, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.CompletedTask;
+#else
+            return Task.CompletedTask;
+#endif
+        }
+
+        /// <summary>
+        /// 异步 Confirm 对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<bool> ConfirmAsync(string message, string title = null, CancellationToken ct = default)
+#else
+        public static Task<bool> ConfirmAsync(string message, string title = null, CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.ConfirmAsync(message, title, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult(false);
+#else
+            return Task.FromResult(false);
+#endif
+        }
+
+        /// <summary>
+        /// 异步 Prompt 对话框。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<(bool confirmed, string value)> PromptAsync(
+            string message, string title = null, string defaultValue = null, CancellationToken ct = default)
+#else
+        public static Task<(bool confirmed, string value)> PromptAsync(
+            string message, string title = null, string defaultValue = null, CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.PromptAsync(message, title, defaultValue, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult((false, defaultValue));
+#else
+            return Task.FromResult((false, defaultValue));
+#endif
+        }
+
+        /// <summary>
         /// 是否有对话框正在显示
         /// </summary>
         public static bool HasActiveDialog
@@ -90,6 +221,18 @@ namespace YokiFrame
             {
                 var root = Root;
                 return root != default ? root.HasActiveDialog : false;
+            }
+        }
+
+        /// <summary>
+        /// 当前等待中的对话框数量。
+        /// </summary>
+        public static int DialogQueueCount
+        {
+            get
+            {
+                var root = Root;
+                return root != default ? root.DialogQueueCount : 0;
             }
         }
 
@@ -105,3 +248,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

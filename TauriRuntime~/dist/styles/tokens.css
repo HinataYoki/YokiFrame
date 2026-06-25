@@ -1,0 +1,210 @@
+/* YokiFrame 2 Tauri Workbench - Apple-like professional console themes */
+
+:root {
+  --canvas: #f5f5f7;
+  --canvas-soft: #ededf2;
+  --surface-1: #ffffff;
+  --surface-2: #f9fafb;
+  --surface-3: #f1f2f5;
+  --surface-4: #e7e9ee;
+  --surface-overlay: #ffffff;
+  --nav-overlay: #f9fafb;
+  --header-overlay: #ffffff;
+  --chrome-material: #f9fafb;
+  --control-material: #ffffff;
+  --ink: #1d1d1f;
+  --ink-muted: #424245;
+  --ink-subtle: #6e6e73;
+  --ink-tertiary: #86868b;
+  --hairline: #d9dadf;
+  --hairline-strong: #b9bbc3;
+  --primary: #007aff;
+  --primary-hover: #0066d6;
+  --primary-focus: #0a84ff;
+  --primary-soft: rgba(0, 122, 255, 0.10);
+  --accent: #34c759;
+  --accent-soft: rgba(52, 199, 89, 0.12);
+  --success: #248a3d;
+  --success-soft: #e8f7ed;
+  --warning: #b26a00;
+  --warning-soft: #fff5df;
+  --error: #c92a2a;
+  --error-soft: #fff0f0;
+  --doc-core: #5856d6;
+  --doc-tool: #007aff;
+  --doc-command: #bf5b00;
+  --doc-note: #248a3d;
+  --doc-rose: #d7006f;
+  --kit-icon-framework: #0a84ff;
+  --kit-icon-docs: #af52de;
+  --kit-icon-architecture: #0a84ff;
+  --kit-icon-audiokit: #0a84ff;
+  --kit-icon-eventkit: #00bcd4;
+  --kit-icon-fsmkit: #4285f4;
+  --kit-icon-logkit: #bf5b00;
+  --kit-icon-poolkit: #34a853;
+  --kit-icon-reskit: #ffb300;
+  --kit-icon-singletonkit: #ea4335;
+  --kit-icon-actionkit: #fbbc04;
+  --kit-icon-inputkit: #00acc1;
+  --kit-icon-localizationkit: #00bcd4;
+  --kit-icon-savekit: #3f7ee8;
+  --kit-icon-scenekit: #e94235;
+  --kit-icon-spatialkit: #009688;
+  --kit-icon-tablekit: #2e9f51;
+  --kit-icon-uikit: #009688;
+  --kit-icon-package: #8e44ad;
+  --kit-icon-github: #24292f;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 14px 34px rgba(16, 24, 40, 0.10);
+  --shadow-window: 0 18px 48px rgba(16, 24, 40, 0.12);
+  --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --focus-ring: 0 0 0 3px rgba(0, 122, 255, 0.24);
+  --glow-a: rgba(0, 122, 255, 0.08);
+  --glow-b: rgba(142, 142, 147, 0.10);
+  --scroll-thumb: #c8c9cf;
+  --code-bg: #101827;
+  --code-header: #0d1422;
+  --code-border: #263854;
+  --titlebar-height: 62px;
+  --nav-width: 224px;
+  --sp-xxs: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 32px;
+  --sp-xxl: 48px;
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 8px;
+  --r-xl: 8px;
+  --r-pill: 999px;
+  --panel-pad-x: 16px;
+  --panel-pad-y: 16px;
+  --panel-header-height: 40px;
+  --kit-header-min-height: 88px;
+  --kit-header-pad-x: 16px;
+  --kit-header-pad-y: 14px;
+  --tile-min-height: 92px;
+  --font-display: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+  --font-body: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+  --fs-headline: 24px;
+  --fs-card-title: 18px;
+  --fs-subhead: 16px;
+  --fs-body: 14px;
+  --fs-body-sm: 13px;
+  --fs-caption: 12px;
+  --fs-mono: 12px;
+  --lh-body: 1.6;
+}
+
+html[data-theme="dark"] {
+  --canvas: #1d1d1f;
+  --canvas-soft: #242426;
+  --surface-1: #2c2c2e;
+  --surface-2: #262628;
+  --surface-3: #343437;
+  --surface-4: #3f3f44;
+  --surface-overlay: #2c2c2e;
+  --nav-overlay: #242426;
+  --header-overlay: #2c2c2e;
+  --chrome-material: #242426;
+  --control-material: #2c2c2e;
+  --ink: #f5f5f7;
+  --ink-muted: #d1d1d6;
+  --ink-subtle: #aeaeb2;
+  --ink-tertiary: #8e8e93;
+  --hairline: #3a3a3c;
+  --hairline-strong: #545458;
+  --primary: #0a84ff;
+  --primary-hover: #58aaff;
+  --primary-focus: #64d2ff;
+  --primary-soft: rgba(10, 132, 255, 0.18);
+  --accent: #30d158;
+  --accent-soft: rgba(48, 209, 88, 0.16);
+  --success: #30d158;
+  --success-soft: rgba(48, 209, 88, 0.16);
+  --warning: #ffd60a;
+  --warning-soft: rgba(255, 214, 10, 0.16);
+  --error: #ff6961;
+  --error-soft: rgba(255, 105, 97, 0.16);
+  --doc-core: #5e5ce6;
+  --doc-tool: #64d2ff;
+  --doc-command: #ffd60a;
+  --doc-note: #30d158;
+  --doc-rose: #ff2d55;
+  --kit-icon-framework: #64d2ff;
+  --kit-icon-docs: #bf5af2;
+  --kit-icon-architecture: #64d2ff;
+  --kit-icon-audiokit: #0a84ff;
+  --kit-icon-eventkit: #00d4e8;
+  --kit-icon-fsmkit: #5e9cff;
+  --kit-icon-logkit: #ff9f0a;
+  --kit-icon-poolkit: #30d158;
+  --kit-icon-reskit: #ffd60a;
+  --kit-icon-singletonkit: #ff6961;
+  --kit-icon-actionkit: #ffd60a;
+  --kit-icon-inputkit: #64d2ff;
+  --kit-icon-localizationkit: #00d4e8;
+  --kit-icon-savekit: #5e9cff;
+  --kit-icon-scenekit: #ff6961;
+  --kit-icon-spatialkit: #00c7a3;
+  --kit-icon-tablekit: #30d158;
+  --kit-icon-uikit: #00c7a3;
+  --kit-icon-package: #bf5af2;
+  --kit-icon-github: #f5f5f7;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --shadow-window: 0 20px 56px rgba(0, 0, 0, 0.36);
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.32);
+  --glow-a: rgba(10, 132, 255, 0.10);
+  --glow-b: rgba(255, 255, 255, 0.04);
+  --scroll-thumb: #57575d;
+  --code-bg: #0a101c;
+  --code-header: #101827;
+  --code-border: #2f4566;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  letter-spacing: 0;
+}

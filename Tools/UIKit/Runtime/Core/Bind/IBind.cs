@@ -1,3 +1,4 @@
+#if !GODOT
 namespace YokiFrame
 {
     public interface IBind
@@ -22,3 +23,4 @@ namespace YokiFrame
         UnityEngine.Transform Transform { get; }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if !GODOT
 using System.Collections.Generic;
 
 namespace YokiFrame
@@ -120,3 +121,4 @@ namespace YokiFrame
         }
     }
 }
+#endif

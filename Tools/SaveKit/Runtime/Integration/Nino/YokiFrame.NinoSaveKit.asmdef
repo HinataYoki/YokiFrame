@@ -1,0 +1,25 @@
+{
+    "name": "YokiFrame.NinoSaveKit",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame.SaveKit",
+        "Nino.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "YOKIFRAME_NINO_SUPPORT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.jasonxudeveloper.nino",
+            "expression": "",
+            "define": "YOKIFRAME_NINO_SUPPORT"
+        }
+    ],
+    "noEngineReferences": true
+}

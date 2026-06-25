@@ -1,8 +1,11 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
-#if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 
 namespace YokiFrame
@@ -24,6 +27,7 @@ namespace YokiFrame
         private readonly Queue<DialogQueueItem> mDialogQueue = new();
         private UIDialogPanel mCurrentDialog;
         private bool mIsDialogProcessing;
+        private bool mIsDialogResetting;
 
         #endregion
 
@@ -143,6 +147,7 @@ namespace YokiFrame
 
         private void ProcessDialogQueue()
         {
+            if (mIsDialogResetting) return;
             if (mIsDialogProcessing || mDialogQueue.Count == 0) return;
             if (mCurrentDialog != default) return;
 
@@ -186,6 +191,31 @@ namespace YokiFrame
             ProcessDialogQueue();
         }
 
+        internal void ResetDialogState()
+        {
+            mIsDialogResetting = true;
+            mCurrentDialog = null;
+            mIsDialogProcessing = false;
+            ClearDialogQueue();
+            mIsDialogResetting = false;
+        }
+
+        internal void BeginDialogReset()
+        {
+            mIsDialogResetting = true;
+            mCurrentDialog = null;
+            mIsDialogProcessing = false;
+            ClearDialogQueue();
+        }
+
+        internal void EndDialogReset()
+        {
+            ClearDialogQueue();
+            mCurrentDialog = null;
+            mIsDialogProcessing = false;
+            mIsDialogResetting = false;
+        }
+
         #endregion
 
         #region 对话框查询
@@ -214,73 +244,121 @@ namespace YokiFrame
 
         #endregion
 
+        #region 异步对话框
+
+        /// <summary>
+        /// 异步显示对话框。安装 UniTask 后返回 UniTask，否则返回 Task。
+        /// </summary>
 #if YOKIFRAME_UNITASK_SUPPORT
-        #region UniTask 对话框
-
-        /// <summary>
-        /// [UniTask] 显示对话框
-        /// </summary>
-        public UniTask<DialogResultData> ShowDialogUniTaskAsync(DialogConfig config,
+        public UniTask<DialogResultData> ShowDialogAsync(DialogConfig config,
             CancellationToken ct = default)
+#else
+        public Task<DialogResultData> ShowDialogAsync(DialogConfig config,
+            CancellationToken ct = default)
+#endif
         {
-            return ShowDialogUniTaskAsync(mDefaultDialogType, config, ct);
+            return ShowDialogAsync(mDefaultDialogType, config, ct);
         }
 
         /// <summary>
-        /// [UniTask] 显示指定类型的对话框
+        /// 异步显示指定类型的对话框。
         /// </summary>
-        public UniTask<DialogResultData> ShowDialogUniTaskAsync<T>(DialogConfig config,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public UniTask<DialogResultData> ShowDialogAsync<T>(DialogConfig config,
             CancellationToken ct = default) where T : UIDialogPanel
+#else
+        public Task<DialogResultData> ShowDialogAsync<T>(DialogConfig config,
+            CancellationToken ct = default) where T : UIDialogPanel
+#endif
         {
-            return ShowDialogUniTaskAsync(typeof(T), config, ct);
+            return ShowDialogAsync(typeof(T), config, ct);
         }
 
         /// <summary>
-        /// [UniTask] 显示指定类型的对话框
+        /// 异步显示指定类型的对话框。
         /// </summary>
-        public UniTask<DialogResultData> ShowDialogUniTaskAsync(Type panelType, DialogConfig config,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public UniTask<DialogResultData> ShowDialogAsync(Type panelType, DialogConfig config,
             CancellationToken ct)
+#else
+        public Task<DialogResultData> ShowDialogAsync(Type panelType, DialogConfig config,
+            CancellationToken ct)
+#endif
         {
+#if YOKIFRAME_UNITASK_SUPPORT
             var tcs = new UniTaskCompletionSource<DialogResultData>();
             ct.Register(() => tcs.TrySetCanceled());
             ShowDialog(panelType, config, result => tcs.TrySetResult(result));
             return tcs.Task;
+#else
+            var tcs = new TaskCompletionSource<DialogResultData>();
+            ct.Register(() => tcs.TrySetCanceled(ct));
+            ShowDialog(panelType, config, result => tcs.TrySetResult(result));
+            return tcs.Task;
+#endif
         }
 
         /// <summary>
-        /// [UniTask] Alert 对话框
+        /// 异步 Alert 对话框。
         /// </summary>
-        public async UniTask AlertUniTaskAsync(string message, string title = null,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public async UniTask AlertAsync(string message, string title = null,
             CancellationToken ct = default)
+#else
+        public async Task AlertAsync(string message, string title = null,
+            CancellationToken ct = default)
+#endif
         {
             var config = DialogConfig.Alert(message, title);
-            await ShowDialogUniTaskAsync(config, ct);
+#if YOKIFRAME_UNITASK_SUPPORT
+            await ShowDialogAsync(config, ct);
+#else
+            await ShowDialogAsync(config, ct).ConfigureAwait(false);
+#endif
         }
 
         /// <summary>
-        /// [UniTask] Confirm 对话框
+        /// 异步 Confirm 对话框。
         /// </summary>
-        public async UniTask<bool> ConfirmUniTaskAsync(string message, string title = null,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public async UniTask<bool> ConfirmAsync(string message, string title = null,
             CancellationToken ct = default)
+#else
+        public async Task<bool> ConfirmAsync(string message, string title = null,
+            CancellationToken ct = default)
+#endif
         {
             var config = DialogConfig.Confirm(message, title);
-            var result = await ShowDialogUniTaskAsync(config, ct);
+#if YOKIFRAME_UNITASK_SUPPORT
+            var result = await ShowDialogAsync(config, ct);
+#else
+            var result = await ShowDialogAsync(config, ct).ConfigureAwait(false);
+#endif
             return result.IsConfirmed;
         }
 
         /// <summary>
-        /// [UniTask] Prompt 对话框
+        /// 异步 Prompt 对话框。
         /// </summary>
-        public async UniTask<(bool confirmed, string value)> PromptUniTaskAsync(string message,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public async UniTask<(bool confirmed, string value)> PromptAsync(string message,
             string title = null, string defaultValue = null, CancellationToken ct = default)
+#else
+        public async Task<(bool confirmed, string value)> PromptAsync(string message,
+            string title = null, string defaultValue = null, CancellationToken ct = default)
+#endif
         {
             var config = PromptConfig.Create(message, title, defaultValue);
             var panelType = mDefaultPromptType != default ? mDefaultPromptType : mDefaultDialogType;
-            var result = await ShowDialogUniTaskAsync(panelType, config, ct);
+#if YOKIFRAME_UNITASK_SUPPORT
+            var result = await ShowDialogAsync(panelType, config, ct);
+#else
+            var result = await ShowDialogAsync(panelType, config, ct).ConfigureAwait(false);
+#endif
             return (result.IsConfirmed, result.InputValue);
         }
 
         #endregion
-#endif
     }
 }
+#endif

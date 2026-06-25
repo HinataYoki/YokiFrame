@@ -1,8 +1,9 @@
-﻿{
+{
     "name":  "YokiFrame.TableKit.Editor.TableKitWindow",
-    "rootNamespace":  "YokiFrame.TableKit.Editor",
+    "rootNamespace": "YokiFrame.Unity",
     "references":  [
-                       "Luban.Runtime"
+                       "Luban.Runtime",
+                       "YokiFrame.CodeGenKit"
                    ],
     "includePlatforms":  [
                              "Editor"
@@ -17,7 +18,8 @@
                               ],
     "autoReferenced":  true,
     "defineConstraints":  [
-
+                              "YOKIFRAME_LUBAN_SUPPORT",
+                              "YOKIFRAME_LEGACY_UNITY_TABLEKIT_EDITOR"
                           ],
     "versionDefines":  [
 

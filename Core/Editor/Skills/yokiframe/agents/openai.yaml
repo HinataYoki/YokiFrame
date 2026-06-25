@@ -1,0 +1,7 @@
+interface:
+  display_name: "YokiFrame 使用指南"
+  short_description: "YokiFrame Kit 使用、调试和命令桥入口"
+  default_prompt: "Use $yokiframe to build with YokiFrame Kits, query framework state, and choose the right existing module before writing game code."
+
+policy:
+  allow_implicit_invocation: true

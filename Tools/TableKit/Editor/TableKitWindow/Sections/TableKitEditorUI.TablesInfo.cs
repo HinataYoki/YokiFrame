@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 配置表信息区块
@@ -41,7 +41,7 @@ namespace YokiFrame.TableKit.Editor
             container.Add(header);
 
             var title = new Label("配置表信息");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             header.Add(title);
@@ -66,7 +66,7 @@ namespace YokiFrame.TableKit.Editor
 
             var searchIcon = new Label("[搜索]");
             searchIcon.style.marginRight = 4;
-            searchIcon.style.fontSize = Design.FontSizeSmall;
+            searchIcon.style.fontSize = Design.FONT_SIZE_SMALL;
             searchIcon.style.color = new StyleColor(Design.TextTertiary);
             searchContainer.Add(searchIcon);
 

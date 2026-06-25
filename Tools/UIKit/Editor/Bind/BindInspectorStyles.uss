@@ -1,5 +1,31 @@
 /* AbstractBind Inspector 样式 - v2 */
-/* 使用全局设计令牌，遵循 BEM 命名规范 */
+/* 与 1.0 BindInspectorStyles.uss 保持同一视觉结构；本地补齐 token，避免依赖旧样式服务。 */
+
+:root {
+    --layer-base: rgb(24, 25, 28);
+    --layer-card: rgb(45, 47, 54);
+    --layer-elevated: rgb(52, 55, 62);
+    --layer-hover: rgb(58, 61, 70);
+    --text-primary: rgb(240, 240, 245);
+    --text-secondary: rgb(180, 185, 195);
+    --text-tertiary: rgb(130, 135, 145);
+    --text-on-brand: rgb(255, 255, 255);
+    --border-subtle: rgb(45, 48, 55);
+    --border-default: rgb(55, 58, 65);
+    --border-strong: rgb(70, 73, 82);
+    --brand-primary: rgb(33, 150, 243);
+    --brand-primary-hover: rgb(66, 165, 245);
+    --brand-success: rgb(76, 175, 80);
+    --brand-danger: rgb(244, 67, 54);
+    --brand-warning: rgb(255, 152, 0);
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --radius-sm: 4px;
+    --font-xs: 11px;
+    --font-sm: 12px;
+    --duration-normal: 0.2s;
+}
 
 .bind-inspector {
     padding: var(--spacing-xs);
@@ -51,8 +77,6 @@
     -unity-font-style: italic;
 }
 
-
-/* 验证提示 - 使用全局变量 */
 .validation-label {
     margin-top: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-sm);
@@ -75,12 +99,60 @@
     border-color: var(--brand-success);
 }
 
-/* PopupField 样式调整 */
 .bind-field PopupField {
     margin: 0;
 }
 
-/* TextField 输入框样式 */
+.bind-dropdown-field > .unity-base-field__input,
+.bind-dropdown-field > .unity-base-popup-field__input,
+.bind-dropdown-field > .unity-popup-field__input,
+.bind-dropdown-field > .unity-enum-field__input {
+    background-color: var(--layer-elevated);
+    border-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: var(--border-default);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-primary);
+    transition-property: border-color, background-color;
+    transition-duration: var(--duration-normal);
+}
+
+.bind-dropdown-field > .unity-base-field__input:hover,
+.bind-dropdown-field > .unity-base-popup-field__input:hover,
+.bind-dropdown-field > .unity-popup-field__input:hover,
+.bind-dropdown-field > .unity-enum-field__input:hover {
+    border-color: var(--border-strong);
+}
+
+.bind-dropdown-field > .unity-base-field__input:focus,
+.bind-dropdown-field > .unity-base-popup-field__input:focus,
+.bind-dropdown-field > .unity-popup-field__input:focus,
+.bind-dropdown-field > .unity-enum-field__input:focus {
+    border-color: var(--brand-primary);
+    background-color: var(--layer-card);
+}
+
+.bind-dropdown-field .unity-base-popup-field__text,
+.bind-dropdown-field .unity-popup-field__text,
+.bind-dropdown-field .unity-enum-field__text {
+    color: var(--text-primary);
+    -unity-text-align: middle-left;
+}
+
+.bind-dropdown-field .unity-base-popup-field__arrow,
+.bind-dropdown-field .unity-popup-field__arrow,
+.bind-dropdown-field .unity-enum-field__arrow {
+    color: var(--text-secondary);
+    -unity-background-image-tint-color: var(--text-secondary);
+}
+
+.bind-dropdown-field:hover .unity-base-popup-field__arrow,
+.bind-dropdown-field:hover .unity-popup-field__arrow,
+.bind-dropdown-field:hover .unity-enum-field__arrow {
+    color: var(--text-primary);
+    -unity-background-image-tint-color: var(--text-primary);
+}
+
 .bind-field TextField > TextInput {
     background-color: var(--layer-elevated);
     border-color: var(--border-default);
@@ -92,14 +164,12 @@
     border-color: var(--brand-primary);
 }
 
-/* EnumField 样式 */
 .bind-field EnumField > VisualElement {
     background-color: var(--layer-elevated);
     border-color: var(--border-default);
     border-radius: var(--radius-sm);
 }
 
-/* 类型快速转换按钮 */
 .type-convert-row {
     margin-top: var(--spacing-xs);
 }
@@ -127,8 +197,6 @@
     opacity: 0.5;
 }
 
-
-/* 命名建议行 - 使用全局变量 */
 .suggestion-row {
     background-color: rgba(33, 150, 243, 0.1);
     border-radius: var(--radius-sm);
@@ -162,7 +230,6 @@
     background-color: var(--brand-primary-hover);
 }
 
-/* 绑定路径显示 */
 .bind-path-row {
     margin-top: var(--spacing-sm);
     padding-top: var(--spacing-sm);
@@ -176,7 +243,6 @@
     -unity-font-style: italic;
 }
 
-/* 代码预览区域 */
 .code-preview-foldout {
     margin-top: var(--spacing-sm);
 }
@@ -197,7 +263,6 @@
     white-space: normal;
 }
 
-/* 跳转到代码按钮 */
 .jump-to-code-btn {
     margin-top: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);

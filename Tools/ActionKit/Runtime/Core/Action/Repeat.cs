@@ -1,34 +1,28 @@
-﻿using System;
+using System;
 
 namespace YokiFrame
 {
-    public interface IRepeat : ISequence
-    {
-    }
-
     internal class Repeat : ActionBase, IRepeat
     {
-        private Sequence mSequence = null;
-        private int mMaxRepeatCount = 0;
-        private int mCurrentRepeatCount = 0;
-        private Func<bool> mCondition = () => true;
+        private static readonly Func<bool> sDefaultCondition = static () => true;
+        private static readonly YokiFrame.SimplePoolKit<Repeat> sPool = new(static () => new Repeat());
 
-        private static readonly SimplePoolKit<Repeat> mPool = new(() => new Repeat());
+        private Sequence mSequence;
+        private int mMaxRepeatCount;
+        private int mCurrentRepeatCount;
+        private Func<bool> mCondition = sDefaultCondition;
 
         static Repeat()
         {
-            ActionKitPlayerLoopSystem.RegisterRecycleProcessor<Repeat>();
+            ActionKitScheduler.RegisterRecycleProcessor<Repeat>();
         }
 
-        public static Repeat Allocate(int repeatCount = 0, Func<bool> condition = null)
+        internal static Repeat Allocate(int repeatCount = -1, Func<bool> condition = null)
         {
-            var repeat = mPool.Allocate();
-            repeat.ActionID = ActionKit.ID_GENERATOR++;
+            var repeat = sPool.Allocate();
+            repeat.ActionID = ActionKit.sIdGenerator++;
             repeat.mSequence = Sequence.Allocate();
-            if (condition != null)
-            {
-                repeat.mCondition = condition;
-            }
+            if (condition != null) repeat.mCondition = condition;
             repeat.Deinited = false;
             repeat.OnInit();
             repeat.mMaxRepeatCount = repeatCount;
@@ -46,24 +40,10 @@ namespace YokiFrame
 
         public override void OnExecute(float dt) => Repeating(dt);
 
-        private void Repeating(float dt)
-        {
-            if (mSequence.Update(dt))
-            {
-                ++mCurrentRepeatCount;
-                if (Condition())
-                {
-                    mSequence.OnInit();
-                }
-                else
-                {
-                    this.Finish();
-                }
-            }
-        }
-
-        private bool Condition() => mCondition.Invoke() && (mMaxRepeatCount <= 0 || mCurrentRepeatCount < mMaxRepeatCount);
-
+        /// <summary>
+        /// 添加一个子 Action。
+        /// </summary>
+        /// <param name="action">要追加的子 Action。</param>
         public ISequence Append(IAction action)
         {
             mSequence.Append(action);
@@ -72,29 +52,33 @@ namespace YokiFrame
 
         public override void OnDeinit()
         {
-            if (!Deinited)
-            {
-                Deinited = true;
-                mMaxRepeatCount = 0;
-                mCondition = () => true;
-                mSequence.OnDeinit();
-                ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Repeat>(mPool, this));
-            }
+            if (Deinited) return;
+
+            Deinited = true;
+            mMaxRepeatCount = 0;
+            mCondition = sDefaultCondition;
+            mSequence.OnDeinit();
+            ActionRecyclerManager.AddRecycleCallback(new ActionRecycler<Repeat>(sPool, this));
         }
 
         public override string GetDebugInfo() => $"Repeat(max={mMaxRepeatCount}, current={mCurrentRepeatCount})";
-        
-        // 编辑器监控接口（通过反射访问，运行时零开销）
-        internal Sequence EditorGetSequence() => mSequence;
-    }
 
-    public static class RepeatExtension
-    {
-        public static ISequence Repeat(this ISequence self, Action<IRepeat> repeat, int count = -1, Func<bool> condition = null)
+        internal Sequence EditorGetSequence() => mSequence;
+
+        private bool Condition() => mCondition.Invoke() && (mMaxRepeatCount <= 0 || mCurrentRepeatCount < mMaxRepeatCount);
+
+        private void Repeating(float dt)
         {
-            var r = YokiFrame.Repeat.Allocate(count, condition);
-            repeat?.Invoke(r);
-            return self.Append(r);
+            if (!mSequence.Update(dt)) return;
+
+            ++mCurrentRepeatCount;
+            if (Condition())
+            {
+                mSequence.OnInit();
+                return;
+            }
+
+            this.Finish();
         }
     }
 }

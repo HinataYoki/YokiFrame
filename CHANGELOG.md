@@ -1,497 +1,81 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+本文件记录 YokiFrame 当前发布线的重要变化。
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+YokiFrame 2.0 是一次跨引擎架构重启，不再沿用 1.x 的 Unity 单宿主演进记录。因此当前包内 changelog 从 `2.0.0-pre` 重新开始；1.x 历史更新记录已从本文件移除。
 
-## [1.8.2] - 2026-03-28
+格式参考 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，版本号遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
-### Added
-
-- **AudioKit** Handler 生命周期管理和状态检测
-  - 新增 `IAudioHandle.IsValid` 属性，检测 Handle 是否已回收
-  - 新增 `IAudioHandle.IsManualLifecycle` 属性，查询当前生命周期模式
-  - 新增 `IAudioHandle.SetManualLifecycle(bool)` 方法，运行时切换生命周期模式
-  - 新增 `IAudioHandle.Release()` 方法，手动释放 Handle
-  - 新增 `AudioPlayConfig.ManualLifecycle` 字段，配置时声明手动生命周期
-  - 新增 `AudioPlayConfig.WithManualLifecycle(bool)` 链式配置方法
-  - 所有 Handle 操作方法（Pause/Resume/Stop/StopWithFade/SetPosition）增加 `IsValid` 检测和警告日志
-  - 手动生命周期模式下，音频播放完成不会自动回收，需调用 `Release()` 手动释放
-  - 适用场景：需要在音频播放完成后保留 Handle 进行状态查询
-
-### Changed
-
-- **AudioKit** 优化自动回收逻辑
-  - `UnityAudioHandle.UpdateFade()` 和 `FmodAudioHandle.UpdateFade()` 在播放完成和淡出完成时检查手动模式标记
-  - 手动模式下返回 `false` 阻止自动回收，自动模式下返回 `true` 触发回收
-  - `UnityAudioHandle.Initialize()` 和 `FmodAudioHandle.Initialize()` 新增 `manualLifecycle` 参数
-  - `UnityAudioBackend.PlayInternal()` 传递 `config.ManualLifecycle` 参数到 Handle
-
-### Fixed
-
-- **AudioKit** 修复用户持有 Handle 引用但内部已回收导致的空引用问题
-  - 所有属性访问（Volume/Pitch/Time/Duration）增加 `IsValid` 检测
-  - 失效 Handle 操作时输出警告日志，避免静默失败
-
-### Documentation
-
-- **AudioKit** 编辑器文档更新
-  - 更新"句柄控制"章节，修正 API 示例（`FadeOut` → `StopWithFade`，`SetVolume` → `Volume` 属性）
-  - 新增"手动生命周期管理"章节，包含完整使用示例和场景说明
-  - 补充 `IsValid` 和 `IsManualLifecycle` 属性使用示例
-
-## [1.8.0] - 2026-03-20
+## [2.0.0-pre] - 2026-06-24
 
 ### Added
 
-- **SaveKit** `ISaveSerializer` 新增非泛型方法 `Serialize(object)` 和 `DeserializeOverwrite(byte[], object)`
-  - 支持运行时 Type 场景（如 Architecture 集成中按类型序列化/反序列化 IModel）
-  - `JsonSaveSerializer` 已实现上述方法
-- **SaveKit** 新增 `NinoSaveSerializer` — 基于 Nino 的高性能二进制序列化器
-  - 独立程序集 `YokiFrame.BinarySave`，通过 `defineConstraints: YOKIFRAME_NINO_SUPPORT` 条件编译
-  - 使用非泛型 `NinoDeserializer.Deserialize(bytes, Type)` API，支持跨程序集反序列化
-  - 通过 `SaveKit.SetSerializer(new NinoSaveSerializer())` 一行切换
-- **DependencyDefineService** 新增 Type 反射检测方式（第三种检测模式）
-  - 通过 `AppDomain.CurrentDomain.GetAssemblies()` + `Assembly.GetType()` 检测类型是否存在
-  - 解决 precompiled DLL 包（无 .asmdef、非本地路径）无法被包路径和 asmdef 检测发现的问题
-  - `DependencyInfo` 新增可选 `TypeName` 字段
-  - 新增 Nino 依赖项：检测 `Nino.Core.NinoTypeAttribute` 自动定义 `YOKIFRAME_NINO_SUPPORT`
-
-### Fixed
-
-- **SaveKit** 修复 `SaveData.RegisterModuleByType` 硬编码 `JsonUtility.ToJson` 的问题
-  - 改为通过委托延迟调用 `serializer.Serialize(data)` ，遵循 `ISaveSerializer` 接口
-- **SaveKit** 修复 `SaveKit.ApplyToArchitecture` 硬编码 `JsonUtility.FromJsonOverwrite` 的问题
-  - 改为调用 `serializer.DeserializeOverwrite(bytes, model)`，支持任意序列化器
-
-## [1.7.9] - 2026-03-20
-
-### Added
-
-- **UIKit** `OpenPanel` / `OpenPanelAsync` / `OpenPanelUniTaskAsync` 新增可选 `tag` 参数，支持为面板打标签
-- **UIKit** 新增 `UIKit.ClosePanelsByTag(string tag)` — 批量关闭所有带指定 tag 的面板
-  - `PanelHandler` 新增 `Tag` 字段，Recycle 时自动清空
-  - `UIRoot` 内部维护 `mTagIndex (Dictionary<string, HashSet<Type>>)`，AddToCache / RemoveFromCache 时自动同步
-  - 支持同一 tag 绑定多个面板类型，关闭后索引自动清理
-
-### Fixed
-- **SaveKit** 修复加载后部分 RegisterModule 再保存导致未注册模块数据丢失的严重 BUG
-  - `SerializeRegisteredModules` 现在同时保留未被引用覆盖的原始字节模块
-- **SaveKit** 修复 `ModuleCount` 不包含加载后的字节模块，导致计数与实际不一致
-- **SaveKit** 修复 `DeserializeSaveData` unsafe 代码对损坏文件无越界保护，可能导致内存访问违规
-  - 添加模块数量合理性检查、读取前剩余空间校验、数据长度负值检查
-
-### Changed
-- **SaveKit** Architecture 集成重构
-  - `CollectFromArchitecture` 改为注册对象引用（等价于手动 `RegisterModule`），替代原来的 `SetRawModule` 方式
-  - `ApplyToArchitecture` 直接通过 `JsonUtility.FromJsonOverwrite` 覆盖 Architecture 中的 Model 数据
-  - 去掉 `SerializableModelData` 包裹，`CollectFromArchitecture` 和手动 `RegisterModule` 两种方式保存的数据格式完全兼容
-- **SaveKit** `RegisterModule` 重复注册同类型模块时输出日志提示
-- **SaveKit** 编辑器文档更新
-  - 加载数据示例：去掉"加载后重新注册引用"的说明，注册后持续持有引用无需重复注册
-  - Architecture 集成示例：说明 `CollectFromArchitecture` 等价于手动 `RegisterModule`，注册的是引用
-
-## [1.7.8] - 2026-03-09
-
-### Added
-- **TableKit** 异步加载模式新增 `SetTableFileNames(string[])` 运行时覆盖接口
-  - 生成时嵌入的 `TABLE_FILE_NAMES` 作为默认值，运行时可通过该方法替换
-  - `InitAsync` 优先使用覆盖值 (`sCustomTableFileNames ?? TABLE_FILE_NAMES`)
-- **TableKit** 异步自定义加载器文档补充
-  - 运行时使用文档新增 `SetAsyncBinaryLoader` / `SetAsyncJsonLoader` / `SetTableFileNames` 用法示例
-  - 编辑器使用指南新增异步自定义加载器完整代码示例
-  - 最佳实践文档补充自定义加载器与文件名覆盖说明
-- **TableKit** 新增 `TableKitCodeGenerator` 单元测试（47 个测试用例）
-  - 覆盖：基础生成、命名空间、路径嵌入/转义、编辑器区块、同步/异步模式、TABLE_FILE_NAMES 嵌入、运行时覆盖、asmdef 生成、ExternalTypeUtil、旧文件清理、Tables 自动初始化、InitAsync 预缓存策略、Clear 方法
-- **TableKit** 数据预览卡片新增"验证配置"按钮
+- 新增 YokiFrame 2.0 跨引擎 Kit 框架定位。
+  - Runtime API 围绕 `YokiFrame` 命名空间下的统一 Kit 入口组织。
+  - Unity、Godot 和未来宿主通过 Adapter 接入，不再扩散平行公开 API。
+  - Core Runtime 覆盖 Architecture、EventKit、FsmKit、PoolKit、ResKit、SingletonKit、LogKit、ToolClass、FluentApi、Settings 和 CommandBridge。
+- 新增 `.yokiframe/` AI 原生文件通信桥。
+  - 通过 `.yokiframe/engines/<engineId>/engine.json` 发现引擎实例。
+  - 命令使用 engine-scoped `commands/<requestId>.json` 与 `results/<requestId>-response.json`。
+  - 当前状态通过 `snapshots/<kit>/<name>.json` 覆盖式发布。
+  - 重要离散事件通过 JSONL event stream 发布。
+  - 共享内存 telemetry 支持 Tauri 工作台实时刷新，并保留 snapshot / command 兜底。
+- 新增 FileBridge v2 协议能力。
+  - 命令 envelope 包含 `protocolVersion`、`requestId`、`engineId`、`source`、`kit`、`action`、`payload`、`createdAtUtc` 和可选 timeout 字段。
+  - 新命令优先走 engine-scoped 路由；legacy root 路径在迁移期保留兼容。
+  - 协议包含安全标识符校验、根目录约束、标准终态响应、命令认领、archive / deadletter、重复响应复用和存储清理模型。
+- 新增 Tauri 版 YokiFrame Editor 工作台。
+  - System 页面展示 engine registry、heartbeat、FileBridge 健康、命令目录和日志。
+  - Kit 页面覆盖 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、SingletonKit 和 Docs。
+  - 工作台页面优先读 telemetry，其次读 snapshot，缺失或用户显式操作时才走 command/result。
+  - Docs 页面承载快速上手、Kit 文档、API 速查、第三方依赖建议和前端结构说明。
+- 新增包内 AI Skill 入口。
+  - `Core/Editor/Skills/yokiframe`
+  - `Core/Editor/Skills/yokiframe-usage`
+  - `Core/Editor/Skills/yokiframe-editor`
+  - `Core/Editor/Skills/yokiframe-command-bridge`
+  - Tauri 工作台提供 AI Skill 安装和状态查看能力。
+- 新增 Unity Adapter 能力。
+  - `UnityBootstrap`、Unity logger / time / object / serialization / resource provider、`MonoSingleton<T>`、runtime settings bridge 和 Runtime Kit installer。
+  - Unity Editor CommandBridge host、heartbeat、engine registry、Tauri launcher、Tauri packager、event writer、snapshot publisher 和 shared-memory telemetry publisher。
+  - 可选集成 YooAsset、DOTween、FMOD、Unity Input、SceneManager 和 Unity UI 后端。
+- 新增 Godot Adapter 能力。
+  - `GodotBootstrap`、`GodotAutoBootstrap`、Godot resource / time / object / logger / serialization provider、`GodotSingleton<T>` 和 Runtime Kit installer。
+  - Godot CommandBridge host、event writer、EventKit bridge、FsmKit bridge、Kit snapshot publisher 和 Godot editor plugin 入口。
+  - Godot `.NET / C#` 项目通过 `addons/yokiframe/package/YokiFrame` 安装布局接入。
+- 新增 Tool Kit 工作台与命令桥覆盖。
+  - ActionKit、AudioKit、SaveKit、InputKit、LocalizationKit、SceneKit、SpatialKit、UIKit 以及核心 Kit 诊断已提供 command handler 或 snapshot 工作流。
+  - TableKit 作为 Tauri 内 Luban 配置表生成工作流呈现，不作为运行时 Kit 发布。
+- 新增 2.0 预发布包元数据。
+  - `package.json` 版本更新为 `2.0.0-pre`。
+  - 包描述和关键词已改为跨引擎、AI 原生 FileBridge、Tauri 工作台、Unity / Godot Adapter、诊断与当前 Kit 集合。
 
 ### Changed
-- **TableKit** 编辑器数据路径默认跟随数据输出目录，新增"自定义编辑器数据路径"开关
-- **TableKit** "打开配置表"按钮直接打开 Datas 文件夹（`OpenWithDefaultApp`），替代原来的目录定位
-- **TableKit** 配置表信息搜索框宽度从 150 调整为 180，修复提示文字截断
-- **TableKit** 命令中心移除重复的"验证"按钮，验证功能统一由数据预览卡片提供
 
-## [1.7.7] - 2026-03-08
-
-### Added
-- **UIKit** `UILevel` 从 enum 重构为 `readonly struct`，支持用户自定义层级
-  - 用户可通过 `new UILevel(order)` 创建自定义层级，无需修改框架代码
-  - `default(UILevel)` 等价于 `UILevel.Common`（Order = 0），方法签名可用 `UILevel level = default`
-  - 预定义 9 个层级：AlwayBottom(-200)、Bg(-100)、Hud(-50)、Common(0)、Toast(50)、Pop(100)、Guide(150)、AlwayTop(200)、CanvasPanel(300)
-  - 新增 Hud 层级 — 血条、名牌、伤害飘字等世界跟踪 UI
-  - 新增 Toast 层级 — Toast 消息、成就通知、系统广播
-  - 新增 Guide 层级 — 新手引导、教程遮罩、高亮提示
-  - 提供 `PredefinedLevels`、`PredefinedLevelNames`、`TryParse()` 静态 API
-  - 支持隐式 int 转换、比较运算符、`IEquatable`/`IComparable` 接口
-- **UIKit** 自定义层级懒创建机制
-  - `EnsureLevelExists()` 首次使用自定义层级时自动在 UIRoot 下创建对应 GameObject 节点
-  - 节点按 Order 值自动插入正确的 sibling 位置
-  - 预定义层级节点使用字段名命名（如 "Common"、"Hud"），自定义层级节点使用 "UILevel({order})" 格式
-- **UIKit** 新增 `UILevelPropertyDrawer` Inspector 自定义绘制器
-  - 支持 `[SerializeField] UILevel` 字段在 Inspector 中显示为预定义层级下拉框
-  - 非预定义值显示为 "Custom (N)"
-  - 同时支持 UIToolkit 和 IMGUI 回退
-
-### Changed
-- **UIKit** 所有公共 API 的 `UILevel level = UILevel.Common` 默认参数统一改为 `UILevel level = default`
-- **UIKit** 编辑器创建面板窗口的 UI 层级选择从 `EnumField` 改为 `DropdownField`
-- **UIKit** `GetGlobalTopPanel()` 从硬编码层级数组改为动态遍历所有已注册层级，使用缓存 List 避免闭包 GC 分配
-
-### Breaking Changes
-- **UILevel 序列化不兼容** — 旧 enum int 值（如 Pop=3）与新 struct Order 值（Pop=100）不同，升级后需在 Inspector 中重新选择 UILevel 字段值
-- **UILevel 不再是 Enum** — 依赖 `Enum.GetValues(typeof(UILevel))` 或 `EnumField` 的用户代码需迁移到 `UILevel.PredefinedLevels` 和 `DropdownField`
-
-## [1.7.6] - 2026-03-04
-
-### Added
-- **ResKit** 新增批量资源加载（AllAssets）与子资源加载（SubAssets）功能
-  - 新增 `IAllAssetsLoader` / `ISubAssetsLoader` 接口及 UniTask 扩展接口
-  - 新增 `AllAssetsResHandler` / `SubAssetsResHandler` 句柄类，通过 `Retain()/Release()` 引用计数管理资源生命周期
-  - `SubAssetsResHandler` 提供 `GetSubAssetObject<T>(name)` 按名称查找子资源（如 SpriteAtlas 内精灵）
-  - 新增门面 API：`ResKit.LoadAll<T>`、`ResKit.LoadAllAsset<T>`、`ResKit.LoadSubAsset<T>` 及对应的 Async / UniTask 变体
-  - YooAsset / Resources / Editor(AssetDatabase) 三种后端均已实现
-  - 新增 `ResKitDocAllAssetsAndSubAssets` 编辑器文档，含各后端语义差异说明与使用示例
-
-### Fixed
-- **ResKit** 修复 `YooAssetResLoader` / `YooAssetResLoaderUniTask` 中 `SubAssetsHandle` 使用了错误的属性 `AllAssetObjects`（应为 `SubAssetObjects`）
-
-## [1.7.5] - 2026-03-02
-
-### Fixed
-- **FsmKit** 修复 `HierarchicalSM` 状态不同步的严重缺陷
-  - 修复 `ValueTuple` 作为值类型存储在字典中导致的更新丢失问题
-  - 重写 `Start`/`End`/`Suspend`/`Change` 方法，确保更新后的 `MachineState` 能够正确写回字典
-- **FsmKit** 修复 `FSM<TEnum, TArgs>.Start` 方法缺少 `MachineState.Running` 守卫的问题，防止运行中的状态机被重复启动导致前驱状态泄漏
-
-### Changed
-- **LogKit** 优化 `KitLoggerWriter.CleanStackTrace` 方法，将换行符数组缓存为静态字段，避免后台 I/O 线程反复在热路径中产生零碎的 `char[]` GC 分配
-
-## [1.7.4] - 2026-03-02
-- **ResKit** 全面精简加载器条件编译冗余，UniTask 加载器改为继承基类，消除重复方法
-  - `DefaultResLoaderUniTask` 继承 `DefaultResLoader`，删除 3 个重复方法
-  - `YooAssetResLoaderUniTask` 继承 `YooAssetResLoader`，删除 4 个重复方法
-  - `DefaultRawFileLoaderUniTask` 继承 `DefaultRawFileLoader`，删除 6 个重复方法
-  - `YooAssetRawFileLoaderUniTask` 继承 `YooAssetRawFileLoader`，删除 7 个重复方法
-  - `YooAssetSceneLoaderUniTaskPool` 继承 `YooAssetSceneLoaderPool`，删除重复池字段
-- **ResKit** `ResKit.LoadAssetUniTaskAsync` 优先走原生 `IResLoaderUniTask.LoadUniTaskAsync`，不再 TCS 包装回调
-- **UIKit** 全面精简 UniTask 调用链，消除多层 TCS 包装
-  - `UIRoot.LoadPanelUniTaskAsync` 优先走 `IPanelLoaderUniTask.LoadUniTaskAsync`
-  - 新增 `UIRoot.OpenPanelUniTaskAsyncInternal`，`UIKit.OpenPanelUniTaskAsync` 直接调用原生 UniTask 路径
-  - 提取 `SetupPreloadedPanel` 共用方法，消除预加载回调版和 UniTask 版的重复逻辑
-  - `DefaultPanelLoaderUniTask` 继承 `DefaultPanelLoader`，删除 3 个重复方法
-- **AudioKit** `DefaultAudioLoaderUniTask` 继承 `DefaultAudioLoader`，删除 3 个重复方法
-
-### Fixed
-- **UIKit** 修复 `DefaultPanelLoaderUniTask.LoadUniTaskAsync` 通过 `ResKit.LoadUniTaskAsync` 加载时 ResHandler 未 Release 的资源泄漏
-  - 改为使用 `mResLoader`（IResLoaderUniTask）直接加载，与 sync/callback 路径保持一致的资源生命周期管理
-- **UIKit** 修复 `YooAssetPanelLoader.LoadUniTaskAsync` 未持有 ResHandler 的资源泄漏
-  - 改为使用 `ResKit.LoadAssetUniTaskAsync`（返回 ResHandler）并存储引用，`UnLoadAndRecycle` 时正确 Release
-- **AudioKit** 修复 `DefaultAudioLoaderUniTask.LoadUniTaskAsync` 通过 `ResKit.LoadUniTaskAsync` 加载时 ResHandler 未 Release 的资源泄漏
-  - 修复方式同 UIKit DefaultPanelLoaderUniTask
-
-## [1.7.3] - 2026-03-01
-
-### Fixed
-- **Meta GUID** 修复 8 个 .meta 文件中 AI 生成的非随机 GUID，避免作为 package 引入其他项目时发生 GUID 冲突
-  - `Core/Runtime/ResKit.meta`
-  - `Core/Runtime/ResKit/Loader.meta`
-  - `Core/Runtime/ResKit/ResKit.cs.meta`
-  - `Core/Runtime/SingletonKit/MonoSingletonPathAttribute.cs.meta`
-  - `Core/Runtime/SingletonKit/Singleton/Singleton.cs.meta`
-  - `Tools/ActionKit/Runtime/Executor/ActionKitPlayerLoopSystem.cs.meta`
-  - `Tools/ActionKit/Runtime/Executor/CoroutineRunner.cs.meta`
-  - `Tools/UIKit/Editor/UIKitToolPage.Settings.cs.meta`
-
-## [1.7.2] - 2026-03-01
-
-### Fixed
-- **SceneKit** 修复异步加载场景时缓存命中返回未完成 handler 的竞态 bug（与 ResKit 1.7.1 修复的 bug 同构）
-  - `LoadSceneAsync` / `PreloadSceneAsync` 在场景加载中再次请求同一场景时，直接返回 `State == Loading` 的 handler，`Scene` 为 `default`
-  - 修复方案：`SceneHandler` 新增等待回调链，未完成的请求排队等待，加载完成后统一通知
-- **SceneKit** 修复卸载正在加载中的场景导致 use-after-recycle
-  - `UnloadSceneAsync` 未检查 `SceneState.Loading` 状态，导致 handler 被回收后异步加载回调仍写入已回收对象
-  - 修复方案：增加 `Loading` 状态前置检查，拒绝卸载正在加载中的场景
-- **UIKit** 修复并发打开同一类型面板导致重复创建实例
-  - 连续调用 `OpenPanelAsync` 或同步异步混合调用同一面板类型时，创建多个面板实例，后续实例成为无法管理的孤儿面板
-  - 修复方案：新增 `mLoadingPanelTypes` 集合跟踪加载中的面板类型，重复请求直接拦截
-- **AudioKit** 修复并发异步加载同一音频路径导致 loader 泄漏
-  - 同一帧多次 `PlayAsync` / `PlayUniTaskAsync` / `PreloadUniTaskAsync` 同一路径时，后完成的 loader 覆盖缓存条目，先完成的 loader 永远不会被释放
-  - 修复方案：异步加载回调中增加缓存存在性检查，若已被并发加载缓存则释放当前 loader
-
-## [1.7.1] - 2026-02-28
-
-### Fixed
-- **ResKit** 修复异步加载中缓存命中返回未完成 handler 的 bug
-  - 同一帧多次异步加载同一资源时，后续请求命中缓存但 `Asset` 仍为 `null`，导致回调拿到空资源
-  - 同步加载命中异步未完成缓存时，同样返回空 `Asset`
-  - UniTask 异步加载存在相同问题，`UniTask.FromResult` 直接返回未就绪的 handler
-  - 修复方案：`ResHandler` 新增等待回调链（`mOnLoaded` 委托链，零堆分配），未完成的请求排队等待，加载完成后统一通知
-  - 同步加载命中未完成缓存时，使用临时 loader 同步补全，不影响原异步 loader 的 handle 生命周期
-  - 已验证 Resources / YooAsset / AssetDatabase 三种后端均无引用计数泄漏
-
-## [1.7.0] - 2026-02-27
-
-### Changed
-- **编辑器架构优化**
-  - 重构编辑器 UI 架构，提升模块化程度和可维护性
-  - 优化 UIToolkit 组件组织结构，增强组件复用性
-  - 改进 ToolsWindow 页面结构，精简生命周期管理逻辑
-  - 优化 USS 样式组织，全面采用 BEM 命名规范确保样式隔离
-  - 减少 YokiFrameUIComponents 中的代码重复，提取通用模式
-- **编辑器性能提升**
-  - 增强响应式数据绑定模式，减少不必要的 UI 更新
-  - 优化编辑器事件系统隔离（EditorEventCenter/EditorDataBridge）
-  - 实现查询结果缓存机制，避免重复 DOM 查询
-  - 减少编辑器 GC 分配，提升大型项目编辑器响应速度
-
-## [1.6.7] - 2026-01-28
-
-### Added
-- **UIKit** Canvas 配置系统重构
-  - 创建独立 UIKitSettings ScriptableObject 管理 Canvas 配置
-  - 路径: Assets/Settings/Resources/UIKitSettings.asset
-  - 避免 Core 依赖 Tools，保持架构清晰
-  - 配置包含 Canvas、CanvasScaler、GraphicRaycaster 所有参数
-- **UIKit** 编辑器新增设置标签页
-  - 新增第5个标签页 "设置"，可视化配置 Canvas 参数
-  - 支持实时修改：渲染模式、参考分辨率(默认3840x2160)、匹配权重等
-  - 提供重置默认值和保存功能
-
-### Changed
-- **UIKit** UIRoot 运行时配置应用
-  - 初始化时自动从 UIKitSettings 读取配置
-  - 新增三个配置应用方法：ApplyCanvasConfig()、ApplyCanvasScalerConfig()、ApplyGraphicRaycasterConfig()
-
-### Fixed
-- **UIKit** 修复创建面板配置持久化问题
-  - 修复项目设置重启后恢复默认的问题
-  - 在所有配置修改回调中添加 SaveConfig() 调用
-  - 影响配置：命名空间、程序集、生成模板、Scripts路径、Prefab路径
-- **UIKit** 修复文件夹选择按钮图标不居中问题
-  - 添加垂直/水平居中对齐样式
-- **TableKit** 控制台日志持久化
-  - 修复窗口重新打开/编译后日志内容丢失的问题
-  - 日志内容通过 EditorPrefs 持久化存储
-  - 仅在生成/验证/刷新/清除操作时更新日志
-  - 确保编译、PlayMode 切换、窗口重开后日志保留
-
-## [1.6.6] - 2026-01-28
-
-### Fixed
-- **UIKit** 修复静态构造函数中创建 GameObject 导致的 `Internal_CreateGameObject` 异常
-  - `UIRoot.Level.cs` 的 `sModalBlockerPool` 改为懒加载属性，避免类加载时触发 Unity 限制
-- **UIKit** 修复退出 PlayMode 时空引用异常（`NullReferenceException`）
-  - `UIKit.cs` 所有静态方法添加空引用保护，退出时安全降级返回默认值
-  - 引入 `Root` 辅助属性统一管理单例访问
-- **UIKit** 修复 UnityObject 判空规范违规
-  - 移除 `panel?.Show()` / `panel?.Hide()` 等对 MonoBehaviour 的 `?.` 操作符使用
-  - 改用 `if (panel != default)` 显式判空
-- **ResKit** 监控面板 UI 优化
-  - 移除不直观的单字母图标（G、?），直接显示完整类型名称
-  - 修复资源名称过长导致的文字挤压问题（添加 `flex-shrink` 和 `min-width: 0`）
-
-## [1.6.5] - 2026-01-28
-
-### Changed
-- **ActionKit** 驱动机制从 MonoBehaviour 改为 PlayerLoop，提升性能并消除 GameObject 依赖
-  - 移除 `ActionKitMonoDriver`，使用 `PlayerLoopHelper` 注入 Update 循环
-  - 支持 EditMode 和 PlayMode 自动切换驱动模式
-  - 新增性能基准测试（1000 个 Action 创建、Sequence 组合、对象池复用）
-
-### Fixed
-- **PoolKit** 修复编辑器在其他项目运行时堆栈路径解析异常（`Path.GetFileName` 遇到非法字符时的 `ArgumentException`）
-- **PoolKit** 优化堆栈追踪，跳过框架内部调用，直接显示业务代码位置
-- **PoolKit** 优化 UniTask 异步方法堆栈追踪，识别状态机并提取原始方法名
-- **TableKit** 修复生成代码中 `ResKit.LoadAsset<TextAsset>()` 返回的 handler 未释放导致的资源泄漏
-- **UIKit** 修复 PlayMode 退出时 UIKit GameObject 未清理的警告（"Some objects were not cleaned up"）
-  - 新增 `sIsQuitting` 标记防止异步任务触发单例重新创建
-  - `ExitingPlayMode` 时强制停止所有 UI 动画并标记面板为销毁中
-  - `EnteredPlayMode` 时重置退出标记允许重新创建
-- **ResKit** 新增场景资源追踪，SceneKit 加载的场景现在会在 ResKit 监视器面板中显示
-
-## [1.6.4] - 2026-01-27
-
-### Changed
-- **PoolKit** 监控面板数字显示优化（使用/池内/容量格式，颜色图例说明）
-
-### Fixed
-- **PoolKit** 修复池内数字负数、代码跳转失效、左右侧数据不同步问题
+- 将 YokiFrame 从 Unity 单宿主轻量框架重新定位为跨引擎工具集框架。
+- 重写包内 README。
+  - README 现在从跨引擎架构、AI 原生通信和可视化编辑器工具开始介绍。
+  - 移除旧截图、阶段草稿和过时目录引用。
+  - 安装与接入说明覆盖 Unity 和 Godot 两条路径。
+- 更新包文档中的当前目录口径。
+  - 当前包文档指向 `Core/Runtime`、`Core/Runtime/Adapters`、`Core/Editor/Skills`、`Tools` 和 `Installer~`。
+  - Tauri 前端开发源与包内跨引擎运行副本分开说明。
+- 统一 FileBridge v2 文档表述。
+  - AI 和脚本应先发现 engine registry，再优先读取 snapshot，需要请求-响应语义时再发送 command。
+  - 高频运行时状态不逐次写文件，由 Adapter 聚合到 telemetry、snapshot 和采样 event。
+- 更新 package keywords。
+  - 新关键词突出 `cross-engine`、`ai`、`filebridge`、`command-bridge`、`tauri`、`workbench`、`diagnostics`、`unity`、`godot` 和当前 Kit 名称。
 
 ### Removed
-- **PoolKit** 移除泄露检测、时长排序、定位归还功能及相关冗余代码
 
-## [1.6.3] - 2026-01-20
+- 移除当前 changelog 中所有 1.x 版本更新记录。
+  - 1.x 仅作为历史背景，不再在当前包内 changelog 维护。
+  - 本文件从 `2.0.0-pre` 开始记录 2.0 发布线。
+- 移除旧 changelog 中以 Unity 单宿主包为中心的叙述方式。
 
-### Fixed
-- **UIKit** 修复场景切换时 "Some objects were not cleaned up" 警告
-  - `UIFocusHighlight`: `OnDestroy` 中立即终止 DOTween 动画（`Kill(complete: false)`），清空所有组件引用防止延迟回调持有 GameObject
-  - `UIRoot.Focus`: `DisposeFocusSystem()` 改用 `DestroyImmediate`，销毁前先调用 `Hide()` 停止动画
-  - `UIRoot.Level`: `ClearAllLevels()` 添加 `blocker != null` 双重判空，防止已标记销毁对象触发异常
-  - `UIDebugOverlay`: `OnDestroy` 中清空 GUIStyle 引用（`mBoxStyle`/`mLabelStyle`/`mHeaderStyle`），防止场景切换时残留
+### Notes
 
-## [1.6.2] - 2026-01-16
-
-### Fixed
-- **UIKit** 修复场景关闭时 UIKit GameObject 未正确清理的警告（`OnDestroy` 中模态遮罩使用 `DestroyImmediate` 立即销毁）
-
-
-## [1.6.1] - 2026-01-15
-
-### Fixed
-- **PoolKit** 修复打包时 `PoolEvent`/`PoolEventType` 类型未找到的编译错误（移除非编辑器分支中对仅编辑器类型的引用）
-- **UIKit** 修复 `SafeAreaAdapter.mSimulateInEditor` 字段打包时 CS0414 警告（将编辑器模拟字段用 `#if UNITY_EDITOR` 包裹）
-
-## [1.6.0-preview.2] - 2026-01-14
-
-### Added
-- **InputKit** - 基于 Unity InputSystem 的输入管理封装
-  - 类型安全的输入访问，编译时检查
-  - 运行时重绑定系统（支持键盘/手柄、复合绑定、冲突处理）
-  - 输入上下文系统（UI/对话/过场等场景的输入屏蔽）
-  - 连招检测、输入缓冲、震动反馈
-  - 设备切换检测与 UI 提示更新
-- **SpatialKit** - 高性能空间索引系统
-  - 空间哈希网格（HashGrid）- O(1) 查询，均匀分布最优
-  - 四叉树（Quadtree）- 2D/2.5D 场景自适应分区
-  - 八叉树（Octree）- 完整 3D 空间索引
-  - 范围查询、最近邻查询，零 GC 分配
-  - 替代 Physics.OverlapSphere 的高效方案
-
-## [1.6.0-preview.1] - 2026-01-11
-
-### Added
-- **InputKit 文档大幅增强**
-  - 新增「快速入门」章节：完整使用流程、核心 API 速查、常见问题解答
-  - 新增「运行时重绑定」详细文档：
-    - BindingIndex 核心概念解释（普通绑定 vs 复合绑定索引结构）
-    - 查找正确 BindingIndex 的多种方法
-    - 基础重绑定 UI 组件实现（UGUI）
-    - 完整按键设置面板示例（键盘/手柄切换、复合绑定 WASD、重置所有）
-    - 高级重绑定配置（RebindOptions、冲突处理、超时处理）
-    - 绑定持久化（自动/手动、云存档、自定义实现）
-    - 重置绑定与 OnBindingChanged 事件参数解析
-    - 获取绑定显示名称（按控制方案、复合绑定、UI 提示）
-  - 新增「输入上下文系统」详细文档：
-    - 核心概念：上下文栈结构与 ActionMap 的区别
-    - 创建 InputContext ScriptableObject 资产
-    - 典型使用场景（UI 系统、对话系统、过场动画、教程引导、QTE 事件）
-    - 在输入处理中检查上下文（IsActionBlocked）
-    - 高级栈操作（PopToContext、ClearContextStack、查询状态）
-    - 与 ActionMap 配合使用
-    - 完整 GameInputManager 集成示例
-
-### Fixed
-- **InputKit 条件编译重构**
-  - asmdef 添加 `defineConstraints: ["YOKIFRAME_INPUTSYSTEM_SUPPORT"]`，无 InputSystem 时整个程序集跳过编译
-  - 移除运行时文件中冗余的 `#if ENABLE_INPUT_SYSTEM`（由 defineConstraints 统一控制）
-  - `InputKit.Rebind.cs` 保留 `#if YOKIFRAME_UNITASK_SUPPORT`（依赖 UniTask 的异步重绑定功能）
-  - 编辑器文件 `InputKitToolPage.cs` 使用 `YOKIFRAME_INPUTSYSTEM_SUPPORT` 替代 `ENABLE_INPUT_SYSTEM`
-  - 修复无 InputSystem/UniTask 环境下的编译错误
-- **UIKit 条件编译修复**
-  - asmdef 添加 InputSystem 的 `versionDefines` 配置
-  - `GamepadInputHandler.cs`、`UIFocusSystem.cs` 等文件使用 `YOKIFRAME_INPUTSYSTEM_SUPPORT` 替代 `ENABLE_INPUT_SYSTEM`
-  - 修复无 InputSystem 环境下的编译错误
-- **GestureRecognizer 长按功能完善**
-  - 实现 `OnLongPress` 事件触发逻辑
-  - 添加 `LongPressThreshold` 配置属性
-
-### Changed
-- InputKitDocData 章节顺序调整，快速入门移至首位
-
-## [1.5.5] - 2026-01-10
-
-### Added
-- **PoolKit 编辑器工具**
-  - 新增对象池运行时监控面板，支持实时查看所有池的状态
-  - Master-Detail 布局：左侧池列表 + 右侧详情面板
-  - HUD 概览：搜索框 + 统计卡片（总数/活跃/空闲/峰值）
-  - 活跃对象卡片：显示对象名、借出时长、调用来源
-  - 操作按钮：代码跳转、Hierarchy 定位、强制归还
-  - 可展开堆栈详情：点击卡片展开完整调用堆栈
-  - 事件日志面板：实时显示 Spawn/Return/Create/Destroy 事件
-  - 追踪/堆栈开关：工具栏快捷切换
-  - 响应式数据更新：通过 EditorDataBridge 订阅运行时数据变化
-  - 活跃时间实时更新：每秒刷新借出时长显示
-  - 代码跳转功能：点击"代码"按钮跳转到借出代码位置
-
-## [1.5.4] - 2026-01-10
-
-### Changed
-- **配置系统重构**
-  - 新增 `YokiFrameSettings` 统一配置 ScriptableObject，集中管理各 Kit 运行时配置
-  - 配置文件自动创建到 `Assets/Settings/Resources/YokiFrameSettings.asset`
-  - 支持 Package 模式：配置存储在用户项目中，Package 代码只读
-  - 运行时通过 `Resources.Load` 加载配置，确保打包后正常生效
-
-### Fixed
-- 修复 KitLogger 真机 IMGUI 配置打包后不生效的问题（原 JSON 配置不会被打包）
-
-### Removed
-- 移除 `KitLoggerSettings.cs`，配置迁移至 `YokiFrameSettings.LogKit`
-- 移除 `ProjectSettings/KitLoggerSettings.json`
-
-## [1.5.3] - 2026-01-10
-
-### Changed
-- **框架结构重构**
-  - `Core/Runtime/Kit/` 扁平化，移除 `Kit` 中间层，所有基础模块直接位于 `Core/Runtime/` 下
-  - `Core/Editor/CodeGenKit/Editor/` 扁平化，移除多余的 `Editor` 中间层
-  - `Core/Editor/Drawers/ResKit/YooAsset/` 合并到 `Core/Editor/ToolPages/ResKit/YooAsset/`
-  - 删除 `Core/Editor/Drawers/` 目录
-  - `YokiFrame.ResKit.YooAsset.Editor` 程序集合并到 `YokiFrame.Core.Editor`
-- **文件组织优化**
-  - `SceneKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
-  - `AudioKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
-  - `UIKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
-  - `SaveKit/Runtime/Partial/` 下的文件移至 `Runtime/` 根目录
-- **命名规范修正**
-  - `ToolPages/KitLogger/` 重命名为 `ToolPages/LogKit/`（命名一致性）
-  - `UIKit/Runtime/UICreater/` 修正为 `UIKit/Runtime/UICreator/`（拼写错误）
-  - `SceneKit/Runtime/Unitask/` 修正为 `SceneKit/Runtime/UniTask/`（拼写错误）
-
-## [1.5.2] - 2026-01-10
-
-### Added
-- `YooInit` 一键初始化 YooAsset 并自动配置 ResKit 加载器
-  - 统一 API：`InitAsync()` 有 UniTask 时返回 `UniTask`，无 UniTask 时返回 `IEnumerator`
-  - 智能包查找 `FindPackageForPath()` 自动定位资源所在包
-  - 多包配置支持，第一个包为默认包
-  - `LoadRawAsync()` / `LoadRawFileData()` / `LoadRawFileText()` 原始文件加载
-  - `UnloadUnusedAssetsAsync()` 卸载所有包未使用资源
-  - 自定义模式扩展：`HostModeHandler` / `WebModeHandler` / `CustomHandler` 委托
-  - 支持 `CustomPlayMode` 自定义运行模式
-- ResKit 文档拆分为子模块便于快速定位
-  - 完整初始化示例下增加子目录导航
-  - 补充自定义加密完整用法文档
-  - 补充 CustomPlayMode 使用说明
-
-### Changed
-- UIKit 程序集新增 YooAsset 可选引用
-- SceneKit 程序集新增 YooAsset 可选引用
-- `YooAssetRawFileLoader` / `YooAssetRawFileLoaderUniTask` 支持智能包查找
-
-## [1.5.1] - 2026-01-10
-
-### Fixed
-- 修复 Unity 2021.3 中打开 YokiFrame 编辑器面板时的 NullReferenceException（TextField 内部结构兼容性）
-
-## [1.5.0] - 2026-01-10
-
-### Added
-- ESC 快捷键关闭 YokiFrame Tools 面板
-- `YokiFrameUIComponents.FixScrollViewDragger()` 确保 ScrollView 滚动条正常工作
-- `HighlightIndicator` 可复用高亮动画组件
-
-### Fixed
-- 修复 ScrollView 滚动条无法拖动的问题（drag-container 尺寸异常）
-- 修复文档页面滚动后点击标题出现双重高亮的问题
-- 修复 UIKit 动画文档中 API 名称错误（CreateScaleIn → CreatePopIn，CreateSequence → CreateSequential）
-- 修复 UIKit 动画文档中 DOTween 支持说明（YokiFrame 自动检测依赖，无需手动添加宏定义）
-- 修复 LogKit 文档中 IMGUI API 名称错误（KitLogger.EnableIMGUI → KitLoggerIMGUI.Enable）
-- 修复 README 中 KitLoggerIMGUI API 调用错误
-- 补充 UIKit 动画文档中直接使用 DOTween 动画类的示例（DOTweenFadeAnimation、DOTweenScaleAnimation）
-
-### Changed
-- 侧边栏 YokiFrame 图标区域固定在顶部，不随内容滚动
-- 优化文档页面导航高亮动画逻辑
+- `2.0.0-pre` 是预发布架构重启版本。
+- `package.json` 仍声明 Unity 2021.3+ 兼容；当前仓库开发环境同时覆盖 Unity 6000.x。
+- Godot 支持面向 Godot `.NET / C#` 项目，通过安装器和 Adapter 入口接入。
+- FileBridge legacy root 目录仍在迁移期保留；新工具应优先使用 `.yokiframe/engines/<engineId>/` 下的 engine-scoped 路径。

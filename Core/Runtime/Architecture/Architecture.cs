@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
@@ -6,7 +6,7 @@ namespace YokiFrame
 {
     #region 定义
     /// <summary>
-    /// 架构
+    /// 架构接口
     /// </summary>
     public interface IArchitecture : ICanInit
     {
@@ -15,18 +15,21 @@ namespace YokiFrame
         T GetService<T>(bool force = false) where T : class, IService, new();
         IEnumerable<IService> GetAllServices();
     }
+
     /// <summary>
-    /// 服务
+    /// 服务接口
     /// </summary>
     public interface IService : ICanInit
     {
         IArchitecture Architecture { get; }
         void SetArchitecture(IArchitecture architecture);
     }
+
     /// <summary>
     /// 数据服务
     /// </summary>
     public interface IModel : IService, ISerializable { }
+
     public interface ICanInit : IDisposable
     {
         abstract bool Initialized { get; }
@@ -50,22 +53,27 @@ namespace YokiFrame
                 if (mArchitecture is null)
                 {
                     mArchitecture ??= new();
-                    // 初始化架构,用户自己的服务在这里面写入
+                    ArchitectureRegistry.Register(typeof(T), mArchitecture, false, mArchitecture.mServices);
                     mArchitecture.OnInit();
-                    // 服务在注册结束后统一初始化，确保在OnInit中服务互相引用不会拿空
                     foreach (var service in mArchitecture.mServices.Values)
                     {
                         service.Init();
                     }
                     mArchitecture.mInited = true;
                 }
+
+                ArchitectureRegistry.Register(typeof(T), mArchitecture, mArchitecture.mInited, mArchitecture.mServices);
                 return mArchitecture;
             }
         }
 
         void ICanInit.Init() => OnInit();
         protected abstract void OnInit();
-        void IDisposable.Dispose() => Dispose();
+        void IDisposable.Dispose()
+        {
+            ArchitectureRegistry.Unregister(typeof(T), this);
+            Dispose();
+        }
         protected virtual void Dispose() { }
 
         public K GetService<K>(bool force = false) where K : class, IService, new()
@@ -73,7 +81,6 @@ namespace YokiFrame
             var key = typeof(K);
             if (!mServices.TryGetValue(key, out var service))
             {
-                // 如果没有注册到架构会尝试注册到架构
                 if (force)
                 {
                     var newService = new K();
@@ -90,7 +97,6 @@ namespace YokiFrame
             var key = typeof(K);
             if (mServices.ContainsKey(key))
             {
-                // 如果有新的，释放先前的
                 mServices[key].Dispose();
                 mServices[key] = service;
             }
@@ -99,6 +105,7 @@ namespace YokiFrame
                 mServices.Add(key, service);
             }
             service.SetArchitecture(mArchitecture);
+            ArchitectureRegistry.Register(typeof(T), mArchitecture ?? this, mInited, mServices);
         }
 
         public IEnumerable<IService> GetAllServices() => mServices.Values;
@@ -111,7 +118,6 @@ namespace YokiFrame
 
         private bool mInitialized = false;
         public bool Initialized => mInitialized;
-
 
         void IService.SetArchitecture(IArchitecture architecture)
         {

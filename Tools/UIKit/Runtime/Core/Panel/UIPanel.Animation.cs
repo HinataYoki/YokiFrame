@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -59,6 +60,7 @@ namespace YokiFrame
         /// </summary>
         public async UniTask ShowUniTaskAsync(CancellationToken ct = default)
         {
+            mHideLifecycleCompleted = false;
             gameObject.SetActive(true);
             
             // 触发 OnWillShow
@@ -113,9 +115,11 @@ namespace YokiFrame
             gameObject.SetActive(false);
             SafeInvokeHook(OnDidHide, nameof(OnDidHide));
             EventKit.Type.Send(new PanelDidHideEvent { Panel = this });
+            mHideLifecycleCompleted = true;
         }
 
         #endregion
 #endif
     }
 }
+#endif

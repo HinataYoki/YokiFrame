@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 
 namespace YokiFrame
@@ -45,7 +46,7 @@ namespace YokiFrame
             var bindType = GetBindType(bind, strategy);
             if (string.IsNullOrEmpty(bindType))
             {
-                Debug.LogError($"Bind 组件的 Type 为空: {nextFullName}", child);
+                LogKit.Error($"Bind 组件的 Type 为空: {nextFullName}", child);
                 return;
             }
 
@@ -56,7 +57,7 @@ namespace YokiFrame
             var repeat = parentInfo.MemberDic.ContainsKey(bindName);
             if (repeat && bind.Bind is BindType.Member)
             {
-                Debug.LogError($"重复的 {BindType.Member} 名称: {bindName}，已存在于 {parentInfo.MemberDic[bindName].PathToRoot}", child);
+                LogKit.Error($"重复的 {BindType.Member} 名称: {bindName}，已存在于 {parentInfo.MemberDic[bindName].PathToRoot}", child);
                 return;
             }
 
@@ -64,7 +65,7 @@ namespace YokiFrame
             var parentStrategy = BindStrategyRegistry.Get(parentInfo.Bind);
             if (parentStrategy != null && !parentStrategy.ValidateChild(bind.Bind, out string reason))
             {
-                Debug.LogWarning(reason, bind.Transform);
+                LogKit.Warning(reason, bind.Transform);
                 return;
             }
 
@@ -80,7 +81,7 @@ namespace YokiFrame
                 Self = child.gameObject,
                 BindScript = bind,
                 RepeatElement = repeat,
-                order = order,
+                Order = order,
             };
 
             // 添加到父级字典
@@ -108,3 +109,4 @@ namespace YokiFrame
         }
     }
 }
+#endif

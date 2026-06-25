@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 
@@ -132,3 +133,4 @@ namespace YokiFrame
         Custom
     }
 }
+#endif

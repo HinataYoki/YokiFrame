@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +11,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelWillShowEvent
     {
+        /// <summary>
+        /// 即将显示的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -18,6 +22,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelDidShowEvent
     {
+        /// <summary>
+        /// 已显示的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -26,6 +33,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelWillHideEvent
     {
+        /// <summary>
+        /// 即将隐藏的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -34,6 +44,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelDidHideEvent
     {
+        /// <summary>
+        /// 已隐藏的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -42,6 +55,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelFocusEvent
     {
+        /// <summary>
+        /// 获得焦点的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -50,6 +66,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelBlurEvent
     {
+        /// <summary>
+        /// 失去焦点的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -58,6 +77,9 @@ namespace YokiFrame
     /// </summary>
     public struct PanelResumeEvent
     {
+        /// <summary>
+        /// 从栈中恢复的面板。
+        /// </summary>
         public IPanel Panel;
     }
 
@@ -135,3 +157,4 @@ namespace YokiFrame
 
     #endregion
 }
+#endif

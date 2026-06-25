@@ -1,4 +1,5 @@
-﻿namespace YokiFrame
+#if !GODOT
+namespace YokiFrame
 {
     /// <summary>
     /// UI 管理工具 - 静态门面
@@ -8,7 +9,11 @@
     {
         #region 初始化
 
-        static UIKit() => _ = UIRoot.Instance;
+        static UIKit()
+        {
+            if (UnityEngine.Application.isPlaying)
+                _ = UIRoot.Instance;
+        }
 
         /// <summary>
         /// 获取 UIRoot 实例（退出时返回 null）
@@ -156,3 +161,4 @@
         #endregion
     }
 }
+#endif

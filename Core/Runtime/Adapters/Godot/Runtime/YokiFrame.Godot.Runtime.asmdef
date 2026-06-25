@@ -1,0 +1,18 @@
+{
+    "name": "YokiFrame.Godot.Runtime",
+    "rootNamespace": "YokiFrame.Godot",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.AudioKit",
+        "YokiFrame.InputKit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,183 +1,338 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
-using YokiFrame.EditorTools;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// <see cref="UIPanel"/> 的自定义检视器入口。
-    /// 使用 UI Toolkit 组织面板配置、绑定树查看以及自定义序列化属性区域。
+    /// UIPanel 自定义 Inspector，提供面板设置、绑定树和生成代码入口。
     /// </summary>
-    /// <remarks>
-    /// 文件拆分说明：
-    /// - <c>UIPanelInspector.cs</c>：检视器入口、字段缓存、区块组装
-    /// - <c>UIPanelInspector.PanelConfig.cs</c>：面板配置，例如动画与焦点
-    /// - <c>UIPanelInspector.BindTree.cs</c>：绑定树区块
-    /// - <c>UIPanelInspector.TreeNode.cs</c>：绑定树节点渲染
-    /// - <c>UIPanelInspector.Validation.cs</c>：校验汇总逻辑
-    /// - <c>UIPanelInspector.Helpers.cs</c>：共享辅助方法
-    /// </remarks>
     [CustomEditor(typeof(UIPanel), true)]
     [CanEditMultipleObjects]
     public partial class UIPanelInspector : Editor
     {
-        #region Foldout Keys
+        private const string PANEL_CONFIG_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.PanelConfig";
+        private const string ANIMATION_SECTION_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.AnimationSection";
+        private const string FOCUS_SECTION_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.FocusSection";
+        private const string CUSTOM_PROPERTIES_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.CustomProperties";
+        private const string STYLE_SHEET_PATH = "Assets/YokiFrame/Tools/UIKit/Editor/Inspectors/UIPanelInspectorStyles.uss";
 
-        private const string KEY_PANEL_CONFIG_FOLDOUT = "YokiFrame.UIPanelInspector.PanelConfigFoldout";
-        private const string KEY_BIND_TREE_FOLDOUT = "YokiFrame.UIPanelInspector.BindTreeFoldout";
-        private const string KEY_CUSTOM_PROPS_FOLDOUT = "YokiFrame.UIPanelInspector.CustomPropsFoldout";
+        private static readonly Type[] sAnimationConfigTypes =
+        {
+            null,
+            typeof(FadeAnimationConfig),
+            typeof(ScaleAnimationConfig),
+            typeof(SlideAnimationConfig)
+        };
 
-        #endregion
-
-        #region Serialized Properties
+        private static readonly string[] sAnimationConfigLabels =
+        {
+            "无",
+            "淡入淡出",
+            "缩放",
+            "滑动"
+        };
 
         private SerializedProperty mShowAnimationConfigProp;
         private SerializedProperty mHideAnimationConfigProp;
+        private SerializedProperty mAutoFocusOnShowProp;
         private SerializedProperty mDefaultSelectableProp;
-
-        #endregion
-
-        #region UI Element Cache
-
-        private VisualElement mRoot;
-        private VisualElement mLastSection;
-
-        private Foldout mPanelConfigFoldout;
-        private Foldout mCustomPropsFoldout;
-
-        private Foldout mBindTreeFoldout;
-        private VisualElement mBindTreeContainer;
-        private Label mBindStatsLabel;
-        private Label mValidationSummaryLabel;
-
-        private readonly HashSet<string> mCollapsedNodes = new(16);
-        private List<BindValidationResult> mCachedValidationResults;
-
-        #endregion
 
         private void OnEnable()
         {
             mShowAnimationConfigProp = serializedObject.FindProperty("mShowAnimationConfig");
             mHideAnimationConfigProp = serializedObject.FindProperty("mHideAnimationConfig");
+            mAutoFocusOnShowProp = serializedObject.FindProperty("mAutoFocusOnShow");
             mDefaultSelectableProp = serializedObject.FindProperty("mDefaultSelectable");
+            LoadCollapsedBindPaths();
         }
 
         public override VisualElement CreateInspectorGUI()
         {
-            mRoot = new VisualElement();
-            mRoot.AddToClassList("uipanel-inspector");
+            var root = new VisualElement();
+            root.AddToClassList("uipanel-inspector");
 
-            var styleSheet = YokiFrameEditorUtility.LoadStyleSheetByName("UIPanelInspectorStyles");
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(STYLE_SHEET_PATH);
             if (styleSheet != null)
-            {
-                mRoot.styleSheets.Add(styleSheet);
-            }
+                root.styleSheets.Add(styleSheet);
 
-            bool hasAnimConfig = mShowAnimationConfigProp != null || mHideAnimationConfigProp != null;
-            bool hasFocusConfig = mDefaultSelectableProp != null;
-            if (hasAnimConfig || hasFocusConfig)
-            {
-                CreatePanelConfigSection(hasAnimConfig, hasFocusConfig);
-            }
-
-            CreateBindTreeSection();
-            CreateCustomPropertiesSection();
-
-            if (mLastSection != null)
-            {
-                mLastSection.AddToClassList("last-section");
-            }
-
-            return mRoot;
+            CreatePanelSettings(root);
+            CreateBindTree(root);
+            CreateCustomProperties(root);
+            return root;
         }
 
-        /// <summary>
-        /// 创建自定义序列化属性区块。
-        /// 会过滤公共基础字段与设计器自动生成字段，只保留面板自身需要暴露的属性。
-        /// </summary>
-        private void CreateCustomPropertiesSection()
+        private void CreatePanelSettings(VisualElement root)
         {
-            var basePropertyNames = new HashSet<string>
+            var section = CreateSectionContainer("uipanel-section-panelconfig");
+
+            var foldout = new Foldout
             {
-                "m_Script",
-                "mShowAnimationConfig",
-                "mHideAnimationConfig",
-                "mDefaultSelectable"
+                text = "面板设置",
+                value = SessionState.GetBool(PANEL_CONFIG_FOLDOUT_KEY, true)
             };
-
-            var customProperties = new List<SerializedProperty>();
-            var iterator = serializedObject.GetIterator();
-
-            if (iterator.NextVisible(true))
-            {
-                do
-                {
-                    if (basePropertyNames.Contains(iterator.name))
-                        continue;
-
-                    if (iterator.name == "m_Script")
-                        continue;
-
-                    if (IsDesignerGeneratedProperty(iterator))
-                        continue;
-
-                    customProperties.Add(iterator.Copy());
-                }
-                while (iterator.NextVisible(false));
-            }
-
-            if (customProperties.Count == 0)
-                return;
-
-            var section = new VisualElement();
-            section.AddToClassList("uipanel-section");
-            section.AddToClassList("uipanel-section-custom");
-
-            bool savedFoldoutState = SessionState.GetBool(KEY_CUSTOM_PROPS_FOLDOUT, true);
-            mCustomPropsFoldout = new Foldout { text = "自定义属性", value = savedFoldoutState };
-            mCustomPropsFoldout.AddToClassList("uipanel-custom-foldout");
-
-            mCustomPropsFoldout.RegisterValueChangedCallback(evt =>
-            {
-                SessionState.SetBool(KEY_CUSTOM_PROPS_FOLDOUT, evt.newValue);
-            });
-
-            section.Add(mCustomPropsFoldout);
+            foldout.AddToClassList("uipanel-panelconfig-foldout");
+            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(PANEL_CONFIG_FOLDOUT_KEY, evt.newValue));
+            section.Add(foldout);
 
             var content = new VisualElement();
             content.AddToClassList("uipanel-section-content");
-            mCustomPropsFoldout.Add(content);
+            foldout.Add(content);
 
-            for (int i = 0; i < customProperties.Count; i++)
-            {
-                var prop = customProperties[i];
-                var field = new UnityEditor.UIElements.PropertyField(prop);
-                field.AddToClassList("uipanel-custom-field");
-                content.Add(field);
-            }
+            var animationSection = CreateSubSection("动画设置", "uipanel-subsection-animation", ANIMATION_SECTION_FOLDOUT_KEY);
+            var animationContent = animationSection.Q<VisualElement>(className: "uipanel-subsection-content");
+            animationContent.Add(CreateHelpBox("配置面板显示和隐藏时播放的动画效果。"));
+            animationContent.Add(CreateAnimationField("显示动画", mShowAnimationConfigProp));
+            animationContent.Add(CreateAnimationField("隐藏动画", mHideAnimationConfigProp));
+            content.Add(animationSection);
 
-            mRoot.Add(section);
-            mLastSection = section;
+            var focusSection = CreateSubSection("焦点设置", "uipanel-subsection-focus", FOCUS_SECTION_FOLDOUT_KEY);
+            var focusContent = focusSection.Q<VisualElement>(className: "uipanel-subsection-content");
+            focusContent.Add(CreateHelpBox("定义面板打开时默认获得焦点的可选控件。"));
+            if (mAutoFocusOnShowProp != null)
+                focusContent.Add(CreatePropertyRow("自动聚焦", mAutoFocusOnShowProp));
+            if (mDefaultSelectableProp != null)
+                focusContent.Add(CreatePropertyRow("默认选中对象", mDefaultSelectableProp));
+            content.Add(focusSection);
+
+            root.Add(section);
         }
 
-        /// <summary>
-        /// 判断当前属性是否属于 UIKit 设计器自动生成的字段。
-        /// </summary>
-        private bool IsDesignerGeneratedProperty(SerializedProperty property)
+        private VisualElement CreateAnimationField(string label, SerializedProperty property)
         {
-            var typeName = property.type;
-            if (string.IsNullOrEmpty(typeName))
-                return false;
+            var container = new VisualElement();
+            container.AddToClassList("uipanel-animation-config");
+            if (property == null)
+                return container;
 
-            if (typeName.Contains("UIElement") || typeName.Contains("UIComponent"))
-                return true;
+            var row = CreateFieldRow(label);
+            var choices = new List<string>(sAnimationConfigLabels);
+            var dropdown = new DropdownField(choices, GetAnimationIndex(property));
+            dropdown.AddToClassList("uipanel-animation-dropdown");
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                var index = choices.IndexOf(evt.newValue);
+                SetAnimationConfig(property, index);
+                RebuildInspector();
+            });
+            row.Add(dropdown);
+            container.Add(row);
 
-            if (property.name == "mData")
-                return true;
+            if (property.managedReferenceValue != null)
+            {
+                var field = new PropertyField(property, "参数");
+                field.AddToClassList("uipanel-animation-params");
+                container.Add(field);
+            }
 
-            return false;
+            return container;
+        }
+
+        private int GetAnimationIndex(SerializedProperty property)
+        {
+            if (property == null || property.managedReferenceValue == null)
+                return 0;
+
+            var type = property.managedReferenceValue.GetType();
+            for (var i = 1; i < sAnimationConfigTypes.Length; i++)
+            {
+                if (sAnimationConfigTypes[i] == type)
+                    return i;
+            }
+
+            return 0;
+        }
+
+        private void SetAnimationConfig(SerializedProperty property, int index)
+        {
+            serializedObject.Update();
+            property.managedReferenceValue = index > 0 ? Activator.CreateInstance(sAnimationConfigTypes[index]) : null;
+            serializedObject.ApplyModifiedProperties();
+
+            var panel = target as UIPanel;
+            if (panel != null && property.managedReferenceValue is FadeAnimationConfig && panel.GetComponent<CanvasGroup>() == null)
+                Undo.AddComponent<CanvasGroup>(panel.gameObject);
+        }
+
+        private void GenerateUICode()
+        {
+            var prefab = ResolvePrefabAsset();
+            if (prefab == null)
+            {
+                EditorUtility.DisplayDialog("无法生成 UI 代码", "请在 Prefab 资源或 Prefab 实例上使用生成入口。", "确定");
+                return;
+            }
+
+            try
+            {
+                UIKitPanelPrefabCreator.GenerateCodeForPrefab(prefab, new UIKitPanelCreateRequest
+                {
+                    PanelName = prefab.name,
+                    ScriptFolder = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER,
+                    ScriptNamespace = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE,
+                    AssemblyName = UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME,
+                    CodeTemplate = UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE
+                });
+                RefreshBindTree();
+            }
+            catch (Exception ex)
+            {
+                EditorUtility.DisplayDialog("生成失败", ex.Message, "确定");
+                LogKit.Exception(ex);
+            }
+        }
+
+        private GameObject ResolvePrefabAsset()
+        {
+            var panel = target as UIPanel;
+            if (panel == null)
+                return null;
+
+            var assetPath = AssetDatabase.GetAssetPath(panel.gameObject);
+            if (!string.IsNullOrEmpty(assetPath))
+                return AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+
+            assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(panel.gameObject);
+            return string.IsNullOrEmpty(assetPath) ? null : AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        }
+
+        private void OpenPanelScript()
+        {
+            var panel = target as UIPanel;
+            if (panel == null)
+                return;
+
+            var path = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER + "/" + panel.gameObject.name + "/" + panel.gameObject.name + ".cs";
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+            if (asset != null)
+                AssetDatabase.OpenAsset(asset);
+            else
+                EditorUtility.DisplayDialog("脚本不存在", "尚未找到脚本文件：\n" + path, "确定");
+        }
+
+        private void CreateCustomProperties(VisualElement root)
+        {
+            var iterator = serializedObject.GetIterator();
+            if (!iterator.NextVisible(true))
+                return;
+
+            var properties = new List<SerializedProperty>();
+            do
+            {
+                if (IsBuiltInPanelProperty(iterator.name))
+                    continue;
+
+                properties.Add(iterator.Copy());
+            }
+            while (iterator.NextVisible(false));
+
+            if (properties.Count == 0)
+                return;
+
+            var section = CreateSectionContainer("uipanel-section-custom");
+            var foldout = new Foldout
+            {
+                text = "其他属性",
+                value = SessionState.GetBool(CUSTOM_PROPERTIES_FOLDOUT_KEY, false)
+            };
+            foldout.AddToClassList("uipanel-custom-foldout");
+            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(CUSTOM_PROPERTIES_FOLDOUT_KEY, evt.newValue));
+            section.Add(foldout);
+
+            var content = new VisualElement();
+            content.AddToClassList("uipanel-section-content");
+            foldout.Add(content);
+
+            for (var i = 0; i < properties.Count; i++)
+                content.Add(new PropertyField(properties[i]));
+
+            root.Add(section);
+        }
+
+        private static bool IsBuiltInPanelProperty(string propertyName)
+        {
+            return propertyName == "m_Script" ||
+                   propertyName == "mShowAnimationConfig" ||
+                   propertyName == "mHideAnimationConfig" ||
+                   propertyName == "mAutoFocusOnShow" ||
+                   propertyName == "mDefaultSelectable" ||
+                   propertyName == "mData";
+        }
+
+        private static VisualElement CreateSectionContainer(string modifierClass)
+        {
+            var section = new VisualElement();
+            section.AddToClassList("uipanel-section");
+            section.AddToClassList(modifierClass);
+            return section;
+        }
+
+        private static VisualElement CreateSubSection(string title, string modifierClass, string sessionStateKey)
+        {
+            var subSection = new VisualElement();
+            subSection.AddToClassList("uipanel-subsection");
+            subSection.AddToClassList(modifierClass);
+
+            var foldout = new Foldout
+            {
+                text = title,
+                value = SessionState.GetBool(sessionStateKey, true)
+            };
+            foldout.AddToClassList("uipanel-subsection-foldout");
+            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(sessionStateKey, evt.newValue));
+            subSection.Add(foldout);
+
+            var content = new VisualElement();
+            content.AddToClassList("uipanel-subsection-content");
+            foldout.Add(content);
+            return subSection;
+        }
+
+        private static VisualElement CreateHelpBox(string text)
+        {
+            var helpBox = new VisualElement();
+            helpBox.AddToClassList("uipanel-helpbox");
+
+            var icon = new Label("i");
+            icon.AddToClassList("uipanel-helpbox-icon");
+            helpBox.Add(icon);
+
+            var label = new Label(text);
+            label.AddToClassList("uipanel-helpbox-text");
+            helpBox.Add(label);
+            return helpBox;
+        }
+
+        private static VisualElement CreatePropertyRow(string label, SerializedProperty property)
+        {
+            var row = CreateFieldRow(label);
+            var field = new PropertyField(property, string.Empty);
+            field.AddToClassList("uipanel-field");
+            row.Add(field);
+            return row;
+        }
+
+        private static VisualElement CreateFieldRow(string label)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("uipanel-field-row");
+
+            var labelElement = new Label(label);
+            labelElement.AddToClassList("uipanel-field-label");
+            row.Add(labelElement);
+            return row;
+        }
+
+        private void RebuildInspector()
+        {
+            var active = ActiveEditorTracker.sharedTracker;
+            if (active != null)
+                active.ForceRebuild();
         }
     }
 }

@@ -5,7 +5,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 项目级用户配置持久化
@@ -87,7 +87,7 @@ namespace YokiFrame.TableKit.Editor
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[TableKit] 用户配置读取失败: {e.Message}");
+                    LogKit.Error($"[TableKit] 用户配置读取失败: {e.Message}");
                 }
             }
 
@@ -114,7 +114,7 @@ namespace YokiFrame.TableKit.Editor
             }
             catch (Exception e)
             {
-                Debug.LogError($"[TableKit] 用户配置写入失败: {e.Message}");
+                LogKit.Error($"[TableKit] 用户配置写入失败: {e.Message}");
             }
         }
 

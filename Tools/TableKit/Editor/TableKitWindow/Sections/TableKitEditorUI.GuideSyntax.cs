@@ -1,6 +1,6 @@
 #if UNITY_EDITOR && YOKIFRAME_LUBAN_SUPPORT
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 语法高亮与代码常量
@@ -23,7 +23,7 @@ namespace YokiFrame.TableKit.Editor
             public const string DEFAULT = "#D4D4D4";
         }
 
-        private static readonly string[] CSHARP_KEYWORDS =
+        private static readonly string[] sCsharpKeywords =
         {
             "public", "private", "protected", "internal", "static", "readonly", "const",
             "class", "struct", "interface", "enum", "namespace", "using", "new", "return",
@@ -34,9 +34,9 @@ namespace YokiFrame.TableKit.Editor
             "this", "base", "virtual", "override", "abstract", "sealed", "partial", "async", "await"
         };
 
-        private static readonly string[] CSHARP_TYPES =
+        private static readonly string[] sCsharpTypes =
         {
-            "TableKit", "Tables", "ITableLoader", "ResourcePackage", "YooAssets", "YooAsset",
+            "TableKit", "Tables", "ResKit", "IResourceProvider", "ResourcePackage", "YooAsset",
             "UniTask", "CancellationToken"
         };
 
@@ -140,7 +140,7 @@ namespace YokiFrame.TableKit.Editor
             }
 
             // 关键字
-            foreach (var kw in CSHARP_KEYWORDS)
+            foreach (var kw in sCsharpKeywords)
             {
                 if (word == kw)
                 {
@@ -150,7 +150,7 @@ namespace YokiFrame.TableKit.Editor
             }
 
             // 类型
-            foreach (var type in CSHARP_TYPES)
+            foreach (var type in sCsharpTypes)
             {
                 if (word == type)
                 {
@@ -179,52 +179,33 @@ namespace YokiFrame.TableKit.Editor
 "#endif";
 
         private const string GUIDE_CODE_CUSTOM_LOADER =
-@"// 实现 ITableLoader 接口
-public class MyTableLoader : ITableLoader
+@"// 覆盖二进制加载
+TableKit.SetBinaryLoader(fileName =>
 {
-    public byte[] Load(string tableName)
-    {
-        // 自定义加载逻辑
-        return yourLoadMethod(tableName);
-    }
-}
+    var path = string.Format(TableKit.RuntimePathPattern, fileName);
+    return YourLoadBytes(path);
+});
 
-// 初始化时设置加载器
-TableKit.SetLoader(new MyTableLoader());";
+// 覆盖 JSON 加载
+TableKit.SetJsonLoader(fileName =>
+{
+    var path = string.Format(TableKit.RuntimePathPattern, fileName);
+    return YourLoadText(path);
+});";
 
         private const string GUIDE_CODE_YOOASSET =
-@"using YooAsset;
+@"// TableKit 默认会调用 ResKit
+var bytes = YokiFrame.ResKit.LoadRaw(""Art/Table/tb_item"");
+var json = YokiFrame.ResKit.LoadRawText(""Art/Table/tb_item"");
 
-public class YooAssetTableLoader : ITableLoader
-{
-    private readonly ResourcePackage mPackage;
-    private readonly string mPathPattern;
+// 切换 Unity/Godot/YooAsset 等资源后端时，只替换 ResKit Provider。
+YokiFrame.ResKit.SetProvider(new YourResourceProvider());";
 
-    public YooAssetTableLoader(ResourcePackage package, string pathPattern = ""{0}"")
-    {
-        mPackage = package;
-        mPathPattern = pathPattern;
-    }
-
-    public byte[] Load(string tableName)
-    {
-        var path = string.Format(mPathPattern, tableName);
-        var handle = mPackage.LoadRawFileSync(path);
-        var data = handle.GetRawFileData();
-        handle.Release();
-        return data;
-    }
-}
-
-// 使用示例
-var package = YooAssets.GetPackage(""DefaultPackage"");
-TableKit.SetLoader(new YooAssetTableLoader(package, ""Art/Table/{0}""));";
-
-        private static readonly string[] GUIDE_NOTES =
+        private static readonly string[] sGuideNotes =
         {
             "• 运行时模式路径需与数据输出路径对应",
-            "• 使用 Resources 时，数据需放在 Resources 文件夹下",
-            "• 使用 YooAsset 时，确保资源已正确打包",
+            "• 默认运行时加载统一走 ResKit.LoadRaw/LoadRawText",
+            "• Unity/Godot/YooAsset 等差异应由 ResKit Provider 处理",
             "• 编辑器数据路径默认跟随数据输出目录"
         };
 

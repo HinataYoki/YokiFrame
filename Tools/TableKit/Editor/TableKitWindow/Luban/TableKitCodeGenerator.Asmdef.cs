@@ -1,11 +1,9 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
-using UnityEngine;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitCodeGenerator - 程序集定义与辅助文件生成
@@ -17,25 +15,27 @@ namespace YokiFrame.TableKit.Editor
         /// </summary>
         private static void GenerateExternalTypeUtil(string outputDir, string tablesNamespace)
         {
-            var content = $@"using UnityEngine;
-
-namespace {tablesNamespace}
-{{
-    /// <summary>
-    /// Luban 外部类型转换工具
-    /// 由 TableKit 工具自动生成
-    /// </summary>
-    public static class ExternalTypeUtil
-    {{
-        public static Vector2 NewVector2(vector2 v) => new(v.X, v.Y);
-        public static Vector2Int NewVector2Int(vector2int v) => new(v.X, v.Y);
-        public static Vector3 NewVector3(vector3 v) => new(v.X, v.Y, v.Z);
-        public static Vector3Int NewVector3Int(vector3int v) => new(v.X, v.Y, v.Z);
-        public static Vector4 NewVector4(vector4 v) => new(v.X, v.Y, v.Z, v.W);
-    }}
-}}
-";
-            File.WriteAllText(Path.Combine(outputDir, "ExternalTypeUtil.cs"), content, Encoding.UTF8);
+            CodeGenKit.GenerateToFile(Path.Combine(outputDir, "ExternalTypeUtil.cs"), root =>
+            {
+                CodeGenLineBuilder sb = CodeGenKit.Lines(root);
+                sb.AppendLine("using UnityEngine;");
+                sb.AppendLine();
+                sb.AppendLine($"namespace {tablesNamespace}");
+                sb.AppendLine("{");
+                sb.AppendLine("    /// <summary>");
+                sb.AppendLine("    /// Luban 外部类型转换工具");
+                sb.AppendLine("    /// 由 TableKit 工具自动生成");
+                sb.AppendLine("    /// </summary>");
+                sb.AppendLine("    public static class ExternalTypeUtil");
+                sb.AppendLine("    {");
+                sb.AppendLine("        public static Vector2 NewVector2(vector2 v) => new Vector2(v.X, v.Y);");
+                sb.AppendLine("        public static Vector2Int NewVector2Int(vector2int v) => new Vector2Int(v.X, v.Y);");
+                sb.AppendLine("        public static Vector3 NewVector3(vector3 v) => new Vector3(v.X, v.Y, v.Z);");
+                sb.AppendLine("        public static Vector3Int NewVector3Int(vector3int v) => new Vector3Int(v.X, v.Y, v.Z);");
+                sb.AppendLine("        public static Vector4 NewVector4(vector4 v) => new Vector4(v.X, v.Y, v.Z, v.W);");
+                sb.AppendLine("    }");
+                sb.AppendLine("}");
+            });
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace {tablesNamespace}
             var classMatch = Regex.Match(content, @"\bclass\s+ExternalTypeUtil\b");
             if (!classMatch.Success)
             {
-                Debug.LogWarning($"[TableKit] {utilPath} 未找到 ExternalTypeUtil 类声明，跳过命名空间同步");
+                LogKit.Warning($"[TableKit] {utilPath} 未找到 ExternalTypeUtil 类声明，跳过命名空间同步");
                 return false;
             }
 
@@ -59,7 +59,7 @@ namespace {tablesNamespace}
             var nsMatches = Regex.Matches(contentBefore, @"\bnamespace\s+([\w\.]+)");
             if (nsMatches.Count == 0)
             {
-                Debug.LogWarning($"[TableKit] {utilPath} 未找到命名空间声明，跳过同步");
+                LogKit.Warning($"[TableKit] {utilPath} 未找到命名空间声明，跳过同步");
                 return false;
             }
 
@@ -70,8 +70,7 @@ namespace {tablesNamespace}
             var newContent = content.Substring(0, lastNs.Index)
                 + $"namespace {tablesNamespace}"
                 + content.Substring(lastNs.Index + lastNs.Length);
-            File.WriteAllText(utilPath, newContent, Encoding.UTF8);
-            Debug.Log($"[TableKit] ExternalTypeUtil.cs 命名空间已从 \"{currentNs}\" 同步至 \"{tablesNamespace}\"");
+            WriteGeneratedText(utilPath, newContent);
             return true;
         }
 
@@ -81,11 +80,8 @@ namespace {tablesNamespace}
         private static void GenerateAssemblyDefinition(string outputDir, string assemblyName, bool hasYokiFrame,
             string codeTarget, bool useAsyncLoading = false)
         {
-            // 基础引用
-            var referencesList = new List<string> { "\"Luban.Runtime\"" };
-
-            if (hasYokiFrame)
-                referencesList.Add("\"YokiFrame\"");
+            // 生成的 TableKit.cs 默认使用 YokiFrame.ResKit / LogKit。
+            var referencesList = new List<string> { "\"Luban.Runtime\"", "\"YokiFrame\"" };
 
             // 根据代码生成器类型添加对应的 JSON 库引用
             if (codeTarget == "cs-newtonsoft-json")
@@ -128,7 +124,27 @@ namespace {tablesNamespace}
     ""versionDefines"": {versionDefines},
     ""noEngineReferences"": false
 }}";
-            File.WriteAllText(Path.Combine(outputDir, $"{assemblyName}.asmdef"), content, Encoding.UTF8);
+            WriteGeneratedText(Path.Combine(outputDir, $"{assemblyName}.asmdef"), content);
+        }
+
+        private static void WriteGeneratedText(string path, string content)
+        {
+            CodeGenKit.GenerateToFile(path, root =>
+            {
+                CodeGenLineBuilder sb = CodeGenKit.Lines(root);
+                string normalized = content.Replace("\r\n", "\n").Replace('\r', '\n');
+                string[] lines = normalized.Split('\n');
+                int lineCount = lines.Length;
+                if (lineCount > 0 && lines[lineCount - 1].Length == 0)
+                {
+                    lineCount--;
+                }
+
+                for (int i = 0; i < lineCount; i++)
+                {
+                    sb.AppendLine(lines[i]);
+                }
+            });
         }
     }
 }

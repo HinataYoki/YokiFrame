@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -123,7 +124,7 @@ namespace YokiFrame
             var settings = Resources.Load<UIKitSettings>(RESOURCES_PATH);
             if (settings == default)
             {
-                Debug.LogWarning("[UIKit] 配置文件不存在，使用默认配置");
+                LogKit.Warning("[UIKit] 配置文件不存在，使用默认配置");
                 settings = CreateInstance<UIKitSettings>();
             }
             return settings;
@@ -146,10 +147,10 @@ namespace YokiFrame
 
                 UnityEditor.AssetDatabase.CreateAsset(settings, ASSET_PATH);
                 UnityEditor.AssetDatabase.SaveAssets();
-                Debug.Log($"[UIKit] 配置文件已创建: {ASSET_PATH}");
             }
             return settings;
         }
 #endif
     }
 }
+#endif

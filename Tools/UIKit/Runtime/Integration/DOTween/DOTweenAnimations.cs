@@ -1,3 +1,4 @@
+#if !GODOT
 #if YOKIFRAME_DOTWEEN_SUPPORT
 using System;
 using UnityEngine;
@@ -112,7 +113,8 @@ namespace YokiFrame
 
         public void Stop()
         {
-            mTweener?.Kill();
+            if (mTweener != default)
+                mTweener.Kill();
             mTweener = null;
             mOnCompleteCallback = null;
             mCallbackState = null;
@@ -273,7 +275,8 @@ namespace YokiFrame
 
         public void Stop()
         {
-            mTweener?.Kill();
+            if (mTweener != default)
+                mTweener.Kill();
             mTweener = null;
             mOnCompleteCallback = null;
             mCallbackState = null;
@@ -412,7 +415,8 @@ namespace YokiFrame
 
         public void Stop()
         {
-            mTweener?.Kill();
+            if (mTweener != default)
+                mTweener.Kill();
             mTweener = null;
             mOnCompleteCallback = null;
             mCallbackState = null;
@@ -470,4 +474,5 @@ namespace YokiFrame
 #endif
     }
 }
+#endif
 #endif

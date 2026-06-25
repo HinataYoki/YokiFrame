@@ -6,7 +6,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 数据预览功能
@@ -55,7 +55,7 @@ namespace YokiFrame.TableKit.Editor
             container.Add(headerRow);
 
             var title = new Label("数据预览");
-            title.style.fontSize = Design.FontSizeSection;
+            title.style.fontSize = Design.FONT_SIZE_SECTION;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = new StyleColor(Design.TextPrimary);
             headerRow.Add(title);
@@ -84,7 +84,7 @@ namespace YokiFrame.TableKit.Editor
 
             mDataPreviewMatchLabel = new Label();
             mDataPreviewMatchLabel.style.marginLeft = 8;
-            mDataPreviewMatchLabel.style.fontSize = Design.FontSizeSmall;
+            mDataPreviewMatchLabel.style.fontSize = Design.FONT_SIZE_SMALL;
             mDataPreviewMatchLabel.style.display = DisplayStyle.None;
             searchRow.Add(mDataPreviewMatchLabel);
 

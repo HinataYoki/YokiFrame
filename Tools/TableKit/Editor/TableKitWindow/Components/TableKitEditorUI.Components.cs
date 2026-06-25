@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - UI 组件（Toggle、Callout、按钮样式）
@@ -51,7 +51,7 @@ namespace YokiFrame.TableKit.Editor
             {
                 var labelEl = new Label(label);
                 labelEl.style.color = new StyleColor(Design.TextSecondary);
-                labelEl.style.fontSize = Design.FontSizeSmall;
+                labelEl.style.fontSize = Design.FONT_SIZE_SMALL;
                 container.Add(labelEl);
             }
 

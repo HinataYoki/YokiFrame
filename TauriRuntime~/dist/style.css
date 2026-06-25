@@ -1,0 +1,13 @@
+/* YokiFrame 2 Tauri Workbench styles - module entrypoint */
+@import url("styles/tokens.css");
+@import url("styles/shell.css");
+@import url("styles/workbench.css");
+@import url("styles/kits.css");
+@import url("styles/system.css");
+@import url("styles/eventkit.css");
+@import url("styles/fsmkit.css");
+@import url("styles/docs.css");
+@import url("styles/fsmkit-graph.css");
+@import url("styles/motion.css");
+@import url("styles/markdown.css");
+@import url("styles/responsive.css");

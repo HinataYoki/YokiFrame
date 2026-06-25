@@ -1,447 +1,251 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 #if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
-using UnityEngine;
-using Object = UnityEngine.Object;
-
 namespace YokiFrame
 {
     /// <summary>
-    /// 资源句柄 - 管理单个资源的引用计数
-    /// </summary>
-    public class ResHandler : IPoolable
-    {
-        public string Path;
-        public Type AssetType;
-        public Object Asset;
-        public IResLoader Loader;
-        public int RefCount;
-        public bool IsDone;
-
-        /// <summary>
-        /// 等待加载完成的回调链（用委托链代替 List，常见情况零堆分配）
-        /// </summary>
-        private Action<ResHandler> mOnLoaded;
-
-        public bool IsRecycled { get; set; }
-
-        public void Retain() => RefCount++;
-
-        public void Release()
-        {
-            RefCount--;
-            if (RefCount <= 0)
-            {
-                ResKit.UnloadAsset(this);
-            }
-        }
-
-        /// <summary>
-        /// 添加加载完成回调。若已完成则立即回调，否则排队等待。
-        /// </summary>
-        public void AddLoadedCallback(Action<ResHandler> callback)
-        {
-            if (callback is null) return;
-
-            if (IsDone)
-            {
-                callback.Invoke(this);
-                return;
-            }
-
-            mOnLoaded += callback;
-        }
-
-        /// <summary>
-        /// 加载完成后，通知所有等待者
-        /// </summary>
-        public void InvokeLoadedCallbacks()
-        {
-            var callbacks = mOnLoaded;
-            mOnLoaded = null;
-            callbacks?.Invoke(this);
-        }
-
-        public void OnRecycled()
-        {
-            Path = null;
-            AssetType = null;
-            Asset = null;
-            Loader?.UnloadAndRecycle();
-            Loader = null;
-            RefCount = 0;
-            IsDone = false;
-            mOnLoaded = null;
-        }
-    }
-
-    /// <summary>
-    /// 批量资源句柄 — 管理 AllAssets 加载的生命周期
-    /// </summary>
-    /// <remarks>
-    /// 调用方通过 Retain()/Release() 管理引用计数。
-    /// 引用归零后自动回收底层 Loader（释放 YooAsset AllAssetsHandle）。
-    /// </remarks>
-    public class AllAssetsResHandler
-    {
-        public string Path;
-        public Type AssetType;
-        public Object[] AllAssetObjects;
-        public IResLoader Loader;
-        public int RefCount;
-        public bool IsDone;
-
-        private Action<AllAssetsResHandler> mOnLoaded;
-
-        public void Retain() => RefCount++;
-
-        public void Release()
-        {
-            RefCount--;
-            if (RefCount <= 0)
-            {
-                Loader?.UnloadAndRecycle();
-                Loader = null;
-                AllAssetObjects = null;
-                Path = null;
-                AssetType = null;
-                mOnLoaded = null;
-            }
-        }
-
-        /// <summary>
-        /// 获取所有指定类型的资源
-        /// </summary>
-        public T[] GetAllAssetObjects<T>() where T : Object
-        {
-            if (AllAssetObjects is null) return Array.Empty<T>();
-
-            var result = new System.Collections.Generic.List<T>(AllAssetObjects.Length);
-            foreach (var obj in AllAssetObjects)
-            {
-                if (obj is T typed)
-                    result.Add(typed);
-            }
-            return result.ToArray();
-        }
-
-        public void AddLoadedCallback(Action<AllAssetsResHandler> callback)
-        {
-            if (callback is null) return;
-            if (IsDone) { callback.Invoke(this); return; }
-            mOnLoaded += callback;
-        }
-
-        public void InvokeLoadedCallbacks()
-        {
-            var callbacks = mOnLoaded;
-            mOnLoaded = null;
-            callbacks?.Invoke(this);
-        }
-    }
-
-    /// <summary>
-    /// 子资源句柄 — 管理 SubAssets 加载的生命周期
-    /// </summary>
-    /// <remarks>
-    /// 调用方通过 Retain()/Release() 管理引用计数。
-    /// 引用归零后自动回收底层 Loader（释放 YooAsset SubAssetsHandle）。
-    /// </remarks>
-    public class SubAssetsResHandler
-    {
-        public string Path;
-        public Type AssetType;
-        public Object[] AllAssetObjects;
-        public IResLoader Loader;
-        public int RefCount;
-        public bool IsDone;
-
-        private Action<SubAssetsResHandler> mOnLoaded;
-
-        public void Retain() => RefCount++;
-
-        public void Release()
-        {
-            RefCount--;
-            if (RefCount <= 0)
-            {
-                Loader?.UnloadAndRecycle();
-                Loader = null;
-                AllAssetObjects = null;
-                Path = null;
-                AssetType = null;
-                mOnLoaded = null;
-            }
-        }
-
-        /// <summary>
-        /// 按名称获取子资源对象
-        /// </summary>
-        /// <param name="name">子资源名称</param>
-        /// <typeparam name="T">子资源类型</typeparam>
-        /// <returns>匹配的子资源，未找到返回 null</returns>
-        public T GetSubAssetObject<T>(string name) where T : Object
-        {
-            if (AllAssetObjects is null) return null;
-
-            foreach (var obj in AllAssetObjects)
-            {
-                if (obj is T typed && typed.name == name)
-                    return typed;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 获取所有指定类型的子资源
-        /// </summary>
-        public T[] GetAllSubAssetObjects<T>() where T : Object
-        {
-            if (AllAssetObjects is null) return Array.Empty<T>();
-
-            var result = new List<T>(AllAssetObjects.Length);
-            foreach (var obj in AllAssetObjects)
-            {
-                if (obj is T typed)
-                    result.Add(typed);
-            }
-            return result.ToArray();
-        }
-
-        public void AddLoadedCallback(Action<SubAssetsResHandler> callback)
-        {
-            if (callback is null) return;
-            if (IsDone) { callback.Invoke(this); return; }
-            mOnLoaded += callback;
-        }
-
-        public void InvokeLoadedCallbacks()
-        {
-            var callbacks = mOnLoaded;
-            mOnLoaded = null;
-            callbacks?.Invoke(this);
-        }
-    }
-
-    /// <summary>
-    /// 资源缓存 Key（避免字符串拼接 GC）
-    /// </summary>
-    public readonly struct ResCacheKey : IEquatable<ResCacheKey>
-    {
-        public readonly Type AssetType;
-        public readonly string Path;
-
-        public ResCacheKey(Type assetType, string path)
-        {
-            AssetType = assetType;
-            Path = path;
-        }
-
-        public bool Equals(ResCacheKey other) => AssetType == other.AssetType && Path == other.Path;
-        public override bool Equals(object obj) => obj is ResCacheKey other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(AssetType, Path);
-    }
-
-    /// <summary>
-    /// 资源管理工具
+    /// 引擎无关资源门面。引擎差异由 IResourceProvider 实现承载。
     /// </summary>
     public static partial class ResKit
     {
+        private const int MAX_UNLOAD_HISTORY = 100;
+
+        private static readonly object sLock = new();
+        private static readonly Dictionary<ResCacheKey, object> sAssetCache = new();
+        private static readonly Queue<ResUnloadRecord> sUnloadHistory = new(MAX_UNLOAD_HISTORY);
+        private static IResourceProvider sProvider;
+
+        /// <summary>
+        /// 是否记录资源加载调用位置。默认关闭，避免普通运行时加载路径付出堆栈采集成本。
+        /// </summary>
+        public static bool EnableLoadLocationTracking { get; set; }
+
+        /// <summary>
+        /// 当前资源 Provider 名称；未配置时返回 None。
+        /// </summary>
+        public static string ProviderName => sProvider != null ? sProvider.ProviderName : "None";
+
+        /// <summary>
+        /// 当前缓存中的资源数量。
+        /// </summary>
+        public static int LoadedCount
+        {
+            get
+            {
+                lock (sLock)
+                    return sAssetCache.Count;
+            }
+        }
+
+        /// <summary>
+        /// 当前所有已缓存资源的总引用计数。
+        /// </summary>
+        public static int TotalRefCount
+        {
+            get
+            {
+                var total = 0;
+                lock (sLock)
+                {
+                    foreach (var kvp in sAssetCache)
+                    {
+                        if (kvp.Value is IResHandleDebugView handle)
+                            total += handle.RefCount;
+                    }
+                }
+
+                return total;
+            }
+        }
+
+        /// <summary>
+        /// 当前保留的资源卸载历史数量。
+        /// </summary>
+        public static int UnloadHistoryCount
+        {
+            get
+            {
+                lock (sLock)
+                    return sUnloadHistory.Count;
+            }
+        }
+
+        /// <summary>
+        /// 设置 ResKit 使用的资源 Provider。
+        /// </summary>
+        /// <param name="provider">引擎或宿主提供的资源 Provider。</param>
+        /// <exception cref="ArgumentNullException">provider 为空时抛出。</exception>
+        public static void SetProvider(IResourceProvider provider)
+        {
+            if (provider == null)
+                throw new ArgumentNullException(nameof(provider));
+
+            ClearAll();
+            sProvider = provider;
+            if (provider is IResSceneBackend sceneBackend)
+                SetSceneBackend(sceneBackend);
+        }
+
+        /// <summary>
+        /// 获取当前资源 Provider。
+        /// </summary>
+        /// <returns>当前资源 Provider；未配置时返回空。</returns>
+        public static IResourceProvider GetProvider()
+        {
+            return sProvider;
+        }
+
+        /// <summary>
+        /// 同步加载资源对象。
+        /// </summary>
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <returns>资源对象；加载失败时返回空。</returns>
+        public static T Load<T>(string path) where T : class
+        {
+            var handler = LoadAsset<T>(path);
+            return handler != null ? handler.Asset : null;
+        }
+
+        /// <summary>
+        /// 同步加载资源并返回可释放句柄。
+        /// </summary>
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <returns>资源句柄；加载失败时返回空。</returns>
+        public static ResHandle<T> LoadAsset<T>(string path) where T : class
+        {
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentException("path is empty", nameof(path));
+
+            var provider = EnsureProvider();
+            var key = new ResCacheKey(typeof(T), path);
+
+            lock (sLock)
+            {
+                if (sAssetCache.TryGetValue(key, out var cached))
+                {
+                    var cachedHandle = cached as ResHandle<T>;
+                    if (cachedHandle != null)
+                    {
+                        cachedHandle.Retain();
+                        return cachedHandle;
+                    }
+                }
+            }
+
+            var asset = provider.Load<T>(path);
+            if (asset == null)
+                return null;
+
+            var source = CaptureLoadSource();
+            var handle = new ResHandle<T>(path, asset, provider.ProviderName, source.Display, source.FilePath, source.Line);
+            lock (sLock)
+                sAssetCache[key] = handle;
+
+            return handle;
+        }
+
 #if YOKIFRAME_UNITASK_SUPPORT
-        private static IResLoaderPool sLoaderPool = new DefaultResLoaderUniTaskPool();
-        private static IRawFileLoaderPool sRawFileLoaderPool = new DefaultRawFileLoaderUniTaskPool();
-        private static ISceneResLoaderPool sSceneLoaderPool = new DefaultSceneResLoaderUniTaskPool();
+        /// <summary>
+        /// 异步加载资源对象。
+        /// </summary>
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <param name="token">取消令牌。</param>
+        /// <returns>资源对象；加载失败时返回空。</returns>
+        public static async UniTask<T> LoadAsync<T>(string path, CancellationToken token = default) where T : class
 #else
-        private static IResLoaderPool sLoaderPool = new DefaultResLoaderPool();
-        private static IRawFileLoaderPool sRawFileLoaderPool = new DefaultRawFileLoaderPool();
-        private static ISceneResLoaderPool sSceneLoaderPool = new DefaultSceneResLoaderPool();
+        /// <summary>
+        /// 异步加载资源对象。
+        /// </summary>
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <param name="token">取消令牌。</param>
+        /// <returns>资源对象；加载失败时返回空。</returns>
+        public static async Task<T> LoadAsync<T>(string path, CancellationToken token = default) where T : class
 #endif
-        private static readonly Dictionary<ResCacheKey, ResHandler> sAssetCache = new();
-
-        /// <summary>
-        /// 设置自定义加载池（用于 YooAsset 等扩展）
-        /// </summary>
-        public static void SetLoaderPool(IResLoaderPool pool)
         {
-            sLoaderPool = pool;
-            KitLogger.Log($"[ResKit] 加载池已切换为: {pool.GetType().Name}");
+#if YOKIFRAME_UNITASK_SUPPORT
+            var handler = await LoadAssetAsync<T>(path, token);
+#else
+            var handler = await LoadAssetAsync<T>(path, token).ConfigureAwait(false);
+#endif
+            return handler != null ? handler.Asset : null;
         }
-
-        /// <summary>
-        /// 获取当前加载池
-        /// </summary>
-        public static IResLoaderPool GetLoaderPool() => sLoaderPool;
-
-        /// <summary>
-        /// 设置自定义原始文件加载池（用于 YooAsset 等扩展）
-        /// </summary>
-        public static void SetRawFileLoaderPool(IRawFileLoaderPool pool)
-        {
-            sRawFileLoaderPool = pool;
-            KitLogger.Log($"[ResKit] 原始文件加载池已切换为: {pool.GetType().Name}");
-        }
-
-        /// <summary>
-        /// 获取当前原始文件加载池
-        /// </summary>
-        public static IRawFileLoaderPool GetRawFileLoaderPool() => sRawFileLoaderPool;
-
-        /// <summary>
-        /// 设置自定义场景加载池（用于 YooAsset 等扩展）
-        /// </summary>
-        public static void SetSceneLoaderPool(ISceneResLoaderPool pool)
-        {
-            sSceneLoaderPool = pool;
-            KitLogger.Log($"[ResKit] 场景加载池已切换为: {pool.GetType().Name}");
-        }
-
-        /// <summary>
-        /// 获取当前场景加载池
-        /// </summary>
-        public static ISceneResLoaderPool GetSceneLoaderPool() => sSceneLoaderPool;
-
-        #region 卸载
-
-        /// <summary>
-        /// 卸载资源
-        /// </summary>
-        internal static void UnloadAsset(ResHandler handler)
-        {
-            if (handler is null) return;
-
-            var key = new ResCacheKey(handler.AssetType, handler.Path);
-            sAssetCache.Remove(key);
-            SafePoolKit<ResHandler>.Instance.Recycle(handler);
-        }
-
-        /// <summary>
-        /// 清理所有缓存
-        /// </summary>
-        public static void ClearAll()
-        {
-            foreach (var handler in sAssetCache.Values)
-            {
-                handler.Loader?.UnloadAndRecycle();
-            }
-            sAssetCache.Clear();
-        }
-
-        #endregion
-
-        #region 原始文件加载
-
-        /// <summary>
-        /// 同步加载原始文件文本
-        /// </summary>
-        public static string LoadRawFileText(string path)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            var text = loader.LoadRawFileText(path);
-            loader.UnloadAndRecycle();
-            return text;
-        }
-
-        /// <summary>
-        /// 同步加载原始文件字节数据
-        /// </summary>
-        public static byte[] LoadRawFileData(string path)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            var data = loader.LoadRawFileData(path);
-            loader.UnloadAndRecycle();
-            return data;
-        }
-
-        /// <summary>
-        /// 异步加载原始文件文本
-        /// </summary>
-        public static void LoadRawFileTextAsync(string path, Action<string> onComplete)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            loader.LoadRawFileTextAsync(path, text =>
-            {
-                onComplete?.Invoke(text);
-                loader.UnloadAndRecycle();
-            });
-        }
-
-        /// <summary>
-        /// 异步加载原始文件字节数据
-        /// </summary>
-        public static void LoadRawFileDataAsync(string path, Action<byte[]> onComplete)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            loader.LoadRawFileDataAsync(path, data =>
-            {
-                onComplete?.Invoke(data);
-                loader.UnloadAndRecycle();
-            });
-        }
-
-        /// <summary>
-        /// 获取原始文件的完整路径（用于需要直接访问文件的场景）
-        /// </summary>
-        public static string GetRawFilePath(string path)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            var filePath = loader.GetRawFilePath(path);
-            loader.UnloadAndRecycle();
-            return filePath;
-        }
-
-        #endregion
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        #region UniTask 原始文件加载
-
         /// <summary>
-        /// [UniTask] 异步加载原始文件文本
+        /// 异步加载资源并返回可释放句柄。
         /// </summary>
-        public static async UniTask<string> LoadRawFileTextUniTaskAsync(string path, CancellationToken cancellationToken = default)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            
-            if (loader is IRawFileLoaderUniTask uniTaskLoader)
-            {
-                var text = await uniTaskLoader.LoadRawFileTextUniTaskAsync(path, cancellationToken);
-                loader.UnloadAndRecycle();
-                return text;
-            }
-
-            // 回退到回调方式
-            var tcs = new UniTaskCompletionSource<string>();
-            loader.LoadRawFileTextAsync(path, text => tcs.TrySetResult(text));
-            var result = await tcs.Task.AttachExternalCancellation(cancellationToken);
-            loader.UnloadAndRecycle();
-            return result;
-        }
-
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <param name="token">取消令牌。</param>
+        /// <returns>资源句柄；加载失败时返回空。</returns>
+        public static async UniTask<ResHandle<T>> LoadAssetAsync<T>(string path, CancellationToken token = default) where T : class
+#else
         /// <summary>
-        /// [UniTask] 异步加载原始文件字节数据
+        /// 异步加载资源并返回可释放句柄。
         /// </summary>
-        public static async UniTask<byte[]> LoadRawFileDataUniTaskAsync(string path, CancellationToken cancellationToken = default)
-        {
-            var loader = sRawFileLoaderPool.Allocate();
-            
-            if (loader is IRawFileLoaderUniTask uniTaskLoader)
-            {
-                var data = await uniTaskLoader.LoadRawFileDataUniTaskAsync(path, cancellationToken);
-                loader.UnloadAndRecycle();
-                return data;
-            }
-
-            // 回退到回调方式
-            var tcs = new UniTaskCompletionSource<byte[]>();
-            loader.LoadRawFileDataAsync(path, data => tcs.TrySetResult(data));
-            var result = await tcs.Task.AttachExternalCancellation(cancellationToken);
-            loader.UnloadAndRecycle();
-            return result;
-        }
-
-        #endregion
+        /// <typeparam name="T">资源对象类型。</typeparam>
+        /// <param name="path">资源路径。</param>
+        /// <param name="token">取消令牌。</param>
+        /// <returns>资源句柄；加载失败时返回空。</returns>
+        public static async Task<ResHandle<T>> LoadAssetAsync<T>(string path, CancellationToken token = default) where T : class
 #endif
+        {
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentException("path is empty", nameof(path));
+
+            var provider = EnsureProvider();
+            var key = new ResCacheKey(typeof(T), path);
+
+            lock (sLock)
+            {
+                if (sAssetCache.TryGetValue(key, out var cached))
+                {
+                    var cachedHandle = cached as ResHandle<T>;
+                    if (cachedHandle != null)
+                    {
+                        cachedHandle.Retain();
+                        return cachedHandle;
+                    }
+                }
+            }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            var asset = await provider.LoadAsync<T>(path, token);
+#else
+            var asset = await provider.LoadAsync<T>(path, token).ConfigureAwait(false);
+#endif
+            if (asset == null)
+                return null;
+
+            var source = CaptureLoadSource();
+            var handle = new ResHandle<T>(path, asset, provider.ProviderName, source.Display, source.FilePath, source.Line);
+            lock (sLock)
+                sAssetCache[key] = handle;
+
+            return handle;
+        }
+
+        /// <summary>
+        /// 实例化指定路径的资源对象。
+        /// </summary>
+        /// <param name="path">资源路径。</param>
+        /// <returns>引擎对象抽象。</returns>
+        public static IEngineObject Instantiate(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentException("path is empty", nameof(path));
+
+            return EnsureProvider().Instantiate(path);
+        }
     }
 }

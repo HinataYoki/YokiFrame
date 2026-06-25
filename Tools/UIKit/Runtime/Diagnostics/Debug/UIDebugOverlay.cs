@@ -1,3 +1,5 @@
+#if !GODOT
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace YokiFrame
@@ -82,6 +84,18 @@ namespace YokiFrame
         private int mCachedCacheCount;
         private float mLastUpdateTime;
         private const float UPDATE_INTERVAL = 0.2f;
+
+        // ToString 缓存（避免每帧 GC 分配）
+        private string mCachedPanelCountStr;
+        private string mCachedStackDepthStr;
+        private string mCachedCacheCountStr;
+        private string mCachedHotkeyText;
+
+        // GUIStyle 缓存（避免每帧 new GUIStyle）
+        private GUIStyle mHintStyle;
+
+        // GetComponentsInChildren 非分配缓存
+        private static readonly List<UIPanel> sPanelBuffer = new();
 
         #endregion
 
@@ -207,6 +221,7 @@ namespace YokiFrame
             mBoxStyle = null;
             mLabelStyle = null;
             mHeaderStyle = null;
+            mHintStyle = null;
             mStylesInitialized = false;
         }
 
@@ -274,3 +289,4 @@ namespace YokiFrame
 
     }
 }
+#endif

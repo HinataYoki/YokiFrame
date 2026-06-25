@@ -1,5 +1,9 @@
+#if !GODOT
 using System;
-using UnityEngine;
+
+#if YOKIFRAME_ZSTRING_SUPPORT
+using Cysharp.Text;
+#endif
 
 namespace YokiFrame
 {
@@ -158,11 +162,14 @@ namespace YokiFrame
         /// <param name="message">消息内容</param>
         public static void Log(LogLevel level, string category, string message)
         {
-            if (!sIsEnabled || level < sLogLevel) return;
+            if (!sIsEnabled || level < sLogLevel || level < LogLevel.Warning || level == LogLevel.None)
+            {
+                return;
+            }
             
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("[");
                 sb.Append(timestamp);
@@ -171,35 +178,26 @@ namespace YokiFrame
                 sb.Append("] ");
                 sb.Append(message);
                 var formattedMessage = sb.ToString();
-                
+
                 switch (level)
                 {
-                    case LogLevel.Verbose:
-                    case LogLevel.Info:
-                        Debug.Log(formattedMessage);
-                        break;
                     case LogLevel.Warning:
-                        Debug.LogWarning(formattedMessage);
+                        LogKit.Warning(formattedMessage);
                         break;
                     case LogLevel.Error:
-                        Debug.LogError(formattedMessage);
+                        LogKit.Error(formattedMessage);
                         break;
                 }
             }
 #else
             var formattedMessage = "[" + timestamp + "] [UIKit:" + category + "] " + message;
-            
             switch (level)
             {
-                case LogLevel.Verbose:
-                case LogLevel.Info:
-                    Debug.Log(formattedMessage);
-                    break;
                 case LogLevel.Warning:
-                    Debug.LogWarning(formattedMessage);
+                    LogKit.Warning(formattedMessage);
                     break;
                 case LogLevel.Error:
-                    Debug.LogError(formattedMessage);
+                    LogKit.Error(formattedMessage);
                     break;
             }
 #endif
@@ -250,7 +248,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.WillShow: ");
                 sb.Append(panelName);
@@ -266,7 +264,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.DidShow: ");
                 sb.Append(panelName);
@@ -282,7 +280,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.WillHide: ");
                 sb.Append(panelName);
@@ -298,7 +296,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.DidHide: ");
                 sb.Append(panelName);
@@ -314,7 +312,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.Focus: ");
                 sb.Append(panelName);
@@ -330,7 +328,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.Blur: ");
                 sb.Append(panelName);
@@ -346,7 +344,7 @@ namespace YokiFrame
             if (!sLogLifecycle) return;
             var panelName = evt.Panel != default ? evt.Panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("Panel.Resume: ");
                 sb.Append(panelName);
@@ -363,7 +361,7 @@ namespace YokiFrame
             var prevName = evt.Previous != null ? evt.Previous.name : "null";
             var currName = evt.Current != null ? evt.Current.name : "null";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("焦点变化: ");
                 sb.Append(prevName);
@@ -380,7 +378,7 @@ namespace YokiFrame
         {
             if (!sLogFocus) return;
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append("输入模式变化: ");
                 sb.Append(evt.Mode.ToString());
@@ -406,7 +404,7 @@ namespace YokiFrame
             if (!sIsEnabled || !sLogStack) return;
             var panelName = panel != default ? panel.GetType().Name : "null";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append(operation);
                 sb.Append(": ");
@@ -433,7 +431,7 @@ namespace YokiFrame
             var typeName = panelType != default ? panelType.Name : "Unknown";
             var status = success ? "成功" : "失败";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append(operation);
                 sb.Append(": ");
@@ -459,7 +457,7 @@ namespace YokiFrame
             if (!sIsEnabled || !sLogAnimation) return;
             var panelName = panel != default ? panel.GetType().Name : "Unknown";
 #if YOKIFRAME_ZSTRING_SUPPORT
-            using (var sb = Cysharp.Text.ZString.CreateStringBuilder())
+            using (var sb = ZString.CreateStringBuilder())
             {
                 sb.Append(eventName);
                 sb.Append(": ");
@@ -477,3 +475,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

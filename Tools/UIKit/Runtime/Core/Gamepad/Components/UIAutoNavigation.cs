@@ -1,3 +1,4 @@
+#if !GODOT
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -240,3 +241,4 @@ namespace YokiFrame
         Grid
     }
 }
+#endif

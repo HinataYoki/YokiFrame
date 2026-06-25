@@ -2,53 +2,64 @@ using System;
 
 namespace YokiFrame
 {
-    public enum ActionUpdateModes
-    {
-        ScaledDeltaTime,
-        UnscaledDeltaTime,
-    }
-
+    /// <summary>
+    /// ActionKit 调度控制器契约。
+    /// </summary>
     public interface IActionController
     {
         /// <summary>
-        /// 当前执行的任务ID
+        /// 当前控制器关联的 Action 运行时编号。
         /// </summary>
-        ulong CurExcuteActionID { get; set; }
+        ulong CurExecuteActionID { get; set; }
+
         /// <summary>
-        /// 任务
+        /// 当前控制器关联的 Action 运行时编号。保留旧拼写以兼容已有调用。
+        /// </summary>
+        [Obsolete("Use CurExecuteActionID. This misspelled alias is kept for source compatibility.", false)]
+        ulong CurExcuteActionID { get; set; }
+
+        /// <summary>
+        /// 当前控制器驱动的 Action。
         /// </summary>
         IAction Action { get; set; }
+
         /// <summary>
-        /// 任务更新模式
+        /// 当前控制器使用的时间更新模式。
         /// </summary>
         ActionUpdateModes UpdateMode { get; set; }
+
         /// <summary>
-        /// 任务结束回调
+        /// Action 完成后调用的回调。
         /// </summary>
         Action<IActionController> Finish { get; set; }
+
         /// <summary>
-        /// 暂停任务
+        /// 当前 Action 是否暂停。
         /// </summary>
         bool Paused { get; set; }
+
         /// <summary>
-        /// 是否已取消
+        /// 当前控制器是否已取消。
         /// </summary>
         bool IsCancelled { get; }
 
         /// <summary>
-        /// 任务开始
+        /// 开始驱动 Action。
         /// </summary>
         void OnStart();
+
         /// <summary>
-        /// 任务结束
+        /// 结束驱动 Action。
         /// </summary>
         void OnEnd();
+
         /// <summary>
-        /// 取消任务（提前终止）
+        /// 取消当前控制器。
         /// </summary>
         void Cancel();
+
         /// <summary>
-        /// 回收
+        /// 回收当前控制器。
         /// </summary>
         void Recycle();
     }

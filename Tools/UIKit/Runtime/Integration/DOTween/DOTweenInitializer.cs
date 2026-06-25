@@ -1,3 +1,4 @@
+#if !GODOT
 #if YOKIFRAME_DOTWEEN_SUPPORT
 using DG.Tweening;
 using UnityEngine;
@@ -29,4 +30,5 @@ namespace YokiFrame
         }
     }
 }
+#endif
 #endif

@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - Luban 参数构建与数据复制
@@ -213,13 +213,17 @@ namespace YokiFrame.TableKit.Editor
         /// <summary>
         /// 获取数据格式对应的文件扩展名
         /// </summary>
-        private static string GetDataFileExtension(string dataFormat) => dataFormat switch
+        private static string GetDataFileExtension(string dataFormat)
         {
-            "bin" => ".bytes",
-            "json" => ".json",
-            "lua" => ".lua",
-            _ => ".*"
-        };
+            if (dataFormat == "bin")
+                return ".bytes";
+            if (dataFormat == "json")
+                return ".json";
+            if (dataFormat == "lua")
+                return ".lua";
+
+            return ".*";
+        }
 
         #endregion
     }

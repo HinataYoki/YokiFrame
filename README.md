@@ -1,266 +1,377 @@
 # YokiFrame
 
 <p align="center">
-  <img src="Core/Editor/UISystem/Resources/yoki.png" alt="YokiFrame Logo" width="128" height="128">
+  <img src="Core/Editor/Resources/yoki.png" alt="YokiFrame Logo" width="128" height="128">
 </p>
 
 <p align="center">
-  <b>一个轻量级 Unity 开发框架</b><br>
-  提供架构设计、事件系统、动作序列、状态机、UI 管理、音频管理、存档系统等常用功能模块。
+  <b>跨引擎游戏 Kit 框架 + AI 原生通信层 + Tauri 可视化工作台</b><br>
+  用统一的 C# Kit API 承载运行时能力，用文件协议让 AI、工具前端和引擎宿主可靠协作。
 </p>
 
 ---
 
-## 目录
+## YokiFrame 是什么
 
-- [安装](#安装)
-- [快速开始](#快速开始)
-- [功能导航](#功能导航)
-- [核心模块](#核心模块)
-- [工具模块](#工具模块)
-- [编辑器工具](#编辑器工具)
-- [编辑器截图预览](#编辑器截图预览)
-- [文档索引](#文档索引)
-- [License](#license)
+YokiFrame 不再只是一个绑定 Unity 的工具包，而是一套面向多宿主的游戏开发框架。它把事件、状态机、对象池、资源、单例、日志、动作、音频、输入、场景、存档、UI、配置表和本地化等能力整理为稳定的 Kit API；Unity、Godot 或未来其它宿主只负责提供 Adapter。
+
+新版框架重点完成了三件事：
+
+| 方向 | 做到了什么 |
+| --- | --- |
+| 跨引擎设计 | Runtime 核心优先保持纯 C#；宿主差异通过 Unity / Godot Adapter 接入，业务侧继续调用 `YokiFrame` 统一入口。 |
+| AI 原生通信 | `.yokiframe/` 文件桥成为框架级控制面，AI Agent 不依赖 Unity MCP 也能发现引擎、发送命令、读取响应和检查快照。 |
+| 可视化编辑器工具 | Tauri + Web 前端提供独立工作台，把 Kit 状态、命令桥健康、代码扫描、生成器和运行时诊断集中到一个现代桌面工具里。 |
 
 ---
 
-## 安装
+## 核心能力
 
-通过 Unity Package Manager 安装：
+### 统一 Kit API
+
+业务代码优先依赖 `YokiFrame` 命名空间下的统一入口：
+
+| Kit | 能力 |
+| --- | --- |
+| Architecture | 服务注册、模块化组织和运行时架构诊断。 |
+| EventKit | 类型事件、枚举事件和旧字符串事件兼容，用于模块解耦。 |
+| FsmKit | 普通 FSM、带参数 FSM、层级状态机和运行时状态诊断。 |
+| PoolKit | C# 对象池、可回收对象池、集合池和对象池工作台快照。 |
+| ResKit | 统一资源加载、raw 文件读取、引用计数和 Provider 替换。 |
+| SingletonKit | 纯 C# 单例、Unity `MonoSingleton`、Godot `GodotSingleton` 的统一生命周期视角。 |
+| LogKit | 引擎日志适配、运行时日志文件、工作台日志诊断。 |
+| ActionKit | 延迟、回调、并行、重复、Task / Coroutine 组合和动作树调试。 |
+| AudioKit | 音效、音乐、音量总线、活跃 voice 诊断和音频 ID 生成辅助。 |
+| SaveKit | 多槽位存档、序列化/加密/迁移后端、自动保存状态。 |
+| InputKit | 输入后端、动作状态、输入缓冲和上下文栈。 |
+| SceneKit | 跨引擎场景加载、预加载、激活和卸载后端。 |
+| SpatialKit | HashGrid、Quadtree、Octree 空间索引和查询诊断。 |
+| LocalizationKit | 多语言 Provider、formatter、缓存、binder 和语言切换。 |
+| UIKit | UI 后端、面板栈、层级、面板创建和绑定辅助。 |
+| TableKit | 基于 Tauri 的 Luban 配置表生成、参数管理和输出校验。 |
+
+### 跨引擎 Adapter
+
+框架分层的原则是：核心 API 不知道自己跑在 Unity 还是 Godot。
+
+```text
+User Code
+  -> YokiFrame Kit API
+  -> Core Runtime interfaces / providers / handlers
+  -> Unity or Godot Adapter
+  -> Engine runtime and editor
+```
+
+当前包内落点：
+
+```text
+YokiFrame/
+├── Core/
+│   ├── Runtime/
+│   │   ├── Architecture, EventKit, FsmKit, PoolKit, ResKit, Singleton, LogKit
+│   │   ├── Interfaces, ToolClass, FluentApi, Settings
+│   │   ├── CommandBridge
+│   │   └── Adapters/
+│   │       ├── Unity/
+│   │       └── Godot/
+│   └── Editor/
+│       ├── Skills/
+│       └── Resources/
+├── Tools/
+│   ├── ActionKit, AudioKit, InputKit, LocalizationKit
+│   ├── SaveKit, SceneKit, SpatialKit, TableKit, UIKit
+│   └── ...
+└── Installer~/
+```
+
+核心抽象包括 `IEngineLogger`、`IEngineTime`、`IEngineObject`、`IResourceProvider`、`ISerializationProvider` 等；上层工具 Kit 也通过 `IAudioBackend`、`IInputBackend`、`ISceneBackend`、`IUIBackend` 等后端接口隔离宿主能力。
+
+Unity Adapter 提供 `UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、Unity CommandBridge Host、Tauri Launcher、事件/快照/遥测发布器，以及 YooAsset、DOTween、FMOD、Unity Input、Unity UI 等可选集成。
+
+Godot Adapter 提供 `GodotBootstrap`、`GodotAutoBootstrap`、`GodotResourceProvider`、`GodotSingleton<T>`、Godot CommandBridge Host、事件桥、FSM 桥、Kit 快照发布器，以及输入、场景、UI、存档等 Installer 入口。Godot 侧以 Godot 4.7 `.NET / C#` 项目为主要接入对象。
+
+---
+
+## AI 原生通信机制
+
+YokiFrame 把 AI 访问设计成框架能力，而不是某个编辑器插件的附属功能。核心是 `.yokiframe/` 文件桥：
+
+```text
+.yokiframe/
+└── engines/
+    └── <engineId>/
+        ├── engine.json
+        ├── status/heartbeat.json
+        ├── commands/<requestId>.json
+        ├── results/<requestId>-response.json
+        ├── snapshots/<kit>/<name>.json
+        └── events/*.jsonl
+```
+
+### 命令面
+
+AI、Tauri 和脚本都可以写入 engine-scoped 命令文件：
+
+```json
+{
+  "protocolVersion": 2,
+  "requestId": "codex-ping-001",
+  "engineId": "unity-editor",
+  "source": "codex",
+  "kit": "System",
+  "action": "ping",
+  "payload": {},
+  "createdAtUtc": "2026-06-24T00:00:00Z",
+  "timeoutMs": 10000
+}
+```
+
+响应会写入：
+
+```text
+.yokiframe/engines/<engineId>/results/<requestId>-response.json
+```
+
+协议保证：已接受命令必须产出一个 terminal response。未知 Kit、未知 action、解析失败、超时、策略拒绝都应变成标准 JSON 响应，而不是让调用方静默等待。
+
+### 快照、事件和实时遥测
+
+文件桥不是高频运行时总线。YokiFrame 将通信拆成多条通道：
+
+| 通道 | 用途 |
+| --- | --- |
+| Command Plane | 请求-响应命令，例如 `System/ping`、`FsmKit/get_workbench_snapshot`。 |
+| Snapshot Plane | 当前状态覆盖式快照，例如 `FsmKit/state`、`PoolKit/state`、`ResKit/state`。 |
+| Event Plane | 重要离散事件 JSONL，例如 Kit 状态变化、生命周期提醒。 |
+| Realtime Telemetry Plane | 共享内存最新帧，用于 Tauri 页面的人类感知实时刷新。 |
+| Trace Plane | 显式开启的短期诊断 ring buffer。 |
+
+AI Agent 默认读取 snapshot 或 command/result；Tauri 工作台优先读 telemetry，再读 snapshot，只有用户动作、详情查询或缺失兜底时才走 command/result。这样既能让 AI 稳定访问框架状态，也避免把热路径变成跨进程文件轮询。
+
+### AI Skill
+
+包内包含面向 Agent 的 Skill 文档：
+
+```text
+YokiFrame/Core/Editor/Skills/
+├── yokiframe/
+├── yokiframe-usage/
+├── yokiframe-editor/
+└── yokiframe-command-bridge/
+```
+
+Tauri 工作台也提供 AI Skill 安装入口，方便把项目内的 YokiFrame 使用说明同步到 Codex 等 Agent 的技能目录。AI 不需要直接猜测 Unity 内部对象；它可以先发现 engine registry，再按协议查询 Kit 状态。
+
+---
+
+## Tauri 可视化工作台
+
+YokiFrame Editor 是一个 Tauri + Web 技术栈的桌面工作台。它不是营销页，而是给开发者在调试循环里使用的控制台：连接宿主、查看 Kit 状态、观察运行时变化、触发只读诊断命令、打开代码位置、管理生成器和阅读内置文档。
+
+在 Unity / Godot 编辑器中通常可通过 `Ctrl+E` 打开工作台。
+
+当前工作台页面包括：
+
+| 页面 | 能力 |
+| --- | --- |
+| System | 引擎连接、heartbeat、engine registry、FileBridge 健康、命令目录和日志。 |
+| Architecture | 当前架构实例、注册服务和服务实现诊断。 |
+| EventKit | 事件注册关系、最近事件、代码扫描、发送/监听/注销关系图。 |
+| FsmKit | 状态机列表、状态流图、当前状态、转换历史和生命周期事件。 |
+| PoolKit | 对象池统计、池详情、峰值、缓存数量和当前快照。 |
+| ResKit | 资源缓存、引用计数、Provider 状态和资源加载诊断。 |
+| LogKit | 运行时日志、日志配置、文件输出和错误定位。 |
+| ActionKit | 动作树、执行状态、堆栈追踪开关和当前动作统计。 |
+| AudioKit | 活跃声音、音量总线、播放历史、音频 ID / 路径生成器。 |
+| SaveKit | 存档槽、自动保存、存储/序列化/加密后端状态。 |
+| LocalizationKit | 语言列表、Provider、formatter、缓存和语言切换命令。 |
+| SceneKit | 场景加载状态、预加载、卸载诊断和场景后端。 |
+| SpatialKit | 空间索引列表、实体统计、查询结构诊断。 |
+| InputKit | 当前设备、动作状态、输入缓冲和上下文栈。 |
+| UIKit | 面板列表、面板栈、层级、Unity 面板 Prefab 创建和绑定辅助。 |
+| TableKit | Luban 环境检测、生成参数、输出目录、执行日志和生成校验。 |
+| SingletonKit | Core / Unity / Godot 单例实例和生命周期状态。 |
+| Docs | 快速上手、Kit 文档、API 速查和第三方依赖说明。 |
+
+仓库内的前端开发源位于 `YokiFrameTools/TauriEditor/dist`；包内跨引擎运行副本位于：
+
+```text
+YokiFrame/TauriRuntime~/dist
+```
+
+---
+
+## 安装和接入
+
+<p align="center">
+  <img src="Documentation~/images/yokiframe-installer.png" alt="YokiFrame Installer" width="720">
+</p>
+
+### 安装器
+
+推荐使用随包发布的轻量安装器统一安装到 Unity 或 Godot 项目：
+
+```text
+YokiFrame/Installer~/win-x64/YokiFramePackageTool.exe
+```
+
+安装器会自动检测目标项目类型，并按目标引擎生成对应安装计划：
+
+| 目标项目 | 支持方式 | 说明 |
+| --- | --- | --- |
+| Unity | 本地包 | 复制到目标项目 `Packages/com.hinatayoki.yokiframe`，适合离线使用或本地改源码。 |
+| Unity | Git 包 | 写入目标项目 `Packages/manifest.json`，后续可通过 Unity Package Manager 更新。 |
+| Godot | 本地包 | 安装到 Godot 4.7 `.NET / C#` 项目的 `addons/yokiframe/package/YokiFrame`，并创建 Godot 插件入口。 |
+
+Unity 本地包模式和 Godot 模式需要选择 YokiFrame 源目录；Unity Git 包模式只需要选择目标 Unity 项目目录和 Git URL。
+
+### Unity Git URL
+
+Unity 项目也可以直接通过 Unity Package Manager 安装：
 
 1. 打开 `Window > Package Manager`
 2. 点击 `+` > `Add package from git URL`
-3. 输入：`https://github.com/HinataYoki/YokiFrame.git`
+3. 输入 Git URL：
 
----
-
-## 快速开始
-
-### 最小示例
-
-```csharp
-using YokiFrame;
-
-// 事件系统
-EventKit.Type.Register<PlayerDiedEvent>(e => Debug.Log($"{e.PlayerName} 死亡"))
-    .UnRegisterWhenGameObjectDestroyed(gameObject);
-EventKit.Type.Send(new PlayerDiedEvent { PlayerName = "Player1" });
-
-// 动作序列
-ActionKit.Sequence()
-    .Delay(1f, () => Debug.Log("1秒后"))
-    .Callback(() => Debug.Log("立即执行"))
-    .Start(this);
-
-// UI 管理
-UIKit.OpenPanel<MainMenuPanel>();
-UIKit.ClosePanel<MainMenuPanel>();
-
-// 音频播放
-AudioKit.Play("Audio/BGM/MainTheme", AudioChannel.Bgm);
-AudioKit.Play("Audio/SFX/Click");
+```text
+https://github.com/HinataYoki/YokiFrame.git
 ```
 
-### 进阶使用
+当前 GitHub `main` 的 Unity package 根目录位于仓库根目录，因此默认 URL 不带 `?path=`。如果需要锁定分支、tag 或 commit，可在 URL 末尾追加 `#branch-or-tag`。只有当目标分支或 tag 的 `package.json` 确实位于仓库子目录时，才需要手动追加 `?path=/子目录`。
 
-按 `Ctrl+E` 打开 YokiFrame 编辑器工具面板，查看文档、监控页面和代码辅助工具。
+### Unity 初始化
 
----
+运行时最小初始化：
 
-## 功能导航
+```csharp
+using UnityEngine;
+using YokiFrame.Unity;
 
-| 需求关键词 | 推荐模块 | 核心能力 | 代码位置 |
-| --- | --- | --- | --- |
-| 事件、消息、模块解耦 | EventKit | 类型安全事件系统 | `Core/Runtime/EventKit` |
-| 对象池、复用、GC 优化 | PoolKit | GameObject / C# 对象池 | `Core/Runtime/PoolKit` |
-| 状态机、AI、行为控制 | FsmKit | 有限状态机 | `Core/Runtime/FsmKit` |
-| 单例、全局管理 | SingletonKit | 单例模式基础设施 | `Core/Runtime/SingletonKit` |
-| 资源加载、AssetBundle | ResKit | 统一资源加载接口 | `Core/Runtime/ResKit` |
-| UI、面板、窗口 | UIKit | 面板管理与编辑器辅助 | `Tools/UIKit` |
-| 音频、BGM、音效 | AudioKit | 音频播放与通道管理 | `Tools/AudioKit` |
-| 动画、延时、时序控制 | ActionKit | 链式动作序列 | `Tools/ActionKit` |
-| 配置表、Excel、数据表 | TableKit | Luban 配置表工作流 | `Tools/TableKit` |
-| 存档、持久化 | SaveKit | 多槽位存档系统 | `Tools/SaveKit` |
-| 场景切换、异步加载 | SceneKit | 场景加载与切换 | `Tools/SceneKit` |
-| 本地化、多语言 | LocalizationKit | 文本本地化 | `Tools/LocalizationKit` |
-| Buff、属性修饰 | BuffKit | Buff / Debuff 系统 | `Tools/BuffKit` |
-| 空间查询、邻近搜索 | SpatialKit | 空间分区与查询 | `Tools/SpatialKit` |
+public sealed class GameStartup : MonoBehaviour
+{
+    private void Awake()
+    {
+        _ = UnityBootstrap.Instance;
+    }
+}
+```
 
----
+`UnityBootstrap` 会注册 Unity 侧资源、时间、对象、序列化、日志等默认后端。只使用 EventKit、FsmKit、PoolKit 或纯 C# 单例时不强制依赖它；使用 ResKit、AudioKit、InputKit、SceneKit、UIKit 等宿主能力时建议先完成适配器初始化。
 
-## 核心模块
+### Godot
 
-核心模块之间可以相互依赖；工具模块应优先依赖核心模块，而不是彼此耦合。
+安装器会把包安装到 Godot 4.7 `.NET / C#` 项目，并创建项目根插件入口：
 
-| 模块 | 说明 |
+```text
+addons/yokiframe/plugin.cfg
+addons/yokiframe/plugin.gd
+addons/yokiframe/package/YokiFrame/
+```
+
+Godot 插件启用后会注册 bootstrap、autoload、`.yokiframe` 工作目录和 Godot engine registry。运行时命令通过 `.yokiframe/engines/godot-runtime/commands/*.json` 进入，响应从同 engine 的 `results` 目录读取。
+
+### 第三方增强
+
+| 依赖 | 用途 |
 | --- | --- |
-| Architecture | 轻量级架构基础设施，适合依赖注入与模块化组织 |
-| EventKit | 类型、枚举、字符串三类事件总线 |
-| SingletonKit | MonoBehaviour / C# 单例支持 |
-| PoolKit | GameObject 与纯 C# 对象池 |
-| ResKit | 统一资源加载接口与后端扩展 |
-| FsmKit | 状态切换、生命周期回调 |
-| LogKit | 日志系统与调试辅助 |
-| FluentApi | 常用链式扩展方法 |
-| ToolClass | 通用工具类集合 |
-| CodeGenKit | 编辑器代码生成辅助 |
+| UniTask | Unity 项目中启用 `YOKIFRAME_UNITASK_SUPPORT` 后，ResKit / SaveKit 等异步 API 可切换为 `UniTask<T>`。 |
+| YooAsset | Unity ResKit 可选资源后端。 |
+| DOTween | ActionKit / UIKit 可选动画集成。 |
+| FMOD | AudioKit 可选音频后端。 |
+| Luban | TableKit 配置表生成工作流。 |
 
 ---
 
-## 工具模块
-
-| 模块 | 说明 |
-| --- | --- |
-| ActionKit | 链式动作序列、延时、并行与回调组合 |
-| UIKit | 现代化 UI 面板系统、面板管理与代码辅助 |
-| AudioKit | 音频播放、通道音量、BGM / 音效管理 |
-| SaveKit | 多槽位存档、模块化存储、序列化支持 |
-| TableKit | Luban 配置表生成与查询工作流 |
-| BuffKit | Buff / Debuff、容器与堆叠规则 |
-| LocalizationKit | 多语言与格式化文本 |
-| SceneKit | 场景异步加载、切换、预加载 |
-| InputKit | 统一输入访问接口 |
-| SpatialKit | 空间查询、范围搜索、近邻搜索 |
-
----
-
-## 常用代码示例
+## 常用代码
 
 ### EventKit
 
 ```csharp
-public struct PlayerDiedEvent
+using YokiFrame;
+
+public readonly struct PlayerDiedEvent
 {
-    public string PlayerName;
+    public readonly string PlayerName;
+
+    public PlayerDiedEvent(string playerName)
+    {
+        PlayerName = playerName;
+    }
 }
 
-EventKit.Type.Register<PlayerDiedEvent>(e => Debug.Log($"{e.PlayerName} 死亡"))
-    .UnRegisterWhenGameObjectDestroyed(gameObject);
-
-EventKit.Type.Send(new PlayerDiedEvent
-{
-    PlayerName = "Player1"
-});
-```
-
-### PoolKit
-
-```csharp
-var bullet = PoolKit.Spawn("Prefabs/Bullet", parent);
-PoolKit.Recycle(bullet);
+EventKit.Type.Register<PlayerDiedEvent>(OnPlayerDied);
+EventKit.Type.Send(new PlayerDiedEvent("Player"));
+EventKit.Type.UnRegister<PlayerDiedEvent>(OnPlayerDied);
 ```
 
 ### FsmKit
 
 ```csharp
-var fsm = new SimpleStateMachine();
-fsm.ChangeState<IdleState>();
+using YokiFrame;
+
+var fsm = new FSM<PlayerState>("PlayerFSM");
+fsm.Add(PlayerState.Idle, new IdleState(fsm, owner));
+fsm.Add(PlayerState.Run, new RunState(fsm, owner));
+fsm.Start(PlayerState.Idle);
+
+fsm.Change(PlayerState.Run);
 fsm.Update();
 ```
 
-### UIKit
+### ResKit
 
 ```csharp
-UIKit.OpenPanel<MainMenuPanel>();
-UIKit.ClosePanel<MainMenuPanel>();
+using YokiFrame;
+
+var handle = ResKit.LoadAsset<MyConfig>("Configs/GameConfig");
+try
+{
+    Use(handle.Asset);
+}
+finally
+{
+    handle.Release();
+}
 ```
 
-### AudioKit
+### ActionKit
 
 ```csharp
-AudioKit.Play("Audio/BGM/MainTheme", AudioChannel.Bgm);
-AudioKit.SetVolume(AudioChannel.Bgm, 0.8f);
-```
+using YokiFrame;
 
-### SaveKit
+IActionController controller = ActionKit.Sequence()
+    .Callback(OnStarted)
+    .Delay(0.5f)
+    .Callback(OnFinished)
+    .Start();
 
-```csharp
-var saveData = SaveKit.CreateSaveData();
-saveData.SetModule(new PlayerData { Level = 10 });
-SaveKit.Save(0, saveData);
-```
-
-### SceneKit
-
-```csharp
-await SceneKit.LoadSceneAsync("GameScene", SceneLoadMode.Single);
+controller.Pause();
+controller.Resume();
+controller.Cancel();
 ```
 
 ---
 
-## 编辑器工具
+## 技术约束
 
-### 快捷键
+- Unity 包声明兼容 Unity 2021.3+；当前仓库开发环境覆盖 Unity 6000.x。
+- Godot 接入面向 Godot 4.7 `.NET / C#` 项目。
+- C# 代码保持 C# 9.0 兼容，不使用 C# 10+ 语法。
+- Core Runtime 不直接依赖 Tauri；跨进程通信通过 `.yokiframe` 协议和 Adapter 层实现。
+- 文件桥协议字段使用安全 ASCII 标识符；命令写入应使用临时文件加原子重命名。
+- 高频运行时状态不逐次写文件；由 Adapter 缓存、节流、snapshot 和 telemetry 承担可视化刷新。
 
-| 快捷键 | 功能 |
+---
+
+## 文档入口
+
+| 目标 | 位置 |
 | --- | --- |
-| `Ctrl+E` | 打开 YokiFrame 工具面板 |
-| `Alt+B` | 添加 UI 组件绑定 |
-
-### 工具页概览
-
-| 页面 | 功能 |
-| --- | --- |
-| 文档 | 查看 API 文档和使用示例 |
-| EventKit | 事件注册与发送监控 |
-| PoolKit | 对象池状态与统计查看 |
-| FsmKit | 状态机运行时监控 |
-| ActionKit | 动作序列执行观察 |
-| UIKit | UI 面板创建与代码辅助 |
-| AudioKit | 音频监控与代码辅助 |
-| TableKit | 配置表生成与管理 |
-| BuffKit | Buff 容器与状态查看 |
-| LocalizationKit | 本地化预览与缺失检查 |
-| SceneKit | 场景状态查看与管理 |
-
----
-
-## 编辑器截图预览
-
-### 文档页
-
-![Documentation](Core/Editor/UISystem/Resources/document.png)
-
-### EventKit 监控页
-
-![EventKit](Core/Editor/UISystem/Resources/eventkit.png)
-
-### EventKit 扫描页
-
-![EventKit Scan](Core/Editor/UISystem/Resources/eventkit_scan.png)
-
-### FsmKit 监控页
-
-![FsmKit](Core/Editor/UISystem/Resources/fsmkit.png)
-
-### PoolKit 监控页
-
-![PoolKit](Core/Editor/UISystem/Resources/poolkit.png)
-
----
-
-## 文档索引
-
-- 当前入口：`Assets/YokiFrame/README.md`
-- 核心代码：`Assets/YokiFrame/Core/Runtime`
-- 工具模块：`Assets/YokiFrame/Tools`
-- 编辑器相关：`Assets/YokiFrame/Core/Editor`
-
-### 目录结构
-
-```text
-Assets/YokiFrame/
-|- README.md
-|- Core/
-|  |- Runtime/
-|  |- Editor/
-|- Tools/
-   |- ActionKit/
-   |- AudioKit/
-   |- UIKit/
-   |- ...
-```
+| 快速上手和 Kit 文档 | Tauri 工作台 `Docs` 页面 |
+| Tauri 内置文档源 | `TauriRuntime~/dist/docs` |
+| AI 命令桥 Skill | `Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
+| YokiFrame 使用 Skill | `Core/Editor/Skills/yokiframe-usage/SKILL.md` |
+| 架构速查表 | `../Doc/YOKIFRAME2_ARCHITECTURE_QUICK_REFERENCE.md` |
 
 ---
 

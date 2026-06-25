@@ -1,14 +1,13 @@
-﻿#if UNITY_EDITOR
-using System.Text;
+#if UNITY_EDITOR
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// Async template-generation helpers for TableKit code generation.
     /// </summary>
     public static partial class TableKitCodeGenerator
     {
-        private static void AppendAsyncLoadingSection(StringBuilder sb, string tablesNamespace, bool hasYokiFrame,
+        private static void AppendAsyncLoadingSection(CodeGenLineBuilder sb, string tablesNamespace, bool hasYokiFrame,
             string[] tableFileNames)
         {
             sb.AppendLine();
@@ -38,7 +37,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("#endif");
         }
 
-        private static void AppendTableFileNames(StringBuilder sb, string[] tableFileNames)
+        private static void AppendTableFileNames(CodeGenLineBuilder sb, string[] tableFileNames)
         {
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// Generated table file names used for async preloading.");
@@ -62,7 +61,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
         }
 
-        private static void AppendAsyncLoaderSetters(StringBuilder sb)
+        private static void AppendAsyncLoaderSetters(CodeGenLineBuilder sb)
         {
             sb.AppendLine("    private static Func<string, CancellationToken, UniTask<byte[]>> sAsyncBinaryLoader;");
             sb.AppendLine("    private static Func<string, CancellationToken, UniTask<string>> sAsyncJsonLoader;");
@@ -93,7 +92,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
         }
 
-        private static void AppendInitAsync(StringBuilder sb, string tablesNamespace)
+        private static void AppendInitAsync(CodeGenLineBuilder sb, string tablesNamespace)
         {
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// Initializes tables asynchronously using a preload-then-build strategy.");
@@ -130,7 +129,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("                {");
             sb.AppendLine("                    if (!cache.TryGetValue(name, out var bytes) || bytes == null)");
             sb.AppendLine("                    {");
-            sb.AppendLine("                        Debug.LogError($\"[TableKit] 寮傛缂撳瓨鏈懡涓? {name}\");");
+            sb.AppendLine("                        YokiFrame.LogKit.Error($\"[TableKit] 异步缓存未命中: {name}\");");
             sb.AppendLine("                        return null;");
             sb.AppendLine("                    }");
             sb.AppendLine("                    return new ByteBuf(bytes);");
@@ -154,7 +153,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("            {");
             sb.AppendLine("                if (!cache.TryGetValue(name, out var json) || string.IsNullOrEmpty(json))");
             sb.AppendLine("                {");
-            sb.AppendLine("                    Debug.LogError($\"[TableKit] 寮傛缂撳瓨鏈懡涓? {name}\");");
+            sb.AppendLine("                    YokiFrame.LogKit.Error($\"[TableKit] 异步缓存未命中: {name}\");");
             sb.AppendLine("                    return null;");
             sb.AppendLine("                }");
             sb.AppendLine();
@@ -184,7 +183,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine();
         }
 
-        private static void AppendAsyncCacheHelpers(StringBuilder sb)
+        private static void AppendAsyncCacheHelpers(CodeGenLineBuilder sb)
         {
             sb.AppendLine("    private static async UniTask LoadAndCacheBinaryAsync(");
             sb.AppendLine("        string fileName, Dictionary<string, byte[]> cache, CancellationToken ct)");
@@ -201,63 +200,21 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
         }
 
-        private static void AppendDefaultAsyncLoaders(StringBuilder sb, bool hasYokiFrame)
+        private static void AppendDefaultAsyncLoaders(CodeGenLineBuilder sb, bool hasYokiFrame)
         {
             sb.AppendLine();
-            if (hasYokiFrame)
-            {
-                sb.AppendLine("    // 榛樿寮傛鍔犺浇鍣細浣跨敤 YokiFrame.ResKit");
-                sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = await YokiFrame.ResKit.LoadAssetUniTaskAsync<TextAsset>(path, ct);");
-                sb.AppendLine("        if (handler == default)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 寮傛鍔犺浇澶辫触: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var bytes = textAsset != null ? textAsset.bytes : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return bytes;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = await YokiFrame.ResKit.LoadAssetUniTaskAsync<TextAsset>(path, ct);");
-                sb.AppendLine("        if (handler == default)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 寮傛鍔犺浇澶辫触: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var text = textAsset != null ? textAsset.text : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return text;");
-                sb.AppendLine("    }");
-            }
-            else
-            {
-                sb.AppendLine("    // 榛樿寮傛鍔犺浇鍣細浣跨敤 Resources.LoadAsync");
-                sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var request = Resources.LoadAsync<TextAsset>(path);");
-                sb.AppendLine("        await request.ToUniTask(cancellationToken: ct);");
-                sb.AppendLine("        var textAsset = request.asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.bytes : null;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var request = Resources.LoadAsync<TextAsset>(path);");
-                sb.AppendLine("        await request.ToUniTask(cancellationToken: ct);");
-                sb.AppendLine("        var textAsset = request.asset as TextAsset;");
-                sb.AppendLine("        return textAsset != null ? textAsset.text : null;");
-                sb.AppendLine("    }");
-            }
+            sb.AppendLine("    // 默认异步加载器：统一委托给 ResKit，具体 Unity/Godot/自定义后端由 ResKit Provider 决定。");
+            sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
+            sb.AppendLine("        return await YokiFrame.ResKit.LoadRawAsync(path, ct);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
+            sb.AppendLine("        return await YokiFrame.ResKit.LoadRawTextAsync(path, ct);");
+            sb.AppendLine("    }");
         }
 
     }

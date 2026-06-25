@@ -5,9 +5,8 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - Luban 生成逻辑
@@ -91,7 +90,7 @@ namespace YokiFrame.TableKit.Editor
                 logBuilder.AppendLine($"[异常] {ex.Message}");
                 logBuilder.AppendLine(ex.StackTrace);
                 UpdateStatusBanner(BuildStatus.Failed);
-                Debug.LogException(ex);
+                LogKit.Exception(ex);
             }
             finally
             {
@@ -216,7 +215,7 @@ namespace YokiFrame.TableKit.Editor
                 logBuilder.AppendLine($"[异常] {ex.Message}");
                 logBuilder.AppendLine(ex.StackTrace);
                 UpdateStatusBanner(BuildStatus.Failed);
-                Debug.LogException(ex);
+                LogKit.Exception(ex);
             }
             finally
             {
@@ -281,13 +280,13 @@ namespace YokiFrame.TableKit.Editor
             var lubanCodeDir = Path.Combine(codeDir, "Luban");
             if (!Directory.Exists(lubanCodeDir)) Directory.CreateDirectory(lubanCodeDir);
 
-            logBuilder.AppendLine("正在生成 TableKit 运行时代码...");
+            logBuilder.AppendLine("正在生成项目侧 TableKit 代码...");
             var tablesNamespace = TableKitCodeGenerator.ResolveTopModule(mLubanWorkDir, mTarget);
             logBuilder.AppendLine($"[INFO] Tables 命名空间：{tablesNamespace}");
             TableKitCodeGenerator.Generate(codeDir, mUseAssemblyDefinition, mGenerateExternalTypeUtil,
                 mAssemblyName, tablesNamespace, mRuntimePathPattern, mEditorDataPath, mCodeTarget,
                 mUseAsyncLoading, mOutputDataDir, mDataTarget);
-            logBuilder.AppendLine("[OK] TableKit 运行时代码生成完成");
+            logBuilder.AppendLine("[OK] 项目侧 TableKit 代码生成完成");
             if (mUseAsyncLoading) logBuilder.AppendLine("[OK] 已生成异步加载代码 (InitAsync/ReloadAsync)");
 
             if (mGenerateExternalTypeUtil) logBuilder.AppendLine("[OK] 已生成 ExternalTypeUtil.cs");

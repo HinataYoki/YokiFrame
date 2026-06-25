@@ -1,0 +1,31 @@
+{
+    "name": "YokiFrame.Unity.Runtime",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.AudioKit",
+        "UniTask",
+        "YooAsset",
+        "ZString"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "2.3.0",
+            "define": "YOOASSET_2_3_OR_NEWER"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "3.0.0-beta",
+            "define": "YOOASSET_3_0_OR_NEWER"
+        }
+    ],
+    "noEngineReferences": false
+}

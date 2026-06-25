@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 
 namespace YokiFrame
@@ -73,3 +74,4 @@ namespace YokiFrame
         void Disable();
     }
 }
+#endif

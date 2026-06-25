@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+#if !GODOT
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -25,9 +26,13 @@ namespace YokiFrame
                 
                 if (sInstance == default)
                 {
-                    sInstance = FindFirstObjectByType<UIRoot>();
+                    sInstance = FindAnyObjectByType<UIRoot>();
                     if (sInstance == default)
                     {
+                        // Editor 快照和只读诊断可能访问 Instance；非 PlayMode 禁止创建会 DontDestroyOnLoad 的 prefab。
+                        if (!Application.isPlaying)
+                            return null;
+
                         sInstance = CreateFromPrefab();
                     }
                     if (!sIsInitialized && sInstance != default)
@@ -190,3 +195,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

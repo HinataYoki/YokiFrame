@@ -1,8 +1,11 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
-#if YOKIFRAME_UNITASK_SUPPORT
 using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
 #endif
 
 namespace YokiFrame
@@ -261,18 +264,25 @@ namespace YokiFrame
 
         #endregion
 
-#if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
-        /// [UniTask] 异步弹出面板
+        /// 异步弹出面板。安装 UniTask 后返回 UniTask，否则返回 Task。
         /// </summary>
         /// <param name="stackName">栈名称</param>
         /// <param name="showPrevious">是否显示前一个面板</param>
         /// <param name="autoClose">是否自动关闭弹出的面板</param>
         /// <param name="ct">取消令牌</param>
         /// <returns>弹出的面板</returns>
-        public async UniTask<IPanel> PopFromStackUniTaskAsync(string stackName = DEFAULT_STACK,
+#if YOKIFRAME_UNITASK_SUPPORT
+        public async UniTask<IPanel> PopFromStackAsync(string stackName = DEFAULT_STACK,
             bool showPrevious = true, bool autoClose = true, CancellationToken ct = default)
+#else
+        public Task<IPanel> PopFromStackAsync(string stackName = DEFAULT_STACK,
+            bool showPrevious = true, bool autoClose = true, CancellationToken ct = default)
+#endif
         {
+#if !YOKIFRAME_UNITASK_SUPPORT
+            return Task.FromResult(PopFromStack(stackName, showPrevious, autoClose));
+#else
             if (!mStacks.TryGetValue(stackName, out var stack) || stack.Count == 0)
             {
 #if YOKIFRAME_ZSTRING_SUPPORT
@@ -319,7 +329,8 @@ namespace YokiFrame
             }
 
             return panel;
-        }
 #endif
+        }
     }
 }
+#endif

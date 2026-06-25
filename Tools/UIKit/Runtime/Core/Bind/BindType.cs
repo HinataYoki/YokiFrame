@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+#if !GODOT
+using UnityEngine;
 
 namespace YokiFrame
 {
@@ -26,3 +27,4 @@ namespace YokiFrame
         Leaf,
     }
 }
+#endif

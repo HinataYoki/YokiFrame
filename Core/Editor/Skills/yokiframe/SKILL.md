@@ -1,485 +1,134 @@
 ---
 name: yokiframe
-description: >-
-  YokiFrame 是 Unity 的模块化游戏框架。当用户需要以下任何功能时触发此 Skill，
-  优先使用框架已有模块，禁止从零手写底层轮子 ——
-  事件通信/解耦（EventKit）、对象池/避免 GC 分配（PoolKit）、
-  有限状态机/角色状态/流程控制（FsmKit）、全局单例/Manager（SingletonKit）、
-  资源加载/Asset 管理/预制体实例化（ResKit）、日志/调试输出/文件日志（LogKit）、
-  IOC 依赖注入/MVC/MVVM 架构（Architecture）、Transform/GameObject 扩展方法（FluentApi）、
-  可绑定值/高性能字典/链表（ToolClass）、
-  UI 面板管理/打开关闭/UI 动画/手柄导航（UIKit）、
-  音频播放/BGM/SFX/3D 音效/音频通道控制（AudioKit）、
-  动作序列/延迟/插值/并行动画/定时回调（ActionKit）、
-  游戏存档/数据持久化/加密存档/多槽位（SaveKit）、
-  场景加载/异步切换/场景过渡/多场景管理（SceneKit）、
-  Buff/Debuff/状态效果/持续伤害/属性修改（BuffKit）、
-  空间查询/范围搜索/八叉树/四叉树/空间哈希（SpatialKit）、
-  输入管理/连招系统/输入缓冲/手柄触屏（InputKit）、
-  多语言/本地化/文本格式化/复数规则（LocalizationKit）。
-  编码规范：Unity 对象 == default 判空、mCamelCase 私有字段命名。
-  UniTask / ZString / InputSystem / DOTween / FMOD / YooAsset / Nino 为软依赖，
-  按项目实际安装的包通过条件编译宏（YOKIFRAME_*_SUPPORT）启用。
+description: YokiFrame 使用指南。Use when Codex 需要在 Unity 或 Godot 项目中使用 YokiFrame 的 EventKit、FsmKit、PoolKit、SingletonKit、ResKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、Tauri 工作台或命令桥进行业务开发、调试和框架状态查询。
 ---
 
-# YokiFrame 框架开发 Skill
+# YokiFrame 使用指南
 
-## 首要原则 [MANDATORY]
+YokiFrame 是面向游戏项目的模块化框架。优先使用框架现有 Kit，不要重新手写事件总线、对象池、状态机、单例、资源加载、输入、UI 面板栈、空间索引或运行时调试协议。
 
-**遇到任何功能需求，先对照下方模块速查表，确认框架是否已有现成方案。禁止重复造轮子。**
+## 快速选择
 
-```
-用户需要 → 框架已有 → 直接用，不要自己写
-用户需要 → 框架没有 → 才考虑从零实现
-```
+- 事件通信：使用 `EventKit.Type` 或 `EventKit.Enum`。
+- 状态机：使用 `FsmKit` 的 `FSM<TEnum>` 和 `AbstractState<TEnum, TBlackboard>`。
+- 对象复用：使用 `SimplePoolKit<T>`、`SafePoolKit<T>` 或集合池。
+- 单例：纯 C# 使用 `Singleton<T>`，Unity 生命周期对象使用 Unity Adapter 的 `MonoSingleton<T>`。
+- 资源：使用 `ResKit`，通过 Provider 适配 Unity、Godot 或项目资源系统。
+- 输入：使用 `InputKit` 和 `InputContext`，宿主按键细节留给 backend。
+- UI：使用 `UIKit` 管理面板、层级和面板栈；当前 runtime 仍包含 Unity UI 实现，Godot 完整接入需要独立 `IUIBackend`。
+- 空间查询：使用 `SpatialKit` 的 HashGrid、Quadtree 或 Octree。
+- 动作流程：使用 `ActionKit` 组合 Delay、Callback、Sequence、Parallel 等动作。
+- 调试工作台：在 Unity 菜单打开 `YokiFrame/Editor UI/Launch`。
+- AI/脚本状态查询：使用 `.yokiframe` 文件命令桥，优先读 snapshot，再发送 command。
 
-Core 层的 EventKit/PoolKit/FsmKit/SingletonKit/ResKit/LogKit 是项目的基础设施轮子，
-任何涉及事件、对象池、状态机、单例、资源加载、日志的功能都应直接使用框架模块。
+## 使用规则
 
----
+1. 先查现有 Kit API，再写项目代码。
+2. 业务代码依赖统一 Kit 入口，不直接依赖宿主内部实现。
+3. 高频运行时逻辑不要写 `.yokiframe` 文件，不要每帧序列化 JSON。
+4. 查询当前状态优先读 snapshot；只有需要详情、历史或显式操作时才发送 engine-scoped 命令。
+5. 变更型命令，例如删除存档、停止音频、切换语言、卸载场景，只在用户明确要求时执行。
+6. 注册事件、订阅输入、打开 UI、启动自动保存等生命周期能力必须有成对释放路径。
+7. Unity/Godot 差异优先放在 Adapter、Provider 或 Backend，业务仍调用同一套 YokiFrame API。
 
-## 模块速查：按用户需求定位
+## 常用入口
 
-| 用户需求 | 使用模块 | 所在层 |
-|---------|---------|--------|
-| 模块间解耦通信、发事件通知 | EventKit | Core |
-| 高频创建/销毁对象、减少 GC | PoolKit | Core |
-| 角色状态、流程控制、回合制 | FsmKit | Core |
-| 全局管理器、跨场景单例 | SingletonKit | Core |
-| 加载 Prefab/Asset、实例化 | ResKit | Core |
-| 日志输出、文件日志、真机调试 | LogKit | Core |
-| MVC/MVVM/IOC 架构搭建 | Architecture | Core |
-| Transform/GameObject 便捷操作 | FluentApi | Core |
-| 可监听变化的值绑定 | ToolClass | Core |
-| UI 面板管理、打开/关闭/动画 | UIKit | Tools |
-| 背景音乐、音效、3D 音频 | AudioKit | Tools |
-| 序列动画、延迟执行、插值 | ActionKit | Tools |
-| 游戏存档、数据持久化 | SaveKit | Tools |
-| 场景加载、异步切换 | SceneKit | Tools |
-| Buff/Debuff/状态效果 | BuffKit | Tools |
-| 范围搜索、最近敌人查询 | SpatialKit | Tools |
-| 键盘/手柄/触屏输入管理 | InputKit | Tools |
-| 多语言/本地化文本 | LocalizationKit | Tools |
-| 配置表/数据表代码生成 | TableKit | Tools |
+### EventKit
 
----
-
-## 架构概览
-
-```
-Assets/YokiFrame/
-├── Core/     ← 核心层（不可删）：EventKit, PoolKit, FsmKit, SingletonKit, ResKit, LogKit, Architecture, FluentApi, ToolClass
-└── Tools/    ← 工具层（可独立删除）：UIKit, AudioKit, ActionKit, SaveKit, SceneKit, BuffKit, SpatialKit, InputKit, LocalizationKit, TableKit
-```
-
-| 依赖方向 | 规则 |
-|---------|------|
-| Core → Core | ✅ 允许 |
-| Tools → Core | ✅ 允许 |
-| Tools → Tools | ❌ 禁止 —— 提取共享逻辑到 Core |
-| Core → Tools | ❌ 禁止 |
-
-命名空间: 运行时 `YokiFrame` | 编辑器 `YokiFrame.EditorTools`
-
-### 软依赖与条件编译 [CRITICAL]
-
-YokiFrame 对第三方包采用**软依赖**策略。`DependencyDefineService` 自动检测已安装的包并定义对应宏。
-**生成代码前必须先确认项目中该宏是否已定义**，否则应包裹在 `#if` 中或提供无依赖的替代路径。
-
-| 宏 | 必需包 | 影响范围 |
-|----|-------|---------|
-| `YOKIFRAME_UNITASK_SUPPORT` | com.cysharp.unitask | ResKit/SceneKit/ActionKit/AudioKit 的所有 `async`/`UniTask` API |
-| `YOKIFRAME_YOOASSET_SUPPORT` | com.tuyoogame.yooasset | ResKit 的 YooAsset 加载器，SetLoaderPool 扩展 |
-| `YOKIFRAME_ZSTRING_SUPPORT` | com.cysharp.zstring | 热路径零 GC 字符串拼接（无此宏时用 `StringBuilder` 替代） |
-| `YOKIFRAME_INPUTSYSTEM_SUPPORT` | com.unity.inputsystem | **InputKit 全部功能**（无此宏时 InputKit 不可用） |
-| `YOKIFRAME_DOTWEEN_SUPPORT` | com.demigiant.dotween | UIKit DOTween 动画集成 |
-| `YOKIFRAME_FMOD_SUPPORT` | com.unity.fmod | AudioKit FMOD 音频后端 |
-| `YOKIFRAME_LUBAN_SUPPORT` | com.code-philosophy.luban | TableKit Luban 代码生成 |
-| `YOKIFRAME_NINO_SUPPORT` | com.jasonxudeveloper.nino | SaveKit Nino 二进制序列化 |
-
-**生成规则**：
-- 使用 `UniTask` 的 API → 必须用 `#if YOKIFRAME_UNITASK_SUPPORT` 包裹，并提供同步回退
-- 使用 `InputKit` → 必须用 `#if YOKIFRAME_INPUTSYSTEM_SUPPORT` 包裹
-- 使用 `ZString` → 优先用 `#if YOKIFRAME_ZSTRING_SUPPORT`，否则 fallback 到 `StringBuilder`
-- 未列出的 Core 模块（EventKit/PoolKit/FsmKit/SingletonKit/LogKit/Architecture/FluentApi/ToolClass）**无外部依赖**，始终可用
-
----
-
-## Core 模块 API
-
-### EventKit — 事件通信
-
-当用户需要**模块间解耦通信、发送事件通知、消息广播**时，使用 EventKit，不要自己写 event/delegate 管理器。
+使用强类型事件做业务解耦：
 
 ```csharp
-// 类型事件 — 按 payload 类型路由
-EventKit.Type.Send(new EnemyKilledEvent { EnemyId = 5 });
-var unregister = EventKit.Type.Register<EnemyKilledEvent>(OnEnemyKilled);
-EventKit.Type.UnRegister<EnemyKilledEvent>(OnEnemyKilled);
-
-// 枚举事件 — 按枚举值路由
-EventKit.Enum.Send(GameEvent.RoundStart);
-EventKit.Enum.Send<GameEvent, int>(GameEvent.ScoreChanged, 100);
-EventKit.Enum.Register(GameEvent.RoundStart, OnRoundStart);
-EventKit.Enum.Register<GameEvent, int>(GameEvent.ScoreChanged, OnScoreChanged);
-EventKit.Enum.UnRegister(GameEvent.RoundStart);
-```
-
-编辑器代码禁止用 EventKit，必须用 `EditorEventCenter`。`EventKit.String` 已废弃。
-
-### PoolKit — 对象池
-
-当用户需要**频繁创建/销毁对象、减少 GC 分配、优化性能**时，使用 PoolKit，不要自己写对象池。
-
-```csharp
-// SafePoolKit — 类型安全单例池（T : IPoolable, new()）
-var bullet = SafePoolKit<Bullet>.Instance.Allocate();
-SafePoolKit<Bullet>.Instance.Recycle(bullet);
-
-// SimplePoolKit — 非 IPoolable 类型的简单池
-var pool = new SimplePoolKit<List<int>>(
-    factoryMethod: () => new List<int>(),
-    resetMethod: list => list.Clear());
-
-// IPoolable 接口
-public class Bullet : IPoolable
+public readonly struct EnemyKilledEvent
 {
-    public bool IsRecycled { get; set; }
-    public void OnRecycled() { /* 重置状态 */ }
-}
-```
+    public readonly int EnemyId;
 
-### FsmKit — 状态机
-
-当用户需要**角色状态管理、回合流程控制、AI 状态切换**时，使用 FsmKit，不要自己写 switch-case 状态机。
-
-```csharp
-var fsm = new FSM<PlayerState>(name: "Player");
-fsm.AddState(PlayerState.Idle, new IdleState());
-fsm.AddState(PlayerState.Attack, new AttackState());
-fsm.Start(PlayerState.Idle);
-fsm.ChangeState(PlayerState.Attack);
-fsm.ChangeState<AttackArgs>(PlayerState.Attack, new AttackArgs { Target = enemy });
-
-// 状态接口 — 继承 AbstractState 获得默认实现
-// IState: Condition() / Start() / End() / Update() / FixedUpdate() / Suspend() / SendMessage<T>()
-// MachineState: Running / Suspend / End
-```
-
-### SingletonKit — 单例
-
-当用户需要**全局管理器、跨场景唯一实例**时，使用 SingletonKit，不要自己写 Instance 属性。
-
-```csharp
-// 纯 C# 单例
-public class ConfigManager : ISingleton
-{
-    void ISingleton.OnSingletonInit() { }
-    public static ConfigManager Instance => SingletonKit<ConfigManager>.Instance;
-}
-
-// MonoBehaviour 单例（自动 DontDestroyOnLoad）
-[MonoSingletonPath("Managers/GameManager")]
-public class GameManager : MonoBehaviour, ISingleton
-{
-    void ISingleton.OnSingletonInit() { }
-    public static GameManager Instance => SingletonKit<GameManager>.Instance;
-}
-```
-
-### ResKit — 资源加载
-
-当用户需要**加载 Prefab、实例化 GameObject、加载 Asset**时，使用 ResKit，不要直接调 Resources.Load 或 AssetDatabase。
-
-```csharp
-// 同步
-var prefab = ResKit.Load<GameObject>("Prefabs/Player");
-var obj = ResKit.Instantiate("Prefabs/Enemy", parent);
-
-// 异步回调
-ResKit.LoadAsync<GameObject>("Prefabs/Player", prefab => { });
-ResKit.InstantiateAsync("Prefabs/Enemy", obj => { }, parent);
-
-// UniTask（需 YOKIFRAME_UNITASK_SUPPORT）
-var prefab = await ResKit.LoadUniTaskAsync<GameObject>("Prefabs/Player", ct);
-var obj = await ResKit.InstantiateUniTaskAsync("Prefabs/Enemy", parent, ct);
-
-// 引用计数（ResHandler / AllAssetsResHandler / SubAssetsResHandler）
-handler.Retain();
-handler.Release();  // 归零自动回收
-
-// 批量/子资源
-ResKit.LoadAll<Sprite>("Assets/Textures/atlas");
-ResKit.LoadSubAsset<Sprite>("Assets/Atlas.spriteatlas");
-
-// 配置 YooAsset 集成
-ResKit.SetLoaderPool(new YooAssetResLoaderPool());
-```
-
-### LogKit — 日志
-
-当用户需要**日志输出、文件日志、真机调试日志**时，使用 KitLogger，不要自己封装 Debug.Log。
-
-```csharp
-KitLogger.Log("message", context: gameObject);  // 可点击定位
-KitLogger.Warning("warning");
-KitLogger.Error("error");
-KitLogger.Exception(ex);
-KitLogger.Level = KitLogger.LogLevel.All;
-KitLogger.SaveLogInEditor = true;
-KitLogger.EnableIMGUI(maxLogCount: 200);  // 真机调试面板
-```
-
-### Architecture — IOC 架构
-
-当用户需要**MVC/MVVM 架构、依赖注入、服务定位**时，使用 Architecture。
-
-```csharp
-public class GameArchitecture : Architecture<GameArchitecture>
-{
-    protected override void OnInit()
+    public EnemyKilledEvent(int enemyId)
     {
-        Register<IPlayerModel>(new PlayerModel());
-        Register<IGameSystem>(new GameSystem());
+        EnemyId = enemyId;
     }
 }
-var model = GameArchitecture.Interface.GetService<IPlayerModel>();
+
+EventKit.Type.Register<EnemyKilledEvent>(OnEnemyKilled);
+EventKit.Type.Send(new EnemyKilledEvent(enemyId));
+EventKit.Type.UnRegister<EnemyKilledEvent>(OnEnemyKilled);
 ```
 
-### FluentApi — 扩展方法
+### FsmKit
 
-当用户需要对 Transform/GameObject 做常见操作时，使用已有扩展方法。
+状态逻辑放进状态类，业务脚本负责驱动：
 
 ```csharp
-transform.ResetTransform();
-transform.FindByPath("Child/Grandchild");
-gameObject.FindComponent<SpriteRenderer>("Icon");
-gameObject.DestroySelf();
+var fsm = new FSM<PlayerState>("PlayerFSM");
+fsm.Add(PlayerState.Idle, new IdleState());
+fsm.Add(PlayerState.Move, new MoveState());
+fsm.Start(PlayerState.Idle);
+fsm.Update();
 ```
 
-### ToolClass — 工具类
+### PoolKit
+
+普通对象用局部池，可回收对象用全局安全池：
 
 ```csharp
-var bind = new BindValue<int>(10);
-bind.Register(v => RefreshUI(v));
-bind.Value = 20;  // 自动触发回调
+var pool = new SimplePoolKit<Bullet>(
+    () => new Bullet(),
+    bullet => bullet.Reset(),
+    initCount: 16);
 
-// FastDictionary<TKey,TValue> / PooledLinkedList<T> / SpanSplitter
+var bullet = pool.Allocate();
+pool.Recycle(bullet);
 ```
 
----
+### ResKit
 
-## Tools 模块 API
-
-### UIKit — UI 面板管理
-
-当用户需要**UI 面板的打开/关闭/切换/动画、对话框、手柄导航**时，使用 UIKit。
+资源加载走统一入口，引用结束后释放 handle：
 
 ```csharp
-// 打开/关闭
-var panel = UIKit.OpenPanel<MainPanel>(level: UILevel.Common, data: uiData, tag: "Main");
-UIKit.OpenPanelAsync<MainPanel>(callback: p => { }, level: UILevel.Common, data: uiData);
-UIKit.ClosePanel<MainPanel>();
-UIKit.CloseAllPanel();
-
-// Panel 基类
-public class MainPanel : UIPanel
+var handle = ResKit.LoadAsset<MyConfig>("Configs/GameConfig");
+try
 {
-    protected override void OnInit() { }
-    protected override void OnOpen(IUIData data) { }
-    protected override void OnClose() { }
+    Use(handle.Asset);
 }
-
-// UXML 绑定
-[SerializeField] private Bind mBind;
-var btn = mBind.Get<Button>("BtnStart");
-```
-
-动画通过 `[SerializeReference]` 在 Panel 上配置 FadeAnimation/SlideAnimation/ScaleAnimation。
-Dialog 用 `UIDialogPanel` + `DialogConfig`。Gamepad 支持 UIAutoNavigation 等组件。
-
-### AudioKit — 音频
-
-当用户需要**播放 BGM/SFX/语音、3D 音效、音量控制**时，使用 AudioKit。
-
-```csharp
-var handle = AudioKit.Play("Audio/Click");                    // 默认 SFX
-var handle = AudioKit.Play("Audio/BGM", AudioChannel.Bgm);    // 指定通道
-var handle = AudioKit.Play("Audio/BGM", AudioPlayConfig.Default
-    .WithChannel(AudioChannel.Bgm).WithVolume(0.8f).WithLoop(true));
-AudioKit.Play3D("Audio/Explosion", position);
-AudioKit.Play3D("Audio/Engine", followTarget);
-
-// 句柄控制
-handle.Pause(); handle.Resume(); handle.Stop();
-handle.StopWithFade(1f);
-handle.Volume = 0.5f;
-
-// AudioChannel: Bgm=0, Sfx=1, Voice=2, Ambient=3, UI=4（自定义通道 >= 5）
-```
-
-### ActionKit — 动作序列
-
-当用户需要**延迟执行、序列动画、插值、定时回调、并行任务**时，使用 ActionKit，不要自己写 Coroutine 链。
-
-```csharp
-ActionKit.Sequence()
-    .Delay(1f)
-    .Callback(() => Debug.Log("开始"))
-    .Parallel(
-        ActionKit.Lerp(0, 1, 2f, v => slider.value = v),
-        ActionKit.Delay(2f, () => Debug.Log("完成"))
-    )
-    .Start();
-
-// 常用: Delay / DelayFrame / Callback / Lerp / Repeat / Coroutine / Task
-// UniTask: ActionKit.UniTask(async ct => ...) / WaitUntil / WaitWhile
-```
-
-### SaveKit — 存档
-
-当用户需要**游戏存档、数据持久化、多槽位**时，使用 SaveKit。
-
-```csharp
-SaveKit.SetSerializer(new JsonSaveSerializer());
-SaveKit.SetEncryptor(new AesSaveEncryptor("key"));
-
-var data = SaveKit.CreateSaveData();
-data.RegisterModule(new PlayerModule { Health = 100 });
-SaveKit.Save(slotId: 1, data, displayName: "存档1");
-var loaded = SaveKit.Load(1);
-data.GetModule<PlayerModule>();
-SaveKit.Delete(1);
-SaveKit.EnableAutoSave(intervalSeconds: 60);
-```
-
-### SceneKit — 场景管理
-
-当用户需要**场景加载/切换/卸载、Loading 进度**时，使用 SceneKit。
-
-```csharp
-SceneKit.LoadSceneAsync("GameScene", SceneLoadMode.Single,
-    onComplete: handler => { },
-    onProgress: p => loadingBar.value = p,
-    data: sceneData);
-SceneKit.UnloadSceneAsync("OldScene", () => { });
-bool loaded = SceneKit.IsSceneLoaded("GameScene");
-```
-
-### BuffKit — Buff 系统
-
-当用户需要**Buff/Debuff、持续效果、属性修改、状态异常**时，使用 BuffKit。
-
-```csharp
-BuffKit.RegisterBuffData(new BuffData { BuffId = 1001, Duration = 5f, MaxStack = 3 });
-var container = BuffKit.CreateContainer(owner);
-container.Add(buffId: 1001);
-container.Tick(deltaTime);
-BuffKit.RecycleContainer(container);
-
-public class SpeedBuff : BaseBuff
+finally
 {
-    protected override void OnAdd() { }
-    protected override void OnRemove(BuffRemoveReason reason) { }
-    protected override void OnUpdate(float deltaTime) { }
+    handle.Release();
 }
 ```
 
-### SpatialKit — 空间查询
+### InputKit
 
-当用户需要**范围搜索、查找最近敌人、区域查询**时，使用 SpatialKit。
-
-```csharp
-var grid = SpatialKit.CreateHashGrid<EnemyEntity>(cellSize: 5f, plane: SpatialPlane.XZ);
-grid.Insert(entity);
-var nearby = grid.Query(center, radius: 10f);
-
-// 也支持: Quadtree (2D/2.5D)、Octree (完整3D)
-// ISpatialEntity: { Vector3 Position }
-```
-
-### InputKit — 输入系统
-
-基于 Unity InputSystem（`YOKIFRAME_INPUTSYSTEM_SUPPORT`）。提供上下文栈、连招检测、输入缓冲、按键重绑定、触屏虚拟控件。
+读取动作状态，不在业务里绑定宿主输入 API：
 
 ```csharp
-InputKit.Initialize(asset);
-InputKit.PushContext("Gameplay");
-InputKit.RegisterCombo(new ComboDefinition { ... });
-InputKit.BufferInput(action, windowSeconds: 0.3f);
-InputKit.PlayHaptic(HapticPreset.Light);
-```
+InputKit.Update(unscaledTime);
 
-### LocalizationKit — 本地化
-
-```csharp
-LocalizationKit.SetProvider(new JsonLocalizationProvider("Locales/"));
-var text = LocalizationKit.Get(textId: 1001);
-var text = LocalizationKit.Get(textId: 1001, arg1, arg2);
-LocalizationKit.SetLanguage(LanguageId.English);
-```
-
-### TableKit — 配置表
-
-纯编辑器工具，代码生成强类型 Table 类，无运行时 API。
-
----
-
-## 编辑器开发规范
-
-### 编辑器事件 — 禁止 EventKit
-
-```csharp
-using YokiFrame.EditorTools;
-
-EditorEventCenter.Register<MyEvent>(this, OnEvent);
-EditorEventCenter.Send(new MyEvent { ... });
-EditorDataBridge.Subscribe<MyData>(DataChannels.CHANNEL_NAME, OnChanged);
-var prop = new ReactiveProperty<int>(0);
-prop.Subscribe(v => UpdateUI(v));
-```
-
-### ToolPage 注册
-
-```csharp
-[YokiToolPage(kit: "MyKit", name: "显示名", icon: KitIcons.CODE, priority: 50, category: YokiPageCategory.Tool)]
-public partial class MyPage : YokiToolPageBase
+if (InputKit.WasPressedThisFrame("Jump"))
 {
-    protected override void BuildUI(VisualElement root) { /* UI Toolkit */ }
-    protected override void OnActivate() { Subscriptions.Add(...); }
+    Jump();
 }
 ```
 
-USS BEM: `.yoki-{kit}-{block}` / `.yoki-{kit}-{block}__{element}` / `.yoki-{kit}-{block}--{modifier}`
+### UIKit
 
-### 禁止模式
+面板显示和栈管理走统一 UI 门面：
 
-| 禁止 | 替代 |
-|------|------|
-| 编辑器用 EventKit | EditorEventCenter |
-| OnUpdate() 轮询 | 响应式订阅 |
-| style.xxx = new StyleColor() | AddToClassList() |
+```csharp
+var menu = UIKit.OpenPanel<MenuPanel>(UILevel.Common, data: null, tag: "main");
+UIKit.PushPanel(menu, "Main", hidePreLevel: true);
+UIKit.PopPanel(showPreLevel: true, autoClose: true);
+```
 
----
+## 调试顺序
 
-## 编码规范速查
+1. 打开工作台：Unity 菜单 `YokiFrame/Editor UI/Launch`。
+2. 看运行状态：在对应 Kit 页面查看 telemetry 或 snapshot。
+3. AI/脚本读取：先查 `.yokiframe/engines/<engineId>/snapshots/<Kit>/state.json`。
+4. 需要详情：发送 `.yokiframe/engines/<engineId>/commands/<requestId>.json`。
+5. 命令超时：发送 `System/bridge_status`，检查 engine-scoped pending、processing、deadletter、lastError。
 
-**判空**: Unity Object `== default` | C# 对象 `??` / `?.`
+## 参考资料
 
-**命名**: PascalCase 类/方法 | mCamelCase 私有字段 | sCamelCase 静态私有 | UPPER_SNAKE 常量 | IPascalCase 接口
-
-**性能**:
-- `#if YOKIFRAME_ZSTRING_SUPPORT` → `ZString.CreateStringBuilder()` 零 GC 拼接
-- 无 ZString → `StringBuilder` 替代，避免热路径 `+` 拼接
-- 禁用 `System.Linq`（用 `ZLinq` 或手写循环）
-- `Span<T>` / `stackalloc` 栈分配（始终可用，无依赖）
-- 缓存 `GetComponent` / `StringToHash` / `PropertyToID` 结果
-
-**异步**:
-- `#if YOKIFRAME_UNITASK_SUPPORT` → `UniTask` + `CancellationToken` + `GetCancellationTokenOnDestroy()`
-- 无 UniTask → `ActionKit.Coroutine` 或 Unity `StartCoroutine` 回退
-- 禁止 `async void` / `Task`（始终适用）
-
-**C# 9+**: `new()` 目标类型推断 | `is and or not` 模式匹配 | `static () =>` 热路径 Lambda | `_` 弃元
-
-**代码质量**: 超 500 行拆 partial | 单方法 ≤ 50 行 | 公共 API 加 XML 文档 | `TryGetComponent` 优先 | `StringToHash` / `PropertyToID` 缓存
+- `references/kits.md`：各 Kit API 速查和示例。
+- `references/command-bridge.md`：文件命令桥请求/响应协议和调试顺序。
+- `yokiframe-command-bridge` Skill：命令桥完整命令目录和压力验证说明。
+- `yokiframe-editor` Skill：YokiFrame 编辑器工作台、安装 Skill、Kit 页面和日志诊断使用说明。

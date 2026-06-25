@@ -1,0 +1,274 @@
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.36);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: var(--r-pill);
+  background: var(--scroll-thumb);
+}
+
+
+@media (max-width: 1360px) {
+  .doc-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .doc-toc {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .workspace-shell {
+    min-width: 0;
+  }
+
+  .workspace-topbar,
+  #titlebar {
+    grid-template-columns: auto minmax(120px, 1fr) auto;
+  }
+
+  .framework-dashboard,
+  .fsm-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .font-preference__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-context-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-context-strip__meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fsm-detail-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .fsm-state-card {
+    grid-column: 1 / -1;
+  }
+
+  .fsm-graph-scroll {
+    max-height: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .workspace-topbar,
+  #titlebar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--sp-xs);
+    padding: 0 var(--sp-sm);
+  }
+
+  .titlebar-subtitle {
+    display: none;
+  }
+
+  .titlebar-logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .titlebar-right {
+    gap: var(--sp-xs);
+  }
+
+  .language-select {
+    width: 76px;
+    padding: 0 6px;
+  }
+
+  .workspace-body,
+  #body {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .workspace-nav,
+  #sidebar {
+    padding: var(--sp-sm) var(--sp-xs);
+  }
+
+  .sidebar-footer,
+  .sidebar-group-header,
+  .item-label {
+    display: none;
+  }
+
+  .sidebar-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .content-body,
+  .metric-strip,
+  .tab-bar {
+    padding-left: var(--sp-md);
+    padding-right: var(--sp-md);
+  }
+
+  .framework-command__form {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-context-strip__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .fsm-state-card,
+  .fsm-timeline-card__route,
+  .fsm-timeline-route {
+    grid-template-columns: 1fr;
+  }
+
+  .fsm-state-card__signal {
+    width: 100%;
+    height: 4px;
+  }
+
+  .fsm-timeline-arrow {
+    display: none;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+@media (max-width: 1180px) {
+  .eventkit-v1-main {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: auto;
+  }
+
+  .eventkit-v1-side {
+    min-height: 360px;
+    max-height: none;
+  }
+
+  .eventkit-v1-toolbar,
+  .eventkit-v1-scan-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eventkit-v1-toolbar--unified {
+    display: flex;
+  }
+
+  .eventkit-v1-toolbar--unified .eventkit-section-desc,
+  .eventkit-v1-toolbar--unified .eventkit-scan-toolbar__hint {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .eventkit-v1-toolbar__actions,
+  .eventkit-v1-toolbar__stats,
+  .eventkit-v1-scan-summary {
+    width: 100%;
+  }
+
+  .eventkit-v1-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .eventkit-v1-toolbar__stats,
+  .eventkit-v1-scan-summary {
+    grid-template-columns: repeat(3, minmax(100px, 1fr));
+  }
+
+  .eventkit-v1-row-head {
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  }
+
+  .eventkit-v1-row-meta {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .eventkit-v1-relation-head {
+    grid-template-columns: 1fr;
+  }
+
+  .eventkit-v1-row {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .eventkit-v1-relation-head {
+    display: none;
+  }
+
+  .eventkit-v1-stream-head {
+    grid-template-columns: 1fr;
+  }
+
+  .eventkit-v1-row-head,
+  .eventkit-v1-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .eventkit-v1-sidecell--sender,
+  .eventkit-v1-sidecell--receiver {
+    justify-content: stretch;
+    text-align: left;
+  }
+
+  .eventkit-v1-toolbar__stats,
+  .eventkit-v1-detail-stats,
+  .eventkit-v1-scan-summary {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .eventkit-v1-scan-controls {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .eventkit-engine-inline {
+    max-width: none;
+  }
+
+  .eventkit-engine-inline select {
+    max-width: none;
+    width: 100%;
+  }
+
+  .eventkit-v1-timeline-item {
+    grid-template-columns: 80px 58px minmax(0, 1fr);
+  }
+
+  .eventkit-v1-timeline-item__kind,
+  .eventkit-v1-timeline-item__payload {
+    display: none;
+  }
+}

@@ -1,0 +1,279 @@
+.doc-layout {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 196px;
+  gap: var(--sp-md);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.doc-nav,
+.doc-article,
+.doc-toc {
+  min-height: 0;
+  overflow: auto;
+}
+
+.doc-nav,
+.doc-toc {
+  padding: var(--sp-md);
+}
+
+.doc-nav {
+  border-top: 3px solid var(--doc-core);
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.06), transparent 220px),
+    var(--surface-1);
+}
+
+.doc-article {
+  padding: var(--sp-lg) var(--sp-xl);
+  max-width: 1040px;
+  border-top: 3px solid var(--primary);
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.06), transparent 260px),
+    var(--surface-1);
+}
+
+.doc-toc {
+  border-top: 3px solid var(--doc-command);
+  background:
+    linear-gradient(180deg, rgba(217, 119, 6, 0.07), transparent 200px),
+    var(--surface-1);
+}
+
+.doc-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--sp-lg);
+  padding: var(--sp-lg);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.16), transparent 52%),
+    linear-gradient(45deg, rgba(8, 145, 178, 0.12), transparent 64%),
+    var(--surface-2);
+}
+
+.doc-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--primary), var(--doc-tool), var(--doc-command));
+}
+
+.doc-hero h1 {
+  margin: var(--sp-xs) 0;
+  color: var(--ink);
+  font-size: 26px;
+}
+
+.doc-hero p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: var(--surface-overlay);
+  color: var(--primary-hover);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+}
+
+.doc-nav-group {
+  margin-bottom: var(--sp-md);
+}
+
+.doc-nav-group-title,
+.doc-toc-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--sp-xs);
+  color: var(--ink-tertiary);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+}
+
+.doc-nav-group-title::before,
+.doc-toc-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--doc-core);
+}
+
+.doc-nav-group:nth-child(2) .doc-nav-group-title::before {
+  background: var(--doc-tool);
+}
+
+.doc-nav-group:nth-child(3) .doc-nav-group-title::before,
+.doc-toc-title::before {
+  background: var(--doc-command);
+}
+
+.doc-nav-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  overflow: hidden;
+  --kit-icon-color: var(--kit-icon-docs);
+}
+
+.doc-nav-item[data-doc] {
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.doc-nav-item:hover,
+.doc-nav-item.active {
+  border-color: rgba(59, 130, 246, 0.20);
+  background:
+    linear-gradient(90deg, rgba(59, 130, 246, 0.14), rgba(8, 145, 178, 0.08)),
+    var(--surface-2);
+}
+
+.doc-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: linear-gradient(180deg, var(--primary), var(--doc-tool));
+}
+
+.doc-nav-item-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  color: var(--kit-icon-color, currentColor);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="framework"] {
+  --kit-icon-color: var(--kit-icon-framework);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="docs"] {
+  --kit-icon-color: var(--kit-icon-docs);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="architecture"] {
+  --kit-icon-color: var(--kit-icon-architecture);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="eventkit"] {
+  --kit-icon-color: var(--kit-icon-eventkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="fsmkit"] {
+  --kit-icon-color: var(--kit-icon-fsmkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="poolkit"] {
+  --kit-icon-color: var(--kit-icon-poolkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="reskit"] {
+  --kit-icon-color: var(--kit-icon-reskit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="singletonkit"] {
+  --kit-icon-color: var(--kit-icon-singletonkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="actionkit"] {
+  --kit-icon-color: var(--kit-icon-actionkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="audiokit"] {
+  --kit-icon-color: var(--kit-icon-audiokit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="inputkit"] {
+  --kit-icon-color: var(--kit-icon-inputkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="localizationkit"] {
+  --kit-icon-color: var(--kit-icon-localizationkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="savekit"] {
+  --kit-icon-color: var(--kit-icon-savekit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="scenekit"] {
+  --kit-icon-color: var(--kit-icon-scenekit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="spatialkit"] {
+  --kit-icon-color: var(--kit-icon-spatialkit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="tablekit"] {
+  --kit-icon-color: var(--kit-icon-tablekit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="uikit"] {
+  --kit-icon-color: var(--kit-icon-uikit);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="package"] {
+  --kit-icon-color: var(--kit-icon-package);
+}
+
+.doc-nav-item-icon[data-doc-icon-tone="github"] {
+  --kit-icon-color: var(--kit-icon-github);
+}
+
+.doc-nav-item-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.doc-nav-item-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.doc-toc-item {
+  display: block;
+  padding: 5px 0 5px 10px;
+  border-left: 2px solid transparent;
+  color: var(--ink-subtle);
+  text-decoration: none;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.doc-toc-item--h3 {
+  padding-left: 20px;
+  font-size: var(--fs-caption);
+}
+
+.doc-toc-item:hover,
+.doc-toc-item.active {
+  border-left-color: var(--doc-command);
+  color: var(--ink);
+  background: rgba(217, 119, 6, 0.08);
+}

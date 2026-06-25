@@ -1,3 +1,4 @@
+#if !GODOT
 namespace YokiFrame
 {
     /// <summary>
@@ -25,3 +26,4 @@ namespace YokiFrame
         public override string GetBaseClassName() => null;
     }
 }
+#endif

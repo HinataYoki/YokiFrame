@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -144,30 +145,64 @@ namespace YokiFrame
 
         #region 隐式转换
 
+        /// <summary>
+        /// 将 UI 层级隐式转换为排序值。
+        /// </summary>
+        /// <param name="level">UI 层级。</param>
         public static implicit operator int(UILevel level) => level.mOrder;
+
+        /// <summary>
+        /// 将排序值隐式转换为 UI 层级。
+        /// </summary>
+        /// <param name="order">排序值。</param>
         public static implicit operator UILevel(int order) => new(order);
 
         #endregion
 
         #region 比较运算符
 
+        /// <summary>
+        /// 判断两个 UI 层级是否相等。
+        /// </summary>
         public static bool operator ==(UILevel left, UILevel right) => left.mOrder == right.mOrder;
+
+        /// <summary>
+        /// 判断两个 UI 层级是否不相等。
+        /// </summary>
         public static bool operator !=(UILevel left, UILevel right) => left.mOrder != right.mOrder;
+
+        /// <summary>
+        /// 判断左侧 UI 层级是否低于右侧。
+        /// </summary>
         public static bool operator <(UILevel left, UILevel right) => left.mOrder < right.mOrder;
+
+        /// <summary>
+        /// 判断左侧 UI 层级是否高于右侧。
+        /// </summary>
         public static bool operator >(UILevel left, UILevel right) => left.mOrder > right.mOrder;
+
+        /// <summary>
+        /// 判断左侧 UI 层级是否低于或等于右侧。
+        /// </summary>
         public static bool operator <=(UILevel left, UILevel right) => left.mOrder <= right.mOrder;
+
+        /// <summary>
+        /// 判断左侧 UI 层级是否高于或等于右侧。
+        /// </summary>
         public static bool operator >=(UILevel left, UILevel right) => left.mOrder >= right.mOrder;
 
         #endregion
 
         #region IEquatable / IComparable
 
+        /// <inheritdoc />
         public bool Equals(UILevel other) => mOrder == other.mOrder;
 
         public override bool Equals(object obj) => obj is UILevel other && Equals(other);
 
         public override int GetHashCode() => mOrder;
 
+        /// <inheritdoc />
         public int CompareTo(UILevel other) => mOrder.CompareTo(other.mOrder);
 
         #endregion
@@ -190,3 +225,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

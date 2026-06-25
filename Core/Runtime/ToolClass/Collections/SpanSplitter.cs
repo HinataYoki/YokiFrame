@@ -3,11 +3,11 @@ using System;
 namespace YokiFrame
 {
     /// <summary>
-    /// Allocation-free splitter for <see cref="ReadOnlySpan{T}"/> segments separated by one character.
+    /// 面向 ReadOnlySpan&lt;char&gt; 的无分配分隔器，按单字符分隔片段。
     /// </summary>
     /// <remarks>
-    /// This helper is intended for hot-path parsing scenarios where allocating intermediate string arrays would
-    /// be too expensive. It iterates one slice at a time and returns each piece as a span.
+    /// 该辅助类型用于热路径解析场景，避免分配中间字符串数组。
+    /// 它逐段迭代并以 span 形式返回当前片段。
     /// </remarks>
     public ref struct SpanSplitter
     {
@@ -15,9 +15,7 @@ namespace YokiFrame
         private readonly char _sep;
         private int _pos;
 
-        /// <summary>
-        /// Creates a splitter for the specified span and separator.
-        /// </summary>
+        /// <summary>为指定 span 和分隔符创建分隔器。</summary>
         public SpanSplitter(ReadOnlySpan<char> span, char sep)
         {
             _span = span;
@@ -26,10 +24,10 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// Advances to the next slice.
+        /// 移动到下一个片段。
         /// </summary>
-        /// <param name="slice">The next span segment.</param>
-        /// <returns><see langword="true"/> when a segment was produced.</returns>
+        /// <param name="slice">下一个 span 片段。</param>
+        /// <returns>成功产出片段时返回 <see langword="true"/>。</returns>
         public bool MoveNext(out ReadOnlySpan<char> slice)
         {
             int start = _pos + 1;

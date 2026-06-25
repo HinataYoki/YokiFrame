@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 多目标输出数据与持久化
@@ -48,7 +48,7 @@ namespace YokiFrame.TableKit.Editor
         private List<ExtraOutputTarget> mExtraOutputTargets = new();
 
         // 所有可用的代码生成器选项（包含客户端和服务端）
-        private static readonly string[] ALL_CODE_TARGET_OPTIONS =
+        private static readonly string[] sAllCodeTargetOptions =
         {
             // Unity 客户端
             "cs-bin",
@@ -104,12 +104,11 @@ namespace YokiFrame.TableKit.Editor
         {
             if (string.IsNullOrEmpty(currentCodeTarget))
             {
-                return dataTarget switch
-                {
-                    "bin" => "java-bin",
-                    "lua" => "lua-lua",
-                    _ => "java-json"
-                };
+                if (dataTarget == "bin")
+                    return "java-bin";
+                if (dataTarget == "lua")
+                    return "lua-lua";
+                return "java-json";
             }
 
             var dashIndex = currentCodeTarget.LastIndexOf('-');
@@ -136,7 +135,7 @@ namespace YokiFrame.TableKit.Editor
 
             var newCodeTarget = prefix + targetSuffix;
 
-            foreach (var option in ALL_CODE_TARGET_OPTIONS)
+            foreach (var option in sAllCodeTargetOptions)
             {
                 if (option == newCodeTarget) return newCodeTarget;
             }

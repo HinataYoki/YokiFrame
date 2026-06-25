@@ -1,4 +1,11 @@
+#if !GODOT
 using System;
+using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
+#endif
 
 namespace YokiFrame
 {
@@ -36,24 +43,78 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 异步打开指定类型的 Panel
+        /// 异步打开指定类型的 Panel（1.0 callback 兼容入口）。
         /// </summary>
         public static void OpenPanelAsync<T>(Action<IPanel> callback = null,
             UILevel level = default, IUIData data = null, string tag = null) where T : UIPanel
         {
             var root = Root;
-            if (root == default) return;
+            if (root == default)
+            {
+                callback?.Invoke(null);
+                return;
+            }
+
             root.OpenPanelAsyncInternal(typeof(T), level, data, callback, tag);
+        }
+
+        /// <summary>
+        /// 异步打开指定类型的 Panel（1.0 callback 兼容入口）。
+        /// </summary>
+        public static void OpenPanelAsync(Type type, UILevel level, IUIData data,
+            Action<IPanel> callback, string tag = null)
+        {
+            var root = Root;
+            if (root == default)
+            {
+                callback?.Invoke(null);
+                return;
+            }
+
+            root.OpenPanelAsyncInternal(type, level, data, callback, tag);
+        }
+
+        /// <summary>
+        /// 异步打开指定类型的 Panel
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static async UniTask<T> OpenPanelAsync<T>(UILevel level = default,
+            IUIData data = null, CancellationToken ct = default, string tag = null) where T : UIPanel
+#else
+        public static async Task<T> OpenPanelAsync<T>(UILevel level = default,
+            IUIData data = null, CancellationToken ct = default, string tag = null) where T : UIPanel
+#endif
+        {
+            var root = Root;
+            if (root == default) return null;
+#if YOKIFRAME_UNITASK_SUPPORT
+            var panel = await root.OpenPanelAsyncInternal(typeof(T), level, data, ct, tag);
+#else
+            var panel = await root.OpenPanelAsyncInternal(typeof(T), level, data, ct, tag).ConfigureAwait(false);
+#endif
+            return panel as T;
         }
 
         /// <summary>
         /// 异步打开指定类型的 Panel（通过 Type）
         /// </summary>
-        public static void OpenPanelAsync(Type type, UILevel level, IUIData data, Action<IPanel> callback, string tag = null)
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<IPanel> OpenPanelAsync(Type type, UILevel level = default,
+            IUIData data = null, CancellationToken ct = default, string tag = null)
+#else
+        public static Task<IPanel> OpenPanelAsync(Type type, UILevel level = default,
+            IUIData data = null, CancellationToken ct = default, string tag = null)
+#endif
         {
             var root = Root;
-            if (root == default) return;
-            root.OpenPanelAsyncInternal(type, level, data, callback, tag);
+            if (root != default)
+                return root.OpenPanelAsyncInternal(type, level, data, ct, tag);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult<IPanel>(null);
+#else
+            return Task.FromResult<IPanel>(null);
+#endif
         }
 
         /// <summary>
@@ -119,21 +180,34 @@ namespace YokiFrame
         {
             var root = Root;
             if (root == default) return;
-            
-            Pool.List<IPanel>(panelsToClose =>
+
+            root.BeginDialogReset();
+            try
             {
-                foreach (var panel in root.GetCachedPanels())
+                Pool.List<IPanel>(panelsToClose =>
                 {
-                    panelsToClose.Add(panel);
-                }
-                for (int i = 0; i < panelsToClose.Count; i++)
-                {
-                    root.ClosePanelInternal(panelsToClose[i]);
-                }
-            });
-            root.ClearAllStacks();
-            root.ClearAllLevels();
+                    foreach (var panel in root.GetCachedPanels())
+                    {
+                        panelsToClose.Add(panel);
+                    }
+                    for (int i = 0; i < panelsToClose.Count; i++)
+                    {
+                        root.ClosePanelInternal(panelsToClose[i]);
+                    }
+                });
+            }
+            finally
+            {
+                root.EndDialogReset();
+                root.ClearAllStacks();
+                root.ClearAllLevels();
+            }
         }
+
+        /// <summary>
+        /// 关闭所有面板。与 <see cref="CloseAllPanel"/> 等价，提供复数命名入口。
+        /// </summary>
+        public static void CloseAllPanels() => CloseAllPanel();
 
         /// <summary>
         /// 关闭所有指定 Tag 的面板
@@ -158,3 +232,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

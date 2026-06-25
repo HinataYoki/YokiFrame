@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitEditorUI - 多目标输出 UI 构建
@@ -28,13 +28,13 @@ namespace YokiFrame.TableKit.Editor
             container.Add(section);
 
             var hint = new Label("可添加多个输出目标，每个目标可独立选择导出字段分组");
-            hint.style.fontSize = Design.FontSizeSmall;
+            hint.style.fontSize = Design.FONT_SIZE_SMALL;
             hint.style.color = new StyleColor(Design.TextTertiary);
             hint.style.marginTop = 4;
             section.Add(hint);
 
             var groupHint = new Label("提示: 不同导出目标会分批运行 Luban，确保字段正确导出");
-            groupHint.style.fontSize = Design.FontSizeSmall;
+            groupHint.style.fontSize = Design.FONT_SIZE_SMALL;
             groupHint.style.color = new StyleColor(Design.BrandWarning);
             groupHint.style.marginTop = 2;
             section.Add(groupHint);
@@ -118,7 +118,7 @@ namespace YokiFrame.TableKit.Editor
             leftHeader.Add(nameField);
 
             // 导出目标下拉
-            var targetDropdown = new DropdownField(new List<string>(TARGET_OPTIONS), 0);
+            var targetDropdown = new DropdownField(new List<string>(sTargetOptions), 0);
             targetDropdown.style.width = 70;
             targetDropdown.style.marginLeft = 8;
             targetDropdown.value = target.target;
@@ -184,7 +184,7 @@ namespace YokiFrame.TableKit.Editor
             dataLabel.style.color = new StyleColor(Design.TextSecondary);
             dataRow.Add(dataLabel);
 
-            var dataTargetDropdown = new DropdownField(new List<string>(DATA_TARGET_OPTIONS), 0);
+            var dataTargetDropdown = new DropdownField(new List<string>(sDataTargetOptions), 0);
             dataTargetDropdown.style.width = 70;
             dataTargetDropdown.value = target.dataTarget;
             dataRow.Add(dataTargetDropdown);
@@ -243,7 +243,7 @@ namespace YokiFrame.TableKit.Editor
             codeLabel.style.color = new StyleColor(Design.TextSecondary);
             codeRow.Add(codeLabel);
 
-            var codeTargetDropdown = new DropdownField(new List<string>(ALL_CODE_TARGET_OPTIONS), 0);
+            var codeTargetDropdown = new DropdownField(new List<string>(sAllCodeTargetOptions), 0);
             codeTargetDropdown.style.width = 130;
             codeTargetDropdown.value = target.codeTarget;
             codeRow.Add(codeTargetDropdown);

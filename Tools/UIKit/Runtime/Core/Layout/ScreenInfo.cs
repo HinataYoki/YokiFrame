@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 
@@ -245,3 +246,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

@@ -1,9 +1,7 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 using System;
-using System.IO;
-using System.Text;
 
-namespace YokiFrame.TableKit.Editor
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKitCodeGenerator - 代码模板生成
@@ -21,24 +19,26 @@ namespace YokiFrame.TableKit.Editor
             var escapedRuntimePath = runtimePathPattern.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var escapedEditorPath = editorDataPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-            var sb = new StringBuilder();
-            AppendTableKitHeader(sb, tablesNamespace, escapedRuntimePath, useAsyncLoading);
-            AppendTableKitLoaderSetters(sb);
-            AppendTableKitInit(sb, tablesNamespace);
-            AppendTableKitLoadMethods(sb);
-            AppendDefaultLoaders(sb, hasYokiFrame);
-            if (useAsyncLoading)
+            CodeGenKit.GenerateToFile(System.IO.Path.Combine(outputDir, "TableKit.cs"), root =>
             {
-                AppendAsyncLoadingSection(sb, tablesNamespace, hasYokiFrame, tableFileNames);
-            }
-            AppendTableKitReloadAndClear(sb, useAsyncLoading);
-            AppendTableKitEditorSection(sb, tablesNamespace, escapedEditorPath);
-            sb.AppendLine("}");
+                CodeGenLineBuilder sb = CodeGenKit.Lines(root);
+                AppendTableKitHeader(sb, tablesNamespace, escapedRuntimePath, useAsyncLoading);
+                AppendTableKitLoaderSetters(sb);
+                AppendTableKitInit(sb, tablesNamespace);
+                AppendTableKitLoadMethods(sb);
+                AppendDefaultLoaders(sb);
+                if (useAsyncLoading)
+                {
+                    AppendAsyncLoadingSection(sb, tablesNamespace, hasYokiFrame, tableFileNames);
+                }
 
-            File.WriteAllText(Path.Combine(outputDir, "TableKit.cs"), sb.ToString(), Encoding.UTF8);
+                AppendTableKitReloadAndClear(sb, useAsyncLoading);
+                AppendTableKitEditorSection(sb, tablesNamespace, escapedEditorPath);
+                sb.AppendLine("}");
+            });
         }
 
-        private static void AppendTableKitHeader(StringBuilder sb, string tablesNamespace, string escapedRuntimePath,
+        private static void AppendTableKitHeader(CodeGenLineBuilder sb, string tablesNamespace, string escapedRuntimePath,
             bool useAsyncLoading)
         {
             sb.AppendLine("//------------------------------------------------------------------------------");
@@ -58,7 +58,6 @@ namespace YokiFrame.TableKit.Editor
                 sb.AppendLine("using System.Threading;");
             }
             sb.AppendLine("using Luban;");
-            sb.AppendLine("using UnityEngine;");
             if (useAsyncLoading)
             {
                 sb.AppendLine("#if YOKIFRAME_UNITASK_SUPPORT");
@@ -99,7 +98,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
         }
 
-        private static void AppendTableKitLoaderSetters(StringBuilder sb)
+        private static void AppendTableKitLoaderSetters(CodeGenLineBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
@@ -119,7 +118,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
         }
 
-        private static void AppendTableKitInit(StringBuilder sb, string tablesNamespace)
+        private static void AppendTableKitInit(CodeGenLineBuilder sb, string tablesNamespace)
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
@@ -144,7 +143,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
         }
 
-        private static void AppendTableKitLoadMethods(StringBuilder sb)
+        private static void AppendTableKitLoadMethods(CodeGenLineBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("    private static MethodInfo sJsonParseMethod;");
@@ -162,7 +161,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var json = sJsonLoader(fileName);");
             sb.AppendLine("        if (string.IsNullOrEmpty(json))");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
+            sb.AppendLine("            YokiFrame.LogKit.Error($\"[TableKit] 加载配置表失败: {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -188,75 +187,37 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        var bytes = sBinaryLoader(fileName);");
             sb.AppendLine("        if (bytes == null || bytes.Length == 0)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 加载配置表失败: {fileName}\");");
+            sb.AppendLine("            YokiFrame.LogKit.Error($\"[TableKit] 加载配置表失败: {fileName}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(bytes);");
             sb.AppendLine("    }");
         }
 
-        private static void AppendDefaultLoaders(StringBuilder sb, bool hasYokiFrame)
+        private static void AppendDefaultLoaders(CodeGenLineBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("    #region Default Loaders");
             sb.AppendLine();
 
-            if (hasYokiFrame)
-            {
-                sb.AppendLine("    // 默认加载器：使用 YokiFrame.ResKit");
-                sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
-                sb.AppendLine("        if (handler == null)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var bytes = textAsset != null ? textAsset.bytes : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return bytes;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var handler = YokiFrame.ResKit.LoadAsset<TextAsset>(path);");
-                sb.AppendLine("        if (handler == null)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            Debug.LogError($\"[TableKit] ResKit 加载失败: {path}\");");
-                sb.AppendLine("            return null;");
-                sb.AppendLine("        }");
-                sb.AppendLine("        var textAsset = handler.Asset as TextAsset;");
-                sb.AppendLine("        var text = textAsset != null ? textAsset.text : null;");
-                sb.AppendLine("        handler.Release();");
-                sb.AppendLine("        return text;");
-                sb.AppendLine("    }");
-            }
-            else
-            {
-                sb.AppendLine("    // 默认加载器：使用 Resources");
-                sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
-                sb.AppendLine("        return asset != null ? asset.bytes : null;");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-                sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
-                sb.AppendLine("    {");
-                sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-                sb.AppendLine("        var asset = Resources.Load<TextAsset>(path);");
-                sb.AppendLine("        return asset != null ? asset.text : null;");
-                sb.AppendLine("    }");
-            }
+            sb.AppendLine("    // 默认加载器：统一委托给 ResKit，具体 Unity/Godot/自定义后端由 ResKit Provider 决定。");
+            sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
+            sb.AppendLine("        return YokiFrame.ResKit.LoadRaw(path);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
+            sb.AppendLine("        return YokiFrame.ResKit.LoadRawText(path);");
+            sb.AppendLine("    }");
             
             sb.AppendLine();
             sb.AppendLine("    #endregion");
         }
 
-        private static void AppendTableKitReloadAndClear(StringBuilder sb, bool useAsyncLoading)
+        private static void AppendTableKitReloadAndClear(CodeGenLineBuilder sb, bool useAsyncLoading)
         {
             sb.AppendLine();
             sb.AppendLine("    /// <summary>");
@@ -272,7 +233,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("        }");
             sb.AppendLine("        catch (Exception ex)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] Reload failed: {ex.Message}\");");
+            sb.AppendLine("            YokiFrame.LogKit.Error($\"[TableKit] Reload failed: {ex.Message}\");");
             sb.AppendLine("        }");
             sb.AppendLine("        onComplete?.Invoke();");
             sb.AppendLine("    }");
@@ -307,7 +268,7 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    }");
         }
 
-        private static void AppendTableKitEditorSection(StringBuilder sb, string tablesNamespace, string escapedEditorPath)
+        private static void AppendTableKitEditorSection(CodeGenLineBuilder sb, string tablesNamespace, string escapedEditorPath)
         {
             sb.AppendLine();
             sb.AppendLine("#if UNITY_EDITOR");
@@ -355,10 +316,10 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    private static object LoadJsonEditorDynamic(string fileName)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = $\"{EditorDataPath}{fileName}.json\";");
-            sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
+            sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
+            sb.AppendLine("            YokiFrame.LogKit.Error($\"[TableKit] 编辑器加载配置表失败: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -382,10 +343,10 @@ namespace YokiFrame.TableKit.Editor
             sb.AppendLine("    private static ByteBuf LoadBinaryEditor(string fileName)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = $\"{EditorDataPath}{fileName}.bytes\";");
-            sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);");
+            sb.AppendLine("        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(path);");
             sb.AppendLine("        if (asset == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            Debug.LogError($\"[TableKit] 编辑器加载配置表失败: {path}\");");
+            sb.AppendLine("            YokiFrame.LogKit.Error($\"[TableKit] 编辑器加载配置表失败: {path}\");");
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(asset.bytes);");

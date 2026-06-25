@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 
-namespace YokiFrame.EditorTools
+namespace YokiFrame.Unity
 {
     /// <summary>
     /// TableKit 编辑器配置文档
@@ -16,7 +16,7 @@ namespace YokiFrame.EditorTools
                 Description = "通过 YokiFrame Tools 面板配置 Luban 生成参数。",
                 CodeExamples = new List<CodeExample>
                 {
-                    new()
+                    new CodeExample()
                     {
                         Title = "配置项说明",
                         Code = @"// 快捷键：Ctrl+E 打开 YokiFrame Tools 面板

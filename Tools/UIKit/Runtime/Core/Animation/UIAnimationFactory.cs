@@ -1,3 +1,4 @@
+#if !GODOT
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -178,3 +179,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

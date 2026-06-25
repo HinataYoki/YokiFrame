@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 
 namespace YokiFrame
@@ -196,3 +197,4 @@ namespace YokiFrame
         public bool IsCancelled => Result is DialogResult.Cancel or DialogResult.No;
     }
 }
+#endif

@@ -1,5 +1,12 @@
+#if !GODOT
 using System;
 using System.Collections.Generic;
+using System.Threading;
+#if YOKIFRAME_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
+#endif
 
 namespace YokiFrame
 {
@@ -26,6 +33,24 @@ namespace YokiFrame
         {
             var root = Root;
             return root != default ? root.IsPanelCached(panelType) : false;
+        }
+
+        /// <summary>
+        /// 检查面板是否已预加载。
+        /// </summary>
+        public static bool IsPanelPreloaded<T>() where T : UIPanel
+        {
+            var root = Root;
+            return root != default && root.IsPanelPreloaded<T>();
+        }
+
+        /// <summary>
+        /// 检查面板是否已预加载。
+        /// </summary>
+        public static bool IsPanelPreloaded(Type panelType)
+        {
+            var root = Root;
+            return root != default && root.IsPanelPreloaded(panelType);
         }
 
         /// <summary>
@@ -65,25 +90,71 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 预加载面板
+        /// 预加载面板（1.0 callback 兼容入口）。
         /// </summary>
-        public static void PreloadPanelAsync<T>(UILevel level = default, Action<bool> onComplete = null)
-            where T : UIPanel
+        public static void PreloadPanelAsync<T>(UILevel level = default,
+            Action<bool> onComplete = null) where T : UIPanel
         {
             var root = Root;
-            if (root == default) return;
+            if (root == default)
+            {
+                onComplete?.Invoke(false);
+                return;
+            }
+
             root.PreloadPanelAsync<T>(level, onComplete);
         }
 
         /// <summary>
-        /// 预加载面板
+        /// 预加载面板（1.0 callback 兼容入口）。
         /// </summary>
         public static void PreloadPanelAsync(Type panelType, UILevel level = default,
             Action<bool> onComplete = null)
         {
             var root = Root;
-            if (root == default) return;
+            if (root == default)
+            {
+                onComplete?.Invoke(false);
+                return;
+            }
+
             root.PreloadPanelAsync(panelType, level, onComplete);
+        }
+
+        /// <summary>
+        /// 预加载面板
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<bool> PreloadPanelAsync<T>(UILevel level = default,
+            CancellationToken ct = default) where T : UIPanel
+#else
+        public static Task<bool> PreloadPanelAsync<T>(UILevel level = default,
+            CancellationToken ct = default) where T : UIPanel
+#endif
+        {
+            return PreloadPanelAsync(typeof(T), level, ct);
+        }
+
+        /// <summary>
+        /// 预加载面板
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        public static UniTask<bool> PreloadPanelAsync(Type panelType, UILevel level = default,
+            CancellationToken ct = default)
+#else
+        public static Task<bool> PreloadPanelAsync(Type panelType, UILevel level = default,
+            CancellationToken ct = default)
+#endif
+        {
+            var root = Root;
+            if (root != default)
+                return root.PreloadPanelAsync(panelType, level, ct);
+
+#if YOKIFRAME_UNITASK_SUPPORT
+            return UniTask.FromResult(false);
+#else
+            return Task.FromResult(false);
+#endif
         }
 
         /// <summary>
@@ -109,3 +180,4 @@ namespace YokiFrame
         #endregion
     }
 }
+#endif

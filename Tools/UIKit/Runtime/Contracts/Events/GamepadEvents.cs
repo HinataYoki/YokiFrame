@@ -1,3 +1,4 @@
+#if !GODOT
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -83,3 +84,4 @@ namespace YokiFrame
         public string DeviceName;
     }
 }
+#endif

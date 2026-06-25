@@ -1,3 +1,4 @@
+#if !GODOT
 using System;
 using UnityEngine;
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -76,3 +77,4 @@ namespace YokiFrame
     }
 #endif
 }
+#endif

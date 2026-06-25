@@ -1,0 +1,4 @@
+interface:
+  display_name: "YokiFrame Command Bridge"
+  short_description: "YokiFrame 文件命令桥调试手册"
+  default_prompt: "Use $yokiframe-command-bridge to inspect YokiFrame Kit state through .yokiframe command files."

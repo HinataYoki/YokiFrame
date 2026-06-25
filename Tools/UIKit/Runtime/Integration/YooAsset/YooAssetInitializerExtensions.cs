@@ -1,3 +1,4 @@
+#if !GODOT
 #if YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_UNITASK_SUPPORT
 namespace YokiFrame
 {
@@ -12,15 +13,15 @@ namespace YokiFrame
         /// </summary>
         public static void ConfigureUIKit()
         {
-            if (!YooInit.Initialized)
+            if (ResKit.GetProvider() == null)
             {
-                KitLogger.Warning("[YooInit] 请先调用 InitAsync() 初始化 YooAsset");
+                LogKit.Warning("[YooInit] 请先初始化 YooAsset 并安装 ResKit Provider");
                 return;
             }
             
             UIKit.SetPanelLoader(new YooAssetPanelLoaderPool());
-            KitLogger.Log("[YooInit] UIKit 面板加载器已配置为 YooAsset");
         }
     }
 }
+#endif
 #endif

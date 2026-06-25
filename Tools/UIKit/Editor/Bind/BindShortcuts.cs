@@ -1,62 +1,69 @@
 #if UNITY_EDITOR
+using System;
 using UnityEditor;
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// UIKit 快捷菜单和快捷键
+    /// UIKit Bind 快捷菜单和快捷键。
     /// </summary>
     public static class BindShortcuts
     {
-        #region 右键预制体生成 UI 代码
-
-        /// <summary>
-        /// 右键预制体：生成 UI 代码
-        /// </summary>
         [MenuItem("Assets/UIKit - 生成 UI 代码", false, 100)]
         private static void GenerateUICode()
         {
             var prefab = Selection.activeGameObject;
-            if (prefab == default) return;
+            if (prefab == null)
+                return;
 
-            var ns = UIKitCreateConfig.Instance.ScriptNamespace;
-            UICodeGenerator.DoCreateCode(prefab, ns);
+            try
+            {
+                UIKitPanelPrefabCreator.GenerateCodeForPrefab(prefab, new UIKitPanelCreateRequest
+                {
+                    PanelName = prefab.name,
+                    ScriptFolder = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER,
+                    ScriptNamespace = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE,
+                    AssemblyName = UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME,
+                    CodeTemplate = UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE
+                });
+            }
+            catch (Exception ex)
+            {
+                EditorUtility.DisplayDialog("生成失败", ex.Message, "确定");
+                LogKit.Exception(ex);
+            }
         }
 
         [MenuItem("Assets/UIKit - 生成 UI 代码", true)]
         private static bool GenerateUICodeValidate()
         {
             var go = Selection.activeGameObject;
-            if (go == default) return false;
+            if (go == null)
+                return false;
 
             var prefabType = PrefabUtility.GetPrefabAssetType(go);
-            return prefabType is PrefabAssetType.Regular or PrefabAssetType.Variant;
+            return prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
         }
 
-        #endregion
-
-        /// <summary>
-        /// ALT+B: 为选中的 GameObject 添加 Bind 组件
-        /// </summary>
         [MenuItem("Edit/UIKit/Add Bind Component &b", false, 100)]
         private static void AddBindToSelection()
         {
             var selectedObjects = Selection.gameObjects;
             if (selectedObjects == null || selectedObjects.Length == 0)
             {
-                Debug.LogWarning("[UIKit] 请先选中一个或多个 GameObject");
+                LogKit.Warning("[UIKit] 请先选中一个或多个 GameObject");
                 return;
             }
 
-            int addedCount = 0;
-            int skippedCount = 0;
-
-            foreach (var go in selectedObjects)
+            var addedCount = 0;
+            var skippedCount = 0;
+            for (var i = 0; i < selectedObjects.Length; i++)
             {
-                if (go == null) continue;
+                var go = selectedObjects[i];
+                if (go == null)
+                    continue;
 
-                // 检查是否已有 Bind 组件
                 if (go.GetComponent<AbstractBind>() != null)
                 {
                     skippedCount++;
@@ -67,69 +74,42 @@ namespace YokiFrame
                 addedCount++;
             }
 
-            // 输出结果
-            if (addedCount > 0 && skippedCount > 0)
-            {
-                Debug.Log($"[UIKit] 已添加 {addedCount} 个 Bind 组件，跳过 {skippedCount} 个（已存在）");
-            }
-            else if (addedCount > 0)
-            {
-                Debug.Log($"[UIKit] 已添加 {addedCount} 个 Bind 组件");
-            }
-            else if (skippedCount > 0)
-            {
-                Debug.Log($"[UIKit] 选中的 {skippedCount} 个 GameObject 已有 Bind 组件");
-            }
+            LogKit.Log("[UIKit] 已添加 " + addedCount + " 个 Bind 组件，跳过 " + skippedCount + " 个。");
         }
 
-        /// <summary>
-        /// 验证菜单项是否可用
-        /// </summary>
         [MenuItem("Edit/UIKit/Add Bind Component &b", true)]
-        private static bool AddBindToSelectionValidate() => Selection.gameObjects.Length > 0;
+        private static bool AddBindToSelectionValidate() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
 
-        /// <summary>
-        /// ALT+SHIFT+B: 移除选中 GameObject 的 Bind 组件
-        /// </summary>
         [MenuItem("Edit/UIKit/Remove Bind Component &%b", false, 101)]
         private static void RemoveBindFromSelection()
         {
             var selectedObjects = Selection.gameObjects;
             if (selectedObjects == null || selectedObjects.Length == 0)
             {
-                Debug.LogWarning("[UIKit] 请先选中一个或多个 GameObject");
+                LogKit.Warning("[UIKit] 请先选中一个或多个 GameObject");
                 return;
             }
 
-            int removedCount = 0;
-
-            foreach (var go in selectedObjects)
+            var removedCount = 0;
+            for (var i = 0; i < selectedObjects.Length; i++)
             {
-                if (go == null) continue;
+                var go = selectedObjects[i];
+                if (go == null)
+                    continue;
 
                 var bind = go.GetComponent<AbstractBind>();
-                if (bind != null)
-                {
-                    Undo.DestroyObjectImmediate(bind);
-                    removedCount++;
-                }
+                if (bind == null)
+                    continue;
+
+                Undo.DestroyObjectImmediate(bind);
+                removedCount++;
             }
 
-            if (removedCount > 0)
-            {
-                Debug.Log($"[UIKit] 已移除 {removedCount} 个 Bind 组件");
-            }
-            else
-            {
-                Debug.Log("[UIKit] 选中的 GameObject 没有 Bind 组件");
-            }
+            LogKit.Log("[UIKit] 已移除 " + removedCount + " 个 Bind 组件。");
         }
 
-        /// <summary>
-        /// 验证移除菜单项是否可用
-        /// </summary>
         [MenuItem("Edit/UIKit/Remove Bind Component &%b", true)]
-        private static bool RemoveBindFromSelectionValidate() => Selection.gameObjects.Length > 0;
+        private static bool RemoveBindFromSelectionValidate() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
     }
 }
 #endif
