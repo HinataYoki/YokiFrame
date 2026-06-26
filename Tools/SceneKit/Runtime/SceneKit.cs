@@ -385,6 +385,13 @@ namespace YokiFrame
                 return;
             }
 
+            if (sLoadedScenes.Count <= 1)
+            {
+                if (onComplete != null)
+                    onComplete();
+                return;
+            }
+
             if (handler.State == SceneState.Unloading || handler.State == SceneState.Unloaded)
             {
                 if (onComplete != null)
@@ -513,7 +520,9 @@ namespace YokiFrame
 
             for (int i = 0; i < scenesToUnload.Count; i++)
             {
-                UnloadSceneAsync(scenesToUnload[i]);
+                var handler = scenesToUnload[i];
+                UnregisterHandler(handler);
+                handler.MarkUnloaded();
             }
         }
 
