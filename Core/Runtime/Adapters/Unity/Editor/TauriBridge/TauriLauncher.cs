@@ -733,7 +733,7 @@ namespace YokiFrame.Unity
 
         private static bool ValidateRestart() => IsRunning;
 
-        [MenuItem("YokiFrame/编辑器窗口/启动窗口", false, 99)]
+        [MenuItem("YokiFrame/编辑器窗口/启动窗口 %e", false, 99)]
         private static void MenuLaunchWindow()
         {
             Launch();
