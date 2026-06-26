@@ -12,7 +12,7 @@ function renderAiSkillInstallPanel() {
     const selectedInfo = skills.find(skill => skill.name === selected);
     const packagedCount = skills.filter(skill => skill.packaged).length;
     const installedTargetCount = targets.filter(target => isAiSkillInstalled(target, selected)).length;
-    const sourceRoot = status?.sourceRoot ?? 'Assets/YokiFrame/Core/Editor/Skills';
+    const sourceRoot = status?.sourceRoot ?? t('ai_skill.source_hint');
 
     return panel(t('ai_skill.title'),
         `<div class="ai-skill-installer" data-ai-skill-installer>

@@ -262,7 +262,7 @@ function enUS() {
         // ── AI Skill Installer ──
         'ai_skill.title': 'AI Skill Installer',
         'ai_skill.source': 'Package Source',
-        'ai_skill.source_hint': 'Assets/YokiFrame/Core/Editor/Skills',
+        'ai_skill.source_hint': 'Auto-detect Unity/Godot packaged Skills',
         'ai_skill.selected': 'Selected Skill',
         'ai_skill.packaged': 'Packaged',
         'ai_skill.missing': 'Missing from package',

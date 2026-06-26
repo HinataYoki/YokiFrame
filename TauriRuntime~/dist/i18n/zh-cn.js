@@ -262,7 +262,7 @@ function zhCN() {
         // ── AI Skill 安装 ──
         'ai_skill.title': '安装Skill',
         'ai_skill.source': '包内源',
-        'ai_skill.source_hint': 'Assets/YokiFrame/Core/Editor/Skills',
+        'ai_skill.source_hint': '自动探测 Unity/Godot 包内 Skills',
         'ai_skill.selected': '当前 Skill',
         'ai_skill.packaged': '已随包提供',
         'ai_skill.missing': '包内缺失',

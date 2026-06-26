@@ -1040,7 +1040,7 @@ test('framework overview keeps engine status and log in the primary stack while 
     assert.match(rust, /tauri::generate_handler!\[[\s\S]*list_ai_skills[\s\S]*install_ai_skill[\s\S]*uninstall_ai_skill/);
 });
 
-test('YokiFrame package carries all AI skill source folders under Assets/YokiFrame/Core/Editor/Skills', () => {
+test('YokiFrame package carries all AI skill source folders', () => {
     for (const skillName of ['yokiframe', 'yokiframe-command-bridge', 'yokiframe-editor']) {
         const skillFile = resolveWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Editor', 'Skills', skillName, 'SKILL.md');
         assert.ok(fs.existsSync(skillFile), `${skillName} should be packaged under Assets/YokiFrame/Core/Editor/Skills`);
