@@ -66,6 +66,7 @@ function navigateTo(pageId) {
 
     const requestSeq = ++navigationSeq;
     activePage = pageId;
+    $pageBody.classList.remove('content-body--system');
     $pageBody.classList.remove('content-body--fsmkit');
     $pageBody.classList.remove('content-body--eventkit');
     $pageBody.classList.remove('content-body--architecture');
@@ -82,6 +83,7 @@ function navigateTo(pageId) {
     $pageBody.classList.remove('content-body--uikit');
     $pageBody.classList.remove('content-body--tablekit');
     $pageBody.classList.remove('content-body--singletonkit');
+    $pageBody.classList.add(`content-body--${pageId}`);
     // 更新侧边栏。
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pageId);

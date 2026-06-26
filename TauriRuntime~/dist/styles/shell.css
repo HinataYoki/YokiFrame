@@ -357,8 +357,10 @@
 #body {
   display: grid;
   grid-template-columns: var(--nav-width) minmax(0, 1fr);
+  gap: var(--sp-md);
   height: calc(100vh - var(--titlebar-height));
   min-height: 0;
+  padding: var(--sp-md);
 }
 
 .workspace-nav,
@@ -369,9 +371,10 @@
   gap: var(--sp-md);
   min-height: 0;
   padding: var(--sp-md) var(--sp-sm);
-  border-right: 1px solid var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
   background: var(--nav-overlay);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.36);
+  box-shadow: var(--shadow-panel), 10px 0 24px rgba(0, 0, 0, 0.10);
   overflow: hidden;
 }
 
@@ -649,6 +652,10 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
 }
 

@@ -309,6 +309,13 @@
   overflow-wrap: anywhere;
 }
 
+.content-body--system {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+}
+
 .diagnostic-tile__hint {
   color: var(--ink-subtle);
   font-size: var(--fs-caption);
@@ -335,7 +342,9 @@
   display: grid;
   grid-template-columns: minmax(680px, 1fr) minmax(360px, 0.58fr);
   gap: var(--sp-md);
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
 }
 
 .framework-stack,
@@ -343,10 +352,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-md);
+  min-height: 0;
+}
+
+.framework-stack--primary {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .framework-stack--secondary {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
+}
+
+.framework-stack--primary #log-panel {
+  display: grid;
+  grid-template-rows: var(--panel-header-height) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.framework-stack--secondary > .panel {
+  display: grid;
+  grid-template-rows: var(--panel-header-height) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.framework-stack--secondary .panel-body {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .framework-engine-panel__body {
@@ -366,6 +400,11 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.framework-engine-panel__section--command,
+.framework-engine-panel__section--font {
+  overflow: hidden;
 }
 
 .framework-engine-panel__section-header {
@@ -388,6 +427,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
   gap: var(--sp-sm);
   align-items: stretch;
+  min-width: 0;
 }
 
 .framework-engine-panel .diagnostic-tile {
@@ -399,12 +439,18 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-sm);
+  min-width: 0;
 }
 
 .framework-command__form {
   display: grid;
-  grid-template-columns: minmax(130px, 0.65fr) minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(108px, 0.54fr) minmax(0, 1fr) minmax(56px, auto);
   gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.framework-command__form .cmd-select {
+  min-width: 0;
 }
 
 .framework-command__hint {
@@ -423,6 +469,13 @@
 .ai-skill-installer {
   display: grid;
   gap: var(--sp-sm);
+}
+
+.framework-stack--secondary .ai-skill-installer {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .ai-skill-installer__summary {
@@ -569,9 +622,23 @@
 }
 
 @media (max-width: 1360px) {
+  .content-body--system {
+    display: block;
+    overflow-y: auto;
+  }
+
   .developer-context-strip,
   .framework-dashboard {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .framework-dashboard {
+    height: auto;
+  }
+
+  .framework-stack--primary,
+  .framework-stack--secondary {
+    display: flex;
   }
 
   .framework-grid--status {
@@ -582,6 +649,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .framework-engine-panel__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1120px) {
   .framework-engine-panel__controls {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -609,6 +682,7 @@
 .font-preference {
   display: grid;
   gap: var(--sp-sm);
+  min-width: 0;
 }
 
 .font-preference__summary {
@@ -644,9 +718,15 @@
 
 .font-preference__controls {
   display: grid;
-  grid-template-columns: minmax(150px, 0.8fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(132px, 0.72fr) minmax(0, 1fr) minmax(54px, auto);
   gap: var(--sp-xs);
   align-items: end;
+  min-width: 0;
+}
+
+.font-preference__controls .cmd-select,
+.font-preference__controls .cmd-input {
+  min-width: 0;
 }
 
 .font-preference__field {
@@ -786,8 +866,9 @@
 }
 
 .framework-stack--primary #log-panel .log-output {
-  min-height: 180px;
-  max-height: min(32vh, 340px);
+  height: 100%;
+  min-height: 0;
+  max-height: none;
 }
 
 .log-entry {

@@ -177,14 +177,13 @@
     flex-direction: column;
   }
 
-  .eventkit-v1-toolbar--unified {
-    display: flex;
+  .eventkit-hero-actions,
+  .eventkit-hero-controls {
+    justify-content: flex-start;
   }
 
-  .eventkit-v1-toolbar--unified .eventkit-section-desc,
-  .eventkit-v1-toolbar--unified .eventkit-scan-toolbar__hint {
-    white-space: normal;
-    overflow-wrap: anywhere;
+  .eventkit-hero-status {
+    max-width: 100%;
   }
 
   .eventkit-v1-toolbar__actions,

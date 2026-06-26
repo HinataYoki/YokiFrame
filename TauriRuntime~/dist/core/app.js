@@ -282,7 +282,7 @@ let heroActionPromotionFrame = 0;
 let sidebarIndicatorMotionTimer = 0;
 let tabIndicatorMotionTimer = 0;
 const HERO_CARD_TARGET_SELECTOR = '.kit-toolbar, .audio-master-strip, .tablekit-command-center, .kit-panel, .panel, .doc-hero, .developer-context-strip';
-const HERO_INTRO_CARD_PAGE_IDS = new Set(['fsmkit', 'logkit', 'poolkit', 'reskit', 'singletonkit']);
+const HERO_INTRO_CARD_PAGE_IDS = new Set(['fsmkit', 'eventkit', 'logkit', 'poolkit', 'reskit', 'singletonkit']);
 
 function setConnectionStatus(isConnected) {
     connected = isConnected;

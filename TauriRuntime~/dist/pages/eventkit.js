@@ -34,13 +34,7 @@ const EVENTKIT_SCROLL_SELECTORS = [
 
 function renderEventKitPage() {
     $pageBody.classList.add('content-body--eventkit');
-    setHero(
-        t('eventkit.title'),
-        t('eventkit.subtitle'),
-        t('eventkit.tab'),
-        'event',
-        `<button class="btn btn-primary btn-sm" onclick="refreshEventKit()">${t('common.refresh')}</button>`
-    );
+    setEventKitHero();
 
     clearMetrics();
     clearTabs();
@@ -51,6 +45,16 @@ function renderEventKitPage() {
     renderEventKitWorkbench();
     loadEventRegistrations(currentPageLoadToken('eventkit'));
     scheduleEventKitAutoScan();
+}
+
+function setEventKitHero() {
+    setHero(
+        t('eventkit.title'),
+        t('eventkit.subtitle'),
+        t('eventkit.tab'),
+        'event',
+        renderEventKitHeroActions()
+    );
 }
 
 async function refreshEventKit() {
@@ -150,6 +154,7 @@ function getSelectedEventKitEngine() {
 
 function renderEventKitWorkbench() {
     const scrollState = captureEventKitScrollState();
+    setEventKitHero();
     let root = $pageBody.querySelector('[data-eventkit-workbench="root"]');
     if (!root) {
         $pageBody.innerHTML = `
@@ -286,7 +291,6 @@ function renderEventKitMonitorHtml(view) {
         <div class="eventkit-v1-layout eventkit-v1-layout--monitor">
             <div class="eventkit-v1-main">
                 <section class="eventkit-v1-map">
-                    ${renderEventKitUnifiedToolbar(view.engine, eventKitScanCache, view.rows.length, view.filteredRows.length)}
                     ${eventKitRelationHeader(t('eventkit.sender_code'), t('eventkit.event_unregister'), t('eventkit.receiver_code'))}
                     <div class="eventkit-v1-relations" data-eventkit-region="flow">
                         ${view.filteredRows.length ? view.filteredRows.map(row => renderEventKitMonitorRow(row, row.id === view.selectedKey)).join('') : emptyState('event', view.emptyMessage)}
@@ -422,19 +426,20 @@ function eventKitStatChip(label, value, tone = '') {
     </div>`;
 }
 
-function renderEventKitUnifiedToolbar(engine, scan, totalRows, visibleRows) {
+function renderEventKitHeroActions() {
+    const engine = getSelectedEventKitEngine();
+    const scan = eventKitScanCache;
     const projectPath = scan?.projectPath ?? engine?.projectPath ?? latestStatusSummary?.projectPath ?? '--';
     const scanState = eventKitScanInFlight
         ? t('eventkit.scanning')
         : (scan?.error ? t('eventkit.scan_failed_short') : (scan ? `${escapeHtml(scan.matchedFileCount ?? 0)} matched / ${escapeHtml(scan.scannedFileCount ?? 0)} files` : t('eventkit.not_scanned')));
-    return `<div class="eventkit-v1-toolbar eventkit-v1-toolbar--unified" data-eventkit-region="insights">
-        <div>
-            <div class="eventkit-section-title">${t('eventkit.workbench_title')}</div>
-            <div class="eventkit-section-desc">${t('eventkit.workbench_desc')}</div>
-            <div class="eventkit-scan-toolbar__hint">${escapeHtml(projectPath)} · ${scanState} · ${escapeHtml(visibleRows)}/${escapeHtml(totalRows)} events</div>
+    return `<div class="eventkit-hero-actions">
+        <div class="eventkit-hero-status">
+            <span>${escapeHtml(projectPath)}</span>
+            <strong>${scanState}</strong>
             ${scan?.error ? `<div class="eventkit-v1-note eventkit-v1-note--warning">${escapeHtml(scan.error)}</div>` : ''}
         </div>
-        <div class="eventkit-v1-scan-controls">
+        <div class="eventkit-hero-controls">
             ${renderEventKitEngineInline(engine)}
             ${renderKitToggle(t('eventkit.exclude_editor'), eventKitScanExcludeEditor, 'data-eventkit-exclude-editor')}
             <label class="eventkit-scan-search">
@@ -583,14 +588,14 @@ function renderEventKitScanUnregisters(files) {
 
 function renderEventKitMonitorDetail(row, counts, recentEvents, emptyMessage = t('eventkit.select_event_hint')) {
     if (!row) {
-        return `<section class="eventkit-v1-detail">${emptyState('event', emptyMessage)}</section>`;
+        return `<section class="eventkit-v1-detail eventkit-v1-detail-card">${emptyState('event', emptyMessage)}</section>`;
     }
 
     const matchingEvents = row.recentEvents.length ? row.recentEvents.slice().reverse() : [];
     const channelClass = eventKitChannelClass(row.channel);
     const healthClass = eventKitHealthClass(row.health);
     return `
-        <section class="eventkit-v1-detail">
+        <section class="eventkit-v1-detail eventkit-v1-detail-card">
             <div class="eventkit-v1-detail-top eventkit-v1-detail-top--${escapeHtml(channelClass)}">
                 <div class="eventkit-v1-detail-badges">
                     <span class="eventkit-channel eventkit-channel--${escapeHtml(channelClass)}">${escapeHtml(row.channel)}</span>

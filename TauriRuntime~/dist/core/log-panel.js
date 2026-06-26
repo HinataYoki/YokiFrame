@@ -81,9 +81,7 @@ function renderLogPanel() {
         container.appendChild(createLogEntry(logBuffer[i]));
     }
     renderedLogCount = logBuffer.length;
-    if (container.parentElement) {
-        container.parentElement.scrollTop = container.scrollHeight;
-    }
+    container.scrollTop = container.scrollHeight;
 }
 
 // ═══════════════════════════════════════════════════════════════════

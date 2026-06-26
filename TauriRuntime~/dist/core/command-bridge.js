@@ -155,12 +155,16 @@ function renderFrameworkCommandKitOptions() {
     }).join('');
 }
 
+function getFrameworkCommandDescription(item) {
+    if (item?.descriptionKey) return t(item.descriptionKey);
+    return item?.description || '';
+}
+
 function renderFrameworkCommandActionOptions(kit) {
     return getFrameworkCommandActions(kit).map(item => {
         const selected = item.action === commandComposerState.action ? ' selected' : '';
-        const desc = item.descriptionKey ? t(item.descriptionKey) : item.description;
-        const label = desc ? `${item.label} - ${desc}` : item.label;
-        return `<option value="${escapeHtml(item.action)}"${selected}>${escapeHtml(label)}</option>`;
+        const desc = getFrameworkCommandDescription(item);
+        return `<option value="${escapeHtml(item.action)}" title="${escapeHtml(desc)}"${selected}>${escapeHtml(item.label || item.action)}</option>`;
     }).join('');
 }
 
@@ -183,8 +187,7 @@ function updateFrameworkActionOptions() {
 function getFrameworkCommandHint() {
     const action = getFrameworkCommandActions(commandComposerState.kit)
         .find(item => item.action === commandComposerState.action);
-    if (action?.descriptionKey) return t(action.descriptionKey);
-    return action?.description || t('command.select_from_catalog');
+    return getFrameworkCommandDescription(action) || t('command.select_from_catalog');
 }
 
 function cloneFrameworkCommandCatalog(source) {
@@ -228,7 +231,8 @@ function applyFrameworkCommandCatalogResponse(payload) {
             normalizedActions.push({
                 action,
                 label: fallback.label || action,
-                description: fallback.description || t('command.select_from_catalog'),
+                descriptionKey: fallback.descriptionKey,
+                description: fallback.description || '',
             });
         });
 

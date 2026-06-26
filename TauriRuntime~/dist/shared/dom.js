@@ -56,8 +56,20 @@ function applyLocale(locale) {
 function setHero(title, summary, eyebrow, iconName, actionsHtml = '') {
     currentHeroMeta = { title, summary, eyebrow, iconName };
     currentHeroActionsHtml = actionsHtml || '';
+    updateExistingHeroIntroCard();
     scheduleHeroActionPromotion();
     return { title, summary, eyebrow, iconName, actionsHtml };
+}
+
+function updateExistingHeroIntroCard() {
+    if (!$pageBody || !currentHeroMeta || !shouldKeepHeroIntroCard()) return;
+    const existing = $pageBody.querySelector('[data-hero-intro-card="1"]');
+    if (!existing) return;
+
+    const template = document.createElement('template');
+    template.innerHTML = renderHeroIntroCard(currentHeroMeta, currentHeroActionsHtml);
+    const card = template.content.firstElementChild;
+    if (card) existing.replaceWith(card);
 }
 
 function scheduleHeroActionPromotion() {
