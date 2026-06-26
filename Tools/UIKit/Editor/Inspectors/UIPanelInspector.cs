@@ -71,13 +71,11 @@ namespace YokiFrame
         {
             var section = CreateSectionContainer("uipanel-section-panelconfig");
 
-            var foldout = new Foldout
-            {
-                text = "面板设置",
-                value = SessionState.GetBool(PANEL_CONFIG_FOLDOUT_KEY, true)
-            };
-            foldout.AddToClassList("uipanel-panelconfig-foldout");
-            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(PANEL_CONFIG_FOLDOUT_KEY, evt.newValue));
+            var foldout = CreateRememberedFoldout(
+                "面板设置",
+                PANEL_CONFIG_FOLDOUT_KEY,
+                true,
+                "uipanel-panelconfig-foldout");
             section.Add(foldout);
 
             var content = new VisualElement();
@@ -235,13 +233,11 @@ namespace YokiFrame
                 return;
 
             var section = CreateSectionContainer("uipanel-section-custom");
-            var foldout = new Foldout
-            {
-                text = "其他属性",
-                value = SessionState.GetBool(CUSTOM_PROPERTIES_FOLDOUT_KEY, false)
-            };
-            foldout.AddToClassList("uipanel-custom-foldout");
-            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(CUSTOM_PROPERTIES_FOLDOUT_KEY, evt.newValue));
+            var foldout = CreateRememberedFoldout(
+                "其他属性",
+                CUSTOM_PROPERTIES_FOLDOUT_KEY,
+                false,
+                "uipanel-custom-foldout");
             section.Add(foldout);
 
             var content = new VisualElement();
@@ -278,13 +274,11 @@ namespace YokiFrame
             subSection.AddToClassList("uipanel-subsection");
             subSection.AddToClassList(modifierClass);
 
-            var foldout = new Foldout
-            {
-                text = title,
-                value = SessionState.GetBool(sessionStateKey, true)
-            };
-            foldout.AddToClassList("uipanel-subsection-foldout");
-            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(sessionStateKey, evt.newValue));
+            var foldout = CreateRememberedFoldout(
+                title,
+                sessionStateKey,
+                true,
+                "uipanel-subsection-foldout");
             subSection.Add(foldout);
 
             var content = new VisualElement();
@@ -333,6 +327,52 @@ namespace YokiFrame
             var active = ActiveEditorTracker.sharedTracker;
             if (active != null)
                 active.ForceRebuild();
+        }
+
+        private static Foldout CreateRememberedFoldout(string title, string stateKey, bool defaultValue, string className)
+        {
+            var foldout = new Foldout
+            {
+                text = title,
+                value = GetSavedBool(stateKey, defaultValue),
+                viewDataKey = stateKey
+            };
+
+            if (!string.IsNullOrEmpty(className))
+                foldout.AddToClassList(className);
+
+            foldout.RegisterValueChangedCallback(evt => SetSavedBool(stateKey, evt.newValue));
+            return foldout;
+        }
+
+        private static bool GetSavedBool(string key, bool defaultValue)
+        {
+            if (EditorPrefs.HasKey(key))
+                return EditorPrefs.GetBool(key, defaultValue);
+
+            return SessionState.GetBool(key, defaultValue);
+        }
+
+        private static void SetSavedBool(string key, bool value)
+        {
+            SessionState.SetBool(key, value);
+            EditorPrefs.SetBool(key, value);
+        }
+
+        private static string GetSavedString(string key, string defaultValue)
+        {
+            const string MissingValue = "__YOKIFRAME_MISSING_SESSION_STATE__";
+            var sessionValue = SessionState.GetString(key, MissingValue);
+            if (sessionValue != MissingValue)
+                return sessionValue;
+
+            return EditorPrefs.HasKey(key) ? EditorPrefs.GetString(key, defaultValue) : defaultValue;
+        }
+
+        private static void SetSavedString(string key, string value)
+        {
+            SessionState.SetString(key, value);
+            EditorPrefs.SetString(key, value);
         }
     }
 }

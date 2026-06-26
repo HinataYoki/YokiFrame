@@ -22,13 +22,11 @@ namespace YokiFrame
         {
             var section = CreateSectionContainer("uipanel-section-bindtree");
 
-            var foldout = new Foldout
-            {
-                text = "绑定树",
-                value = SessionState.GetBool(BIND_TREE_FOLDOUT_KEY, true)
-            };
-            foldout.AddToClassList("uipanel-bindtree-foldout");
-            foldout.RegisterValueChangedCallback(evt => SessionState.SetBool(BIND_TREE_FOLDOUT_KEY, evt.newValue));
+            var foldout = CreateRememberedFoldout(
+                "绑定树",
+                BIND_TREE_FOLDOUT_KEY,
+                true,
+                "uipanel-bindtree-foldout");
             section.Add(foldout);
 
             var content = new VisualElement();
@@ -348,7 +346,7 @@ namespace YokiFrame
         {
             mCollapsedBindPaths.Clear();
 
-            var raw = SessionState.GetString(GetCollapsedBindPathsSessionKey(), string.Empty);
+            var raw = GetSavedString(GetCollapsedBindPathsSessionKey(), string.Empty);
             if (string.IsNullOrEmpty(raw))
                 return;
 
@@ -364,7 +362,7 @@ namespace YokiFrame
         {
             var paths = new List<string>(mCollapsedBindPaths);
             paths.Sort(StringComparer.Ordinal);
-            SessionState.SetString(GetCollapsedBindPathsSessionKey(), string.Join("\n", paths.ToArray()));
+            SetSavedString(GetCollapsedBindPathsSessionKey(), string.Join("\n", paths.ToArray()));
         }
 
         private string GetCollapsedBindPathsSessionKey()
