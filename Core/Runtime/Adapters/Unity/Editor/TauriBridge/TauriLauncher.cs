@@ -236,11 +236,24 @@ namespace YokiFrame.Unity
                 EditorUtility.DisplayProgressBar("YokiFrame",
                     $"正在编译 {GetCrossPlatformTargetName(target)} ({i + 1}/{total})...", progress);
 
-                var (success, _) = await RunCargoForCrossPlatformAsync(target);
-                if (success)
-                    succeeded++;
-                else
+                try
+                {
+                    var (success, _) = await RunCargoForCrossPlatformAsync(target);
+                    if (success)
+                    {
+                        CopyCrossPlatformArtifact(target);
+                        succeeded++;
+                    }
+                    else
+                    {
+                        failed.Add(GetCrossPlatformTargetName(target));
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogKit.Error($"[TauriLauncher] Tauri Editor 发布复制失败 ({GetCrossPlatformTargetName(target)}): {e.Message}");
                     failed.Add(GetCrossPlatformTargetName(target));
+                }
             }
 
             EditorUtility.ClearProgressBar();
@@ -324,11 +337,24 @@ namespace YokiFrame.Unity
                 EditorUtility.DisplayProgressBar("YokiFrame",
                     $"正在编译安装器 {GetCrossPlatformTargetName(target)} ({i + 1}/{total})...", progress);
 
-                var (success, _) = await RunInstallerCargoForCrossPlatformAsync(target);
-                if (success)
-                    succeeded++;
-                else
+                try
+                {
+                    var (success, _) = await RunInstallerCargoForCrossPlatformAsync(target);
+                    if (success)
+                    {
+                        CopyInstallerCrossPlatformArtifact(target);
+                        succeeded++;
+                    }
+                    else
+                    {
+                        failed.Add(GetCrossPlatformTargetName(target));
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogKit.Error($"[TauriLauncher] 安装器发布复制失败 ({GetCrossPlatformTargetName(target)}): {e.Message}");
                     failed.Add(GetCrossPlatformTargetName(target));
+                }
             }
 
             EditorUtility.ClearProgressBar();
@@ -781,7 +807,10 @@ namespace YokiFrame.Unity
                 EditorUtility.ClearProgressBar();
 
                 if (success)
+                {
+                    CopyPlatformArtifact(platform);
                     return (true, output);
+                }
 
                 LogKit.Error($"[TauriLauncher] cargo build 失败 ({platformName})\n{output}");
                 EditorUtility.DisplayDialog("编译失败",
@@ -822,7 +851,10 @@ namespace YokiFrame.Unity
                 EditorUtility.ClearProgressBar();
 
                 if (success)
+                {
+                    CopyCrossPlatformArtifact(target);
                     return (true, output);
+                }
 
                 LogKit.Error($"[TauriLauncher] cargo build 失败 ({targetName})\n{output}");
                 EditorUtility.DisplayDialog("编译失败",
@@ -858,6 +890,116 @@ namespace YokiFrame.Unity
                 CrossPlatformTarget.LinuxX64 => "build --release --target x86_64-unknown-linux-gnu --target-dir " + CARGO_TARGET_DIR_NAME,
                 _ => "build --release --target-dir " + CARGO_TARGET_DIR_NAME
             };
+        }
+
+        /// <summary>复制当前平台 Tauri Editor release 产物到 TauriRuntime~/。</summary>
+        internal static void CopyPlatformArtifact(TauriRuntimePlatform platform)
+        {
+            CopyPlatformArtifact(SrcTauriPath, RuntimeDir, platform);
+        }
+
+        internal static void CopyPlatformArtifact(
+            string srcTauriPath,
+            string runtimeDir,
+            TauriRuntimePlatform platform)
+        {
+            if (platform == TauriRuntimePlatform.MacOS)
+            {
+                CopyAppBundle(
+                    ResolveDevAppBundlePath(srcTauriPath, platform),
+                    ResolvePublishedAppBundlePath(runtimeDir, platform));
+                return;
+            }
+
+            CopyArtifact(
+                ResolveDevBinaryPath(srcTauriPath, platform),
+                ResolvePublishedBinaryPath(runtimeDir, platform));
+        }
+
+        /// <summary>复制跨平台 Tauri Editor release 产物到 TauriRuntime~/。</summary>
+        internal static void CopyCrossPlatformArtifact(CrossPlatformTarget target)
+        {
+            CopyCrossPlatformArtifact(SrcTauriPath, RuntimeDir, target);
+        }
+
+        internal static void CopyCrossPlatformArtifact(
+            string srcTauriPath,
+            string runtimeDir,
+            CrossPlatformTarget target)
+        {
+            if (target == CrossPlatformTarget.MacosArm64 || target == CrossPlatformTarget.MacosX64)
+            {
+                CopyAppBundle(
+                    ResolveCrossPlatformAppBundlePath(srcTauriPath, target),
+                    ResolvePublishedAppBundlePath(runtimeDir, TauriRuntimePlatform.MacOS));
+                return;
+            }
+
+            var platform = target == CrossPlatformTarget.WinX64
+                ? TauriRuntimePlatform.Windows
+                : TauriRuntimePlatform.Linux;
+            CopyArtifact(
+                ResolveCrossPlatformBinaryPath(srcTauriPath, target),
+                ResolvePublishedBinaryPath(runtimeDir, platform));
+        }
+
+        internal static string ResolveCrossPlatformBinaryPath(string srcTauriPath, CrossPlatformTarget target)
+        {
+            var targetDir = target switch
+            {
+                CrossPlatformTarget.WinX64 => "x86_64-pc-windows-msvc",
+                CrossPlatformTarget.MacosArm64 => "aarch64-apple-darwin",
+                CrossPlatformTarget.MacosX64 => "x86_64-apple-darwin",
+                CrossPlatformTarget.LinuxX64 => "x86_64-unknown-linux-gnu",
+                _ => throw new ArgumentOutOfRangeException(nameof(target))
+            };
+
+            var releaseDir = Path.Combine(srcTauriPath, CARGO_TARGET_DIR_NAME, targetDir, "release");
+            if (target == CrossPlatformTarget.WinX64)
+                return Path.Combine(releaseDir, "yokiframe-tauri-editor.exe");
+
+            return Path.Combine(releaseDir, "yokiframe-tauri-editor");
+        }
+
+        internal static string ResolveCrossPlatformAppBundlePath(string srcTauriPath, CrossPlatformTarget target)
+        {
+            var targetDir = target switch
+            {
+                CrossPlatformTarget.MacosArm64 => "aarch64-apple-darwin",
+                CrossPlatformTarget.MacosX64 => "x86_64-apple-darwin",
+                _ => throw new ArgumentOutOfRangeException(nameof(target))
+            };
+
+            return Path.Combine(
+                srcTauriPath,
+                CARGO_TARGET_DIR_NAME,
+                targetDir,
+                "release",
+                "bundle",
+                "macos",
+                "YokiFrame Editor.app");
+        }
+
+        private static void CopyArtifact(string sourcePath, string targetPath)
+        {
+            if (!File.Exists(sourcePath))
+                throw new FileNotFoundException($"Tauri Editor release 产物缺失: {sourcePath}");
+
+            var targetParent = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(targetParent))
+                Directory.CreateDirectory(targetParent);
+            File.Copy(sourcePath, targetPath, overwrite: true);
+        }
+
+        private static void CopyAppBundle(string sourceAppPath, string targetAppPath)
+        {
+            if (!Directory.Exists(sourceAppPath))
+                throw new DirectoryNotFoundException($"Tauri Editor app bundle 缺失: {sourceAppPath}");
+
+            if (Directory.Exists(targetAppPath))
+                Directory.Delete(targetAppPath, recursive: true);
+
+            CopyDirectory(sourceAppPath, targetAppPath);
         }
 
         /// <summary>判断当前宿主系统是否能本机生成指定 Tauri 目标。</summary>
