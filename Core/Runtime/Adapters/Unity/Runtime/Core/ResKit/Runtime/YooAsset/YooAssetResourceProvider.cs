@@ -317,7 +317,11 @@ namespace YokiFrame.Unity
             if (mActiveScene.SceneName == scene.SceneName)
                 mActiveScene = default(ResSceneHandle);
 
+#if YOOASSET_3_0_OR_NEWER
             var unloadOperation = handle.UnloadSceneAsync();
+#else
+            var unloadOperation = handle.UnloadAsync();
+#endif
             unloadOperation.Completed += _ =>
             {
                 if (onComplete != null)
@@ -500,7 +504,11 @@ namespace YokiFrame.Unity
             public void ResumeLoad()
             {
                 if (mHandle != null)
+#if YOOASSET_3_0_OR_NEWER
                     mHandle.AllowSceneActivation();
+#else
+                    mHandle.UnSuspend();
+#endif
                 IsSuspended = false;
             }
 
@@ -545,7 +553,11 @@ namespace YokiFrame.Unity
         {
             public YooSceneHandle LoadSceneAsync(string path, LoadSceneMode sceneMode, bool allowSceneActivation)
             {
+#if YOOASSET_3_0_OR_NEWER
                 return YooAssets.LoadSceneAsync(path, sceneMode, LocalPhysicsMode.None, allowSceneActivation);
+#else
+                return YooAssets.LoadSceneAsync(path, sceneMode, LocalPhysicsMode.None, !allowSceneActivation);
+#endif
             }
         }
 #endif
