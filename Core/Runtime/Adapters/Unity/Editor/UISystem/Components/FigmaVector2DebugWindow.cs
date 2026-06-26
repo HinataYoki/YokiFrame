@@ -12,7 +12,6 @@ namespace YokiFrame.Unity
     /// </summary>
     public class FigmaVector2DebugWindow : EditorWindow
     {
-        [MenuItem("YokiFrame/Debug/Figma Vector2 Test Window")]
         public static void ShowWindow()
         {
             var window = GetWindow<FigmaVector2DebugWindow>();

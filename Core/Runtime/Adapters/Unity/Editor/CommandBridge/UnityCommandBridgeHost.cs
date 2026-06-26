@@ -148,7 +148,6 @@ namespace YokiFrame.Unity
             return nowUtc - lastPollUtc.Value >= interval;
         }
 
-        [MenuItem("YokiFrame/CommandBridge/Poll Now", false, 200)]
         public static void PollNow()
         {
             if (sEngineCore != default)

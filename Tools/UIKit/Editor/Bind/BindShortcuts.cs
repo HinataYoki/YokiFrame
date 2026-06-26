@@ -11,7 +11,7 @@ namespace YokiFrame
     public static class BindShortcuts
     {
         [MenuItem("Assets/UIKit - 生成 UI 代码", false, 100)]
-        private static void GenerateUICode()
+        public static void GenerateUICode()
         {
             var prefab = Selection.activeGameObject;
             if (prefab == null)
@@ -36,7 +36,7 @@ namespace YokiFrame
         }
 
         [MenuItem("Assets/UIKit - 生成 UI 代码", true)]
-        private static bool GenerateUICodeValidate()
+        public static bool CanGenerateUICode()
         {
             var go = Selection.activeGameObject;
             if (go == null)
@@ -47,7 +47,7 @@ namespace YokiFrame
         }
 
         [MenuItem("Edit/UIKit/Add Bind Component &b", false, 100)]
-        private static void AddBindToSelection()
+        public static void AddBindToSelection()
         {
             var selectedObjects = Selection.gameObjects;
             if (selectedObjects == null || selectedObjects.Length == 0)
@@ -78,10 +78,10 @@ namespace YokiFrame
         }
 
         [MenuItem("Edit/UIKit/Add Bind Component &b", true)]
-        private static bool AddBindToSelectionValidate() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
+        public static bool CanAddBindToSelection() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
 
         [MenuItem("Edit/UIKit/Remove Bind Component &%b", false, 101)]
-        private static void RemoveBindFromSelection()
+        public static void RemoveBindFromSelection()
         {
             var selectedObjects = Selection.gameObjects;
             if (selectedObjects == null || selectedObjects.Length == 0)
@@ -109,7 +109,7 @@ namespace YokiFrame
         }
 
         [MenuItem("Edit/UIKit/Remove Bind Component &%b", true)]
-        private static bool RemoveBindFromSelectionValidate() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
+        public static bool CanRemoveBindFromSelection() => Selection.gameObjects != null && Selection.gameObjects.Length > 0;
     }
 }
 #endif

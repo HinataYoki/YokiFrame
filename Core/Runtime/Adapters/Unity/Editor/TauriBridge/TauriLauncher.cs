@@ -34,7 +34,7 @@ namespace YokiFrame.Unity
             Unavailable
         }
 
-        internal enum TauriRuntimePlatform
+        public enum TauriRuntimePlatform
         {
             Windows,
             MacOS,
@@ -42,7 +42,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>跨平台编译目标。</summary>
-        internal enum CrossPlatformTarget
+        public enum CrossPlatformTarget
         {
             WinX64,
             MacosArm64,
@@ -53,22 +53,6 @@ namespace YokiFrame.Unity
         private static System.Diagnostics.Process sTauriProcess;
         private static bool sOutdatedBinaryWarningShown;
 
-        internal const string MENU_ROOT = "YokiFrame/编辑器窗口";
-        private const string MENU_LAUNCH = MENU_ROOT + "/启动窗口 %e";
-        private const string MENU_CLOSE = MENU_ROOT + "/关闭窗口";
-        private const string MENU_RESTART = MENU_ROOT + "/重启窗口";
-        private const string MENU_BUILD_CURRENT = MENU_ROOT + "/编译/编译当前平台";
-        private const string MENU_BUILD_WIN_X64 = MENU_ROOT + "/编译/编译 Windows (win-x64)";
-        private const string MENU_BUILD_MACOS_ARM64 = MENU_ROOT + "/编译/编译 macOS (macos-arm64)";
-        private const string MENU_BUILD_MACOS_X64 = MENU_ROOT + "/编译/编译 macOS (macos-x64)";
-        private const string MENU_BUILD_LINUX_X64 = MENU_ROOT + "/编译/编译 Linux (linux-x64)";
-        private const string MENU_BUILD_ALL = MENU_ROOT + "/编译/编译所有平台";
-        private const string MENU_INSTALLER_BUILD_CURRENT = MENU_ROOT + "/安装器/编译当前平台";
-        private const string MENU_INSTALLER_BUILD_WIN_X64 = MENU_ROOT + "/安装器/编译 Windows (win-x64)";
-        private const string MENU_INSTALLER_BUILD_MACOS_ARM64 = MENU_ROOT + "/安装器/编译 macOS (arm64)";
-        private const string MENU_INSTALLER_BUILD_MACOS_X64 = MENU_ROOT + "/安装器/编译 macOS (x64)";
-        private const string MENU_INSTALLER_BUILD_LINUX_X64 = MENU_ROOT + "/安装器/编译 Linux (linux-x64)";
-        private const string MENU_INSTALLER_BUILD_ALL = MENU_ROOT + "/安装器/编译所有平台";
         private const string PANEL_REQUEST_DIR = "panel";
         private const string PANEL_SHOW_REQUEST_FILE = "show-window.json";
         private const int ASSET_REFRESH_INTERVAL_SEC = 2;
@@ -199,57 +183,31 @@ namespace YokiFrame.Unity
             EditorApplication.update += OnEditorUpdate;
         }
 
-        #region Menu Items
-
-        /// <summary>
-        /// 编译当前平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_CURRENT, false, 99)]
         public static async void BuildCurrentPlatform()
         {
             await BuildForPlatformAsync(CurrentRuntimePlatform);
         }
 
-        /// <summary>
-        /// 编译 Windows (win-x64) 平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_WIN_X64, false, 100)]
         public static async void BuildWinX64()
         {
             await BuildCrossPlatformAsync(CrossPlatformTarget.WinX64);
         }
 
-        /// <summary>
-        /// 编译 macOS (arm64) 平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_MACOS_ARM64, false, 101)]
         public static async void BuildMacosArm64()
         {
             await BuildCrossPlatformAsync(CrossPlatformTarget.MacosArm64);
         }
 
-        /// <summary>
-        /// 编译 macOS (x64) 平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_MACOS_X64, false, 102)]
         public static async void BuildMacosX64()
         {
             await BuildCrossPlatformAsync(CrossPlatformTarget.MacosX64);
         }
 
-        /// <summary>
-        /// 编译 Linux (x64) 平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_LINUX_X64, false, 103)]
         public static async void BuildLinuxX64()
         {
             await BuildCrossPlatformAsync(CrossPlatformTarget.LinuxX64);
         }
 
-        /// <summary>
-        /// 编译所有平台的 Tauri 二进制。
-        /// </summary>
-        [MenuItem(MENU_BUILD_ALL, false, 104)]
         public static async void BuildAllPlatforms()
         {
             if (!Directory.Exists(SrcTauriPath))
@@ -301,75 +259,43 @@ namespace YokiFrame.Unity
             }
         }
 
-        [MenuItem(MENU_BUILD_CURRENT, true)]
         private static bool ValidateBuildCurrent() => Directory.Exists(SrcTauriPath);
 
-        [MenuItem(MENU_BUILD_WIN_X64, true)]
         private static bool ValidateBuildWinX64() => Directory.Exists(SrcTauriPath);
 
-        [MenuItem(MENU_BUILD_MACOS_ARM64, true)]
         private static bool ValidateBuildMacosArm64() => Directory.Exists(SrcTauriPath);
 
-        [MenuItem(MENU_BUILD_MACOS_X64, true)]
         private static bool ValidateBuildMacosX64() => Directory.Exists(SrcTauriPath);
 
-        [MenuItem(MENU_BUILD_LINUX_X64, true)]
         private static bool ValidateBuildLinuxX64() => Directory.Exists(SrcTauriPath);
 
-        [MenuItem(MENU_BUILD_ALL, true)]
         private static bool ValidateBuildAll() => Directory.Exists(SrcTauriPath);
 
-        #region Installer Build
-
-        /// <summary>
-        /// 编译当前平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_CURRENT, false, 150)]
         public static async void BuildInstallerCurrentPlatform()
         {
             await BuildInstallerForPlatformAsync(CurrentRuntimePlatform);
         }
 
-        /// <summary>
-        /// 编译 Windows (win-x64) 平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_WIN_X64, false, 151)]
         public static async void BuildInstallerWinX64()
         {
             await BuildInstallerForCrossPlatformAsync(CrossPlatformTarget.WinX64);
         }
 
-        /// <summary>
-        /// 编译 macOS (arm64) 平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_MACOS_ARM64, false, 152)]
         public static async void BuildInstallerMacosArm64()
         {
             await BuildInstallerForCrossPlatformAsync(CrossPlatformTarget.MacosArm64);
         }
 
-        /// <summary>
-        /// 编译 macOS (x64) 平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_MACOS_X64, false, 153)]
         public static async void BuildInstallerMacosX64()
         {
             await BuildInstallerForCrossPlatformAsync(CrossPlatformTarget.MacosX64);
         }
 
-        /// <summary>
-        /// 编译 Linux (x64) 平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_LINUX_X64, false, 154)]
         public static async void BuildInstallerLinuxX64()
         {
             await BuildInstallerForCrossPlatformAsync(CrossPlatformTarget.LinuxX64);
         }
 
-        /// <summary>
-        /// 编译所有平台的安装器。
-        /// </summary>
-        [MenuItem(MENU_INSTALLER_BUILD_ALL, false, 155)]
         public static async void BuildInstallerAllPlatforms()
         {
             if (!Directory.Exists(InstallerProjectPath))
@@ -421,22 +347,16 @@ namespace YokiFrame.Unity
             }
         }
 
-        [MenuItem(MENU_INSTALLER_BUILD_CURRENT, true)]
         private static bool ValidateInstallerBuildCurrent() => Directory.Exists(InstallerProjectPath);
 
-        [MenuItem(MENU_INSTALLER_BUILD_WIN_X64, true)]
         private static bool ValidateInstallerBuildWinX64() => Directory.Exists(InstallerProjectPath);
 
-        [MenuItem(MENU_INSTALLER_BUILD_MACOS_ARM64, true)]
         private static bool ValidateInstallerBuildMacosArm64() => Directory.Exists(InstallerProjectPath);
 
-        [MenuItem(MENU_INSTALLER_BUILD_MACOS_X64, true)]
         private static bool ValidateInstallerBuildMacosX64() => Directory.Exists(InstallerProjectPath);
 
-        [MenuItem(MENU_INSTALLER_BUILD_LINUX_X64, true)]
         private static bool ValidateInstallerBuildLinuxX64() => Directory.Exists(InstallerProjectPath);
 
-        [MenuItem(MENU_INSTALLER_BUILD_ALL, true)]
         private static bool ValidateInstallerBuildAll() => Directory.Exists(InstallerProjectPath);
 
         /// <summary>编译指定运行平台的安装器。</summary>
@@ -735,12 +655,9 @@ namespace YokiFrame.Unity
             }
         }
 
-        #endregion
-
         /// <summary>
         /// 启动或唤起 Tauri 编辑器窗口。
         /// </summary>
-        [MenuItem(MENU_LAUNCH, false, 100)]
         public static void Launch()
         {
             if (IsRunning)
@@ -783,13 +700,11 @@ namespace YokiFrame.Unity
             }
         }
 
-        [MenuItem(MENU_LAUNCH, true)]
         private static bool ValidateLaunch() => true;
 
         /// <summary>
         /// 关闭当前 Tauri 编辑器进程。
         /// </summary>
-        [MenuItem(MENU_CLOSE, false, 101)]
         public static void Close()
         {
             var process = GetRunningTauriProcess();
@@ -804,13 +719,11 @@ namespace YokiFrame.Unity
             }
         }
 
-        [MenuItem(MENU_CLOSE, true)]
         private static bool ValidateClose() => IsRunning;
 
         /// <summary>
         /// 重启 Tauri 编辑器窗口。
         /// </summary>
-        [MenuItem(MENU_RESTART, false, 102)]
         public static async void Restart()
         {
             Close();
@@ -818,10 +731,25 @@ namespace YokiFrame.Unity
             Launch();
         }
 
-        [MenuItem(MENU_RESTART, true)]
         private static bool ValidateRestart() => IsRunning;
 
-        #endregion
+        [MenuItem("YokiFrame/编辑器窗口/启动窗口", false, 99)]
+        private static void MenuLaunchWindow()
+        {
+            Launch();
+        }
+
+        [MenuItem("YokiFrame/编辑器窗口/关闭窗口", false, 100)]
+        private static void MenuCloseWindow()
+        {
+            Close();
+        }
+
+        [MenuItem("YokiFrame/编辑器窗口/重启窗口", false, 101)]
+        private static void MenuRestartWindow()
+        {
+            Restart();
+        }
 
         #region Cross-Platform Build
 

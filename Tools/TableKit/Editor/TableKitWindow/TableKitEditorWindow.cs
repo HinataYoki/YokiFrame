@@ -15,7 +15,6 @@ namespace YokiFrame.Unity
         /// <summary>
         /// 打开 TableKit 独立编辑器窗口。
         /// </summary>
-        [MenuItem("Tools/TableKit/配置表工具 %l", priority = 100)]
         public static void ShowWindow()
         {
             var window = GetWindow<TableKitEditorWindow>();

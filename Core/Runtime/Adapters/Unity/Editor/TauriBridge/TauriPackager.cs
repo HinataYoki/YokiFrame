@@ -21,45 +21,31 @@ namespace YokiFrame.Unity
     /// </summary>
     public static class TauriPackager
     {
-        private const string MENU_ROOT = TauriLauncher.MENU_ROOT;
-        private const string MENU_PACKAGE_CURRENT = MENU_ROOT + "/打包/打包当前平台";
-        private const string MENU_PACKAGE_WIN_X64 = MENU_ROOT + "/打包/打包 Windows (win-x64)";
-        private const string MENU_PACKAGE_MACOS_ARM64 = MENU_ROOT + "/打包/打包 macOS (arm64)";
-        private const string MENU_PACKAGE_MACOS_X64 = MENU_ROOT + "/打包/打包 macOS (x64)";
-        private const string MENU_PACKAGE_LINUX_X64 = MENU_ROOT + "/打包/打包 Linux (linux-x64)";
-        private const string MENU_PACKAGE_ALL = MENU_ROOT + "/打包/打包所有平台";
-
-        [MenuItem(MENU_PACKAGE_CURRENT, false, 120)]
         public static async void PackageCurrentPlatform()
         {
             await PackageForPlatformAsync(TauriLauncher.CurrentRuntimePlatform);
         }
 
-        [MenuItem(MENU_PACKAGE_WIN_X64, false, 121)]
         public static async void PackageWinX64()
         {
             await PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget.WinX64);
         }
 
-        [MenuItem(MENU_PACKAGE_MACOS_ARM64, false, 122)]
         public static async void PackageMacosArm64()
         {
             await PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget.MacosArm64);
         }
 
-        [MenuItem(MENU_PACKAGE_MACOS_X64, false, 123)]
         public static async void PackageMacosX64()
         {
             await PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget.MacosX64);
         }
 
-        [MenuItem(MENU_PACKAGE_LINUX_X64, false, 124)]
         public static async void PackageLinuxX64()
         {
             await PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget.LinuxX64);
         }
 
-        [MenuItem(MENU_PACKAGE_ALL, false, 125)]
         public static async void PackageAllPlatforms()
         {
             if (!Directory.Exists(TauriLauncher.SrcTauriPath))
@@ -126,26 +112,8 @@ namespace YokiFrame.Unity
             }
         }
 
-        [MenuItem(MENU_PACKAGE_CURRENT, true)]
-        private static bool ValidatePackageCurrent() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
-        [MenuItem(MENU_PACKAGE_WIN_X64, true)]
-        private static bool ValidatePackageWinX64() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
-        [MenuItem(MENU_PACKAGE_MACOS_ARM64, true)]
-        private static bool ValidatePackageMacosArm64() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
-        [MenuItem(MENU_PACKAGE_MACOS_X64, true)]
-        private static bool ValidatePackageMacosX64() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
-        [MenuItem(MENU_PACKAGE_LINUX_X64, true)]
-        private static bool ValidatePackageLinuxX64() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
-        [MenuItem(MENU_PACKAGE_ALL, true)]
-        private static bool ValidatePackageAll() => Directory.Exists(TauriLauncher.SrcTauriPath);
-
         /// <summary>打包指定运行平台到 TauriRuntime~。</summary>
-        internal static async Task<bool> PackageForPlatformAsync(TauriLauncher.TauriRuntimePlatform platform)
+        public static async Task<bool> PackageForPlatformAsync(TauriLauncher.TauriRuntimePlatform platform)
         {
             if (!Directory.Exists(TauriLauncher.SrcTauriPath))
             {
@@ -184,7 +152,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>打包跨平台目标到 TauriRuntime~。</summary>
-        internal static async Task<bool> PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget target)
+        public static async Task<bool> PackageForCrossPlatformAsync(TauriLauncher.CrossPlatformTarget target)
         {
             if (!Directory.Exists(TauriLauncher.SrcTauriPath))
             {
@@ -223,7 +191,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>拷贝运行平台二进制到 TauriRuntime~。</summary>
-        internal static void CopyPlatformArtifacts(TauriLauncher.TauriRuntimePlatform platform)
+        public static void CopyPlatformArtifacts(TauriLauncher.TauriRuntimePlatform platform)
         {
             Directory.CreateDirectory(TauriLauncher.RuntimeDir);
 
@@ -231,7 +199,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>拷贝跨平台目标二进制到 TauriRuntime~。</summary>
-        internal static void CopyCrossPlatformArtifacts(TauriLauncher.CrossPlatformTarget target)
+        public static void CopyCrossPlatformArtifacts(TauriLauncher.CrossPlatformTarget target)
         {
             Directory.CreateDirectory(TauriLauncher.RuntimeDir);
 
