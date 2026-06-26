@@ -849,6 +849,7 @@ test('frontend renders Chinese framework, theme controls, svg icons, and FsmKit 
     assert.match(js, /theme-toggle/);
     assert.match(js, /function svgIcon\(/);
     assert.match(js, /restoreWindowState\(\{\s*showAfter:\s*true\s*\}\)/);
+    assert.match(js, /invoke\('mark_panel_window_ready'\)/);
     assert.doesNotMatch(css, /\.kit-header\s*\{/);
     assert.match(css, /\.hero-intro-card,\s*\n\.kit-toolbar,\s*\n\.audio-master-strip\s*\{[\s\S]*?-webkit-app-region:\s*no-drag/);
     assert.doesNotMatch(js, /setTimeout\(showWindowOnce,\s*1200\)/);

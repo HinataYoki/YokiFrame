@@ -35,6 +35,29 @@ namespace YokiFrame.Unity
                 }
             }
 
+            if (AutoPreloadEnabled &&
+                !sPreloadAttempted &&
+                nowUtc - sEditorLoadUtc >= TimeSpan.FromSeconds(AUTO_PRELOAD_DELAY_SEC))
+            {
+                var processRunning = IsRunning;
+                var launchTarget = processRunning ? LaunchTarget.Unavailable : ResolveCurrentLaunchTarget();
+                if (ShouldAutoPreload(
+                        AutoPreloadEnabled,
+                        sPreloadAttempted,
+                        processRunning,
+                        launchTarget,
+                        EditorApplication.isCompiling,
+                        EditorApplication.isUpdating,
+                        EditorApplication.isPlayingOrWillChangePlaymode,
+                        EditorApplication.isPlaying,
+                        nowUtc,
+                        sEditorLoadUtc))
+                {
+                    sPreloadAttempted = true;
+                    Preload();
+                }
+            }
+
             if (ShouldRefreshAssetsForToolWindow(
                     sTauriProcess is { HasExited: false },
                     EditorApplication.isCompiling,

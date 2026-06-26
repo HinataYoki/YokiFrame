@@ -154,6 +154,20 @@ async function showWindowOnce() {
     }
 }
 
+async function signalPanelWindowReady() {
+    if (typeof invoke !== 'function') {
+        await showWindowOnce();
+        return;
+    }
+
+    try {
+        await invoke('mark_panel_window_ready');
+    } catch (e) {
+        addLog(t('window.show_failed', e.message || e), 'error');
+        await showWindowOnce();
+    }
+}
+
 async function restoreWindowState({ showAfter = false } = {}) {
     if (!window.__TAURI__?.window) {
         return;
@@ -177,7 +191,7 @@ async function restoreWindowState({ showAfter = false } = {}) {
         addLog(t('window.restore_failed', e.message || e), 'error');
     } finally {
         if (showAfter) {
-            await showWindowOnce();
+            await signalPanelWindowReady();
         }
     }
 }

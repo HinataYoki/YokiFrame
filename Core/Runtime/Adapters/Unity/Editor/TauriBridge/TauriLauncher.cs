@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
 [assembly: InternalsVisibleTo("YokiFrame.Unity.Tests")]
@@ -52,10 +53,14 @@ namespace YokiFrame.Unity
 
         private static System.Diagnostics.Process sTauriProcess;
         private static bool sOutdatedBinaryWarningShown;
+        private static bool sPreloadAttempted;
+        private static DateTime sEditorLoadUtc;
 
         private const string PANEL_REQUEST_DIR = "panel";
         private const string PANEL_SHOW_REQUEST_FILE = "show-window.json";
+        private const string AUTO_PRELOAD_PREF_KEY = "YokiFrame.TauriLauncher.AutoPreload";
         private const int ASSET_REFRESH_INTERVAL_SEC = 2;
+        private const int AUTO_PRELOAD_DELAY_SEC = 3;
         internal const string CARGO_TARGET_DIR_NAME = "target-codex";
 
         /// <summary>本源文件编译期绝对路径。由 CallerFilePath 烘焙。</summary>
@@ -179,6 +184,7 @@ namespace YokiFrame.Unity
 
         static TauriLauncher()
         {
+            sEditorLoadUtc = DateTime.UtcNow;
             EditorApplication.quitting += OnEditorQuitting;
             EditorApplication.update += OnEditorUpdate;
         }
@@ -696,15 +702,20 @@ namespace YokiFrame.Unity
                 return;
             }
 
-            var launchTarget = ResolveLaunchTarget(
-                IsDevMode,
-                IsBinaryAvailableForLaunch(BinaryPath),
-                IsDevMode && IsBinaryOutdated());
+            var launchTarget = ResolveCurrentLaunchTarget();
 
             if (launchTarget == LaunchTarget.Source)
             {
                 WarnIfLaunchingOutdatedDevBinary(launchingSourceWindow: true);
-                if (!StartSourceProcess())
+                var processStarted = StartSourceProcess();
+                if (ShouldRequestPanelShowAfterLaunchStart(
+                        processStarted,
+                        EditorApplication.isCompiling,
+                        EditorApplication.isUpdating,
+                        EditorApplication.isPlayingOrWillChangePlaymode))
+                    WritePanelShowRequest(ResolveYokiframeDir(), activate: true);
+
+                if (!processStarted)
                 {
                     EditorUtility.DisplayDialog("Tauri 源码窗口启动失败",
                         $"无法通过源码启动 Tauri。\n路径: {SrcTauriPath}", "确定");
@@ -719,7 +730,15 @@ namespace YokiFrame.Unity
             }
 
             WarnIfLaunchingOutdatedDevBinary(launchingSourceWindow: false);
-            if (!StartBinaryProcess(BinaryPath))
+            var binaryStarted = StartBinaryProcess(BinaryPath);
+            if (ShouldRequestPanelShowAfterLaunchStart(
+                    binaryStarted,
+                    EditorApplication.isCompiling,
+                    EditorApplication.isUpdating,
+                    EditorApplication.isPlayingOrWillChangePlaymode))
+                WritePanelShowRequest(ResolveYokiframeDir(), activate: true);
+
+            if (!binaryStarted)
             {
                 EditorUtility.DisplayDialog("Tauri 启动失败",
                     $"无法启动 Tauri 进程。\n路径: {BinaryPath}", "确定");
@@ -727,6 +746,19 @@ namespace YokiFrame.Unity
         }
 
         private static bool ValidateLaunch() => true;
+
+        private static void Preload()
+        {
+            if (IsRunning)
+                return;
+
+            var launchTarget = ResolveCurrentLaunchTarget();
+            if (launchTarget != LaunchTarget.Binary)
+                return;
+
+            if (!StartBinaryProcess(BinaryPath))
+                LogKit.Warning($"[TauriLauncher] 预热 Tauri 二进制失败: {BinaryPath}");
+        }
 
         /// <summary>
         /// 关闭当前 Tauri 编辑器进程。
@@ -759,7 +791,8 @@ namespace YokiFrame.Unity
 
         private static bool ValidateRestart() => IsRunning;
 
-        [MenuItem("YokiFrame/编辑器窗口/启动窗口 %e", false, 99)]
+        [MenuItem("YokiFrame/编辑器窗口/启动窗口", false, 99)]
+        [Shortcut("YokiFrame/Editor UI/Launch", KeyCode.E, ShortcutModifiers.Action)]
         private static void MenuLaunchWindow()
         {
             Launch();
@@ -775,6 +808,20 @@ namespace YokiFrame.Unity
         private static void MenuRestartWindow()
         {
             Restart();
+        }
+
+        [MenuItem("YokiFrame/编辑器窗口/启动时预热", false, 104)]
+        private static void MenuToggleAutoPreload()
+        {
+            AutoPreloadEnabled = !AutoPreloadEnabled;
+            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热", AutoPreloadEnabled);
+        }
+
+        [MenuItem("YokiFrame/编辑器窗口/启动时预热", true)]
+        private static bool ValidateMenuToggleAutoPreload()
+        {
+            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热", AutoPreloadEnabled);
+            return true;
         }
 
         #region Cross-Platform Build
@@ -1103,6 +1150,14 @@ namespace YokiFrame.Unity
             return LaunchTarget.Unavailable;
         }
 
+        private static LaunchTarget ResolveCurrentLaunchTarget()
+        {
+            return ResolveLaunchTarget(
+                IsDevMode,
+                IsBinaryAvailableForLaunch(BinaryPath),
+                IsDevMode && IsBinaryOutdated());
+        }
+
         private static void ReportMissingPublishedBinary()
         {
             LogKit.Error($"[TauriLauncher] 发布产物缺失: {PublishedBinaryPath}");
@@ -1204,12 +1259,52 @@ namespace YokiFrame.Unity
 
         internal static bool ShouldAutoRestartExitedProcess(bool processExited) => false;
 
+        internal static bool AutoPreloadEnabled
+        {
+            get => EditorPrefs.GetBool(AUTO_PRELOAD_PREF_KEY, true);
+            set => EditorPrefs.SetBool(AUTO_PRELOAD_PREF_KEY, value);
+        }
+
         internal static bool ShouldRequestPanelShow(
             bool isCompiling,
             bool isUpdating,
             bool isPlayingOrWillChangePlaymode)
         {
             return !isCompiling && !isUpdating && !isPlayingOrWillChangePlaymode;
+        }
+
+        internal static bool ShouldRequestPanelShowAfterLaunchStart(
+            bool processStarted,
+            bool isCompiling,
+            bool isUpdating,
+            bool isPlayingOrWillChangePlaymode)
+        {
+            return processStarted && ShouldRequestPanelShow(
+                isCompiling,
+                isUpdating,
+                isPlayingOrWillChangePlaymode);
+        }
+
+        internal static bool ShouldAutoPreload(
+            bool preloadEnabled,
+            bool preloadAttempted,
+            bool processRunning,
+            LaunchTarget launchTarget,
+            bool isCompiling,
+            bool isUpdating,
+            bool isPlayingOrWillChangePlaymode,
+            bool isPlaying,
+            DateTime nowUtc,
+            DateTime editorLoadUtc)
+        {
+            if (!preloadEnabled || preloadAttempted || processRunning)
+                return false;
+            if (launchTarget != LaunchTarget.Binary)
+                return false;
+            if (isCompiling || isUpdating || isPlayingOrWillChangePlaymode || isPlaying)
+                return false;
+
+            return nowUtc - editorLoadUtc >= TimeSpan.FromSeconds(AUTO_PRELOAD_DELAY_SEC);
         }
 
         internal static bool ShouldRefreshAssetsForToolWindow(

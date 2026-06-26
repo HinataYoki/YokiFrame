@@ -142,7 +142,7 @@ description: >-
 1. 使用 `YokiFrame/Editor UI/Restart`。
 2. 检查 Unity Console 是否有 Tauri 启动错误。
 3. 若二进制缺失，使用 `YokiFrame/Editor UI/Package Binary (Release)` 重新打包。
-4. 若已经存在窗口进程，工作台会通过 `.yokiframe/panel/show-window.json` 聚焦旧窗口。
+4. 若已经存在窗口进程，工作台会通过 `.yokiframe/panel/show-window.json` 聚焦旧窗口；新窗口启动时会先等前端恢复窗口尺寸与位置，再写入 `.yokiframe/panel/show-window-ready.json` 放行显示，避免左上角闪动。
 
 ### 页面没有 Kit 数据
 
