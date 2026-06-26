@@ -191,6 +191,7 @@ func _open_panel() -> void:
 		return
 
 	_write_pid_file(yokiframe_dir, pid)
+	_write_panel_show_request(yokiframe_dir)
 	print("[YokiFrame] Panel launched. PID: " + str(pid))
 
 
@@ -413,6 +414,7 @@ func _write_panel_show_request(yokiframe_dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(panel_dir)
 	var request_path: String = panel_dir.path_join(PANEL_SHOW_REQUEST_FILE)
 	_atomic_write_text(request_path, _build_panel_show_request_json())
+	print("[YokiFrame] Panel show requested: " + request_path)
 
 
 func _poll_editor_commands() -> void:
@@ -669,6 +671,7 @@ func _build_heartbeat_json() -> String:
 func _build_panel_show_request_json() -> String:
 	return "{\"protocolVersion\":2" \
 		+ ",\"type\":\"show_window\"" \
+		+ ",\"activate\":true" \
 		+ ",\"source\":\"" + GODOT_EDITOR_ENGINE_ID + "\"" \
 		+ ",\"createdAtUtc\":\"" + _json_escape(_utc_now_string()) + "\"}"
 

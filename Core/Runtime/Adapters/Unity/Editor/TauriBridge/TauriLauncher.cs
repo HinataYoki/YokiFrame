@@ -54,6 +54,7 @@ namespace YokiFrame.Unity
         private static System.Diagnostics.Process sTauriProcess;
         private static bool sOutdatedBinaryWarningShown;
         private static bool sPreloadAttempted;
+        private static readonly GlobalLaunchShortcutContext sGlobalLaunchShortcutContext = new GlobalLaunchShortcutContext();
         private static DateTime sEditorLoadUtc;
 
         private const string PANEL_REQUEST_DIR = "panel";
@@ -195,6 +196,7 @@ namespace YokiFrame.Unity
         static TauriLauncher()
         {
             sEditorLoadUtc = DateTime.UtcNow;
+            ShortcutManager.RegisterContext(sGlobalLaunchShortcutContext);
             EditorApplication.quitting += OnEditorQuitting;
             EditorApplication.update += OnEditorUpdate;
         }
@@ -702,35 +704,33 @@ namespace YokiFrame.Unity
         /// </summary>
         public static void Launch()
         {
+            var yokiframeDir = ResolveYokiframeDir();
+            var launchTarget = ResolveCurrentLaunchTarget();
             if (IsRunning)
             {
-                if (ShouldRequestPanelShow(
-                        EditorApplication.isCompiling,
-                        EditorApplication.isUpdating,
-                        EditorApplication.isPlayingOrWillChangePlaymode))
+                var shouldRequestPanelShow = ShouldRequestPanelShow(
+                    EditorApplication.isCompiling,
+                    EditorApplication.isUpdating,
+                    EditorApplication.isPlayingOrWillChangePlaymode);
+                if (shouldRequestPanelShow)
                 {
-                    WritePanelShowRequest(
-                        ResolveYokiframeDir(),
-                        activate: true);
+                    WritePanelShowRequest(yokiframeDir, activate: true);
                 }
                 return;
             }
-
-            var launchTarget = ResolveCurrentLaunchTarget();
 
             if (launchTarget == LaunchTarget.Source)
             {
                 WarnIfLaunchingOutdatedDevBinary(launchingSourceWindow: true);
                 var processStarted = StartSourceProcess();
-                if (ShouldRequestPanelShowAfterLaunchStart(
-                        processStarted,
-                        EditorApplication.isCompiling,
-                        EditorApplication.isUpdating,
-                        EditorApplication.isPlayingOrWillChangePlaymode))
+                var shouldRequestPanelShowAfterSourceStart = ShouldRequestPanelShowAfterLaunchStart(
+                    processStarted,
+                    EditorApplication.isCompiling,
+                    EditorApplication.isUpdating,
+                    EditorApplication.isPlayingOrWillChangePlaymode);
+                if (shouldRequestPanelShowAfterSourceStart)
                 {
-                    WritePanelShowRequest(
-                        ResolveYokiframeDir(),
-                        activate: true);
+                    WritePanelShowRequest(yokiframeDir, activate: true);
                 }
 
                 if (!processStarted)
@@ -749,15 +749,14 @@ namespace YokiFrame.Unity
 
             WarnIfLaunchingOutdatedDevBinary(launchingSourceWindow: false);
             var binaryStarted = StartBinaryProcess(BinaryPath);
-            if (ShouldRequestPanelShowAfterLaunchStart(
-                    binaryStarted,
-                    EditorApplication.isCompiling,
-                    EditorApplication.isUpdating,
-                    EditorApplication.isPlayingOrWillChangePlaymode))
+            var shouldRequestPanelShowAfterBinaryStart = ShouldRequestPanelShowAfterLaunchStart(
+                binaryStarted,
+                EditorApplication.isCompiling,
+                EditorApplication.isUpdating,
+                EditorApplication.isPlayingOrWillChangePlaymode);
+            if (shouldRequestPanelShowAfterBinaryStart)
             {
-                WritePanelShowRequest(
-                    ResolveYokiframeDir(),
-                    activate: true);
+                WritePanelShowRequest(yokiframeDir, activate: true);
             }
 
             if (!binaryStarted)
@@ -813,10 +812,11 @@ namespace YokiFrame.Unity
 
         private static bool ValidateRestart() => IsRunning;
 
-        [MenuItem("YokiFrame/编辑器窗口/启动窗口", false, 99)]
-        [Shortcut("YokiFrame/Editor UI/Launch", KeyCode.E, ShortcutModifiers.Action)]
+        [MenuItem("YokiFrame/编辑器窗口/启动窗口 %e", false, 99)]
+        [Shortcut("YokiFrame/Editor UI/Launch", typeof(GlobalLaunchShortcutContext), KeyCode.E, ShortcutModifiers.Action)]
         private static void MenuLaunchWindow()
         {
+            LogKit.Info("[TauriLauncher] 正在打开 YokiFrame 工作台...");
             Launch();
         }
 
@@ -844,6 +844,14 @@ namespace YokiFrame.Unity
         {
             Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热（可选）", AutoPreloadEnabled);
             return true;
+        }
+
+        public sealed class GlobalLaunchShortcutContext : IShortcutContext
+        {
+            public bool active
+            {
+                get { return true; }
+            }
         }
 
         #region Cross-Platform Build
@@ -1375,7 +1383,7 @@ namespace YokiFrame.Unity
             bool isUpdating,
             bool isPlayingOrWillChangePlaymode)
         {
-            return !isCompiling && !isUpdating && !isPlayingOrWillChangePlaymode;
+            return !isCompiling && !isUpdating;
         }
 
         internal static bool ShouldRequestPanelShowAfterLaunchStart(

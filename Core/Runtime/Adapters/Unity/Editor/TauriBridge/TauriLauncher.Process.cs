@@ -160,7 +160,7 @@ namespace YokiFrame.Unity
                 sTauriProcess.ErrorDataReceived += (_, e) =>
                 {
                     if (!string.IsNullOrEmpty(e.Data))
-                        LogKit.Warning($"[Tauri:dev] {e.Data}");
+                        LogKit.Info($"[Tauri:dev] {e.Data}");
                 };
 
                 sTauriProcess.Exited += OnTauriProcessExited;
