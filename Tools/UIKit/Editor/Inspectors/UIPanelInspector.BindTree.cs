@@ -38,6 +38,13 @@ namespace YokiFrame
             var openButton = new Button(OpenPanelScript) { text = "打开脚本" };
             openButton.AddToClassList("uipanel-open-code-btn");
             toolbar.Add(openButton);
+            var refreshButton = new Button(RefreshBindTree) { text = "刷新绑定树" };
+            refreshButton.AddToClassList("uipanel-refresh-btn");
+            toolbar.Add(refreshButton);
+
+            var generateButton = new Button(GenerateUICode) { text = "生成 UI 代码" };
+            generateButton.AddToClassList("uipanel-gencode-btn");
+            toolbar.Add(generateButton);
             content.Add(toolbar);
 
             mBindTreeContainer = new VisualElement();
@@ -53,14 +60,6 @@ namespace YokiFrame
             mBindValidationLabel = new Label();
             mBindValidationLabel.AddToClassList("uipanel-validation-summary");
             content.Add(mBindValidationLabel);
-
-            var refreshButton = new Button(RefreshBindTree) { text = "刷新绑定树" };
-            refreshButton.AddToClassList("uipanel-refresh-btn");
-            content.Add(refreshButton);
-
-            var generateButton = new Button(GenerateUICode) { text = "生成 UI 代码" };
-            generateButton.AddToClassList("uipanel-gencode-btn");
-            content.Add(generateButton);
 
             root.Add(section);
             RefreshBindTree();
@@ -103,9 +102,10 @@ namespace YokiFrame
             if (panel == null)
                 return;
 
-            var rootInfo = CollectBindInfo(panel.gameObject);
+            var rootInfo = CollectBindTree(panel.gameObject);
             var stats = new BindTreeStats();
             var errors = new List<string>(4);
+            ValidateBindTree(rootInfo, errors);
             var renderedCount = RenderBindChildren(rootInfo, 0, stats, errors);
 
             if (renderedCount == 0)
@@ -140,20 +140,23 @@ namespace YokiFrame
             }
         }
 
-        private static BindCodeInfo CollectBindInfo(GameObject root)
+        private static InspectorBindNode CollectBindTree(GameObject root)
         {
-            var info = new BindCodeInfo
+            var info = new InspectorBindNode
             {
                 Name = root.name,
                 Type = root.name,
                 Bind = BindType.Member,
-                Self = root
+                Self = root,
+                PathToRoot = root.name,
+                IsRoot = true,
+                Order = 0
             };
             CollectInspectorBinds(root.transform, root.name, info);
             return info;
         }
 
-        private static void CollectInspectorBinds(Transform current, string fullName, BindCodeInfo parentInfo)
+        private static void CollectInspectorBinds(Transform current, string fullName, InspectorBindNode parentInfo)
         {
             foreach (Transform child in current)
             {
@@ -170,18 +173,17 @@ namespace YokiFrame
             }
         }
 
-        private static void ProcessInspectorBind(AbstractBind bind, Transform child, string nextFullName, BindCodeInfo parentInfo)
+        private static void ProcessInspectorBind(AbstractBind bind, Transform child, string nextFullName, InspectorBindNode parentInfo)
         {
             var strategy = BindStrategyRegistry.Get(bind.Bind);
-            if (strategy == null || strategy.ShouldSkipCodeGen)
+            if (strategy == null)
                 return;
 
             var bindType = !string.IsNullOrEmpty(bind.Type) ? bind.Type : strategy.InferTypeName(bind);
             var bindName = string.IsNullOrEmpty(bind.Name) ? child.name : bind.Name;
-            var repeat = parentInfo.MemberDic.ContainsKey(bindName);
 
-            var order = parentInfo.MemberDic.Count + 1;
-            var bindInfo = new BindCodeInfo
+            var order = parentInfo.Children.Count + 1;
+            var bindInfo = new InspectorBindNode
             {
                 Type = bindType,
                 Name = bindName,
@@ -190,18 +192,15 @@ namespace YokiFrame
                 Bind = bind.Bind,
                 Self = child.gameObject,
                 BindScript = bind,
-                RepeatElement = repeat,
                 Order = order,
+                Parent = parentInfo,
             };
 
-            var key = repeat ? bindName + order : bindName;
-            parentInfo.MemberDic.Add(key, bindInfo);
-
-            var nextParent = strategy.CanContainChildren ? bindInfo : parentInfo;
-            CollectInspectorBinds(child, nextFullName, nextParent);
+            parentInfo.Children.Add(bindInfo);
+            CollectInspectorBinds(child, nextFullName, bindInfo);
         }
 
-        private int RenderBindChildren(BindCodeInfo parent, int level, BindTreeStats stats, List<string> errors)
+        private int RenderBindChildren(InspectorBindNode parent, int level, BindTreeStats stats, List<string> errors)
         {
             var renderedCount = 0;
             var children = GetSortedChildren(parent);
@@ -209,7 +208,6 @@ namespace YokiFrame
             {
                 var child = children[i];
                 stats.Add(child.Bind);
-                ValidateBindInfo(child, errors);
 
                 var childHasChildren = HasBindChildren(child);
                 mBindTreeContainer.Add(CreateBindRow(child, level, childHasChildren));
@@ -222,7 +220,7 @@ namespace YokiFrame
             return renderedCount;
         }
 
-        private VisualElement CreateBindRow(BindCodeInfo info, int level, bool hasChildren)
+        private VisualElement CreateBindRow(InspectorBindNode info, int level, bool hasChildren)
         {
             var row = new VisualElement();
             row.AddToClassList("uipanel-bindtree-node");
@@ -276,9 +274,13 @@ namespace YokiFrame
             name.AddToClassList("uipanel-bindtree-name");
             card.Add(name);
 
-            var typeName = new Label("(" + ShortTypeName(info.Type) + ")");
-            typeName.AddToClassList("uipanel-bindtree-type");
-            card.Add(typeName);
+            var shortTypeName = ShortTypeName(info.Type);
+            if (!string.IsNullOrEmpty(shortTypeName))
+            {
+                var typeName = new Label("(" + shortTypeName + ")");
+                typeName.AddToClassList("uipanel-bindtree-type");
+                card.Add(typeName);
+            }
 
             var bindType = new Label("- " + info.Bind);
             bindType.AddToClassList("uipanel-bindtree-bindtype");
@@ -298,48 +300,159 @@ namespace YokiFrame
             return row;
         }
 
-        private static List<BindCodeInfo> GetSortedChildren(BindCodeInfo parent)
+        private static List<InspectorBindNode> GetSortedChildren(InspectorBindNode parent)
         {
-            var result = new List<BindCodeInfo>();
-            if (parent == null || parent.MemberDic == null)
+            var result = new List<InspectorBindNode>();
+            if (parent == null || parent.Children == null)
                 return result;
 
-            foreach (var pair in parent.MemberDic)
+            for (var i = 0; i < parent.Children.Count; i++)
             {
-                if (pair.Value != null)
-                    result.Add(pair.Value);
+                if (parent.Children[i] != null)
+                    result.Add(parent.Children[i]);
             }
             result.Sort(CompareBindOrder);
             return result;
         }
 
-        private static int CompareBindOrder(BindCodeInfo left, BindCodeInfo right)
+        private static int CompareBindOrder(InspectorBindNode left, InspectorBindNode right)
         {
             return left.Order.CompareTo(right.Order);
         }
 
-        private static bool HasBindChildren(BindCodeInfo info)
+        private static bool HasBindChildren(InspectorBindNode info)
         {
-            return info != null && info.MemberDic != null && info.MemberDic.Count > 0;
+            return info != null && info.Children != null && info.Children.Count > 0;
         }
 
-        private static string GetBindPathKey(BindCodeInfo info)
+        private static string GetBindPathKey(InspectorBindNode info)
         {
             if (info == null)
                 return string.Empty;
             return string.IsNullOrEmpty(info.PathToRoot) ? info.Name : info.PathToRoot;
         }
 
-        private static void ValidateBindInfo(BindCodeInfo info, List<string> errors)
+        private static void ValidateBindTree(InspectorBindNode root, List<string> errors)
         {
-            if (info.Bind == BindType.Leaf)
+            if (root == null || errors == null)
                 return;
-            if (info.RepeatElement && info.Bind == BindType.Member)
-                errors.Add(info.PathToRoot + ": 重复的 Member 名称 " + info.Name + "。");
-            if (string.IsNullOrEmpty(info.Name))
-                errors.Add(info.PathToRoot + ": 字段名称为空。");
-            if (string.IsNullOrEmpty(info.Type))
-                errors.Add(info.PathToRoot + ": 类型为空。");
+
+            ValidateRequiredFields(root, errors);
+            DetectNameConflictsInContainer(root, errors);
+            ValidateHierarchyRules(root, errors);
+        }
+
+        private static void ValidateRequiredFields(InspectorBindNode node, List<string> errors)
+        {
+            if (node == null)
+                return;
+
+            if (!node.IsRoot && node.Bind != BindType.Leaf)
+            {
+                if (string.IsNullOrEmpty(node.Name))
+                    errors.Add(node.PathToRoot + ": 字段名称为空。");
+                if (string.IsNullOrEmpty(node.Type))
+                    errors.Add(node.PathToRoot + ": 类型为空。");
+            }
+
+            for (var i = 0; i < node.Children.Count; i++)
+                ValidateRequiredFields(node.Children[i], errors);
+        }
+
+        private static void DetectNameConflictsInContainer(InspectorBindNode container, List<string> errors)
+        {
+            if (container == null || errors == null)
+                return;
+
+            var nameToNodes = new Dictionary<string, List<InspectorBindNode>>(8);
+            for (var i = 0; i < container.Children.Count; i++)
+                CollectDirectContainerMembers(container.Children[i], nameToNodes, errors);
+
+            foreach (var pair in nameToNodes)
+            {
+                if (pair.Value.Count <= 1)
+                    continue;
+
+                var containerName = GetContainerDisplayName(container);
+                for (var i = 0; i < pair.Value.Count; i++)
+                {
+                    var node = pair.Value[i];
+                    errors.Add(node.PathToRoot + ": 字段名 " + pair.Key + " 在 " + containerName + " 中存在 " + pair.Value.Count + " 处重复定义。");
+                }
+            }
+        }
+
+        private static void CollectDirectContainerMembers(
+            InspectorBindNode node,
+            Dictionary<string, List<InspectorBindNode>> nameToNodes,
+            List<string> errors)
+        {
+            if (node == null)
+                return;
+
+            if (node.Bind == BindType.Element || node.Bind == BindType.Component)
+            {
+                AddNameToContainer(node, nameToNodes);
+                DetectNameConflictsInContainer(node, errors);
+                return;
+            }
+
+            if (node.Bind == BindType.Member)
+                AddNameToContainer(node, nameToNodes);
+
+            for (var i = 0; i < node.Children.Count; i++)
+                CollectDirectContainerMembers(node.Children[i], nameToNodes, errors);
+        }
+
+        private static void AddNameToContainer(InspectorBindNode node, Dictionary<string, List<InspectorBindNode>> nameToNodes)
+        {
+            if (node == null || string.IsNullOrEmpty(node.Name))
+                return;
+
+            if (!nameToNodes.TryGetValue(node.Name, out var nodes))
+            {
+                nodes = new List<InspectorBindNode>(2);
+                nameToNodes[node.Name] = nodes;
+            }
+
+            nodes.Add(node);
+        }
+
+        private static void ValidateHierarchyRules(InspectorBindNode node, List<string> errors)
+        {
+            if (node == null)
+                return;
+
+            if (node.Bind == BindType.Element)
+            {
+                var parent = node.Parent;
+                while (parent != null)
+                {
+                    if (parent.Bind == BindType.Component)
+                    {
+                        errors.Add(node.PathToRoot + ": Element 不能定义在 Component " + parent.Name + " 下。");
+                        break;
+                    }
+
+                    parent = parent.Parent;
+                }
+            }
+
+            for (var i = 0; i < node.Children.Count; i++)
+                ValidateHierarchyRules(node.Children[i], errors);
+        }
+
+        private static string GetContainerDisplayName(InspectorBindNode container)
+        {
+            if (container == null)
+                return "未知容器";
+            if (container.IsRoot)
+                return "Panel " + container.Name;
+            if (container.Bind == BindType.Element)
+                return "Element " + container.Name;
+            if (container.Bind == BindType.Component)
+                return "Component " + container.Name;
+            return container.Name;
         }
 
         private void LoadCollapsedBindPaths()
@@ -468,6 +581,21 @@ namespace YokiFrame
                         break;
                 }
             }
+        }
+
+        private sealed class InspectorBindNode
+        {
+            public string Name;
+            public string Type;
+            public string Comment;
+            public string PathToRoot;
+            public BindType Bind;
+            public GameObject Self;
+            public IBind BindScript;
+            public int Order;
+            public bool IsRoot;
+            public InspectorBindNode Parent;
+            public readonly List<InspectorBindNode> Children = new List<InspectorBindNode>(8);
         }
     }
 }
