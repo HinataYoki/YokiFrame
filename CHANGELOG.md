@@ -31,7 +31,6 @@ YokiFrame 2.0 是一次跨引擎架构重启，不再沿用 1.x 的 Unity 单宿
   - Docs 页面承载快速上手、Kit 文档、API 速查、第三方依赖建议和前端结构说明。
 - 新增包内 AI Skill 入口。
   - `Core/Editor/Skills/yokiframe`
-  - `Core/Editor/Skills/yokiframe-usage`
   - `Core/Editor/Skills/yokiframe-editor`
   - `Core/Editor/Skills/yokiframe-command-bridge`
   - Tauri 工作台提供 AI Skill 安装和状态查看能力。

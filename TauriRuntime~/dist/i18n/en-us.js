@@ -270,7 +270,6 @@ function enUS() {
         'ai_skill.installed_count_hint': 'Preset coverage for the selected Skill',
         'ai_skill.skill_list': 'YokiFrame Skill list',
         'ai_skill.skill.yokiframe': 'Usage Guide',
-        'ai_skill.skill.yokiframe_usage': 'Usage Guide',
         'ai_skill.skill.command_bridge': 'Command Bridge',
         'ai_skill.skill.editor': 'Workbench Guide',
         'ai_skill.installed': 'Installed',

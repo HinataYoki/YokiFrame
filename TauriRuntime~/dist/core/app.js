@@ -77,7 +77,6 @@ const YOKIFRAME_ICON_CANDIDATES = [
 ];
 const AI_SKILL_DEFAULT_SKILLS = [
     { name: 'yokiframe', labelKey: 'ai_skill.skill.yokiframe' },
-    { name: 'yokiframe-usage', labelKey: 'ai_skill.skill.yokiframe_usage' },
     { name: 'yokiframe-command-bridge', labelKey: 'ai_skill.skill.command_bridge' },
     { name: 'yokiframe-editor', labelKey: 'ai_skill.skill.editor' },
 ];

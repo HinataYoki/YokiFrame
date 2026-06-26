@@ -160,6 +160,5 @@ description: >-
 
 ## 相关 Skill
 
-- `yokiframe`：Kit 选择、业务代码使用和调试入口总览。
-- `yokiframe-usage`：Kit API 与工作台使用速查。
+- `yokiframe`：Kit 选择、业务代码使用、工作台使用速查和框架状态查询入口。
 - `yokiframe-command-bridge`：`.yokiframe` 文件命令桥、命令目录、payload 示例和压力验证。

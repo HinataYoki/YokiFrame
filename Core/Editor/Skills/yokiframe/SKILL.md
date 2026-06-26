@@ -1,11 +1,19 @@
 ---
 name: yokiframe
-description: YokiFrame 使用指南。Use when Codex 需要在 Unity 或 Godot 项目中使用 YokiFrame 的 EventKit、FsmKit、PoolKit、SingletonKit、ResKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、Tauri 工作台或命令桥进行业务开发、调试和框架状态查询。
+description: YokiFrame 使用指南。Use when Codex 需要在 Unity 或 Godot 项目中使用或说明 YokiFrame Kit API、Tauri 工作台、EventKit、FsmKit、PoolKit、SingletonKit、ResKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、命令桥、snapshot、telemetry、事件流、代码扫描或 AI 运行时查询。
 ---
 
 # YokiFrame 使用指南
 
-YokiFrame 是面向游戏项目的模块化框架。优先使用框架现有 Kit，不要重新手写事件总线、对象池、状态机、单例、资源加载、输入、UI 面板栈、空间索引或运行时调试协议。
+YokiFrame 是面向游戏项目的跨引擎 Kit 框架。优先使用框架现有 Kit，不要重新手写事件总线、对象池、状态机、单例、资源加载、输入、UI 面板栈、空间索引或运行时调试协议。
+
+## 选择入口
+
+- 业务代码：使用 `YokiFrame` 命名空间下的统一 Kit API。
+- 人类调试：在 Unity 菜单打开 `YokiFrame/Editor UI/Launch`，快捷键为 `Ctrl+E`。
+- AI/脚本诊断：通过 `.yokiframe/engines/<engineId>` 文件桥读取 snapshot 或发送命令。
+- Tauri 页面：高频可视状态优先 shared memory telemetry；不可用或过期时读 snapshot。
+- Godot 项目：使用 Godot adapter 和 `addons/yokiframe` 薄插件入口；命令桥路径同样走 `.yokiframe/engines/<engineId>`。
 
 ## 快速选择
 
@@ -18,8 +26,18 @@ YokiFrame 是面向游戏项目的模块化框架。优先使用框架现有 Kit
 - UI：使用 `UIKit` 管理面板、层级和面板栈；当前 runtime 仍包含 Unity UI 实现，Godot 完整接入需要独立 `IUIBackend`。
 - 空间查询：使用 `SpatialKit` 的 HashGrid、Quadtree 或 Octree。
 - 动作流程：使用 `ActionKit` 组合 Delay、Callback、Sequence、Parallel 等动作。
-- 调试工作台：在 Unity 菜单打开 `YokiFrame/Editor UI/Launch`。
 - AI/脚本状态查询：使用 `.yokiframe` 文件命令桥，优先读 snapshot，再发送 command。
+
+## 查询顺序
+
+查看当前状态时按这个顺序：
+
+1. Tauri 可视高频页面：`read_telemetry`。
+2. AI 或脚本：优先读 `snapshots/<kit>/<name>.json`。
+3. 需要详情、历史、显式操作或 snapshot 缺失：发送 command/result 请求。
+4. 请求超时：先发 `System/bridge_status`，再看 pending、processing、deadletter、lastError。
+
+不要用高频 `send_command` 轮询实时页面；命令桥是可靠控制面，不是运行时事件总线。
 
 ## 使用规则
 
@@ -30,6 +48,7 @@ YokiFrame 是面向游戏项目的模块化框架。优先使用框架现有 Kit
 5. 变更型命令，例如删除存档、停止音频、切换语言、卸载场景，只在用户明确要求时执行。
 6. 注册事件、订阅输入、打开 UI、启动自动保存等生命周期能力必须有成对释放路径。
 7. Unity/Godot 差异优先放在 Adapter、Provider 或 Backend，业务仍调用同一套 YokiFrame API。
+8. AI 需要框架状态时优先使用 `.yokiframe` 协议和 `yokiframe-command-bridge` Skill，不把 Unity MCP 当作唯一状态来源。
 
 ## 常用入口
 
@@ -118,13 +137,16 @@ UIKit.PushPanel(menu, "Main", hidePreLevel: true);
 UIKit.PopPanel(showPreLevel: true, autoClose: true);
 ```
 
-## 调试顺序
+## 常用诊断任务
 
-1. 打开工作台：Unity 菜单 `YokiFrame/Editor UI/Launch`。
-2. 看运行状态：在对应 Kit 页面查看 telemetry 或 snapshot。
-3. AI/脚本读取：先查 `.yokiframe/engines/<engineId>/snapshots/<Kit>/state.json`。
-4. 需要详情：发送 `.yokiframe/engines/<engineId>/commands/<requestId>.json`。
-5. 命令超时：发送 `System/bridge_status`，检查 engine-scoped pending、processing、deadletter、lastError。
+- 查看桥状态：读 `references/command-bridge.md` 的 `System/bridge_status`。
+- 查看 FSM：优先 `FsmKit/state` snapshot，再用 `FsmKit/get_workbench_snapshot`。
+- 查看 EventKit：优先 `EventKit/state` snapshot，再用 `EventKit/get_workbench_snapshot`；代码关系由扫描器提供。
+- 查看 SpatialKit：优先 `SpatialKit/state` snapshot，再用 `SpatialKit/get_workbench_snapshot`；实体插入、更新、删除和查询留在运行时代码的 `ISpatialIndex<T>` 对象上执行。
+- 查看 InputKit：优先 `InputKit/state` snapshot，再用 `InputKit/get_workbench_snapshot`；输入模拟、按键注入和重绑定不通过命令桥执行。
+- 查看 UIKit：优先 `UIKit/state` snapshot，再用 `UIKit/get_workbench_snapshot`；面板开关、显示/隐藏和压栈不通过命令桥执行。
+- 扫描 EventKit 代码：在 Tauri EventKit 页面点击“扫描代码”，需要时勾选“排除 Editor”。
+- 打开源码：通过 Tauri 页面或 `System/open_code_location`，由引擎默认代码编辑器处理。
 
 ## 参考资料
 

@@ -43,7 +43,6 @@ function renderAiSkillInstallPanel() {
             </div>
             <div class="ai-skill-installer__metadata" hidden>
                 <span data-ai-skill-name="yokiframe"></span>
-                <span data-ai-skill-name="yokiframe-usage"></span>
                 <span data-ai-skill-name="yokiframe-command-bridge"></span>
                 <span data-ai-skill-name="yokiframe-editor"></span>
                 <span data-ai-skill-target="codex"></span>

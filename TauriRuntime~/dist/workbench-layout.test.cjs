@@ -1023,7 +1023,6 @@ test('framework overview keeps engine status and log in the primary stack while 
     assert.match(js, /invoke\('install_ai_skill'/);
     assert.match(js, /invoke\('uninstall_ai_skill'/);
     assert.match(js, /data-ai-skill-name="yokiframe"/);
-    assert.match(js, /data-ai-skill-name="yokiframe-usage"/);
     assert.match(js, /data-ai-skill-name="yokiframe-command-bridge"/);
     assert.match(js, /data-ai-skill-name="yokiframe-editor"/);
     assert.match(js, /data-ai-skill-target="codex"/);
@@ -1042,18 +1041,13 @@ test('framework overview keeps engine status and log in the primary stack while 
 });
 
 test('YokiFrame package carries all AI skill source folders under Assets/YokiFrame/Core/Editor/Skills', () => {
-    for (const skillName of ['yokiframe', 'yokiframe-usage', 'yokiframe-command-bridge', 'yokiframe-editor']) {
+    for (const skillName of ['yokiframe', 'yokiframe-command-bridge', 'yokiframe-editor']) {
         const skillFile = resolveWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Editor', 'Skills', skillName, 'SKILL.md');
         assert.ok(fs.existsSync(skillFile), `${skillName} should be packaged under Assets/YokiFrame/Core/Editor/Skills`);
         const body = fs.readFileSync(skillFile, 'utf8');
         assert.match(body, new RegExp(`name:\\s*${skillName}`));
         assert.match(body, /description:/);
     }
-
-    assert.ok(
-        workspaceFileExists('Assets', 'YokiFrame', 'Core', 'Editor', 'Skills', 'yokiframe-usage', 'references', 'kits.md'),
-        'yokiframe-usage should package references for AI onboarding'
-    );
     assert.ok(
         workspaceFileExists('Assets', 'YokiFrame', 'Core', 'Editor', 'Skills', 'yokiframe-command-bridge', 'references', 'command-catalog.md'),
         'yokiframe-command-bridge should package its command catalog'

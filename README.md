@@ -155,7 +155,6 @@ AI Agent 默认读取 snapshot 或 command/result；Tauri 工作台优先读 tel
 ```text
 YokiFrame/Core/Editor/Skills/
 ├── yokiframe/
-├── yokiframe-usage/
 ├── yokiframe-editor/
 └── yokiframe-command-bridge/
 ```
@@ -438,7 +437,7 @@ controller.Cancel();
 | 快速上手和 Kit 文档 | Tauri 工作台 `Docs` 页面 |
 | Tauri 内置文档源 | `TauriRuntime~/dist/docs` |
 | AI 命令桥 Skill | `Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
-| YokiFrame 使用 Skill | `Core/Editor/Skills/yokiframe-usage/SKILL.md` |
+| YokiFrame 使用 Skill | `Core/Editor/Skills/yokiframe/SKILL.md` |
 
 ---
 

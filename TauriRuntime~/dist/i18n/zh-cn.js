@@ -270,7 +270,6 @@ function zhCN() {
         'ai_skill.installed_count_hint': '当前 Skill 的预设目标覆盖',
         'ai_skill.skill_list': 'YokiFrame Skill 列表',
         'ai_skill.skill.yokiframe': '使用指南',
-        'ai_skill.skill.yokiframe_usage': '使用指南',
         'ai_skill.skill.command_bridge': '命令桥',
         'ai_skill.skill.editor': '工作台指南',
         'ai_skill.installed': '已安装',
