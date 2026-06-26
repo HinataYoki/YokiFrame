@@ -426,7 +426,12 @@ var text = ResKit.LoadRawText("Configs/GameConfig");
 
 默认 Unity Provider 基于 `TextAsset`，默认 Godot Provider 基于 `FileAccess`。自定义 Provider 要支持 raw 读取时实现 `IRawResourceProvider`。
 
-SceneKit 和 UIKit 的默认资源入口也应跟随 ResKit：内置 Unity Resources / YooAsset Provider 已经提供场景加载能力，UIKit 默认 `DefaultPanelLoader` 通过 `ResKit.LoadAsset<GameObject>()` 加载面板。切换 YooAsset 时只需要切 ResKit Provider，不需要再单独切 SceneKit 后端或 UIKit PanelLoader。
+SceneKit 和 UIKit 的默认资源入口也应跟随 ResKit：内置 Unity Resources / YooAsset Provider 已经提供场景加载能力，UIKit 默认 `DefaultPanelLoader` 通过 `ResKit.LoadAsset<GameObject>()` 加载面板。切换 YooAsset 时只需要切 ResKit Provider，不需要再单独切 SceneKit 后端或 YooAsset 专用 PanelLoader。如果 YooAsset 面板使用类型名作为可寻址 location，开启默认加载池的可寻址模式：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
+```
 
 ### TableKit
 

@@ -286,6 +286,16 @@ ResKit.SetProvider(new YooAssetResourceProvider());
 
 不要再额外要求用户调用 `SceneKit.SetBackend()`。UIKit 不再提供 YooAsset 专用初始化入口；除非项目确实要显式覆盖场景系统或面板加载策略，否则只切换 ResKit Provider。
 
+如果 YooAsset 面板资源使用面板类型名作为可寻址 location，例如 `LoginPanel`，不要恢复 YooAsset 专用 loader，直接开启默认加载池的可寻址模式：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
+
+// 如果还没有创建 UIKit 当前加载池，也可以先设置新建默认池的全局默认值
+DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
+```
+
 原始文件通过统一 ResKit API 读取，Unity 和 Godot 调用侧保持一致：
 
 ```csharp
@@ -383,7 +393,7 @@ UIKit.PopPanel(showPreLevel: true, autoClose: true);
 - `IPanel` 只暴露 `PanelName`、`Level`、`State`、`Tag`、`Data`。
 - `UILevel`、`PanelState` 和面板栈语义应保持宿主无关。
 - 当前 Unity 的 GameObject / Canvas 细节仍在 runtime 实现内；新增能力不要继续扩大这部分耦合。
-- 默认面板加载器走 `ResKit.LoadAsset<GameObject>()`。如果 ResKit Provider 切到 YooAsset，UIKit 默认面板加载也会跟随 YooAsset；不要再为 YooAsset 面板引入平行 loader 或独立初始化入口。
+- 默认面板加载器走 `ResKit.LoadAsset<GameObject>()`。默认路径是 `Art/UIPrefab/<PanelName>`；如果 ResKit Provider 切到 YooAsset 且面板使用类型名作为可寻址 location，设置 `UIKit.GetPanelLoader().UseAddressableLocation = true`；未创建当前加载池时可提前设置 `DefaultPanelLoaderPool.DefaultUseAddressableLocation = true`。不要再为 YooAsset 面板引入平行 loader 或独立初始化入口。
 - 命令桥只暴露 `UIKit/state`、`stats`、`list_panels`、`list_stacks`、`get_workbench_snapshot` 这类只读诊断；不要通过 `.yokiframe` 打开、关闭、显示、隐藏、压栈或弹栈面板。
 - AI 排查 UI 状态时优先读 `UIKit/state` snapshot；只有用户要求显式刷新或拆分列表时才发命令。
 

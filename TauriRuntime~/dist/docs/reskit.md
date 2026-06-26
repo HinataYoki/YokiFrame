@@ -66,6 +66,16 @@ ResKit.SetProvider(new YooAssetResourceProvider());
 
 之后 `ResKit.LoadAsset<T>()`、`ResKit.LoadRawText()`、`SceneKit.LoadSceneAsync()` 和 UIKit 默认 `DefaultPanelLoader` 都会沿用当前 ResKit Provider。新项目不需要再额外调用 `SceneKit.SetBackend()`，UIKit 也不再提供 YooAsset 专用初始化入口；只有项目要接入完全不同的场景系统或 UI 加载策略时，才使用显式覆盖点。
 
+UIKit 默认面板路径仍是 `Art/UIPrefab/<PanelName>`。如果 YooAsset 面板收集方式使用可寻址名，例如 `LoginPanel`，开启默认加载池的可寻址模式：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
+
+// 如果还没有创建 UIKit 当前加载池，也可以先设置新建默认池的全局默认值
+DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
+```
+
 `UnityBootstrap` 会在初始化时完成这一步。如果项目使用自己的资源系统，实现 `IResourceProvider` 后手动注入：
 
 ```csharp

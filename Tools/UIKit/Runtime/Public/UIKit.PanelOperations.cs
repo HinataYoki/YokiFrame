@@ -183,6 +183,15 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 获取当前 Panel 加载器池
+        /// </summary>
+        public static IPanelLoaderPool GetPanelLoader()
+        {
+            var root = Root;
+            return root != default ? root.GetPanelLoader() : null;
+        }
+
+        /// <summary>
         /// 设置自定义的 Panel 加载器池
         /// </summary>
         public static void SetPanelLoader(IPanelLoaderPool loaderPool)

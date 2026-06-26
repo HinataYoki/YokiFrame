@@ -21,6 +21,15 @@ namespace YokiFrame
         private IPanelLoaderPool mLoaderPool = new DefaultPanelLoaderPool();
 
         /// <summary>
+        /// 获取当前面板加载器池。
+        /// </summary>
+        /// <returns>当前面板加载器池。</returns>
+        public IPanelLoaderPool GetPanelLoader()
+        {
+            return mLoaderPool;
+        }
+
+        /// <summary>
         /// 设置面板加载器
         /// </summary>
         /// <param name="loaderPool">加载器池</param>

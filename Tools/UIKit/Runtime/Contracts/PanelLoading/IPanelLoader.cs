@@ -54,6 +54,11 @@ namespace YokiFrame
     public interface IPanelLoaderPool
     {
         /// <summary>
+        /// 是否使用可寻址 location 加载面板。启用后默认加载器直接使用面板类型名。
+        /// </summary>
+        bool UseAddressableLocation { get; set; }
+
+        /// <summary>
         /// 分配一个面板加载器。
         /// </summary>
         /// <returns>面板加载器实例。</returns>
@@ -72,6 +77,9 @@ namespace YokiFrame
     public abstract class AbstractPanelLoaderPool : IPanelLoaderPool
     {
         private readonly Stack<IPanelLoader> mLoaderPool = new();
+
+        /// <inheritdoc />
+        public virtual bool UseAddressableLocation { get; set; }
 
         /// <inheritdoc />
         public IPanelLoader AllocateLoader() => mLoaderPool.Count > 0 ? mLoaderPool.Pop() : CreatePanelLoader();
@@ -101,6 +109,19 @@ namespace YokiFrame
         /// 路径前缀，可在运行时修改
         /// </summary>
         public static string PathPrefix { get; set; } = DEFAULT_PATH_PREFIX;
+
+        /// <summary>
+        /// 默认加载池创建时是否使用可寻址 location。启用后默认加载器直接使用面板类型名，例如 LoginPanel。
+        /// </summary>
+        public static bool DefaultUseAddressableLocation { get; set; }
+
+        /// <summary>
+        /// 创建默认面板加载池。
+        /// </summary>
+        public DefaultPanelLoaderPool()
+        {
+            UseAddressableLocation = DefaultUseAddressableLocation;
+        }
         
         /// <inheritdoc />
         protected override IPanelLoader CreatePanelLoader() => new DefaultPanelLoader(this);
@@ -174,8 +195,11 @@ namespace YokiFrame
                 mLoaderPool.RecycleLoader(this);
             }
 
-            private static string BuildPath(PanelHandler handler)
+            private string BuildPath(PanelHandler handler)
             {
+                if (mLoaderPool.UseAddressableLocation)
+                    return handler.Type.Name;
+
 #if YOKIFRAME_ZSTRING_SUPPORT
                 return Cysharp.Text.ZString.Concat(PathPrefix, "/", handler.Type.Name);
 #else

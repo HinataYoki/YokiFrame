@@ -248,6 +248,16 @@ var result = await UIKit.ShowDialogAsync(config, cts.Token);
 UIKit.SetPanelLoader(new MyPanelLoaderPool());
 ```
 
+默认加载池通过 `ResKit.LoadAsset<GameObject>()` 加载面板。默认路径是 `Art/UIPrefab/<PanelName>`；如果当前 ResKit Provider 是 YooAsset 且面板使用类型名作为可寻址 location，可开启可寻址模式：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
+
+// 如果还没有创建 UIKit 当前加载池，也可以先设置新建默认池的全局默认值
+DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
+```
+
 ## 命令桥
 
 UIKit 已接入文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径：

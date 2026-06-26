@@ -257,7 +257,15 @@ YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ResKit.SetProvider(new YooAssetResourceProvider());
 ```
 
-内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 同时提供普通资源、raw 文件和场景加载能力。SceneKit 默认跟随当前 ResKit Provider；UIKit 默认 `DefaultPanelLoader` 也通过 `ResKit.LoadAsset<GameObject>()` 加载面板，不再提供 YooAsset 专用初始化入口或专用 PanelLoader。
+内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 同时提供普通资源、raw 文件和场景加载能力。SceneKit 默认跟随当前 ResKit Provider；UIKit 默认 `DefaultPanelLoader` 也通过 `ResKit.LoadAsset<GameObject>()` 加载面板，不再提供 YooAsset 专用初始化入口或专用 PanelLoader。默认面板路径仍是 `Art/UIPrefab/<PanelName>`；如果 YooAsset 使用面板类型名作为可寻址 location，可在启动时设置：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
+
+// 如果还没有创建 UIKit 当前加载池，也可以先设置新建默认池的全局默认值
+DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
+```
 
 如果希望继续使用场景生命周期自动驱动，可保留一个轻量 MonoBehaviour 外壳：
 
