@@ -21,8 +21,7 @@ namespace YokiFrame
                     continue;
 
                 scope.Field(typeName, fieldName, field => field
-                    .WithAccess(AccessModifier.Private)
-                    .WithAttribute("SerializeField"));
+                    .WithAccess(AccessModifier.Public));
             }
 
             if (children.Count > 0)
