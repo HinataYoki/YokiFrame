@@ -5,7 +5,9 @@ using Cysharp.Threading.Tasks;
 #else
 using System.Threading.Tasks;
 #endif
+using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using YokiFrame;
 
 namespace YokiFrame.Unity
@@ -14,12 +16,30 @@ namespace YokiFrame.Unity
     /// IResourceProvider 的 Unity 实现，基于 Resources.Load
     /// 未来可替换为 YooAsset / Addressables 实现
     /// </summary>
-    public sealed class UnityResourceProvider : IResourceProvider, IRawResourceProvider
+    public sealed class UnityResourceProvider : IResourceProvider, IRawResourceProvider, IResSceneBackend
     {
+        private readonly UnitySceneBackend mSceneBackend = new UnitySceneBackend();
+
         /// <summary>
         /// 获取资源提供者名称。
         /// </summary>
         public string ProviderName => "Unity.Resources";
+
+        /// <summary>
+        /// 获取场景加载后端名称。
+        /// </summary>
+        public string BackendName
+        {
+            get { return mSceneBackend.BackendName; }
+        }
+
+        /// <summary>
+        /// 获取当前激活场景。
+        /// </summary>
+        public ResSceneHandle ActiveScene
+        {
+            get { return mSceneBackend.ActiveScene; }
+        }
 
 #if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
@@ -174,6 +194,50 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
+        /// 通过 Unity SceneManager 加载场景。
+        /// </summary>
+        public IResSceneLoadOperation LoadSceneAsync(
+            ResSceneLoadRequest request,
+            Action<ResSceneLoadResult> onComplete,
+            Action<float> onProgress,
+            Action onSuspended)
+        {
+            return mSceneBackend.LoadSceneAsync(request, onComplete, onProgress, onSuspended);
+        }
+
+        /// <summary>
+        /// 通过 Unity SceneManager 卸载场景。
+        /// </summary>
+        public void UnloadSceneAsync(ResSceneHandle scene, Action onComplete)
+        {
+            mSceneBackend.UnloadSceneAsync(scene, onComplete);
+        }
+
+        /// <summary>
+        /// 设置当前激活场景。
+        /// </summary>
+        public void SetActiveScene(ResSceneHandle scene)
+        {
+            mSceneBackend.SetActiveScene(scene);
+        }
+
+        /// <summary>
+        /// 获取当前激活场景。
+        /// </summary>
+        public ResSceneHandle GetActiveScene()
+        {
+            return mSceneBackend.GetActiveScene();
+        }
+
+        /// <summary>
+        /// 卸载未使用资源。
+        /// </summary>
+        public void UnloadUnusedAssets(Action onComplete)
+        {
+            mSceneBackend.UnloadUnusedAssets(onComplete);
+        }
+
+        /// <summary>
         /// 释放资源引用。Resources 系统不支持手动释放，此方法保留统一接口形状。
         /// </summary>
         /// <param name="asset">要释放的资源对象。</param>
@@ -199,6 +263,172 @@ namespace YokiFrame.Unity
             }
 
             return obj as T;
+        }
+
+        private sealed class UnitySceneBackend : IResSceneBackend
+        {
+            public string BackendName
+            {
+                get { return "Unity.SceneManager"; }
+            }
+
+            public ResSceneHandle ActiveScene
+            {
+                get { return ToSceneHandle(SceneManager.GetActiveScene()); }
+            }
+
+            public IResSceneLoadOperation LoadSceneAsync(
+                ResSceneLoadRequest request,
+                Action<ResSceneLoadResult> onComplete,
+                Action<float> onProgress,
+                Action onSuspended)
+            {
+                var loadMode = request.Mode == ResSceneLoadMode.Single ? LoadSceneMode.Single : LoadSceneMode.Additive;
+                AsyncOperation operation;
+                if (request.BuildIndex >= 0)
+                    operation = SceneManager.LoadSceneAsync(request.BuildIndex, loadMode);
+                else
+                    operation = SceneManager.LoadSceneAsync(request.SceneName, loadMode);
+
+                var loadOperation = new UnityResourceSceneLoadOperation(operation);
+                if (operation == null)
+                {
+                    if (onComplete != null)
+                        onComplete(new ResSceneLoadResult(new ResSceneHandle(request.SceneName, request.BuildIndex, false)));
+                    return loadOperation;
+                }
+
+                if (request.SuspendAtProgress < 1f)
+                {
+                    operation.allowSceneActivation = false;
+                    if (onSuspended != null)
+                        onSuspended();
+                }
+
+                if (onProgress != null)
+                    onProgress(operation.progress);
+
+                operation.completed += _ =>
+                {
+                    var scene = request.BuildIndex >= 0
+                        ? SceneManager.GetSceneByBuildIndex(request.BuildIndex)
+                        : SceneManager.GetSceneByName(request.SceneName);
+                    if (onComplete != null)
+                        onComplete(new ResSceneLoadResult(ToSceneHandle(scene)));
+                };
+
+                return loadOperation;
+            }
+
+            public void UnloadSceneAsync(ResSceneHandle scene, Action onComplete)
+            {
+                var unityScene = ResolveScene(scene);
+                if (!unityScene.IsValid())
+                {
+                    if (onComplete != null)
+                        onComplete();
+                    return;
+                }
+
+                var operation = SceneManager.UnloadSceneAsync(unityScene);
+                if (operation == null)
+                {
+                    if (onComplete != null)
+                        onComplete();
+                    return;
+                }
+
+                operation.completed += _ =>
+                {
+                    if (onComplete != null)
+                        onComplete();
+                };
+            }
+
+            public void SetActiveScene(ResSceneHandle scene)
+            {
+                var unityScene = ResolveScene(scene);
+                if (unityScene.IsValid())
+                    SceneManager.SetActiveScene(unityScene);
+            }
+
+            public ResSceneHandle GetActiveScene()
+            {
+                return ActiveScene;
+            }
+
+            public void UnloadUnusedAssets(Action onComplete)
+            {
+                var operation = Resources.UnloadUnusedAssets();
+                if (operation == null)
+                {
+                    if (onComplete != null)
+                        onComplete();
+                    return;
+                }
+
+                operation.completed += _ =>
+                {
+                    if (onComplete != null)
+                        onComplete();
+                };
+            }
+
+            private static UnityEngine.SceneManagement.Scene ResolveScene(ResSceneHandle scene)
+            {
+                if (scene.BuildIndex >= 0)
+                {
+                    var byIndex = SceneManager.GetSceneByBuildIndex(scene.BuildIndex);
+                    if (byIndex.IsValid())
+                        return byIndex;
+                }
+
+                return string.IsNullOrEmpty(scene.SceneName)
+                    ? default(UnityEngine.SceneManagement.Scene)
+                    : SceneManager.GetSceneByName(scene.SceneName);
+            }
+
+            private static ResSceneHandle ToSceneHandle(UnityEngine.SceneManagement.Scene scene)
+            {
+                return new ResSceneHandle(scene.name, scene.buildIndex, scene.IsValid());
+            }
+
+            private sealed class UnityResourceSceneLoadOperation : IResSceneLoadOperation
+            {
+                private AsyncOperation mOperation;
+
+                public UnityResourceSceneLoadOperation(AsyncOperation operation)
+                {
+                    mOperation = operation;
+                }
+
+                public bool IsSuspended
+                {
+                    get { return mOperation != null && !mOperation.allowSceneActivation; }
+                }
+
+                public float Progress
+                {
+                    get { return mOperation != null ? mOperation.progress : 0f; }
+                }
+
+                public void SuspendLoad()
+                {
+                    if (mOperation != null)
+                        mOperation.allowSceneActivation = false;
+                }
+
+                public void ResumeLoad()
+                {
+                    if (mOperation != null)
+                        mOperation.allowSceneActivation = true;
+                }
+
+                public void Recycle()
+                {
+                    mOperation = null;
+                }
+            }
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT

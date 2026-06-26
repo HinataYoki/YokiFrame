@@ -1,6 +1,6 @@
 # UIKit 面板
 
-UIKit 当前是 Unity UI 实现与 `IUIBackend` 兼容层并存的面板系统。业务代码在 `YokiFrame` 命名空间中调用 `UIKit` 静态入口打开、显示、隐藏、关闭和压栈面板；Unity 的 GameObject / Canvas / DOTween / YooAsset 依赖仍在 UIKit runtime 中，后续跨引擎拆分时应先把纯契约和宿主实现分离。
+UIKit 当前是 Unity UI 实现与 `IUIBackend` 兼容层并存的面板系统。业务代码在 `YokiFrame` 命名空间中调用 `UIKit` 静态入口打开、显示、隐藏、关闭和压栈面板；Unity 的 GameObject / Canvas / DOTween 细节仍在 UIKit runtime 中，后续跨引擎拆分时应先把纯契约和宿主实现分离。
 
 ## 核心类型
 

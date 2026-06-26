@@ -278,6 +278,14 @@ Unity 和 Godot 调用侧都直接使用 `YokiFrame.ResKit`。Unity 项目安装
 ResKit.SetProvider(new MyResourceProvider());
 ```
 
+Provider 如果同时实现 `IRawResourceProvider` 和 `IResSceneBackend`，raw 文件读取和 SceneKit 默认场景加载会自动跟随当前 ResKit Provider。内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 已经同时覆盖普通资源、raw 文件和场景加载；UIKit 默认 `DefaultPanelLoader` 也通过 `ResKit.LoadAsset<GameObject>()` 加载面板。因此切换 YooAsset 时只需要：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+```
+
+不要再额外要求用户调用 `SceneKit.SetBackend()`。UIKit 不再提供 YooAsset 专用初始化入口；除非项目确实要显式覆盖场景系统或面板加载策略，否则只切换 ResKit Provider。
+
 原始文件通过统一 ResKit API 读取，Unity 和 Godot 调用侧保持一致：
 
 ```csharp
@@ -286,11 +294,11 @@ var text = ResKit.LoadRawText("Configs/GameConfig");
 var asyncBytes = await ResKit.LoadRawAsync("Configs/GameConfig", token);
 ```
 
-Unity Adapter 默认使用 `Unity.Resources`，raw 读取基于 `TextAsset`。Godot Adapter 默认使用 `Godot.ResourceLoader`，raw 读取基于 `FileAccess`。项目需要 YooAsset、Addressables 或 Godot 第三方资源插件时，实现 `IResourceProvider`；需要支持 raw 文件时同时实现 `IRawResourceProvider`，再调用 `ResKit.SetProvider(customProvider)`。
+Unity Adapter 默认使用 `Unity.Resources`，raw 读取基于 `TextAsset`，场景加载基于 Unity `SceneManager`。Godot Adapter 默认使用 `Godot.ResourceLoader`，raw 读取基于 `FileAccess`。项目需要 YooAsset、Addressables 或 Godot 第三方资源插件时，实现 `IResourceProvider`；需要支持 raw 文件时同时实现 `IRawResourceProvider`；需要 SceneKit 默认跟随后端时同时实现 `IResSceneBackend`，再调用 `ResKit.SetProvider(customProvider)`。
 
 规则：
 
-- Base 层的 ResKit API 只依赖 `IResourceProvider` / `IRawResourceProvider`，不直接引用 Unity、Godot 或具体资源库；UniTask 只作为 `YOKIFRAME_UNITASK_SUPPORT` 下的异步返回类型。
+- Base 层的 ResKit API 只依赖 `IResourceProvider` / `IRawResourceProvider` / `IResSceneBackend`，不直接引用 Unity、Godot 或具体资源库；UniTask 只作为 `YOKIFRAME_UNITASK_SUPPORT` 下的异步返回类型。
 - `Load<T>()` 适合直接取资源，`LoadAsset<T>()` 返回带引用计数的 `ResHandle<T>`。
 - `ResKit.LoadAsync<T>()` / `LoadRawAsync()` 在 `YOKIFRAME_UNITASK_SUPPORT` 启用时返回 `UniTask<T>`，否则返回 `Task<T>`。
 - `LoadRaw()` 返回 bytes，`LoadRawText()` 返回文本；1.x 的 `LoadRawFileData()` / `LoadRawFileText()` raw 别名已移除。
@@ -358,12 +366,10 @@ InputKit.PopContext();
 
 ## UIKit
 
-UIKit 当前是 Unity UI 实现与 `IUIBackend` 兼容层并存的面板系统。业务代码仍通过 `UIKit` 静态入口调用；Unity 的 GameObject / Canvas / DOTween / YooAsset 依赖仍在 UIKit runtime 中，后续跨引擎拆分时应先把纯契约和宿主实现分离。
+UIKit 当前是 Unity UI 实现与 `IUIBackend` 兼容层并存的面板系统。业务代码仍通过 `UIKit` 静态入口调用；Unity 的 GameObject / Canvas / DOTween 细节仍在 UIKit runtime 中，后续跨引擎拆分时应先把纯契约和宿主实现分离。
 
 ```csharp
 using YokiFrame;
-
-UIKit.SetBackend(myUiBackend);
 
 var menu = UIKit.OpenPanel<MenuPanel>(UILevel.Common, data: null, tag: "main");
 UIKit.PushPanel(menu, "Main", hidePreLevel: true);
@@ -377,6 +383,7 @@ UIKit.PopPanel(showPreLevel: true, autoClose: true);
 - `IPanel` 只暴露 `PanelName`、`Level`、`State`、`Tag`、`Data`。
 - `UILevel`、`PanelState` 和面板栈语义应保持宿主无关。
 - 当前 Unity 的 GameObject / Canvas 细节仍在 runtime 实现内；新增能力不要继续扩大这部分耦合。
+- 默认面板加载器走 `ResKit.LoadAsset<GameObject>()`。如果 ResKit Provider 切到 YooAsset，UIKit 默认面板加载也会跟随 YooAsset；不要再为 YooAsset 面板引入平行 loader 或独立初始化入口。
 - 命令桥只暴露 `UIKit/state`、`stats`、`list_panels`、`list_stacks`、`get_workbench_snapshot` 这类只读诊断；不要通过 `.yokiframe` 打开、关闭、显示、隐藏、压栈或弹栈面板。
 - AI 排查 UI 状态时优先读 `UIKit/state` snapshot；只有用户要求显式刷新或拆分列表时才发命令。
 

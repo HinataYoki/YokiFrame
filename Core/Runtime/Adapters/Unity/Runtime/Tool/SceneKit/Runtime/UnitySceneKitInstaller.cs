@@ -24,7 +24,11 @@ namespace YokiFrame.Unity
 
         public static void Install(IResourceProvider provider)
         {
-            ResKit.SetSceneBackend(new UnitySceneBackend());
+            if (ResKit.GetSceneBackend() == null)
+            {
+                var sceneBackend = provider as IResSceneBackend;
+                ResKit.SetSceneBackend(sceneBackend ?? new UnitySceneBackend());
+            }
         }
 
         public bool Tick(float deltaSeconds)

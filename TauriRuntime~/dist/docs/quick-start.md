@@ -239,7 +239,7 @@ finally
 }
 ```
 
-如果没有设置 Provider，调用加载 API 会抛出 `InvalidOperationException`。自定义资源系统实现 `IResourceProvider` 后调用 `ResKit.SetProvider(provider)`。
+如果没有设置 Provider，调用加载 API 会抛出 `InvalidOperationException`。自定义资源系统实现 `IResourceProvider` 后调用 `ResKit.SetProvider(provider)`。Provider 如果同时实现 `IRawResourceProvider` 和 `IResSceneBackend`，raw 文件读取和 SceneKit 默认场景加载也会一起跟随当前 ResKit Provider。内置 `UnityResourceProvider` 与 `YooAssetResourceProvider` 已经覆盖这些默认能力，UIKit 默认面板加载器也走 `ResKit.LoadAsset<GameObject>()`。
 
 ## 7. 运行一个 ActionKit 序列
 
@@ -318,7 +318,7 @@ using YokiFrame.Unity;
 | UIKit | `IUIBackend` | `BackendName`、`OpenPanel()`、`Show()`、`Hide()`、`Close()` |
 | UIKit | `IPanel` | `PanelName`、`Level`、`State`、`Tag`、`Data` |
 | AudioKit | `AudioKit` | `SetBackend()`、`Play()`、`PlayMusic()`、`PlaySfx()`、`Stop()`、`StopAll()`、`SetVolume()`、`GetVolume()`、`Update()` |
-| SceneKit | `SceneKit` | `SetBackend()`、`LoadSceneAsync()`、`PreloadSceneAsync()`、`ActivatePreloadedScene()`、`UnloadSceneAsync()`、`UnloadUnusedAssets()` |
+| SceneKit | `SceneKit` | `LoadSceneAsync()`、`PreloadSceneAsync()`、`ActivatePreloadedScene()`、`UnloadSceneAsync()`、`UnloadUnusedAssets()`、`SetBackend()` |
 | SceneKit | `SceneHandler` | `SceneName`、`BuildIndex`、`State`、`Progress`、`IsSuspended`、`IsPreloaded`、`SceneData` |
 | SpatialKit | `SpatialKit` | `CreateHashGrid<T>()`、`CreateQuadtree<T>()`、`CreateOctree<T>()` |
 | SpatialKit | `ISpatialIndex<T>` | `Insert()`、`Remove()`、`Update()`、`QueryRadius()`、`QueryBounds()`、`QueryNearest()`、`Clear()` |
@@ -425,6 +425,8 @@ var text = ResKit.LoadRawText("Configs/GameConfig");
 ```
 
 默认 Unity Provider 基于 `TextAsset`，默认 Godot Provider 基于 `FileAccess`。自定义 Provider 要支持 raw 读取时实现 `IRawResourceProvider`。
+
+SceneKit 和 UIKit 的默认资源入口也应跟随 ResKit：内置 Unity Resources / YooAsset Provider 已经提供场景加载能力，UIKit 默认 `DefaultPanelLoader` 通过 `ResKit.LoadAsset<GameObject>()` 加载面板。切换 YooAsset 时只需要切 ResKit Provider，不需要再单独切 SceneKit 后端或 UIKit PanelLoader。
 
 ### TableKit
 
@@ -548,7 +550,7 @@ UIKit.PushPanel(menu, "Main");
 UIKit.PopPanel(showPreLevel: true, autoClose: true);
 ```
 
-UIKit 当前仍包含 Unity UI runtime 实现。业务代码保持使用 `UIKit` 静态入口；面板实例实现 `IPanel`，运行时层级使用 `UILevel`。新增能力不要继续扩大 GameObject / Canvas / DOTween / YooAsset 这类 Unity 依赖，Godot 完整接入需要独立 `IUIBackend`。
+UIKit 当前仍包含 Unity UI runtime 实现。业务代码保持使用 `UIKit` 静态入口；面板实例实现 `IPanel`，运行时层级使用 `UILevel`。新增能力不要继续扩大 GameObject / Canvas / DOTween 这类 Unity 依赖，Godot 完整接入需要独立 `IUIBackend`。
 
 ### AudioKit
 

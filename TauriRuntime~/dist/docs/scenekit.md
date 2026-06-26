@@ -36,7 +36,13 @@ using YokiFrame;
 YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ```
 
-`YokiFrameKit.Initialize(YokiFrameEngine.Unity)` 会通过可选 installer 自动安装 Unity SceneKit 后端。需要手动接入项目自己的场景系统时，再调用 `SceneKit.SetBackend()` / `ResKit.SetSceneBackend()` 或使用 `UnitySceneKitInstaller`。
+`YokiFrameKit.Initialize(YokiFrameEngine.Unity)` 会先安装 ResKit 的 Unity 默认 Provider。内置 `UnityResourceProvider` 同时实现 `IResSceneBackend`，所以 SceneKit 默认通过 ResKit 使用 Unity `SceneManager`。如果后续切换到 `YooAssetResourceProvider`：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+```
+
+SceneKit 会跟随当前 ResKit Provider，按 YooAsset location 加载场景。需要手动接入项目自己的场景系统时，再调用 `SceneKit.SetBackend()` 或 `ResKit.SetSceneBackend()` 显式覆盖。
 
 Godot 项目由 `GodotSceneKitInstaller` 或 `GodotBootstrap` 注入后端。业务侧仍只依赖统一静态入口：
 
@@ -151,6 +157,6 @@ snapshot 缺失、过期或需要显式维护动作时，再发送 `SceneKit/get
 | 问题 | 处理方式 |
 |------|----------|
 | Tauri 页面没有场景 | 确认引擎在线、后端已安装，并检查 `SceneKit/state` snapshot。 |
-| 后端显示 None | 启动时尚未调用 `SceneKit.SetBackend()`，需要由 Unity/Godot Adapter 安装。 |
+| 后端显示 None | 启动时尚未调用 `YokiFrameKit.Initialize(...)` 或当前 ResKit Provider 没有提供场景能力。 |
 | 卸载没有生效 | 检查场景名是否匹配当前 `SceneHandler.SceneName`，再查看命令响应的 `error.code`。 |
 | Unity/Godot 加载差异 | 差异应放在 `ISceneBackend` 实现中，业务仍使用 `SceneKit.LoadSceneAsync()`。 |

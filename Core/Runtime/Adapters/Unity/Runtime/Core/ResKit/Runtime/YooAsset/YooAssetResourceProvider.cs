@@ -10,27 +10,45 @@ using Cysharp.Threading.Tasks;
 using System.Threading.Tasks;
 #endif
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using YokiFrame;
 using Object = UnityEngine.Object;
+using YooSceneHandle = YooAsset.SceneHandle;
 
 namespace YokiFrame.Unity
 {
     /// <summary>
     /// ResKit 的 YooAsset 后端。对外仍通过 YokiFrame.ResKit 统一访问。
     /// </summary>
-    public sealed class YooAssetResourceProvider : IResourceProvider, IRawResourceProvider
+    public sealed class YooAssetResourceProvider : IResourceProvider, IRawResourceProvider, IResSceneBackend
     {
         private const string DEFAULT_PACKAGE_NAME = "DefaultPackage";
 
         private readonly object mHandleLock = new();
         private readonly Dictionary<object, Stack<AssetHandle>> mHandlesByAsset = new();
+        private readonly Dictionary<string, YooSceneHandle> mSceneHandlesByName = new Dictionary<string, YooSceneHandle>(StringComparer.Ordinal);
         private readonly IYooAssetResourceBackend mResourceBackend;
         private readonly IYooAssetRawFileBackend mRawFileBackend;
+        private readonly IYooAssetSceneBackend mSceneBackend;
+        private ResSceneHandle mActiveScene;
 
         /// <summary>
         /// 获取资源提供者名称。
         /// </summary>
         public string ProviderName => "YooAsset";
+
+        /// <summary>
+        /// 获取场景加载后端名称。
+        /// </summary>
+        public string BackendName => "YooAsset.Scene";
+
+        /// <summary>
+        /// 获取当前激活场景。
+        /// </summary>
+        public ResSceneHandle ActiveScene
+        {
+            get { return mActiveScene; }
+        }
 
 #if YOKIFRAME_UNITASK_SUPPORT
         /// <summary>
@@ -58,7 +76,7 @@ namespace YokiFrame.Unity
         /// </summary>
         /// <param name="package">YooAsset 资源包实例。</param>
         public YooAssetResourceProvider(ResourcePackage package)
-            : this(new YooAssetV3ResourceBackend(package), new YooAssetV3RawFileBackend(package))
+            : this(new YooAssetV3ResourceBackend(package), new YooAssetV3RawFileBackend(package), new YooAssetV3SceneBackend(package))
         {
         }
 
@@ -67,7 +85,7 @@ namespace YokiFrame.Unity
         /// </summary>
         /// <param name="packageName">YooAsset 资源包名称。</param>
         public YooAssetResourceProvider(string packageName)
-            : this(new YooAssetV3ResourceBackend(packageName), new YooAssetV3RawFileBackend(packageName))
+            : this(new YooAssetV3ResourceBackend(packageName), new YooAssetV3RawFileBackend(packageName), new YooAssetV3SceneBackend(packageName))
         {
         }
 #else
@@ -82,9 +100,18 @@ namespace YokiFrame.Unity
 #endif
 
         internal YooAssetResourceProvider(IYooAssetResourceBackend resourceBackend, IYooAssetRawFileBackend rawFileBackend)
+            : this(resourceBackend, rawFileBackend, CreateDefaultSceneBackend())
+        {
+        }
+
+        internal YooAssetResourceProvider(
+            IYooAssetResourceBackend resourceBackend,
+            IYooAssetRawFileBackend rawFileBackend,
+            IYooAssetSceneBackend sceneBackend)
         {
             mResourceBackend = resourceBackend ?? throw new ArgumentNullException(nameof(resourceBackend));
             mRawFileBackend = rawFileBackend ?? throw new ArgumentNullException(nameof(rawFileBackend));
+            mSceneBackend = sceneBackend ?? throw new ArgumentNullException(nameof(sceneBackend));
         }
 
         /// <inheritdoc />
@@ -213,6 +240,128 @@ namespace YokiFrame.Unity
             return mRawFileBackend.GetRawFilePath(path);
         }
 
+        /// <inheritdoc />
+        public IResSceneLoadOperation LoadSceneAsync(
+            ResSceneLoadRequest request,
+            Action<ResSceneLoadResult> onComplete,
+            Action<float> onProgress,
+            Action onSuspended)
+        {
+            if (request.BuildIndex >= 0)
+            {
+                var invalidHandle = new ResSceneHandle(request.SceneName, request.BuildIndex, false);
+                if (onComplete != null)
+                    onComplete(new ResSceneLoadResult(invalidHandle));
+                return new YooAssetSceneLoadOperation(null);
+            }
+
+            if (string.IsNullOrEmpty(request.SceneName))
+            {
+                var invalidHandle = new ResSceneHandle(request.SceneName, request.BuildIndex, false);
+                if (onComplete != null)
+                    onComplete(new ResSceneLoadResult(invalidHandle));
+                return new YooAssetSceneLoadOperation(null);
+            }
+
+            var sceneMode = request.Mode == ResSceneLoadMode.Single ? LoadSceneMode.Single : LoadSceneMode.Additive;
+            var allowSceneActivation = request.SuspendAtProgress >= 1f;
+            var sceneHandle = mSceneBackend.LoadSceneAsync(request.SceneName, sceneMode, allowSceneActivation);
+            if (!allowSceneActivation && onSuspended != null)
+                onSuspended();
+
+            if (onProgress != null)
+                onProgress(sceneHandle != null ? sceneHandle.Progress : 0f);
+
+            if (sceneHandle == null)
+            {
+                var invalidHandle = new ResSceneHandle(request.SceneName, request.BuildIndex, false);
+                if (onComplete != null)
+                    onComplete(new ResSceneLoadResult(invalidHandle));
+                return new YooAssetSceneLoadOperation(null);
+            }
+
+            sceneHandle.Completed += handle =>
+            {
+                var scene = ToResSceneHandle(handle);
+                mSceneHandlesByName[scene.SceneName] = handle;
+                if (request.Mode == ResSceneLoadMode.Single || !mActiveScene.IsValid)
+                    mActiveScene = scene;
+                if (onProgress != null)
+                    onProgress(handle.Progress);
+                if (onComplete != null)
+                    onComplete(new ResSceneLoadResult(scene));
+            };
+
+            return new YooAssetSceneLoadOperation(sceneHandle);
+        }
+
+        /// <inheritdoc />
+        public void UnloadSceneAsync(ResSceneHandle scene, Action onComplete)
+        {
+            if (string.IsNullOrEmpty(scene.SceneName))
+            {
+                if (onComplete != null)
+                    onComplete();
+                return;
+            }
+
+            YooSceneHandle handle;
+            if (!mSceneHandlesByName.TryGetValue(scene.SceneName, out handle) || handle == null)
+            {
+                if (onComplete != null)
+                    onComplete();
+                return;
+            }
+
+            mSceneHandlesByName.Remove(scene.SceneName);
+            if (mActiveScene.SceneName == scene.SceneName)
+                mActiveScene = default(ResSceneHandle);
+
+            var unloadOperation = handle.UnloadSceneAsync();
+            unloadOperation.Completed += _ =>
+            {
+                if (onComplete != null)
+                    onComplete();
+            };
+        }
+
+        /// <inheritdoc />
+        public void SetActiveScene(ResSceneHandle scene)
+        {
+            YooSceneHandle handle;
+            if (!string.IsNullOrEmpty(scene.SceneName) &&
+                mSceneHandlesByName.TryGetValue(scene.SceneName, out handle) &&
+                handle != null &&
+                handle.ActivateScene())
+            {
+                mActiveScene = ToResSceneHandle(handle);
+            }
+        }
+
+        /// <inheritdoc />
+        public ResSceneHandle GetActiveScene()
+        {
+            return mActiveScene;
+        }
+
+        /// <inheritdoc />
+        public void UnloadUnusedAssets(Action onComplete)
+        {
+            var operation = Resources.UnloadUnusedAssets();
+            if (operation == null)
+            {
+                if (onComplete != null)
+                    onComplete();
+                return;
+            }
+
+            operation.completed += _ =>
+            {
+                if (onComplete != null)
+                    onComplete();
+            };
+        }
+
         private AssetHandle LoadAssetHandle(string path, Type unityType)
         {
             return mResourceBackend.LoadAsset(path, unityType);
@@ -303,6 +452,103 @@ namespace YokiFrame.Unity
             return new YooAssetV2RawFileBackend();
 #endif
         }
+
+        private static IYooAssetSceneBackend CreateDefaultSceneBackend()
+        {
+#if YOOASSET_3_0_OR_NEWER
+            return new YooAssetV3SceneBackend(DEFAULT_PACKAGE_NAME);
+#else
+            return new YooAssetV2SceneBackend();
+#endif
+        }
+
+        private static ResSceneHandle ToResSceneHandle(YooSceneHandle handle)
+        {
+            if (handle == null || !handle.IsValid)
+                return default(ResSceneHandle);
+
+            var scene = handle.SceneObject;
+            return new ResSceneHandle(handle.SceneName, scene.buildIndex, scene.IsValid());
+        }
+
+        internal interface IYooAssetSceneBackend
+        {
+            YooSceneHandle LoadSceneAsync(string path, LoadSceneMode sceneMode, bool allowSceneActivation);
+        }
+
+        private sealed class YooAssetSceneLoadOperation : IResSceneLoadOperation
+        {
+            private YooSceneHandle mHandle;
+
+            public YooAssetSceneLoadOperation(YooSceneHandle handle)
+            {
+                mHandle = handle;
+            }
+
+            public bool IsSuspended { get; private set; }
+
+            public float Progress
+            {
+                get { return mHandle != null ? mHandle.Progress : 0f; }
+            }
+
+            public void SuspendLoad()
+            {
+                IsSuspended = true;
+            }
+
+            public void ResumeLoad()
+            {
+                if (mHandle != null)
+                    mHandle.AllowSceneActivation();
+                IsSuspended = false;
+            }
+
+            public void Recycle()
+            {
+                mHandle = null;
+                IsSuspended = false;
+            }
+        }
+
+#if YOOASSET_3_0_OR_NEWER
+        private sealed class YooAssetV3SceneBackend : IYooAssetSceneBackend
+        {
+            private readonly ResourcePackage mPackage;
+            private readonly string mPackageName;
+
+            public YooAssetV3SceneBackend(ResourcePackage package)
+            {
+                mPackage = package ?? throw new ArgumentNullException(nameof(package));
+            }
+
+            public YooAssetV3SceneBackend(string packageName)
+            {
+                mPackageName = string.IsNullOrEmpty(packageName) ? DEFAULT_PACKAGE_NAME : packageName;
+            }
+
+            public YooSceneHandle LoadSceneAsync(string path, LoadSceneMode sceneMode, bool allowSceneActivation)
+            {
+                return ResolvePackage().LoadSceneAsync(path, sceneMode, LocalPhysicsMode.None, allowSceneActivation);
+            }
+
+            private ResourcePackage ResolvePackage()
+            {
+                if (mPackage != null)
+                    return mPackage;
+
+                return YooAssets.GetPackage(mPackageName);
+            }
+        }
+#else
+        private sealed class YooAssetV2SceneBackend : IYooAssetSceneBackend
+        {
+            public YooSceneHandle LoadSceneAsync(string path, LoadSceneMode sceneMode, bool allowSceneActivation)
+            {
+                return YooAssets.LoadSceneAsync(path, sceneMode, LocalPhysicsMode.None, allowSceneActivation);
+            }
+        }
+#endif
     }
 }
 #endif

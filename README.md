@@ -37,7 +37,7 @@ YokiFrame 不再只是一个绑定 Unity 的工具包，而是一套面向多宿
 | EventKit | 类型事件、枚举事件和旧字符串事件兼容，用于模块解耦。 |
 | FsmKit | 普通 FSM、带参数 FSM、层级状态机和运行时状态诊断。 |
 | PoolKit | C# 对象池、可回收对象池、集合池和对象池工作台快照。 |
-| ResKit | 统一资源加载、raw 文件读取、引用计数和 Provider 替换。 |
+| ResKit | 统一资源加载、raw 文件读取、场景资源后端、引用计数和 Provider 替换。 |
 | SingletonKit | 纯 C# 单例、Unity `MonoSingleton`、Godot `GodotSingleton` 的统一生命周期视角。 |
 | LogKit | 引擎日志适配、运行时日志文件、工作台日志诊断。 |
 | ActionKit | 延迟、回调、并行、重复、Task / Coroutine 组合和动作树调试。 |
@@ -84,7 +84,7 @@ YokiFrame/
 └── Installer~/
 ```
 
-核心抽象包括 `IEngineLogger`、`IEngineTime`、`IEngineObject`、`IResourceProvider`、`ISerializationProvider` 等；上层工具 Kit 也通过 `IAudioBackend`、`IInputBackend`、`ISceneBackend`、`IUIBackend` 等后端接口隔离宿主能力。
+核心抽象包括 `IEngineLogger`、`IEngineTime`、`IEngineObject`、`IResourceProvider`、`IRawResourceProvider`、`IResSceneBackend`、`ISerializationProvider` 等；上层工具 Kit 也通过 `IAudioBackend`、`IInputBackend`、`ISceneBackend`、`IUIBackend` 等后端接口隔离宿主能力。SceneKit 默认委托 ResKit 的场景后端，UIKit 默认面板加载器通过 ResKit 加载面板，因此切换 Unity Resources / YooAsset / 项目自定义资源系统时，优先只替换 ResKit Provider。
 
 Unity Adapter 提供 `UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、Unity 数学类型转换扩展、Unity CommandBridge Host、Tauri Launcher、事件/快照/遥测发布器、Editor UI Toolkit 组件与样式服务，以及 YooAsset、DOTween、FMOD、Unity Input、Unity UI 等可选集成。
 
@@ -250,6 +250,14 @@ YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ```
 
 `YokiFrameKit` 会通知当前已存在的 Kit installer 根据 Unity 宿主安装默认后端，例如 ResKit 的 `UnityResourceProvider`、LogKit 的 Unity logger，以及可选 Tool Kit 的 Unity 后端。只使用 EventKit、FsmKit、PoolKit 或纯 C# 单例时不强制初始化；使用 ResKit、AudioKit、InputKit、SceneKit、UIKit 等宿主能力时建议在项目启动阶段先调用。
+
+如果项目切换到 YooAsset 或自定义资源系统，推荐只替换 ResKit Provider：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+```
+
+内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 同时提供普通资源、raw 文件和场景加载能力。SceneKit 默认跟随当前 ResKit Provider；UIKit 默认 `DefaultPanelLoader` 也通过 `ResKit.LoadAsset<GameObject>()` 加载面板，不再提供 YooAsset 专用初始化入口或专用 PanelLoader。
 
 如果希望继续使用场景生命周期自动驱动，可保留一个轻量 MonoBehaviour 外壳：
 

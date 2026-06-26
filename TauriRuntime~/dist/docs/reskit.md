@@ -9,6 +9,7 @@ ResKit 是运行时统一资源 API。它不直接绑定 Unity `Resources`、Yoo
 | `ResKit` | 静态资源入口，负责缓存、引用计数、卸载历史和调试数据。 |
 | `IResourceProvider` | 资源后端接口，提供同步加载、异步加载、实例化和释放。 |
 | `IRawResourceProvider` | 原始资源后端接口，提供文本、bytes 和原始文件路径读取。 |
+| `IResSceneBackend` | ResKit 统一管理的场景加载后端；Provider 实现它时，SceneKit 默认跟随当前 ResKit Provider。 |
 | `ResHandle<T>` | 带引用计数的资源句柄，支持 `Retain()`、`Release()`、`Dispose()`。 |
 | `ResDebugInfo` | 当前已加载资源的调试数据。 |
 | `ResUnloadRecord` | 引用归零或 `ClearAll()` 后的卸载记录。 |
@@ -57,6 +58,14 @@ ResKit.SetProvider(new YooAssetResourceProvider(package));
 #endif
 ```
 
+内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 都同时提供 asset、raw 和 scene 能力。也就是说，切到 YooAsset 后端只需要替换 ResKit Provider：
+
+```csharp
+ResKit.SetProvider(new YooAssetResourceProvider());
+```
+
+之后 `ResKit.LoadAsset<T>()`、`ResKit.LoadRawText()`、`SceneKit.LoadSceneAsync()` 和 UIKit 默认 `DefaultPanelLoader` 都会沿用当前 ResKit Provider。新项目不需要再额外调用 `SceneKit.SetBackend()`，UIKit 也不再提供 YooAsset 专用初始化入口；只有项目要接入完全不同的场景系统或 UI 加载策略时，才使用显式覆盖点。
+
 `UnityBootstrap` 会在初始化时完成这一步。如果项目使用自己的资源系统，实现 `IResourceProvider` 后手动注入：
 
 ```csharp
@@ -94,23 +103,6 @@ ResKit.SetProvider(new ProjectResourceProvider());
 如果 `YOKIFRAME_UNITASK_SUPPORT` 已启用，`IResourceProvider.LoadAsync<T>()` 和 raw 异步接口的返回值会从 `Task<T>` 切换为 `UniTask<T>`，自定义 Provider 也需要实现同一套条件编译签名。
 
 `SetProvider()` 会先调用 `ClearAll()`，因此切换 Provider 会清空当前缓存并记录卸载历史。
-
-### YooInit 与资源清单
-
-Unity + YooAsset 项目可以使用 `YokiFrame.Unity.YooInit` 完成 YooAsset 初始化。`YooInit.InitAsync(config)` 成功后会把 ResKit Provider 切换为 `YooAssetResourceProvider`，业务加载仍走 `ResKit.LoadAsset<T>()` / `LoadAssetAsync<T>()`。
-
-```csharp
-using UnityEngine;
-using YokiFrame;
-using YokiFrame.Unity;
-
-await YooInit.InitAsync(yooConfig, token);
-var prefab = await ResKit.LoadAssetAsync<GameObject>("Assets/Game/Items/Drop.prefab", token);
-```
-
-UIKit 如果要用 YooAsset 加载面板，在 `YooInit.InitAsync()` 之后调用 `YooInitUIKitExt.ConfigureUIKit()`。SceneKit 不需要 YooAsset 专属配置；Unity 场景后端由 `UnityBootstrap`、`UnitySceneKitInstaller`、`SceneKit.SetBackend()` 或 `ResKit.SetSceneBackend()` 安装。
-
-2.0 不在 `YooInit` 上提供 `GetAssetInfosByTag()` 这类资源枚举快捷入口。ResKit 负责“按路径加载和释放”，资源清单、tag 查询和筛选属于 YooAsset 自身能力；需要按 tag 找资源时，从 `YooInit.DefaultPackage` / `YooInit.GetPackage(name)` 取得 YooAsset package，使用 YooAsset API 查询 `AssetInfo`，再把 `AssetPath` 交给 ResKit 加载。
 
 ## 同步加载
 
@@ -199,12 +191,12 @@ Unity `Resources` 后端的资源生命周期主要由 Unity 管理；YooAsset P
 
 ## 场景后端管理
 
-ResKit 提供场景后端管理接口，供 SceneKit 或项目自定义场景系统使用：
+ResKit 提供场景后端管理接口，供 SceneKit 或项目自定义场景系统使用。`ResKit.SetProvider(provider)` 会在 provider 同时实现 `IResSceneBackend` 时自动设置场景后端：
 
 | 属性/方法 | 说明 |
 |-----------|------|
 | `SceneBackendName` | 当前场景后端名称。 |
-| `SetSceneBackend(backend)` | 设置场景后端。 |
+| `SetSceneBackend(backend)` | 显式覆盖场景后端。通常只有项目场景系统不属于资源 Provider 时才需要。 |
 | `GetSceneBackend()` | 获取当前场景后端。 |
 | `ClearSceneBackend()` | 清除场景后端。 |
 

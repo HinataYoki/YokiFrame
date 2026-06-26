@@ -88,6 +88,7 @@ namespace YokiFrame
 
             ClearAll();
             sProvider = provider;
+            ClearSceneBackend();
             if (provider is IResSceneBackend sceneBackend)
                 SetSceneBackend(sceneBackend);
         }
