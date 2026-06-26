@@ -213,7 +213,8 @@ namespace YokiFrame
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
             if (mFadeTween != default) mFadeTween.Kill();
-            mFadeTween = mCanvasGroup.DOFade(1f, GetConfig().HighlightScaleDuration);
+            mFadeTween = DOTween.To(() => mCanvasGroup.alpha, value => mCanvasGroup.alpha = value, 1f, GetConfig().HighlightScaleDuration)
+                .SetTarget(mCanvasGroup);
 #else
             mCanvasGroup.alpha = 1f;
 #endif
@@ -229,7 +230,8 @@ namespace YokiFrame
 
 #if YOKIFRAME_DOTWEEN_SUPPORT
             if (mFadeTween != default) mFadeTween.Kill();
-            mFadeTween = mCanvasGroup.DOFade(0f, GetConfig().HighlightScaleDuration)
+            mFadeTween = DOTween.To(() => mCanvasGroup.alpha, value => mCanvasGroup.alpha = value, 0f, GetConfig().HighlightScaleDuration)
+                .SetTarget(mCanvasGroup)
                 .OnComplete(static () => { })  // 确保完成
                 .OnKill(() => { if (!mIsVisible) mImage.enabled = false; });
 #else
@@ -288,9 +290,11 @@ namespace YokiFrame
             if (mMoveTween != default) mMoveTween.Kill();
             if (mSizeTween != default) mSizeTween.Kill();
 
-            mMoveTween = mRectTransform.DOMove(targetPos, config.HighlightMoveDuration)
+            mMoveTween = DOTween.To(() => mRectTransform.position, value => mRectTransform.position = value, targetPos, config.HighlightMoveDuration)
+                .SetTarget(mRectTransform)
                 .SetEase(Ease.OutQuad);
-            mSizeTween = mRectTransform.DOSizeDelta(targetSize, config.HighlightScaleDuration)
+            mSizeTween = DOTween.To(() => mRectTransform.sizeDelta, value => mRectTransform.sizeDelta = value, targetSize, config.HighlightScaleDuration)
+                .SetTarget(mRectTransform)
                 .SetEase(Ease.OutQuad);
 #else
             mRectTransform.position = targetPos;

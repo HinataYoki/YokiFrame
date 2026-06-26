@@ -159,7 +159,9 @@ namespace YokiFrame
         private void AnimateScale(Vector3 targetScale)
         {
 #if YOKIFRAME_DOTWEEN_SUPPORT
-            mRectTransform.DOScale(targetScale, mScaleDuration).SetEase(DG.Tweening.Ease.OutQuad);
+            DOTween.To(() => mRectTransform.localScale, value => mRectTransform.localScale = value, targetScale, mScaleDuration)
+                .SetTarget(mRectTransform)
+                .SetEase(Ease.OutQuad);
 #else
             // 无 DOTween 时直接设置缩放
             _ = mScaleDuration; // 抑制未使用警告

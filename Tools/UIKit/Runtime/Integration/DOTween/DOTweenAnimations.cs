@@ -97,7 +97,8 @@ namespace YokiFrame
             mOnCompleteCallback = onComplete;
             mCallbackState = state;
 
-            mTweener = mCanvasGroup.DOFade(mToAlpha, mDuration)
+            mTweener = DOTween.To(() => mCanvasGroup.alpha, value => mCanvasGroup.alpha = value, mToAlpha, mDuration)
+                .SetTarget(mCanvasGroup)
                 .SetEase(mEase)
                 .OnComplete(OnTweenComplete);
         }
@@ -169,7 +170,8 @@ namespace YokiFrame
 
             // 手动处理 DOTween 异步（兼容免费版）
             var tcs = AutoResetUniTaskCompletionSource.Create();
-            var tween = mCanvasGroup.DOFade(mToAlpha, mDuration)
+            var tween = DOTween.To(() => mCanvasGroup.alpha, value => mCanvasGroup.alpha = value, mToAlpha, mDuration)
+                .SetTarget(mCanvasGroup)
                 .SetEase(mEase)
                 .SetLink(target.gameObject)
                 .OnComplete(() => tcs.TrySetResult());
@@ -259,7 +261,8 @@ namespace YokiFrame
             mOnCompleteCallback = onComplete;
             mCallbackState = state;
 
-            mTweener = target.DOScale(mToScale, mDuration)
+            mTweener = DOTween.To(() => target.localScale, value => target.localScale = value, mToScale, mDuration)
+                .SetTarget(target)
                 .SetEase(mEase)
                 .OnComplete(OnTweenComplete);
         }
@@ -306,7 +309,8 @@ namespace YokiFrame
 
             // 手动处理 DOTween 异步（兼容免费版）
             var tcs = AutoResetUniTaskCompletionSource.Create();
-            var tween = target.DOScale(mToScale, mDuration)
+            var tween = DOTween.To(() => target.localScale, value => target.localScale = value, mToScale, mDuration)
+                .SetTarget(target)
                 .SetEase(mEase)
                 .SetLink(target.gameObject)
                 .OnComplete(() => tcs.TrySetResult());
@@ -399,7 +403,8 @@ namespace YokiFrame
             mOnCompleteCallback = onComplete;
             mCallbackState = state;
 
-            mTweener = target.DOAnchorPos(mToPosition, mDuration)
+            mTweener = DOTween.To(() => target.anchoredPosition, value => target.anchoredPosition = value, mToPosition, mDuration)
+                .SetTarget(target)
                 .SetEase(mEase)
                 .OnComplete(OnTweenComplete);
         }
@@ -461,7 +466,8 @@ namespace YokiFrame
 
             // 手动处理 DOTween 异步（兼容免费版）
             var tcs = AutoResetUniTaskCompletionSource.Create();
-            var tween = target.DOAnchorPos(mToPosition, mDuration)
+            var tween = DOTween.To(() => target.anchoredPosition, value => target.anchoredPosition = value, mToPosition, mDuration)
+                .SetTarget(target)
                 .SetEase(mEase)
                 .SetLink(target.gameObject)
                 .OnComplete(() => tcs.TrySetResult());
