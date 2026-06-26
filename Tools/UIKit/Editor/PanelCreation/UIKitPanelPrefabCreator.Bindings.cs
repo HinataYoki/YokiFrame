@@ -45,10 +45,10 @@ namespace YokiFrame
 
         private static string GetBindFieldName(BindCodeInfo bindInfo)
         {
-            if (bindInfo == default || string.IsNullOrEmpty(bindInfo.Name))
+            if (bindInfo == default || bindInfo.RepeatElement || string.IsNullOrEmpty(bindInfo.Name))
                 return string.Empty;
 
-            return bindInfo.RepeatElement ? bindInfo.Name + bindInfo.Order : bindInfo.Name;
+            return bindInfo.Name;
         }
 
         private static string GetBindFieldType(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)

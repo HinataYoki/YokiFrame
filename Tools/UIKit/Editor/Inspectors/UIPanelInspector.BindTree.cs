@@ -197,7 +197,9 @@ namespace YokiFrame
             };
 
             parentInfo.Children.Add(bindInfo);
-            CollectInspectorBinds(child, nextFullName, bindInfo);
+
+            var nextParent = strategy.CanContainChildren ? bindInfo : parentInfo;
+            CollectInspectorBinds(child, nextFullName, nextParent);
         }
 
         private int RenderBindChildren(InspectorBindNode parent, int level, BindTreeStats stats, List<string> errors)
