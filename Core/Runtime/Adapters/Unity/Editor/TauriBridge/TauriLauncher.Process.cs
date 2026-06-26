@@ -61,10 +61,11 @@ namespace YokiFrame.Unity
 
             try
             {
-                var workingDir = Path.GetDirectoryName(binaryPath);
+                var launchPath = PrepareBinaryForLaunch(binaryPath);
+                var workingDir = Path.GetDirectoryName(launchPath);
                 var startInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = binaryPath,
+                    FileName = launchPath,
                     WorkingDirectory = workingDir,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -101,6 +102,27 @@ namespace YokiFrame.Unity
                 LogKit.Error($"[TauriLauncher] 启动二进制失败: {e.Message}");
                 return false;
             }
+        }
+
+        private static string PrepareBinaryForLaunch(string binaryPath)
+        {
+            var launchPath = ResolveBinaryLaunchPath(
+                binaryPath,
+                RuntimeDir,
+                CurrentRuntimePlatform,
+                UnityProjectRootDir);
+            if (string.Equals(
+                    Path.GetFullPath(launchPath),
+                    Path.GetFullPath(binaryPath),
+                    StringComparison.OrdinalIgnoreCase))
+                return binaryPath;
+
+            var launchParent = Path.GetDirectoryName(launchPath);
+            if (!string.IsNullOrEmpty(launchParent))
+                Directory.CreateDirectory(launchParent);
+
+            File.Copy(binaryPath, launchPath, overwrite: true);
+            return launchPath;
         }
 
         private static bool StartSourceProcess()
@@ -188,8 +210,10 @@ namespace YokiFrame.Unity
             {
                 try
                 {
+                    var processPath = Path.GetFullPath(process.MainModule.FileName);
                     if (!process.HasExited &&
-                        string.Equals(Path.GetFullPath(process.MainModule.FileName), expectedPath, StringComparison.OrdinalIgnoreCase))
+                        (string.Equals(processPath, expectedPath, StringComparison.OrdinalIgnoreCase) ||
+                         IsDetachedPackageBinaryPath(processPath, UnityProjectRootDir, processName)))
                     {
                         process.EnableRaisingEvents = true;
                         process.Exited -= OnTauriProcessExited;

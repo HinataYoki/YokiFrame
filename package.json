@@ -4,7 +4,7 @@
     "displayName": "YokiFrame",
     "description": "YokiFrame 2.0 is a cross-engine game Kit framework with unified C# runtime APIs, Unity and Godot adapters, an AI-native .yokiframe file communication bridge, and a Tauri visual workbench for Kit diagnostics, code scanning, generators, and runtime state inspection.",
     "unity": "2022.3",
-    "changelogUrl": "https://github.com/HinataYoki/YokiFrame/blob/main/YokiFrame/CHANGELOG.md",
+    "changelogUrl": "https://github.com/HinataYoki/YokiFrame/blob/main/CHANGELOG.md",
     "licensesUrl": "https://github.com/HinataYoki/YokiFrame/blob/main/LICENSE",
     "author": {
         "name": "HinataYoki",

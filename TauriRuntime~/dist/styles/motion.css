@@ -23,7 +23,7 @@
 
 .workspace-shell {
   transform-origin: center center;
-  animation: yoki-window-open 260ms var(--ease-emphasized) both;
+  animation: yoki-window-open 80ms var(--ease-emphasized) both;
 }
 
 .content-body {
@@ -524,7 +524,7 @@ button.audio-channel-strip:hover,
   from {
     opacity: 0;
     filter: saturate(0.92);
-    transform: scale(0.96);
+    transform: scale(0.99);
   }
   to {
     opacity: 1;

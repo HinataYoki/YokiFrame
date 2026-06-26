@@ -58,10 +58,11 @@ namespace YokiFrame.Unity
 
         private const string PANEL_REQUEST_DIR = "panel";
         private const string PANEL_SHOW_REQUEST_FILE = "show-window.json";
-        private const string AUTO_PRELOAD_PREF_KEY = "YokiFrame.TauriLauncher.AutoPreload";
+        internal const string AUTO_PRELOAD_PREF_KEY = "YokiFrame.TauriLauncher.AutoPreload";
         private const int ASSET_REFRESH_INTERVAL_SEC = 2;
         private const int AUTO_PRELOAD_DELAY_SEC = 3;
         internal const string CARGO_TARGET_DIR_NAME = "target-codex";
+        private const string DETACHED_BINARY_ROOT_DIR = "YokiFrame/TauriRuntime/bin";
 
         /// <summary>本源文件编译期绝对路径。由 CallerFilePath 烘焙。</summary>
         private static string sSourceFilePath;
@@ -93,6 +94,15 @@ namespace YokiFrame.Unity
 
         private static string ProjectRootDir =>
             Path.GetFullPath(Path.Combine(PackageRootDir, "..", ".."));
+
+        private static string UnityProjectRootDir
+        {
+            get
+            {
+                var projectRoot = Path.GetDirectoryName(Application.dataPath);
+                return string.IsNullOrEmpty(projectRoot) ? ProjectRootDir : projectRoot;
+            }
+        }
 
         /// <summary>安装器 Tauri 项目路径。</summary>
         internal static string InstallerProjectPath =>
@@ -698,7 +708,11 @@ namespace YokiFrame.Unity
                         EditorApplication.isCompiling,
                         EditorApplication.isUpdating,
                         EditorApplication.isPlayingOrWillChangePlaymode))
-                    WritePanelShowRequest(ResolveYokiframeDir(), activate: true);
+                {
+                    WritePanelShowRequest(
+                        ResolveYokiframeDir(),
+                        activate: true);
+                }
                 return;
             }
 
@@ -713,7 +727,11 @@ namespace YokiFrame.Unity
                         EditorApplication.isCompiling,
                         EditorApplication.isUpdating,
                         EditorApplication.isPlayingOrWillChangePlaymode))
-                    WritePanelShowRequest(ResolveYokiframeDir(), activate: true);
+                {
+                    WritePanelShowRequest(
+                        ResolveYokiframeDir(),
+                        activate: true);
+                }
 
                 if (!processStarted)
                 {
@@ -736,7 +754,11 @@ namespace YokiFrame.Unity
                     EditorApplication.isCompiling,
                     EditorApplication.isUpdating,
                     EditorApplication.isPlayingOrWillChangePlaymode))
-                WritePanelShowRequest(ResolveYokiframeDir(), activate: true);
+            {
+                WritePanelShowRequest(
+                    ResolveYokiframeDir(),
+                    activate: true);
+            }
 
             if (!binaryStarted)
             {
@@ -810,17 +832,17 @@ namespace YokiFrame.Unity
             Restart();
         }
 
-        [MenuItem("YokiFrame/编辑器窗口/启动时预热", false, 104)]
+        [MenuItem("YokiFrame/编辑器窗口/启动时预热（可选）", false, 104)]
         private static void MenuToggleAutoPreload()
         {
             AutoPreloadEnabled = !AutoPreloadEnabled;
-            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热", AutoPreloadEnabled);
+            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热（可选）", AutoPreloadEnabled);
         }
 
-        [MenuItem("YokiFrame/编辑器窗口/启动时预热", true)]
+        [MenuItem("YokiFrame/编辑器窗口/启动时预热（可选）", true)]
         private static bool ValidateMenuToggleAutoPreload()
         {
-            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热", AutoPreloadEnabled);
+            Menu.SetChecked("YokiFrame/编辑器窗口/启动时预热（可选）", AutoPreloadEnabled);
             return true;
         }
 
@@ -1222,7 +1244,9 @@ namespace YokiFrame.Unity
             return Path.Combine(projectRoot, ".yokiframe");
         }
 
-        internal static bool WritePanelShowRequest(string yokiframeDir, bool activate = true)
+        internal static bool WritePanelShowRequest(
+            string yokiframeDir,
+            bool activate = true)
         {
             try
             {
@@ -1261,8 +1285,89 @@ namespace YokiFrame.Unity
 
         internal static bool AutoPreloadEnabled
         {
-            get => EditorPrefs.GetBool(AUTO_PRELOAD_PREF_KEY, true);
+            get => EditorPrefs.GetBool(AUTO_PRELOAD_PREF_KEY, false);
             set => EditorPrefs.SetBool(AUTO_PRELOAD_PREF_KEY, value);
+        }
+
+        internal static bool ShouldUseDetachedPackageBinary(
+            string binaryPath,
+            string runtimeDir,
+            TauriRuntimePlatform platform)
+        {
+            if (platform != TauriRuntimePlatform.Windows)
+                return false;
+            if (string.IsNullOrEmpty(binaryPath) || string.IsNullOrEmpty(runtimeDir))
+                return false;
+
+            var binaryFullPath = Path.GetFullPath(binaryPath);
+            var runtimeFullPath = Path.GetFullPath(runtimeDir);
+            return string.Equals(
+                       Path.GetFileName(binaryFullPath),
+                       "yokiframe-tauri-editor.exe",
+                       StringComparison.OrdinalIgnoreCase) &&
+                   IsPathInsideDirectory(runtimeFullPath, binaryFullPath);
+        }
+
+        internal static string ResolveDetachedPackageBinaryRoot(string projectRootDir)
+        {
+            return Path.Combine(projectRootDir, "Temp", DETACHED_BINARY_ROOT_DIR);
+        }
+
+        internal static string ResolveDetachedPackageBinaryPath(
+            string binaryPath,
+            string projectRootDir)
+        {
+            return Path.Combine(
+                ResolveDetachedPackageBinaryRoot(projectRootDir),
+                Path.GetFileName(binaryPath));
+        }
+
+        internal static string ResolveBinaryLaunchPath(
+            string binaryPath,
+            string runtimeDir,
+            TauriRuntimePlatform platform,
+            string projectRootDir)
+        {
+            if (!ShouldUseDetachedPackageBinary(binaryPath, runtimeDir, platform))
+                return binaryPath;
+
+            return ResolveDetachedPackageBinaryPath(binaryPath, projectRootDir);
+        }
+
+        internal static bool IsDetachedPackageBinaryPath(
+            string processPath,
+            string projectRootDir,
+            string processName)
+        {
+            if (string.IsNullOrEmpty(processPath) ||
+                string.IsNullOrEmpty(projectRootDir) ||
+                string.IsNullOrEmpty(processName))
+                return false;
+
+            var detachedRoot = ResolveDetachedPackageBinaryRoot(projectRootDir);
+            return string.Equals(
+                       Path.GetFileNameWithoutExtension(processPath),
+                       processName,
+                       StringComparison.OrdinalIgnoreCase) &&
+                   IsPathInsideDirectory(detachedRoot, processPath);
+        }
+
+        private static bool IsPathInsideDirectory(string rootDir, string candidatePath)
+        {
+            if (string.IsNullOrEmpty(rootDir) || string.IsNullOrEmpty(candidatePath))
+                return false;
+
+            var rootFullPath = Path.GetFullPath(rootDir)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var candidateFullPath = Path.GetFullPath(candidatePath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (string.Equals(rootFullPath, candidateFullPath, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return candidateFullPath.StartsWith(
+                rootFullPath + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         internal static bool ShouldRequestPanelShow(

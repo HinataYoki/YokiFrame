@@ -290,9 +290,9 @@ test('motion system adds purposeful transitions with reduced-motion safeguards',
     assert.match(motionCss, /@keyframes yoki-page-enter/);
     assert.match(motionCss, /@keyframes yoki-surface-enter/);
     assert.match(motionCss, /@keyframes yoki-window-open/);
-    assert.match(motionCss, /\.workspace-shell\s*\{[\s\S]*?animation:\s*yoki-window-open\s+260ms\s+var\(--ease-emphasized\)\s+both/);
+    assert.match(motionCss, /\.workspace-shell\s*\{[\s\S]*?animation:\s*yoki-window-open\s+80ms\s+var\(--ease-emphasized\)\s+both/);
     assert.match(motionCss, /transform-origin:\s*center center/);
-    assert.match(motionCss, /transform:\s*scale\(0\.96\)/);
+    assert.match(motionCss, /transform:\s*scale\(0\.99\)/);
     assert.match(motionCss, /@keyframes yoki-status-pulse/);
     assert.match(motionCss, /@keyframes yoki-shimmer/);
     assert.match(motionCss, /@media \(prefers-reduced-motion:\s*reduce\)/);
@@ -758,15 +758,17 @@ test('Godot editor plugin resolves Tauri panel binary per desktop platform', () 
 }
 );
 
-test('Godot editor plugin launches Tauri without Unity owner-window binding', () => {
+test('Godot editor plugin passes the Godot editor HWND to Tauri on Windows', () => {
     const plugin = readWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Runtime', 'Adapters', 'Godot', 'Editor', 'addons', 'yokiframe', 'plugin.gd');
     const openPanelBody = plugin.slice(plugin.indexOf('func _open_panel()'), plugin.indexOf('func _resolve_tauri_binary_path('));
 
     assert.match(plugin, /const YOKI_OWNER_HWND = "YOKI_OWNER_HWND"/);
+    assert.match(openPanelBody, /_resolve_owner_hwnd\(\)/);
+    assert.match(openPanelBody, /OS\.set_environment\(YOKI_OWNER_HWND,\s*str\(owner_hwnd\)\)/);
     assert.match(openPanelBody, /OS\.unset_environment\(YOKI_OWNER_HWND\)/);
-    assert.doesNotMatch(openPanelBody, /_resolve_owner_hwnd\(/);
-    assert.doesNotMatch(openPanelBody, /OS\.set_environment\(YOKI_OWNER_HWND/);
-    assert.doesNotMatch(plugin, /func _resolve_owner_hwnd\(\)/);
+    assert.match(plugin, /func _resolve_owner_hwnd\(\) -> int:/);
+    assert.match(plugin, /OS\.get_name\(\)\s*!=\s*"Windows"/);
+    assert.match(plugin, /DisplayServer\.window_get_native_handle\(DisplayServer\.WINDOW_HANDLE,\s*DisplayServer\.MAIN_WINDOW_ID\)/);
 });
 
 test('stylesheet defines Apple-like professional console themes for the workbench shell', () => {
@@ -1136,6 +1138,41 @@ test('frontend startup and push listeners are idempotent to avoid duplicate runt
     assert.match(js, /function teardownPushListeners\(\)/);
     assert.match(js, /pushListenerUnlisteners\.forEach/);
     assert.match(startup, /window\.addEventListener\('beforeunload',\s*teardownPushListeners\)/);
+});
+
+test('startup diagnostics are stripped from release launch path', () => {
+    const windowState = readDistFile('core/window-state.js');
+    const startupSource = readDistFile('main.js');
+    const launcher = readWorkspaceFile(
+        'Assets',
+        'YokiFrame',
+        'Core',
+        'Runtime',
+        'Adapters',
+        'Unity',
+        'Editor',
+        'TauriBridge',
+        'TauriLauncher.cs',
+    );
+    const launcherProcess = readWorkspaceFile(
+        'Assets',
+        'YokiFrame',
+        'Core',
+        'Runtime',
+        'Adapters',
+        'Unity',
+        'Editor',
+        'TauriBridge',
+        'TauriLauncher.Process.cs',
+    );
+
+    assert.match(windowState, /invoke\('mark_panel_window_ready'\)/);
+    assert.doesNotMatch(windowState, /markStartup/);
+    assert.doesNotMatch(windowState, /mark_startup_event/);
+    assert.doesNotMatch(windowState, /frontend\.first\.paint|frontend\.raf|frontend\.ready|frontend\.restore/);
+    assert.doesNotMatch(startupSource, /markStartup/);
+    assert.doesNotMatch(launcher, /TauriStartup|LogStartup|CreateStartupTraceId|STARTUP_TRACE|BuildStartupLogLine/);
+    assert.doesNotMatch(launcherProcess, /TauriStartup|LogStartup|STARTUP_TRACE|ShouldForwardTauriStdoutToUnity/);
 });
 
 test('FsmKit stable refresh bindings do not stack duplicate event listeners', () => {

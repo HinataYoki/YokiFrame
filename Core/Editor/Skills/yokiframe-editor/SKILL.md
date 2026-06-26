@@ -16,6 +16,7 @@ description: >-
 - 关闭窗口：`YokiFrame/Editor UI/Close`。
 - 重启窗口：`YokiFrame/Editor UI/Restart`。
 - 打包窗口：`YokiFrame/Editor UI/Package Binary (Release)`。
+- 启动时预热：默认关闭；需要极致首开速度时可手动开启，升级或移除包前请关闭工作台。
 - 工作台系统页：查看宿主连接、命令桥、快捷命令、运行日志和“安装Skill”卡片。
 
 ## 推荐使用顺序
@@ -143,6 +144,8 @@ description: >-
 2. 检查 Unity Console 是否有 Tauri 启动错误。
 3. 若二进制缺失，使用 `YokiFrame/Editor UI/Package Binary (Release)` 重新打包。
 4. 若已经存在窗口进程，工作台会通过 `.yokiframe/panel/show-window.json` 聚焦旧窗口；新窗口启动时会先等前端恢复窗口尺寸与位置，再写入 `.yokiframe/panel/show-window-ready.json` 放行显示，避免左上角闪动。
+5. Windows 发布包会从项目 `Temp/YokiFrame/TauriRuntime/bin` 的临时副本启动 exe，避免长期锁住包内 `TauriRuntime~` 二进制；若 UPM 升级或移除仍提示占用，先执行 `YokiFrame/Editor UI/Close`。
+6. 默认发布包不输出冷启动阶段打点；若需要继续排查首开耗时，临时开启专项诊断后再采集 Unity Console 和工作台运行日志。
 
 ### 页面没有 Kit 数据
 
