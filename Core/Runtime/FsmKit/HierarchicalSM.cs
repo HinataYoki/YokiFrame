@@ -95,6 +95,7 @@ namespace YokiFrame
                 state.State.Dispose();
             }
             mStateDic.Clear();
+            CurEnum = default;
 #if UNITY_EDITOR || GODOT
             mStateOrderDic.Clear();
             mNextStateOrderIndex = 0;
@@ -132,6 +133,7 @@ namespace YokiFrame
                 var entry = mStateDic[key];
                 mStateDic[key] = (entry.State, MachineState.End);
             }
+            CurEnum = default;
         }
 
         public void FixedUpdate()
@@ -150,10 +152,13 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
+                var isCurrentState = EqualityComparer<TEnum>.Default.Equals(CurEnum, id);
                 if (state.Status is not MachineState.End)
                     state.State.End();
                 state.State.Dispose();
                 mStateDic.Remove(id);
+                if (isCurrentState)
+                    CurEnum = default;
 #if UNITY_EDITOR || GODOT
                 mStateOrderDic.Remove(id);
                 FsmEditorHook.OnStateRemoved?.Invoke(this, id.ToString());
@@ -238,7 +243,7 @@ namespace YokiFrame
                         }
                         break;
                     case MachineState.Running:
-                        if (state.Status is not MachineState.Running)
+                        if (state.Status is not MachineState.Running && state.State.Condition())
                         {
                             state.State.Start();
                             mStateDic[id] = (state.State, MachineState.Running);
@@ -258,6 +263,8 @@ namespace YokiFrame
             if (mStateDic.TryGetValue(id, out var state))
             {
                 if (state.Status is MachineState.Running) return;
+                if (!state.State.Condition())
+                    return;
                 if (state.State is IState<TArgs> stateWithArgs)
                     stateWithArgs.Start(args);
                 else

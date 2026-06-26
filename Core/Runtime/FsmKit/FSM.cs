@@ -56,9 +56,11 @@ namespace YokiFrame
 
         public void Add(TEnum id, IState state)
         {
+            var replacedCurrent = false;
             if (mStateDic.ContainsKey(id))
             {
                 if (mStateDic[id] == state) return;
+                replacedCurrent = CurState == mStateDic[id];
 #if UNITY_EDITOR || GODOT
                 FsmEditorHook.OnStateRemoved?.Invoke(this, id.ToString());
 #endif
@@ -76,6 +78,11 @@ namespace YokiFrame
                 CurState = state;
                 CurEnum = id;
             }
+            else if (replacedCurrent)
+            {
+                CurState = state;
+                CurEnum = id;
+            }
 #if UNITY_EDITOR || GODOT
             FsmEditorHook.OnStateAdded?.Invoke(this, id.ToString());
 #endif
@@ -85,14 +92,19 @@ namespace YokiFrame
         {
             if (mStateDic.TryGetValue(id, out var state))
             {
-                if (CurState == state && mMachineState is MachineState.Running)
+                var isCurrentState = CurState == state;
+                if (isCurrentState && mMachineState is MachineState.Running)
                 {
                     CurState.End();
-                    CurState = null;
-                    mMachineState = MachineState.End;
                 }
                 mStateDic[id].Dispose();
                 mStateDic.Remove(id);
+                if (isCurrentState)
+                {
+                    CurState = null;
+                    CurEnum = default;
+                    mMachineState = MachineState.End;
+                }
 #if UNITY_EDITOR || GODOT
                 mStateOrderDic.Remove(id);
 #endif
@@ -154,6 +166,7 @@ namespace YokiFrame
                 End();
             }
             CurState = null;
+            CurEnum = default;
             foreach (var state in mStateDic.Values)
                 state.Dispose();
             mStateDic.Clear();
@@ -179,6 +192,7 @@ namespace YokiFrame
             {
                 mMachineState = MachineState.End;
                 CurState?.End();
+                CurEnum = default;
             }
         }
 

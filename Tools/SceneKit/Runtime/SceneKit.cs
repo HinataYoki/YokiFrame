@@ -185,7 +185,7 @@ namespace YokiFrame
 
             var backend = EnsureBackend();
             if (mode == SceneLoadMode.Single)
-                ClearScenesForSingleMode(sceneName);
+                ClearScenesForSingleMode(sceneName, backend);
 
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, mode, data, false);
             RegisterHandler(handler);
@@ -244,7 +244,7 @@ namespace YokiFrame
 
             var backend = EnsureBackend();
             if (mode == SceneLoadMode.Single)
-                ClearScenesForSingleMode(sceneName);
+                ClearScenesForSingleMode(sceneName, backend);
 
             var handler = CreateHandler(sceneName, buildIndex, mode, data, false);
             RegisterHandler(handler);
@@ -503,7 +503,7 @@ namespace YokiFrame
                 sActiveSceneHandler = null;
         }
 
-        private static void ClearScenesForSingleMode(string newSceneName)
+        private static void ClearScenesForSingleMode(string newSceneName, ISceneBackend backend)
         {
             if (sLoadedScenes.Count == 0)
                 return;
@@ -521,6 +521,8 @@ namespace YokiFrame
             for (int i = 0; i < scenesToUnload.Count; i++)
             {
                 var handler = scenesToUnload[i];
+                if (backend != null)
+                    backend.UnloadSceneAsync(handler.Scene, null);
                 UnregisterHandler(handler);
                 handler.MarkUnloaded();
             }

@@ -160,6 +160,8 @@ namespace YokiFrame
         /// <summary>清空全部枚举事件容器。</summary>
         public void Clear()
         {
+            foreach (var kvp in mEventDic)
+                kvp.Value.Clear();
             mEventDic.Clear();
 #if UNITY_EDITOR || GODOT
             EasyEventEditorHook.OnClear?.Invoke("Enum", "*");
