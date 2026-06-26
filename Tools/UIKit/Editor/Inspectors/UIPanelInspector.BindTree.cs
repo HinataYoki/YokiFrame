@@ -151,8 +151,56 @@ namespace YokiFrame
                 Bind = BindType.Member,
                 Self = root
             };
-            BindCollector.SearchBinds(root.transform, root.name, info);
+            CollectInspectorBinds(root.transform, root.name, info);
             return info;
+        }
+
+        private static void CollectInspectorBinds(Transform current, string fullName, BindCodeInfo parentInfo)
+        {
+            foreach (Transform child in current)
+            {
+                var nextFullName = fullName + "/" + child.name;
+
+                if (child.TryGetComponent<AbstractBind>(out var bind))
+                {
+                    ProcessInspectorBind(bind, child, nextFullName, parentInfo);
+                }
+                else
+                {
+                    CollectInspectorBinds(child, nextFullName, parentInfo);
+                }
+            }
+        }
+
+        private static void ProcessInspectorBind(AbstractBind bind, Transform child, string nextFullName, BindCodeInfo parentInfo)
+        {
+            var strategy = BindStrategyRegistry.Get(bind.Bind);
+            if (strategy == null || strategy.ShouldSkipCodeGen)
+                return;
+
+            var bindType = !string.IsNullOrEmpty(bind.Type) ? bind.Type : strategy.InferTypeName(bind);
+            var bindName = string.IsNullOrEmpty(bind.Name) ? child.name : bind.Name;
+            var repeat = parentInfo.MemberDic.ContainsKey(bindName);
+
+            var order = parentInfo.MemberDic.Count + 1;
+            var bindInfo = new BindCodeInfo
+            {
+                Type = bindType,
+                Name = bindName,
+                Comment = bind.Comment,
+                PathToRoot = nextFullName,
+                Bind = bind.Bind,
+                Self = child.gameObject,
+                BindScript = bind,
+                RepeatElement = repeat,
+                Order = order,
+            };
+
+            var key = repeat ? bindName + order : bindName;
+            parentInfo.MemberDic.Add(key, bindInfo);
+
+            var nextParent = strategy.CanContainChildren ? bindInfo : parentInfo;
+            CollectInspectorBinds(child, nextFullName, nextParent);
         }
 
         private int RenderBindChildren(BindCodeInfo parent, int level, BindTreeStats stats, List<string> errors)
@@ -288,6 +336,8 @@ namespace YokiFrame
         {
             if (info.Bind == BindType.Leaf)
                 return;
+            if (info.RepeatElement && info.Bind == BindType.Member)
+                errors.Add(info.PathToRoot + ": 重复的 Member 名称 " + info.Name + "。");
             if (string.IsNullOrEmpty(info.Name))
                 errors.Add(info.PathToRoot + ": 字段名称为空。");
             if (string.IsNullOrEmpty(info.Type))

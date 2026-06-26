@@ -17,9 +17,9 @@ namespace YokiFrame
     [CanEditMultipleObjects]
     public partial class AbstractBindInspector : Editor
     {
-        private const string TOKENS_STYLE_SHEET_PATH = "Assets/YokiFrame/Core/Runtime/Adapters/Unity/Editor/UISystem/Styling/Tokens/YokiTokens.uss";
-        private const string CORE_STYLE_SHEET_PATH = "Assets/YokiFrame/Core/Runtime/Adapters/Unity/Editor/UISystem/Styling/Core/YokiCoreComponents.uss";
-        private const string STYLE_SHEET_PATH = "Assets/YokiFrame/Tools/UIKit/Editor/Bind/BindInspectorStyles.uss";
+        private const string TOKENS_STYLE_SHEET_PATH = "Core/Runtime/Adapters/Unity/Editor/UISystem/Styling/Tokens/YokiTokens.uss";
+        private const string CORE_STYLE_SHEET_PATH = "Core/Runtime/Adapters/Unity/Editor/UISystem/Styling/Core/YokiCoreComponents.uss";
+        private const string STYLE_SHEET_PATH = "Tools/UIKit/Editor/Bind/BindInspectorStyles.uss";
         private const string CODE_PREVIEW_FOLDOUT_KEY = "YokiFrame.UIKit.AbstractBindInspector.CodePreview";
 
         private static readonly HashSet<string> sCSharpKeywords = new HashSet<string>(StringComparer.Ordinal)
@@ -112,7 +112,7 @@ namespace YokiFrame
             if (root == null || string.IsNullOrEmpty(styleSheetPath))
                 return;
 
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(styleSheetPath);
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(UIKitEditorAssetPaths.ResolveStyleSheetPath(styleSheetPath));
             if (styleSheet == null)
                 return;
 

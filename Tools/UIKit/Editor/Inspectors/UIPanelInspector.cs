@@ -20,7 +20,7 @@ namespace YokiFrame
         private const string ANIMATION_SECTION_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.AnimationSection";
         private const string FOCUS_SECTION_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.FocusSection";
         private const string CUSTOM_PROPERTIES_FOLDOUT_KEY = "YokiFrame.UIKit.UIPanelInspector.CustomProperties";
-        private const string STYLE_SHEET_PATH = "Assets/YokiFrame/Tools/UIKit/Editor/Inspectors/UIPanelInspectorStyles.uss";
+        private const string STYLE_SHEET_PATH = "Tools/UIKit/Editor/Inspectors/UIPanelInspectorStyles.uss";
 
         private static readonly Type[] sAnimationConfigTypes =
         {
@@ -57,7 +57,7 @@ namespace YokiFrame
             var root = new VisualElement();
             root.AddToClassList("uipanel-inspector");
 
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(STYLE_SHEET_PATH);
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(UIKitEditorAssetPaths.ResolveStyleSheetPath(STYLE_SHEET_PATH));
             if (styleSheet != null)
                 root.styleSheets.Add(styleSheet);
 
