@@ -44,6 +44,7 @@ namespace YokiFrame.Unity
                                 sInstance.OnSingletonInit();
                             }
 
+                            MoveRootToDontDestroyOnLoad(sInstance.gameObject);
                             SingletonRegistry.Register(typeof(T), sInstance, "Unity", "MonoSingleton");
                         }
                     }
@@ -121,6 +122,19 @@ namespace YokiFrame.Unity
             }
 
             return current != default ? current : new GameObject(typeof(T).Name);
+        }
+
+        private static void MoveRootToDontDestroyOnLoad(GameObject gameObject)
+        {
+            if (!Application.isPlaying)
+                return;
+
+            if (gameObject == default)
+                return;
+
+            var root = gameObject.transform.root.gameObject;
+            if (root != default)
+                DontDestroyOnLoad(root);
         }
 
         private static GameObject CreatePathNode(string name, bool useRectTransform)
