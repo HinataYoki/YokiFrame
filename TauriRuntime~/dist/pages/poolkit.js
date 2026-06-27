@@ -52,17 +52,9 @@ function normalizePoolKitStatePayload(data) {
 }
 
 async function fetchPoolKitWorkbenchState({ forceCommandRefresh = false } = {}) {
-    if (forceCommandRefresh) {
-        return await fetchPoolKitWorkbenchStateFromCommands();
-    }
-
-    const telemetry = await readKitTelemetryData('PoolKit');
-    if (telemetry) return normalizePoolKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('PoolKit');
-    if (snapshot) return normalizePoolKitStatePayload(snapshot);
-
-    return null;
+    return await fetchKitWorkbenchState('PoolKit', normalizePoolKitStatePayload, {
+        forceCommandRefresh: forceCommandRefresh,
+    });
 }
 
 function applyPoolKitWorkbenchState(state) {
@@ -92,8 +84,7 @@ async function loadPoolWorkbench({ forceDetailRefresh = false, forceCommandRefre
         return;
     }
     try {
-        const snapshotState = await fetchPoolKitWorkbenchState({ forceCommandRefresh });
-        const state = snapshotState ?? await fetchPoolKitWorkbenchStateFromCommands();
+        const state = await fetchPoolKitWorkbenchState({ forceCommandRefresh });
         const selectedPool = applyPoolKitWorkbenchState(state);
 
         clearMetrics();
@@ -120,11 +111,6 @@ async function loadPoolWorkbench({ forceDetailRefresh = false, forceCommandRefre
         }
         $pageBody.innerHTML = panel(t('common.error'), `<span style="color:var(--error)">${escapeHtml(e)}</span>`, '!');
     }
-}
-
-async function fetchPoolKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('PoolKit', 'get_workbench_snapshot');
-    return normalizePoolKitStatePayload(snapshot);
 }
 
 function findPoolKitSnapshotDetail(poolName) {

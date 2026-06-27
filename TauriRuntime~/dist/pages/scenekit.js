@@ -49,18 +49,7 @@ function normalizeSceneKitStatePayload(data) {
 }
 
 async function fetchSceneKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('SceneKit');
-    if (telemetry) return normalizeSceneKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('SceneKit');
-    if (snapshot) return normalizeSceneKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchSceneKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('SceneKit', 'get_workbench_snapshot');
-    return normalizeSceneKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('SceneKit', normalizeSceneKitStatePayload);
 }
 
 async function loadSceneKitWorkbench() {
@@ -71,8 +60,7 @@ async function loadSceneKitWorkbench() {
     }
 
     try {
-        const snapshotState = await fetchSceneKitWorkbenchState();
-        const state = snapshotState ?? await fetchSceneKitWorkbenchStateFromCommands();
+        const state = await fetchSceneKitWorkbenchState();
         sceneKitState.stats = state.stats;
         sceneKitState.scenes = state.scenes;
         reconcileSceneKitSelection(sceneKitState.scenes);

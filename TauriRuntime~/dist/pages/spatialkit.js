@@ -49,18 +49,7 @@ function normalizeSpatialKitStatePayload(data) {
 }
 
 async function fetchSpatialKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('SpatialKit');
-    if (telemetry) return normalizeSpatialKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('SpatialKit');
-    if (snapshot) return normalizeSpatialKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchSpatialKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('SpatialKit', 'get_workbench_snapshot');
-    return normalizeSpatialKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('SpatialKit', normalizeSpatialKitStatePayload);
 }
 
 async function loadSpatialKitWorkbench() {
@@ -71,8 +60,7 @@ async function loadSpatialKitWorkbench() {
     }
 
     try {
-        const snapshotState = await fetchSpatialKitWorkbenchState();
-        const state = snapshotState ?? await fetchSpatialKitWorkbenchStateFromCommands();
+        const state = await fetchSpatialKitWorkbenchState();
         spatialKitState.stats = state.stats;
         spatialKitState.indexes = state.indexes;
         reconcileSpatialKitSelection(spatialKitState.indexes);

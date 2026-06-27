@@ -24,7 +24,7 @@ function renderArchitecturePage() {
     loadArchitectureWorkbench();
 }
 
-async function refreshArchitecture() { await loadArchitectureWorkbench(); }
+async function refreshArchitecture() { await loadArchitectureWorkbench({ forceCommandRefresh: true }); }
 
 async function refreshArchitectureReactive(event) {
     await loadArchitectureWorkbench();
@@ -41,25 +41,26 @@ function normalizeArchitectureStatePayload(data) {
     };
 }
 
-async function fetchArchitectureWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('Architecture', 'get_workbench_snapshot');
-    return normalizeArchitectureStatePayload(snapshot);
+async function fetchArchitectureWorkbenchState({ forceCommandRefresh = false } = {}) {
+    return await fetchKitWorkbenchState('Architecture', normalizeArchitectureStatePayload, {
+        forceCommandRefresh: forceCommandRefresh,
+    });
 }
 
-async function loadArchitectureWorkbench() {
+async function loadArchitectureWorkbench({ forceCommandRefresh = false } = {}) {
     if (!invoke || !connected) {
         $pageBody.innerHTML = emptyState('architecture', t('architecture.connect_hint'));
         clearMetrics();
         return;
     }
 
-    if (!canSendRuntimeKitCommand('Architecture')) {
-        showRuntimeKitUnavailable('Architecture', t('architecture.instance_label'));
-        return;
-    }
-
     try {
-        const state = await fetchArchitectureWorkbenchStateFromCommands();
+        const state = await fetchArchitectureWorkbenchState({ forceCommandRefresh });
+        if (!state && !canSendRuntimeKitCommand('Architecture')) {
+            showRuntimeKitUnavailable('Architecture', t('architecture.instance_label'));
+            return;
+        }
+
         architectureKitState.stats = state.stats;
         architectureKitState.architectures = state.architectures;
         reconcileArchitectureSelection(architectureKitState.architectures);
@@ -70,6 +71,7 @@ async function loadArchitectureWorkbench() {
             stats: architectureKitState.stats,
             architectures: architectureKitState.architectures,
             selected: architectureKitState.selectedType,
+            search: architectureKitState.searchTerm,
         });
         renderWorkbenchHtmlStable(architectureKitState, html, signature, bindArchitectureWorkbenchActions);
     } catch (e) {

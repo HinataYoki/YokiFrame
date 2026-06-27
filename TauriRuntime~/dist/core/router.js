@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 const pages = {};
 const NAVIGATION_MOTION_SETTLE_MS = 240;
+const PAGE_LOADING_STATE_PAGE_IDS = new Set(['architecture', 'tablekit']);
 let navigationMotionTimer = 0;
 
 function registerPage(pageId, page) {
@@ -55,6 +56,10 @@ function markNavigationMotion(phase) {
     }, NAVIGATION_MOTION_SETTLE_MS);
 }
 
+function shouldShowPageLoadingState(pageId) {
+    return PAGE_LOADING_STATE_PAGE_IDS.has(pageId);
+}
+
 function navigateTo(pageId) {
     const targetKit = KIT_PAGE_ID_TO_KIT[pageId];
     if (targetKit && !engineSupportsKit(getSelectedEngineForNavigation(), targetKit)) {
@@ -94,7 +99,10 @@ function navigateTo(pageId) {
     // 清空内容。
     clearMetrics();
     clearTabs();
-    $pageBody.innerHTML = renderPageLoadingState();
+    const pageLoadToken = currentPageLoadToken(pageId);
+    if (shouldShowPageLoadingState(pageId)) {
+        setPageBodyForLoad(pageLoadToken, renderPageLoadingState());
+    }
     // 渲染页面。
     scheduleNavigationRender(pageId, requestSeq);
 }

@@ -46,18 +46,7 @@ function normalizeSaveKitStatePayload(data) {
 }
 
 async function fetchSaveKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('SaveKit');
-    if (telemetry) return normalizeSaveKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('SaveKit');
-    if (snapshot) return normalizeSaveKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchSaveKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('SaveKit', 'get_workbench_snapshot');
-    return normalizeSaveKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('SaveKit', normalizeSaveKitStatePayload);
 }
 
 async function loadSaveKitWorkbench() {
@@ -67,8 +56,7 @@ async function loadSaveKitWorkbench() {
         return;
     }
     try {
-        const snapshotState = await fetchSaveKitWorkbenchState();
-        const state = snapshotState ?? await fetchSaveKitWorkbenchStateFromCommands();
+        const state = await fetchSaveKitWorkbenchState();
         saveKitState.stats = state.stats;
         saveKitState.slots = state.slots;
         saveKitState.autoSave = state.autoSave;

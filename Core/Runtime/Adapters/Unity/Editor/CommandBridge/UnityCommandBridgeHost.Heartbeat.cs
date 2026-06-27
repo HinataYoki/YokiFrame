@@ -15,7 +15,7 @@ namespace YokiFrame.Unity
             try
             {
                 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                WriteEngineFiles(sYokiframeRoot, Application.unityVersion, Path.GetDirectoryName(Application.dataPath), timestamp);
+                WriteHeartbeatFile(sYokiframeRoot, timestamp);
             }
             catch (Exception e)
             {
@@ -30,11 +30,10 @@ namespace YokiFrame.Unity
 
             try
             {
-                WriteEngineFiles(
+                WriteEngineRegistryFile(
                     sYokiframeRoot,
                     Application.unityVersion,
-                    Path.GetDirectoryName(Application.dataPath),
-                    DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                    Path.GetDirectoryName(Application.dataPath));
             }
             catch (Exception e)
             {
@@ -67,20 +66,21 @@ namespace YokiFrame.Unity
                    ",\"typeName\":\"Luban.ByteBuf\"}}}";
         }
 
-        internal static void WriteEngineFiles(string yokiframeRoot, string unityVersion, string projectPath, long timestamp)
+        internal static void WriteHeartbeatFile(string yokiframeRoot, long timestamp)
         {
-            var rootStatusPath = Path.Combine(yokiframeRoot, "status", "heartbeat.json");
+            var engineRoot = Path.Combine(yokiframeRoot, "engines", ENGINE_ID);
+            var engineHeartbeatPath = Path.Combine(engineRoot, "status", "heartbeat.json");
+            FileBridgeFileSystem.AtomicWriteAllTextInRoot(yokiframeRoot, engineHeartbeatPath, BuildHeartbeatJson(timestamp));
+        }
+
+        internal static void WriteEngineRegistryFile(string yokiframeRoot, string unityVersion, string projectPath)
+        {
             var engineRoot = Path.Combine(yokiframeRoot, "engines", ENGINE_ID);
             var enginePath = Path.Combine(engineRoot, "engine.json");
-            var engineHeartbeatPath = Path.Combine(engineRoot, "status", "heartbeat.json");
-            var heartbeatJson = BuildHeartbeatJson(timestamp);
-
             FileBridgeFileSystem.AtomicWriteAllTextInRoot(
                 yokiframeRoot,
                 enginePath,
                 BuildEngineRegistryJson(unityVersion, projectPath, sStartedAtUtc));
-            FileBridgeFileSystem.AtomicWriteAllTextInRoot(yokiframeRoot, rootStatusPath, heartbeatJson);
-            FileBridgeFileSystem.AtomicWriteAllTextInRoot(yokiframeRoot, engineHeartbeatPath, heartbeatJson);
         }
     }
 }

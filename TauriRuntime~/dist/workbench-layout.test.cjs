@@ -60,10 +60,19 @@ function readTauriSourceFile(...segments) {
 
 function readFrontendScripts() {
     const files = [
+        'i18n/zh-cn-shell.js',
+        'i18n/zh-cn-core-kits.js',
+        'i18n/zh-cn-tool-kits.js',
         'i18n/zh-cn.js',
+        'i18n/en-us-shell.js',
+        'i18n/en-us-core-kits.js',
+        'i18n/en-us-tool-kits.js',
         'i18n/en-us.js',
         'i18n.js',
         'core/app.js',
+        'core/app-shell.js',
+        'core/app-state.js',
+        'core/app-status.js',
         'core/window-state.js',
         'core/log-panel.js',
         'core/command-bridge.js',
@@ -71,26 +80,46 @@ function readFrontendScripts() {
         'core/brand-assets.js',
         'core/kit-reactive-refresh.js',
         'shared/dom.js',
+        'shared/kit-bridge.js',
         'shared/kit-ui.js',
         'pages/system.js',
+        'pages/actionkit-data.js',
+        'pages/actionkit-render.js',
+        'pages/actionkit-interactions.js',
         'pages/actionkit.js',
         'pages/poolkit.js',
         'pages/fsmkit-graph.js',
+        'pages/fsmkit-graph-interactions.js',
+        'pages/fsmkit-data.js',
+        'pages/fsmkit-workbench.js',
+        'pages/fsmkit-detail.js',
+        'pages/fsmkit-interactions.js',
         'pages/fsmkit.js',
         'pages/eventkit-scan.js',
+        'pages/eventkit-data.js',
+        'pages/eventkit-monitor.js',
         'pages/eventkit.js',
         'pages/reskit.js',
         'pages/architecture.js',
         'pages/singletonkit.js',
+        'pages/logkit-render.js',
+        'pages/logkit-viewer.js',
         'pages/logkit.js',
+        'pages/audiokit-index.js',
+        'pages/audiokit-mixer.js',
         'pages/audiokit.js',
         'pages/savekit.js',
         'pages/localizationkit.js',
         'pages/scenekit.js',
         'pages/spatialkit.js',
         'pages/inputkit.js',
+        'pages/uikit-editor-tools.js',
+        'pages/uikit-render.js',
         'pages/uikit.js',
         'pages/tablekit-preview.js',
+        'pages/tablekit-state.js',
+        'pages/tablekit-render.js',
+        'pages/tablekit-actions.js',
         'pages/tablekit.js',
         'pages/docs.js',
         'core/router.js',
@@ -98,6 +127,15 @@ function readFrontendScripts() {
         'main.js',
     ];
     return files.map(file => `\n// ${file}\n${readDistFile(file)}`).join('\n');
+}
+
+function countTextLines(content) {
+    return content.split(/\r?\n/).length;
+}
+
+function getScriptOrder() {
+    const html = readDistFile('index.html');
+    return [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(match => match[1]);
 }
 
 function extractCssBlock(css, selector) {
@@ -141,13 +179,26 @@ function extractSidebarGroups(html) {
     return groups;
 }
 
+function readPageSource(pageFileName) {
+    return readDistFile(path.join('pages', pageFileName));
+}
+
 test('frontend script entrypoint is split into core shared and page modules', () => {
     const html = readDistFile('index.html');
     const requiredScripts = [
+        'i18n/zh-cn-shell.js',
+        'i18n/zh-cn-core-kits.js',
+        'i18n/zh-cn-tool-kits.js',
         'i18n/zh-cn.js',
+        'i18n/en-us-shell.js',
+        'i18n/en-us-core-kits.js',
+        'i18n/en-us-tool-kits.js',
         'i18n/en-us.js',
         'i18n.js',
         'core/app.js',
+        'core/app-shell.js',
+        'core/app-state.js',
+        'core/app-status.js',
         'core/window-state.js',
         'core/log-panel.js',
         'core/command-bridge.js',
@@ -155,13 +206,23 @@ test('frontend script entrypoint is split into core shared and page modules', ()
         'core/brand-assets.js',
         'core/kit-reactive-refresh.js',
         'shared/dom.js',
+        'shared/kit-bridge.js',
         'shared/kit-ui.js',
         'pages/system.js',
+        'pages/actionkit-data.js',
+        'pages/actionkit-render.js',
+        'pages/actionkit-interactions.js',
+        'pages/actionkit.js',
         'pages/fsmkit-graph.js',
         'pages/fsmkit.js',
         'pages/eventkit-scan.js',
         'pages/eventkit.js',
+        'pages/logkit-render.js',
+        'pages/logkit-viewer.js',
         'pages/logkit.js',
+        'pages/uikit-editor-tools.js',
+        'pages/uikit-render.js',
+        'pages/uikit.js',
         'pages/tablekit-preview.js',
         'pages/tablekit.js',
         'core/router.js',
@@ -194,33 +255,62 @@ test('frontend script entrypoint is split into core shared and page modules', ()
 test('large frontend modules are split by functional responsibility', () => {
     const html = readDistFile('index.html');
     const modules = [
+        ['i18n/zh-cn-shell.js', /function zhCNShellTranslations\(/],
+        ['i18n/zh-cn-core-kits.js', /function zhCNCoreKitTranslations\(/],
+        ['i18n/zh-cn-tool-kits.js', /function zhCNToolKitTranslations\(/],
         ['i18n/zh-cn.js', /function zhCN\(/],
+        ['i18n/en-us-shell.js', /function enUSShellTranslations\(/],
+        ['i18n/en-us-core-kits.js', /function enUSCoreKitTranslations\(/],
+        ['i18n/en-us-tool-kits.js', /function enUSToolKitTranslations\(/],
         ['i18n/en-us.js', /function enUS\(/],
+        ['core/app-shell.js', /function panel\(/],
+        ['core/app-state.js', /const FRAMEWORK_COMMAND_CATALOG\s*=/],
+        ['core/app-status.js', /async function pollStatus\(/],
         ['core/window-state.js', /function restoreWindowState\(/],
         ['core/log-panel.js', /function renderLogPanel\(/],
         ['core/command-bridge.js', /async function sendCommand\(/],
         ['core/ai-skill-installer.js', /function renderAiSkillInstallPanel\(/],
         ['core/brand-assets.js', /function applyYokiFrameBrandAssets\(/],
         ['core/kit-reactive-refresh.js', /function registerKitReactiveRefresh\(/],
+        ['shared/kit-bridge.js', /async function sendKitCommandData\(/],
         ['pages/fsmkit-graph.js', /function renderFsmGraphSvg\(/],
+        ['pages/fsmkit-graph-interactions.js', /function bindFsmGraphInteractions\(/],
+        ['pages/fsmkit-data.js', /async function fetchFsmList\(/],
+        ['pages/fsmkit-workbench.js', /function renderFsmWorkbenchShell\(/],
+        ['pages/fsmkit-detail.js', /function renderFsmInsightsHtml\(/],
+        ['pages/fsmkit-interactions.js', /function selectFsmWorkbench\(/],
         ['pages/eventkit-scan.js', /async function runEventKitCodeScan\(/],
+        ['pages/eventkit-data.js', /async function fetchEventKitMonitorSnapshot\(/],
+        ['pages/eventkit-monitor.js', /function renderEventKitMonitorHtml\(/],
+        ['pages/actionkit-data.js', /function normalizeActionKitStatePayload\(/],
+        ['pages/actionkit-render.js', /function renderActionKitWorkbench\(/],
+        ['pages/actionkit-interactions.js', /function bindActionKitWorkbenchActions\(/],
+        ['pages/logkit-render.js', /function renderLogKitWorkbench\(/],
+        ['pages/logkit-viewer.js', /function syncLogKitViewerDom\(/],
+        ['pages/uikit-editor-tools.js', /function renderUIKitEditorToolsSection\(/],
+        ['pages/uikit-render.js', /function renderUIKitWorkbench\(/],
         ['pages/tablekit-preview.js', /function renderTableKitPreviewPanel\(/],
+        ['pages/tablekit-state.js', /function loadTableKitConfig\(/],
+        ['pages/tablekit-render.js', /function renderTableKitEnvironmentPanel\(/],
+        ['pages/tablekit-actions.js', /async function runTableKitLuban\(/],
     ];
 
     for (const [modulePath, marker] of modules) {
         const source = readDistFile(modulePath);
         assert.match(html, new RegExp(`<script src="${modulePath.replace('/', '\\/')}"><\\/script>`), `${modulePath} should be loaded by index.html`);
         assert.match(source, marker, `${modulePath} should keep its functional owner marker`);
-        const maxLines = modulePath.startsWith('i18n/') ? 900 : 760;
-        assert.ok(source.split(/\r?\n/).length <= maxLines, `${modulePath} should stay readable for AI review`);
+        assert.ok(source.split(/\r?\n/).length <= 500, `${modulePath} should stay at or below 500 lines`);
     }
 
     const thinEntrypoints = [
         ['i18n.js', 90],
-        ['core/app.js', 1000],
-        ['pages/fsmkit.js', 1120],
-        ['pages/eventkit.js', 1120],
-        ['pages/tablekit.js', 1040],
+        ['core/app.js', 160],
+        ['pages/actionkit.js', 500],
+        ['pages/logkit.js', 500],
+        ['pages/uikit.js', 500],
+        ['pages/fsmkit.js', 500],
+        ['pages/eventkit.js', 500],
+        ['pages/tablekit.js', 500],
     ];
 
     for (const [modulePath, maxLines] of thinEntrypoints) {
@@ -231,10 +321,73 @@ test('large frontend modules are split by functional responsibility', () => {
     const i18nEntry = readDistFile('i18n.js');
     assert.doesNotMatch(i18nEntry, /function zhCN\(/);
     assert.doesNotMatch(i18nEntry, /function enUS\(/);
-    assert.doesNotMatch(readDistFile('core/app.js'), /async function sendCommand\(/);
+    assert.doesNotMatch(readDistFile('core/app.js'), /async function pollStatus\(/);
+    assert.doesNotMatch(readDistFile('core/app.js'), /const FRAMEWORK_COMMAND_CATALOG\s*=/);
     assert.doesNotMatch(readDistFile('pages/fsmkit.js'), /function renderFsmGraphSvg\(/);
     assert.doesNotMatch(readDistFile('pages/eventkit.js'), /async function runEventKitCodeScan\(/);
     assert.doesNotMatch(readDistFile('pages/tablekit.js'), /function renderTableKitPreviewPanel\(/);
+});
+
+test('production frontend scripts stay within the 500 line module budget', () => {
+    const ignored = new Set(['workbench-layout.test.cjs']);
+    const jsFiles = [];
+    const walk = dir => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const fullPath = path.join(dir, entry.name);
+            const relativePath = path.relative(distDir, fullPath).replace(/\\/g, '/');
+            if (entry.isDirectory()) {
+                if (relativePath === 'docs') continue;
+                walk(fullPath);
+                continue;
+            }
+            if (!entry.isFile() || !entry.name.endsWith('.js') || ignored.has(relativePath)) continue;
+            jsFiles.push(relativePath);
+        }
+    };
+
+    walk(distDir);
+    const oversized = jsFiles
+        .map(fileName => [fileName, countTextLines(readDistFile(fileName))])
+        .filter(([, lines]) => lines > 500);
+    assert.deepEqual(oversized, [], 'production JS modules should stay at or below 500 lines');
+});
+
+test('shared kit bridge owns transport helpers while kit-ui stays presentation-only', () => {
+    const bridge = readDistFile('shared/kit-bridge.js');
+    const ui = readDistFile('shared/kit-ui.js');
+
+    for (const marker of [
+        /async function sendKitCommandData\(/,
+        /function getPreferredEngineId\(/,
+        /function canSendRuntimeKitCommand\(/,
+        /function engineSupportsCapability\(/,
+        /function engineSupportsKitFeature\(/,
+        /function parseBridgePayload\(/,
+        /async function readKitTelemetryData\(/,
+        /async function readKitSnapshotData\(/,
+        /async function fetchKitWorkbenchState\(/,
+    ]) {
+        assert.match(bridge, marker);
+        assert.doesNotMatch(ui, marker);
+    }
+
+    for (const marker of [
+        /function canShowStaticKitWorkbench\(/,
+        /function showRuntimeKitUnavailable\(/,
+        /function getSelectedEngineForNavigation\(/,
+        /function syncSidebarKitAvailability\(/,
+        /function syncSidebarGroupVisibility\(/,
+        /async function openKitCodeLocation\(/,
+        /function renderWorkbenchHtmlStable\(/,
+    ]) {
+        if (String(marker).includes('getSelectedEngineForNavigation')) {
+            assert.match(bridge, marker);
+            assert.doesNotMatch(ui, marker);
+            continue;
+        }
+        assert.match(ui, marker);
+        assert.doesNotMatch(bridge, marker);
+    }
 });
 
 test('stylesheet entrypoint is split into focused CSS modules', () => {
@@ -398,6 +551,27 @@ test('sidebar navigation groups live in a rounded scroll card outside the versio
     assert.match(navCardCss, /min-height:\s*0/);
 });
 
+test('workspace separates the sidebar as a rounded floating rail instead of a hard divider', () => {
+    const css = readDistFile('style.css');
+    const bodyCss = css.slice(css.indexOf('.workspace-body'), css.indexOf('.workspace-nav'));
+    const sidebarCss = css.slice(css.indexOf('.workspace-nav'), css.indexOf('.sidebar-scroll-card'));
+    const contentCss = css.slice(css.indexOf('.workspace-content'), css.indexOf('.metric-strip'));
+
+    assert.match(bodyCss, /grid-template-columns:\s*var\(--nav-width\)\s+minmax\(0,\s*1fr\)/);
+    assert.match(bodyCss, /gap:\s*var\(--sp-md\)/);
+    assert.match(bodyCss, /padding:\s*var\(--sp-md\)/);
+    assert.match(sidebarCss, /border:\s*1px solid var\(--hairline\)/);
+    assert.match(sidebarCss, /border-radius:\s*var\(--r-lg\)/);
+    assert.match(sidebarCss, /background:\s*var\(--nav-overlay\)/);
+    assert.match(sidebarCss, /box-shadow:\s*var\(--shadow-panel\),\s*10px 0 24px rgba\(0,\s*0,\s*0,\s*0\.10\)/);
+    assert.doesNotMatch(sidebarCss, /border-right:\s*1px solid var\(--hairline\)/);
+    assert.doesNotMatch(sidebarCss, /inset -1px 0 0/);
+    assert.match(contentCss, /border-radius:\s*var\(--r-lg\)/);
+    assert.match(contentCss, /background:\s*var\(--surface-overlay\)/);
+    assert.match(contentCss, /border:\s*1px solid var\(--hairline\)/);
+    assert.match(contentCss, /box-shadow:\s*var\(--shadow-panel\)/);
+});
+
 test('sidebar footer stays anchored at the bottom and only shows version plus GitHub', () => {
     const html = readDistFile('index.html');
     const css = readDistFile('style.css');
@@ -508,16 +682,18 @@ test('runtime Kit workbenches keep the rounded intro card after async refresh', 
     assert.match(js, /function renderFsmWorkbenchShell\([\s\S]*?\$pageBody\.innerHTML = `[\s\S]*?`;\s*scheduleHeroActionPromotion\(\);/);
 });
 
-test('tool navigation uses centered loading text instead of transient intro card', () => {
+test('tool navigation no longer writes a transient loading placeholder', () => {
     const js = readFrontendScripts();
     const css = readDistFile('style.css');
+    const navigateToBody = js.slice(js.indexOf('function navigateTo(pageId)'), js.indexOf('// 侧边栏点击处理'));
 
     assert.match(js, /function renderPageLoadingState\(\)/);
     assert.match(js, /data-page-loading-state="1"/);
     assert.match(js, /t\('common\.loading'\)/);
     assert.match(js, /function isPageLoadingStateVisible\(\)/);
     assert.match(js, /function scheduleHeroActionPromotion\(\)\s*\{[\s\S]*?if\s*\(isPageLoadingStateVisible\(\)\)\s*\{[\s\S]*?setTimeout\(scheduleHeroActionPromotion,\s*48\);[\s\S]*?return;[\s\S]*?\}/);
-    assert.match(js, /function navigateTo\(pageId\)[\s\S]*?\$pageBody\.innerHTML\s*=\s*renderPageLoadingState\(\);/);
+    assert.match(navigateToBody, /scheduleNavigationRender\(pageId,\s*requestSeq\);/);
+    assert.doesNotMatch(navigateToBody, /\$pageBody\.innerHTML\s*=\s*renderPageLoadingState\(\);/);
     assert.match(css, /\.page-loading-state\s*\{[\s\S]*?display:\s*grid[\s\S]*?place-items:\s*center/);
     assert.match(css, /\.page-loading-state__text\s*\{[\s\S]*?color:\s*var\(--ink-subtle\)/);
 });
@@ -653,7 +829,7 @@ test('sidebar and docs hide Kit entries that the selected engine does not implem
     const godotEditorPlugin = readWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Runtime', 'Adapters', 'Godot', 'Editor', 'addons', 'yokiframe', 'plugin.gd');
     const godotRuntimeHost = readWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Runtime', 'Adapters', 'Godot', 'Runtime', 'Core', 'CommandBridge', 'Runtime', 'GodotCommandBridgeHost.cs');
     const navigateToBody = js.slice(js.indexOf('function navigateTo(pageId)'), js.indexOf('// 侧边栏点击处理'));
-    const syncSidebarBody = js.slice(js.indexOf('function syncSidebarKitAvailability()'), js.indexOf('function parseBridgePayload'));
+    const syncSidebarBody = js.slice(js.indexOf('function syncSidebarKitAvailability()'), js.indexOf('async function openKitCodeLocation'));
     const docsPageBody = js.slice(js.indexOf('async function renderDocsPage()'), js.indexOf('function getDocNavTitle'));
     const godotImplementedKits = '["System","Architecture","EventKit","FsmKit","LogKit","PoolKit","ResKit","SingletonKit","ActionKit","InputKit","LocalizationKit","SaveKit","SceneKit","SpatialKit","TableKit"]';
     const normalizeRegistrySource = source => source.replace(/\\/g, '');
@@ -661,6 +837,8 @@ test('sidebar and docs hide Kit entries that the selected engine does not implem
     assert.match(html, /data-page="uikit"[\s\S]*?data-kit="UIKit"/);
     assert.match(html, /data-page="eventkit"[\s\S]*?data-kit="EventKit"/);
     assert.match(js, /const KIT_PAGE_ID_TO_KIT/);
+    assert.match(js, /function getWorkbenchStatus\(/);
+    assert.match(js, /function getWorkbenchEngines\(/);
     assert.match(js, /function getSelectedEngineForNavigation\(/);
     assert.match(js, /function engineSupportsKit\(engine,\s*kit\)/);
     assert.match(js, /function engineSupportsKitFeature\(engine,\s*kit,\s*feature\)/);
@@ -771,16 +949,21 @@ test('Godot editor plugin passes the Godot editor HWND to Tauri on Windows', () 
     assert.match(plugin, /DisplayServer\.window_get_native_handle\(DisplayServer\.WINDOW_HANDLE,\s*DisplayServer\.MAIN_WINDOW_ID\)/);
 });
 
-test('stylesheet defines Apple-like professional console themes for the workbench shell', () => {
+test('stylesheet defines the reference blue gradient light theme for the workbench shell', () => {
     const css = readDistFile('style.css');
 
-    assert.match(css, /--canvas:\s*#f5f5f7/i);
-    assert.match(css, /--primary:\s*#007aff/i);
+    assert.match(css, /--canvas:\s*linear-gradient\(160deg,\s*#eefcf4\s+0%,\s*#d8eff8\s+45%,\s*#ffffeb\s+100%\)/i);
+    assert.match(css, /--primary:\s*#00a5d8/i);
+    assert.match(css, /--accent-soft:\s*rgba\(115,\s*255,\s*238,\s*0\.20\)/i);
+    assert.match(css, /--focus-ring:\s*0\s+0\s+0\s+3px\s+rgba\(0,\s*165,\s*216,\s*0\.24\)/i);
     assert.match(css, /--chrome-material:/);
     assert.match(css, /--control-material:/);
     assert.match(css, /--shadow-window:/);
     assert.match(css, /html\[data-theme="dark"\]/);
     assert.match(css, /--canvas:\s*#1d1d1f/i);
+    const lightThemeCss = css.slice(css.indexOf(':root'), css.indexOf('html[data-theme="dark"]'));
+    assert.doesNotMatch(lightThemeCss, /#007aff/i);
+    assert.doesNotMatch(lightThemeCss, /rgba\(0,\s*122,\s*255/i);
     assert.match(css, /\.workspace-shell/);
     assert.match(css, /\.workspace-nav/);
     assert.match(css, /\.workspace-content/);
@@ -794,6 +977,7 @@ test('stylesheet defines Apple-like professional console themes for the workbenc
 test('system workbench applies unified compact visual rhythm for cards and diagnostics', () => {
     const css = readDistFile('style.css');
     const systemPage = readDistFile('pages/system.js');
+    const routerSource = readDistFile('core/router.js');
 
     assert.match(css, /--panel-pad-x:\s*16px/);
     assert.match(css, /--panel-pad-y:\s*16px/);
@@ -809,13 +993,27 @@ test('system workbench applies unified compact visual rhythm for cards and diagn
     assert.match(css, /\.diagnostic-tile\s*\{[\s\S]*?min-height:\s*var\(--tile-min-height\)/);
     assert.match(css, /\.framework-engine-panel\s+\.diagnostic-tile\s*\{[\s\S]*?min-height:\s*86px/);
     assert.match(css, /\.diagnostic-tile__value\s*\{[\s\S]*?font-size:\s*var\(--fs-body-sm\)/);
+    assert.match(css, /\.content-body--system\s*\{[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
+    assert.match(css, /\.content-body--system\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)/);
+    assert.match(css, /\.framework-dashboard\s*\{[\s\S]*?align-items:\s*stretch[\s\S]*?min-height:\s*0[\s\S]*?height:\s*100%/);
+    assert.match(css, /\.framework-stack,\s*\.tool-stack\s*\{[\s\S]*?min-height:\s*0/);
+    assert.match(css, /\.framework-stack--primary\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)/);
+    assert.match(css, /\.framework-stack--secondary\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*minmax\(0,\s*1fr\)/);
+    assert.match(css, /\.framework-stack--primary\s+#log-panel\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*var\(--panel-header-height\)\s+minmax\(0,\s*1fr\)[\s\S]*?min-height:\s*0/);
+    assert.match(css, /\.framework-stack--primary\s+#log-panel\s+\.log-output\s*\{[\s\S]*?height:\s*100%[\s\S]*?min-height:\s*0[\s\S]*?max-height:\s*none/);
+    assert.match(css, /\.framework-stack--secondary\s+>\s+\.panel\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*var\(--panel-header-height\)\s+minmax\(0,\s*1fr\)[\s\S]*?min-height:\s*0/);
+    assert.match(css, /\.framework-stack--secondary\s+\.panel-body\s*\{[\s\S]*?min-height:\s*0[\s\S]*?overflow:\s*hidden/);
+    assert.match(css, /\.framework-stack--secondary\s+\.ai-skill-installer\s*\{[\s\S]*?height:\s*100%[\s\S]*?min-height:\s*0[\s\S]*?overflow:\s*auto/);
     assert.match(css, /\.ai-skill-target-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
     assert.match(css, /\.ai-skill-target-card\s*\{[\s\S]*?grid-template-rows:\s*auto\s+minmax\(32px,\s*1fr\)\s+auto/);
     assert.match(css, /\.ai-skill-target-card__actions\s*\{[\s\S]*?margin-top:\s*auto/);
     assert.match(css, /@media\s*\(max-width:\s*1360px\)[\s\S]*?\.framework-dashboard\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    assert.match(css, /@media\s*\(max-width:\s*1360px\)[\s\S]*?\.content-body--system\s*\{[\s\S]*?overflow-y:\s*auto/);
     assert.match(css, /@media\s*\(max-width:\s*1360px\)[\s\S]*?\.framework-grid--status\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     assert.match(css, /@media\s*\(max-width:\s*1360px\)[\s\S]*?\.diagnostic-grid--compact\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-    assert.match(css, /\.framework-stack--primary\s+#log-panel\s+\.log-output\s*\{[\s\S]*?min-height:\s*180px[\s\S]*?max-height:\s*min\(32vh,\s*340px\)/);
+    assert.doesNotMatch(css, /\.framework-stack--primary\s+#log-panel\s+\.log-output\s*\{[\s\S]*?max-height:\s*min\(32vh,\s*340px\)/);
+    assert.match(routerSource, /\$pageBody\.classList\.remove\('content-body--system'\)/);
+    assert.match(routerSource, /\$pageBody\.classList\.add\(`content-body--\$\{pageId\}`\)/);
     assert.match(systemPage, /<div class="framework-stack framework-stack--primary">/);
     assert.match(systemPage, /<div class="framework-stack framework-stack--secondary">/);
     assert.match(systemPage, /renderEngineStatusCard\(\)/);
@@ -893,6 +1091,27 @@ test('framework overview replaces responsibility panel with command bridge query
     assert.match(css, /\.framework-command__hint/);
 });
 
+test('system command and font controls stay bounded at narrow widths', () => {
+    const js = readFrontendScripts();
+    const css = readDistFile('style.css');
+    const commandSection = js.slice(js.indexOf('// core/command-bridge.js'), js.indexOf('// core/ai-skill-installer.js'));
+
+    assert.match(commandSection, /const desc = getFrameworkCommandDescription\(item\)/);
+    assert.match(commandSection, /<option value="\$\{escapeHtml\(item\.action\)\}" title="\$\{escapeHtml\(desc\)\}"\$\{selected\}>/);
+    assert.match(commandSection, />\$\{escapeHtml\(item\.label \|\| item\.action\)\}<\/option>/);
+    assert.doesNotMatch(commandSection, /const label = desc \? `\$\{item\.label\} - \$\{desc\}` : item\.label/);
+
+    assert.match(css, /\.framework-engine-panel__controls\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.framework-engine-panel__section--command,\s*\.framework-engine-panel__section--font\s*\{[\s\S]*?overflow:\s*hidden/);
+    assert.match(css, /\.framework-command\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.framework-command__form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.54fr\)\s+minmax\(0,\s*1fr\)\s+minmax\(56px,\s*auto\)[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.framework-command__form\s+\.cmd-select\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.font-preference\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.font-preference__controls\s*\{[\s\S]*?grid-template-columns:\s*minmax\(132px,\s*0\.72fr\)\s+minmax\(0,\s*1fr\)\s+minmax\(54px,\s*auto\)[\s\S]*?min-width:\s*0/);
+    assert.match(css, /\.font-preference__controls\s+\.cmd-select,\s*\.font-preference__controls\s+\.cmd-input\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css, /@media\s*\(max-width:\s*1120px\)[\s\S]*?\.framework-engine-panel__controls\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+});
+
 test('Architecture workbench exposes live instances and registered services through the command bridge', () => {
     const html = readDistFile('index.html');
     const js = readFrontendScripts();
@@ -908,7 +1127,10 @@ test('Architecture workbench exposes live instances and registered services thro
     assert.match(js, /function renderArchitecturePage\(\)/);
     assert.match(js, /\$pageBody\.classList\.add\('content-body--architecture'\)/);
     assert.match(js, /setHero\(\s*t\('architecture\.title'\)/);
-    assert.match(js, /sendKitCommandData\('Architecture',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /function fetchArchitectureWorkbenchState\(\{\s*forceCommandRefresh\s*=\s*false\s*\}\s*=\s*\{\}\)/);
+    assert.match(js, /fetchKitWorkbenchState\('Architecture',\s*normalizeArchitectureStatePayload/);
+    assert.doesNotMatch(js, /function fetchArchitectureWorkbenchStateFromCommands\(\)/);
+    assert.match(js, /forceCommandRefresh:\s*true/);
     assert.match(js, /function normalizeArchitectureStatePayload\(/);
     assert.match(js, /architectureKitState/);
     assert.match(js, /data-architecture-search/);
@@ -1068,6 +1290,7 @@ test('system log rendering is frame-batched and appends only changed rows', () =
     assert.match(js, /scheduleLogPanelRender\(\)/);
     assert.match(js, /appendChild\(createLogEntry\(logBuffer\[i\]\)\)/);
     assert.match(js, /while\s*\(container\.childElementCount\s*>\s*logBuffer\.length\)/);
+    assert.match(js, /container\.scrollTop\s*=\s*container\.scrollHeight/);
     assert.doesNotMatch(js, /logBuffer\.forEach\(e\s*=>\s*fragment\.appendChild\(createLogEntry\(e\)\)\)/);
     assert.doesNotMatch(js, /container\.replaceChildren\(fragment\)/);
 });
@@ -1249,6 +1472,10 @@ test('navigation clicks update immediately while page renders and stale refreshe
     assert.match(js, /window\.addEventListener\('focus',\s*handleInteractiveFocusResume\)/);
     assert.match(js, /document\.addEventListener\('visibilitychange'/);
     assert.match(js, /const requestSeq\s*=\s*\+\+navigationSeq/);
+    assert.match(js, /const pageLoadToken\s*=\s*currentPageLoadToken\(pageId\)/);
+    assert.match(js, /const PAGE_LOADING_STATE_PAGE_IDS\s*=\s*new Set\(\[\s*'architecture',\s*'tablekit'\s*\]\)/);
+    assert.match(js, /function shouldShowPageLoadingState\(pageId\)/);
+    assert.match(js, /if\s*\(shouldShowPageLoadingState\(pageId\)\)\s*\{\s*setPageBodyForLoad\(pageLoadToken,\s*renderPageLoadingState\(\)\);/);
     assert.match(js, /scheduleNavigationRender\(pageId,\s*requestSeq\)/);
     assert.match(js, /isCurrentNavigation\(refreshNavigationSeq,\s*handler\.pageId\)/);
     assert.match(js, /activePage\s*===\s*'fsmkit'/);
@@ -1277,13 +1504,17 @@ test('EventKit workbench merges realtime monitor and code scan into one engine-a
     const js = readFrontendScripts();
     const css = readDistFile('style.css');
     const pageRenderer = js.match(/function renderEventKitPage\(\)[\s\S]*?async function refreshEventKit/);
+    const monitorRenderer = js.match(/function renderEventKitMonitorHtml\(view\)[\s\S]*?function scheduleEventKitMonitorPartialRender/);
 
     assert.match(js, /t\('eventkit\.title'\)/);
     assert.match(js, /t\('eventkit\.subtitle'\)/);
     assert.match(js, /clearTabs\(\)/);
-    assert.match(js, /t\('eventkit\.workbench_title'\)/);
     assert.match(js, /t\('eventkit\.scan_code'\)/);
     assert.ok(pageRenderer, 'EventKit page renderer should be capturable');
+    assert.ok(monitorRenderer, 'EventKit monitor renderer should be capturable');
+    assert.match(js, /function setEventKitHero\(\)/);
+    assert.match(js, /function renderEventKitHeroActions\(/);
+    assert.match(pageRenderer[0], /setEventKitHero\(\)/);
     assert.doesNotMatch(pageRenderer[0], /runEventKitCodeScan/);
     assert.doesNotMatch(pageRenderer[0], /renderEventKitTabs/);
     assert.doesNotMatch(js, /eventkit-engine-strip/);
@@ -1297,7 +1528,9 @@ test('EventKit workbench merges realtime monitor and code scan into one engine-a
     assert.match(js, /function renderEventKitScanUnregisters/);
     assert.match(js, /renderEventKitScanUnregisters\(unregisterFiles\)/);
     assert.match(js, /data-eventkit-monitor-row/);
-    assert.match(js, /function renderEventKitUnifiedToolbar/);
+    assert.doesNotMatch(js, /function renderEventKitUnifiedToolbar/);
+    assert.doesNotMatch(monitorRenderer[0], /eventkit-v1-toolbar--unified/);
+    assert.doesNotMatch(monitorRenderer[0], /data-eventkit-region="insights"/);
     assert.match(js, /normalizeEventKitScanEvents/);
     assert.match(js, /filterEventKitUnifiedRows/);
     assert.match(js, /function renderEventKitEngineInline/);
@@ -1323,7 +1556,9 @@ test('EventKit workbench merges realtime monitor and code scan into one engine-a
     assert.match(css, /\.eventkit-v1-code-stack/);
     assert.match(css, /\.eventkit-v1-code-link/);
     assert.match(css, /\.content-body--eventkit\s*{[\s\S]*display:\s*flex/);
-    assert.match(css, /\.eventkit-v1-toolbar--unified\s*{[\s\S]*grid-template-columns/);
+    assert.match(css, /\.eventkit-hero-actions\s*{[\s\S]*display:\s*flex/);
+    assert.match(css, /\.eventkit-hero-actions \.eventkit-scan-search\s*{[\s\S]*flex:\s*1\s+1\s+180px/);
+    assert.doesNotMatch(css, /\.eventkit-v1-toolbar--unified\s*\{/);
     assert.match(css, /\.eventkit-v1-row\s*{[\s\S]*grid-template-columns:\s*minmax\(220px,\s*1fr\)\s*minmax\(300px,\s*360px\)\s*minmax\(220px,\s*1fr\)/);
     assert.match(css, /\.eventkit-v1-row\s*{[\s\S]*flex:\s*0 0 auto/);
     assert.match(css, /\.eventkit-v1-row\s*{[\s\S]*min-height:\s*138px/);
@@ -1333,6 +1568,46 @@ test('EventKit workbench merges realtime monitor and code scan into one engine-a
     assert.match(css, /\.eventkit-v1-sidecell--receiver \.eventkit-v1-location-list\s*{[\s\S]*justify-items:\s*start/);
     assert.match(css, /\.eventkit-v1-code-stack \.eventkit-v1-location-list\s*{[\s\S]*max-height:\s*none/);
     assert.doesNotMatch(css, /\.eventkit-v1-detail-scroll--registry/);
+});
+
+test('EventKit frontend splits data and monitor rendering without adding redundant flow layers', () => {
+    const dataModule = 'pages/eventkit-data.js';
+    const monitorModule = 'pages/eventkit-monitor.js';
+    const pageModule = 'pages/eventkit.js';
+    const scripts = getScriptOrder();
+
+    for (const fileName of [dataModule, monitorModule, pageModule]) {
+        assert.ok(fs.existsSync(path.join(distDir, fileName)), `${fileName} should exist`);
+    }
+
+    const scanOrder = scripts.indexOf('pages/eventkit-scan.js');
+    const dataOrder = scripts.indexOf(dataModule);
+    const monitorOrder = scripts.indexOf(monitorModule);
+    const pageOrder = scripts.indexOf(pageModule);
+    assert.ok(scanOrder >= 0 && scanOrder < dataOrder, 'EventKit scan helpers should load before data merge helpers');
+    assert.ok(dataOrder >= 0 && dataOrder < monitorOrder, 'EventKit data helpers should load before monitor rendering');
+    assert.ok(monitorOrder >= 0 && monitorOrder < pageOrder, 'EventKit monitor renderer should load before the page shell');
+
+    const dataJs = readDistFile(dataModule);
+    const monitorJs = readDistFile(monitorModule);
+    const pageJs = readDistFile(pageModule);
+
+    for (const [fileName, source] of [[dataModule, dataJs], [monitorModule, monitorJs], [pageModule, pageJs]]) {
+        assert.ok(countTextLines(source) <= 500, `${fileName} should stay at or below 500 lines`);
+    }
+
+    assert.match(dataJs, /async function fetchEventKitMonitorSnapshot\(/);
+    assert.match(dataJs, /function normalizeEventKitMonitorPayload\(/);
+    assert.match(dataJs, /function buildEventKitMonitorRows\(/);
+    assert.match(monitorJs, /function renderEventKitMonitorHtml\(/);
+    assert.match(monitorJs, /function renderEventKitMonitorDetail\(/);
+    assert.match(pageJs, /function renderEventKitPage\(/);
+    assert.match(pageJs, /async function refreshEventKitReactive\(event\)/);
+
+    assert.doesNotMatch(pageJs, /function normalizeEventKitMonitorPayload\(/);
+    assert.doesNotMatch(pageJs, /function renderEventKitMonitorHtml\(/);
+    assert.doesNotMatch(dataJs + monitorJs + pageJs, /fetchEventKitMonitorSnapshotFromCommands/);
+    assert.doesNotMatch(dataJs + monitorJs + pageJs, /const\s+snapshotState\s*=/);
 });
 
 test('EventKit monitor prefers engine-scoped snapshot and falls back to command response', () => {
@@ -1355,7 +1630,7 @@ test('EventKit monitor prefers engine-scoped snapshot and falls back to command 
     assert.match(js, /data-eventkit-region="timeline"/);
     assert.doesNotMatch(js, /data-eventkit-region="registry"/);
     assert.doesNotMatch(js, /代码位置卡片/);
-    assert.match(js, /data-eventkit-region="insights"/);
+    assert.doesNotMatch(js, /data-eventkit-region="insights"/);
     assert.match(js, /buildEventKitMonitorRows/);
     assert.match(js, /eventKitMonitorRowOrder/);
     assert.match(js, /function orderEventKitMonitorRows/);
@@ -1415,16 +1690,23 @@ test('EventKit monitor prefers engine-scoped snapshot and falls back to command 
     assert.match(eventLookup, /runtimeListenerCount/);
 });
 
-test('EventKit detail summary keeps three stat cards in one row above a taller timeline', () => {
+test('EventKit detail summary and timeline share one natural side card', () => {
     const js = readFrontendScripts();
     const css = readDistFile('style.css');
+    const detailTopBlock = extractCssBlock(css, '.eventkit-v1-detail-top');
 
+    assert.match(js, /<section class="eventkit-v1-detail eventkit-v1-detail-card">/);
     assert.match(js, /eventKitStatChip\(t\('eventkit\.stat_cumulative'\),\s*row\.sendCount,\s*'send'\)/);
     assert.match(js, /eventKitStatChip\(t\('eventkit\.stat_recent'\),\s*matchingEvents\.length,\s*'history'\)/);
     assert.match(js, /eventKitStatChip\(t\('eventkit\.stat_static'\),\s*row\.senderLocations\.length \+ row\.receiverLocations\.length \+ row\.unregisterLocations\.length,\s*'handler'\)/);
+    assert.match(css, /\.eventkit-v1-detail-card\s*\{[\s\S]*?border:\s*1px solid var\(--hairline\)/);
+    assert.match(css, /\.eventkit-v1-detail-card\s*\{[\s\S]*?background:\s*var\(--surface-1\)/);
+    assert.match(detailTopBlock, /border-bottom:\s*1px solid var\(--hairline\)/);
+    assert.doesNotMatch(detailTopBlock, /border:\s*1px solid var\(--hairline\)/);
     assert.match(css, /\.eventkit-v1-detail-stats\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     assert.doesNotMatch(css, /\.eventkit-v1-detail-stats\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-    assert.match(css, /\.eventkit-v1-detail-scroll\s*\{[\s\S]*?flex:\s*1\s+1\s+0/);
+    assert.match(css, /\.eventkit-v1-detail-scroll\s*\{[\s\S]*?border:\s*0/);
+    assert.match(css, /\.eventkit-v1-detail-scroll\s*\{[\s\S]*?background:\s*transparent/);
     assert.match(css, /\.eventkit-v1-timeline,\s*\n\.eventkit-v1-quick-list\s*\{[\s\S]*?flex:\s*1\s+1\s+auto/);
 });
 
@@ -1440,7 +1722,7 @@ test('EventKit code scan invokes the Rust scanner and renders sender receiver he
     assert.match(js, /invoke\('scan_eventkit_code'/);
     assert.match(js, /eventKitScanExcludeEditor/);
     assert.match(js, /excludeEditor:\s*eventKitScanExcludeEditor/);
-    assert.match(js, /function renderEventKitUnifiedToolbar/);
+    assert.match(js, /function renderEventKitHeroActions/);
     assert.match(js, /data-eventkit-exclude-editor/);
     assert.match(js, /t\('eventkit\.exclude_editor'\)/);
     assert.match(js, /t\('eventkit\.scan_code'\)/);
@@ -1498,27 +1780,117 @@ test('FsmKit current-state list prefers shared memory telemetry before file snap
     const js = readFrontendScripts();
     const rust = readTauriSourceFile('src-tauri', 'src', 'main.rs');
 
-    assert.match(js, /function fetchFsmTelemetryList\(/);
-    assert.match(js, /read_telemetry/);
-    assert.match(js, /kit:\s*'FsmKit'/);
-    assert.match(js, /name:\s*'state'/);
-    assert.match(js, /const telemetryFsms\s*=\s*await fetchFsmTelemetryList\(\)/);
-    assert.match(js, /const snapshotFsms\s*=\s*await fetchFsmSnapshotList\(\)/);
-    assert.match(js, /sendKitCommandData\('FsmKit',\s*'list_all'\)/);
+    assert.match(js, /function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
+    assert.match(js, /function fetchFsmList\(/);
+    assert.match(js, /function normalizeFsmListPayload\(/);
+    assert.match(js, /fetchKitWorkbenchState\('FsmKit',\s*normalizeFsmListPayload/);
+    assert.match(js, /forceCommandRefresh:\s*true/);
+    assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_state'/);
+    assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_history'/);
     assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_workbench_snapshot',\s*\{\s*fsmName\s*\}\)/);
-    assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_state',\s*\{\s*fsmName/);
-    assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_history',\s*\{\s*fsmName/);
     assert.doesNotMatch(js, /invoke\('send_command',\s*\{\s*kit:\s*'FsmKit'/);
-    assert.ok(
-        js.indexOf('const telemetryFsms = await fetchFsmTelemetryList()') <
-        js.indexOf('const snapshotFsms = await fetchFsmSnapshotList()'),
-        'FsmKit should try shared memory telemetry before file snapshot'
-    );
+    assert.doesNotMatch(js, /readKitTelemetryData\('FsmKit'\)/);
+    assert.doesNotMatch(js, /readKitSnapshotData\('FsmKit'\)/);
+    assert.doesNotMatch(js, /fetchFsmTelemetryList\(/);
+    assert.doesNotMatch(js, /fetchFsmSnapshotList\(/);
+    assert.doesNotMatch(js, /sendKitCommandData\('FsmKit',\s*'list_all'\)/);
 
     assert.match(rust, /fn read_telemetry\(/);
     assert.match(rust, /read_telemetry_frame_from_buffer/);
     assert.match(rust, /OpenFileMappingW|shm_open/);
     assert.match(rust, /read_telemetry,/);
+});
+
+test('FsmKit frontend splits data workbench and interactions without local bridge wrappers', () => {
+    const dataModule = 'pages/fsmkit-data.js';
+    const workbenchModule = 'pages/fsmkit-workbench.js';
+    const detailModule = 'pages/fsmkit-detail.js';
+    const interactionsModule = 'pages/fsmkit-interactions.js';
+    const pageModule = 'pages/fsmkit.js';
+    const scripts = getScriptOrder();
+
+    for (const fileName of [dataModule, workbenchModule, detailModule, interactionsModule, pageModule]) {
+        assert.ok(fs.existsSync(path.join(distDir, fileName)), `${fileName} should exist`);
+    }
+
+    const graphOrder = scripts.indexOf('pages/fsmkit-graph.js');
+    const dataOrder = scripts.indexOf(dataModule);
+    const workbenchOrder = scripts.indexOf(workbenchModule);
+    const detailOrder = scripts.indexOf(detailModule);
+    const interactionsOrder = scripts.indexOf(interactionsModule);
+    const pageOrder = scripts.indexOf(pageModule);
+    assert.ok(graphOrder >= 0 && graphOrder < dataOrder, 'FsmKit graph helpers should load before data/workbench helpers');
+    assert.ok(dataOrder >= 0 && dataOrder < workbenchOrder, 'FsmKit data helpers should load before workbench rendering');
+    assert.ok(workbenchOrder >= 0 && workbenchOrder < detailOrder, 'FsmKit workbench shell should load before detail helpers');
+    assert.ok(detailOrder >= 0 && detailOrder < interactionsOrder, 'FsmKit detail helpers should load before interactions');
+    assert.ok(interactionsOrder >= 0 && interactionsOrder < pageOrder, 'FsmKit interactions should load before the page shell');
+
+    const dataJs = readDistFile(dataModule);
+    const workbenchJs = readDistFile(workbenchModule);
+    const detailJs = readDistFile(detailModule);
+    const interactionsJs = readDistFile(interactionsModule);
+    const pageJs = readDistFile(pageModule);
+    const graphJs = readDistFile('pages/fsmkit-graph.js');
+
+    for (const [fileName, source] of [[dataModule, dataJs], [workbenchModule, workbenchJs], [detailModule, detailJs], [interactionsModule, interactionsJs], [pageModule, pageJs]]) {
+        assert.ok(countTextLines(source) <= 500, `${fileName} should stay at or below 500 lines`);
+    }
+
+    assert.match(dataJs, /async function fetchFsmList\(/);
+    assert.match(dataJs, /async function fetchFsmWorkbenchSnapshot\(/);
+    assert.match(workbenchJs, /function renderFsmWorkbenchShell\(/);
+    assert.match(workbenchJs, /function renderFsmDetailRegionHtml\(/);
+    assert.match(detailJs, /function renderFsmInsightsHtml\(/);
+    assert.match(detailJs, /function scheduleFsmCurrentStateFit\(/);
+    assert.match(interactionsJs, /function selectFsmWorkbench\(/);
+    assert.match(interactionsJs, /function applyFsmWorkbenchSearch\(/);
+    assert.match(pageJs, /function renderFsmKitPage\(/);
+    assert.match(pageJs, /async function refreshFsmKitReactive\(event\)/);
+
+    assert.doesNotMatch(pageJs, /function renderFsmWorkbenchShell\(/);
+    assert.doesNotMatch(pageJs, /async function fetchFsmList\(/);
+    const combined = dataJs + workbenchJs + detailJs + interactionsJs + pageJs + graphJs;
+    assert.doesNotMatch(combined, /fetchFsm.*FromCommands/);
+    assert.doesNotMatch(combined, /const\s+snapshotState\s*=/);
+    assert.doesNotMatch(combined, /function activateFsmTab\(/);
+    assert.doesNotMatch(combined, /async function loadFsmGraph\(/);
+    assert.doesNotMatch(combined, /async function loadFsmList\(/);
+    assert.doesNotMatch(combined, /async function loadFsmState\(/);
+    assert.doesNotMatch(combined, /async function loadFsmHistory\(/);
+    assert.doesNotMatch(combined, /function fsmSelector\(/);
+});
+
+test('runtime Kit state pages delegate command fallback to the shared kit bridge', () => {
+    const bridge = readDistFile('shared/kit-bridge.js');
+    const pages = [
+        ['architecture.js', 'Architecture', 'fetchArchitectureWorkbenchState'],
+        ['actionkit.js', 'ActionKit', 'fetchActionKitWorkbenchState'],
+        ['poolkit.js', 'PoolKit', 'fetchPoolKitWorkbenchState'],
+        ['reskit.js', 'ResKit', 'fetchResKitWorkbenchState'],
+        ['singletonkit.js', 'SingletonKit', 'fetchSingletonKitWorkbenchState'],
+        ['logkit.js', 'LogKit', 'fetchLogKitWorkbenchState'],
+        ['audiokit.js', 'AudioKit', 'fetchAudioKitWorkbenchState'],
+        ['savekit.js', 'SaveKit', 'fetchSaveKitWorkbenchState'],
+        ['localizationkit.js', 'LocalizationKit', 'fetchLocalizationKitWorkbenchState'],
+        ['scenekit.js', 'SceneKit', 'fetchSceneKitWorkbenchState'],
+        ['spatialkit.js', 'SpatialKit', 'fetchSpatialKitWorkbenchState'],
+        ['inputkit.js', 'InputKit', 'fetchInputKitWorkbenchState'],
+        ['uikit.js', 'UIKit', 'fetchUIKitWorkbenchState'],
+    ];
+
+    assert.match(bridge, /async function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
+    assert.match(bridge, /data\s*=\s*await readKitTelemetryData\(kit,\s*telemetryName\)/);
+    assert.match(bridge, /data\s*=\s*await readKitSnapshotData\(kit,\s*snapshotName\)/);
+    assert.match(bridge, /data\s*=\s*await sendKitCommandData\(kit,\s*commandAction,\s*commandPayload\)/);
+
+    for (const [fileName, kit, fetchName] of pages) {
+        const source = readPageSource(fileName);
+        assert.match(source, new RegExp(`function ${fetchName}\\(`), `${fileName} should keep one page-local state fetcher`);
+        assert.match(source, new RegExp(`fetchKitWorkbenchState\\('${kit}',`), `${fileName} should call the shared state bridge`);
+        assert.doesNotMatch(source, /WorkbenchStateFromCommands/, `${fileName} should not keep a duplicate command-only state wrapper`);
+        assert.doesNotMatch(source, /const\s+snapshotState\s*=/, `${fileName} should not split shared bridge fallback into two local reads`);
+        assert.doesNotMatch(source, /snapshotState\s*\?\?\s*await\s*fetch[A-Za-z]+WorkbenchStateFromCommands/, `${fileName} should not re-run command fallback after shared fetch`);
+    }
 });
 
 test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneKit SpatialKit InputKit and UIKit prefer telemetry snapshots before command fallback', () => {
@@ -1562,8 +1934,7 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     const inputHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'InputKit', 'Runtime', 'CommandBridge', 'InputKitCommandHandler.cs');
     const uiHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Runtime', 'CommandBridge', 'UIKitCommandHandler.cs');
 
-    assert.match(js, /function readKitTelemetryData\(kit,\s*name = 'state'\)/);
-    assert.match(js, /function readKitSnapshotData\(kit,\s*snapshot = 'state'\)/);
+    assert.match(js, /function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
     assert.match(js, /function canSendRuntimeKitCommand\(kit\)/);
     assert.match(js, /function showRuntimeKitUnavailable\(kit,\s*label/);
     assert.match(js, /t\('runtime\.need_bridge'/);
@@ -1575,33 +1946,24 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(js, /getPreferredEngineId\(\{\s*capability:\s*'telemetry'\s*\}\)/);
     assert.match(js, /getPreferredEngineId\(\{\s*capability:\s*'snapshots'\s*\}\)/);
     assert.match(js, /function fetchPoolKitWorkbenchState\(\{\s*forceCommandRefresh\s*=\s*false\s*\}\s*=\s*\{\}\)/);
-    assert.match(js, /if\s*\(forceCommandRefresh\)\s*\{\s*return await fetchPoolKitWorkbenchStateFromCommands\(\);\s*\}/);
-    assert.match(js, /readKitTelemetryData\('PoolKit'\)/);
-    assert.match(js, /readKitSnapshotData\('PoolKit'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('PoolKit',\s*normalizePoolKitStatePayload,\s*\{\s*forceCommandRefresh:\s*forceCommandRefresh/);
     assert.match(js, /details:\s*Array\.isArray\(source\.details\)/);
     assert.match(js, /function findPoolKitSnapshotDetail\(poolName\)/);
     assert.match(js, /const snapshotDetail\s*=\s*findPoolKitSnapshotDetail\(selectedPool\.name\)/);
-    assert.match(js, /sendKitCommandData\('PoolKit',\s*'get_workbench_snapshot'\)/);
+    assert.doesNotMatch(js, /fetchPoolKitWorkbenchStateFromCommands/);
     assert.match(js, /function fetchResKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('ResKit'\)/);
-    assert.match(js, /readKitSnapshotData\('ResKit'\)/);
-    assert.match(js, /sendKitCommandData\('ResKit',\s*'get_workbench_snapshot'\)/);
-    assert.doesNotMatch(js, /sendKitCommandData\('ResKit',\s*'list_resources'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('ResKit',\s*normalizeResKitStatePayload/);
+    assert.doesNotMatch(js, /fetchResKitWorkbenchStateFromCommands/);
     assert.match(js, /function fetchSingletonKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('SingletonKit'\)/);
-    assert.match(js, /readKitSnapshotData\('SingletonKit'\)/);
-    assert.match(js, /sendKitCommandData\('SingletonKit',\s*'get_workbench_snapshot'\)/);
-    assert.doesNotMatch(js, /sendKitCommandData\('SingletonKit',\s*'list_singletons'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('SingletonKit',\s*normalizeSingletonKitStatePayload/);
+    assert.doesNotMatch(js, /fetchSingletonKitWorkbenchStateFromCommands/);
     assert.match(js, /function fetchAudioKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('AudioKit'\)/);
-    assert.match(js, /readKitSnapshotData\('AudioKit'\)/);
-    assert.match(js, /sendKitCommandData\('AudioKit',\s*'get_workbench_snapshot'\)/);
-    assert.doesNotMatch(js, /sendKitCommandData\('AudioKit',\s*'list_voices'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('AudioKit',\s*normalizeAudioKitStatePayload/);
+    assert.doesNotMatch(js, /fetchAudioKitWorkbenchStateFromCommands/);
     assert.match(js, /function renderLogKitPage\(/);
-    assert.match(js, /function fetchLogKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('LogKit'\)/);
-    assert.match(js, /readKitSnapshotData\('LogKit'\)/);
-    assert.match(js, /sendKitCommandData\('LogKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /function fetchLogKitWorkbenchState\(\{\s*forceCommandRefresh\s*=\s*false\s*\}\s*=\s*\{\}\)/);
+    assert.match(js, /fetchKitWorkbenchState\('LogKit',\s*normalizeLogKitStatePayload/);
+    assert.doesNotMatch(js, /fetchLogKitWorkbenchStateFromCommands/);
     assert.match(js, /sendKitCommandData\('LogKit',\s*'set_settings'/);
     assert.match(js, /sendKitCommandData\('LogKit',\s*'open_log_folder'/);
     assert.match(js, /sendKitCommandData\('LogKit',\s*'decrypt_log_file'/);
@@ -1613,57 +1975,32 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(js, /data-logkit-pick-encrypted/);
     assert.match(js, /sendKitCommandData\('LogKit',\s*'read_log_file'/);
     assert.match(js, /function fetchSaveKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('SaveKit'\)/);
-    assert.match(js, /readKitSnapshotData\('SaveKit'\)/);
-    assert.match(js, /sendKitCommandData\('SaveKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('SaveKit',\s*normalizeSaveKitStatePayload/);
+    assert.doesNotMatch(js, /fetchSaveKitWorkbenchStateFromCommands/);
     assert.match(js, /sendKitCommandData\('SaveKit',\s*'delete_slot'/);
     assert.match(js, /sendKitCommandData\('SaveKit',\s*'disable_auto_save'/);
     assert.match(js, /function fetchLocalizationKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('LocalizationKit'\)/);
-    assert.match(js, /readKitSnapshotData\('LocalizationKit'\)/);
-    assert.match(js, /sendKitCommandData\('LocalizationKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('LocalizationKit',\s*normalizeLocalizationKitStatePayload/);
+    assert.doesNotMatch(js, /fetchLocalizationKitWorkbenchStateFromCommands/);
     assert.match(js, /sendKitCommandData\('LocalizationKit',\s*'set_language'/);
     assert.match(js, /function fetchSceneKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('SceneKit'\)/);
-    assert.match(js, /readKitSnapshotData\('SceneKit'\)/);
-    assert.match(js, /sendKitCommandData\('SceneKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('SceneKit',\s*normalizeSceneKitStatePayload/);
+    assert.doesNotMatch(js, /fetchSceneKitWorkbenchStateFromCommands/);
     assert.match(js, /sendKitCommandData\('SceneKit',\s*'unload_scene'/);
     assert.match(js, /function fetchSpatialKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('SpatialKit'\)/);
-    assert.match(js, /readKitSnapshotData\('SpatialKit'\)/);
-    assert.match(js, /sendKitCommandData\('SpatialKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('SpatialKit',\s*normalizeSpatialKitStatePayload/);
+    assert.doesNotMatch(js, /fetchSpatialKitWorkbenchStateFromCommands/);
     assert.doesNotMatch(js, /sendKitCommandData\('SpatialKit',\s*'(insert|update|remove)/);
     assert.match(js, /function fetchInputKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('InputKit'\)/);
-    assert.match(js, /readKitSnapshotData\('InputKit'\)/);
-    assert.match(js, /sendKitCommandData\('InputKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('InputKit',\s*normalizeInputKitStatePayload/);
+    assert.doesNotMatch(js, /fetchInputKitWorkbenchStateFromCommands/);
     assert.doesNotMatch(js, /sendKitCommandData\('InputKit',\s*'(simulate|press|inject|rebind|set_binding)/);
     assert.match(js, /function fetchUIKitWorkbenchState\(\)/);
-    assert.match(js, /readKitTelemetryData\('UIKit'\)/);
-    assert.match(js, /readKitSnapshotData\('UIKit'\)/);
-    assert.match(js, /sendKitCommandData\('UIKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /fetchKitWorkbenchState\('UIKit',\s*normalizeUIKitStatePayload/);
+    assert.doesNotMatch(js, /fetchUIKitWorkbenchStateFromCommands/);
     assert.doesNotMatch(js, /sendKitCommandData\('UIKit',\s*'(open|close|show|hide|push|pop)/);
-    assert.match(js, /fetchPoolKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchResKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchSingletonKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchLogKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchAudioKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchSaveKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchLocalizationKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchSceneKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchSpatialKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchInputKitWorkbenchStateFromCommands/);
-    assert.match(js, /fetchUIKitWorkbenchStateFromCommands/);
-    assert.ok(
-        js.indexOf("const telemetry = await readKitTelemetryData('PoolKit')") <
-        js.indexOf("const snapshot = await readKitSnapshotData('PoolKit')"),
-        'PoolKit should try telemetry before file snapshot'
-    );
-    assert.ok(
-        js.indexOf("const snapshotState = await fetchPoolKitWorkbenchState({ forceCommandRefresh })") <
-        js.indexOf("const state = snapshotState ?? await fetchPoolKitWorkbenchStateFromCommands()"),
-        'PoolKit should fall back to command snapshot when telemetry/snapshot are missing'
-    );
+    assert.doesNotMatch(js, /readKitTelemetryData\('PoolKit'\)/);
+    assert.doesNotMatch(js, /readKitSnapshotData\('PoolKit'\)/);
     assert.match(js, /await loadPoolWorkbench\(\{\s*forceCommandRefresh:\s*true,\s*forceDetailRefresh:\s*true\s*\}\)/);
     assert.match(js, /trackingEnabled:\s*nextStack\s*\?\s*true\s*:\s*!!poolKitState\.stats\?\.trackingEnabled/);
     assert.match(js, /eventHistoryEnabled:\s*nextStack\s*\?\s*true\s*:\s*!!poolKitState\.stats\?\.eventHistoryEnabled/);
@@ -1921,6 +2258,7 @@ test('AudioKit workbench restores the 1.0 mixer rail with horizontally scrollabl
     assert.match(css, /\.audio-mixer-console\s*\{[\s\S]*?flex:\s*1\s+1\s+auto/);
     assert.match(css, /\.audio-mixer-console\s*\{[\s\S]*?grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)/);
     assert.match(css, /\.audio-channel-rail\s*\{[\s\S]*?height:\s*100%/);
+    assert.match(css, /\.audio-channel-rail\s*\{[\s\S]*?grid-auto-columns:\s*minmax\(282px,\s*360px\)/);
     assert.match(css, /\.audio-channel-rail\s*\{[\s\S]*?grid-auto-rows:\s*auto/);
     assert.match(css, /\.audio-channel-rail\s*\{[\s\S]*?overflow-y:\s*auto/);
     assert.match(css, /\.audio-channel-strip\s*\{[\s\S]*?height:\s*var\(--audio-strip-card-height\)/);
@@ -2011,6 +2349,101 @@ test('AudioKit ID generator sits below the runtime mixer and lets the page scrol
     assert.match(pageWorkbenchRule, /flex-direction:\s*column/);
     assert.match(pageWorkbenchRule, /overflow:\s*visible/);
     assert.doesNotMatch(pageWorkbenchRule, /overflow:\s*hidden/);
+});
+
+test('AudioKit frontend splits generator and mixer into focused modules under the line budget', () => {
+    const indexModule = 'pages/audiokit-index.js';
+    const mixerModule = 'pages/audiokit-mixer.js';
+    const pageModule = 'pages/audiokit.js';
+    const scripts = getScriptOrder();
+
+    for (const fileName of [indexModule, mixerModule, pageModule]) {
+        assert.ok(fs.existsSync(path.join(distDir, fileName)), `${fileName} should exist`);
+    }
+
+    const indexOrder = scripts.indexOf(indexModule);
+    const mixerOrder = scripts.indexOf(mixerModule);
+    const pageOrder = scripts.indexOf(pageModule);
+    assert.ok(indexOrder >= 0 && indexOrder < pageOrder, 'AudioKit ID generator should load before the page shell');
+    assert.ok(mixerOrder >= 0 && mixerOrder < pageOrder, 'AudioKit mixer renderer should load before the page shell');
+
+    const indexJs = readDistFile(indexModule);
+    const mixerJs = readDistFile(mixerModule);
+    const pageJs = readDistFile(pageModule);
+
+    for (const [fileName, source] of [[indexModule, indexJs], [mixerModule, mixerJs], [pageModule, pageJs]]) {
+        assert.ok(countTextLines(source) <= 500, `${fileName} should stay at or below 500 lines`);
+    }
+
+    assert.match(indexJs, /AUDIOKIT_INDEX_DEFAULT_CONFIG/);
+    assert.match(indexJs, /function renderAudioKitIndexGenerator/);
+    assert.match(indexJs, /invoke\('audiokit_scan_audio_files'/);
+    assert.match(indexJs, /invoke\('audiokit_generate_audio_ids'/);
+    assert.match(mixerJs, /function renderAudioKitWorkbench/);
+    assert.match(mixerJs, /function renderAudioChannelStrips/);
+    assert.doesNotMatch(pageJs, /AUDIOKIT_INDEX_DEFAULT_CONFIG/);
+    assert.doesNotMatch(pageJs, /function renderAudioKitIndexGenerator/);
+    assert.doesNotMatch(pageJs, /function renderAudioKitWorkbench/);
+});
+
+test('ActionKit LogKit UIKit and app shell split without redundant flow layers', () => {
+    const scripts = getScriptOrder();
+    const groups = [
+        {
+            name: 'ActionKit',
+            files: ['pages/actionkit-data.js', 'pages/actionkit-render.js', 'pages/actionkit-interactions.js', 'pages/actionkit.js'],
+            page: 'pages/actionkit.js',
+            pageMustOwn: /async function loadActionKitWorkbench\(/,
+            movedOut: [/function renderActionKitWorkbench\(/, /function bindActionKitWorkbenchActions\(/],
+            sharedBridge: /fetchKitWorkbenchState\('ActionKit',\s*normalizeActionKitStatePayload/,
+        },
+        {
+            name: 'LogKit',
+            files: ['pages/logkit-render.js', 'pages/logkit-viewer.js', 'pages/logkit.js'],
+            page: 'pages/logkit.js',
+            pageMustOwn: /async function loadLogKitWorkbench\(/,
+            movedOut: [/function renderLogKitWorkbench\(/, /function syncLogKitViewerDom\(/],
+            sharedBridge: /fetchKitWorkbenchState\('LogKit',\s*normalizeLogKitStatePayload/,
+        },
+        {
+            name: 'UIKit',
+            files: ['pages/uikit-editor-tools.js', 'pages/uikit-render.js', 'pages/uikit.js'],
+            page: 'pages/uikit.js',
+            pageMustOwn: /async function loadUIKitWorkbench\(/,
+            movedOut: [/function renderUIKitWorkbench\(/, /function renderUIKitEditorToolsSection\(/],
+            sharedBridge: /fetchKitWorkbenchState\('UIKit',\s*normalizeUIKitStatePayload/,
+        },
+    ];
+
+    for (const group of groups) {
+        const fileSources = group.files.map(fileName => [fileName, readDistFile(fileName)]);
+        for (const [fileName, source] of fileSources) {
+            assert.ok(countTextLines(source) <= 500, `${fileName} should stay at or below 500 lines`);
+        }
+
+        const indexes = group.files.map(fileName => scripts.indexOf(fileName));
+        assert.ok(indexes.every(index => index >= 0), `${group.name} split files should be loaded`);
+        assert.deepEqual([...indexes].sort((a, b) => a - b), indexes, `${group.name} split files should load in dependency order`);
+
+        const combined = fileSources.map(([, source]) => source).join('\n');
+        const pageSource = readDistFile(group.page);
+        assert.match(pageSource, group.pageMustOwn, `${group.name} page should own only the page load flow`);
+        assert.match(combined, group.sharedBridge, `${group.name} should keep using the shared kit bridge`);
+        for (const pattern of group.movedOut) {
+            assert.doesNotMatch(pageSource, pattern, `${group.name} page should not keep moved rendering/interaction code`);
+        }
+        assert.doesNotMatch(combined, /\b(?:EventBus|MessageBus|DataStore|TransportAdapter|FlowController|WorkbenchManager|StoreManager)\b/);
+        assert.doesNotMatch(combined, /FromCommands/);
+    }
+
+    const coreFiles = ['core/app.js', 'core/app-shell.js', 'core/app-state.js', 'core/app-status.js'];
+    const coreIndexes = coreFiles.map(fileName => scripts.indexOf(fileName));
+    assert.ok(coreIndexes.every(index => index >= 0), 'core app split files should be loaded');
+    assert.deepEqual([...coreIndexes].sort((a, b) => a - b), coreIndexes, 'core app split files should load in dependency order');
+    assert.match(readDistFile('core/app.js'), /document\.addEventListener\('contextmenu'/);
+    assert.match(readDistFile('core/app-shell.js'), /function renderFontPreferencePanel\(/);
+    assert.match(readDistFile('core/app-state.js'), /let activePage\s*=\s*'system'/);
+    assert.match(readDistFile('core/app-status.js'), /async function pollStatus\(/);
 });
 
 test('Unity AudioKit exposes an optional FMOD backend only inside the Unity adapter layer', () => {
@@ -2134,9 +2567,9 @@ test('ActionKit workbench visualizes deeply nested action structures through an 
     assert.match(js, /ActionKit:\s*\[[\s\S]*?get_workbench_snapshot[\s\S]*?set_stack_trace[\s\S]*?clear_stack_trace/);
     assert.match(js, /function renderActionKitPage\(/);
     assert.match(js, /function fetchActionKitWorkbenchState\(\{\s*forceCommandRefresh\s*=\s*false\s*\}\s*=\s*\{\}\)/);
-    assert.match(js, /readKitTelemetryData\('ActionKit'\)/);
-    assert.match(js, /readKitSnapshotData\('ActionKit'\)/);
-    assert.match(js, /sendKitCommandData\('ActionKit',\s*'get_workbench_snapshot'\)/);
+    assert.match(js, /function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
+    assert.match(js, /fetchKitWorkbenchState\('ActionKit',\s*normalizeActionKitStatePayload/);
+    assert.doesNotMatch(js, /fetchActionKitWorkbenchStateFromCommands/);
     assert.match(js, /function renderActionKitFlowMap\(/);
     assert.match(js, /function renderActionKitTreeRows\(/);
     assert.match(js, /function getActionKitNodePath\(/);
@@ -2155,6 +2588,9 @@ test('ActionKit workbench visualizes deeply nested action structures through an 
     assert.match(js, /actionkit-tree-row/);
     assert.match(js, /--action-depth/);
     assert.match(js, /actionkit-inspector-drawer/);
+    assert.match(js, /data-actionkit-workbench="root"/);
+    assert.match(js, /data-actionkit-breadcrumb/);
+    assert.match(js, /data-actionkit-detail-panel/);
     assert.doesNotMatch(js, /class="actionkit-node/);
     assert.doesNotMatch(js, /actionkit-node__children/);
 
@@ -2204,6 +2640,55 @@ test('ActionKit workbench visualizes deeply nested action structures through an 
     assert.match(godotPublisher, /ACTION_KIT_COMMAND_HANDLER_TYPE/);
     assert.match(godotPublisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*ACTION_KIT_NAME,\s*SNAPSHOT_NAME/);
     assert.match(godotPublisher, /action_update/);
+});
+
+test('ActionKit node selection updates in place without re-rendering the whole workbench', () => {
+    const js = readFrontendScripts();
+    const bindStart = js.indexOf('function bindActionKitNodeClicks()');
+    const syncStart = js.indexOf('function syncActionKitSelectionDom()');
+    const renderStart = js.indexOf('function renderActionKitWorkbenchFromState()', syncStart);
+    const bindSource = js.slice(bindStart, syncStart);
+    const syncSource = js.slice(syncStart, renderStart);
+
+    assert.match(js, /function syncActionKitSelectionDom\(/);
+    assert.match(bindSource, /syncActionKitSelectionDom\(\)/);
+    assert.doesNotMatch(bindSource, /renderActionKitWorkbenchFromState\(\)/);
+    assert.match(syncSource, /data-actionkit-workbench="root"/);
+    assert.match(syncSource, /data-actionkit-breadcrumb/);
+    assert.match(syncSource, /data-actionkit-detail-panel/);
+    assert.match(syncSource, /querySelectorAll\('\[data-actionkit-node\]'\)/);
+    assert.doesNotMatch(syncSource, /renderWorkbenchHtmlStable\(/);
+});
+
+test('LogKit viewer selection and decrypted preview update in place without full workbench refresh', () => {
+    const js = readFrontendScripts();
+    const renderStart = js.indexOf('function renderLogKitWorkbenchFromState()');
+    const syncStart = js.indexOf('function syncLogKitViewerDom()');
+    const selectStart = js.indexOf('async function selectLogKitFile(kind)');
+    const decryptStart = js.indexOf('async function decryptLogKitFile(filePath)');
+    const refreshStart = js.indexOf('async function refreshLogKitViewerState()');
+    const selectEnd = js.indexOf('async function pickEncryptedLogFile()', selectStart);
+    const decryptEnd = js.indexOf('function setLogKitActionMessage(', decryptStart);
+    const syncEnd = renderStart > syncStart ? renderStart : js.length;
+    const selectSource = js.slice(selectStart, selectEnd);
+    const decryptSource = js.slice(decryptStart, decryptEnd);
+    const syncSource = js.slice(syncStart, syncEnd);
+
+    assert.match(js, /data-logkit-workbench="root"/);
+    assert.match(js, /data-logkit-viewer-panel/);
+    assert.match(js, /data-logkit-viewer-tabs/);
+    assert.match(js, /data-logkit-viewer-summary/);
+    assert.match(js, /data-logkit-selected-path/);
+    assert.match(js, /data-logkit-viewer-content/);
+    assert.match(js, /function syncLogKitViewerDom\(/);
+    assert.match(js, /function renderLogKitWorkbenchFromState\(/);
+    assert.match(selectSource, /await refreshLogKitViewerState\(\);\s*syncLogKitViewerDom\(\);/);
+    assert.match(decryptSource, /syncLogKitViewerDom\(\);/);
+    assert.doesNotMatch(selectSource, /await loadLogKitWorkbench\(\{ forceCommandRefresh: true \}\);/);
+    assert.doesNotMatch(decryptSource, /await loadLogKitWorkbench\(\{ forceCommandRefresh: true \}\);/);
+    assert.match(syncSource, /querySelector\('\[data-logkit-viewer-tabs\]'\)/);
+    assert.match(syncSource, /querySelector\('\[data-logkit-history\]'\)/);
+    assert.doesNotMatch(syncSource, /renderWorkbenchHtmlStable\(/);
 });
 
 test('PoolKit ResKit SingletonKit and LogKit avoid duplicate workbench toolbar cards', () => {
@@ -2440,7 +2925,7 @@ test('page tabs use a sliding underline indicator when selection changes', () =>
     assert.match(tabSource, /indicator\.classList\.add\('is-settling'\)/);
     assert.match(js, /syncTabActiveIndicator\(activeTab\)/);
     assert.match(js, /syncTabActiveIndicator\(eventKitActiveTab\)/);
-    assert.match(js, /syncTabActiveIndicator\(tabId\)/);
+    assert.doesNotMatch(js, /function activateFsmTab\(/);
     assert.match(css, /\.tab-active-indicator/);
     assert.match(css, /\.tab-active-indicator\.is-moving/);
     assert.match(css, /\.tab-active-indicator\.is-settling/);
@@ -2587,20 +3072,70 @@ test('FsmKit workbench is a compact single-screen layout with centered graph can
     assert.match(css, /\.fsm-graph-pan\s*\{[\s\S]*?margin:\s*auto/);
 });
 
+test('TableKit frontend splits local state rendering and Tauri actions without command bridge layers', () => {
+    const stateModule = 'pages/tablekit-state.js';
+    const renderModule = 'pages/tablekit-render.js';
+    const actionsModule = 'pages/tablekit-actions.js';
+    const pageModule = 'pages/tablekit.js';
+    const scripts = getScriptOrder();
+
+    for (const fileName of [stateModule, renderModule, actionsModule, pageModule]) {
+        assert.ok(fs.existsSync(path.join(distDir, fileName)), `${fileName} should exist`);
+    }
+
+    const previewOrder = scripts.indexOf('pages/tablekit-preview.js');
+    const stateOrder = scripts.indexOf(stateModule);
+    const renderOrder = scripts.indexOf(renderModule);
+    const actionsOrder = scripts.indexOf(actionsModule);
+    const pageOrder = scripts.indexOf(pageModule);
+    assert.ok(previewOrder >= 0 && previewOrder < stateOrder, 'TableKit preview helpers should load before TableKit state/render modules');
+    assert.ok(stateOrder >= 0 && stateOrder < renderOrder, 'TableKit state should load before rendering');
+    assert.ok(renderOrder >= 0 && renderOrder < actionsOrder, 'TableKit rendering should load before actions bind through data attributes');
+    assert.ok(actionsOrder >= 0 && actionsOrder < pageOrder, 'TableKit actions should load before the page shell');
+
+    const stateJs = readDistFile(stateModule);
+    const renderJs = readDistFile(renderModule);
+    const actionsJs = readDistFile(actionsModule);
+    const pageJs = readDistFile(pageModule);
+    const combined = stateJs + renderJs + actionsJs + pageJs;
+
+    for (const [fileName, source] of [[stateModule, stateJs], [renderModule, renderJs], [actionsModule, actionsJs], [pageModule, pageJs]]) {
+        assert.ok(countTextLines(source) <= 500, `${fileName} should stay at or below 500 lines`);
+    }
+
+    assert.match(stateJs, /function loadTableKitConfig\(/);
+    assert.match(stateJs, /function getTableKitLubanStatus\(/);
+    assert.match(renderJs, /function renderTableKitRegistryStatus\(/);
+    assert.match(renderJs, /function renderTableKitEnvironmentPanel\(/);
+    assert.match(actionsJs, /async function runTableKitLuban\(/);
+    assert.match(actionsJs, /async function handleTableKitGenerate\(/);
+    assert.match(pageJs, /function renderTableKitPage\(/);
+
+    assert.doesNotMatch(pageJs, /function renderTableKitEnvironmentPanel\(/);
+    assert.doesNotMatch(pageJs, /async function runTableKitLuban\(/);
+    assert.doesNotMatch(combined, /sendKitCommandData\('TableKit'/);
+    assert.doesNotMatch(combined, /readKitSnapshotData\('TableKit'/);
+    assert.doesNotMatch(combined, /readKitTelemetryData\('TableKit'/);
+    assert.doesNotMatch(combined, /invoke\('send_command',\s*\{\s*kit:\s*['"]TableKit/);
+});
+
 test('TableKit page reads Luban availability from engine registry instead of runtime commands', () => {
     const js = readFrontendScripts();
     const css = readDistFile('style.css');
     const tablekitDoc = readDistFile('docs/tablekit.md');
     const rustBackend = readTauriSourceFile('src-tauri', 'src', 'main.rs');
-    const start = js.indexOf('function renderTableKitPage()');
-    const end = js.indexOf('function renderDocsPage()', start);
+    const scripts = getScriptOrder();
 
-    assert.ok(start >= 0, 'renderTableKitPage should exist');
-    assert.ok(end > start, 'TableKit source should end before the docs page');
+    assert.match(js, /function renderTableKitPage\(\)/);
+    assert.ok(scripts.indexOf('pages/tablekit-actions.js') < scripts.indexOf('pages/tablekit.js'), 'TableKit actions should load before page shell');
 
-    const tableKitMainSource = js.slice(start, end);
-    const tableKitPreviewSource = readDistFile('pages/tablekit-preview.js');
-    const tableKitSource = tableKitMainSource + '\n' + tableKitPreviewSource;
+    const tableKitSource = [
+        readDistFile('pages/tablekit-state.js'),
+        readDistFile('pages/tablekit-render.js'),
+        readDistFile('pages/tablekit-actions.js'),
+        readDistFile('pages/tablekit-preview.js'),
+        readDistFile('pages/tablekit.js'),
+    ].join('\n');
     const environmentStart = tableKitSource.indexOf('function renderTableKitEnvironmentPanel(');
     const consoleStart = tableKitSource.indexOf('function renderTableKitConsole(');
     const previewStart = tableKitSource.indexOf('function renderTableKitPreviewPanel(');
@@ -2610,6 +3145,12 @@ test('TableKit page reads Luban availability from engine registry instead of run
     assert.match(js, /function getTableKitLubanStatus/);
     assert.match(js, /YOKIFRAME_LUBAN_SUPPORT/);
     assert.match(tableKitSource, /renderTableKitLubanInstallGuide\(status,\s*config\)/);
+    assert.match(tableKitSource, /function getTableKitConsoleSignature/);
+    assert.match(tableKitSource, /function getTableKitPreviewSignature/);
+    assert.match(tableKitSource, /console:\s*getTableKitConsoleSignature\(\)/);
+    assert.match(tableKitSource, /preview:\s*getTableKitPreviewSignature\(\)/);
+    assert.match(tableKitSource, /previewVersion/);
+    assert.doesNotMatch(tableKitSource, /preview:\s*tableKitPreviewState/);
     assert.match(tableKitSource, /Luban 运行时环境未安装/);
     assert.match(tableKitSource, /下载 Luban/);
     assert.match(tableKitSource, /Tools\/Luban\/Luban\.dll/);
@@ -2732,10 +3273,10 @@ test('TableKit page reads Luban availability from engine registry instead of run
 
 test('runtime Kit pages guard command bridge calls before sending to editor-only hosts', () => {
     const js = readFrontendScripts();
-    const architectureStart = js.indexOf('async function loadArchitectureWorkbench()');
+    const architectureStart = js.indexOf('async function loadArchitectureWorkbench(');
     const architectureEnd = js.indexOf('function reconcileArchitectureSelection(', architectureStart);
     const actionStart = js.indexOf('async function loadActionKitWorkbench(');
-    const actionEnd = js.indexOf('function renderActionKitWorkbench(', actionStart);
+    const actionEnd = js.indexOf('// pages/poolkit.js', actionStart);
 
     assert.ok(architectureStart >= 0, 'Architecture loader should exist');
     assert.ok(architectureEnd > architectureStart, 'Architecture loader should have a bounded source block');
@@ -2745,14 +3286,16 @@ test('runtime Kit pages guard command bridge calls before sending to editor-only
     const architectureSource = js.slice(architectureStart, architectureEnd);
     const actionSource = js.slice(actionStart, actionEnd);
     const architectureGuard = architectureSource.indexOf("canSendRuntimeKitCommand('Architecture')");
-    const architectureFetch = architectureSource.indexOf('fetchArchitectureWorkbenchStateFromCommands');
+    const architectureFetch = architectureSource.indexOf('fetchArchitectureWorkbenchState');
     const actionGuard = actionSource.indexOf("canSendRuntimeKitCommand('ActionKit')");
     const actionFetch = actionSource.indexOf('fetchActionKitWorkbenchState');
 
     assert.ok(architectureGuard >= 0, 'Architecture loader should check runtime command availability.');
-    assert.ok(architectureGuard < architectureFetch, 'Architecture loader should guard before command fallback.');
+    assert.ok(architectureFetch >= 0, 'Architecture loader should use the shared workbench state fetcher.');
     assert.ok(actionGuard >= 0, 'ActionKit loader should check runtime command availability.');
-    assert.ok(actionGuard < actionFetch, 'ActionKit loader should guard before telemetry/snapshot command fallback.');
+    assert.ok(actionFetch >= 0, 'ActionKit loader should use the shared workbench state fetcher.');
+    assert.doesNotMatch(architectureSource, /WorkbenchStateFromCommands/);
+    assert.doesNotMatch(actionSource, /WorkbenchStateFromCommands/);
     assert.match(architectureSource, /showRuntimeKitUnavailable\('Architecture',\s*t\('architecture\.instance_label'\)\)/);
     assert.match(actionSource, /showRuntimeKitUnavailable\('ActionKit',\s*t\('actionkit\.title'\)\)/);
 });

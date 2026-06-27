@@ -46,18 +46,7 @@ function normalizeResKitStatePayload(data) {
 }
 
 async function fetchResKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('ResKit');
-    if (telemetry) return normalizeResKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('ResKit');
-    if (snapshot) return normalizeResKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchResKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('ResKit', 'get_workbench_snapshot');
-    return normalizeResKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('ResKit', normalizeResKitStatePayload);
 }
 
 async function loadResKitWorkbench() {
@@ -67,8 +56,7 @@ async function loadResKitWorkbench() {
         return;
     }
     try {
-        const snapshotState = await fetchResKitWorkbenchState();
-        const state = snapshotState ?? await fetchResKitWorkbenchStateFromCommands();
+        const state = await fetchResKitWorkbenchState();
         resKitState.stats = state.stats;
         resKitState.resources = state.resources;
         resKitState.history = state.history;

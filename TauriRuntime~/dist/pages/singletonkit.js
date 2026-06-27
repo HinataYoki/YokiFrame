@@ -42,18 +42,7 @@ function normalizeSingletonKitStatePayload(data) {
 }
 
 async function fetchSingletonKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('SingletonKit');
-    if (telemetry) return normalizeSingletonKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('SingletonKit');
-    if (snapshot) return normalizeSingletonKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchSingletonKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('SingletonKit', 'get_workbench_snapshot');
-    return normalizeSingletonKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('SingletonKit', normalizeSingletonKitStatePayload);
 }
 
 async function loadSingletonKitWorkbench() {
@@ -63,8 +52,7 @@ async function loadSingletonKitWorkbench() {
         return;
     }
     try {
-        const snapshotState = await fetchSingletonKitWorkbenchState();
-        const state = snapshotState ?? await fetchSingletonKitWorkbenchStateFromCommands();
+        const state = await fetchSingletonKitWorkbenchState();
         singletonKitState.stats = state.stats;
         singletonKitState.singletons = state.singletons;
         reconcileSingletonKitSelection(singletonKitState.singletons);

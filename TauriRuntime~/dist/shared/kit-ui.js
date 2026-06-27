@@ -1,121 +1,12 @@
-// shared/kit-ui.js
-async function sendKitCommandData(kit, action, payload = {}) {
-    if (!canSendRuntimeKitCommand(kit)) {
-        throw new Error(runtimeKitUnavailableMessage(kit));
-    }
-
-    const r = await invoke('send_command', { kit, action, payload: JSON.stringify(payload ?? {}) });
-    const parsed = JSON.parse(r);
-    if (parsed.status === 'error') {
-        throw new Error(parsed.error?.message || parsed.errorMessage || `${kit}/${action} failed`);
-    }
-    return parsed.data ?? parsed;
-}
-
-function getActiveEngineId() {
-    return getPreferredEngineId();
-}
-
-function getConnectedEngines() {
-    const engines = Array.isArray(latestStatusRaw?.engines) ? latestStatusRaw.engines : [];
-    return engines.filter(engine => engine && engine.engineId && engine.connected !== false);
-}
-
-function canSendRuntimeKitCommand(kit) {
-    if (kit === 'System') return true;
-    return getConnectedEngines().some(engine => {
-        return engineSupportsCapability(engine, 'commands') && engineSupportsCapability(engine, 'snapshots') && engineSupportsKit(engine, kit);
-    });
-}
-
 function canShowStaticKitWorkbench(kit, engine = null) {
     if (kit !== 'EventKit') return false;
     const targetEngine = engine ?? getSelectedEventKitEngine?.();
     return engineSupportsCapability(targetEngine, 'static_scan');
 }
 
-function runtimeKitUnavailableMessage(kit) {
-    return t('runtime.need_bridge', kit);
-}
-
 function showRuntimeKitUnavailable(kit, label = kit) {
     clearMetrics();
     $pageBody.innerHTML = emptyState('bridge', t('runtime.need_bridge_short', label));
-}
-
-function getPreferredEngineId(options = {}) {
-    const capability = String(options?.capability ?? options?.preferredCapability ?? '').trim().toLowerCase();
-    const engines = Array.isArray(latestStatusRaw?.engines) ? latestStatusRaw.engines : [];
-    const connectedEngines = engines.filter(engine => engine && engine.engineId && engine.connected !== false);
-    const findWithCapability = cap => connectedEngines.find(engine => engineSupportsCapability(engine, cap)) ?? null;
-    const summaryEngineId = latestStatusSummary?.engineId;
-    const summaryEngine = summaryEngineId && summaryEngineId !== '--'
-        ? connectedEngines.find(engine => engine.engineId === summaryEngineId) ?? null
-        : null;
-
-    if (capability) {
-        const capableEngine = findWithCapability(capability);
-        if (capableEngine) return capableEngine.engineId;
-
-        if (capability === 'telemetry') {
-            const snapshotEngine = findWithCapability('snapshots');
-            if (snapshotEngine) return snapshotEngine.engineId;
-        }
-
-        const commandEngine = findWithCapability('commands');
-        if (commandEngine) return commandEngine.engineId;
-
-        if (summaryEngine && engineSupportsCapability(summaryEngine, capability)) return summaryEngine.engineId;
-    } else if (summaryEngine) {
-        return summaryEngine.engineId;
-    }
-
-    return connectedEngines[0]?.engineId ?? (summaryEngineId && summaryEngineId !== '--' ? summaryEngineId : null);
-}
-
-function engineSupportsCapability(engine, capability) {
-    if (!engine || !capability) return false;
-    const capabilities = Array.isArray(engine.capabilities) ? engine.capabilities : [];
-    return capabilities.some(item => String(item ?? '').toLowerCase() === capability);
-}
-
-function getSelectedEngineForNavigation() {
-    const engines = Array.isArray(latestStatusRaw?.engines) ? latestStatusRaw.engines : [];
-    if (!engines.length) return null;
-
-    const summaryEngineId = latestStatusSummary?.engineId;
-    const summaryEngine = summaryEngineId && summaryEngineId !== '--'
-        ? engines.find(engine => engine?.engineId === summaryEngineId) ?? null
-        : null;
-    if (summaryEngine && summaryEngine.connected !== false) return summaryEngine;
-
-    return engines.find(engine => engine && engine.connected !== false) ?? summaryEngine ?? engines[0] ?? null;
-}
-
-function engineSupportsKit(engine, kit) {
-    if (!kit || kit === 'System') return true;
-    if (!engine) return true;
-
-    if (!Array.isArray(engine.implementedKits)) return true;
-    return engine.implementedKits.some(item => String(item ?? '').toLowerCase() === String(kit).toLowerCase());
-}
-
-function getKitFeatureList(engine, kit) {
-    if (!engine || !kit || !engine.kitFeatures || typeof engine.kitFeatures !== 'object') return [];
-    const direct = engine.kitFeatures[kit];
-    if (Array.isArray(direct)) return direct;
-
-    const target = String(kit).toLowerCase();
-    for (const [key, value] of Object.entries(engine.kitFeatures)) {
-        if (String(key).toLowerCase() === target && Array.isArray(value)) return value;
-    }
-    return [];
-}
-
-function engineSupportsKitFeature(engine, kit, feature) {
-    if (!feature || !engineSupportsKit(engine, kit)) return false;
-    return getKitFeatureList(engine, kit)
-        .some(item => String(item ?? '').toLowerCase() === String(feature).toLowerCase());
 }
 
 function syncSidebarKitAvailability() {
@@ -128,9 +19,7 @@ function syncSidebarKitAvailability() {
         let fallbackPage = null;
         for (const item of items) {
             const kit = item.dataset.kit || KIT_PAGE_ID_TO_KIT[item.dataset.page];
-            const available = !latestStatusRaw || !targetEngine
-                ? true
-                : engineSupportsKit(targetEngine, kit);
+            const available = !targetEngine || engineSupportsKit(targetEngine, kit);
             item.hidden = !available;
             if (activePage === item.dataset.page && !available) {
                 fallbackPage = 'system';
@@ -155,43 +44,6 @@ function syncSidebarGroupVisibility() {
         if (!items.length) return;
         group.hidden = items.every(item => item.hidden);
     });
-}
-
-function parseBridgePayload(raw) {
-    if (raw == null) return null;
-    if (typeof raw === 'object') return raw;
-    if (typeof raw !== 'string' || !raw.trim()) return null;
-    try {
-        return JSON.parse(raw);
-    } catch (_) {
-        return null;
-    }
-}
-
-async function readKitTelemetryData(kit, name = 'state') {
-    const engineId = getPreferredEngineId({ capability: 'telemetry' });
-    if (!invoke || !engineId) return null;
-    try {
-        const raw = await invoke('read_telemetry', { engineId, kit, name });
-        const envelope = parseBridgePayload(raw);
-        if (!envelope || envelope.available !== true) return null;
-        return envelope.data ?? envelope;
-    } catch (_) {
-        return null;
-    }
-}
-
-async function readKitSnapshotData(kit, snapshot = 'state') {
-    const engineId = getPreferredEngineId({ capability: 'snapshots' });
-    if (!invoke || !engineId) return null;
-    try {
-        const raw = await invoke('read_snapshot', { engineId, kit, snapshot });
-        const envelope = parseBridgePayload(raw);
-        if (!envelope) return null;
-        return envelope.data ?? envelope;
-    } catch (_) {
-        return null;
-    }
 }
 
 async function openKitCodeLocation(filePath, line) {
@@ -275,6 +127,7 @@ function buildKitFocusSelector(element) {
     }
     const attrs = [
         'data-poolkit-search',
+        'data-architecture-search',
         'data-actionkit-search',
         'data-reskit-search',
         'data-logkit-search',

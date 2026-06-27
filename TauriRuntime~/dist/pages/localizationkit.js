@@ -47,18 +47,7 @@ function normalizeLocalizationKitStatePayload(data) {
 }
 
 async function fetchLocalizationKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('LocalizationKit');
-    if (telemetry) return normalizeLocalizationKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('LocalizationKit');
-    if (snapshot) return normalizeLocalizationKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchLocalizationKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('LocalizationKit', 'get_workbench_snapshot');
-    return normalizeLocalizationKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('LocalizationKit', normalizeLocalizationKitStatePayload);
 }
 
 async function loadLocalizationKitWorkbench() {
@@ -68,8 +57,7 @@ async function loadLocalizationKitWorkbench() {
         return;
     }
     try {
-        const snapshotState = await fetchLocalizationKitWorkbenchState();
-        const state = snapshotState ?? await fetchLocalizationKitWorkbenchStateFromCommands();
+        const state = await fetchLocalizationKitWorkbenchState();
         localizationKitState.stats = state.stats;
         localizationKitState.languages = state.languages;
         reconcileLocalizationKitSelection(localizationKitState.languages);

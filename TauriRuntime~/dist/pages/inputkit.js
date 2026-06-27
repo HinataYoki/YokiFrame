@@ -64,18 +64,7 @@ function normalizeInputKitStatePayload(data) {
 }
 
 async function fetchInputKitWorkbenchState() {
-    const telemetry = await readKitTelemetryData('InputKit');
-    if (telemetry) return normalizeInputKitStatePayload(telemetry);
-
-    const snapshot = await readKitSnapshotData('InputKit');
-    if (snapshot) return normalizeInputKitStatePayload(snapshot);
-
-    return null;
-}
-
-async function fetchInputKitWorkbenchStateFromCommands() {
-    const snapshot = await sendKitCommandData('InputKit', 'get_workbench_snapshot');
-    return normalizeInputKitStatePayload(snapshot);
+    return await fetchKitWorkbenchState('InputKit', normalizeInputKitStatePayload);
 }
 
 async function loadInputKitWorkbench() {
@@ -86,8 +75,7 @@ async function loadInputKitWorkbench() {
     }
 
     try {
-        const snapshotState = await fetchInputKitWorkbenchState();
-        const state = snapshotState ?? await fetchInputKitWorkbenchStateFromCommands();
+        const state = await fetchInputKitWorkbenchState();
         inputKitState.stats = state.stats;
         inputKitState.actions = state.actions;
         inputKitState.contexts = state.contexts;
