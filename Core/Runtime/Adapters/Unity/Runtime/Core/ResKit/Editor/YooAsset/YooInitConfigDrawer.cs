@@ -8,6 +8,12 @@ using UnityEngine.UIElements;
 using YooAsset;
 using YooAsset.Editor;
 
+#if UNITY_2022_1_OR_NEWER
+using IntegerField = UnityEngine.UIElements.IntegerField;
+#else
+using IntegerField = UnityEditor.UIElements.IntegerField;
+#endif
+
 namespace YokiFrame.Unity
 {
     /// <summary>

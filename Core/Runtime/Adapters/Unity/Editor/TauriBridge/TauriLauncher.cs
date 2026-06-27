@@ -54,7 +54,9 @@ namespace YokiFrame.Unity
         private static System.Diagnostics.Process sTauriProcess;
         private static bool sOutdatedBinaryWarningShown;
         private static bool sPreloadAttempted;
+#if UNITY_6000_0_OR_NEWER
         private static readonly GlobalLaunchShortcutContext sGlobalLaunchShortcutContext = new GlobalLaunchShortcutContext();
+#endif
         private static DateTime sEditorLoadUtc;
 
         private const string PANEL_REQUEST_DIR = "panel";
@@ -196,7 +198,9 @@ namespace YokiFrame.Unity
         static TauriLauncher()
         {
             sEditorLoadUtc = DateTime.UtcNow;
+#if UNITY_6000_0_OR_NEWER
             ShortcutManager.RegisterContext(sGlobalLaunchShortcutContext);
+#endif
             EditorApplication.quitting += OnEditorQuitting;
             EditorApplication.update += OnEditorUpdate;
         }
@@ -813,7 +817,11 @@ namespace YokiFrame.Unity
         private static bool ValidateRestart() => IsRunning;
 
         [MenuItem("YokiFrame/编辑器窗口/启动窗口 %e", false, 99)]
+#if UNITY_6000_0_OR_NEWER
         [Shortcut("YokiFrame/Editor UI/Launch", typeof(GlobalLaunchShortcutContext), KeyCode.E, ShortcutModifiers.Action)]
+#else
+        [Shortcut("YokiFrame/Editor UI/Launch", KeyCode.E, ShortcutModifiers.Action)]
+#endif
         private static void MenuLaunchWindow()
         {
             LogKit.Info("[TauriLauncher] 正在打开 YokiFrame 工作台...");
@@ -846,6 +854,7 @@ namespace YokiFrame.Unity
             return true;
         }
 
+#if UNITY_6000_0_OR_NEWER
         public sealed class GlobalLaunchShortcutContext : IShortcutContext
         {
             public bool active
@@ -853,6 +862,7 @@ namespace YokiFrame.Unity
                 get { return true; }
             }
         }
+#endif
 
         #region Cross-Platform Build
 
