@@ -22,10 +22,16 @@ namespace YokiFrame.Unity
         {
             get
             {
+                if (MonoSingletonExitState.IsQuitting)
+                    return null;
+
                 if (sInstance == default)
                 {
                     lock (sLock)
                     {
+                        if (MonoSingletonExitState.IsQuitting)
+                            return null;
+
                         if (sInstance == default)
                         {
                             // 先尝试查找场景中已有的实例
@@ -51,6 +57,23 @@ namespace YokiFrame.Unity
                 }
                 return sInstance;
             }
+        }
+
+        /// <summary>
+        /// 当前是否存在可用的单例实例。
+        /// </summary>
+        public static bool HasInstance
+        {
+            get { return sInstance != default; }
+        }
+
+        /// <summary>
+        /// 尝试获取当前实例，不触发自动创建。
+        /// </summary>
+        public static bool TryGetInstance(out T instance)
+        {
+            instance = sInstance;
+            return instance != default;
         }
 
         /// <summary>
@@ -85,6 +108,14 @@ namespace YokiFrame.Unity
             SingletonRegistry.Unregister(typeof(T));
             if (sInstance == this)
                 sInstance = null;
+        }
+
+        /// <summary>
+        /// 应用退出时阻止单例在销毁链路里重新创建。
+        /// </summary>
+        protected virtual void OnApplicationQuit()
+        {
+            MonoSingletonExitState.MarkQuitting();
         }
 
         private static GameObject CreateSingletonGameObject()
@@ -152,6 +183,53 @@ namespace YokiFrame.Unity
 
             return path;
         }
+    }
+
+    internal static class MonoSingletonExitState
+    {
+        private static bool sIsQuitting;
+
+        internal static bool IsQuitting
+        {
+            get { return sIsQuitting; }
+        }
+
+        internal static void MarkQuitting()
+        {
+            sIsQuitting = true;
+        }
+
+        internal static void ResetForTests()
+        {
+            sIsQuitting = false;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForSubsystemRegistration()
+        {
+            sIsQuitting = false;
+        }
+
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        private static void RegisterEditorHooks()
+        {
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state)
+        {
+            if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+            {
+                sIsQuitting = true;
+            }
+            else if (state == UnityEditor.PlayModeStateChange.EnteredEditMode)
+            {
+                sIsQuitting = false;
+            }
+        }
+#endif
     }
 }
 #endif
