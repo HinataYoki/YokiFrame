@@ -207,26 +207,6 @@ function getTableKitMatchingDataTarget(codeTarget) {
     return codeTarget === 'cs-bin' ? 'bin' : 'json';
 }
 
-function updateTableKitBehaviorSearchTerm(value) {
-    tableKitBehaviorState.searchTerm = String(value || '');
-    persistTableKitBehaviorSearchTerm();
-    renderTableKitRegistryStatus();
-}
-
-function updateTableKitBehaviorTemplateSelection(templateId) {
-    const selected = getTableKitBehaviorTemplateById(templateId);
-    tableKitBehaviorState.selectedTemplateId = selected ? selected.id : TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID;
-    persistTableKitBehaviorTemplateSelection();
-    renderTableKitRegistryStatus();
-}
-
-function updateTableKitBehaviorNodeSelection(nodeId) {
-    const selected = getTableKitBehaviorNodeById(nodeId);
-    tableKitBehaviorState.selectedNodeId = selected ? selected.id : TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID;
-    persistTableKitBehaviorNodeSelection();
-    renderTableKitRegistryStatus();
-}
-
 function renderTableKitValidateCommandPreview(config, status) {
     const projectRoot = status.projectPath && status.projectPath !== '--' ? normalizeTableKitPath(status.projectPath) : '<projectRoot>';
     const workDir = resolveTableKitProjectPath(projectRoot, config.lubanWorkDir);
@@ -286,17 +266,6 @@ function renderTableKitCommandPreview(config, status) {
         '# Luban C#: ' + lubanCodeDir,
         '# Data: ' + outputDataDir,
     ].filter(line => line !== '').join('\n');
-}
-
-function renderTableKitBehaviorCommandPreview() {
-    const template = getTableKitBehaviorSelectedTemplate();
-    const node = getTableKitBehaviorSelectedNode();
-    return [
-        '# TableKit Behavior 原型',
-        '# template: ' + (template ? template.id : TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID),
-        '# node: ' + (node ? node.id : TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID),
-        '# xml: ' + getTableKitBehaviorXmlPreview(template, node),
-    ].join('\n');
 }
 
 function resolveTableKitProjectPath(projectRoot, value) {
