@@ -10,7 +10,7 @@ using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
-[assembly: InternalsVisibleTo("YokiFrame.Unity.Tests")]
+[assembly: InternalsVisibleTo("YokiFrame.Unity.Editor.Tests")]
 
 namespace YokiFrame.Unity
 {

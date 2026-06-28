@@ -196,8 +196,6 @@ namespace YokiFrame
             }
 
             var backend = EnsureBackend();
-            if (mode == SceneLoadMode.Single)
-                ClearScenesForSingleMode(sceneName, backend);
 
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, mode, data, false);
             RegisterHandler(handler);
@@ -255,8 +253,6 @@ namespace YokiFrame
             }
 
             var backend = EnsureBackend();
-            if (mode == SceneLoadMode.Single)
-                ClearScenesForSingleMode(sceneName, backend);
 
             var handler = CreateHandler(sceneName, buildIndex, mode, data, false);
             RegisterHandler(handler);
@@ -521,16 +517,16 @@ namespace YokiFrame
             BumpDiagnosticVersion();
         }
 
-        private static void ClearScenesForSingleMode(string newSceneName, ISceneBackend backend)
+        private static void ClearReplacedScenesForSingleMode(SceneHandler activeHandler)
         {
-            if (sLoadedScenes.Count == 0)
+            if (activeHandler == null || sLoadedScenes.Count <= 1)
                 return;
 
             var scenesToUnload = new List<SceneHandler>(sLoadedScenes.Count);
             for (int i = sLoadedScenes.Count - 1; i >= 0; i--)
             {
                 var handler = sLoadedScenes[i];
-                if (handler.SceneName == newSceneName)
+                if (ReferenceEquals(handler, activeHandler))
                     continue;
 
                 scenesToUnload.Add(handler);
@@ -539,8 +535,6 @@ namespace YokiFrame
             for (int i = 0; i < scenesToUnload.Count; i++)
             {
                 var handler = scenesToUnload[i];
-                if (backend != null)
-                    backend.UnloadSceneAsync(handler.Scene, null);
                 UnregisterHandler(handler);
                 handler.MarkUnloaded();
             }
@@ -588,6 +582,9 @@ namespace YokiFrame
 
             if (handler.LoadMode == SceneLoadMode.Single || sActiveSceneHandler == null)
                 SetActiveScene(handler);
+
+            if (handler.LoadMode == SceneLoadMode.Single)
+                ClearReplacedScenesForSingleMode(handler);
 
             EventKit.Type.Send(new SceneLoadCompleteEvent
             {

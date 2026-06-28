@@ -27,6 +27,7 @@ namespace YokiFrame.Unity
         private readonly object mHandleLock = new();
         private readonly Dictionary<object, Stack<AssetHandle>> mHandlesByAsset = new();
         private readonly Dictionary<string, YooSceneHandle> mSceneHandlesByName = new Dictionary<string, YooSceneHandle>(StringComparer.Ordinal);
+        private readonly List<string> mSceneNamesToRemove = new List<string>();
         private readonly IYooAssetResourceBackend mResourceBackend;
         private readonly IYooAssetRawFileBackend mRawFileBackend;
         private readonly IYooAssetSceneBackend mSceneBackend;
@@ -284,6 +285,8 @@ namespace YokiFrame.Unity
             {
                 var scene = ToResSceneHandle(handle);
                 mSceneHandlesByName[scene.SceneName] = handle;
+                if (request.Mode == ResSceneLoadMode.Single)
+                    ClearSceneHandleCacheForSingleMode(scene.SceneName);
                 if (request.Mode == ResSceneLoadMode.Single || !mActiveScene.IsValid)
                     mActiveScene = scene;
                 if (onProgress != null)
@@ -364,6 +367,23 @@ namespace YokiFrame.Unity
                 if (onComplete != null)
                     onComplete();
             };
+        }
+
+        private void ClearSceneHandleCacheForSingleMode(string activeSceneName)
+        {
+            mSceneNamesToRemove.Clear();
+            foreach (var pair in mSceneHandlesByName)
+            {
+                if (pair.Key != activeSceneName)
+                    mSceneNamesToRemove.Add(pair.Key);
+            }
+
+            for (int i = 0; i < mSceneNamesToRemove.Count; i++)
+            {
+                mSceneHandlesByName.Remove(mSceneNamesToRemove[i]);
+            }
+
+            mSceneNamesToRemove.Clear();
         }
 
         private AssetHandle LoadAssetHandle(string path, Type unityType)

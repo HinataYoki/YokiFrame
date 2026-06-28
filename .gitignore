@@ -27,5 +27,3 @@ $RECYCLE.BIN/
 **/*Test*.asmdef.meta
 **/*Test*.asmref
 **/*Test*.asmref.meta
-Core/Runtime/Adapters/Unity/Runtime/AssemblyInfo.cs
-Core/Runtime/Adapters/Unity/Runtime/AssemblyInfo.cs.meta
