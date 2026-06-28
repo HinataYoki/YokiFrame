@@ -77,17 +77,29 @@ namespace YokiFrame.Unity
             new CommandBridgeSnapshotPublisher(ENGINE_ID, ACTION_KIT_NAME, SNAPSHOT_NAME, BuildActionPayloadJson);
 
         private static string sLastPoolPayloadJson;
+        private static string sLastPoolInvalidationKey;
         private static string sLastResPayloadJson;
+        private static string sLastResInvalidationKey;
         private static string sLastSingletonPayloadJson;
+        private static string sLastSingletonInvalidationKey;
         private static string sLastAudioPayloadJson;
+        private static string sLastAudioInvalidationKey;
         private static string sLastLogPayloadJson;
+        private static string sLastLogInvalidationKey;
         private static string sLastSavePayloadJson;
+        private static string sLastSaveInvalidationKey;
         private static string sLastLocalizationPayloadJson;
+        private static string sLastLocalizationInvalidationKey;
         private static string sLastScenePayloadJson;
+        private static string sLastSceneInvalidationKey;
         private static string sLastSpatialPayloadJson;
+        private static string sLastSpatialInvalidationKey;
         private static string sLastInputPayloadJson;
+        private static string sLastInputInvalidationKey;
         private static string sLastUIKitPayloadJson;
+        private static string sLastUIKitInvalidationKey;
         private static string sLastActionPayloadJson;
+        private static string sLastActionInvalidationKey;
 
         static KitStateSnapshotPublisher()
         {
@@ -98,34 +110,34 @@ namespace YokiFrame.Unity
 
         public static void TryPublishAll(string yokiframeRoot)
         {
-            PublishIfChanged(yokiframeRoot, POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, ref sLastPoolPayloadJson, false);
-            PublishIfChanged(yokiframeRoot, RES_KIT_NAME, sResPublisher, BuildResPayloadJson, ref sLastResPayloadJson, false);
-            PublishIfChanged(yokiframeRoot, SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, ref sLastSingletonPayloadJson, false);
-            PublishIfChanged(yokiframeRoot, AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, ref sLastAudioPayloadJson, false);
-            PublishIfChanged(yokiframeRoot, LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, ref sLastLogPayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, false);
-            PublishOptionalIfChanged(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, false);
+            PublishIfInvalidated(yokiframeRoot, POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, sPoolHandler, ref sLastPoolPayloadJson, ref sLastPoolInvalidationKey, false);
+            PublishIfInvalidated(yokiframeRoot, RES_KIT_NAME, sResPublisher, BuildResPayloadJson, sResHandler, ref sLastResPayloadJson, ref sLastResInvalidationKey, false);
+            PublishIfInvalidated(yokiframeRoot, SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, sSingletonHandler, ref sLastSingletonPayloadJson, ref sLastSingletonInvalidationKey, false);
+            PublishIfInvalidated(yokiframeRoot, AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, sAudioHandler, ref sLastAudioPayloadJson, ref sLastAudioInvalidationKey, false);
+            PublishIfInvalidated(yokiframeRoot, LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, sLogHandler, ref sLastLogPayloadJson, ref sLastLogInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, () => sSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, ref sLastSaveInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, () => sUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, ref sLastUIKitInvalidationKey, false);
+            PublishOptionalIfInvalidated(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, false);
         }
 
         public static void ForcePublishAll(string yokiframeRoot)
         {
-            PublishIfChanged(yokiframeRoot, POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, ref sLastPoolPayloadJson, true);
-            PublishIfChanged(yokiframeRoot, RES_KIT_NAME, sResPublisher, BuildResPayloadJson, ref sLastResPayloadJson, true);
-            PublishIfChanged(yokiframeRoot, SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, ref sLastSingletonPayloadJson, true);
-            PublishIfChanged(yokiframeRoot, AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, ref sLastAudioPayloadJson, true);
-            PublishIfChanged(yokiframeRoot, LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, ref sLastLogPayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, true);
-            PublishOptionalIfChanged(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, true);
+            PublishIfInvalidated(yokiframeRoot, POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, sPoolHandler, ref sLastPoolPayloadJson, ref sLastPoolInvalidationKey, true);
+            PublishIfInvalidated(yokiframeRoot, RES_KIT_NAME, sResPublisher, BuildResPayloadJson, sResHandler, ref sLastResPayloadJson, ref sLastResInvalidationKey, true);
+            PublishIfInvalidated(yokiframeRoot, SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, sSingletonHandler, ref sLastSingletonPayloadJson, ref sLastSingletonInvalidationKey, true);
+            PublishIfInvalidated(yokiframeRoot, AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, sAudioHandler, ref sLastAudioPayloadJson, ref sLastAudioInvalidationKey, true);
+            PublishIfInvalidated(yokiframeRoot, LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, sLogHandler, ref sLastLogPayloadJson, ref sLastLogInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, () => sSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, ref sLastSaveInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, () => sUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, ref sLastUIKitInvalidationKey, true);
+            PublishOptionalIfInvalidated(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, true);
         }
 
         public static void RestoreAndPublishPoolMonitorPreferences(string yokiframeRoot)
@@ -180,6 +192,49 @@ namespace YokiFrame.Unity
             }
         }
 
+        private static void PublishIfInvalidated(
+            string yokiframeRoot,
+            string kitName,
+            CommandBridgeSnapshotPublisher publisher,
+            Func<string> payloadFactory,
+            IKitSnapshotInvalidationProvider invalidationProvider,
+            ref string lastPayloadJson,
+            ref string lastInvalidationKey,
+            bool force)
+        {
+            if (invalidationProvider == null)
+            {
+                PublishIfChanged(yokiframeRoot, kitName, publisher, payloadFactory, ref lastPayloadJson, force);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(yokiframeRoot))
+                return;
+
+            try
+            {
+                var invalidationKey = invalidationProvider.GetSnapshotInvalidationKey();
+                if (!force && string.Equals(invalidationKey, lastInvalidationKey, StringComparison.Ordinal))
+                    return;
+
+                var payloadJson = payloadFactory();
+                if (!force && string.Equals(payloadJson, lastPayloadJson, StringComparison.Ordinal))
+                {
+                    lastInvalidationKey = invalidationKey;
+                    return;
+                }
+
+                publisher.Publish(yokiframeRoot, payloadJson);
+                UnitySharedMemoryTelemetry.TryWriteLatest(ENGINE_ID, kitName, SNAPSHOT_NAME, payloadJson);
+                lastPayloadJson = payloadJson;
+                lastInvalidationKey = invalidationKey;
+            }
+            catch (Exception e)
+            {
+                LogKit.Warning("[KitStateSnapshotPublisher] 写入 " + kitName + " snapshot 失败: " + e.Message);
+            }
+        }
+
         private static void PublishOptionalIfChanged(
             string yokiframeRoot,
             string kitName,
@@ -193,6 +248,31 @@ namespace YokiFrame.Unity
                 return;
 
             PublishIfChanged(yokiframeRoot, kitName, publisher, payloadFactory, ref lastPayloadJson, force);
+        }
+
+        private static void PublishOptionalIfInvalidated(
+            string yokiframeRoot,
+            string kitName,
+            CommandBridgeSnapshotPublisher publisher,
+            Func<bool> ensureHandler,
+            Func<IKitCommandHandler> getHandler,
+            Func<string> payloadFactory,
+            ref string lastPayloadJson,
+            ref string lastInvalidationKey,
+            bool force)
+        {
+            if (!ensureHandler())
+                return;
+
+            PublishIfInvalidated(
+                yokiframeRoot,
+                kitName,
+                publisher,
+                payloadFactory,
+                getHandler() as IKitSnapshotInvalidationProvider,
+                ref lastPayloadJson,
+                ref lastInvalidationKey,
+                force);
         }
 
         private static bool EnsureSaveHandler()
@@ -307,7 +387,7 @@ namespace YokiFrame.Unity
 
         private static string BuildLogPayloadJson()
         {
-            return sLogHandler.HandleAction("get_workbench_snapshot", "{}");
+            return LogKitCommandHandler.BuildSnapshotState();
         }
 
         private static string BuildSavePayloadJson()

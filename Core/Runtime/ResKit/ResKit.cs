@@ -20,11 +20,32 @@ namespace YokiFrame
         private static readonly Dictionary<ResCacheKey, object> sAssetCache = new();
         private static readonly Queue<ResUnloadRecord> sUnloadHistory = new(MAX_UNLOAD_HISTORY);
         private static IResourceProvider sProvider;
+        private static long sDiagnosticVersion;
+        private static bool sEnableLoadLocationTracking;
 
         /// <summary>
         /// 是否记录资源加载调用位置。默认关闭，避免普通运行时加载路径付出堆栈采集成本。
         /// </summary>
-        public static bool EnableLoadLocationTracking { get; set; }
+        public static bool EnableLoadLocationTracking
+        {
+            get { return sEnableLoadLocationTracking; }
+            set
+            {
+                if (sEnableLoadLocationTracking == value)
+                    return;
+
+                sEnableLoadLocationTracking = value;
+                BumpDiagnosticVersion();
+            }
+        }
+
+        /// <summary>
+        /// ResKit 诊断状态版本。
+        /// </summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>
         /// 当前资源 Provider 名称；未配置时返回 None。
@@ -91,6 +112,7 @@ namespace YokiFrame
             ClearSceneBackend();
             if (provider is IResSceneBackend sceneBackend)
                 SetSceneBackend(sceneBackend);
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -149,6 +171,7 @@ namespace YokiFrame
             var handle = new ResHandle<T>(path, asset, provider.ProviderName, source.Display, source.FilePath, source.Line);
             lock (sLock)
                 sAssetCache[key] = handle;
+            BumpDiagnosticVersion();
 
             return handle;
         }
@@ -231,9 +254,17 @@ namespace YokiFrame
             var source = CaptureLoadSource();
             var handle = new ResHandle<T>(path, asset, provider.ProviderName, source.Display, source.FilePath, source.Line);
             lock (sLock)
+            {
                 sAssetCache[key] = handle;
+                BumpDiagnosticVersion();
+            }
 
             return handle;
+        }
+
+        internal static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
 
         /// <summary>

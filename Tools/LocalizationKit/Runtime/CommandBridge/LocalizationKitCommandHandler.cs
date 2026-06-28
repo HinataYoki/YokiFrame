@@ -8,7 +8,7 @@ namespace YokiFrame
     /// LocalizationKit 命令桥处理器。
     /// 工作台、AI 和 snapshot publisher 共用这一个只读状态出口；切换语言是显式用户动作。
     /// </summary>
-    public sealed class LocalizationKitCommandHandler : IKitCommandHandler
+    public sealed class LocalizationKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "LocalizationKit";
@@ -21,6 +21,13 @@ namespace YokiFrame
             "get_workbench_snapshot",
             "set_language"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            LocalizationKitDiagnosticsSnapshot snapshot = LocalizationKit.CreateDiagnosticsSnapshot();
+            return LocalizationKit.DiagnosticVersion.ToString() + ":" + BuildStatsJson(snapshot);
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

@@ -8,13 +8,19 @@ namespace YokiFrame
     /// SingletonKit 命令处理器：查询已注册单例的生命周期快照。
     /// Base 层不会反射扫描全部静态泛型实例，只读取各宿主登记到 SingletonRegistry 的实例。
     /// </summary>
-    public sealed class SingletonKitCommandHandler : IKitCommandHandler
+    public sealed class SingletonKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "SingletonKit";
 
         /// <inheritdoc />
         public string[] SupportedActions => new[] { "stats", "get_workbench_snapshot", "list_singletons", "get_singleton_detail" };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return SingletonRegistry.DiagnosticVersion.ToString();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

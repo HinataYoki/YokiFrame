@@ -9,7 +9,7 @@ namespace YokiFrame
     /// InputKit 命令桥处理器。
     /// 这里只输出当前输入状态、上下文和缓冲诊断，不把高频输入轮询搬进文件桥。
     /// </summary>
-    public sealed class InputKitCommandHandler : IKitCommandHandler
+    public sealed class InputKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <summary>
         /// Kit 名称。
@@ -34,6 +34,12 @@ namespace YokiFrame
                     "get_workbench_snapshot"
                 };
             }
+        }
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return BuildStatsJson(InputKit.CreateDiagnosticsSnapshot());
         }
 
         /// <summary>

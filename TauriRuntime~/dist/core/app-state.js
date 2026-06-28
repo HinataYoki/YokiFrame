@@ -69,6 +69,7 @@ const FRAMEWORK_COMMAND_CATALOG = {
         { action: 'ping', label: 'ping', descriptionKey: 'command.system.ping' },
         { action: 'status', label: 'status', descriptionKey: 'command.system.status' },
         { action: 'bridge_status', label: 'bridge_status', descriptionKey: 'command.system.bridge_status' },
+        { action: 'bridge_status_detail', label: 'bridge_status_detail', descriptionKey: 'command.system.bridge_status_detail' },
         { action: 'list_commands', label: 'list_commands', descriptionKey: 'command.system.list_commands' },
     ],
     FsmKit: [

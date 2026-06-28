@@ -7,7 +7,7 @@ namespace YokiFrame
     /// <summary>
     /// ResKit 命令处理器：查询资源缓存、引用计数和卸载历史。
     /// </summary>
-    public sealed class ResKitCommandHandler : IKitCommandHandler
+    public sealed class ResKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "ResKit";
@@ -24,6 +24,12 @@ namespace YokiFrame
             "clear_history",
             "set_tracking"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return ResKit.DiagnosticVersion.ToString();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

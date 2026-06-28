@@ -97,13 +97,18 @@ namespace YokiFrame
         /// <param name="progress">加载进度。</param>
         public void UpdateProgress(float progress)
         {
+            var previous = Progress;
             if (progress < MIN_PROGRESS)
             {
                 Progress = MIN_PROGRESS;
+                if (Math.Abs(previous - Progress) > float.Epsilon)
+                    SceneKit.BumpDiagnosticVersion();
                 return;
             }
 
             Progress = progress > MAX_PROGRESS ? MAX_PROGRESS : progress;
+            if (Math.Abs(previous - Progress) > float.Epsilon)
+                SceneKit.BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -112,7 +117,11 @@ namespace YokiFrame
         /// <param name="state">场景状态。</param>
         public void SetState(SceneState state)
         {
+            if (State == state)
+                return;
+
             State = state;
+            SceneKit.BumpDiagnosticVersion();
         }
 
         internal void Reset(

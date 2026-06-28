@@ -84,7 +84,7 @@ async function sendCommand(options = {}) {
     let kit = options.kit ?? elements.kit?.value ?? commandComposerState.kit;
     let action = options.action ?? elements.action?.value ?? commandComposerState.action;
     if (!action) return null;
-    if (action === 'ping' || action === 'status' || action === 'bridge_status' || action === 'list_commands') {
+    if (action === 'ping' || action === 'status' || action === 'bridge_status' || action === 'bridge_status_detail' || action === 'list_commands') {
         kit = 'System';
     }
     if (options.syncControls !== false) {
@@ -126,7 +126,7 @@ function recordCommandDiagnostics(kit, action, response) {
     if (kit === 'System' && action === 'ping') {
         latestPingSummary = summarizePing(response);
     }
-    if (kit === 'System' && action === 'bridge_status') {
+    if (kit === 'System' && (action === 'bridge_status' || action === 'bridge_status_detail')) {
         latestBridgeStatusResponse = response;
         latestBridgeSummary = summarizeBridgeStatus(response?.data ?? response);
     }

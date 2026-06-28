@@ -7,7 +7,7 @@ namespace YokiFrame
     /// <summary>
     /// AudioKit 命令处理器：查询当前播放通道、音量和历史事件。
     /// </summary>
-    public sealed class AudioKitCommandHandler : IKitCommandHandler
+    public sealed class AudioKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "AudioKit";
@@ -29,6 +29,12 @@ namespace YokiFrame
             "mute_master",
             "mute_bus"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return GetStats();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

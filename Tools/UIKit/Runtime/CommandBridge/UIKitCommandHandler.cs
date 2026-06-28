@@ -10,7 +10,7 @@ namespace YokiFrame
     /// UIKit 命令桥处理器。
     /// 只输出面板缓存和面板栈诊断，不通过文件桥打开、关闭或切换 UI，避免 AI/编辑器误改运行时界面。
     /// </summary>
-    public sealed class UIKitCommandHandler : IKitCommandHandler
+    public sealed class UIKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         public string KitName
         {
@@ -29,6 +29,12 @@ namespace YokiFrame
                     "get_workbench_snapshot"
                 };
             }
+        }
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return BuildStatsJson(UIKit.CreateDiagnosticsSnapshot());
         }
 
         public string HandleAction(string action, string payloadJson)

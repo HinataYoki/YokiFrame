@@ -95,4 +95,54 @@ namespace YokiFrame
         /// </summary>
         public TimeSpan EventFileTtl { get; set; } = TimeSpan.FromDays(1);
     }
+
+    /// <summary>
+    /// 命令桥轮询退避策略：空闲时降低扫描频率，有活动或背压时回到最低延迟。
+    /// </summary>
+    public sealed class CommandBridgePollBackoff
+    {
+        private readonly int mMinIntervalMs;
+        private readonly int mMaxIntervalMs;
+
+        /// <summary>
+        /// 当前建议轮询间隔，单位毫秒。
+        /// </summary>
+        public int CurrentIntervalMs { get; private set; }
+
+        /// <summary>
+        /// 创建轮询退避策略。
+        /// </summary>
+        /// <param name="minIntervalMs">最低轮询间隔。</param>
+        /// <param name="maxIntervalMs">最高轮询间隔。</param>
+        public CommandBridgePollBackoff(int minIntervalMs, int maxIntervalMs)
+        {
+            mMinIntervalMs = Math.Max(1, minIntervalMs);
+            mMaxIntervalMs = Math.Max(mMinIntervalMs, maxIntervalMs);
+            CurrentIntervalMs = mMinIntervalMs;
+        }
+
+        /// <summary>
+        /// 记录一次轮询结果，并更新下一次轮询间隔。
+        /// </summary>
+        /// <param name="hadActivity">本次轮询是否处理了命令或遇到背压。</param>
+        public void RecordPollResult(bool hadActivity)
+        {
+            if (hadActivity)
+            {
+                CurrentIntervalMs = mMinIntervalMs;
+                return;
+            }
+
+            var next = CurrentIntervalMs * 2;
+            CurrentIntervalMs = next > mMaxIntervalMs ? mMaxIntervalMs : next;
+        }
+
+        /// <summary>
+        /// 立即恢复到最低轮询间隔。
+        /// </summary>
+        public void Reset()
+        {
+            CurrentIntervalMs = mMinIntervalMs;
+        }
+    }
 }

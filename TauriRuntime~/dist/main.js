@@ -116,7 +116,6 @@ function bootstrapYokiFrameEditor() {
     setupPushListeners();
     navigateTo('system');
     syncSidebarActiveIndicator();
-    addLog('前端已初始化', 'system');
     void loadYokiFramePackageInfo();
 }
 

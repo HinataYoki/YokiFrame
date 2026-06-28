@@ -10,7 +10,7 @@ namespace YokiFrame
     /// SaveKit 命令桥处理器。
     /// 只暴露诊断和显式维护动作，不通过文件桥传输真实存档 payload，避免把项目私有存档结构写进协议层。
     /// </summary>
-    public sealed class SaveKitCommandHandler : IKitCommandHandler
+    public sealed class SaveKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "SaveKit";
@@ -24,6 +24,12 @@ namespace YokiFrame
             "delete_slot",
             "disable_auto_save"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return SaveKit.DiagnosticVersion.ToString();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

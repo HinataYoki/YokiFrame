@@ -51,14 +51,15 @@ namespace YokiFrame.Unity
 #else
             const string LUBAN_AVAILABLE = "false";
 #endif
-            // Registry 明确暴露 implementedKits 与 kitFeatures，供 Tauri 过滤当前引擎未实现的页面和工具入口。
+            var implementedKitsJson = CommandBridgeKitRegistry.BuildImplementedKitsJson(CommandBridgeEngineKind.Unity);
+            var kitFeaturesJson = CommandBridgeKitRegistry.BuildKitFeaturesJson(CommandBridgeEngineKind.Unity);
             return "{\"protocolVersion\":2,\"engineId\":\"" + ENGINE_ID +
                    "\",\"engine\":\"Unity\",\"version\":\"" + JsonHelper.EscapeString(unityVersion) +
                    "\",\"projectPath\":\"" + JsonHelper.EscapeString(projectPath) +
                    "\",\"adapterVersion\":\"2.0.0\",\"startedAtUtc\":\"" + JsonHelper.EscapeString(startedAtUtc) +
                    "\",\"capabilities\":[\"commands\",\"events\",\"heartbeat\",\"bridge_status\",\"snapshots\",\"telemetry\"]" +
-                   ",\"implementedKits\":[\"System\",\"Architecture\",\"EventKit\",\"FsmKit\",\"LogKit\",\"PoolKit\",\"ResKit\",\"SingletonKit\",\"ActionKit\",\"AudioKit\",\"InputKit\",\"LocalizationKit\",\"SaveKit\",\"SceneKit\",\"SpatialKit\",\"TableKit\",\"UIKit\"]" +
-                   ",\"kitFeatures\":{\"System\":[\"commands\",\"bridge_status\"],\"Architecture\":[\"runtime\",\"snapshots\",\"telemetry\"],\"EventKit\":[\"runtime\",\"events\",\"snapshots\",\"telemetry\",\"static_scan\"],\"FsmKit\":[\"runtime\",\"events\",\"snapshots\",\"telemetry\"],\"LogKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"PoolKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"ResKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SingletonKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"ActionKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"AudioKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"InputKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"LocalizationKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SaveKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SceneKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SpatialKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"TableKit\":[\"tauri_config\",\"registry_optional_dependencies\"],\"UIKit\":[\"runtime\",\"snapshots\",\"telemetry\",\"ui_editor_tools\"]}" +
+                   ",\"implementedKits\":" + implementedKitsJson +
+                   ",\"kitFeatures\":" + kitFeaturesJson +
                    ",\"optionalDependencies\":{\"luban\":{\"available\":" + LUBAN_AVAILABLE +
                    ",\"define\":\"YOKIFRAME_LUBAN_SUPPORT\"" +
                    ",\"packageName\":\"com.code-philosophy.luban\"" +

@@ -12,7 +12,8 @@ namespace YokiFrame.Godot
     public sealed class GodotCommandBridgeHost
     {
         private const string ENGINE_ID = "godot-runtime";
-        private const int POLL_INTERVAL_MS = 100;
+        private const int POLL_MIN_INTERVAL_MS = 100;
+        private const int POLL_MAX_INTERVAL_MS = 1000;
         private const int HEARTBEAT_INTERVAL_MS = 2000;
         private const string CODE_EDITOR_PATH_SETTING_KEY = "yokiframe/code_editor/path";
         private const string CODE_EDITOR_ARGUMENTS_SETTING_KEY = "yokiframe/code_editor/arguments";
@@ -25,13 +26,13 @@ namespace YokiFrame.Godot
         private const string SPATIAL_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SpatialKitCommandHandler, YokiFrame.SpatialKit";
         private const string INPUT_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.InputKitCommandHandler, YokiFrame.InputKit";
         private const string ACTION_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.ActionKitCommandHandler, YokiFrame.ActionKit";
-        private const string IMPLEMENTED_KITS_JSON = "[\"System\",\"Architecture\",\"EventKit\",\"FsmKit\",\"LogKit\",\"PoolKit\",\"ResKit\",\"SingletonKit\",\"ActionKit\",\"InputKit\",\"LocalizationKit\",\"SaveKit\",\"SceneKit\",\"SpatialKit\",\"TableKit\"]";
-        private const string KIT_FEATURES_JSON = "{\"System\":[\"commands\",\"bridge_status\"],\"Architecture\":[\"runtime\",\"snapshots\",\"telemetry\"],\"EventKit\":[\"runtime\",\"events\",\"snapshots\",\"telemetry\"],\"FsmKit\":[\"runtime\",\"events\",\"snapshots\",\"telemetry\"],\"LogKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"PoolKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"ResKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SingletonKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"ActionKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"InputKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"LocalizationKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SaveKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SceneKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"SpatialKit\":[\"runtime\",\"snapshots\",\"telemetry\"],\"TableKit\":[\"tauri_config\",\"registry_optional_dependencies\"]}";
 
         private readonly KitCommandDispatcher mDispatcher = new KitCommandDispatcher();
         private YokiCommandBridgeCore mCore;
         private string mBridgeRootPath;
         private string mStartedAtUtc;
+        private readonly CommandBridgePollBackoff mPollBackoff =
+            new CommandBridgePollBackoff(POLL_MIN_INTERVAL_MS, POLL_MAX_INTERVAL_MS);
         private double mPollAccumulatorMs;
         private double mHeartbeatAccumulatorMs;
 
@@ -54,7 +55,10 @@ namespace YokiFrame.Godot
                     ? mCore.BuildStatusJson()
                     : "{\"available\":false,\"reason\":\"bridge is not initialized\"}",
                 OpenCodeLocationWithGodotShell,
-                () => mDispatcher.BuildCommandCatalogJson()));
+                () => mDispatcher.BuildCommandCatalogJson(),
+                () => mCore != null
+                    ? mCore.BuildStatusDetailJson()
+                    : "{\"available\":false,\"reason\":\"bridge is not initialized\"}"));
             mDispatcher.Register(new FsmKitCommandHandler());
             mDispatcher.Register(new PoolKitCommandHandler());
             mDispatcher.Register(new LogKitCommandHandler());
@@ -101,10 +105,11 @@ namespace YokiFrame.Godot
             GodotKitStateSnapshotPublisher.Tick(delta);
 
             mPollAccumulatorMs += delta * 1000.0;
-            if (mPollAccumulatorMs >= POLL_INTERVAL_MS)
+            if (mPollAccumulatorMs >= mPollBackoff.CurrentIntervalMs)
             {
                 mPollAccumulatorMs = 0.0;
                 mCore.Poll();
+                mPollBackoff.RecordPollResult(mCore.LastPollHadActivity || mCore.BackpressureActive);
             }
 
             mHeartbeatAccumulatorMs += delta * 1000.0;
@@ -141,13 +146,15 @@ namespace YokiFrame.Godot
         private static string BuildEngineRegistryJson(string version, string projectPath, string startedAtUtc)
         {
             var lubanAvailable = GodotDependencyDefineService.IsLubanEnvironmentAvailable() ? "true" : "false";
+            var implementedKitsJson = CommandBridgeKitRegistry.BuildImplementedKitsJson(CommandBridgeEngineKind.Godot);
+            var kitFeaturesJson = CommandBridgeKitRegistry.BuildKitFeaturesJson(CommandBridgeEngineKind.Godot);
             return "{\"protocolVersion\":2,\"engineId\":\"" + ENGINE_ID +
                    "\",\"engine\":\"Godot\",\"version\":\"" + JsonHelper.EscapeString(version) +
                    "\",\"projectPath\":\"" + JsonHelper.EscapeString(projectPath) +
                    "\",\"adapterVersion\":\"2.0.0\",\"startedAtUtc\":\"" + JsonHelper.EscapeString(startedAtUtc) +
                    "\",\"capabilities\":[\"commands\",\"heartbeat\",\"bridge_status\",\"events\",\"snapshots\",\"telemetry\"]" +
-                   ",\"implementedKits\":" + IMPLEMENTED_KITS_JSON +
-                   ",\"kitFeatures\":" + KIT_FEATURES_JSON +
+                   ",\"implementedKits\":" + implementedKitsJson +
+                   ",\"kitFeatures\":" + kitFeaturesJson +
                    ",\"optionalDependencies\":{\"luban\":{\"available\":" + lubanAvailable +
                    ",\"define\":\"YOKIFRAME_LUBAN_SUPPORT\"" +
                    ",\"packageName\":\"com.code-philosophy.luban\"" +

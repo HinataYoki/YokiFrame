@@ -62,7 +62,10 @@ namespace YokiFrame
         public static void ClearUnloadHistory()
         {
             lock (sLock)
+            {
                 sUnloadHistory.Clear();
+                BumpDiagnosticVersion();
+            }
         }
     }
 }

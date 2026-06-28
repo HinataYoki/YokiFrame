@@ -13,7 +13,8 @@ namespace YokiFrame.Unity
     internal static partial class UnityCommandBridgeHost
     {
         private const int HEARTBEAT_INTERVAL_MS = 2000;
-        private const int POLL_INTERVAL_MS = 100;
+        private const int POLL_MIN_INTERVAL_MS = 100;
+        private const int POLL_MAX_INTERVAL_MS = 1000;
         private const int KIT_SNAPSHOT_INTERVAL_MS = 1000;
         private const string ENGINE_ID = "unity-editor";
         private const string BRIDGE_UNAVAILABLE_JSON = "{\"available\":false,\"reason\":\"core is not initialized\"}";
@@ -31,6 +32,10 @@ namespace YokiFrame.Unity
         private static DateTime? sLastPollUtc;
         private static DateTime? sLastKitSnapshotPublishUtc;
         private static readonly string sStartedAtUtc = DateTime.UtcNow.ToString("O");
+        private static readonly CommandBridgePollBackoff sPollBackoff =
+            new CommandBridgePollBackoff(POLL_MIN_INTERVAL_MS, POLL_MAX_INTERVAL_MS);
+        private static FileSystemWatcher sCommandDirectoryWatcher;
+        private static volatile bool sCommandDirectoryChanged;
 
         /// <summary>
         /// engine-scoped 文件桥使用的共享命令分发器。
@@ -52,8 +57,11 @@ namespace YokiFrame.Unity
 
             RegisterCommandHandlers();
             UnityEventStreamWriter.Init(sYokiframeRoot);
+            ResetCommandDirectoryWatcher();
 
             EditorApplication.update += OnEditorUpdate;
+            AssemblyReloadEvents.beforeAssemblyReload += DisposeCommandDirectoryWatcher;
+            EditorApplication.quitting += DisposeCommandDirectoryWatcher;
 
             WriteEngineRegistry();
             PollCores();
@@ -64,7 +72,8 @@ namespace YokiFrame.Unity
             Dispatcher.Register(new SystemCommandHandler(
                 () => BuildBridgeStatusJson(sEngineCore),
                 OpenCodeLocationWithDefaultEditor,
-                () => Dispatcher != null ? Dispatcher.BuildCommandCatalogJson() : BRIDGE_UNAVAILABLE_JSON));
+                () => Dispatcher != null ? Dispatcher.BuildCommandCatalogJson() : BRIDGE_UNAVAILABLE_JSON,
+                () => BuildBridgeStatusDetailJson(sEngineCore)));
             Dispatcher.Register(new FsmKitCommandHandler());
             Dispatcher.Register(new UnityPoolKitCommandHandler());
             Dispatcher.Register(new UnityLogKitCommandHandler());
@@ -118,9 +127,12 @@ namespace YokiFrame.Unity
             EnsureDefaultLogger();
 
             var nowUtc = DateTime.UtcNow;
-            if (ShouldPoll(nowUtc, sLastPollUtc, TimeSpan.FromMilliseconds(POLL_INTERVAL_MS)))
+            if (ShouldPollCommandBridge(nowUtc))
             {
+                sCommandDirectoryChanged = false;
                 PollCores();
+                sPollBackoff.RecordPollResult(sEngineCore != default &&
+                    (sEngineCore.LastPollHadActivity || sEngineCore.BackpressureActive));
                 sLastPollUtc = nowUtc;
             }
 
@@ -148,15 +160,68 @@ namespace YokiFrame.Unity
             return nowUtc - lastPollUtc.Value >= interval;
         }
 
+        private static bool ShouldPollCommandBridge(DateTime nowUtc)
+        {
+            if (sCommandDirectoryChanged)
+            {
+                sPollBackoff.Reset();
+                return true;
+            }
+
+            return ShouldPoll(nowUtc, sLastPollUtc, TimeSpan.FromMilliseconds(sPollBackoff.CurrentIntervalMs));
+        }
+
         public static void PollNow()
         {
             if (sEngineCore != default)
             {
                 PollCores();
+                sPollBackoff.RecordPollResult(sEngineCore.LastPollHadActivity || sEngineCore.BackpressureActive);
+                sLastPollUtc = DateTime.UtcNow;
                 return;
             }
 
             LogKit.Warning("[YokiCommandBridge] 未初始化，请等待 DomainReload 完成后重试");
+        }
+
+        private static void ResetCommandDirectoryWatcher()
+        {
+            DisposeCommandDirectoryWatcher();
+
+            try
+            {
+                var commandDir = Path.Combine(GetEngineRoot(sYokiframeRoot), "commands");
+                Directory.CreateDirectory(commandDir);
+                sCommandDirectoryWatcher = new FileSystemWatcher(commandDir, "*.json");
+                sCommandDirectoryWatcher.IncludeSubdirectories = false;
+                sCommandDirectoryWatcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
+                sCommandDirectoryWatcher.Created += OnCommandDirectoryChanged;
+                sCommandDirectoryWatcher.Changed += OnCommandDirectoryChanged;
+                sCommandDirectoryWatcher.Renamed += OnCommandDirectoryChanged;
+                sCommandDirectoryWatcher.EnableRaisingEvents = true;
+            }
+            catch (Exception e)
+            {
+                LogKit.Warning("[YokiCommandBridge] 命令目录监听启动失败，回退到自适应轮询: " + e.Message);
+            }
+        }
+
+        private static void OnCommandDirectoryChanged(object sender, FileSystemEventArgs e)
+        {
+            sCommandDirectoryChanged = true;
+        }
+
+        private static void DisposeCommandDirectoryWatcher()
+        {
+            if (sCommandDirectoryWatcher == null)
+                return;
+
+            sCommandDirectoryWatcher.EnableRaisingEvents = false;
+            sCommandDirectoryWatcher.Created -= OnCommandDirectoryChanged;
+            sCommandDirectoryWatcher.Changed -= OnCommandDirectoryChanged;
+            sCommandDirectoryWatcher.Renamed -= OnCommandDirectoryChanged;
+            sCommandDirectoryWatcher.Dispose();
+            sCommandDirectoryWatcher = null;
         }
     }
 }

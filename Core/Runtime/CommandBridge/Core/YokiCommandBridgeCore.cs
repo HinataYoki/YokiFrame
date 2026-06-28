@@ -42,6 +42,24 @@ namespace YokiFrame
         private StatusStorageSnapshot mStatusStorageSnapshot;
 
         /// <summary>
+        /// 上一次 Poll 是否处理了命令或触发背压。
+        /// </summary>
+        public bool LastPollHadActivity { get; private set; }
+
+        /// <summary>
+        /// 上一次 Poll 实际处理的命令数量。
+        /// </summary>
+        public int LastPollProcessedCommandCount { get; private set; }
+
+        /// <summary>
+        /// 当前命令桥是否处于背压状态。
+        /// </summary>
+        public bool BackpressureActive
+        {
+            get { return mBackpressureActive; }
+        }
+
+        /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="yokiframeRootDir">引擎注入的根路径（如 "F:/YokiFrame2/.yokiframe"）</param>
@@ -96,7 +114,10 @@ namespace YokiFrame
             mLastPollUtc = DateTime.UtcNow;
             mBackpressureActive = false;
             mLastPollLimitReason = string.Empty;
+            LastPollHadActivity = false;
+            LastPollProcessedCommandCount = 0;
             var pollStartUtc = mLastPollUtc.Value;
+            var processedThisPoll = 0;
             try
             {
                 if (ShouldRunCleanup(mLastPollUtc.Value))
@@ -105,7 +126,6 @@ namespace YokiFrame
                 var files = FileBridgeFileSystem.GetFilesInRoot(mRootDir, mCommandDir, "*.json");
                 Array.Sort(files, StringComparer.OrdinalIgnoreCase);
                 ApplyPendingQueueLimit(files);
-                var processedThisPoll = 0;
                 foreach (var file in files)
                 {
                     if (!File.Exists(file))
@@ -138,6 +158,11 @@ namespace YokiFrame
             catch (Exception ex)
             {
                 RecordLastError(ex.Message);
+            }
+            finally
+            {
+                LastPollProcessedCommandCount = processedThisPoll;
+                LastPollHadActivity = processedThisPoll > 0 || mBackpressureActive;
             }
         }
 

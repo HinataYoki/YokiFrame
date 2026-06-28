@@ -10,7 +10,7 @@ namespace YokiFrame
     /// <summary>
     /// ActionKit 命令处理器：为 Tauri/AI 提供动作树快照和堆栈追踪开关。
     /// </summary>
-    public sealed class ActionKitCommandHandler : IKitCommandHandler
+    public sealed class ActionKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         private const int MAX_ROOTS = 128;
         private const int MAX_DEPTH = 16;
@@ -20,6 +20,12 @@ namespace YokiFrame
 
         public string KitName => "ActionKit";
         public string[] SupportedActions => new[] { "stats", "get_workbench_snapshot", "set_stack_trace", "clear_stack_trace" };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return GetStats();
+        }
 
         /// <summary>
         /// 处理 ActionKit 命令桥请求。

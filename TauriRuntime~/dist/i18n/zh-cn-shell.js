@@ -141,6 +141,7 @@ function zhCNShellTranslations() {
         'command.system.ping': '验证命令桥请求响应',
         'command.system.status': '读取宿主状态',
         'command.system.bridge_status': '刷新桥接诊断',
+        'command.system.bridge_status_detail': '刷新详细桥接诊断',
         'command.system.list_commands': '查询命令桥支持动作',
         'command.fsmkit.get_workbench_snapshot': '读取状态机工作台快照',
         'command.fsmkit.list_all': '列出状态机',

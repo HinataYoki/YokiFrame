@@ -141,6 +141,7 @@ function enUSShellTranslations() {
         'command.system.ping': 'Verify command bridge request-response',
         'command.system.status': 'Read host status',
         'command.system.bridge_status': 'Refresh bridge diagnostics',
+        'command.system.bridge_status_detail': 'Refresh detailed bridge diagnostics',
         'command.system.list_commands': 'Query supported bridge actions',
         'command.fsmkit.get_workbench_snapshot': 'Read FSM workbench snapshot',
         'command.fsmkit.list_all': 'List state machines',

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -20,6 +21,15 @@ namespace YokiFrame
         private static ISceneBackend sBackend;
         private static SceneHandler sActiveSceneHandler;
         private static bool sIsTransitioning;
+        private static long sDiagnosticVersion;
+
+        /// <summary>
+        /// SceneKit 诊断状态版本。
+        /// </summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>
         /// 获取当前是否处于场景过渡流程中。
@@ -37,6 +47,7 @@ namespace YokiFrame
         public static void SetBackend(ISceneBackend backend)
         {
             sBackend = backend ?? throw new ArgumentNullException(nameof(backend));
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -63,6 +74,7 @@ namespace YokiFrame
             sBackend = null;
             sActiveSceneHandler = null;
             sIsTransitioning = false;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -320,11 +332,13 @@ namespace YokiFrame
             {
                 handler.Operation.ResumeLoad();
                 handler.IsSuspended = false;
+                BumpDiagnosticVersion();
                 return;
             }
 
             SetActiveScene(handler);
             handler.IsPreloaded = false;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -338,6 +352,7 @@ namespace YokiFrame
 
             handler.Operation.SuspendLoad();
             handler.IsSuspended = true;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -351,6 +366,7 @@ namespace YokiFrame
 
             handler.Operation.ResumeLoad();
             handler.IsSuspended = false;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -488,6 +504,7 @@ namespace YokiFrame
             sSceneCache[handler.SceneName] = handler;
             if (!sLoadedScenes.Contains(handler))
                 sLoadedScenes.Add(handler);
+            BumpDiagnosticVersion();
         }
 
         private static void UnregisterHandler(SceneHandler handler)
@@ -501,6 +518,7 @@ namespace YokiFrame
             sLoadedScenes.Remove(handler);
             if (sActiveSceneHandler == handler)
                 sActiveSceneHandler = null;
+            BumpDiagnosticVersion();
         }
 
         private static void ClearScenesForSingleMode(string newSceneName, ISceneBackend backend)
@@ -532,6 +550,7 @@ namespace YokiFrame
         {
             handler.UpdateProgress(progress);
             handler.IsSuspended = handler.Operation != null && handler.Operation.IsSuspended;
+            BumpDiagnosticVersion();
             EventKit.Type.Send(new SceneLoadProgressEvent
             {
                 SceneName = handler.SceneName,
@@ -547,6 +566,7 @@ namespace YokiFrame
             handler.IsSuspended = true;
             if (handler.Operation != null)
                 handler.UpdateProgress(handler.Operation.Progress);
+            BumpDiagnosticVersion();
         }
 
         private static void OnSceneLoaded(SceneHandler handler, SceneLoadResult result, Action<SceneHandler> onComplete)
@@ -598,7 +618,10 @@ namespace YokiFrame
         private static void SetActiveScene(SceneHandler handler)
         {
             var previousScene = sActiveSceneHandler != null ? sActiveSceneHandler.Scene : default(SceneHandle);
+            var changed = !ReferenceEquals(sActiveSceneHandler, handler);
             sActiveSceneHandler = handler;
+            if (changed)
+                BumpDiagnosticVersion();
             if (handler != null)
             {
                 EnsureBackend().SetActiveScene(handler.Scene);
@@ -630,6 +653,11 @@ namespace YokiFrame
                     return;
                 }
             }
+        }
+
+        internal static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
     }
 

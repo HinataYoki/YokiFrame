@@ -1,7 +1,6 @@
 #if !GODOT
 using System;
 using System.IO;
-using System.Text;
 
 namespace YokiFrame.Unity
 {
@@ -29,18 +28,21 @@ namespace YokiFrame.Unity
 
         internal static string BuildBridgeStatusJson(YokiCommandBridgeCore engineCore)
         {
-            var engineStatus = engineCore != default ? engineCore.BuildStatusJson() : BRIDGE_UNAVAILABLE_JSON;
+            return BuildBridgeStatusJson(engineCore, false);
+        }
 
-            if (!IsJsonObject(engineStatus))
-                engineStatus = BRIDGE_UNAVAILABLE_JSON;
+        internal static string BuildBridgeStatusDetailJson(YokiCommandBridgeCore engineCore)
+        {
+            return BuildBridgeStatusJson(engineCore, true);
+        }
 
-            // 顶层保持原 core 状态字段，同时附带 engineScoped，供旧 UI 读取不丢诊断。
-            var sb = new StringBuilder(engineStatus.Length * 2 + 32);
-            sb.Append(engineStatus, 0, engineStatus.Length - 1);
-            sb.Append(",\"engineScoped\":");
-            sb.Append(engineStatus);
-            sb.Append('}');
-            return sb.ToString();
+        private static string BuildBridgeStatusJson(YokiCommandBridgeCore engineCore, bool detail)
+        {
+            var engineStatus = engineCore != default
+                ? (detail ? engineCore.BuildStatusDetailJson() : engineCore.BuildStatusJson())
+                : BRIDGE_UNAVAILABLE_JSON;
+
+            return IsJsonObject(engineStatus) ? engineStatus : BRIDGE_UNAVAILABLE_JSON;
         }
 
         private static bool IsJsonObject(string json) =>

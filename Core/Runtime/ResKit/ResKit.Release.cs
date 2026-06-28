@@ -23,6 +23,7 @@ namespace YokiFrame
                     return;
 
                 handle.RefCount--;
+                BumpDiagnosticVersion();
                 if (handle.RefCount > 0)
                     return;
 
@@ -86,6 +87,7 @@ namespace YokiFrame
                 }
 
                 sAssetCache.Clear();
+                BumpDiagnosticVersion();
             }
 
             if (assets == null || sProvider == null)

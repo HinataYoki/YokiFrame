@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -17,15 +18,58 @@ namespace YokiFrame
         private static readonly Dictionary<object, object> sObjectToPool = new();
         private static readonly Queue<PoolEvent> sEventHistory = new(MAX_EVENT_HISTORY);
         private static readonly long sStartTimestamp = Stopwatch.GetTimestamp();
+        private static long sDiagnosticVersion;
+        private static bool sEnableTracking;
+        private static bool sEnableStackTrace;
+        private static bool sEnableEventHistory;
 
         /// <summary>对象池跟踪是否启用。</summary>
-        public static bool EnableTracking { get; set; }
+        public static bool EnableTracking
+        {
+            get { return sEnableTracking; }
+            set
+            {
+                if (sEnableTracking == value)
+                    return;
+
+                sEnableTracking = value;
+                BumpDiagnosticVersion();
+            }
+        }
 
         /// <summary>是否记录堆栈。</summary>
-        public static bool EnableStackTrace { get; set; }
+        public static bool EnableStackTrace
+        {
+            get { return sEnableStackTrace; }
+            set
+            {
+                if (sEnableStackTrace == value)
+                    return;
+
+                sEnableStackTrace = value;
+                BumpDiagnosticVersion();
+            }
+        }
 
         /// <summary>是否记录对象池事件。</summary>
-        public static bool EnableEventHistory { get; set; }
+        public static bool EnableEventHistory
+        {
+            get { return sEnableEventHistory; }
+            set
+            {
+                if (sEnableEventHistory == value)
+                    return;
+
+                sEnableEventHistory = value;
+                BumpDiagnosticVersion();
+            }
+        }
+
+        /// <summary>对象池诊断状态版本。</summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>当前跟踪的对象池数量。</summary>
         public static int PoolCount
@@ -65,6 +109,7 @@ namespace YokiFrame
                     PoolRef = pool,
                     MaxCacheCount = maxCacheCount
                 });
+                BumpDiagnosticVersion();
             }
         }
 
@@ -88,6 +133,7 @@ namespace YokiFrame
 
                 info.InactiveObjects.Clear();
                 sPools.Remove(pool);
+                BumpDiagnosticVersion();
             }
         }
 
@@ -125,6 +171,8 @@ namespace YokiFrame
 
                 if (EnableEventHistory)
                     RecordEventLocked(PoolEventType.Spawn, info.Name, obj, stackTrace, location);
+
+                BumpDiagnosticVersion();
             }
         }
 
@@ -158,6 +206,8 @@ namespace YokiFrame
                     var stackTrace = stackTraceObject != null ? stackTraceObject.ToString() : string.Empty;
                     RecordEventLocked(PoolEventType.Return, info.Name, obj, stackTrace, ParseStackTraceLocation(stackTraceObject, stackTrace));
                 }
+
+                BumpDiagnosticVersion();
             }
         }
 
@@ -172,9 +222,14 @@ namespace YokiFrame
                 if (!sPools.TryGetValue(pool, out var info))
                     return;
 
-                info.TotalCount = totalCount < 0 ? 0 : totalCount;
+                var normalizedTotalCount = totalCount < 0 ? 0 : totalCount;
+                if (info.TotalCount == normalizedTotalCount)
+                    return;
+
+                info.TotalCount = normalizedTotalCount;
                 if (info.TotalCount > info.PeakCount)
                     info.PeakCount = info.TotalCount;
+                BumpDiagnosticVersion();
             }
         }
 
@@ -191,10 +246,15 @@ namespace YokiFrame
 
                 info.InactiveObjects.Clear();
                 if (inactiveObjects == null)
+                {
+                    BumpDiagnosticVersion();
                     return;
+                }
 
                 foreach (var obj in inactiveObjects)
                     AddInactiveObjectLocked(info, obj);
+
+                BumpDiagnosticVersion();
             }
         }
 
@@ -216,8 +276,11 @@ namespace YokiFrame
 
             lock (sLock)
             {
-                if (sPools.TryGetValue(pool, out var info))
-                    info.MaxCacheCount = maxCacheCount;
+                if (!sPools.TryGetValue(pool, out var info) || info.MaxCacheCount == maxCacheCount)
+                    return;
+
+                info.MaxCacheCount = maxCacheCount;
+                BumpDiagnosticVersion();
             }
         }
 
@@ -255,6 +318,7 @@ namespace YokiFrame
                     var poolName = sPools.TryGetValue(pool, out var info) ? info.Name : pool.GetType().Name;
                     if (EnableEventHistory)
                         RecordEventLocked(PoolEventType.Forced, poolName, obj, "ForceReturn", default);
+                    BumpDiagnosticVersion();
                 }
                 return true;
             }
@@ -302,7 +366,10 @@ namespace YokiFrame
         public static void ClearEventHistory()
         {
             lock (sLock)
+            {
                 sEventHistory.Clear();
+                BumpDiagnosticVersion();
+            }
         }
 
         /// <summary>清空全部运行时数据。</summary>
@@ -313,6 +380,7 @@ namespace YokiFrame
                 sPools.Clear();
                 sObjectToPool.Clear();
                 sEventHistory.Clear();
+                BumpDiagnosticVersion();
             }
         }
 
@@ -473,6 +541,11 @@ namespace YokiFrame
                    line.IndexOf("YokiFrame.SetPool", StringComparison.Ordinal) >= 0 ||
                    line.IndexOf("YokiFrame.Pool.", StringComparison.Ordinal) >= 0 ||
                    line.IndexOf("System.Diagnostics", StringComparison.Ordinal) >= 0;
+        }
+
+        private static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
 
         private readonly struct SourceLocation

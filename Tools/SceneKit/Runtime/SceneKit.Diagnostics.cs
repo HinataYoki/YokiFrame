@@ -10,7 +10,11 @@ namespace YokiFrame
     {
         internal static void SetTransitioning(bool value)
         {
+            if (sIsTransitioning == value)
+                return;
+
             sIsTransitioning = value;
+            BumpDiagnosticVersion();
         }
 
         internal static SceneKitDiagnosticsSnapshot CreateDiagnosticsSnapshot()

@@ -13,10 +13,11 @@ namespace YokiFrame
         public string KitName => "System";
 
         /// <inheritdoc />
-        public string[] SupportedActions => new[] { "ping", "status", "bridge_status", "list_commands", "open_code_location" };
+        public string[] SupportedActions => new[] { "ping", "status", "bridge_status", "bridge_status_detail", "list_commands", "open_code_location" };
 
         private readonly DateTime mStartTime = DateTime.UtcNow;
         private readonly Func<string> mBridgeStatusProvider;
+        private readonly Func<string> mBridgeStatusDetailProvider;
         private readonly Func<string, int, string> mCodeLocationOpener;
         private readonly Func<string> mCommandCatalogProvider;
 
@@ -59,6 +60,23 @@ namespace YokiFrame
             mCommandCatalogProvider = commandCatalogProvider;
         }
 
+        /// <summary>
+        /// 创建带轻量 bridge_status、详细 bridge_status、代码跳转和命令目录能力的 System 命令处理器。
+        /// </summary>
+        /// <param name="bridgeStatusProvider">返回轻量 bridge_status 数据 JSON 的委托。</param>
+        /// <param name="codeLocationOpener">打开指定源码位置的委托。</param>
+        /// <param name="commandCatalogProvider">返回已注册命令目录 JSON 的委托。</param>
+        /// <param name="bridgeStatusDetailProvider">返回详细 bridge_status 数据 JSON 的委托。</param>
+        public SystemCommandHandler(
+            Func<string> bridgeStatusProvider,
+            Func<string, int, string> codeLocationOpener,
+            Func<string> commandCatalogProvider,
+            Func<string> bridgeStatusDetailProvider)
+            : this(bridgeStatusProvider, codeLocationOpener, commandCatalogProvider)
+        {
+            mBridgeStatusDetailProvider = bridgeStatusDetailProvider;
+        }
+
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)
         {
@@ -77,10 +95,17 @@ namespace YokiFrame
                     return mBridgeStatusProvider != null
                         ? mBridgeStatusProvider()
                         : "{\"available\":false,\"reason\":\"bridge status provider is not configured\"}";
+                case "bridge_status_detail":
+                    if (mBridgeStatusDetailProvider != null)
+                        return mBridgeStatusDetailProvider();
+
+                    return mBridgeStatusProvider != null
+                        ? mBridgeStatusProvider()
+                        : "{\"available\":false,\"reason\":\"bridge status provider is not configured\"}";
                 case "list_commands":
                     return mCommandCatalogProvider != null
                         ? mCommandCatalogProvider()
-                        : "{\"kits\":[{\"kit\":\"System\",\"actions\":[{\"action\":\"ping\"},{\"action\":\"status\"},{\"action\":\"bridge_status\"},{\"action\":\"list_commands\"},{\"action\":\"open_code_location\"}]}]}";
+                        : "{\"kits\":[{\"kit\":\"System\",\"actions\":[{\"action\":\"ping\"},{\"action\":\"status\"},{\"action\":\"bridge_status\"},{\"action\":\"bridge_status_detail\"},{\"action\":\"list_commands\"},{\"action\":\"open_code_location\"}]}]}";
                 case "open_code_location":
                     return OpenCodeLocation(payloadJson);
                 default:

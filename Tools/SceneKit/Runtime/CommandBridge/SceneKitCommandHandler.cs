@@ -10,7 +10,7 @@ namespace YokiFrame
     /// SceneKit 命令桥处理器。
     /// 默认只输出场景诊断快照；卸载场景是显式维护动作，仍通过 SceneKit 统一静态入口执行。
     /// </summary>
-    public sealed class SceneKitCommandHandler : IKitCommandHandler
+    public sealed class SceneKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName
@@ -31,6 +31,12 @@ namespace YokiFrame
                     "unload_scene"
                 };
             }
+        }
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return SceneKit.DiagnosticVersion.ToString();
         }
 
         /// <inheritdoc />

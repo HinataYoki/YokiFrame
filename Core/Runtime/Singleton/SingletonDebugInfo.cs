@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -24,6 +25,12 @@ namespace YokiFrame
     {
         private static readonly object sLock = new();
         private static readonly Dictionary<Type, SingletonDebugInfo> sInfos = new();
+        private static long sDiagnosticVersion;
+
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         public static int Count
         {
@@ -51,6 +58,7 @@ namespace YokiFrame
                     InstanceHash = instance != null ? instance.GetHashCode() : 0,
                     IsAlive = instance != null
                 };
+                BumpDiagnosticVersion();
             }
         }
 
@@ -62,7 +70,10 @@ namespace YokiFrame
             lock (sLock)
             {
                 if (sInfos.TryGetValue(type, out var info))
+                {
                     info.IsAlive = false;
+                    BumpDiagnosticVersion();
+                }
             }
         }
 
@@ -82,7 +93,15 @@ namespace YokiFrame
         public static void Clear()
         {
             lock (sLock)
+            {
                 sInfos.Clear();
+                BumpDiagnosticVersion();
+            }
+        }
+
+        private static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
     }
 }

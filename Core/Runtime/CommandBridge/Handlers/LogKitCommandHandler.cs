@@ -7,7 +7,7 @@ namespace YokiFrame
     /// <summary>
     /// LogKit 命令处理器：查询日志配置、最近日志和工作台快照。
     /// </summary>
-    public sealed class LogKitCommandHandler : IKitCommandHandler
+    public sealed class LogKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName => "LogKit";
@@ -23,6 +23,12 @@ namespace YokiFrame
             "get_workbench_snapshot",
             "clear_history"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return LogKit.DiagnosticVersion.ToString() + ":" + LogKitSettings.SettingsVersion.ToString();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)
@@ -68,6 +74,29 @@ namespace YokiFrame
             return sb.ToString();
         }
 
+        /// <summary>
+        /// 构建默认 state snapshot。该路径用于轮询发布，只携带历史摘要，完整日志历史由 get_history 显式查询。
+        /// </summary>
+        /// <returns>轻量 LogKit state JSON。</returns>
+        public static string BuildSnapshotState()
+        {
+            var stats = LogKit.GetStats();
+            var statsJson = BuildStatsJson(stats);
+            var settings = GetSettings();
+
+            var sb = new StringBuilder(statsJson.Length + settings.Length + 96);
+            sb.Append("{\"stats\":");
+            sb.Append(statsJson);
+            sb.Append(",\"settings\":");
+            sb.Append(settings);
+            sb.Append(",\"historySummary\":{\"count\":");
+            sb.Append(stats.HistoryCount);
+            sb.Append(",\"droppedCount\":");
+            sb.Append(stats.DroppedCount);
+            sb.Append(",\"omitted\":true}}");
+            return sb.ToString();
+        }
+
         private static string GetSettings()
         {
             return LogKitSettings.BuildJson();
@@ -75,7 +104,11 @@ namespace YokiFrame
 
         private static string GetStats()
         {
-            var stats = LogKit.GetStats();
+            return BuildStatsJson(LogKit.GetStats());
+        }
+
+        private static string BuildStatsJson(LogKitStats stats)
+        {
             var sb = new StringBuilder(160);
             sb.Append("{\"loggerName\":\"");
             sb.Append(JsonHelper.EscapeString(stats.LoggerName));

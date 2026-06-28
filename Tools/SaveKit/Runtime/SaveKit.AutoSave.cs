@@ -34,6 +34,7 @@ namespace YokiFrame
             sAutoSaveIntervalSeconds = intervalSeconds;
             sAutoSaveElapsedSeconds = 0f;
             sAutoSaveEnabled = true;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -47,6 +48,7 @@ namespace YokiFrame
             sBeforeAutoSave = null;
             sAutoSaveIntervalSeconds = 0f;
             sAutoSaveElapsedSeconds = 0f;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -128,7 +130,10 @@ namespace YokiFrame
         public static bool Delete(int slotId)
         {
             ValidateSlotId(slotId);
-            return sStorage.Delete(slotId);
+            var deleted = sStorage.Delete(slotId);
+            if (deleted)
+                BumpDiagnosticVersion();
+            return deleted;
         }
 
         /// <summary>
@@ -188,6 +193,7 @@ namespace YokiFrame
             sCurrentVersion = DEFAULT_VERSION;
             sMaxSlots = DEFAULT_MAX_SLOTS;
             sMigrators.Clear();
+            BumpDiagnosticVersion();
         }
     }
 }

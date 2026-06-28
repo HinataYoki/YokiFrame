@@ -9,7 +9,7 @@ namespace YokiFrame
     /// SpatialKit 命令桥处理器。
     /// 只输出空间索引诊断快照，不通过文件桥插入、移动或删除运行时实体，避免把高频空间查询变成跨进程控制流。
     /// </summary>
-    public sealed class SpatialKitCommandHandler : IKitCommandHandler
+    public sealed class SpatialKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         /// <inheritdoc />
         public string KitName
@@ -29,6 +29,12 @@ namespace YokiFrame
                     "get_workbench_snapshot"
                 };
             }
+        }
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return BuildStatsJson(SpatialKit.CreateDiagnosticsSnapshot());
         }
 
         /// <inheritdoc />

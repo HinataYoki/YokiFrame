@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -17,6 +18,15 @@ namespace YokiFrame
         private static bool sEnabled = true;
         private static LogLevel sMinimumLevel = LogLevel.Debug;
         private static int sDroppedCount;
+        private static long sDiagnosticVersion;
+
+        /// <summary>
+        /// LogKit 诊断状态版本号；日志历史、过滤配置或后端变化时递增，用于快照失效判断。
+        /// </summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>
         /// 获取或设置 LogKit 是否接收并转发日志。
@@ -31,7 +41,13 @@ namespace YokiFrame
             set
             {
                 lock (sLock)
+                {
+                    if (sEnabled == value)
+                        return;
+
                     sEnabled = value;
+                    BumpDiagnosticVersion();
+                }
             }
         }
 
@@ -48,7 +64,14 @@ namespace YokiFrame
             set
             {
                 lock (sLock)
-                    sMinimumLevel = NormalizeLevel(value);
+                {
+                    var normalized = NormalizeLevel(value);
+                    if (sMinimumLevel == normalized)
+                        return;
+
+                    sMinimumLevel = normalized;
+                    BumpDiagnosticVersion();
+                }
             }
         }
 
@@ -83,7 +106,13 @@ namespace YokiFrame
         public static void SetLogger(IEngineLogger logger)
         {
             lock (sLock)
+            {
+                if (ReferenceEquals(sLogger, logger))
+                    return;
+
                 sLogger = logger;
+                BumpDiagnosticVersion();
+            }
         }
 
         /// <summary>
@@ -102,7 +131,13 @@ namespace YokiFrame
         public static void ClearLogger()
         {
             lock (sLock)
+            {
+                if (sLogger == null)
+                    return;
+
                 sLogger = null;
+                BumpDiagnosticVersion();
+            }
         }
 
         /// <summary>
@@ -117,6 +152,7 @@ namespace YokiFrame
                 sMinimumLevel = LogLevel.Debug;
                 sDroppedCount = 0;
                 sHistory.Clear();
+                BumpDiagnosticVersion();
             }
         }
 
@@ -246,6 +282,7 @@ namespace YokiFrame
             {
                 sHistory.Clear();
                 sDroppedCount = 0;
+                BumpDiagnosticVersion();
             }
         }
 
@@ -289,6 +326,7 @@ namespace YokiFrame
                     StackTrace = exception != null ? exception.StackTrace ?? string.Empty : string.Empty,
                     TimestampUtc = DateTime.UtcNow.ToString("O")
                 });
+                BumpDiagnosticVersion();
                 logger = sLogger;
             }
 
@@ -305,6 +343,11 @@ namespace YokiFrame
             }
 
             sHistory.Enqueue(entry);
+        }
+
+        private static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
 
         private static string FormatMessage(object message)

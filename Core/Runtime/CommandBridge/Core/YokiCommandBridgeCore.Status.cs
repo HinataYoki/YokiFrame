@@ -11,8 +11,22 @@ namespace YokiFrame
         /// <summary>
         /// 构建当前命令桥状态的 JSON 快照。
         /// </summary>
-        /// <returns>包含队列、存储、限流和错误状态的 JSON 字符串。</returns>
+        /// <returns>包含实时队列、限流和错误状态的轻量 JSON 字符串。</returns>
         public string BuildStatusJson()
+        {
+            return BuildStatusJson(false);
+        }
+
+        /// <summary>
+        /// 构建当前命令桥状态的详细 JSON 快照，包含需要扫描协议目录的存储统计。
+        /// </summary>
+        /// <returns>包含队列、存储、限流和错误状态的 JSON 字符串。</returns>
+        public string BuildStatusDetailJson()
+        {
+            return BuildStatusJson(true);
+        }
+
+        private string BuildStatusJson(bool includeStorageStats)
         {
             var sb = new StringBuilder(512);
             sb.Append("{\"protocolVersion\":2");
@@ -22,12 +36,23 @@ namespace YokiFrame
             AppendCount(sb, "pendingCommandCount", mCommandDir, "*.json");
             AppendNumber(sb, "processingCommandCount", CountFiles(mProcessingDir, "*.json", ShouldCountAsVisibleProcessing));
             AppendNumber(sb, "staleProcessingCommandCount", CountStaleProcessingCommands());
-            var storageSnapshot = GetStatusStorageSnapshot();
-            AppendNumber(sb, "archiveCommandCount", storageSnapshot.ArchiveCommandCount);
-            AppendNumber(sb, "deadletterCommandCount", storageSnapshot.DeadletterCommandCount);
-            AppendNumber(sb, "resultCount", storageSnapshot.ResultCount);
-            AppendNumber(sb, "errorCount", storageSnapshot.ErrorCount);
-            AppendNumber(sb, "snapshotCount", storageSnapshot.SnapshotCount);
+            sb.Append(",\"storageStatsIncluded\":");
+            sb.Append(includeStorageStats ? "true" : "false");
+            if (includeStorageStats)
+            {
+                var storageSnapshot = GetStatusStorageSnapshot();
+                AppendNumber(sb, "archiveCommandCount", storageSnapshot.ArchiveCommandCount);
+                AppendNumber(sb, "deadletterCommandCount", storageSnapshot.DeadletterCommandCount);
+                AppendNumber(sb, "resultCount", storageSnapshot.ResultCount);
+                AppendNumber(sb, "errorCount", storageSnapshot.ErrorCount);
+                AppendNumber(sb, "snapshotCount", storageSnapshot.SnapshotCount);
+                var storageStats = storageSnapshot.ProtocolStats;
+                AppendNumber(sb, "protocolFileCount", storageStats.FileCount);
+                AppendNumber(sb, "protocolBytes", storageStats.TotalBytes);
+                AppendDate(sb, "oldestProtocolFileUtc", storageStats.OldestFileUtc);
+                sb.Append(",\"statusStorageStatsTruncated\":");
+                sb.Append(storageSnapshot.Truncated || storageStats.Truncated ? "true" : "false");
+            }
             AppendNumber(sb, "processedCommandCount", mProcessedCommandCount);
             AppendNumber(sb, "deadletteredProcessingCommandCount", mDeadletterCommandCount);
             AppendNumber(sb, "cleanedFileCount", mCleanedFileCount);
@@ -35,12 +60,6 @@ namespace YokiFrame
             AppendNumber(sb, "payloadTooLargeCount", mPayloadTooLargeCount);
             AppendNumber(sb, "resultTooLargeCount", mResultTooLargeCount);
             AppendNumber(sb, "bridgeBusyCount", mBridgeBusyCount);
-            var storageStats = storageSnapshot.ProtocolStats;
-            AppendNumber(sb, "protocolFileCount", storageStats.FileCount);
-            AppendNumber(sb, "protocolBytes", storageStats.TotalBytes);
-            AppendDate(sb, "oldestProtocolFileUtc", storageStats.OldestFileUtc);
-            sb.Append(",\"statusStorageStatsTruncated\":");
-            sb.Append(storageSnapshot.Truncated || storageStats.Truncated ? "true" : "false");
             sb.Append(",\"backpressureActive\":");
             sb.Append(mBackpressureActive ? "true" : "false");
             if (!string.IsNullOrEmpty(mLastPollLimitReason))

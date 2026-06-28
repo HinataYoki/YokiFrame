@@ -31,6 +31,15 @@ namespace YokiFrame
         private static Action sBeforeAutoSave;
         private static float sAutoSaveIntervalSeconds;
         private static float sAutoSaveElapsedSeconds;
+        private static long sDiagnosticVersion;
+
+        /// <summary>
+        /// SaveKit 诊断状态版本。
+        /// </summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>
         /// 设置 SaveKit 使用的序列化器。
@@ -45,6 +54,7 @@ namespace YokiFrame
 
             // 序列化由宿主或项目注入，Tools 层只认接口，避免把 Unity/Godot JSON 细节写进 SaveKit。
             sSerializer = saveSerializer;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -63,6 +73,7 @@ namespace YokiFrame
         public static void SetEncryptor(ISaveEncryptor saveEncryptor)
         {
             sEncryptor = saveEncryptor;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -87,6 +98,7 @@ namespace YokiFrame
 
             // 存储路径属于 Adapter 边界：Unity/Godot 各自决定目录，业务仍使用同一个 SaveKit 静态入口。
             sStorage = saveStorage;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -110,6 +122,7 @@ namespace YokiFrame
             }
 
             sCurrentVersion = version;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -133,6 +146,7 @@ namespace YokiFrame
             }
 
             sMaxSlots = slots;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -156,6 +170,7 @@ namespace YokiFrame
             }
 
             sMigrators[GetMigratorKey(migrator.FromVersion, migrator.ToVersion)] = migrator;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -212,6 +227,7 @@ namespace YokiFrame
             Buffer.BlockCopy(header, 0, fileBytes, 0, header.Length);
             Buffer.BlockCopy(payload, 0, fileBytes, header.Length, payload.Length);
             sStorage.Write(slotId, fileBytes);
+            BumpDiagnosticVersion();
             return true;
         }
 
@@ -386,6 +402,11 @@ namespace YokiFrame
 #else
             }, cancellationToken);
 #endif
+        }
+
+        internal static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
     }
 }

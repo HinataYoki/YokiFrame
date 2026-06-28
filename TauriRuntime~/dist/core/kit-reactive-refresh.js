@@ -26,7 +26,6 @@ async function setupPushListeners() {
                 if (typeof unlisten === 'function') pushListenerUnlisteners.push(unlisten);
             });
             pushListenersReady = true;
-            addLog('IPC 推送监听已挂载', 'system');
         } catch (e) {
             nextUnlisteners.forEach(unlisten => {
                 try {

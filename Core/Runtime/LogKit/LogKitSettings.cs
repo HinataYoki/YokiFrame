@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -8,6 +9,8 @@ namespace YokiFrame
     /// </summary>
     public static class LogKitSettings
     {
+        private static long sSettingsVersion;
+
         /// <summary>
         /// LogKit 在通用设置存储中的 Kit 名称。
         /// </summary>
@@ -164,6 +167,14 @@ namespace YokiFrame
         public const string DEFAULT_PLAYER_FILE_NAME = "yoki_player.log";
 
         /// <summary>
+        /// LogKit 设置版本号；命令桥设置变更时递增，用于快照失效判断。
+        /// </summary>
+        public static long SettingsVersion
+        {
+            get { return Interlocked.Read(ref sSettingsVersion); }
+        }
+
+        /// <summary>
         /// 获取当前日志总开关。
         /// </summary>
         public static bool Enabled
@@ -252,6 +263,7 @@ namespace YokiFrame
             SetStringIfPresent(payloadJson, EDITOR_FILE_NAME_KEY);
             SetStringIfPresent(payloadJson, PLAYER_FILE_NAME_KEY);
             ApplyBaseRuntimeSettings();
+            BumpSettingsVersion();
         }
 
         /// <summary>
@@ -274,6 +286,7 @@ namespace YokiFrame
             KitSettings.SetString(KIT_NAME, EDITOR_FILE_NAME_KEY, DEFAULT_EDITOR_FILE_NAME);
             KitSettings.SetString(KIT_NAME, PLAYER_FILE_NAME_KEY, DEFAULT_PLAYER_FILE_NAME);
             ApplyBaseRuntimeSettings();
+            BumpSettingsVersion();
         }
 
         /// <summary>
@@ -392,6 +405,11 @@ namespace YokiFrame
             sb.Append("\":\"");
             sb.Append(JsonHelper.EscapeString(value));
             sb.Append('"');
+        }
+
+        private static void BumpSettingsVersion()
+        {
+            Interlocked.Increment(ref sSettingsVersion);
         }
     }
 }

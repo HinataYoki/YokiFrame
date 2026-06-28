@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -17,6 +18,15 @@ namespace YokiFrame
         private static readonly Dictionary<LocalizationTextCacheKey, string> sTextCache = new();
         private static readonly Dictionary<LocalizationPluralCacheKey, string> sPluralCache = new();
         private static readonly HashSet<ILocalizationBinder> sBinders = new();
+        private static long sDiagnosticVersion;
+
+        /// <summary>
+        /// LocalizationKit 诊断状态版本。
+        /// </summary>
+        public static long DiagnosticVersion
+        {
+            get { return Interlocked.Read(ref sDiagnosticVersion); }
+        }
 
         /// <summary>
         /// 当前语言成功切换后触发。
@@ -37,6 +47,7 @@ namespace YokiFrame
 
             sProvider = localizationProvider;
             ClearCache();
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -58,6 +69,7 @@ namespace YokiFrame
             }
 
             sFormatter = textFormatter;
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -70,7 +82,16 @@ namespace YokiFrame
         /// 设置文本缺失时使用的默认回退语言。
         /// </summary>
         /// <param name="languageId">默认语言。</param>
-        public static void SetDefaultLanguage(LanguageId languageId) => sDefaultLanguage = languageId;
+        public static void SetDefaultLanguage(LanguageId languageId)
+        {
+            if (sDefaultLanguage == languageId)
+            {
+                return;
+            }
+
+            sDefaultLanguage = languageId;
+            BumpDiagnosticVersion();
+        }
 
         /// <summary>
         /// 获取当前默认回退语言。
@@ -98,6 +119,7 @@ namespace YokiFrame
             sCurrentLanguage = languageId;
             ClearCache();
             NotifyBinders();
+            BumpDiagnosticVersion();
 
             Action<LanguageId> handler = OnLanguageChanged;
             if (handler != null)
@@ -235,6 +257,7 @@ namespace YokiFrame
         {
             sTextCache.Clear();
             sPluralCache.Clear();
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -249,6 +272,7 @@ namespace YokiFrame
             }
 
             sBinders.Add(binder);
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -263,6 +287,7 @@ namespace YokiFrame
             }
 
             sBinders.Remove(binder);
+            BumpDiagnosticVersion();
         }
 
         /// <summary>
@@ -280,6 +305,7 @@ namespace YokiFrame
             if (sProvider != null)
             {
                 sProvider.PreloadLanguage(languageId);
+                BumpDiagnosticVersion();
             }
         }
 
@@ -295,6 +321,7 @@ namespace YokiFrame
             }
 
             RemoveLanguageCache(languageId);
+            BumpDiagnosticVersion();
         }
 
         internal static LocalizationKitDiagnosticsSnapshot CreateDiagnosticsSnapshot()
@@ -336,6 +363,7 @@ namespace YokiFrame
             sPluralCache.Clear();
             sBinders.Clear();
             OnLanguageChanged = null;
+            BumpDiagnosticVersion();
         }
 
         private static string GetInternal(LanguageId languageId, int textId)
@@ -475,6 +503,11 @@ namespace YokiFrame
             {
                 sPluralCache.Remove(pluralKeys[i]);
             }
+        }
+
+        private static void BumpDiagnosticVersion()
+        {
+            Interlocked.Increment(ref sDiagnosticVersion);
         }
     }
 }

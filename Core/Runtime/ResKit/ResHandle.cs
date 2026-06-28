@@ -70,7 +70,11 @@ namespace YokiFrame
         /// <summary>
         /// 增加当前资源句柄的引用计数。
         /// </summary>
-        public void Retain() => RefCount++;
+        public void Retain()
+        {
+            RefCount++;
+            ResKit.BumpDiagnosticVersion();
+        }
 
         /// <summary>
         /// 释放当前资源句柄的一次引用。

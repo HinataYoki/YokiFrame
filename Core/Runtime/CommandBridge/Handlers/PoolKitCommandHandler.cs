@@ -7,7 +7,7 @@ namespace YokiFrame
     /// <summary>
     /// PoolKit 命令处理器：查询对象池统计、列表、详情和泄漏检查。
     /// </summary>
-    public sealed class PoolKitCommandHandler : IKitCommandHandler
+    public sealed class PoolKitCommandHandler : IKitCommandHandler, IKitSnapshotInvalidationProvider
     {
         private const int MAX_SNAPSHOT_POOL_DETAILS = 128;
         private const int MAX_SNAPSHOT_ACTIVE_OBJECTS_PER_POOL = 64;
@@ -28,6 +28,12 @@ namespace YokiFrame
             "clear_history",
             "check_leak"
         };
+
+        /// <inheritdoc />
+        public string GetSnapshotInvalidationKey()
+        {
+            return PoolDebugger.DiagnosticVersion.ToString();
+        }
 
         /// <inheritdoc />
         public string HandleAction(string action, string payloadJson)

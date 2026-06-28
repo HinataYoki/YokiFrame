@@ -74,16 +74,27 @@ namespace YokiFrame.Godot
         private static double sLastPoolPublishSeconds = -POOL_PUBLISH_INTERVAL_SECONDS;
         private static double sLastDefaultPublishSeconds = -DEFAULT_PUBLISH_INTERVAL_SECONDS;
         private static string sLastPoolPayloadJson;
+        private static string sLastPoolInvalidationKey;
         private static string sLastResPayloadJson;
+        private static string sLastResInvalidationKey;
         private static string sLastSingletonPayloadJson;
+        private static string sLastSingletonInvalidationKey;
         private static string sLastAudioPayloadJson;
+        private static string sLastAudioInvalidationKey;
         private static string sLastLogPayloadJson;
+        private static string sLastLogInvalidationKey;
         private static string sLastSavePayloadJson;
+        private static string sLastSaveInvalidationKey;
         private static string sLastLocalizationPayloadJson;
+        private static string sLastLocalizationInvalidationKey;
         private static string sLastScenePayloadJson;
+        private static string sLastSceneInvalidationKey;
         private static string sLastSpatialPayloadJson;
+        private static string sLastSpatialInvalidationKey;
         private static string sLastInputPayloadJson;
+        private static string sLastInputInvalidationKey;
         private static string sLastActionPayloadJson;
+        private static string sLastActionInvalidationKey;
 
         public static void Init(string yokiframeRoot)
         {
@@ -121,21 +132,21 @@ namespace YokiFrame.Godot
 
         private static void PublishPoolIfChanged(bool force)
         {
-            PublishIfChanged(POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, ref sLastPoolPayloadJson, force, PushPoolSnapshotUpdatedEvent);
+            PublishIfInvalidated(POOL_KIT_NAME, sPoolPublisher, BuildPoolPayloadJson, sPoolHandler, ref sLastPoolPayloadJson, ref sLastPoolInvalidationKey, force, PushPoolSnapshotUpdatedEvent);
         }
 
         private static void PublishNonPoolIfChanged(bool force)
         {
-            PublishIfChanged(RES_KIT_NAME, sResPublisher, BuildResPayloadJson, ref sLastResPayloadJson, force, PushResSnapshotUpdatedEvent);
-            PublishIfChanged(SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, ref sLastSingletonPayloadJson, force, PushSingletonSnapshotUpdatedEvent);
-            PublishIfChanged(AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, ref sLastAudioPayloadJson, force, PushAudioSnapshotUpdatedEvent);
-            PublishIfChanged(LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, ref sLastLogPayloadJson, force, PushLogSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, force, PushSaveSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, force, PushLocalizationSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, force, PushSceneSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, force, PushSpatialSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, force, PushInputSnapshotUpdatedEvent);
-            PublishOptionalIfChanged(ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, force, PushActionSnapshotUpdatedEvent);
+            PublishIfInvalidated(RES_KIT_NAME, sResPublisher, BuildResPayloadJson, sResHandler, ref sLastResPayloadJson, ref sLastResInvalidationKey, force, PushResSnapshotUpdatedEvent);
+            PublishIfInvalidated(SINGLETON_KIT_NAME, sSingletonPublisher, BuildSingletonPayloadJson, sSingletonHandler, ref sLastSingletonPayloadJson, ref sLastSingletonInvalidationKey, force, PushSingletonSnapshotUpdatedEvent);
+            PublishIfInvalidated(AUDIO_KIT_NAME, sAudioPublisher, BuildAudioPayloadJson, sAudioHandler, ref sLastAudioPayloadJson, ref sLastAudioInvalidationKey, force, PushAudioSnapshotUpdatedEvent);
+            PublishIfInvalidated(LOG_KIT_NAME, sLogPublisher, BuildLogPayloadJson, sLogHandler, ref sLastLogPayloadJson, ref sLastLogInvalidationKey, force, PushLogSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(SAVE_KIT_NAME, sSavePublisher, EnsureSaveHandler, () => sSaveHandler, BuildSavePayloadJson, ref sLastSavePayloadJson, ref sLastSaveInvalidationKey, force, PushSaveSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, force, PushLocalizationSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, force, PushSceneSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, force, PushSpatialSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, force, PushInputSnapshotUpdatedEvent);
+            PublishOptionalIfInvalidated(ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, force, PushActionSnapshotUpdatedEvent);
         }
 
         private static void PublishIfChanged(
@@ -166,6 +177,50 @@ namespace YokiFrame.Godot
             }
         }
 
+        private static void PublishIfInvalidated(
+            string kitName,
+            CommandBridgeSnapshotPublisher publisher,
+            Func<string> payloadFactory,
+            IKitSnapshotInvalidationProvider invalidationProvider,
+            ref string lastPayloadJson,
+            ref string lastInvalidationKey,
+            bool force,
+            Action pushSnapshotUpdatedEvent)
+        {
+            if (invalidationProvider == null)
+            {
+                PublishIfChanged(kitName, publisher, payloadFactory, ref lastPayloadJson, force, pushSnapshotUpdatedEvent);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(sYokiframeRoot))
+                return;
+
+            try
+            {
+                var invalidationKey = invalidationProvider.GetSnapshotInvalidationKey();
+                if (!force && string.Equals(invalidationKey, lastInvalidationKey, StringComparison.Ordinal))
+                    return;
+
+                var payloadJson = payloadFactory();
+                if (!force && string.Equals(payloadJson, lastPayloadJson, StringComparison.Ordinal))
+                {
+                    lastInvalidationKey = invalidationKey;
+                    return;
+                }
+
+                publisher.Publish(sYokiframeRoot, payloadJson);
+                AdapterSharedMemoryTelemetry.TryWriteLatest(ENGINE_ID, kitName, SNAPSHOT_NAME, payloadJson);
+                pushSnapshotUpdatedEvent();
+                lastPayloadJson = payloadJson;
+                lastInvalidationKey = invalidationKey;
+            }
+            catch (Exception e)
+            {
+                GD.PushWarning("[YokiFrame][GodotKitStateSnapshotPublisher] 写入 " + kitName + " snapshot 失败: " + e.Message);
+            }
+        }
+
         private static void PublishOptionalIfChanged(
             string kitName,
             CommandBridgeSnapshotPublisher publisher,
@@ -179,6 +234,31 @@ namespace YokiFrame.Godot
                 return;
 
             PublishIfChanged(kitName, publisher, payloadFactory, ref lastPayloadJson, force, pushSnapshotUpdatedEvent);
+        }
+
+        private static void PublishOptionalIfInvalidated(
+            string kitName,
+            CommandBridgeSnapshotPublisher publisher,
+            Func<bool> ensureHandler,
+            Func<IKitCommandHandler> getHandler,
+            Func<string> payloadFactory,
+            ref string lastPayloadJson,
+            ref string lastInvalidationKey,
+            bool force,
+            Action pushSnapshotUpdatedEvent)
+        {
+            if (!ensureHandler())
+                return;
+
+            PublishIfInvalidated(
+                kitName,
+                publisher,
+                payloadFactory,
+                getHandler() as IKitSnapshotInvalidationProvider,
+                ref lastPayloadJson,
+                ref lastInvalidationKey,
+                force,
+                pushSnapshotUpdatedEvent);
         }
 
         private static bool EnsureSaveHandler()
@@ -323,7 +403,7 @@ namespace YokiFrame.Godot
 
         private static string BuildLogPayloadJson()
         {
-            return sLogHandler.HandleAction("get_workbench_snapshot", "{}");
+            return LogKitCommandHandler.BuildSnapshotState();
         }
 
         private static string BuildSavePayloadJson()
