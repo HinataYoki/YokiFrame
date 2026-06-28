@@ -14,7 +14,7 @@ namespace YokiFrame.Unity
     {
         private const int HEARTBEAT_INTERVAL_MS = 2000;
         private const int POLL_INTERVAL_MS = 100;
-        private const int KIT_SNAPSHOT_INTERVAL_MS = 200;
+        private const int KIT_SNAPSHOT_INTERVAL_MS = 1000;
         private const string ENGINE_ID = "unity-editor";
         private const string BRIDGE_UNAVAILABLE_JSON = "{\"available\":false,\"reason\":\"core is not initialized\"}";
         private const string SAVEKIT_COMMAND_HANDLER_TYPE = "YokiFrame.SaveKitCommandHandler, YokiFrame.SaveKit";
@@ -130,11 +130,11 @@ namespace YokiFrame.Unity
                 sLastKitSnapshotPublishUtc = nowUtc;
             }
 
-            if ((nowUtc - sLastHeartbeat).TotalMilliseconds < HEARTBEAT_INTERVAL_MS)
-                return;
-
-            sLastHeartbeat = nowUtc;
-            WriteHeartbeat();
+            if ((nowUtc - sLastHeartbeat).TotalMilliseconds >= HEARTBEAT_INTERVAL_MS)
+            {
+                sLastHeartbeat = nowUtc;
+                WriteHeartbeat();
+            }
         }
 
         internal static bool ShouldPoll(DateTime nowUtc, DateTime? lastPollUtc, TimeSpan interval)

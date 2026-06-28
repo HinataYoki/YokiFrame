@@ -50,6 +50,227 @@ const tableKitPreviewState = {
     previewVersion: 0,
     tables: [],
 };
+const TABLEKIT_BEHAVIOR_SEARCH_STORAGE_KEY = 'yokiframe.tablekit.behavior.search.v1';
+const TABLEKIT_BEHAVIOR_TEMPLATE_STORAGE_KEY = 'yokiframe.tablekit.behavior.template.v1';
+const TABLEKIT_BEHAVIOR_NODE_STORAGE_KEY = 'yokiframe.tablekit.behavior.node.v1';
+const TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID = 'behavior-selector';
+const TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID = 'behavior-root';
+const TABLEKIT_BEHAVIOR_LIBRARY = Object.freeze([
+    {
+        id: 'behavior-selector',
+        kind: 'Selector',
+        title: 'Selector / 优先级选择',
+        summary: '按优先级从左到右尝试子节点，首个成功结果即返回。',
+        runtime: '适合“战斗/巡逻/待机”这类优先级分支。',
+        xmlSample: '<selector id="combat-root" policy="priority" />',
+        ports: 'children ordered by priority',
+        tone: 'selector',
+    },
+    {
+        id: 'behavior-sequence',
+        kind: 'Sequence',
+        title: 'Sequence / 顺序执行',
+        summary: '所有子节点按顺序执行，遇到失败立即中止。',
+        runtime: '适合线性流程，例如接近 -> 攻击 -> 冷却。',
+        xmlSample: '<sequence id="engage-sequence" />',
+        ports: 'children executed in order',
+        tone: 'sequence',
+    },
+    {
+        id: 'behavior-condition',
+        kind: 'Condition',
+        title: 'Condition / 条件节点',
+        summary: '只读判断黑板、感知或上下文，不产生副作用。',
+        runtime: '适合可视范围、血量阈值、目标存在性判断。',
+        xmlSample: '<condition id="enemy-visible" key="Vision.EnemyVisible" />',
+        ports: 'leaf, no child execution',
+        tone: 'condition',
+    },
+    {
+        id: 'behavior-action',
+        kind: 'Action',
+        title: 'Action / 动作节点',
+        summary: '承载具体行为执行，例如移动、攻击、等待、播放动画。',
+        runtime: '适合真正调用引擎能力或通用能力接口。',
+        xmlSample: '<action id="move-to-target" command="MoveToTarget" />',
+        ports: 'leaf executor',
+        tone: 'action',
+    },
+    {
+        id: 'behavior-decorator',
+        kind: 'Decorator',
+        title: 'Decorator / 装饰节点',
+        summary: '对单个子节点结果做限频、反转、计时或重试。',
+        runtime: '适合冷却、反转条件、超时保护等扩展。',
+        xmlSample: '<decorator id="cooldown" mode="timer" seconds="2" />',
+        ports: 'single child wrapper',
+        tone: 'decorator',
+    },
+    {
+        id: 'behavior-subtree',
+        kind: 'Subtree',
+        title: 'Subtree / 子图复用',
+        summary: '把一段通用图结构注册成可复用的子树模板。',
+        runtime: '适合公共巡逻、寻路、对话分支等复用块。',
+        xmlSample: '<subtree id="common-patrol" ref="Patrol.Common" />',
+        ports: 'imports a registered graph',
+        tone: 'subtree',
+    },
+]);
+const TABLEKIT_BEHAVIOR_GRAPH = Object.freeze({
+    nodes: [
+        {
+            id: 'behavior-root',
+            templateId: 'behavior-selector',
+            type: 'Selector',
+            title: '战斗入口',
+            summary: '优先级选择根节点，决定当前进入战斗还是巡逻。',
+            x: 520,
+            y: 40,
+            w: 256,
+            h: 76,
+            ports: 'priority output',
+            params: 'Policy=priority',
+            runtime: 'high-level root',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-engage',
+            templateId: 'behavior-sequence',
+            type: 'Sequence',
+            title: '攻击序列',
+            summary: '执行感知、接近和施法的线性流程。',
+            x: 160,
+            y: 184,
+            w: 224,
+            h: 78,
+            ports: 'children in order',
+            params: 'Blackboard=Combat',
+            runtime: 'engage branch',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-patrol',
+            templateId: 'behavior-sequence',
+            type: 'Sequence',
+            title: '巡逻序列',
+            summary: '在安全时执行巡逻与待机动作。',
+            x: 860,
+            y: 184,
+            w: 224,
+            h: 78,
+            ports: 'children in order',
+            params: 'Blackboard=Patrol',
+            runtime: 'patrol branch',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-visible',
+            templateId: 'behavior-condition',
+            type: 'Condition',
+            title: '敌人可见?',
+            summary: '检查视野范围、角度和锁定状态。',
+            x: 30,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'VisionRange=12',
+            runtime: 'predicate',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-move',
+            templateId: 'behavior-action',
+            type: 'Action',
+            title: '接近目标',
+            summary: '移动到有效攻击距离。',
+            x: 230,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'Action=MoveToTarget',
+            runtime: 'movement',
+            status: 'running',
+        },
+        {
+            id: 'behavior-cast',
+            templateId: 'behavior-action',
+            type: 'Action',
+            title: '施放技能',
+            summary: '触发攻击动作与动画。',
+            x: 430,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'Action=CastSkill',
+            runtime: 'combat',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-safe',
+            templateId: 'behavior-condition',
+            type: 'Condition',
+            title: '环境安全?',
+            summary: '判断是否进入巡逻状态。',
+            x: 730,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'ThreatLevel=Low',
+            runtime: 'predicate',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-route',
+            templateId: 'behavior-action',
+            type: 'Action',
+            title: '沿路线巡逻',
+            summary: '沿路标与路径点执行移动。',
+            x: 930,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'Action=FollowRoute',
+            runtime: 'navigation',
+            status: 'ready',
+        },
+        {
+            id: 'behavior-idle',
+            templateId: 'behavior-action',
+            type: 'Action',
+            title: '待机观察',
+            summary: '保持低频扫描与轻量刷新。',
+            x: 1130,
+            y: 340,
+            w: 184,
+            h: 68,
+            ports: 'leaf',
+            params: 'Action=IdleLookAround',
+            runtime: 'idle',
+            status: 'ready',
+        },
+    ],
+    edges: [
+        { from: 'behavior-root', to: 'behavior-engage', label: 'priority 1' },
+        { from: 'behavior-root', to: 'behavior-patrol', label: 'fallback' },
+        { from: 'behavior-engage', to: 'behavior-visible', label: 'check' },
+        { from: 'behavior-engage', to: 'behavior-move', label: 'then' },
+        { from: 'behavior-engage', to: 'behavior-cast', label: 'then' },
+        { from: 'behavior-patrol', to: 'behavior-safe', label: 'check' },
+        { from: 'behavior-patrol', to: 'behavior-route', label: 'then' },
+        { from: 'behavior-patrol', to: 'behavior-idle', label: 'fallback' },
+    ],
+});
+const tableKitBehaviorState = {
+    searchTerm: loadTableKitBehaviorSearchTerm(),
+    selectedTemplateId: loadTableKitBehaviorTemplateSelection(),
+    selectedNodeId: loadTableKitBehaviorNodeSelection(),
+};
 const tableKitEditorState = { renderSignature: '' };
 
 if (!tableKitConsoleEntries.length) {
@@ -148,6 +369,114 @@ function loadTableKitConsoleEntries() {
 
 function persistTableKitConsoleEntries() {
     localStorage.setItem(TABLEKIT_CONSOLE_STORAGE_KEY, JSON.stringify(tableKitConsoleEntries.slice(-TABLEKIT_CONSOLE_MAX_ENTRIES)));
+}
+
+function loadTableKitBehaviorSearchTerm() {
+    try {
+        return String(localStorage.getItem(TABLEKIT_BEHAVIOR_SEARCH_STORAGE_KEY) || '').trim();
+    } catch (_) {
+        return '';
+    }
+}
+
+function persistTableKitBehaviorSearchTerm() {
+    localStorage.setItem(TABLEKIT_BEHAVIOR_SEARCH_STORAGE_KEY, String(tableKitBehaviorState.searchTerm || '').trim());
+}
+
+function loadTableKitBehaviorTemplateSelection() {
+    try {
+        const value = String(localStorage.getItem(TABLEKIT_BEHAVIOR_TEMPLATE_STORAGE_KEY) || '').trim();
+        return value || TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID;
+    } catch (_) {
+        return TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID;
+    }
+}
+
+function persistTableKitBehaviorTemplateSelection() {
+    localStorage.setItem(TABLEKIT_BEHAVIOR_TEMPLATE_STORAGE_KEY, String(tableKitBehaviorState.selectedTemplateId || TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID));
+}
+
+function loadTableKitBehaviorNodeSelection() {
+    try {
+        const value = String(localStorage.getItem(TABLEKIT_BEHAVIOR_NODE_STORAGE_KEY) || '').trim();
+        return value || TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID;
+    } catch (_) {
+        return TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID;
+    }
+}
+
+function persistTableKitBehaviorNodeSelection() {
+    localStorage.setItem(TABLEKIT_BEHAVIOR_NODE_STORAGE_KEY, String(tableKitBehaviorState.selectedNodeId || TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID));
+}
+
+function getTableKitBehaviorTemplates() {
+    return TABLEKIT_BEHAVIOR_LIBRARY.slice();
+}
+
+function getTableKitBehaviorTemplateById(templateId) {
+    const id = String(templateId || '');
+    if (!id) return TABLEKIT_BEHAVIOR_LIBRARY[0] || null;
+    for (let i = 0; i < TABLEKIT_BEHAVIOR_LIBRARY.length; i++) {
+        const item = TABLEKIT_BEHAVIOR_LIBRARY[i];
+        if (String(item.id) === id) return item;
+    }
+    return TABLEKIT_BEHAVIOR_LIBRARY[0] || null;
+}
+
+function getTableKitBehaviorNodes() {
+    return TABLEKIT_BEHAVIOR_GRAPH.nodes.slice();
+}
+
+function getTableKitBehaviorNodeById(nodeId) {
+    const id = String(nodeId || '');
+    if (!id) return TABLEKIT_BEHAVIOR_GRAPH.nodes[0] || null;
+    for (let i = 0; i < TABLEKIT_BEHAVIOR_GRAPH.nodes.length; i++) {
+        const node = TABLEKIT_BEHAVIOR_GRAPH.nodes[i];
+        if (String(node.id) === id) return node;
+    }
+    return TABLEKIT_BEHAVIOR_GRAPH.nodes[0] || null;
+}
+
+function getTableKitBehaviorEdges() {
+    return TABLEKIT_BEHAVIOR_GRAPH.edges.slice();
+}
+
+function getTableKitFilteredBehaviorTemplates() {
+    const query = String(tableKitBehaviorState.searchTerm || '').trim().toLowerCase();
+    if (!query) return getTableKitBehaviorTemplates();
+    return TABLEKIT_BEHAVIOR_LIBRARY.filter(item => {
+        return [item.id, item.kind, item.title, item.summary, item.runtime, item.xmlSample, item.ports]
+            .some(value => String(value || '').toLowerCase().includes(query));
+    });
+}
+
+function getTableKitFilteredBehaviorNodes() {
+    const query = String(tableKitBehaviorState.searchTerm || '').trim().toLowerCase();
+    if (!query) return getTableKitBehaviorNodes();
+    return TABLEKIT_BEHAVIOR_GRAPH.nodes.filter(item => {
+        const template = getTableKitBehaviorTemplateById(item.templateId);
+        return [item.id, item.type, item.title, item.summary, item.params, item.runtime, item.status, template?.title, template?.summary]
+            .some(value => String(value || '').toLowerCase().includes(query));
+    });
+}
+
+function getTableKitBehaviorSelectedTemplate() {
+    return getTableKitBehaviorTemplateById(tableKitBehaviorState.selectedTemplateId);
+}
+
+function getTableKitBehaviorSelectedNode() {
+    return getTableKitBehaviorNodeById(tableKitBehaviorState.selectedNodeId);
+}
+
+function getTableKitBehaviorSignature() {
+    return [
+        signaturePart(tableKitBehaviorState.searchTerm),
+        signaturePart(tableKitBehaviorState.selectedTemplateId),
+        signaturePart(tableKitBehaviorState.selectedNodeId),
+        TABLEKIT_BEHAVIOR_LIBRARY.length,
+        TABLEKIT_BEHAVIOR_GRAPH.nodes.length,
+        TABLEKIT_BEHAVIOR_GRAPH.edges.length,
+    ].join('|');
 }
 
 function loadTableKitCollapsedSections() {

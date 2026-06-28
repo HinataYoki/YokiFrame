@@ -95,7 +95,8 @@ namespace YokiFrame
             string[] files;
             try
             {
-                files = FileBridgeFileSystem.GetFilesInRoot(mRootDir, dir, pattern);
+                FileBridgeFileSystem.EnsurePathWithinRoot(mRootDir, dir);
+                files = Directory.GetFiles(dir, pattern);
             }
             catch
             {
@@ -107,11 +108,11 @@ namespace YokiFrame
             {
                 try
                 {
-                    FileBridgeFileSystem.EnsurePathWithinRoot(mRootDir, files[i]);
-                    if (now - File.GetLastWriteTimeUtc(files[i]) < ttl)
+                    var file = files[i];
+                    if (now - File.GetLastWriteTimeUtc(file) < ttl)
                         continue;
 
-                    FileBridgeFileSystem.TryDeleteInRoot(mRootDir, files[i]);
+                    FileBridgeFileSystem.TryDeleteInRoot(mRootDir, file);
                     deleted++;
                 }
                 catch

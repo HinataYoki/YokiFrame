@@ -11,6 +11,7 @@ function renderTableKitRegistryStatus() {
         collapsed: tableKitCollapsedSections,
         console: getTableKitConsoleSignature(),
         preview: getTableKitPreviewSignature(),
+        behavior: getTableKitBehaviorSignature(),
     });
     renderWorkbenchHtmlStable(tableKitEditorState, html, signature, bindTableKitEditor);
 }
@@ -43,6 +44,7 @@ function renderTableKitGeneratorStatus(status, config) {
             </div>
         </section>
         <div class="tablekit-sections" data-kit-scroll-key="tablekit-sections">
+            ${renderTableKitBehaviorWorkbench()}
             <section class="kit-panel tablekit-config-log-shell">
                 <div class="tablekit-config-log-grid">
                     ${renderTableKitEnvironmentPanel(status, config, effectiveEngine)}
@@ -215,6 +217,191 @@ function renderTableKitConsole(status, config) {
         </div>
         <div class="tablekit-console" data-kit-scroll-key="tablekit-console">${rows}</div>
     </section>`;
+}
+
+function renderTableKitBehaviorWorkbench() {
+    const templates = getTableKitFilteredBehaviorTemplates();
+    const nodes = getTableKitFilteredBehaviorNodes();
+    const selectedTemplate = getTableKitBehaviorSelectedTemplate();
+    const selectedNode = getTableKitBehaviorSelectedNode();
+    const edges = getTableKitBehaviorEdges();
+    return `<section class="kit-panel tablekit-section tablekit-section--wide tablekit-behavior-workbench">
+        <div class="kit-panel__head">
+            <div>
+                <div class="kit-panel__title">${renderKitTitle('fsm', 'Behavior 节点图原型')}</div>
+                <div class="kit-panel__desc">先验证节点库、图布局、属性面板和 XML 结构预览，再决定是否接入 Luban 回写。</div>
+            </div>
+            <div class="tablekit-panel-actions">
+                <button class="btn btn-secondary btn-sm" type="button" data-tablekit-behavior-docs>查看思路</button>
+                <button class="btn btn-primary btn-sm" type="button" data-tablekit-behavior-focus>聚焦根节点</button>
+            </div>
+        </div>
+        <div class="tablekit-behavior-toolbar">
+            <div class="tablekit-behavior-toolbar__stats">
+                <span class="kit-state-pill">${escapeHtml(templates.length)} 模板</span>
+                <span class="kit-state-pill kit-state-pill--ok">${escapeHtml(nodes.length)} 节点</span>
+                <span class="kit-state-pill">${escapeHtml(edges.length)} 连线</span>
+            </div>
+            <label class="kit-search tablekit-behavior-search" role="search">
+                ${svgIcon('search', 'kit-search__icon')}
+                <input class="kit-search__input" type="search" data-tablekit-behavior-search value="${escapeHtml(tableKitBehaviorState.searchTerm)}" placeholder="搜索节点、模板、参数、XML ...">
+                <button class="kit-search__clear${String(tableKitBehaviorState.searchTerm || '').trim() ? '' : ' is-empty'}" type="button" data-tablekit-behavior-search-clear title="清空搜索">${svgIcon('empty', 'kit-search__clear-icon')}</button>
+            </label>
+        </div>
+        <div class="tablekit-behavior-layout" data-kit-scroll-key="tablekit-behavior-layout">
+            <aside class="tablekit-behavior-library" data-kit-scroll-key="tablekit-behavior-library">
+                <div class="tablekit-behavior-library__head">
+                    <strong>节点库</strong>
+                    <span>Behavior 风格原型</span>
+                </div>
+                <div class="tablekit-behavior-library__list">
+                    ${templates.length ? templates.map(template => renderTableKitBehaviorTemplateCard(template, selectedTemplate)).join('') : emptyState('empty', '没有可用模板')}
+                </div>
+            </aside>
+            <section class="tablekit-behavior-canvas-shell">
+                <div class="tablekit-behavior-canvas-head">
+                    <div>
+                        <strong>图结构</strong>
+                        <span>支持缩放 / 平移 / 选择</span>
+                    </div>
+                    <code>${escapeHtml(getTableKitBehaviorXmlPreview(selectedTemplate, selectedNode))}</code>
+                </div>
+                <div class="tablekit-behavior-canvas" data-tablekit-behavior-canvas>
+                    ${renderTableKitBehaviorGraph(selectedNode)}
+                </div>
+            </section>
+            <aside class="tablekit-behavior-inspector" data-kit-scroll-key="tablekit-behavior-inspector">
+                ${renderTableKitBehaviorInspector(selectedTemplate, selectedNode)}
+            </aside>
+        </div>
+    </section>`;
+}
+
+function renderTableKitBehaviorTemplateCard(template, selectedTemplate) {
+    const active = selectedTemplate && String(selectedTemplate.id) === String(template.id) ? ' active' : '';
+    return `<button class="tablekit-behavior-card tablekit-behavior-card--${escapeHtml(template.tone)}${active}" type="button" data-tablekit-behavior-template="${escapeHtml(template.id)}">
+        <span class="tablekit-behavior-card__top">
+            <strong>${escapeHtml(template.title)}</strong>
+            <em>${escapeHtml(template.kind)}</em>
+        </span>
+        <span class="tablekit-behavior-card__summary">${escapeHtml(template.summary)}</span>
+        <code>${escapeHtml(template.xmlSample)}</code>
+    </button>`;
+}
+
+function renderTableKitBehaviorGraph(selectedNode) {
+    const nodes = getTableKitFilteredBehaviorNodes();
+    const edges = getTableKitBehaviorEdges();
+    const visibleNodeIds = new Set(nodes.map(node => String(node.id)));
+    const visibleEdges = edges.filter(edge => visibleNodeIds.has(String(edge.from)) && visibleNodeIds.has(String(edge.to)));
+    const allNodes = TABLEKIT_BEHAVIOR_GRAPH.nodes;
+    const selectedId = selectedNode ? String(selectedNode.id) : '';
+    const width = 1420;
+    const height = 520;
+    const edgeHtml = visibleEdges.map(edge => renderTableKitBehaviorEdge(edge, allNodes, selectedId)).join('');
+    const nodeHtml = nodes.map(node => renderTableKitBehaviorNode(node, selectedId)).join('');
+    return `<svg class="tablekit-behavior-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Behavior graph">
+        <defs>
+            <marker id="tablekit-behavior-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+            </marker>
+            <linearGradient id="tablekit-behavior-node" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#eef4ff"></stop>
+                <stop offset="100%" stop-color="#d8e5ff"></stop>
+            </linearGradient>
+        </defs>
+        ${edgeHtml}
+        ${nodeHtml}
+    </svg>`;
+}
+
+function renderTableKitBehaviorEdge(edge, nodes, selectedId) {
+    const from = findTableKitBehaviorNode(nodes, edge.from);
+    const to = findTableKitBehaviorNode(nodes, edge.to);
+    if (!from || !to) return '';
+    const startX = from.x + from.w;
+    const startY = from.y + from.h / 2;
+    const endX = to.x;
+    const endY = to.y + to.h / 2;
+    const deltaX = Math.max(120, Math.abs(endX - startX) * 0.32);
+    const controlX1 = startX + deltaX;
+    const controlX2 = endX - deltaX;
+    const highlight = selectedId && (selectedId === String(from.id) || selectedId === String(to.id)) ? ' tablekit-behavior-edge--active' : '';
+    return `<g class="tablekit-behavior-edge${highlight}">
+        <path d="M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}" marker-end="url(#tablekit-behavior-arrow)"></path>
+        <text x="${(startX + endX) / 2}" y="${(startY + endY) / 2 - 6}">${escapeHtml(edge.label)}</text>
+    </g>`;
+}
+
+function renderTableKitBehaviorNode(node, selectedId) {
+    const active = selectedId && String(selectedId) === String(node.id) ? ' active tablekit-behavior-node--active' : '';
+    const template = getTableKitBehaviorTemplateById(node.templateId);
+    const statusClass = String(node.status || '').toLowerCase();
+    return `<g class="tablekit-behavior-node tablekit-behavior-node--${escapeHtml(statusClass)}${active}" data-tablekit-behavior-node="${escapeHtml(node.id)}" transform="translate(${escapeHtml(node.x)}, ${escapeHtml(node.y)})">
+        <rect width="${escapeHtml(node.w)}" height="${escapeHtml(node.h)}" rx="14" ry="14"></rect>
+        <rect class="tablekit-behavior-node__accent" x="0" y="0" width="${escapeHtml(node.w)}" height="10" rx="14" ry="14"></rect>
+        <text x="16" y="28" class="tablekit-behavior-node__title">${escapeHtml(node.title)}</text>
+        <text x="16" y="48" class="tablekit-behavior-node__summary">${escapeHtml(node.summary)}</text>
+        <text x="16" y="64" class="tablekit-behavior-node__meta">${escapeHtml(node.params)}</text>
+        <text x="${escapeHtml(node.w - 16)}" y="28" class="tablekit-behavior-node__type">${escapeHtml(template?.kind || node.type || '--')}</text>
+    </g>`;
+}
+
+function renderTableKitBehaviorInspector(selectedTemplate, selectedNode) {
+    const templateRows = selectedTemplate ? [
+        ['Kind', selectedTemplate.kind],
+        ['Runtime', selectedTemplate.runtime],
+        ['Ports', selectedTemplate.ports],
+        ['XML', selectedTemplate.xmlSample],
+    ] : [];
+    const nodeRows = selectedNode ? [
+        ['ID', selectedNode.id],
+        ['Type', selectedNode.type],
+        ['Params', selectedNode.params],
+        ['Runtime', selectedNode.runtime],
+        ['Status', selectedNode.status],
+    ] : [];
+    return `<div class="tablekit-behavior-inspector__shell">
+        <div class="tablekit-behavior-inspector__head">
+            <div>
+                <strong>${escapeHtml(selectedNode ? selectedNode.title : selectedTemplate.title)}</strong>
+                <span>${escapeHtml(selectedNode ? selectedNode.summary : selectedTemplate.summary)}</span>
+            </div>
+            <span class="kit-state-pill">${escapeHtml(selectedNode ? selectedNode.status : selectedTemplate.kind)}</span>
+        </div>
+        <div class="tablekit-behavior-inspector__body">
+            <section class="tablekit-behavior-meta">
+                <div class="tablekit-behavior-meta__title">模板信息</div>
+                ${templateRows.map(row => renderTableKitBehaviorMetaRow(row[0], row[1])).join('')}
+            </section>
+            <section class="tablekit-behavior-meta">
+                <div class="tablekit-behavior-meta__title">当前节点</div>
+                ${nodeRows.map(row => renderTableKitBehaviorMetaRow(row[0], row[1])).join('') || '<div class="tablekit-empty-line">图上没有可选节点。</div>'}
+            </section>
+        </div>
+    </div>`;
+}
+
+function renderTableKitBehaviorMetaRow(label, value) {
+    return `<div class="tablekit-behavior-meta__row">
+        <span>${escapeHtml(label)}</span>
+        <code>${escapeHtml(String(value ?? '--'))}</code>
+    </div>`;
+}
+
+function getTableKitBehaviorXmlPreview(template, node) {
+    const templateId = template?.id || TABLEKIT_BEHAVIOR_DEFAULT_TEMPLATE_ID;
+    const nodeId = node?.id || TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID;
+    return `<graph template="${templateId}" node="${nodeId}" source="xml" />`;
+}
+
+function findTableKitBehaviorNode(nodes, nodeId) {
+    const id = String(nodeId || '');
+    if (!id) return null;
+    for (let i = 0; i < nodes.length; i++) {
+        if (String(nodes[i].id) === id) return nodes[i];
+    }
+    return null;
 }
 
 function renderTableKitSelectField(field, label, value, options, hint) {

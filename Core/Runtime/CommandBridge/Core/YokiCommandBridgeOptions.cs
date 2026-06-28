@@ -53,7 +53,7 @@ namespace YokiFrame
         /// <summary>
         /// 协议目录维护（过期文件清理）的最小执行间隔；小于等于 0 表示每次 Poll 都执行。
         /// </summary>
-        public TimeSpan CleanupInterval { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan CleanupInterval { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// bridge_status 中诊断型存储统计的单目录最大扫描文件数；小于等于 0 表示不限制。

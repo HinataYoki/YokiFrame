@@ -323,6 +323,44 @@ function bindTableKitEditor() {
             renderTableKitRegistryStatus();
         });
     });
+
+    const behaviorSearch = $pageBody.querySelector('[data-tablekit-behavior-search]');
+    if (behaviorSearch && behaviorSearch.dataset.bound !== '1') {
+        behaviorSearch.dataset.bound = '1';
+        behaviorSearch.addEventListener('input', () => {
+            updateTableKitBehaviorSearchTerm(behaviorSearch.value);
+        });
+    }
+
+    bindKitButtonClick('[data-tablekit-behavior-search-clear]', () => {
+        updateTableKitBehaviorSearchTerm('');
+    });
+
+    $pageBody.querySelectorAll('[data-tablekit-behavior-template]').forEach(button => {
+        if (button.dataset.bound === '1') return;
+        button.dataset.bound = '1';
+        button.addEventListener('click', () => {
+            updateTableKitBehaviorTemplateSelection(button.dataset.tablekitBehaviorTemplate);
+        });
+    });
+
+    $pageBody.querySelectorAll('[data-tablekit-behavior-node]').forEach(node => {
+        if (node.dataset.bound === '1') return;
+        node.dataset.bound = '1';
+        node.addEventListener('click', event => {
+            updateTableKitBehaviorNodeSelection(node.dataset.tablekitBehaviorNode);
+            event.stopPropagation();
+        });
+    });
+
+    bindKitButtonClick('[data-tablekit-behavior-focus]', () => {
+        updateTableKitBehaviorNodeSelection(TABLEKIT_BEHAVIOR_DEFAULT_NODE_ID);
+    });
+
+    bindKitButtonClick('[data-tablekit-behavior-docs]', () => {
+        activeDocId = 'tablekit';
+        navigateTo('docs');
+    });
 }
 
 async function pickTableKitPath(field) {

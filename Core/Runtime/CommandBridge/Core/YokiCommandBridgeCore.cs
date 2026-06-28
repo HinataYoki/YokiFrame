@@ -102,7 +102,6 @@ namespace YokiFrame
                 if (ShouldRunCleanup(mLastPollUtc.Value))
                     CleanupExpiredFiles();
                 RecoverStaleProcessingCommands();
-
                 var files = FileBridgeFileSystem.GetFilesInRoot(mRootDir, mCommandDir, "*.json");
                 Array.Sort(files, StringComparer.OrdinalIgnoreCase);
                 ApplyPendingQueueLimit(files);
@@ -150,5 +149,6 @@ namespace YokiFrame
 
             return nowUtc - mLastCleanupSweepUtc.Value >= interval;
         }
+
     }
 }
