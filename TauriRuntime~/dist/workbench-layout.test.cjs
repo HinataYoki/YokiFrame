@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const distDir = __dirname;
 
@@ -127,6 +128,11 @@ function readFrontendScripts() {
         'main.js',
     ];
     return files.map(file => `\n// ${file}\n${readDistFile(file)}`).join('\n');
+}
+
+function loadDistExpression(fileName, expression, context = {}) {
+    const source = readDistFile(fileName);
+    return vm.runInNewContext(`${source}\n;(${expression});`, context);
 }
 
 function countTextLines(content) {
@@ -1316,6 +1322,7 @@ test('Kit push events route through a shared throttled reactive refresh bus', ()
     const js = readFrontendScripts();
 
     assert.match(js, /KIT_REACTIVE_REFRESH_THROTTLE_MS\s*=\s*220/);
+    assert.match(js, /FSMKIT_REACTIVE_REFRESH_THROTTLE_MS\s*=\s*80/);
     assert.match(js, /KIT_INTERACTION_REFRESH_DEFER_MS/);
     assert.match(js, /function markKitInteractionActive\(/);
     assert.match(js, /function getKitInteractionRefreshDelay\(/);
@@ -1330,6 +1337,7 @@ test('Kit push events route through a shared throttled reactive refresh bus', ()
     assert.match(js, /setTimeout\(\(\)\s*=>\s*flushKitReactiveRefresh\(kitId\)/);
     assert.match(js, /registerKitReactiveRefresh\('fsmkit'/);
     assert.match(js, /refresh:\s*refreshFsmKitReactive/);
+    assert.match(js, /throttleMs:\s*FSMKIT_REACTIVE_REFRESH_THROTTLE_MS/);
     assert.match(js, /refresh:\s*refreshEventKitReactive/);
     assert.doesNotMatch(js, /FSM_WORKBENCH_REFRESH_THROTTLE_MS/);
     assert.doesNotMatch(js, /pendingFsmWorkbenchRefreshReason/);
@@ -1435,6 +1443,12 @@ test('Kit reactive refreshes avoid full workbench fetches on high-frequency tick
 
     assert.match(js, /const FSM_DETAIL_RECONCILE_MS\s*=\s*1800/);
     assert.match(js, /function applyFsmWorkbenchListSnapshot\(/);
+    assert.match(js, /function mergeFsmRealtimeDetail\(selectedMeta\)/);
+    assert.match(js, /function mergeFsmRealtimeStateTree\(states,\s*currentStateId\)/);
+    assert.match(js, /liveDetail\.states\s*=\s*mergeFsmRealtimeStateTree\(cachedDetail\.states,\s*liveDetail\.currentStateId\)/);
+    assert.match(js, /renderOrUpdateFsmWorkbench\(fsms,\s*selectedMeta,\s*liveDetail,\s*history,\s*'',\s*preferInPlace\)/);
+    assert.doesNotMatch(js, /appendFsmRealtimeTransition/);
+    assert.doesNotMatch(js, /fsmRealtimeCurrentStateByMachine/);
     assert.match(js, /function scheduleFsmDetailReconcile\(/);
     assert.match(js, /const requestSeq\s*=\s*fsmWorkbenchLoadSeq/);
 
@@ -1779,15 +1793,18 @@ test('FsmKit workbench uses a composite bridge snapshot before falling back to s
 test('FsmKit current-state list prefers shared memory telemetry before file snapshot fallback', () => {
     const js = readFrontendScripts();
     const rust = readTauriSourceFile('src-tauri', 'src', 'main.rs');
+    const handler = readWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Runtime', 'CommandBridge', 'Handlers', 'FsmKitCommandHandler.cs');
 
     assert.match(js, /function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
     assert.match(js, /function fetchFsmList\(/);
     assert.match(js, /function normalizeFsmListPayload\(/);
     assert.match(js, /fetchKitWorkbenchState\('FsmKit',\s*normalizeFsmListPayload/);
+    assert.doesNotMatch(js, /skipTelemetry:\s*true,\s*commandAction:\s*'list_all'/);
     assert.match(js, /forceCommandRefresh:\s*true/);
     assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_state'/);
     assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_history'/);
     assert.match(js, /sendKitCommandData\('FsmKit',\s*'get_workbench_snapshot',\s*\{\s*fsmName\s*\}\)/);
+    assert.match(handler, /AppendStateDebugFields\(sb,\s*fsm,\s*true\)/);
     assert.doesNotMatch(js, /invoke\('send_command',\s*\{\s*kit:\s*'FsmKit'/);
     assert.doesNotMatch(js, /readKitTelemetryData\('FsmKit'\)/);
     assert.doesNotMatch(js, /readKitSnapshotData\('FsmKit'\)/);
@@ -2962,6 +2979,45 @@ test('FsmKit graph animates the latest transition into the current node', () => 
     assert.match(css, /\.fsm-edge-flow-dot/);
     assert.match(css, /@keyframes\s+fsm-edge-flow/);
     assert.match(css, /@keyframes\s+fsm-node-arrive/);
+});
+
+test('FsmKit graph prefers realtime current state over stale detail tree markers', () => {
+    const buildFsmGraph = loadDistExpression('pages/fsmkit-graph.js', 'buildFsmGraph');
+    const graph = buildFsmGraph([], 'PatrolState', [
+        { id: 0, name: 'Dead', isCurrent: true },
+        { id: 1, name: 'PatrolState', isCurrent: false },
+    ]);
+
+    assert.equal(graph.currentState, 'PatrolState');
+    assert.equal(graph.startId, 'PatrolState');
+});
+
+test('FsmKit graph maps realtime current state id onto the selected FSM state tree', () => {
+    const buildFsmGraph = loadDistExpression('pages/fsmkit-graph.js', 'buildFsmGraph');
+    const graph = buildFsmGraph([], 'PatrolState', [
+        { id: 0, name: 'Dead', isCurrent: true },
+        { id: 1, name: 'Patrol', isCurrent: false },
+    ], 1);
+
+    assert.equal(graph.currentState, 'Patrol');
+    assert.equal(graph.startId, 'Patrol');
+    assert.equal(graph.nodeIndex.has('PatrolState'), false);
+});
+
+test('FsmKit detail card prefers realtime selected metadata over stale cached detail', () => {
+    const renderFsmDetail = loadDistExpression('pages/fsmkit-workbench.js', 'renderFsmDetail', {
+        t: (key, ...args) => [key, ...args].join(' '),
+        escapeHtml: value => String(value ?? ''),
+    });
+    const html = renderFsmDetail(
+        { fsmName: 'EnemyFSM', currentState: 'Dead', currentStateId: 3, machineState: 'Running', stateCount: 4 },
+        { name: 'EnemyFSM', currentState: 'PatrolState', currentStateId: 1, machineState: 'Running', stateCount: 4 },
+    );
+
+    assert.match(html, /PatrolState/);
+    assert.match(html, /State Id 1/);
+    assert.doesNotMatch(html, /Dead/);
+    assert.doesNotMatch(html, /State Id 3/);
 });
 
 test('FsmKit graph folds state visit counts into nodes without a lower state matrix', () => {

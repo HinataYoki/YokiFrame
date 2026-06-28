@@ -6,13 +6,19 @@
 // 纯前端、零依赖。当前态高亮，边权重映射线宽，自环/双向边特殊处理。
 // ═══════════════════════════════════════════════════════════════════
 // 从状态树和转换历史构图：状态树补齐所有状态，历史只负责边和频率。
-function buildFsmGraph(history, currentState, stateTree = []) {
+function buildFsmGraph(history, currentState, stateTree = [], currentStateId = null) {
     const nodeIndex = new Map();   // 名称 -> 节点
     const edgeIndex = new Map();   // “from→to” -> 边
     const order = [];              // 节点首次出现顺序（用作布局回退）
     const composites = [];
     let latestTransition = null;
     let treeCurrentState = null;
+    let idMappedCurrentState = null;
+    const targetCurrentStateId = Number(currentStateId);
+    const hasTargetCurrentStateId = currentStateId !== null
+        && currentStateId !== undefined
+        && currentStateId !== ''
+        && Number.isFinite(targetCurrentStateId);
 
     function ensureNode(name, meta = null) {
         if (!name) return null;
@@ -45,6 +51,10 @@ function buildFsmGraph(history, currentState, stateTree = []) {
                 depth,
                 parentPath,
             });
+            const stateId = Number(state.id);
+            if (hasTargetCurrentStateId && Number.isFinite(stateId) && stateId === targetCurrentStateId) {
+                idMappedCurrentState = name;
+            }
             if (state.isCurrent && !treeCurrentState) treeCurrentState = name;
             if (node.isComposite) composites.push(node);
         }
@@ -52,7 +62,7 @@ function buildFsmGraph(history, currentState, stateTree = []) {
 
     addStateTreeNodes(stateTree);
 
-    const activeState = treeCurrentState ?? currentState;
+    const activeState = idMappedCurrentState ?? currentState ?? treeCurrentState;
     if (activeState) ensureNode(activeState);
 
     for (const h of history) {

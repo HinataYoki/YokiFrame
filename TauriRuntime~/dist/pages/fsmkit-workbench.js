@@ -269,7 +269,8 @@ function renderFsmDetailRegionHtml(selectedMeta, detail) {
 
 function renderFsmMatrixHtml(selectedMeta, detail, history) {
     const currentState = selectedMeta?.currentState ?? detail?.currentState ?? null;
-    const graph = selectedMeta ? buildFsmGraph(history ?? [], currentState, detail?.states ?? []) : null;
+    const currentStateId = selectedMeta?.currentStateId ?? detail?.currentStateId ?? null;
+    const graph = selectedMeta ? buildFsmGraph(history ?? [], currentState, detail?.states ?? [], currentStateId) : null;
     if (!graph || !graph.nodes.length) {
         return `<div class="fsm-flow-placeholder">${t('fsmkit.graph_placeholder')}</div>`;
     }
@@ -316,10 +317,10 @@ function renderFsmDetail(detail, selectedMeta) {
         return `<span style="color:var(--error)">${escapeHtml(detail.error)}</span>`;
     }
     const fsmName = detail.fsmName ?? selectedMeta?.name ?? '--';
-    const currentState = detail.currentState ?? selectedMeta?.currentState ?? '--';
-    const machineState = detail.machineState ?? selectedMeta?.machineState ?? '--';
-    const stateId = detail.currentStateId ?? '--';
-    const stateCount = detail.stateCount ?? selectedMeta?.stateCount ?? '--';
+    const currentState = selectedMeta?.currentState ?? detail.currentState ?? '--';
+    const machineState = selectedMeta?.machineState ?? detail.machineState ?? '--';
+    const stateId = selectedMeta?.currentStateId ?? detail.currentStateId ?? '--';
+    const stateCount = selectedMeta?.stateCount ?? detail.stateCount ?? '--';
     return `<div class="fsm-detail-grid">
         <div class="fsm-state-card">
             <div class="fsm-state-card__signal" aria-hidden="true"></div>

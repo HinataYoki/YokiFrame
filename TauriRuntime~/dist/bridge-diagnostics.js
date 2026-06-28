@@ -50,8 +50,11 @@
     }
 
     function extractFsmSnapshotList(snapshot) {
-        const fsms = snapshot?.data?.fsms;
-        return Array.isArray(fsms) ? fsms : [];
+        const directFsms = snapshot?.fsms;
+        if (Array.isArray(directFsms)) return directFsms;
+
+        const envelopeFsms = snapshot?.data?.fsms;
+        return Array.isArray(envelopeFsms) ? envelopeFsms : [];
     }
 
     function formatBridgeError(response) {

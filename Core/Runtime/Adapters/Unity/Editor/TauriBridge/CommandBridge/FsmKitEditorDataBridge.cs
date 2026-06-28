@@ -57,6 +57,8 @@ namespace YokiFrame.Unity
             FsmEditorHook.OnFsmDisposed += OnFsmDisposed;
             FsmEditorHook.OnFsmCleared -= OnFsmCleared;
             FsmEditorHook.OnFsmCleared += OnFsmCleared;
+            FsmEditorHook.OnFsmStarted -= OnFsmStarted;
+            FsmEditorHook.OnFsmStarted += OnFsmStarted;
             FsmEditorHook.OnStateChanged -= OnStateChanged;
             FsmEditorHook.OnStateChanged += OnStateChanged;
             FsmEditorHook.OnStateAdded -= OnStateAdded;
@@ -87,7 +89,7 @@ namespace YokiFrame.Unity
         private static void OnFsmCreated(IFSM fsm)
         {
             var name = ResolveName(fsm);
-            FsmKitCommandHandler.RegisterFsm(name, fsm);
+            EnsureRegisteredFsm(name, fsm);
             FsmKitSnapshotPublisher.TryPublish();
             PushEvent("fsm_update", BuildPayload("created", name, fsm, null, null));
         }
@@ -113,9 +115,45 @@ namespace YokiFrame.Unity
             PushEvent("fsm_update", BuildPayload("cleared", name, fsm, null, null));
         }
 
+        private static void OnFsmStarted(IFSM fsm, string initialState)
+        {
+            var name = ResolveName(fsm);
+            EnsureRegisteredFsm(name, fsm);
+            AddHistoryRecord(name, "Start", initialState);
+            FsmKitSnapshotPublisher.TryPublish();
+            PushEvent("fsm_update", BuildPayload("started", name, fsm, null, initialState));
+        }
+
         private static void OnStateChanged(IFSM fsm, string from, string to)
         {
             var name = ResolveName(fsm);
+            EnsureRegisteredFsm(name, fsm);
+            AddHistoryRecord(name, from, to);
+            FsmKitSnapshotPublisher.RequestPublish();
+        }
+
+        private static void OnStateAdded(IFSM fsm, string stateName)
+        {
+            EnsureRegisteredFsm(ResolveName(fsm), fsm);
+            AddStateLifecycleRecord(fsm, "added", stateName);
+        }
+
+        private static void OnStateRemoved(IFSM fsm, string stateName)
+        {
+            EnsureRegisteredFsm(ResolveName(fsm), fsm);
+            AddStateLifecycleRecord(fsm, "removed", stateName);
+        }
+
+        private static void EnsureRegisteredFsm(string name, IFSM fsm)
+        {
+            if (fsm == null)
+                return;
+
+            FsmKitCommandHandler.RegisterFsm(name, fsm);
+        }
+
+        private static void AddHistoryRecord(string name, string from, string to)
+        {
             if (!sHistory.TryGetValue(name, out var list))
             {
                 list = new List<TransitionRecord>(16);
@@ -127,17 +165,6 @@ namespace YokiFrame.Unity
 
             var time = System.DateTime.Now.ToString("HH:mm:ss.fff");
             list.Add(new TransitionRecord(from, to, time));
-            FsmKitSnapshotPublisher.RequestPublish();
-        }
-
-        private static void OnStateAdded(IFSM fsm, string stateName)
-        {
-            AddStateLifecycleRecord(fsm, "added", stateName);
-        }
-
-        private static void OnStateRemoved(IFSM fsm, string stateName)
-        {
-            AddStateLifecycleRecord(fsm, "removed", stateName);
         }
 
         private static void AddStateLifecycleRecord(IFSM fsm, string evt, string stateName)

@@ -26,6 +26,7 @@ function registerYokiFramePages() {
     registerKitReactiveRefresh('fsmkit', {
         pageId: 'fsmkit',
         refresh: refreshFsmKitReactive,
+        throttleMs: FSMKIT_REACTIVE_REFRESH_THROTTLE_MS,
     });
     registerKitReactiveRefresh('eventkit', {
         pageId: 'eventkit',

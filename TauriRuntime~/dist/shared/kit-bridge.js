@@ -157,6 +157,7 @@ async function readKitSnapshotData(kit, snapshot = 'state') {
 
 async function fetchKitWorkbenchState(kit, normalize, options = {}) {
     const forceCommandRefresh = !!options.forceCommandRefresh;
+    const skipTelemetry = !!options.skipTelemetry;
     const telemetryName = options.telemetryName || 'state';
     const snapshotName = options.snapshotName || telemetryName;
     const commandAction = options.commandAction || 'get_workbench_snapshot';
@@ -164,7 +165,9 @@ async function fetchKitWorkbenchState(kit, normalize, options = {}) {
 
     let data = null;
     if (!forceCommandRefresh) {
-        data = await readKitTelemetryData(kit, telemetryName);
+        if (!skipTelemetry) {
+            data = await readKitTelemetryData(kit, telemetryName);
+        }
         if (!data) {
             data = await readKitSnapshotData(kit, snapshotName);
         }

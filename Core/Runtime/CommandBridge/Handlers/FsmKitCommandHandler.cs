@@ -99,7 +99,7 @@ namespace YokiFrame
                 sb.Append("\",\"machineState\":\"");
                 sb.Append(fsm.MachineState.ToString());
                 sb.Append('"');
-                AppendStateDebugFields(sb, fsm, false);
+                AppendStateDebugFields(sb, fsm, true);
                 sb.Append('}');
                 first = false;
             }

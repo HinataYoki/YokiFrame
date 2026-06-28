@@ -83,3 +83,16 @@ test('extractFsmSnapshotList reads fsms from snapshot envelope data', () => {
         { name: 'PlayerFSM', machineState: 'Running' }
     ]);
 });
+
+test('extractFsmSnapshotList reads fsms from unwrapped snapshot data', () => {
+    const fsms = diagnostics.extractFsmSnapshotList({
+        fsms: [
+            { name: 'EnemyFSM', machineState: 'Running' }
+        ],
+        count: 1
+    });
+
+    assert.deepEqual(fsms, [
+        { name: 'EnemyFSM', machineState: 'Running' }
+    ]);
+});

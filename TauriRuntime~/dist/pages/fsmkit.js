@@ -82,12 +82,41 @@ function applyFsmWorkbenchListSnapshot(fsms, preferInPlace = true) {
     }
 
     const selectedMeta = fsms.find(f => f.name === selectedFsmName) ?? fsms[0];
-    const cachedDetail = fsmDetailCache.get(selectedMeta.name) ?? selectedMeta;
-    if (preferInPlace && updateFsmWorkbenchSummaryView(fsms, selectedMeta, cachedDetail, '')) {
-        return;
-    }
+    const liveDetail = mergeFsmRealtimeDetail(selectedMeta);
     const history = fsmHistoryCache.get(selectedMeta.name) ?? [];
-    renderOrUpdateFsmWorkbench(fsms, selectedMeta, cachedDetail, history, '', preferInPlace);
+    renderOrUpdateFsmWorkbench(fsms, selectedMeta, liveDetail, history, '', preferInPlace);
+}
+
+function mergeFsmRealtimeDetail(selectedMeta) {
+    const fsmName = selectedMeta?.name ?? selectedFsmName ?? '';
+    const cachedDetail = fsmName ? (fsmDetailCache.get(fsmName) ?? {}) : {};
+
+    const liveDetail = {
+        ...cachedDetail,
+        ...selectedMeta,
+        fsmName: cachedDetail.fsmName ?? selectedMeta?.name ?? fsmName,
+        currentState: selectedMeta?.currentState ?? cachedDetail.currentState,
+        currentStateId: selectedMeta?.currentStateId ?? cachedDetail.currentStateId,
+        machineState: selectedMeta?.machineState ?? cachedDetail.machineState,
+        stateCount: selectedMeta?.stateCount ?? cachedDetail.stateCount,
+    };
+    liveDetail.states = mergeFsmRealtimeStateTree(cachedDetail.states, liveDetail.currentStateId);
+    if (fsmName) fsmDetailCache.set(fsmName, liveDetail);
+    return liveDetail;
+}
+
+function mergeFsmRealtimeStateTree(states, currentStateId) {
+    if (!Array.isArray(states)) return states;
+    const targetId = Number(currentStateId);
+    if (!Number.isFinite(targetId)) return states;
+
+    return states.map(state => {
+        const next = { ...state, isCurrent: Number(state?.id) === targetId };
+        if (Array.isArray(state?.children)) {
+            next.children = mergeFsmRealtimeStateTree(state.children, currentStateId);
+        }
+        return next;
+    });
 }
 
 function scheduleFsmDetailReconcile(reason = '') {
