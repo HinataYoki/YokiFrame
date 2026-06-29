@@ -27,3 +27,15 @@ $RECYCLE.BIN/
 **/*Test*.asmdef.meta
 **/*Test*.asmref
 **/*Test*.asmref.meta
+**/Spec/
+**/Spec.meta
+**/Specs/
+**/Specs.meta
+**/*Spec.cs
+**/*Spec.cs.meta
+**/*Specs.cs
+**/*Specs.cs.meta
+**/*Spec*.asmdef
+**/*Spec*.asmdef.meta
+**/*Spec*.asmref
+**/*Spec*.asmref.meta
