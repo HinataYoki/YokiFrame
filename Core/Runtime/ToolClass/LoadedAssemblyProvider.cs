@@ -26,10 +26,18 @@ namespace YokiFrame
                 ? currentAssembliesType.GetMethod("GetLoadedAssemblies", BindingFlags.Public | BindingFlags.Static)
                 : null;
 
-            if (getLoadedAssembliesMethod == null)
-                throw new InvalidOperationException("UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies is unavailable.");
+            if (getLoadedAssembliesMethod == null ||
+                getLoadedAssembliesMethod.ReturnType != typeof(Assembly[]))
+                return AppDomain.CurrentDomain.GetAssemblies;
 
-            return (Func<Assembly[]>)Delegate.CreateDelegate(typeof(Func<Assembly[]>), getLoadedAssembliesMethod);
+            try
+            {
+                return (Func<Assembly[]>)Delegate.CreateDelegate(typeof(Func<Assembly[]>), getLoadedAssembliesMethod);
+            }
+            catch (ArgumentException)
+            {
+                return AppDomain.CurrentDomain.GetAssemblies;
+            }
         }
 #endif
     }
