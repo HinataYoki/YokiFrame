@@ -12,6 +12,9 @@ namespace YokiFrame
     public sealed class NinoSaveSerializer : ISaveSerializer
     {
         private static int sInitialized;
+#if UNITY_6000_5_OR_NEWER && !GODOT
+        private static readonly Func<Assembly[]> sUnityGetLoadedAssemblies = CreateUnityGetLoadedAssemblies();
+#endif
 
         /// <inheritdoc />
         public byte[] Serialize<T>(T data)
@@ -77,12 +80,36 @@ namespace YokiFrame
                 return;
             }
 
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = GetLoadedAssemblies();
             for (var i = 0; i < assemblies.Length; i++)
             {
                 InitializeGeneratedRegistration(assemblies[i]);
             }
         }
+
+        private static Assembly[] GetLoadedAssemblies()
+        {
+#if UNITY_6000_5_OR_NEWER && !GODOT
+            return sUnityGetLoadedAssemblies();
+#else
+            return AppDomain.CurrentDomain.GetAssemblies();
+#endif
+        }
+
+#if UNITY_6000_5_OR_NEWER && !GODOT
+        private static Func<Assembly[]> CreateUnityGetLoadedAssemblies()
+        {
+            var currentAssembliesType = Type.GetType("UnityEngine.Assemblies.CurrentAssemblies, UnityEngine.CoreModule");
+            var getLoadedAssembliesMethod = currentAssembliesType != null
+                ? currentAssembliesType.GetMethod("GetLoadedAssemblies", BindingFlags.Public | BindingFlags.Static)
+                : null;
+
+            if (getLoadedAssembliesMethod == null)
+                throw new InvalidOperationException("UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies is unavailable.");
+
+            return (Func<Assembly[]>)Delegate.CreateDelegate(typeof(Func<Assembly[]>), getLoadedAssembliesMethod);
+        }
+#endif
 
         private static void InitializeGeneratedRegistration(Assembly assembly)
         {

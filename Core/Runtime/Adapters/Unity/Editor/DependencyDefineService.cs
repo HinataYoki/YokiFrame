@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
@@ -109,6 +110,8 @@ namespace YokiFrame.Unity
             new DependencyInfo(NINO_SUPPORT_DEFINE, "com.jasonxudeveloper.nino", null, "Nino.Core.NinoTypeAttribute"),
         };
 
+        private static bool sRefreshScheduled;
+
         static DependencyDefineService()
         {
             EditorApplication.delayCall += RefreshDefines;
@@ -135,13 +138,13 @@ namespace YokiFrame.Unity
             }
 
             if (newDefines.Count != currentDefines.Count || !newDefines.SetEquals(currentDefines))
-                SetDefines(newDefines);
+                SetDefines(currentDefines, newDefines);
         }
 
         private static void OnPackagesChanged(UnityEditor.PackageManager.PackageRegistrationEventArgs args)
         {
             if (HasAnyElement(args.added) || HasAnyElement(args.removed))
-                EditorApplication.delayCall += RefreshDefines;
+                ScheduleRefreshDefines();
         }
 
         private static bool HasAnyElement<T>(IEnumerable<T> collection)
@@ -160,26 +163,59 @@ namespace YokiFrame.Unity
                 string[] movedAssets,
                 string[] movedFromAssetPaths)
             {
-                if (HasAsmdefFile(importedAssets) || HasAsmdefFile(deletedAssets) ||
-                    HasAsmdefFile(movedAssets) || HasAsmdefFile(movedFromAssetPaths))
+                if (HasDependencyMarkerAsset(importedAssets) || HasDependencyMarkerAsset(deletedAssets) ||
+                    HasDependencyMarkerAsset(movedAssets) || HasDependencyMarkerAsset(movedFromAssetPaths))
                 {
-                    EditorApplication.delayCall += RefreshDefines;
+                    ScheduleRefreshDefines();
                 }
             }
         }
 
-        private static bool HasAsmdefFile(string[] assets)
+        private static void ScheduleRefreshDefines()
+        {
+            if (sRefreshScheduled)
+                return;
+
+            sRefreshScheduled = true;
+            EditorApplication.delayCall += RefreshDefinesWhenEditorIsReady;
+        }
+
+        private static void RefreshDefinesWhenEditorIsReady()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += RefreshDefinesWhenEditorIsReady;
+                return;
+            }
+
+            sRefreshScheduled = false;
+            RefreshDefines();
+        }
+
+        private static bool HasDependencyMarkerAsset(string[] assets)
         {
             if (assets == null)
                 return false;
 
             for (var i = 0; i < assets.Length; i++)
             {
-                if (!string.IsNullOrEmpty(assets[i]) && assets[i].EndsWith(".asmdef"))
+                if (IsDependencyMarkerAsset(assets[i]))
                     return true;
             }
 
             return false;
+        }
+
+        internal static bool IsDependencyMarkerAsset(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
+                return false;
+
+            var extension = Path.GetExtension(assetPath);
+            return string.Equals(extension, ".asmdef", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".asmref", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".dll", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".cs", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool DetectDependency(DependencyInfo dependency)
@@ -195,9 +231,8 @@ namespace YokiFrame.Unity
                 if (!string.IsNullOrEmpty(dependency.TypeName) && HasLoadedTypeWithExistingAssembly(dependency.TypeName))
                     return true;
             }
-            catch (System.Exception e)
+            catch
             {
-                LogKit.Warning("[YokiFrame][DependencyDefineService] 检测依赖失败: " + dependency.Define + ", " + e.Message);
             }
 
             return false;
@@ -251,16 +286,25 @@ namespace YokiFrame.Unity
                 try
                 {
                     var assemblyPath = GetLoadedAssemblyPath(assembly);
-                    if (!string.IsNullOrEmpty(assemblyPath) && File.Exists(assemblyPath))
+                    if (IsLoadedAssemblyPathValidDependencyEvidence(assemblyPath))
                         return true;
                 }
                 catch
                 {
-                    return true;
                 }
             }
 
             return false;
+        }
+
+        internal static bool IsLoadedAssemblyPathValidDependencyEvidence(string assemblyPath)
+        {
+            if (string.IsNullOrEmpty(assemblyPath) || !File.Exists(assemblyPath))
+                return false;
+
+            var normalizedPath = assemblyPath.Replace('\\', '/');
+            return normalizedPath.IndexOf("/Library/ScriptAssemblies/", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                   normalizedPath.IndexOf("/Library/PackageCache/", System.StringComparison.OrdinalIgnoreCase) < 0;
         }
 
         private static string GetLoadedAssemblyPath(Assembly assembly)
@@ -281,17 +325,15 @@ namespace YokiFrame.Unity
             return new HashSet<string>(defines);
         }
 
-        private static void SetDefines(HashSet<string> defines)
+        private static void SetDefines(HashSet<string> currentDefines, HashSet<string> defines)
         {
             if (!TryResolveNamedBuildTarget(out var target))
-            {
-                LogKit.Warning("[YokiFrame][DependencyDefineService] 当前 Unity 构建目标无效，已跳过依赖宏刷新。");
                 return;
-            }
 
             var defineArray = new string[defines.Count];
             defines.CopyTo(defineArray);
             PlayerSettings.SetScriptingDefineSymbols(target, defineArray);
+            LogDefineChanges(currentDefines, defines);
         }
 
         internal static bool TryResolveNamedBuildTarget(out NamedBuildTarget target)
@@ -321,6 +363,77 @@ namespace YokiFrame.Unity
         {
             target = NamedBuildTarget.FromBuildTargetGroup(group);
             return group != BuildTargetGroup.Unknown && !string.IsNullOrEmpty(target.TargetName);
+        }
+
+        private static void LogDefineChanges(HashSet<string> currentDefines, HashSet<string> newDefines)
+        {
+            var added = CollectDefineChanges(newDefines, currentDefines);
+            var removed = CollectDefineChanges(currentDefines, newDefines);
+            var message = BuildDependencyChangeLogMessage(added, removed);
+            if (!string.IsNullOrEmpty(message))
+                LogKit.Info(message);
+        }
+
+        private static string[] CollectDefineChanges(HashSet<string> source, HashSet<string> excludes)
+        {
+            var result = new List<string>();
+            foreach (var define in source)
+            {
+                if (excludes.Contains(define) || !IsYokiFrameDependencyDefine(define))
+                    continue;
+
+                result.Add(define);
+            }
+
+            result.Sort(System.StringComparer.Ordinal);
+            return result.ToArray();
+        }
+
+        private static bool IsYokiFrameDependencyDefine(string define)
+        {
+            for (var i = 0; i < sDependencies.Length; i++)
+            {
+                if (sDependencies[i].Define == define)
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal static string BuildDependencyChangeLogMessage(string[] added, string[] removed)
+        {
+            var hasAdded = added != null && added.Length > 0;
+            var hasRemoved = removed != null && removed.Length > 0;
+            if (!hasAdded && !hasRemoved)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            sb.Append("[YokiFrame][DependencyDefineService] 依赖宏已刷新");
+
+            if (hasAdded)
+            {
+                sb.Append(" +");
+                AppendDefines(sb, added);
+            }
+
+            if (hasRemoved)
+            {
+                sb.Append(" -");
+                AppendDefines(sb, removed);
+            }
+
+            return sb.ToString();
+        }
+
+        private static void AppendDefines(StringBuilder sb, string[] defines)
+        {
+            for (var i = 0; i < defines.Length; i++)
+            {
+                if (i > 0)
+                    sb.Append(", ");
+
+                sb.Append(defines[i]);
+            }
         }
 
         private readonly struct DependencyInfo
