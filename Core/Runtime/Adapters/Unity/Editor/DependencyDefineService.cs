@@ -260,17 +260,53 @@ namespace YokiFrame.Unity
 
         private static HashSet<string> GetCurrentDefines()
         {
-            var target = NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            if (!TryResolveNamedBuildTarget(out var target))
+                return new HashSet<string>();
+
             PlayerSettings.GetScriptingDefineSymbols(target, out var defines);
             return new HashSet<string>(defines);
         }
 
         private static void SetDefines(HashSet<string> defines)
         {
-            var target = NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            if (!TryResolveNamedBuildTarget(out var target))
+            {
+                LogKit.Warning("[YokiFrame][DependencyDefineService] 当前 Unity 构建目标无效，已跳过依赖宏刷新。");
+                return;
+            }
+
             var defineArray = new string[defines.Count];
             defines.CopyTo(defineArray);
             PlayerSettings.SetScriptingDefineSymbols(target, defineArray);
+        }
+
+        internal static bool TryResolveNamedBuildTarget(out NamedBuildTarget target)
+        {
+            return TryResolveNamedBuildTarget(
+                EditorUserBuildSettings.selectedBuildTargetGroup,
+                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
+                out target);
+        }
+
+        internal static bool TryResolveNamedBuildTarget(
+            BuildTargetGroup selectedGroup,
+            BuildTargetGroup activeGroup,
+            out NamedBuildTarget target)
+        {
+            if (TryCreateValidNamedBuildTarget(selectedGroup, out target))
+                return true;
+
+            if (activeGroup != selectedGroup && TryCreateValidNamedBuildTarget(activeGroup, out target))
+                return true;
+
+            target = NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.Unknown);
+            return false;
+        }
+
+        private static bool TryCreateValidNamedBuildTarget(BuildTargetGroup group, out NamedBuildTarget target)
+        {
+            target = NamedBuildTarget.FromBuildTargetGroup(group);
+            return group != BuildTargetGroup.Unknown && !string.IsNullOrEmpty(target.TargetName);
         }
 
         private readonly struct DependencyInfo
