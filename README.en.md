@@ -1,100 +1,256 @@
 # YokiFrame
 
 <p align="center">
+  <a href="README.md">中文</a> | <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <img src="Core/Editor/Resources/yoki.png" alt="YokiFrame Logo" width="128" height="128">
 </p>
 
 <p align="center">
-  <b>Cross-engine game Kit framework + AI-native communication layer + Tauri visual workbench</b><br>
-  Runtime capabilities are exposed through a unified C# Kit API, while a file protocol lets AI agents, tool frontends, and engine hosts collaborate reliably.
+  <b>A C# game Kit framework that is not tied to one engine</b><br>
+  YokiFrame connects game runtime code, toolchains, and AI agents through unified Runtime APIs, cross-engine adapters, an AI-friendly file protocol, and a Tauri editor workbench.
 </p>
 
 ---
 
-## What Is YokiFrame?
+## One-Line Introduction
 
-YokiFrame is no longer just a Unity-bound toolkit. It is a multi-host game development framework. Events, state machines, pools, resources, singletons, logging, actions, audio, input, scenes, saves, UI, tables, localization, and other runtime capabilities are organized behind stable Kit APIs. Unity, Godot, and future hosts provide adapters.
+YokiFrame 2.0 is a cross-engine game development framework. Gameplay code is written against the unified Kit APIs in the `YokiFrame` namespace, while Unity, Godot, or future hosts provide engine-specific capabilities through adapters: logging, time, resources, input, scenes, UI, audio, and more.
 
-The current framework focuses on three things:
+It also ships with the `.yokiframe/` file protocol, allowing AI agents, the Tauri workbench, scripts, and game hosts to exchange commands, responses, snapshots, events, and realtime telemetry reliably. AI tools do not need to guess Unity objects or depend on a single editor plugin; they can discover online engines, inspect framework state, run read-only diagnostics, or execute explicitly authorized maintenance commands.
 
-| Direction | What YokiFrame Provides |
-| --- | --- |
-| Cross-engine design | The Runtime core stays pure C# by default. Host-specific behavior enters through Unity / Godot adapters, while gameplay code keeps using the unified `YokiFrame` entry points. |
-| AI-native communication | The `.yokiframe/` file bridge is a framework-level control plane. AI agents can discover engines, send commands, read responses, and inspect snapshots without depending on Unity MCP. |
-| Visual editor tooling | A Tauri + Web desktop workbench brings Kit state, command bridge health, code scanning, generators, and runtime diagnostics into one modern developer console. |
+YokiFrame also provides a complete Tauri visual editor tool for Kit state, command bridge health, runtime snapshots, code scanning, generators, logs, and built-in documentation.
 
 ---
 
-## Core Capabilities
+## Core Positioning
 
-### Unified Kit API
-
-Gameplay code should prefer the unified entry points under the `YokiFrame` namespace:
-
-| Kit | Capability |
+| Question | YokiFrame's Answer |
 | --- | --- |
-| Architecture | Service registration, modular organization, and runtime architecture diagnostics. |
-| EventKit | Typed events, enum events, and legacy string-event compatibility for decoupled modules. |
-| FsmKit | Basic FSMs, parameterized FSMs, hierarchical state machines, and runtime state diagnostics. |
-| PoolKit | C# object pools, recyclable object pools, collection pools, and workbench snapshots. |
-| ResKit | Unified resource loading, raw file loading, scene resource backends, reference counting, and provider replacement. |
-| SingletonKit | A unified lifecycle view for pure C# singletons, Unity `MonoSingleton`, and Godot `GodotSingleton`. |
-| LogKit | Engine log adaptation, runtime log files, and workbench log diagnostics. |
-| ActionKit | Delay, callback, parallel, repeat, Task / Coroutine composition, and action tree debugging. |
-| AudioKit | SFX, music, volume buses, active voice diagnostics, and audio ID generation helpers. |
-| SaveKit | Multi-slot saves, serialization / encryption / migration backends, and auto-save state. |
-| InputKit | Input backends, action state, input buffers, and context stacks. |
-| SceneKit | Cross-engine scene loading, preloading, activation, and unload backends. |
-| SpatialKit | HashGrid, Quadtree, Octree spatial indexes, and query diagnostics. |
-| LocalizationKit | Language providers, formatters, caches, binders, and language switching. |
-| UIKit | UI backend, panel stack, layers, panel creation, and binding helpers. |
-| TableKit | Tauri-based Luban table generation, parameter management, and output validation. |
+| Does gameplay logic have to be tied to Unity or Godot? | No. The business layer uses unified Kit APIs, while host differences live in adapters, providers, and backends. |
+| How can AI understand runtime state? | Through `.yokiframe/engines/<engineId>`: discover hosts, read snapshots / telemetry, and send commands when needed. |
+| Is the editor tool only a launcher? | No. The Tauri workbench is a dedicated debugging console for Kit state, FileBridge health, code scanning, generators, and docs. |
+| Does the framework force one resource or UI solution? | No. ResKit, SceneKit, UIKit, AudioKit, and related Kits are replaceable through providers / backends. |
 
-### Cross-Engine Adapters
+---
 
-The layering rule is simple: the core API does not need to know whether it is running in Unity or Godot.
+## Overall Architecture
 
-```text
-User Code
-  -> YokiFrame Kit API
-  -> Core Runtime interfaces / providers / handlers
-  -> Unity or Godot Adapter
-  -> Engine runtime and editor
+The main idea is simple: gameplay code knows framework capabilities, not engine internals.
+
+```mermaid
+flowchart TB
+    Game["Game Code<br/>gameplay flow / systems / logic"]
+    API["YokiFrame Kit API<br/>EventKit / FsmKit / ResKit / UIKit / ..."]
+    Core["Core Runtime<br/>pure C# contracts, services, protocols, core Kits"]
+    Tools["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Table"]
+    Adapter["Engine Adapters<br/>Unity / Godot / Future Host"]
+    Host["Engine Host<br/>Unity Editor / Godot / Server Runtime"]
+    Bridge[".yokiframe FileBridge v2<br/>commands / results / snapshots / events / telemetry"]
+    Workbench["Tauri Workbench<br/>visual editor tools"]
+    AI["AI Agent / Script<br/>Codex / Claude / CLI / automation"]
+
+    Game --> API
+    API --> Core
+    API --> Tools
+    Core --> Adapter
+    Tools --> Adapter
+    Adapter --> Host
+    Host <--> Bridge
+    Bridge <--> Workbench
+    Bridge <--> AI
 ```
 
-The package layout is:
+### Runtime Layers
+
+```mermaid
+flowchart LR
+    subgraph Business["Business Layer"]
+        GameLogic["Game Logic"]
+        GameplaySystems["Gameplay Systems"]
+    end
+
+    subgraph PublicApi["Unified API Layer"]
+        CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log"]
+        ToolKits["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Localization / UI / Table"]
+    end
+
+    subgraph Contracts["Cross-Engine Contracts"]
+        Interfaces["Interfaces<br/>IEngineLogger / IEngineTime / IResourceProvider / ..."]
+        Backends["Backends<br/>IAudioBackend / IInputBackend / ISceneBackend / IUIBackend"]
+        CommandBridge["CommandBridge<br/>string JSON protocol"]
+    end
+
+    subgraph Hosts["Host Implementations"]
+        Unity["Unity Adapter<br/>UnityResourceProvider / MonoSingleton / Editor tools"]
+        Godot["Godot Adapter<br/>GodotResourceProvider / GodotSingleton / plugin"]
+        Future["Future Host<br/>server / custom engine"]
+    end
+
+    GameLogic --> CoreKits
+    GameplaySystems --> ToolKits
+    CoreKits --> Interfaces
+    ToolKits --> Interfaces
+    ToolKits --> Backends
+    Interfaces --> Unity
+    Interfaces --> Godot
+    Interfaces --> Future
+    Backends --> Unity
+    Backends --> Godot
+    CommandBridge --> Unity
+    CommandBridge --> Godot
+```
+
+### Directory Layout
 
 ```text
-YokiFrame/
+Assets/YokiFrame/
 ├── Core/
 │   ├── Runtime/
-│   │   ├── Architecture, EventKit, FsmKit, PoolKit, ResKit, Singleton, LogKit
-│   │   ├── Interfaces, ToolClass, FluentApi, Settings
-│   │   ├── CommandBridge
+│   │   ├── Architecture, EventKit, FsmKit, PoolKit, ResKit
+│   │   ├── Singleton, LogKit, ToolClass, FluentApi, Settings
+│   │   ├── Interfaces/
+│   │   ├── CommandBridge/
 │   │   └── Adapters/
 │   │       ├── Unity/
 │   │       └── Godot/
-│   └── Editor/
-│       ├── Skills/
-│       └── Resources/
+│   ├── Editor/
+│   │   ├── CodeGenKit/
+│   │   ├── Resources/
+│   │   └── Skills/
+│   └── Tests/
 ├── Tools/
 │   ├── ActionKit, AudioKit, InputKit, LocalizationKit
 │   ├── SaveKit, SceneKit, SpatialKit, TableKit, UIKit
-│   └── ...
-└── Installer~/
+│   └── */Runtime, */Editor, */Tests
+├── TauriRuntime~/        # packaged workbench runtime copy
+├── Installer~/           # packaged installer
+└── Documentation~/       # images and supporting README material
+
+YokiFrameTools/
+├── TauriEditor/          # Tauri workbench source
+├── Installer/            # installer source
+└── scripts/
+
+.yokiframe/               # runtime file protocol directory
 ```
-
-Core abstractions include `IEngineLogger`, `IEngineTime`, `IEngineObject`, `IResourceProvider`, `IRawResourceProvider`, `IResSceneBackend`, and `ISerializationProvider`. Tool Kits isolate host behavior through backend interfaces such as `IAudioBackend`, `IInputBackend`, `ISceneBackend`, and `IUIBackend`. SceneKit delegates to the active ResKit scene backend by default, and UIKit's default panel loader loads panels through ResKit. When switching between Unity Resources, YooAsset, or a custom project resource system, replacing the ResKit provider is usually the first move.
-
-The Unity adapter provides `UnityBootstrap`, `UnityResourceProvider`, `MonoSingleton<T>`, Unity math conversion extensions, the Unity CommandBridge host, the Tauri launcher, event / snapshot / telemetry publishers, Editor UI Toolkit components and style services, plus optional integrations for YooAsset, DOTween, FMOD, Unity Input, and Unity UI.
-
-The Godot adapter provides `GodotBootstrap`, `GodotAutoBootstrap`, `GodotResourceProvider`, `GodotSingleton<T>`, the Godot CommandBridge host, event and FSM bridges, Kit snapshot publishers, and installer entry points for input, scenes, UI, and saves. The Godot integration targets Godot 4.7 `.NET / C#` projects.
 
 ---
 
-## AI-Native Communication
+## Kit Capability Map
 
-YokiFrame treats AI access as a framework capability, not as an attachment to a single editor plugin. The core mechanism is the `.yokiframe/` file bridge:
+YokiFrame organizes common game framework capabilities into Kits. Gameplay code calls unified entry points, and host details are installed by adapters and Kit installers.
+
+```mermaid
+flowchart TB
+    Root["YokiFrame Kits"]
+    Core["Core Runtime Kits"]
+    Tools["Tool Kits"]
+    AI["AI Native Runtime"]
+    Editor["Editor Tooling"]
+
+    Root --> Core
+    Root --> Tools
+    Root --> AI
+    Root --> Editor
+
+    Core --> Architecture["Architecture"]
+    Core --> EventKit["EventKit"]
+    Core --> FsmKit["FsmKit"]
+    Core --> PoolKit["PoolKit"]
+    Core --> ResKit["ResKit"]
+    Core --> SingletonKit["SingletonKit"]
+    Core --> LogKit["LogKit"]
+
+    Tools --> ActionKit["ActionKit"]
+    Tools --> AudioKit["AudioKit"]
+    Tools --> SaveKit["SaveKit"]
+    Tools --> InputKit["InputKit"]
+    Tools --> SceneKit["SceneKit"]
+    Tools --> SpatialKit["SpatialKit"]
+    Tools --> LocalizationKit["LocalizationKit"]
+    Tools --> UIKit["UIKit"]
+    Tools --> TableKit["TableKit"]
+
+    AI --> CommandBridge["CommandBridge"]
+    AI --> Snapshot["Snapshot"]
+    AI --> Telemetry["Telemetry"]
+    AI --> EventStream["Event Stream"]
+    AI --> Skills["Agent Skills"]
+
+    Editor --> Workbench["Tauri Workbench"]
+    Editor --> CodeScan["Code Scan"]
+    Editor --> Generators["Generators"]
+    Editor --> Diagnostics["Diagnostics"]
+```
+
+| Kit | Main Use |
+| --- | --- |
+| Architecture | Service registration, module organization, architecture instances, and runtime diagnostics. |
+| EventKit | Typed events, enum events, and compatible event channels for decoupled modules. |
+| FsmKit | Basic FSMs, parameterized FSMs, state flows, and transition history diagnostics. |
+| PoolKit | Object pools, recyclable object pools, collection pools, and pool state snapshots. |
+| ResKit | Resource loading, raw files, scene resource backends, reference counting, and provider replacement. |
+| SingletonKit | Pure C# singletons, Unity `MonoSingleton<T>`, and Godot `GodotSingleton<T>`. |
+| LogKit | Engine log adaptation, file logs, and workbench log diagnostics. |
+| ActionKit | Delay, Callback, Sequence, Parallel, Task / Coroutine composition, and action debugging. |
+| AudioKit | SFX, music, volume buses, active voice diagnostics, and audio ID helpers. |
+| SaveKit | Multi-slot saves, serialization / encryption / migration backends, and auto-save state. |
+| InputKit | Input backends, action state, input buffers, and input context stacks. |
+| SceneKit | Cross-engine scene loading, preloading, activation, and unloading. |
+| SpatialKit | HashGrid, Quadtree, Octree spatial indexes, and query diagnostics. |
+| LocalizationKit | Language providers, formatters, caches, binders, and language switching. |
+| UIKit | UI backends, panel stack, layers, panel creation, and binding helpers. |
+| TableKit | Tauri-based Luban table generation, parameter management, and output validation. |
+
+---
+
+## Lifecycle
+
+The host only needs to declare the current engine at startup. `YokiFrameKit` discovers and installs Kit installers available for that engine, the host drives Tick every frame, and Shutdown closes everything in reverse order.
+
+```mermaid
+flowchart TB
+    Host["Unity / Godot / Server Host"]
+    Init["YokiFrameKit.Initialize(engine)"]
+    Discover["Discover Kit installers for the current engine"]
+    Install["Install Core Kit and Tool Kit backends"]
+    Runtime["Create IYokiFrameRuntime"]
+    Tick["External main loop drives<br/>YokiFrameKit.Tick(deltaSeconds)"]
+    KitTick["Each Kit installer ticks<br/>Action / Input / Bridge / Telemetry / ..."]
+    Shutdown["On exit: YokiFrameKit.Shutdown()"]
+    Cleanup["Close installers in reverse order<br/>release subscriptions, resources, backends, diagnostics"]
+
+    Host --> Init
+    Init --> Discover
+    Discover --> Install
+    Install --> Runtime
+    Runtime --> Tick
+    Tick --> KitTick
+    KitTick --> Tick
+    Runtime --> Shutdown
+    Shutdown --> Cleanup
+```
+
+Unity can call the unified entry directly:
+
+```csharp
+using YokiFrame;
+
+YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+```
+
+You can also use `UnityBootstrap` in a scene. It initializes YokiFrame, forwards Tick from `Update`, and calls Shutdown from `OnDestroy`.
+
+After the Godot plugin is enabled, it creates bootstrap / autoload entries. At runtime, `GodotBootstrap` handles the same lifecycle through `_Ready`, `_Process`, and `_ExitTree`.
+
+---
+
+## AI File Protocol
+
+YokiFrame treats AI communication as a framework-level capability, not as a private channel owned by one IDE plugin. The current protocol entry is the engine-scoped directory:
 
 ```text
 .yokiframe/
@@ -103,14 +259,74 @@ YokiFrame treats AI access as a framework capability, not as an attachment to a 
         ├── engine.json
         ├── status/heartbeat.json
         ├── commands/<requestId>.json
+        ├── commands/processing/<requestId>.json
+        ├── commands/archive/
+        ├── commands/deadletter/
         ├── results/<requestId>-response.json
-        ├── snapshots/<kit>/<name>.json
-        └── events/*.jsonl
+        └── snapshots/<Kit>/<name>.json
+
+.yokiframe/
+└── events/<type>.jsonl
 ```
 
-### Command Plane
+### Communication Planes
 
-AI agents, Tauri, and scripts can write engine-scoped command files:
+```mermaid
+flowchart LR
+    AI["AI Agent / CLI"]
+    Tauri["Tauri Workbench"]
+    Registry["Engine Registry<br/>engines/*/engine.json"]
+    Command["Command Plane<br/>commands -> results"]
+    Snapshot["Snapshot Plane<br/>snapshots/Kit/name.json"]
+    Event["Event Plane<br/>events/*.jsonl"]
+    Telemetry["Realtime Telemetry<br/>shared memory latest frame"]
+    Engine["Engine Host<br/>Unity / Godot"]
+
+    AI --> Registry
+    Tauri --> Registry
+    AI --> Snapshot
+    AI --> Command
+    Tauri --> Telemetry
+    Tauri --> Snapshot
+    Tauri --> Command
+    Engine --> Registry
+    Engine <--> Command
+    Engine --> Snapshot
+    Engine --> Event
+    Engine --> Telemetry
+```
+
+| Plane | Use Case | Read / Write Pattern |
+| --- | --- | --- |
+| Engine Registry | Discover online Unity / Godot / runtime hosts. | Read `engine.json` first, then choose the target engineId. |
+| Command Plane | Request-response commands, detail queries, explicit operations, and maintenance commands. | Write `commands/<requestId>.json`, read `results/<requestId>-response.json`. |
+| Snapshot Plane | Current state, panel initial data, and default read-only AI queries. | Overwrite-style JSON snapshots, stable for polling. |
+| Event Plane | Important discrete events, lifecycle events, and sampled state changes. | Root-level JSONL event streams. |
+| Realtime Telemetry | Human-perceived realtime refresh for Tauri pages. | Latest-frame shared memory, not the default AI query path. |
+| Trace Plane | Explicitly enabled short-term high-frequency diagnostics. | Ring buffer constrained by duration, count, and size. |
+
+### Command Flow
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent / Tauri
+    participant Registry as .yokiframe/engines
+    participant Command as commands/request.json
+    participant Host as Unity / Godot Host
+    participant Result as results/response.json
+    participant Snapshot as snapshots/Kit/state.json
+
+    Agent->>Registry: Read engine.json to discover online hosts
+    Agent->>Snapshot: Prefer current state snapshots
+    alt Detail query or explicit operation
+        Agent->>Command: Atomically write command JSON
+        Host->>Command: Move into processing and execute
+        Host->>Result: Write terminal response
+        Agent->>Result: Read success, failure, rejection, or timeout result
+    end
+```
+
+A command request looks roughly like this:
 
 ```json
 {
@@ -126,205 +342,158 @@ AI agents, Tauri, and scripts can write engine-scoped command files:
 }
 ```
 
-The response is written to:
+Protocol rules:
 
-```text
-.yokiframe/engines/<engineId>/results/<requestId>-response.json
-```
-
-The protocol guarantee is that every accepted command must produce a terminal response. Unknown Kits, unknown actions, parse failures, timeouts, and policy rejections should become standard JSON responses instead of making callers wait silently.
-
-### Snapshots, Events, And Realtime Telemetry
-
-The file bridge is not a high-frequency runtime bus. YokiFrame splits communication into several planes:
-
-| Plane | Purpose |
-| --- | --- |
-| Command Plane | Request-response commands, such as `System/ping` and `FsmKit/get_workbench_snapshot`. |
-| Snapshot Plane | Overwrite-style current state snapshots, such as `FsmKit/state`, `PoolKit/state`, and `ResKit/state`. |
-| Event Plane | Important discrete JSONL events, such as Kit state changes and lifecycle notices. |
-| Realtime Telemetry Plane | Latest-frame shared memory used for human-perceived realtime updates in Tauri pages. |
-| Trace Plane | Explicitly enabled short-term diagnostic ring buffers. |
-
-AI agents read snapshots or use command/result by default. The Tauri workbench reads telemetry first, falls back to snapshots, and only uses command/result for user actions, detail queries, or missing data. This keeps AI access reliable without turning hot runtime paths into cross-process file polling.
-
-### AI Skills
-
-The package includes Skill documents for AI agents:
-
-```text
-YokiFrame/Core/Editor/Skills/
-├── yokiframe/
-├── yokiframe-editor/
-└── yokiframe-command-bridge/
-```
-
-The Tauri workbench also provides an AI Skill installation entry so project-local YokiFrame guidance can be synchronized to Codex and other agent skill directories. AI tools do not need to guess Unity internals directly; they can discover the engine registry first, then query Kit state through the protocol.
+1. New commands, responses, and state reads use `.yokiframe/engines/<engineId>`. Historical root directories are not the current entry point.
+2. `requestId`, `engineId`, `source`, `kit`, and `action` use safe ASCII identifiers.
+3. Commands and responses are written with temporary files followed by atomic rename / replace, so polling readers never see half-written files.
+4. Every accepted command must produce a terminal response. Unknown Kit/action, parse failures, policy rejections, timeouts, and exceptions should leave a result or deadletter evidence.
+5. Do not use `send_command` for high-frequency polling. Tauri prefers telemetry; AI prefers snapshots.
 
 ---
 
-## Tauri Visual Workbench
+## Tauri Editor Workbench
 
-YokiFrame Editor is a Tauri + Web desktop workbench. It is not a marketing page. It is a developer console for the debugging loop: connect to hosts, inspect Kit state, observe runtime changes, run read-only diagnostic commands, open code locations, manage generators, and read built-in documentation.
+YokiFrame Editor is a Tauri + Web desktop workbench. It is built for the development and debugging loop, not as a marketing page.
 
-In Unity / Godot editors, the workbench is typically opened with `Ctrl+E`.
+```mermaid
+flowchart TB
+    Workbench["YokiFrame Workbench"]
+    System["System<br/>connection, heartbeat, bridge health, logs"]
+    RuntimePages["Runtime Kit Pages<br/>Event / FSM / Pool / Res / UI / ..."]
+    Tools["Tool Pages<br/>TableKit / Code Scan / Generators"]
+    Docs["Docs<br/>quick start, Kit docs, API reference"]
+    Bridge["Rust Backend<br/>send_command / read_snapshot / read_telemetry"]
+    Protocol[".yokiframe Protocol"]
+    Host["Unity / Godot"]
+
+    Workbench --> System
+    Workbench --> RuntimePages
+    Workbench --> Tools
+    Workbench --> Docs
+    System --> Bridge
+    RuntimePages --> Bridge
+    Tools --> Bridge
+    Bridge <--> Protocol
+    Protocol <--> Host
+```
+
+In Unity / Godot editors, the workbench is usually opened with `Ctrl+E`. It can be used to:
+
+- Inspect engine connection, heartbeat, engine registry, FileBridge health, and command catalog.
+- Inspect Architecture, EventKit, FsmKit, PoolKit, ResKit, LogKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit, TableKit, and SingletonKit state.
+- Scan code relationships, such as EventKit send / listen / unregister locations.
+- Open source code locations through the host's default code editor.
+- Inspect runtime logs, errors, snapshots, telemetry freshness, and stale states.
+- Manage TableKit / Luban generation parameters and output validation.
+- Install or sync YokiFrame Skills for agents such as Codex, Claude Code, Cursor, Windsurf, and GitHub Copilot.
 
 ### Workbench Preview
-
-#### Console
 
 <p align="center">
   <img src="Documentation~/images/yokiframe-workbench-console.png" alt="YokiFrame Kit debug workbench" width="960">
 </p>
 
-Check whether Unity / Godot hosts are connected, inspect heartbeat, command queues, FileBridge state, and runtime logs, and install or sync YokiFrame Skills for agents such as Codex, Claude Code, Cursor, Windsurf, and GitHub Copilot.
-
-#### Architecture
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-architecture.png" alt="Architecture registry" width="960">
-</p>
-
-Inspect the current architecture instance, registered service count, initialization state, and service implementation list to confirm whether game entry points, system services, and dependency registration are ready.
-
-#### FsmKit
-
 <p align="center">
   <img src="Documentation~/images/yokiframe-workbench-fsmkit.png" alt="FsmKit state machine workbench" width="960">
 </p>
-
-View active state machines, current states, state flow graphs, and transition history. This is useful for diagnosing transitions, loop risks, and runtime flow.
-
-#### PoolKit
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-poolkit.png" alt="PoolKit monitor" width="960">
-</p>
-
-Monitor pool capacity, rented objects, peaks, and leak risk. When needed, enable tracking, locate rented objects, or clear diagnostic history.
-
-#### ResKit
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-reskit.png" alt="ResKit resource workbench" width="960">
-</p>
-
-Inspect loaded resources, reference counts, resource types, load sources, and unload history to locate unreleased resources, duplicate loads, or provider integration issues.
-
-#### UIKit
 
 <p align="center">
   <img src="Documentation~/images/yokiframe-workbench-uikit.png" alt="UIKit panels and stack" width="960">
 </p>
 
-Inspect current panels, panel stack, layers, UIRoot settings, and cache state. This helps diagnose panels that failed to open, wrong layers, abnormal stack state, and Canvas configuration issues.
-
-#### SingletonKit
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-singletonkit.png" alt="SingletonKit workbench" width="960">
-</p>
-
-View Core / Unity / Godot singleton instances and lifecycle state to confirm whether `MonoSingleton`, `GodotSingleton`, or pure C# singletons are registered and alive.
-
-Current workbench pages include:
-
-| Page | Capability |
-| --- | --- |
-| System | Engine connection, heartbeat, engine registry, FileBridge health, command catalog, and logs. |
-| Architecture | Current architecture instance, registered services, and service implementation diagnostics. |
-| EventKit | Event registration relationships, recent events, code scanning, and send / listen / unregister graphs. |
-| FsmKit | State machine list, state flow graph, current state, transition history, and lifecycle events. |
-| PoolKit | Pool statistics, pool details, peaks, cached count, and current snapshot. |
-| ResKit | Resource cache, reference count, provider state, and resource loading diagnostics. |
-| LogKit | Runtime logs, log configuration, file output, and error location. |
-| ActionKit | Action trees, execution state, stack trace switch, and current action statistics. |
-| AudioKit | Active sounds, volume buses, playback history, and audio ID / path generator. |
-| SaveKit | Save slots, auto-save, storage / serialization / encryption backend state. |
-| LocalizationKit | Language list, provider, formatter, cache, and language switching commands. |
-| SceneKit | Scene loading state, preload / unload diagnostics, and scene backend. |
-| SpatialKit | Spatial index list, entity statistics, and query structure diagnostics. |
-| InputKit | Current device, action state, input buffer, and context stack. |
-| UIKit | Panel list, panel stack, layers, Unity panel Prefab creation, and binding helpers. |
-| TableKit | Luban environment detection, generation parameters, output directories, execution logs, and validation. |
-| SingletonKit | Core / Unity / Godot singleton instances and lifecycle state. |
-| Docs | Quick start, Kit docs, API reference, and third-party dependency notes. |
-
-The frontend development source in this repository is under `YokiFrameTools/TauriEditor/dist`. The packaged cross-engine runtime copy is:
+Frontend development source:
 
 ```text
-YokiFrame/TauriRuntime~/dist
+YokiFrameTools/TauriEditor/dist
+YokiFrameTools/TauriEditor/src-tauri
+```
+
+Packaged runtime copy:
+
+```text
+Assets/YokiFrame/TauriRuntime~/dist
 ```
 
 ---
 
-## Installation And Integration
+## Installation
+
+### Installer
+
+The recommended path is the lightweight installer shipped with the package:
+
+```text
+Assets/YokiFrame/Installer~/win-x64/YokiFramePackageTool.exe
+```
 
 <p align="center">
   <img src="Documentation~/images/yokiframe-installer.png" alt="YokiFrame Installer" width="720">
 </p>
 
-### Installer
-
-The recommended path is the lightweight installer shipped with the package. It installs YokiFrame into Unity or Godot projects:
-
-```text
-YokiFrame/Installer~/win-x64/YokiFramePackageTool.exe
-```
-
-The installer detects the target project type and creates an installation plan for the selected engine:
-
 | Target Project | Mode | Notes |
 | --- | --- | --- |
 | Unity | Local package | Copies into `Packages/com.hinatayoki.yokiframe`, useful for offline use or local source editing. |
 | Unity | Git package | Writes to `Packages/manifest.json`, allowing future updates through Unity Package Manager. |
-| Godot | Local package | Installs into `addons/yokiframe/package/YokiFrame` in a Godot 4.7 `.NET / C#` project and creates the Godot plugin entry. |
+| Godot | Local package | Installs into `addons/yokiframe/package/YokiFrame` in a Godot `.NET / C#` project and creates the Godot plugin entry. |
 
-Unity local package mode and Godot mode require selecting the YokiFrame source directory. Unity Git package mode only needs the target Unity project directory and the Git URL.
+### Unity Package Manager
 
-### Unity Git URL
-
-Unity projects can also install YokiFrame directly through Unity Package Manager:
-
-1. Open `Window > Package Manager`.
-2. Click `+` > `Add package from git URL`.
-3. Enter the Git URL:
+Unity projects can also install YokiFrame directly through a Git URL:
 
 ```text
 https://github.com/HinataYoki/YokiFrame.git
 ```
 
-On the current GitHub `main` branch, the Unity package root is the repository root, so the default URL does not need `?path=`. To pin a branch, tag, or commit, append `#branch-or-tag` to the URL. Only append `?path=/subdir` when the target branch or tag actually places `package.json` in a subdirectory.
+Steps:
 
-### Unity Initialization
+1. Open `Window > Package Manager`.
+2. Click `+`, then choose `Add package from git URL`.
+3. Enter the Git URL above.
 
-The minimal runtime initialization is one line:
+The current package root is the repository root, so the default URL does not need `?path=`. To pin a branch, tag, or commit, append `#branch-or-tag`.
+
+### Godot
+
+The Godot installer creates:
+
+```text
+addons/yokiframe/plugin.cfg
+addons/yokiframe/plugin.gd
+addons/yokiframe/package/YokiFrame/
+```
+
+After the plugin is enabled, Godot registers bootstrap, autoload, the `.yokiframe` working directory, and the engine registry. Runtime commands enter through `.yokiframe/engines/godot-runtime/commands/*.json`, and responses are read from that engine's `results` directory.
+
+---
+
+## Quick Integration
+
+### Unity
 
 ```csharp
 using YokiFrame;
 
-YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+public sealed class GameEntry
+{
+    public void Start()
+    {
+        YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+    }
+
+    public void Update(float deltaSeconds)
+    {
+        YokiFrameKit.Tick(deltaSeconds);
+    }
+
+    public void Stop()
+    {
+        YokiFrameKit.Shutdown();
+    }
+}
 ```
 
-`YokiFrameKit` tells the available Kit installers to install default backends for the Unity host, such as ResKit's `UnityResourceProvider`, LogKit's Unity logger, and optional Tool Kit Unity backends. Initialization is not mandatory when only using EventKit, FsmKit, PoolKit, or pure C# singletons. It is recommended during project startup when using host-backed capabilities such as ResKit, AudioKit, InputKit, SceneKit, and UIKit.
-
-When switching to YooAsset or a custom resource system, prefer replacing only the ResKit provider:
-
-```csharp
-ResKit.SetProvider(new YooAssetResourceProvider());
-```
-
-The built-in `UnityResourceProvider` and `YooAssetResourceProvider` both provide normal resources, raw files, and scene loading. SceneKit follows the active ResKit provider by default. UIKit's default `DefaultPanelLoader` also loads panels through `ResKit.LoadAsset<GameObject>()`, so there is no separate YooAsset initialization entry or dedicated PanelLoader. The default panel path remains `Art/UIPrefab/<PanelName>`. If YooAsset uses the panel type name as the addressable location, configure it at startup:
-
-```csharp
-ResKit.SetProvider(new YooAssetResourceProvider());
-UIKit.GetPanelLoader().UseAddressableLocation = true;
-
-// If the current UIKit loader pool has not been created yet, set the global default for new pools.
-DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
-```
-
-If you still want scene lifecycle auto-driving, keep a lightweight `MonoBehaviour` shell:
+If the project should be driven by Unity lifecycle callbacks, use `UnityBootstrap` in the scene:
 
 ```csharp
 using UnityEngine;
@@ -339,71 +508,26 @@ public sealed class GameStartup : MonoBehaviour
 }
 ```
 
-`UnityBootstrap` also calls the unified entry point internally, and forwards `YokiFrameKit.Tick` and `YokiFrameKit.Shutdown` from `Update` / `OnDestroy`. It is an optional lifecycle shell, not the only initialization body.
+### Godot
 
-### Common Unity Adapter Helpers
-
-The public Unity adapter entry point is `YokiFrame.Unity`. Cross-engine Runtime code continues to use `YokiVector2`, `YokiVector3`, `YokiRect`, and `YokiBounds`. Unity gameplay code can convert both ways between `Vector2`, `Vector3`, `Rect`, and `Bounds` through extension methods instead of manually mapping fields at call sites.
+The plugin entry created by the installer handles bootstrap automatically. For manual integration:
 
 ```csharp
-using UnityEngine;
+using YokiFrame;
+
+YokiFrameKit.Initialize(YokiFrameEngine.Godot);
+```
+
+### Replacing The Resource Backend
+
+SceneKit delegates to ResKit's scene backend by default, and UIKit's default panel loader also loads panels through ResKit. When integrating YooAsset or a custom resource system, prefer replacing the ResKit provider first.
+
+```csharp
 using YokiFrame;
 using YokiFrame.Unity;
 
-var bounds = new Bounds(Vector3.zero, Vector3.one * 1000f).ToYokiBounds();
-var octree = SpatialKit.CreateOctree<MySpatialEntity>(bounds);
-
-var position = transform.position.ToYokiVector3();
-mIndex.QueryRadius(position, sensor.Range, mQueryBuffer);
+ResKit.SetProvider(new YooAssetResourceProvider());
 ```
-
-Unity Editor UI Toolkit templates, design tokens, icons, and style services also live under `YokiFrame.Unity`. Import this namespace when using `YokiStyleService`, `YokiStyleProfile`, or `KitIcons` in custom Inspectors or EditorWindows. Add a static import for `YokiFrameUIComponents` when writing `Spacing.SM`, `Colors.TextPrimary`, `Radius.LG`, or `CreateModernToggle()` directly.
-
-When upgrading from 1.0, start with the migration notes in `TauriRuntime~/dist/docs/quick-start.md`. It maps the practical replacements for `UIPanel.Data`, SceneKit events, YooInit, AudioKit, SaveKit, and Unity UI Toolkit entries.
-
-```csharp
-#if UNITY_EDITOR
-using UnityEditor;
-using UnityEngine.UIElements;
-using YokiFrame.Unity;
-using static YokiFrame.Unity.YokiFrameUIComponents;
-
-public sealed class MyInspector : Editor
-{
-    public override VisualElement CreateInspectorGUI()
-    {
-        var root = new VisualElement();
-        YokiStyleService.Apply(root, YokiStyleProfile.CoreOnly);
-        root.style.marginTop = Spacing.SM;
-
-        root.Add(CreateModernToggle("Enable", true, value => { }));
-        return root;
-    }
-}
-#endif
-```
-
-### Godot
-
-The installer installs the package into a Godot 4.7 `.NET / C#` project and creates the root plugin entry:
-
-```text
-addons/yokiframe/plugin.cfg
-addons/yokiframe/plugin.gd
-addons/yokiframe/package/YokiFrame/
-```
-
-After the Godot plugin is enabled, it registers bootstrap, autoload, the `.yokiframe` working directory, and the Godot engine registry. Runtime commands enter through `.yokiframe/engines/godot-runtime/commands/*.json`, and responses are read from that engine's `results` directory.
-
-### Optional Third-Party Integrations
-
-| Dependency | Purpose |
-| --- | --- |
-| UniTask | When `YOKIFRAME_UNITASK_SUPPORT` is enabled in Unity projects, async APIs in ResKit / SaveKit and related Kits can switch to `UniTask<T>`. |
-| YooAsset | Optional Unity ResKit resource backend. |
-| DOTween | Optional ActionKit / UIKit animation integration. |
-| FMOD | Optional AudioKit backend. |
-| Luban | TableKit table generation workflow. |
 
 ---
 
@@ -475,16 +599,52 @@ controller.Resume();
 controller.Cancel();
 ```
 
+### SpatialKit
+
+```csharp
+using YokiFrame;
+
+var bounds = new YokiBounds(YokiVector3.Zero, new YokiVector3(1000f, 1000f, 1000f));
+var octree = SpatialKit.CreateOctree<MySpatialEntity>(bounds);
+
+octree.Insert(entity);
+octree.QueryRadius(entity.Position, sensorRange, results);
+```
+
+---
+
+## AI Entry Points
+
+The package includes Skill documents for AI agents:
+
+```text
+Assets/YokiFrame/Core/Editor/Skills/
+├── yokiframe/
+├── yokiframe-command-bridge/
+└── yokiframe-editor/
+```
+
+Recommended AI query order:
+
+1. Read `.yokiframe/engines/<engineId>/engine.json` to confirm the current online host and capabilities.
+2. Prefer `snapshots/<Kit>/<name>.json` for current state queries.
+3. For details, history, read-only diagnostics, or explicit maintenance operations, write a command and wait for its result.
+4. On timeout, inspect `processing`, `deadletter`, heartbeat, and `System/bridge_status`.
+
+Do not turn high-frequency UI refresh into `send_command` polling. The command bridge is a reliable control plane, not a runtime frame-sync bus.
+
 ---
 
 ## Technical Constraints
 
-- The Unity package declares compatibility with Unity 2022.3+. The current repository development environment covers Unity 6000.x.
-- Godot integration targets Godot 4.7 `.NET / C#` projects.
-- C# code remains compatible with C# 9.0 and does not use C# 10+ syntax.
-- Core Runtime does not directly depend on Tauri. Cross-process communication is implemented through the `.yokiframe` protocol and adapter layers.
-- File bridge protocol fields use safe ASCII identifiers. Commands should be written through a temporary file followed by an atomic rename.
-- High-frequency runtime state is not written to files on every update. Adapter caching, throttling, snapshots, and telemetry are responsible for visual refresh.
+- Current package version: `2.0.0-preview`.
+- The Unity package declares compatibility with Unity `2022.3+`.
+- Godot integration targets Godot 4.x `.NET / C#` projects, with Godot 4.7 as the current primary target.
+- C# code remains compatible with C# 9.0.
+- Core Runtime does not directly depend on Unity, Godot, Tauri, YooAsset, DOTween, FMOD, Luban, or other concrete host / tool implementations.
+- The file bridge uses FileBridge v2 engine-scoped paths. New commands and responses do not use historical root command/result directories.
+- High-frequency state is not written to `.yokiframe` on every update. Snapshots, telemetry, sampled events, and explicit traces carry diagnostic refresh.
+- Mutating commands must pass through user intent, payload validation, CommandPolicy, and a recoverable path.
 
 ---
 
@@ -492,10 +652,12 @@ controller.Cancel();
 
 | Goal | Location |
 | --- | --- |
-| Quick start and Kit docs | `Docs` page in the Tauri workbench |
-| Tauri built-in documentation source | `TauriRuntime~/dist/docs` |
-| AI command bridge Skill | `Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
-| YokiFrame usage Skill | `Core/Editor/Skills/yokiframe/SKILL.md` |
+| Quick start and Kit docs | `Assets/YokiFrame/TauriRuntime~/dist/docs` or the Tauri workbench `Docs` page |
+| Tauri workbench source | `YokiFrameTools/TauriEditor` |
+| Installer source | `YokiFrameTools/Installer` |
+| AI command bridge Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
+| YokiFrame usage Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe/SKILL.md` |
+| Editor workbench Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe-editor/SKILL.md` |
 
 ---
 
