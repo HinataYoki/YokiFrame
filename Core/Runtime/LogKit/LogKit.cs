@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+using UnityEngine;
+#endif
 
 namespace YokiFrame
 {
@@ -15,6 +18,8 @@ namespace YokiFrame
         private static readonly object sLock = new();
         private static readonly Queue<LogKitEntry> sHistory = new(MAX_HISTORY);
         private static IEngineLogger sLogger;
+        private static IEngineLogger sEffectiveLogger;
+        private static Func<IEngineLogger, IEngineLogger> sLoggerAdapter;
         private static bool sEnabled = true;
         private static LogLevel sMinimumLevel = LogLevel.Debug;
         private static int sDroppedCount;
@@ -111,6 +116,20 @@ namespace YokiFrame
                     return;
 
                 sLogger = logger;
+                sEffectiveLogger = AdaptLoggerLocked(logger);
+                BumpDiagnosticVersion();
+            }
+        }
+
+        internal static void SetLoggerAdapter(Func<IEngineLogger, IEngineLogger> adapter)
+        {
+            lock (sLock)
+            {
+                if (Equals(sLoggerAdapter, adapter))
+                    return;
+
+                sLoggerAdapter = adapter;
+                sEffectiveLogger = AdaptLoggerLocked(sLogger);
                 BumpDiagnosticVersion();
             }
         }
@@ -136,6 +155,7 @@ namespace YokiFrame
                     return;
 
                 sLogger = null;
+                sEffectiveLogger = null;
                 BumpDiagnosticVersion();
             }
         }
@@ -148,6 +168,7 @@ namespace YokiFrame
             lock (sLock)
             {
                 sLogger = null;
+                sEffectiveLogger = null;
                 sEnabled = true;
                 sMinimumLevel = LogLevel.Debug;
                 sDroppedCount = 0;
@@ -161,6 +182,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Debug(object message, object context = null)
         {
             Write(LogLevel.Debug, message, context, null);
@@ -171,6 +195,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Log(object message, object context = null)
         {
             Write(LogLevel.Info, message, context, null);
@@ -181,6 +208,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Info(object message, object context = null)
         {
             Write(LogLevel.Info, message, context, null);
@@ -191,6 +221,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Warning(object message, object context = null)
         {
             Write(LogLevel.Warning, message, context, null);
@@ -201,6 +234,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容；传入异常时会记录异常信息。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Error(object message, object context = null)
         {
             Write(LogLevel.Error, message, context, message as Exception);
@@ -211,6 +247,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="exception">要记录的异常。</param>
         /// <param name="context">宿主上下文对象，例如 Unity Object。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Exception(Exception exception, object context = null)
         {
             if (exception == null)
@@ -228,6 +267,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugLog(string message)
         {
             Debug(message);
@@ -239,6 +281,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugWarning(string message)
         {
             Warning(message);
@@ -250,6 +295,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugError(string message)
         {
             Error(message);
@@ -306,10 +354,20 @@ namespace YokiFrame
             }
         }
 
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         private static void Write(LogLevel level, object message, object context, Exception exception)
         {
             var normalizedLevel = NormalizeLevel(level);
+            lock (sLock)
+            {
+                if (!sEnabled || normalizedLevel < sMinimumLevel)
+                    return;
+            }
+
             var finalMessage = FormatMessage(message);
+            var stackTrace = ResolveStackTrace(exception);
             IEngineLogger logger;
             lock (sLock)
             {
@@ -323,15 +381,21 @@ namespace YokiFrame
                     Context = FormatContext(context),
                     ExceptionType = exception != null ? exception.GetType().Name : string.Empty,
                     ExceptionMessage = exception != null ? exception.Message : string.Empty,
-                    StackTrace = exception != null ? exception.StackTrace ?? string.Empty : string.Empty,
+                    StackTrace = stackTrace,
                     TimestampUtc = DateTime.UtcNow.ToString("O")
                 });
                 BumpDiagnosticVersion();
-                logger = sLogger;
+                logger = sEffectiveLogger;
             }
 
             if (logger != null)
-                logger.Log(normalizedLevel, finalMessage, context);
+            {
+                var stackTraceLogger = logger as IEngineLoggerWithStackTrace;
+                if (stackTraceLogger != null)
+                    stackTraceLogger.Log(normalizedLevel, finalMessage, context, stackTrace);
+                else
+                    logger.Log(normalizedLevel, finalMessage, context);
+            }
         }
 
         private static void EnqueueHistoryLocked(LogKitEntry entry)
@@ -348,6 +412,15 @@ namespace YokiFrame
         private static void BumpDiagnosticVersion()
         {
             Interlocked.Increment(ref sDiagnosticVersion);
+        }
+
+        private static IEngineLogger AdaptLoggerLocked(IEngineLogger logger)
+        {
+            if (logger == null || sLoggerAdapter == null)
+                return logger;
+
+            var adaptedLogger = sLoggerAdapter(logger);
+            return adaptedLogger != null ? adaptedLogger : logger;
         }
 
         private static string FormatMessage(object message)
@@ -378,6 +451,80 @@ namespace YokiFrame
             }
 
             return LogLevel.Debug;
+        }
+
+        private static string ResolveStackTrace(Exception exception)
+        {
+            if (exception != null && !string.IsNullOrEmpty(exception.StackTrace))
+                return exception.StackTrace;
+
+            return CaptureCallerStackTrace();
+        }
+
+        private static string CaptureCallerStackTrace()
+        {
+            var stackTrace = new StackTrace(2, true);
+            var frames = stackTrace.GetFrames();
+            if (frames == null || frames.Length == 0)
+                return string.Empty;
+
+            var builder = new System.Text.StringBuilder(256);
+            for (var i = 0; i < frames.Length; i++)
+            {
+                var frame = frames[i];
+                if (frame == null || IsLogKitFrame(frame))
+                    continue;
+
+                AppendStackFrame(builder, frame);
+            }
+
+            return builder.ToString();
+        }
+
+        private static bool IsLogKitFrame(StackFrame frame)
+        {
+            var method = frame.GetMethod();
+            var declaringType = method != null ? method.DeclaringType : null;
+            if (declaringType == null)
+                return false;
+
+            return declaringType == typeof(LogKit) || declaringType == typeof(KitLogger);
+        }
+
+        private static void AppendStackFrame(System.Text.StringBuilder builder, StackFrame frame)
+        {
+            var method = frame.GetMethod();
+            var declaringType = method != null ? method.DeclaringType : null;
+            var typeName = declaringType != null ? declaringType.FullName : "<unknown>";
+            var methodName = method != null ? method.Name : "<unknown>";
+
+            builder.Append(typeName.Replace('+', '/'));
+            builder.Append(':');
+            builder.Append(methodName);
+            builder.Append(" ()");
+
+            var fileName = frame.GetFileName();
+            var lineNumber = frame.GetFileLineNumber();
+            if (!string.IsNullOrEmpty(fileName) && lineNumber > 0)
+            {
+                builder.Append(" (at ");
+                builder.Append(NormalizeStackTraceFileName(fileName));
+                builder.Append(':');
+                builder.Append(lineNumber);
+                builder.Append(')');
+            }
+
+            builder.AppendLine();
+        }
+
+        private static string NormalizeStackTraceFileName(string fileName)
+        {
+            var normalized = fileName.Replace('\\', '/');
+            var assetsIndex = normalized.IndexOf("/Assets/", StringComparison.OrdinalIgnoreCase);
+            if (assetsIndex >= 0)
+                return normalized.Substring(assetsIndex + 1);
+
+            return normalized;
         }
 
         private static LogKitEntry CloneEntry(LogKitEntry entry)

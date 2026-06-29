@@ -1,5 +1,8 @@
 using System;
 using System.Diagnostics;
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+using UnityEngine;
+#endif
 
 namespace YokiFrame
 {
@@ -43,6 +46,9 @@ namespace YokiFrame
         /// 写入普通信息级别日志。
         /// </summary>
         /// <param name="message">日志内容。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Log(object message)
         {
             if (ShouldWrite(YokiFrame.LogLevel.Info))
@@ -53,6 +59,9 @@ namespace YokiFrame
         /// 写入警告级别日志。
         /// </summary>
         /// <param name="message">日志内容。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Warning(object message)
         {
             if (ShouldWrite(YokiFrame.LogLevel.Warning))
@@ -63,6 +72,9 @@ namespace YokiFrame
         /// 写入错误级别日志。
         /// </summary>
         /// <param name="message">日志内容。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Error(object message)
         {
             if (ShouldWrite(YokiFrame.LogLevel.Error))
@@ -73,6 +85,9 @@ namespace YokiFrame
         /// 写入异常日志。
         /// </summary>
         /// <param name="exception">要记录的异常。</param>
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void Exception(Exception exception)
         {
             if (ShouldWrite(YokiFrame.LogLevel.Error))
@@ -94,6 +109,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugLog(string message)
         {
             Log(message);
@@ -105,6 +123,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugWarning(string message)
         {
             Warning(message);
@@ -116,6 +137,9 @@ namespace YokiFrame
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
         [Conditional("UNITY_ENABLE_CHECKS")]
+#if UNITY_2022_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        [HideInCallstack]
+#endif
         public static void DebugError(string message)
         {
             Error(message);

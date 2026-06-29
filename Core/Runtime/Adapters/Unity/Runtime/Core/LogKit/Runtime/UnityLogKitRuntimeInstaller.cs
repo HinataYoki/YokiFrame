@@ -14,8 +14,14 @@ namespace YokiFrame.Unity
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void AutoInstall()
         {
+            EnsureLoggerAdapterRegistered();
             UnityRuntimeSettingsBridge.EnsureInstalled();
             Install(UnityRuntimeSettingsBridge.GetLogKitOptions(UnityLogKitOptions.CreateDefault()), null);
+        }
+
+        internal static void EnsureLoggerAdapterRegistered()
+        {
+            LogKit.SetLoggerAdapter(UnityEngineLogger.WrapLegacyLogger);
         }
 
         /// <summary>
@@ -25,6 +31,7 @@ namespace YokiFrame.Unity
         /// <param name="logger">日志后端；传入 null 时复用已有后端或创建 UnityEngineLogger。</param>
         public static void Install(UnityLogKitOptions options, IEngineLogger logger)
         {
+            EnsureLoggerAdapterRegistered();
             var finalLogger = logger ?? sLogger ?? new UnityEngineLogger();
             sLogger = finalLogger;
             LogKit.SetLogger(finalLogger);

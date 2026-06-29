@@ -35,6 +35,7 @@ namespace YokiFrame.Godot
             var resourceProvider = new GodotResourceProvider();
             var serializationProvider = new GodotEngineSerializationProvider();
 
+            LogKit.SetLoggerAdapter(GodotEngineLogger.WrapLegacyLogger);
             LogKit.SetLogger(logger);
             ResKit.SetProvider(resourceProvider);
 
