@@ -1,38 +1,18 @@
 # ResKit 资源
 
-ResKit 是运行时统一资源 API。它不直接绑定 Unity `Resources`、YooAsset、Addressables、Godot `ResourceLoader` 或 Godot `FileAccess`，而是通过 `IResourceProvider` / `IRawResourceProvider` 接入具体资源后端。
+## 什么时候先看这里
 
-## 核心类型
+| 问题 | 看本页 |
+|---|---|
+| `ResKit provider is not configured` | 配置 Provider。 |
+| 想从 Unity Resources 切到 YooAsset | 替换 Provider。 |
+| 资源引用计数不归零 | 检查 `LoadAsset<T>()` 句柄释放。 |
+| raw 文件读取失败 | 确认 Provider 实现 `IRawResourceProvider`。 |
+| SceneKit / UIKit 加载路径混乱 | 确认它们是否跟随 ResKit Provider。 |
 
-| 类型 | 作用 |
-|------|------|
-| `ResKit` | 静态资源入口，负责缓存、引用计数、卸载历史和调试数据。 |
-| `IResourceProvider` | 资源后端接口，提供同步加载、异步加载、实例化和释放。 |
-| `IRawResourceProvider` | 原始资源后端接口，提供文本、bytes 和原始文件路径读取。 |
-| `IResSceneBackend` | ResKit 统一管理的场景加载后端；Provider 实现它时，SceneKit 默认跟随当前 ResKit Provider。 |
-| `ResHandle<T>` | 带引用计数的资源句柄，支持 `Retain()`、`Release()`、`Dispose()`。 |
-| `ResDebugInfo` | 当前已加载资源的调试数据。 |
-| `ResUnloadRecord` | 引用归零或 `ClearAll()` 后的卸载记录。 |
+## 配置 Provider
 
-## 统计属性
-
-ResKit 提供以下只读属性用于诊断：
-
-| 属性 | 说明 |
-|------|------|
-| `ProviderName` | 当前 Provider 名称。 |
-| `LoadedCount` | 当前已加载资源数量。 |
-| `TotalRefCount` | 所有资源的引用计数总和。 |
-| `UnloadHistoryCount` | 卸载历史记录数量。 |
-
-```csharp
-Debug.Log($"Provider: {ResKit.ProviderName}");
-Debug.Log($"Loaded: {ResKit.LoadedCount}, Refs: {ResKit.TotalRefCount}");
-```
-
-## 设置 Provider
-
-使用 ResKit 前必须先设置 Provider。Unity 默认 Provider 是 `UnityResourceProvider`，基于 `Resources.Load` / `Resources.LoadAsync` / prefab instantiate，raw 读取基于 `TextAsset`。
+Unity 默认 Provider：
 
 ```csharp
 using YokiFrame;
@@ -41,7 +21,13 @@ using YokiFrame.Unity;
 ResKit.SetProvider(new UnityResourceProvider());
 ```
 
-安装 YooAsset 后，Unity Editor 会自动启用 `YOKIFRAME_YOOASSET_SUPPORT`。需要切换到 YooAsset 后端时仍然使用同一个 `YokiFrame.ResKit` 入口，只替换 Provider：
+统一初始化也会安装默认后端：
+
+```csharp
+YokiFrameKit.Initialize(YokiFrameEngine.Unity);
+```
+
+YooAsset 项目仍然只替换 ResKit Provider：
 
 ```csharp
 #if YOKIFRAME_YOOASSET_SUPPORT
@@ -49,84 +35,26 @@ ResKit.SetProvider(new YooAssetResourceProvider());
 #endif
 ```
 
-`YooAssetResourceProvider` 同时兼容 YooAsset 2.3.x 和 3.x。2.3.x 使用 YooAsset 默认包静态 API；3.x 可额外传入 `ResourcePackage` 或包名：
+自定义资源系统实现 `IResourceProvider` 后注入：
 
 ```csharp
-#if YOKIFRAME_YOOASSET_SUPPORT && YOOASSET_3_0_OR_NEWER
-var package = YooAssets.GetPackage("DefaultPackage");
-ResKit.SetProvider(new YooAssetResourceProvider(package));
-#endif
-```
-
-内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 都同时提供 asset、raw 和 scene 能力。也就是说，切到 YooAsset 后端只需要替换 ResKit Provider：
-
-```csharp
-ResKit.SetProvider(new YooAssetResourceProvider());
-```
-
-之后 `ResKit.LoadAsset<T>()`、`ResKit.LoadRawText()`、`SceneKit.LoadSceneAsync()` 和 UIKit 默认 `DefaultPanelLoader` 都会沿用当前 ResKit Provider。新项目不需要再额外调用 `SceneKit.SetBackend()`，UIKit 也不再提供 YooAsset 专用初始化入口；只有项目要接入完全不同的场景系统或 UI 加载策略时，才使用显式覆盖点。
-
-UIKit 默认面板路径仍是 `Art/UIPrefab/<PanelName>`。如果 YooAsset 面板收集方式使用可寻址名，例如 `LoginPanel`，开启默认加载池的可寻址模式：
-
-```csharp
-ResKit.SetProvider(new YooAssetResourceProvider());
-UIKit.GetPanelLoader().UseAddressableLocation = true;
-
-// 如果还没有创建 UIKit 当前加载池，也可以先设置新建默认池的全局默认值
-DefaultPanelLoaderPool.DefaultUseAddressableLocation = true;
-```
-
-`UnityBootstrap` 会在初始化时完成这一步。如果项目使用自己的资源系统，实现 `IResourceProvider` 后手动注入：
-
-```csharp
-using System.Threading;
-using System.Threading.Tasks;
-using YokiFrame;
-
-public sealed class ProjectResourceProvider : IResourceProvider
-{
-    public string ProviderName => "Project.Custom";
-
-    public T Load<T>(string path) where T : class
-    {
-        return default;
-    }
-
-    public Task<T> LoadAsync<T>(string path, CancellationToken token = default) where T : class
-    {
-        return Task.FromResult(Load<T>(path));
-    }
-
-    public IEngineObject Instantiate(string path)
-    {
-        return null;
-    }
-
-    public void Release(object asset)
-    {
-    }
-}
-
 ResKit.SetProvider(new ProjectResourceProvider());
 ```
 
-如果 `YOKIFRAME_UNITASK_SUPPORT` 已启用，`IResourceProvider.LoadAsync<T>()` 和 raw 异步接口的返回值会从 `Task<T>` 切换为 `UniTask<T>`，自定义 Provider 也需要实现同一套条件编译签名。
+`SetProvider()` 会清空当前缓存。不要在运行中随意切换 Provider。
 
-`SetProvider()` 会先调用 `ClearAll()`，因此切换 Provider 会清空当前缓存并记录卸载历史。
+## 加载资源
 
-## 同步加载
-
-`Load<T>()` 返回资源对象：
+只拿资源对象：
 
 ```csharp
-var config = ResKit.Load<MyConfig>("Configs/GameConfig");
 var icon = ResKit.Load<Sprite>("Sprites/Icon");
 ```
 
-需要明确控制生命周期时，使用 `LoadAsset<T>()`：
+需要明确生命周期：
 
 ```csharp
-var handle = ResKit.LoadAsset<MyConfig>("Configs/GameConfig");
+var handle = ResKit.LoadAsset<Sprite>("Sprites/Icon");
 try
 {
     Use(handle.Asset);
@@ -137,126 +65,81 @@ finally
 }
 ```
 
-相同 `path + T` 会复用同一个缓存句柄，并增加 `RefCount`。当 `RefCount` 归零时，ResKit 会移除缓存，并调用 Provider 的 `Release(asset)`。
+相同 `path + T` 会复用缓存并增加引用计数。句柄释放到 `RefCount == 0` 时，ResKit 移除缓存并调用 Provider 的 `Release(asset)`。
 
-## 异步加载
+## 异步与 raw
 
-`YokiFrame.ResKit` 是 Unity 和 Godot 共用的唯一 ResKit 入口。默认异步返回 `Task<T>`；Unity 项目安装 UniTask 后，Editor 会自动启用 `YOKIFRAME_UNITASK_SUPPORT` 宏，同一组 `LoadAsync()` / `LoadAssetAsync()` / `LoadRawAsync()` / `LoadRawTextAsync()` 返回值会直接切换为 `UniTask<T>`。
+异步 API 默认返回 `Task<T>`；启用 `YOKIFRAME_UNITASK_SUPPORT` 后返回 `UniTask<T>`。
 
 ```csharp
-using System.Threading;
-using YokiFrame;
-
-using var cts = new CancellationTokenSource();
-var handle = await ResKit.LoadAssetAsync<MyConfig>("Configs/GameConfig", cts.Token);
-try
-{
-    Use(handle.Asset);
-}
-finally
-{
-    handle.Release();
-}
+var handle = await ResKit.LoadAssetAsync<MyConfig>("Configs/GameConfig", token);
 ```
 
-## 原始资源加载
-
-Unity 和 Godot 调用侧都通过同一套 ResKit API 读取 raw 文件：
+raw 文件：
 
 ```csharp
 var bytes = ResKit.LoadRaw("Configs/GameConfig");
 var text = ResKit.LoadRawText("Configs/GameConfig");
-var asyncBytes = await ResKit.LoadRawAsync("Configs/GameConfig", cts.Token);
-var asyncText = await ResKit.LoadRawTextAsync("Configs/GameConfig", cts.Token);
 ```
 
-`LoadRaw()` 返回 bytes，`LoadRawText()` 返回文本。1.x 的 `LoadRawFileData()` / `LoadRawFileText()` raw 别名已移除。
+Provider 不实现 `IRawResourceProvider` 时 raw 读取会失败。
 
-默认 Unity Provider 使用 `Resources.Load<TextAsset>()`，路径仍是 Resources 内路径。YooAsset Provider 使用 `LoadRawFile` / `RawFileObject` 兼容 YooAsset 2.3.x 和 3.x，并支持 `GetRawFilePath()`。默认 Godot Provider 使用 `FileAccess`，支持 `res://`、`user://` 等 Godot 文件路径。
+## SceneKit 和 UIKit
 
-自定义 Provider 如果要支持 raw 读取，除 `IResourceProvider` 外还需要实现 `IRawResourceProvider`。否则调用 `LoadRaw()` 会抛出 `NotSupportedException`。
+内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 同时提供 asset、raw 和 scene 能力。切换 Provider 后：
 
-获取原始文件的物理路径（需要 Provider 支持）：
+| 模块 | 默认行为 |
+|---|---|
+| SceneKit | 跟随当前 ResKit Provider 的场景后端。 |
+| UIKit | 默认加载器通过 `ResKit.LoadAsset<GameObject>()` 加载面板。 |
+| TableKit 生成代码 | 默认通过 `ResKit.LoadRaw()` / `LoadRawText()` 读取配置表。 |
+
+YooAsset 面板如果使用类型名作为 location：
 
 ```csharp
-string path = ResKit.GetRawFilePath("Configs/GameConfig");
+ResKit.SetProvider(new YooAssetResourceProvider());
+UIKit.GetPanelLoader().UseAddressableLocation = true;
 ```
 
-## 实例化与释放
+## 诊断 API
 
 ```csharp
-var obj = ResKit.Instantiate("Prefabs/Player");
+Debug.Log(ResKit.ProviderName);
+Debug.Log(ResKit.LoadedCount);
+Debug.Log(ResKit.TotalRefCount);
+
+var loaded = new List<ResDebugInfo>();
+ResKit.GetLoadedAssets(loaded);
 ```
 
-`Instantiate()` 返回 `IEngineObject`。Unity Provider 会加载 `GameObject` prefab 并实例化；Godot Provider 可以实例化 `PackedScene`。
-
-清空全部缓存：
-
-```csharp
-ResKit.ClearAll();
-ResKit.ClearUnloadHistory();
-```
-
-Unity `Resources` 后端的资源生命周期主要由 Unity 管理；YooAsset Provider 会在 ResKit 引用归零时释放对应 `AssetHandle`。自定义 Addressables Provider 应在 `Release()` 中释放对应句柄。
-
-## 场景后端管理
-
-ResKit 提供场景后端管理接口，供 SceneKit 或项目自定义场景系统使用。`ResKit.SetProvider(provider)` 会在 provider 同时实现 `IResSceneBackend` 时自动设置场景后端：
-
-| 属性/方法 | 说明 |
-|-----------|------|
-| `SceneBackendName` | 当前场景后端名称。 |
-| `SetSceneBackend(backend)` | 显式覆盖场景后端。通常只有项目场景系统不属于资源 Provider 时才需要。 |
-| `GetSceneBackend()` | 获取当前场景后端。 |
-| `ClearSceneBackend()` | 清除场景后端。 |
-
-## ResHandle 属性
-
-`ResHandle<T>` 除了 `Asset`、`Release()`、`Retain()`、`Dispose()` 外，还提供以下属性：
-
-| 属性 | 说明 |
-|------|------|
-| `Path` | 资源路径。 |
-| `AssetType` | 资源类型。 |
-| `ProviderName` | 加载该资源的 Provider 名称。 |
-| `RefCount` | 当前引用计数。 |
-| `IsDone` | 异步加载是否已完成。 |
-| `Source` | 加载调用位置（需开启 `EnableLoadLocationTracking`）。 |
-| `SourceFile` | 加载调用文件路径。 |
-| `SourceLine` | 加载调用行号。 |
-
-## 加载位置记录
-
-默认不记录调用位置，避免普通加载路径付出堆栈采集成本。需要排查资源生命周期时可以临时打开：
+需要定位加载来源时临时开启：
 
 ```csharp
 ResKit.EnableLoadLocationTracking = true;
 ```
 
-开启后，新加载资源会记录：
+已缓存资源不会补录位置，需要释放后重新加载。
 
-- `Source`
-- `SourceFile`
-- `SourceLine`
+## 工作台诊断
 
-已经缓存的资源不会补录位置，需要释放后重新加载才会记录。
+ResKit 页面用于查看 Provider、已加载资源、引用计数、卸载历史和加载来源。
 
-读取当前加载数据：
+| 在工作台里看什么 | 用途 |
+|---|---|
+| Provider | 确认当前使用 Resources、YooAsset 还是项目自定义后端。 |
+| 已加载资源列表 | 找到未释放或重复加载的资源。 |
+| RefCount | 判断句柄是否都正确 Release。 |
+| 卸载历史 | 查看资源是否按预期释放。 |
+| 加载来源 | 定位是谁加载了长期持有的资源。 |
 
-```csharp
-var loaded = new List<ResDebugInfo>();
-ResKit.GetLoadedAssets(loaded);
+资源不释放时，先按 RefCount 排序找高引用资源，再打开加载来源；加载来源为空时，先启用加载位置采集并重新触发加载。
 
-var history = new List<ResUnloadRecord>();
-ResKit.GetUnloadHistory(history);
-```
-
-## 常见问题
+## 常见坑
 
 | 问题 | 处理方式 |
-|------|----------|
-| `ResKit provider is not configured` | 先调用 `ResKit.SetProvider(...)`，或确保 `UnityBootstrap` 已初始化。 |
-| `provider does not support raw resources` | 当前 Provider 没有实现 `IRawResourceProvider`，需要换用支持 raw 的后端。 |
-| 资源一直不释放 | 确认所有 `LoadAsset<T>()` 返回的 handle 都调用了 `Release()`。 |
-| 没有加载位置 | 先打开 `EnableLoadLocationTracking`，再重新触发加载。 |
-| `Load<T>()` 不方便释放 | 需要严格生命周期时使用 `LoadAsset<T>()`，不要只拿资源对象。 |
+|---|---|
+| Provider 未配置 | 初始化宿主或手动 `ResKit.SetProvider(...)`。 |
+| 资源不释放 | 所有 `LoadAsset<T>()` 句柄都要 `Release()`。 |
+| raw 不支持 | Provider 需要实现 `IRawResourceProvider`。 |
+| YooAsset UI 找不到面板 | 检查面板路径模式或开启 `UseAddressableLocation`。 |
+| 加载位置为空 | 先开启 `EnableLoadLocationTracking`，再重新触发加载。 |

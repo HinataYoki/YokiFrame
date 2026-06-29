@@ -4,12 +4,14 @@
   gap: var(--sp-md);
   height: 100%;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
 .doc-nav,
 .doc-article,
 .doc-toc {
+  min-width: 0;
   min-height: 0;
   overflow: auto;
 }
@@ -20,10 +22,28 @@
 }
 
 .doc-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  overflow-x: hidden;
+  overflow-y: auto;
   border-top: 3px solid var(--doc-core);
   background:
     linear-gradient(180deg, rgba(124, 58, 237, 0.06), transparent 220px),
     var(--surface-1);
+}
+
+.doc-nav-list {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.doc-nav-refresh {
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .doc-article {
@@ -88,6 +108,7 @@
 }
 
 .doc-nav-group {
+  min-width: 0;
   margin-bottom: var(--sp-md);
 }
 
@@ -96,6 +117,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   margin-bottom: var(--sp-xs);
   color: var(--ink-tertiary);
   font-size: var(--fs-caption);
@@ -126,6 +148,9 @@
   grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
   gap: var(--sp-xs);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: var(--sp-xs);
   border: 1px solid transparent;
   border-radius: var(--r-md);
@@ -250,6 +275,7 @@
 
 .doc-nav-item-title {
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

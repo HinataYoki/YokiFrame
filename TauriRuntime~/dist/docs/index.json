@@ -7,7 +7,7 @@
       "icon": "framework",
       "iconTone": "framework",
       "file": "docs/overview.md",
-      "summary": "YokiFrame 2.0 的运行时定位、主要 Kit 和推荐使用方式。"
+      "summary": "YokiFrame 的组成、Kit 分组、跨引擎方式、AI 诊断通信和工作台入口。"
     },
     {
       "id": "quick-start",
@@ -16,7 +16,7 @@
       "icon": "action",
       "iconTone": "actionkit",
       "file": "docs/quick-start.md",
-      "summary": "从接入运行时启动器到写出第一个事件、状态机、资源加载示例，并快速查阅常用 API。"
+      "summary": "安装 AI Skill、Unity/Godot 初始化、常用 Kit API 和工作台检查。"
     },
     {
       "id": "architecture",
@@ -25,7 +25,7 @@
       "icon": "architecture",
       "iconTone": "architecture",
       "file": "docs/architecture.md",
-      "summary": "YokiFrame Base 层的服务化架构入口、Service / Model 生命周期和跨模块获取方式。"
+      "summary": "项目级服务容器、Service / Model 注册和工作台诊断。"
     },
     {
       "id": "codegenkit",
@@ -35,7 +35,7 @@
       "icon": "code",
       "iconTone": "codegenkit",
       "file": "docs/codegenkit.md",
-      "summary": "纯 C# 代码生成工具，支持结构化 AST 和模板式代码构建。"
+      "summary": "Editor 侧 C# 代码生成入口：结构化 AST 和模板式生成。"
     },
     {
       "id": "eventkit",
@@ -45,7 +45,7 @@
       "icon": "event",
       "iconTone": "eventkit",
       "file": "docs/eventkit.md",
-      "summary": "Type / Enum / String 事件通道、注册注销、发送和生命周期建议。"
+      "summary": "Type / Enum 事件选择、注册发送注销和事件诊断。"
     },
     {
       "id": "fsmkit",
@@ -55,7 +55,7 @@
       "icon": "fsm",
       "iconTone": "fsmkit",
       "file": "docs/fsmkit.md",
-      "summary": "FSM、带参数 FSM、层级状态机、生命周期和常见使用细节。"
+      "summary": "状态机创建、驱动、切换、释放和工作台状态诊断。"
     },
     {
       "id": "poolkit",
@@ -65,7 +65,7 @@
       "icon": "pool",
       "iconTone": "poolkit",
       "file": "docs/poolkit.md",
-      "summary": "SimplePoolKit、SafePoolKit、集合池和运行时跟踪开关。"
+      "summary": "普通池、安全池、集合池选择和回收问题诊断。"
     },
     {
       "id": "reskit",
@@ -75,7 +75,7 @@
       "icon": "res",
       "iconTone": "reskit",
       "file": "docs/reskit.md",
-      "summary": "IResourceProvider、同步/异步加载、资源句柄、引用计数和 Provider 接入。"
+      "summary": "Provider 配置、资源句柄释放、raw 读取和加载来源诊断。"
     },
     {
       "id": "singletonkit",
@@ -85,7 +85,7 @@
       "icon": "singleton",
       "iconTone": "singletonkit",
       "file": "docs/singletonkit.md",
-      "summary": "纯 C# 单例、Unity Mono 单例和 Godot Node 单例的运行时用法。"
+      "summary": "纯 C#、Unity 和 Godot 单例选择与存活诊断。"
     },
     {
       "id": "actionkit",
@@ -95,7 +95,7 @@
       "icon": "action",
       "iconTone": "actionkit",
       "file": "docs/actionkit.md",
-      "summary": "Sequence、Parallel、Repeat、Delay、Callback、Coroutine 和 Task 动作组合。"
+      "summary": "Delay、Callback、Sequence、Parallel、Repeat 和动作取消。"
     },
     {
       "id": "audiokit",
@@ -105,7 +105,7 @@
       "icon": "audio",
       "iconTone": "audiokit",
       "file": "docs/audiokit.md",
-      "summary": "音频后端、播放选项、音量总线、命令桥状态、Tauri 工作台和 Unity AudioSource 后端。"
+      "summary": "音频后端、播放停止、总线音量、voice 和历史诊断。"
     },
     {
       "id": "inputkit",
@@ -115,7 +115,7 @@
       "icon": "input",
       "iconTone": "inputkit",
       "file": "docs/inputkit.md",
-      "summary": "统一输入后端、动作状态、输入缓冲、上下文栈、命令桥状态和 Tauri 工作台。"
+      "summary": "动作输入、输入缓冲、上下文栈和只读诊断。"
     },
     {
       "id": "localizationkit",
@@ -125,7 +125,7 @@
       "icon": "localization",
       "iconTone": "localizationkit",
       "file": "docs/localizationkit.md",
-      "summary": "本地化文本、语言切换、Provider 后端、命令桥状态和 Tauri 工作台。"
+      "summary": "语言 Provider、取文本、切语言、Binder 和语言状态诊断。"
     },
     {
       "id": "savekit",
@@ -135,7 +135,7 @@
       "icon": "save",
       "iconTone": "savekit",
       "file": "docs/savekit.md",
-      "summary": "存档槽、存储/序列化/加密后端、自动保存、命令桥状态和 Tauri 工作台。"
+      "summary": "存档后端、槽位、版本、自动保存和维护命令边界。"
     },
     {
       "id": "scenekit",
@@ -145,7 +145,7 @@
       "icon": "scene",
       "iconTone": "scenekit",
       "file": "docs/scenekit.md",
-      "summary": "跨引擎场景加载、预加载、卸载、ISceneBackend 后端、命令桥状态和 Tauri 工作台。"
+      "summary": "场景后端、加载预加载卸载和状态修改命令边界。"
     },
     {
       "id": "spatialkit",
@@ -155,7 +155,7 @@
       "icon": "spatial",
       "iconTone": "spatialkit",
       "file": "docs/spatialkit.md",
-      "summary": "HashGrid、Quadtree、Octree 空间查询、诊断快照、命令桥状态和 Tauri 工作台。"
+      "summary": "HashGrid、Quadtree、Octree 选择和只读诊断。"
     },
     {
       "id": "tablekit",
@@ -165,7 +165,7 @@
       "icon": "table",
       "iconTone": "tablekit",
       "file": "docs/tablekit.md",
-      "summary": "Tauri 内的 Luban 配置表编辑器、生成配置、输出目录和跨引擎 loader 约定。"
+      "summary": "Luban 环境、TableKit 生成产物、运行时加载和工作台使用。"
     },
     {
       "id": "uikit",
@@ -175,7 +175,7 @@
       "icon": "ui",
       "iconTone": "uikit",
       "file": "docs/uikit.md",
-      "summary": "统一 UI 面板入口、后端接口、面板栈、命令桥状态和 Tauri 工作台。"
+      "summary": "面板打开关闭、栈、加载器、对话框和只读诊断。"
     },
     {
       "id": "third-party-recommendations",
@@ -184,7 +184,7 @@
       "icon": "github",
       "iconTone": "github",
       "file": "docs/third-party-recommendations.md",
-      "summary": "结合 YokiFrame 与 AI 协作工作流推荐的第三方工具。"
+      "summary": "新项目优先装什么、什么时候装、不装会怎样。"
     },
     {
       "id": "third-party-index",
@@ -193,7 +193,7 @@
       "icon": "package",
       "iconTone": "package",
       "file": "docs/third-party-index.md",
-      "summary": "YokiFrame 2.0 常见软依赖、适用 Kit、宏定义和安装入口。"
+      "summary": "软依赖、宏定义、影响 Kit 和安装入口速查。"
     }
   ]
 }

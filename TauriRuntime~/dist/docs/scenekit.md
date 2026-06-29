@@ -1,34 +1,8 @@
 # SceneKit 场景
 
-SceneKit 是跨引擎场景管理门面。业务代码在 `YokiFrame` 命名空间中调用 `SceneKit` 静态入口，Unity 的 `SceneManager`、Godot 的场景树或项目自定义加载器都应隐藏在 `ISceneBackend` 后端里，不创建 `UnitySceneKit2` 或 `GodotSceneKit2` 这类平行 API。
+## 配置后端
 
-## 核心类型
-
-| 类型 | 作用 |
-|------|------|
-| `SceneKit` | 静态统一入口，负责加载、预加载、激活、卸载和诊断快照。 |
-| `ISceneBackend` | 场景后端接口，由 Unity/Godot Adapter 或项目自定义实现。 |
-| `SceneHandler` | 单个场景加载过程和运行状态句柄。 |
-| `SceneLoadRequest` | 后端加载请求，包含场景名、BuildIndex、模式、暂停进度和数据。 |
-| `SceneHandle` | 引擎无关的场景句柄。 |
-| `ISceneData` | 场景切换携带的纯 C# 数据接口。 |
-
-## 状态与查询
-
-| 属性/方法 | 说明 |
-|-----------|------|
-| `IsTransitioning` | 是否正在切换场景。 |
-| `GetActiveSceneHandler()` | 获取当前活跃场景的 Handler。 |
-| `GetActiveScene()` | 获取当前活跃场景的 Handle。 |
-| `GetLoadedScenes()` | 获取所有已加载场景的 Handler 列表。 |
-| `IsSceneLoaded(sceneName)` | 检查场景是否已加载。 |
-| `GetSceneHandler(sceneName)` | 获取指定场景的 Handler。 |
-| `GetSceneData<T>()` | 获取当前活跃场景的数据。 |
-| `GetSceneData<T>(sceneName)` | 获取指定场景的数据。 |
-
-## 设置后端
-
-Unity 项目推荐由统一初始化入口注入后端：
+Unity 项目通常由统一初始化安装 ResKit Provider 和场景后端：
 
 ```csharp
 using YokiFrame;
@@ -36,127 +10,77 @@ using YokiFrame;
 YokiFrameKit.Initialize(YokiFrameEngine.Unity);
 ```
 
-`YokiFrameKit.Initialize(YokiFrameEngine.Unity)` 会先安装 ResKit 的 Unity 默认 Provider。内置 `UnityResourceProvider` 同时实现 `IResSceneBackend`，所以 SceneKit 默认通过 ResKit 使用 Unity `SceneManager`。如果后续切换到 `YooAssetResourceProvider`：
+内置 `UnityResourceProvider` 和 `YooAssetResourceProvider` 同时提供场景后端。切换 YooAsset 时只换 ResKit Provider：
 
 ```csharp
 ResKit.SetProvider(new YooAssetResourceProvider());
 ```
 
-SceneKit 会跟随当前 ResKit Provider，按 YooAsset location 加载场景。需要手动接入项目自己的场景系统时，再调用 `SceneKit.SetBackend()` 或 `ResKit.SetSceneBackend()` 显式覆盖。
-
-Godot 项目由 `GodotSceneKitInstaller` 或 `GodotBootstrap` 注入后端。业务侧仍只依赖统一静态入口：
+项目自定义场景系统时再显式设置：
 
 ```csharp
-using YokiFrame;
-
-SceneKit.LoadSceneAsync("Gameplay", SceneLoadMode.Single);
+SceneKit.SetBackend(new ProjectSceneBackend());
 ```
 
-## 加载与预加载
+## 加载场景
 
 ```csharp
 SceneKit.LoadSceneAsync(
     "Gameplay",
     SceneLoadMode.Single,
-    handler => { /* 加载完成 */ },
+    handler => { /* loaded */ },
     progress => { /* 0..1 */ },
     suspendAtProgress: 1f,
     data: new GameplaySceneData());
 ```
 
-预加载会以 Additive 模式创建场景句柄，可在指定进度暂停，后续显式激活：
+预加载和激活：
 
 ```csharp
 var handler = SceneKit.PreloadSceneAsync("Battle", suspendAtProgress: 0.9f);
 SceneKit.ActivatePreloadedScene(handler);
 ```
 
-卸载和资源回收：
+暂停、恢复、卸载：
 
 ```csharp
+SceneKit.SuspendLoad(handler);
+SceneKit.ResumeLoad(handler);
 SceneKit.UnloadSceneAsync("Battle");
 SceneKit.UnloadUnusedAssets();
 ```
 
-### 暂停与恢复加载
+## 查询状态
 
-```csharp
-var handler = SceneKit.PreloadSceneAsync("Battle", suspendAtProgress: 0.9f);
-// 暂停加载
-SceneKit.SuspendLoad(handler);
-// 恢复加载
-SceneKit.ResumeLoad(handler);
-```
+| 方法 | 说明 |
+|---|---|
+| `IsTransitioning` | 是否正在切换。 |
+| `GetActiveSceneHandler()` | 当前活跃场景 Handler。 |
+| `GetActiveScene()` | 当前活跃场景句柄。 |
+| `GetLoadedScenes()` | 已加载场景列表。 |
+| `IsSceneLoaded(sceneName)` | 场景是否已加载。 |
+| `GetSceneData<T>()` | 当前活跃场景数据。 |
 
-### 清空场景
+## 工作台诊断
 
-```csharp
-SceneKit.ClearAllScenes(preserveActive: true, onComplete: () =>
-{
-    Debug.Log("All scenes cleared except active");
-});
-```
+SceneKit 页面用于查看后端、当前场景、已加载场景和切换状态。
 
-### 重置
+| 在工作台里看什么 | 用途 |
+|---|---|
+| Backend | 确认场景加载由 Unity、Godot 还是项目后端处理。 |
+| Active Scene | 查看当前激活场景。 |
+| Loaded Scenes | 检查 additive 场景是否仍在内存中。 |
+| Transition State | 判断是否正在加载、预加载或卸载。 |
+| History | 回看最近场景操作。 |
 
-```csharp
-SceneKit.Reset();
-```
+场景卡住时，先看 Transition State，再看 Loaded Scenes 是否有旧场景未卸载。卸载场景会改变运行状态，只在明确目标时执行。
 
-`Reset()` 会清除后端、所有场景 Handler 和诊断数据。
-
-## 命令桥
-
-SceneKit 已接入文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径：
-
-```json
-{
-  "protocolVersion": 2,
-  "engineId": "unity-editor",
-  "source": "codex",
-  "requestId": "scene-001",
-  "kit": "SceneKit",
-  "action": "get_workbench_snapshot",
-  "payload": {}
-}
-```
-
-常用 action：
-
-| action | payload | 说明 |
-|--------|---------|------|
-| `get_workbench_snapshot` | `{}` | 工作台、AI 和 snapshot publisher 共用的完整当前状态。 |
-| `stats` | `{}` | 后端、激活场景、加载数量和切换状态。 |
-| `list_scenes` | `{}` | 当前 SceneHandler 诊断列表。 |
-| `unload_scene` | `{ "sceneName": "Menu" }` | 显式卸载指定场景，内部仍调用 `SceneKit.UnloadSceneAsync()`。 |
-
-命令桥不暴露“加载场景”按钮作为默认工作台动作，避免编辑器误触改变游戏流程。加载、切换和预加载应由运行时代码或明确的项目工具触发。
-
-## Tauri 工作台
-
-SceneKit 页面读取顺序为：
-
-1. `read_telemetry("SceneKit", "state")`
-2. `read_snapshot("SceneKit", "state")`
-3. `send_command("SceneKit", "get_workbench_snapshot")`
-
-Unity `KitStateSnapshotPublisher` 和 Godot `GodotKitStateSnapshotPublisher` 都通过可选 handler 发布 `SceneKit/state`。页面只在缺少 telemetry/snapshot、用户点击刷新或执行卸载时走命令桥，避免用高频命令轮询场景状态。
-
-## AI 查询建议
-
-AI 默认先读：
-
-```text
-.yokiframe/engines/<engineId>/snapshots/SceneKit/state.json
-```
-
-snapshot 缺失、过期或需要显式维护动作时，再发送 `SceneKit/get_workbench_snapshot`、`SceneKit/stats`、`SceneKit/list_scenes` 或 `SceneKit/unload_scene`。`unload_scene` 是状态修改命令，只在用户明确要求卸载时使用。
-
-## 常见问题
+## 常见坑
 
 | 问题 | 处理方式 |
-|------|----------|
-| Tauri 页面没有场景 | 确认引擎在线、后端已安装，并检查 `SceneKit/state` snapshot。 |
-| 后端显示 None | 启动时尚未调用 `YokiFrameKit.Initialize(...)` 或当前 ResKit Provider 没有提供场景能力。 |
-| 卸载没有生效 | 检查场景名是否匹配当前 `SceneHandler.SceneName`，再查看命令响应的 `error.code`。 |
-| Unity/Godot 加载差异 | 差异应放在 `ISceneBackend` 实现中，业务仍使用 `SceneKit.LoadSceneAsync()`。 |
+|---|---|
+| 后端是 None | 初始化宿主，或确认当前 ResKit Provider 实现场景能力。 |
+| 卸载没生效 | 检查场景名是否匹配 `SceneHandler.SceneName`。 |
+| YooAsset 场景找不到 | 检查 scene location 和当前 Provider。 |
+| 预加载卡住 | 检查 `suspendAtProgress`，需要时调用 `ActivatePreloadedScene()` 或 `ResumeLoad()`。 |
+| Unity/Godot 加载差异 | 差异放 `ISceneBackend`，业务仍调用 `SceneKit`。 |

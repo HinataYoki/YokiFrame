@@ -1,19 +1,16 @@
 # SpatialKit 空间索引
 
-SpatialKit 是纯 C# 空间查询工具，业务代码在 `YokiFrame` 命名空间中调用 `SpatialKit` 静态入口创建索引。它不依赖 Unity `Vector3`、`Bounds` 或 Godot 节点类型，Unity/Godot 项目都使用同一套 Runtime API。
+## 选择索引
 
-## 核心类型
-
-| 类型 | 说明 |
+| 场景 | 推荐 |
 |---|---|
-| `SpatialKit` | 静态统一入口，创建 HashGrid、Quadtree 和 Octree。 |
-| `ISpatialEntity` | 可被索引管理的实体，提供 `SpatialId` 和 `YokiVector3 Position`。 |
-| `ISpatialIndex<T>` | 统一查询接口，提供插入、移除、更新、半径查询、边界查询和最近点查询。 |
-| `SpatialHashGrid<T>` | 固定网格空间哈希，适合实体分布较均匀、频繁移动的场景。 |
-| `Quadtree<T>` | 2D / 2.5D 投影索引，支持 `SpatialPlane.XZ` 和 `SpatialPlane.XY`。 |
-| `Octree<T>` | 完整 3D 空间索引。 |
+| 大量动态单位、查询半径稳定 | `CreateHashGrid<T>()` |
+| 2D / 2.5D 地图、实体分布不均 | `CreateQuadtree<T>()` |
+| 完整 3D 空间、体积查询 | `CreateOctree<T>()` |
 
-## 快速使用
+实体实现 `ISpatialEntity`，使用 `YokiVector3`，不直接依赖 Unity 或 Godot 类型。
+
+## 最小示例
 
 ```csharp
 using System.Collections.Generic;
@@ -32,82 +29,44 @@ public readonly struct EnemySpatialEntity : ISpatialEntity
 }
 
 var grid = SpatialKit.CreateHashGrid<EnemySpatialEntity>(cellSize: 2f);
-grid.Insert(new EnemySpatialEntity(1, new YokiVector3(0f, 0f, 0f)));
-grid.Insert(new EnemySpatialEntity(2, new YokiVector3(3f, 0f, 0f)));
+grid.Insert(new EnemySpatialEntity(1, YokiVector3.Zero));
 
 var results = new List<EnemySpatialEntity>();
 grid.QueryRadius(YokiVector3.Zero, 4f, results);
 ```
 
-## 选择索引
+高频查询复用 `List<T>`，不要在循环里反复 new。
 
-| 场景 | 推荐索引 |
+## 常用操作
+
+| 方法 | 说明 |
 |---|---|
-| 大量动态单位、查询半径稳定 | `CreateHashGrid<T>()` |
-| 2D / 2.5D 地图、实体分布不均 | `CreateQuadtree<T>()` |
-| 完整 3D 空间、体积边界查询 | `CreateOctree<T>()` |
+| `Insert(entity)` | 插入实体。 |
+| `Remove(entity)` | 移除实体。 |
+| `Update(entity)` | 位置变化后更新。 |
+| `QueryRadius(center, radius, results)` | 半径查询。 |
+| `QueryBounds(bounds, results)` | 边界查询。 |
+| `QueryNearest(position, maxDistance, out result)` | 最近实体。 |
+| `Clear()` | 清空索引。 |
 
-`QueryRadius()`、`QueryBounds()` 会把结果写入调用方传入的 `List<T>`。高频查询时请复用列表并手动 `Clear()`，不要在循环里反复 new。
+## 工作台诊断
 
-## Unity 数学类型转换
+SpatialKit 页面用于查看索引类型、实体数量、分区数量、平面和边界。
 
-SpatialKit 的核心 API 只接收 `YokiVector3`、`YokiRect` 和 `YokiBounds`，保持 Unity/Godot 无关。Unity 项目中不要在每个调用点手写 `new YokiVector3(position.x, position.y, position.z)`；Unity Adapter 已在 `YokiFrame.Unity` 中提供双向扩展方法：
+| 在工作台里看什么 | 用途 |
+|---|---|
+| Index 列表 | 查看当前有哪些 HashGrid、Quadtree 或 Octree。 |
+| Entity Count | 判断实体是否插入成功、是否忘记删除。 |
+| Partition / Node 数量 | 判断索引是否过度分裂或范围设置不合理。 |
+| Bounds / Plane | 检查查询空间是否覆盖游戏区域。 |
 
-```csharp
-using UnityEngine;
-using YokiFrame;
-using YokiFrame.Unity;
+查询结果异常时，先确认实体数量，再看边界是否覆盖目标位置。实体插入、删除、更新属于运行时热路径，在业务代码里调用索引对象完成。
 
-var worldBounds = new Bounds(Vector3.zero, Vector3.one * 1000f).ToYokiBounds();
-var octree = SpatialKit.CreateOctree<MySpatialEntity>(worldBounds);
+## 常见坑
 
-mQueryBuffer.Clear();
-mIndex.QueryRadius(sensor.transform.position.ToYokiVector3(), sensor.Range, mQueryBuffer);
-```
-
-可用转换包括 `Vector2` / `YokiVector2`、`Vector3` / `YokiVector3`、`Rect` / `YokiRect`、`Bounds` / `YokiBounds`。转换 helper 位于 Unity Adapter，Core Runtime 仍不引用 `UnityEngine`。
-
-## 命令桥
-
-SpatialKit 已接入文件命令桥。AI、Tauri 和脚本优先使用 engine-scoped v2 路径：
-
-```json
-{
-  "protocolVersion": 2,
-  "engineId": "unity-editor",
-  "source": "codex",
-  "createdAtUtc": "2026-06-21T12:00:00Z",
-  "requestId": "codex-spatial-001",
-  "kit": "SpatialKit",
-  "action": "get_workbench_snapshot",
-  "payload": {}
-}
-```
-
-| action | payload | 说明 |
-|---|---|---|
-| `get_workbench_snapshot` | `{}` | 返回 `stats` 和 `indexes`。 |
-| `stats` | `{}` | 返回活动索引数量、累计创建数量、实体总数和类型分布。 |
-| `list_indexes` | `{}` | 返回当前存活索引列表。 |
-
-命令桥是只读诊断入口，不提供插入、删除、更新实体的命令。实体变更仍由运行时代码直接调用索引对象完成，避免把高频空间查询和移动同步到跨进程文件桥。
-
-## Tauri 工作台
-
-SpatialKit 页面读取顺序为：
-
-1. `read_telemetry("SpatialKit", "state")`
-2. `read_snapshot("SpatialKit", "state")`
-3. `send_command("SpatialKit", "get_workbench_snapshot")`
-
-Unity `KitStateSnapshotPublisher` 和 Godot `GodotKitStateSnapshotPublisher` 都通过可选 handler 发布 `SpatialKit/state`。页面只在缺少 telemetry/snapshot 或用户点击刷新时走命令桥。
-
-## AI 诊断入口
-
-AI 默认优先读取：
-
-```text
-.yokiframe/engines/<engineId>/snapshots/SpatialKit/state.json
-```
-
-snapshot 缺失、过期或需要显式刷新时，再发送 `SpatialKit/get_workbench_snapshot`、`SpatialKit/stats` 或 `SpatialKit/list_indexes`。空间索引的实体变更不通过 `.yokiframe` 执行。
+| 问题 | 处理方式 |
+|---|---|
+| 查询不到移动后的实体 | 位置变化后调用 `Update(entity)`。 |
+| 查询频繁分配 | 复用结果列表，查询前 `Clear()`。 |
+| 2.5D 轴不对 | 创建 Quadtree 时确认 `SpatialPlane.XZ` 或 `XY`。 |
+| 想通过工作台改实体 | 不支持；实体变化要在运行时代码里更新索引。 |

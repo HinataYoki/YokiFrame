@@ -1,170 +1,70 @@
 # 第三方库索引
 
-除明确说明外，这些库都不是 `YokiFrame/Core/Runtime` 纯核心目录的硬依赖；它们应作为 Unity Adapter、Tool Kit 或具体项目的可选增强。
-
 ## 总览
 
-| 库 | 类型 | 宏定义 | 主要使用方 | 作用 |
-|----|------|--------|------------|------|
-| UniTask | 推荐安装 | `YOKIFRAME_UNITASK_SUPPORT` | ResKit、SceneKit、ActionKit、AudioKit、UIKit、InputKit、LocalizationKit | Unity 异步 API、取消令牌和低分配 async/await。 |
-| YooAsset | 推荐安装 | `YOKIFRAME_YOOASSET_SUPPORT` | ResKit、SceneKit | 资源加载、RawFile、AssetBundle 和热更新后端。 |
-| Luban | TableKit 必需 | `YOKIFRAME_LUBAN_SUPPORT` | TableKit | 配置表解析、代码生成和数据导出。 |
-| FMOD | 可选 | `YOKIFRAME_FMOD_SUPPORT` | AudioKit | 专业音频后端、事件路径、3D 音频和动态音乐。 |
-| DOTween | 可选 | `YOKIFRAME_DOTWEEN_SUPPORT` | ActionKit、UIKit | 补间动画、面板打开关闭动画和演出流程。 |
-| Unity Input System | 可选增强 | `YOKIFRAME_INPUTSYSTEM_SUPPORT` | InputKit | 输入重绑、设备抽象、手柄和触屏输入。 |
-| ZString | 推荐安装 | `YOKIFRAME_ZSTRING_SUPPORT` | 全局性能优化 | 热路径字符串构建和诊断文本拼接。 |
-| Nino | 可选增强 | `YOKIFRAME_NINO_SUPPORT` | SaveKit | 高性能二进制序列化。 |
+| 库 | 推荐级别 | 宏定义 | 影响范围 |
+|---|---|---|---|
+| UniTask | 推荐 | `YOKIFRAME_UNITASK_SUPPORT` | ResKit、SceneKit、AudioKit、UIKit、InputKit、LocalizationKit 等异步入口。 |
+| YooAsset | 推荐 | `YOKIFRAME_YOOASSET_SUPPORT` | ResKit、SceneKit、UIKit 默认面板加载。 |
+| Luban | TableKit 必需 | `YOKIFRAME_LUBAN_SUPPORT` | TableKit 生成、验证和运行时代码。 |
+| FMOD | 按需 | `YOKIFRAME_FMOD_SUPPORT` | AudioKit FMOD 后端。 |
+| DOTween | 按需 | `YOKIFRAME_DOTWEEN_SUPPORT` | UIKit / ActionKit 动画集成。 |
+| Unity Input System | 按需 | `YOKIFRAME_INPUTSYSTEM_SUPPORT` | InputKit Unity 输入后端。 |
+| ZString | 推荐 | `YOKIFRAME_ZSTRING_SUPPORT` | 高频字符串构建优化。 |
+| Nino | 按需 | `YOKIFRAME_NINO_SUPPORT` | SaveKit 序列化后端。 |
 
-## UniTask
+## 安装入口
 
-Cysharp 开源的 Unity async/await 库。它适合替代 Coroutine 处理资源加载、场景切换、UI 异步、延迟、等待条件和取消流程。
+| 库 | 入口 |
+|---|---|
+| UniTask | `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask` |
+| YooAsset | `https://github.com/tuyoogame/YooAsset.git` |
+| Luban | `https://github.com/focus-creative-games/luban` |
+| FMOD | `https://www.fmod.com/download#fmodforunity` |
+| DOTween | `https://dotween.demigiant.com/download.php` |
+| Unity Input System | Unity Package Manager: `com.unity.inputsystem` |
+| ZString | `https://github.com/Cysharp/ZString/releases` |
+| Nino | `https://github.com/JasonXuDeveloper/Nino.git` |
 
-在 YokiFrame 中的作用：
+## 逐项说明
 
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 推荐安装 |
-| 宏定义 | `YOKIFRAME_UNITASK_SUPPORT` |
-| 使用方 | ResKit、SceneKit、ActionKit、AudioKit、UIKit、InputKit、LocalizationKit |
-| 缺省行为 | 未安装时保留同步、回调或 Task 路径；Unity 专属 UniTask API 不启用。 |
-| 安装入口 | `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask` |
+### UniTask
 
-```csharp
-// Package Manager -> Add package from git URL
-// https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask
-```
+Unity 异步流程推荐安装。启用后，同名异步 API 从 `Task<T>` 切到 `UniTask<T>`，更适合取消令牌和 Unity PlayerLoop。
 
-## YooAsset
+### YooAsset
 
-YooAsset 是 Unity 资产管理与热更新框架，适合生产项目替代简单 `Resources` 加载。
+用于生产级资源管理。切换到 YooAsset 后，仍然通过 `ResKit.SetProvider(new YooAssetResourceProvider())` 接入，不改变业务调用入口。
 
-在 YokiFrame 中的作用：
+### Luban
 
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 推荐安装 |
-| 宏定义 | `YOKIFRAME_YOOASSET_SUPPORT` |
-| 使用方 | ResKit、SceneKit |
-| 缺省行为 | 未安装时 ResKit 使用当前项目可用的默认 Provider 或 Unity 资源回退。 |
-| 安装入口 | `https://github.com/tuyoogame/YooAsset.git` |
+TableKit 必需。Tauri 后端通过 `dotnet Luban.dll` 执行验证和生成；生成产物写入用户项目代码输出目录。
 
-```csharp
-// ResKit 侧配置 YooAsset Provider
-// 具体实现放在 Unity Adapter / 项目扩展层，不写入 Base。
-```
+### FMOD
 
-## Luban
+AudioKit 可选后端。使用 FMOD 时播放路径通常是 `event:/...`，不是普通音频文件路径。
 
-Luban 是配置表解决方案，负责 Excel / CSV 到代码与数据文件的生成。TableKit 的编辑器配置、预览、验证和生成流程都围绕 Luban 工作流组织。
+### DOTween
 
-在 YokiFrame 中的作用：
+UIKit / ActionKit 可选动画集成。安装后需要运行 DOTween Setup，确保平台配置完整。
 
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | TableKit 必需 |
-| 宏定义 | `YOKIFRAME_LUBAN_SUPPORT` |
-| 使用方 | TableKit |
-| 缺省行为 | 未配置 Luban 时，TableKit 页面只保留配置提示和路径检查。 |
-| 安装入口 | `https://github.com/focus-creative-games/luban` |
+### Unity Input System
 
-```powershell
-# Tauri 后端通过 dotnet Luban.dll 执行生成和验证
-dotnet Luban.dll -t client -c cs-simple-json
-```
+InputKit 的 Unity 新输入系统后端。需要重绑、多设备、手柄和触屏时安装。
 
-## FMOD
+### ZString
 
-FMOD 是专业游戏音频中间件，适合需要复杂混音、动态音乐、事件路径和 3D 音频控制的项目。
+用于减少热路径字符串构建分配。适合日志、快照和诊断文本。
 
-在 YokiFrame 中的作用：
+### Nino
 
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 可选 |
-| 宏定义 | `YOKIFRAME_FMOD_SUPPORT` |
-| 使用方 | AudioKit |
-| 缺省行为 | 未安装时 AudioKit 使用 Unity AudioSource 后端或项目自定义后端。 |
-| 安装入口 | `https://www.fmod.com/download#fmodforunity` |
+SaveKit 可选二进制序列化后端。适合大存档和频繁读写。
 
-```csharp
-// FMOD 使用事件路径，而不是普通音频文件路径
-AudioKit.Play("event:/Music/BGM_Boss");
-```
+## 分层边界
 
-## DOTween
-
-DOTween 是 Unity 常用补间动画库。它适合 UI 面板动画、Transform 动画、材质动画和演出流程。
-
-在 YokiFrame 中的作用：
-
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 可选 |
-| 宏定义 | `YOKIFRAME_DOTWEEN_SUPPORT` |
-| 使用方 | ActionKit、UIKit |
-| 缺省行为 | 未安装时使用内置动画或普通 Action 流程。 |
-| 安装入口 | `https://dotween.demigiant.com/download.php` |
-
-安装后需要运行 DOTween Setup，确保生成平台兼容配置。
-
-## Unity Input System
-
-Unity 官方新输入系统，适合需要输入重绑、设备抽象、触屏、手柄、动作映射和输入上下文的项目。
-
-在 YokiFrame 中的作用：
-
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 可选增强 |
-| 宏定义 | `YOKIFRAME_INPUTSYSTEM_SUPPORT` |
-| 使用方 | InputKit |
-| 缺省行为 | 未安装时 InputKit 使用 Legacy Input 或项目自定义输入后端。 |
-| 安装入口 | `com.unity.inputsystem` |
-
-```csharp
-// Package Manager -> Unity Registry -> Input System -> Install
-```
-
-## ZString
-
-ZString 是 Cysharp 的零 GC 字符串构建工具，适合高频日志、状态快照、诊断文本和协议字符串拼接场景。
-
-在 YokiFrame 中的作用：
-
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 推荐安装 |
-| 宏定义 | `YOKIFRAME_ZSTRING_SUPPORT` |
-| 使用方 | 高频字符串构建路径 |
-| 缺省行为 | 未安装时使用 `StringBuilder` 或普通 BCL 实现。 |
-| 安装入口 | `https://github.com/Cysharp/ZString/releases` |
-
-建议在 Unity 项目中使用 release 的 `.unitypackage`，避免原生依赖缺失。
-
-## Nino
-
-Nino 是高性能二进制序列化库，适合大存档、频繁读写和需要更小文件体积的项目。
-
-在 YokiFrame 中的作用：
-
-| 项 | 内容 |
-|----|------|
-| 推荐级别 | 可选增强 |
-| 宏定义 | `YOKIFRAME_NINO_SUPPORT` |
-| 使用方 | SaveKit |
-| 缺省行为 | 未安装时 SaveKit 使用内置 JSON 或项目注入的序列化 Provider。 |
-| 安装入口 | `https://github.com/JasonXuDeveloper/Nino.git` |
-
-```csharp
-// 安装后可在项目层把 SaveKit 切换到 Nino 序列化后端
-// SaveKit.SetSerializer(new NinoSaveSerializer());
-```
-
-## 分层注意事项
-
-| 层 | 处理原则 |
-|----|----------|
-| Base | 不直接引用 UnityEngine、DOTween、FMOD、YooAsset、Nino、System.Text.Json 等宿主或第三方库。 |
-| Adapters/Unity | 可以封装 Unity 包、Package Manager 依赖和宿主生命周期。 |
-| Tools | 对外保持统一 Kit API，具体第三方实现通过接口、Provider 或 Adapter 后端接入。 |
-| TauriEditor | 只展示依赖状态、配置入口和文档，不把 Unity-only 假设写进跨引擎协议。 |
+| 层 | 规则 |
+|---|---|
+| Core Runtime | 不直接引用 UnityEngine、DOTween、FMOD、YooAsset、Nino 等宿主或第三方库。 |
+| Unity Adapter | 可以封装 Unity 包和 Package Manager 依赖。 |
+| Tools | 对外保持统一 Kit API，第三方实现通过 Provider / Backend 接入。 |
+| TauriEditor | 只展示依赖状态、配置入口和文档，不写死 Unity-only 假设。 |

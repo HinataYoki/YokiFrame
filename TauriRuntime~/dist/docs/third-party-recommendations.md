@@ -1,43 +1,52 @@
 # 第三方库推荐
 
-YokiFrame  的核心目标是把框架能力尽量沉到纯 C# 层，并通过 Unity / Godot Adapter 接入宿主。第三方库推荐因此分成两类：框架协作工具，以及在 Unity 适配层或具体 Kit 中经过验证的增强组件。
+## 推荐顺序
 
+| 优先级 | 工具 | 什么时候装 |
+|---|---|---|
+| 必装于本仓库开发 | AIBridge | 需要 AI 执行 Unity 编译、日志、资源查询和验证。 |
+| 推荐 | UniTask | Unity 项目有较多异步加载、UI、场景、取消流程。 |
+| 推荐 | YooAsset | 项目需要 AssetBundle、RawFile、热更新或生产级资源管理。 |
+| 推荐 | ZString | 高频日志、快照、诊断字符串构建较多。 |
+| 按需 | DOTween | 需要 UI 动画、流程动画或补间演出。 |
+| 按需 | FMOD | 需要事件音频、动态音乐、复杂混音。 |
+| 按需 | Unity Input System | 需要重绑定、多设备、手柄、触屏。 |
+| 按需 | Nino | 存档数据大、读写频繁、需要二进制序列化。 |
+| TableKit 必需 | Luban | 使用 TableKit 配置表生成。 |
 
 ## AIBridge
 
-AIBridge 是 Unity AI 自动化桥梁工具，为 Codex、Claude Code、Cursor 等 AI 编码助手提供稳定的命令行接口。
-
-推荐理由：
-
-| 维度 | AIBridge | Unity MCP |
-|------|----------|-----------|
-| 连接模型 | 文件 I/O：命令入、结果出 | WebSocket 长连接 |
-| Domain Reload | 命令文件可恢复，编译后继续轮询 | 编译域重载后容易断线 |
-| 部署复杂度 | Unity Package + CLI | MCP Server + 连接配置 |
-| 证据追踪 | 命令、结果、日志、截图可落盘 | 更依赖会话状态 |
-| 适配场景 | AI 开发、CI、批处理、视觉验证 | 实时连接型工具 |
-
-常用命令：
+AIBridge 是本仓库 Unity 自动化入口。Codex 修改 C# 后，优先用它验证。
 
 ```powershell
-# Unity 编译
 ./.aibridge/cli/AIBridgeCLI.exe compile unity
-
-# 获取 Error 日志
 ./.aibridge/cli/AIBridgeCLI.exe get_logs --logType Error
-
-# 搜索已导入资源路径
 ./.aibridge/cli/AIBridgeCLI.exe asset search --query "UI" --format paths
-
-# 查看当前能力快照
 ./.aibridge/cli/AIBridgeCLI.exe harness status
 ```
 
-适用场景：
+| 场景 | 命令 |
+|---|---|
+| 编译验证 | `compile unity` |
+| 看 Console Error | `get_logs --logType Error` |
+| 找已导入资源 | `asset search/find --format paths` |
+| 看工具能力 | `harness status` |
 
-| 场景 | 建议 |
-|------|------|
-| AI 修改 Unity C# 后需要确认是否编译通过 | 优先 `compile unity` |
-| 需要知道 Console 是否有 Error | `get_logs --logType Error` |
-| 需要查找 Prefab、Scene、贴图、材质等已导入资源 | 优先 asset search/find |
-| 需要保留命令证据、截图或批量结果 | 使用 AIBridge 的文件结果与 artifact |
+## Unity 项目增强库
+
+| 库 | 直接收益 | 不装时 |
+|---|---|---|
+| UniTask | async API 返回 UniTask，取消流程更适合 Unity 生命周期。 | 回退 Task、回调或同步路径。 |
+| YooAsset | ResKit raw、asset、scene 统一切到 YooAsset Provider。 | 使用 Unity Resources 或项目自定义 Provider。 |
+| ZString | 减少热路径字符串分配。 | 使用 `StringBuilder` 或普通字符串实现。 |
+| DOTween | UIKit / ActionKit 可接入补间动画。 | 使用内置动画或普通 Action。 |
+| FMOD | AudioKit 可接 FMOD 事件路径。 | 使用 Unity AudioSource 或项目音频后端。 |
+| Input System | InputKit 可接 Unity 新输入系统。 | 使用 legacy / 自定义后端。 |
+| Nino | SaveKit 可接高性能二进制序列化。 | 使用内置或项目自定义序列化。 |
+| Luban | TableKit 可生成配置表代码和数据。 | TableKit 只能做环境提示和配置编辑。 |
+
+## 分层规则
+
+- Base/Core 不直接依赖这些库。
+- Unity 专属包放 Unity Adapter 或项目层。
+- Tool Kit 对外保持统一 API，通过 Provider / Backend 接入第三方实现。

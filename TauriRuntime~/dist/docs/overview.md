@@ -1,85 +1,91 @@
-# YokiFrame 2.0 框架概览
+# YokiFrame 框架概览
 
-YokiFrame 2.0 是一套面向游戏运行时代码的模块化 Kit 框架。它把事件、状态机、对象池、资源、单例、动作序列和音频播放等常用能力整理成统一 API，让业务代码优先依赖稳定的 C# 门面，而不是把项目逻辑写死在某一个宿主 API 上。
+YokiFrame 是面向 Unity / Godot 游戏项目的 C# Kit 框架。它提供统一的运行时 API、跨引擎适配层、AI 可读的诊断通信，以及用于查看 Kit 状态的工作台。
 
-入门阶段不需要先理解内部目录分层。你只需要知道：业务脚本统一使用 `YokiFrame` 命名空间；需要宿主能力时，由 Unity 或 Godot 的运行时适配器负责注入资源、音频、时间、日志等后端。
+## 组成
 
-## 主要特性
+| 部分 | 作用 |
+|---|---|
+| Kit API | 游戏代码直接调用的能力入口，例如 `EventKit`、`FsmKit`、`PoolKit`、`ResKit`、`UIKit`。 |
+| Adapter / Backend | 连接 Unity、Godot 或项目自定义系统，把引擎差异挡在业务代码外。 |
+| AI 通信层 | 让 AI 读取引擎和 Kit 状态，发送只读诊断请求，拿到结构化结果。 |
+| 工作台 | 给开发者查看连接状态、Kit 状态、事件关系、资源引用、对象池、UI 栈等信息。 |
 
-| 特性 | 说明 |
-|------|------|
-| 统一 Kit API | 事件、状态机、对象池、资源、单例、动作和音频都有固定入口，业务代码写法一致。 |
-| 强类型优先 | EventKit、FsmKit 等核心模块优先使用泛型、枚举和明确的 payload 类型，减少字符串拼错和重构风险。 |
-| 宿主能力可替换 | 资源、音频、时间、日志、序列化等能力通过接口或后端注入，项目可以替换为自己的实现。 |
-| 低分配运行时 | PoolKit、ActionKit 等热路径尽量复用对象，避免把调试或诊断成本塞进每帧逻辑。 |
-| Unity / Godot 适配 | Unity 侧提供 `YokiFrameKit.Initialize(YokiFrameEngine.Unity)`、`UnityBootstrap`、`UnityResourceProvider`、`MonoSingleton<T>`、`UnityAudioKitBackend`；Godot 侧提供对应运行时适配类型。 |
+## Kit 分组
 
-## 当前可用 Kit
+| 分组 | Kit | 主要用途 |
+|---|---|---|
+| Core | Architecture | 项目级服务和模型容器。 |
+| Core | EventKit | 强类型事件、枚举事件、模块解耦。 |
+| Core | FsmKit | 普通状态机、带参状态机、层级状态机。 |
+| Core | PoolKit | 普通对象池、可回收对象池、临时集合池。 |
+| Core | ResKit | 资源加载、raw 文件、引用计数、Provider 替换。 |
+| Core | SingletonKit | 纯 C#、Unity、Godot 单例生命周期。 |
+| Tool | ActionKit | Delay、Callback、Sequence、Parallel、Repeat。 |
+| Tool | AudioKit | 音效、音乐、总线音量、活跃 voice。 |
+| Tool | InputKit | 动作输入、输入缓冲、上下文栈。 |
+| Tool | UIKit | 面板打开关闭、层级、缓存、返回栈。 |
+| Tool | SaveKit | 多槽位存档、版本、加密、自动保存。 |
+| Tool | LocalizationKit | 语言 Provider、文本格式化、Binder。 |
+| Tool | SceneKit | 场景加载、预加载、激活、卸载。 |
+| Tool | SpatialKit | HashGrid、Quadtree、Octree 空间查询。 |
+| Tool | TableKit | Luban 配置表生成和运行时读取约定。 |
 
-| Kit | 命名空间 | 入口 | 主要用途 |
-|-----|----------|------|----------|
-| EventKit | `YokiFrame` | `EventKit.Type`、`EventKit.Enum` | 模块解耦、运行时事件发送和监听。 |
-| FsmKit | `YokiFrame` | `FSM<TEnum>`、`FSM<TEnum,TArgs>`、`HierarchicalSM<TEnum>` | 角色、敌人、流程、UI 状态控制。 |
-| PoolKit | `YokiFrame` | `SimplePoolKit<T>`、`SafePoolKit<T>`、`Pool.List<T>` | 普通对象、可回收对象和临时集合复用。 |
-| ResKit | `YokiFrame` | `ResKit`、`ResHandle<T>`、`IResourceProvider` | 统一资源加载、引用计数、后端替换。 |
-| TableKit | 项目生成代码 | `TableKit`、`<topModule>.<manager>` | Luban 编辑器工作流；安装 Luban 并启用 `YOKIFRAME_LUBAN_SUPPORT` 后生成到项目 Scripts。 |
-| SingletonKit | `YokiFrame` | `SingletonKit<T>`、`Singleton<T>` | 纯 C# 服务单例和生命周期管理。 |
-| Unity Singleton | `YokiFrame.Unity` | `MonoSingleton<T>` | 需要 Unity 生命周期的单例。 |
-| Godot Singleton | `YokiFrame.Godot` | `GodotSingleton<T>` | 需要 Godot Node 生命周期的单例。 |
-| CodeGenKit | `YokiFrame` | `CodeGenKit`、`ICode`、`ICodeScope` | Editor 层纯 C# 代码生成工具，支持结构化 AST 和模板式构建。 |
-| ActionKit | `YokiFrame` | `ActionKit.Sequence()`、`ActionKit.Delay()` | 延迟、回调、并行、重复、协程和 Task 组合。 |
-| AudioKit | `YokiFrame` | `AudioKit`、`AudioPlayOptions` | 播放音效/音乐、停止播放、音量总线控制。 |
+## 跨引擎方式
 
-## 推荐使用方式
+业务层只引用 `YokiFrame` 命名空间下的 Kit API。Unity / Godot 差异放在 Adapter、Provider 或 Backend 中。
 
-| 目标 | 推荐入口 |
-|------|----------|
-| 业务模块之间发通知 | 新代码优先用 `EventKit.Type`；固定系统信号用 `EventKit.Enum`。 |
-| 管理一个对象的运行状态 | 用 `FSM<TEnum>`，在宿主的帧循环中手动调用 `Update()` / `FixedUpdate()`。 |
-| 管理多个可并行的子状态 | 用 `HierarchicalSM<TEnum>`，通过 `Change(id, MachineState)` 控制子状态。 |
-| 复用普通对象 | 用 `SimplePoolKit<T>`，传入 factory 和 reset。 |
-| 复用带回收标记的对象 | 实现 `IPoolable`，使用 `SafePoolKit<T>.Instance`。 |
-| 临时使用 List / Dictionary / Set | 用 `Pool.List<T>`、`Pool.Dictionary<TKey,TValue>`、`Pool.Set<T>` 的 action 版本。 |
-| 统一加载资源 | 先确保宿主已调用 `ResKit.SetProvider(...)`，再用 `Load<T>()` 或 `LoadAsset<T>()`。 |
-| 统一加载配置表 | 先确保 Luban 环境已启用 `YOKIFRAME_LUBAN_SUPPORT`，再用 Tauri 的 TableKit 页面配置 Luban 参数，把 Luban 代码和 `TableKit.cs` 生成到项目 Scripts。 |
-| 纯 C# 全局服务 | 实现 `ISingleton` 后使用 `SingletonKit<T>.Instance`，或继承 `Singleton<T>`。 |
-| Unity 全局组件 | 继承 `MonoSingleton<T>`，只在确实需要 `GameObject` / `Transform` 时使用。 |
-| 串联一组延迟和回调 | 用 `ActionKit.Sequence().Delay(...).Callback(...).Start()`。 |
-| 播放音效或音乐 | 确保宿主已设置 `AudioKit` 后端，再调用 `AudioKit.PlaySfx()` 或 `AudioKit.PlayMusic()`。 |
-
-## 运行时接入
-
-Unity 项目通常在启动阶段调用统一入口，注册 Unity 侧默认资源、日志、序列化和可选 Tool 后端：
-
-```csharp
-using YokiFrame;
-
-public sealed class GameEntry : MonoSingleton<GameEntry>
-{
-    private void Awake()
-    {
-        YokiFrameKit.Initialize(YokiFrameEngine.Unity);
-    }
-}
+```text
+Game Code
+  -> YokiFrame Kit API
+  -> Interfaces / Provider / Backend
+  -> Unity Adapter or Godot Adapter
 ```
 
-`UnityBootstrap` 仍可作为场景生命周期外壳使用；它内部同样调用 `YokiFrameKit.Initialize`，并在宿主生命周期中转发 tick 和 shutdown。
+常见替换点：
 
-如果项目有自己的资源系统或音频系统，也可以跳过默认后端，直接实现 `IResourceProvider` 或 `IAudioBackend`，再调用：
+| 能力 | 替换接口 |
+|---|---|
+| 资源加载 | `IResourceProvider` / `IRawResourceProvider` |
+| 音频 | `IAudioBackend` |
+| 输入 | `IInputBackend` |
+| 场景 | `ISceneBackend` |
+| UI | `IUIBackend` |
+| 存档 | `ISaveStorage` |
 
-```csharp
-ResKit.SetProvider(new ProjectResourceProvider());
-AudioKit.SetBackend(new ProjectAudioBackend());
-```
+## AI 诊断通信
 
-Godot 项目使用 Godot 运行时适配器时，由 `GodotBootstrap` 注册资源等运行时 Provider。AudioKit 当前需要项目提供音频后端后再调用 `AudioKit.SetBackend(...)`。
+YokiFrame 会把引擎状态、Kit 快照和诊断结果写到 `.yokiframe/engines/<engineId>`。AI 不需要猜 Unity 或 Godot 内部对象，可以直接按 Kit 查询状态。
 
-## 约束和边界
+| AI 可以做什么 | 例子 |
+|---|---|
+| 确认引擎是否在线 | 查看 engine registry、heartbeat。 |
+| 读取 Kit 当前状态 | 查看 FsmKit 当前状态、PoolKit 借出数量、ResKit 引用计数。 |
+| 请求一次性诊断 | 让对应 Kit 返回工作台快照。 |
+| 辅助 Debug | 根据事件注册、状态机转换、资源引用、对象池活跃对象给出排查路径。 |
 
-- Base 层 API 不依赖 UnityEngine 或 Godot API；引擎对象、资源、音频等差异通过 Adapter 或项目后端接入。
-- `EventKit.String` 仅用于旧代码兼容；新事件优先使用 Type 或 Enum 通道。
-- `FSM<TEnum>` 不会自动更新，必须由业务代码在合适的帧循环中调用更新方法。
-- `SimplePoolKit<T>` 当前不防重复回收；需要防重复时使用 `SafePoolKit<T>` 或在业务侧保证只回收一次。
-- `ResKit.Load<T>()` 只返回资源对象；需要明确释放生命周期时使用 `LoadAsset<T>()` 并释放句柄。
-- TableKit 编辑器和文档都在 Tauri 前端；YokiFrame 不携带 TableKit Runtime，配置表运行时代码由工具生成到项目 Scripts，配置表内容不会写入 Tauri snapshot。
-- ActionKit 核心为纯 C# 调度器，Unity/Godot 适配器负责在宿主帧循环中驱动 tick。
+AI 默认用于只读诊断。删除存档、停止音频、切换语言、卸载场景等会改变运行状态的操作，需要明确用户意图。
+
+## 工作台能看什么
+
+| 页面 | 适合排查 |
+|---|---|
+| System | 引擎连接、框架通信、运行日志、AI Skill 安装。 |
+| EventKit | 事件注册、最近事件、发送/监听/注销代码位置。 |
+| FsmKit | 状态机列表、当前状态、转换历史。 |
+| PoolKit | 池容量、借出对象、峰值、疑似泄漏。 |
+| ResKit | Provider、已加载资源、引用计数、卸载历史。 |
+| UIKit | 面板缓存、面板状态、层级、面板栈。 |
+| 其它 Kit 页面 | 对应后端、状态、历史和健康信息。 |
+
+## 阅读顺序
+
+| 目标 | 文档 |
+|---|---|
+| 第一次接入 | `快速上手` |
+| 管理项目级服务 | `Architecture` |
+| 事件通信 | `EventKit` |
+| 状态机 | `FsmKit` |
+| 资源后端 | `ResKit` |
+| UI 面板 | `UIKit` |
+| 配置表 | `TableKit` |

@@ -61,6 +61,17 @@ function setHero(title, summary, eyebrow, iconName, actionsHtml = '') {
     return { title, summary, eyebrow, iconName, actionsHtml };
 }
 
+function clearHero() {
+    currentHeroMeta = null;
+    currentHeroActionsHtml = '';
+    if (heroActionPromotionFrame) {
+        cancelAnimationFrame(heroActionPromotionFrame);
+        heroActionPromotionFrame = 0;
+    }
+    $pageBody?.querySelector('[data-hero-intro-card="1"]')?.remove();
+    $pageBody?.querySelectorAll('[data-promoted-hero-actions="1"]').forEach(element => element.remove());
+}
+
 function updateExistingHeroIntroCard() {
     if (!$pageBody || !currentHeroMeta || !shouldKeepHeroIntroCard()) return;
     const existing = $pageBody.querySelector('[data-hero-intro-card="1"]');

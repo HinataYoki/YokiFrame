@@ -1,19 +1,15 @@
 # SingletonKit 单例
 
-SingletonKit 提供纯 C# 单例门面，也配合 Unity / Godot 运行时适配器提供引擎生命周期单例。核心规则是：没有引擎依赖的服务使用 Base 单例，需要宿主对象生命周期时才使用对应 Adapter 单例。
+## 选择入口
 
-## 选择哪种单例
-
-| 类型 | 适合场景 | 命名空间 |
-|------|----------|----------|
+| 类型 | 场景 | 命名空间 |
+|---|---|---|
 | `SingletonKit<T>` | 不想继承基类的纯 C# 服务 | `YokiFrame` |
 | `Singleton<T>` | 可继承的纯 C# 服务 | `YokiFrame` |
 | `MonoSingleton<T>` | 需要 `GameObject`、`Transform`、Unity 生命周期 | `YokiFrame.Unity` |
 | `GodotSingleton<T>` | 需要 Godot `Node` 生命周期 | `YokiFrame.Godot` |
 
-## SingletonKit<T>
-
-`SingletonKit<T>` 要求 `T : class, ISingleton`。实例通过反射创建，因此可以使用私有无参构造函数。
+## 纯 C# 单例
 
 ```csharp
 using YokiFrame;
@@ -38,40 +34,23 @@ ConfigService.Instance.ToString();
 SingletonKit<ConfigService>.Dispose();
 ```
 
-行为细节：
-
-- 第一次访问 `Instance` 时创建实例。
-- 创建完成后调用 `OnSingletonInit()`。
-- 缺少无参构造函数会抛出 `InvalidOperationException`。
-- `Dispose()` 会清除当前缓存引用；下一次访问会重新创建。
-- IL2CPP / AOT 项目需要显式引用或 Preserve 相关类型，避免被裁剪。
-
-## Singleton<T>
-
-如果你愿意继承框架基类，可以使用 `Singleton<T>`。
+继承式写法：
 
 ```csharp
 using YokiFrame;
 
 public sealed class AudioConfig : Singleton<AudioConfig>
 {
-    public float Volume = 1f;
+    public float Volume;
 
     public override void OnSingletonInit()
     {
         Volume = 0.8f;
     }
 }
-
-AudioConfig.Instance.Volume = 0.5f;
-AudioConfig.Dispose();
 ```
 
-`Singleton<T>` 内部仍然由 `SingletonKit<T>` 管理。
-
-## Unity MonoSingleton
-
-需要 Unity 对象生命周期时使用 `MonoSingleton<T>`。
+## Unity 单例
 
 ```csharp
 using UnityEngine;
@@ -84,23 +63,11 @@ public sealed class AudioRoot : MonoSingleton<AudioRoot>
         DontDestroyOnLoad(gameObject);
     }
 }
-
-AudioRoot.Instance.ToString();
-AudioRoot.Dispose();
 ```
 
-行为细节：
+`MonoSingleton<T>.Instance` 会先找场景中已有对象，找不到才创建新的 `GameObject`。
 
-- `Instance` 会先查找场景中已有的 `T`。
-- 找不到时自动创建名为 `typeof(T).Name` 的 `GameObject` 并添加组件。
-- `Dispose()` 会销毁关联 `GameObject` 并清除实例引用。
-- `OnDestroy()` 会清除实例引用。
-
-只需要普通全局服务时，不要使用 `MonoSingleton<T>`；直接用纯 C# 单例即可。
-
-## Godot Singleton
-
-Godot 运行时使用 `GodotSingleton<T>`。
+## Godot 单例
 
 ```csharp
 using YokiFrame.Godot;
@@ -111,24 +78,28 @@ public partial class AudioRoot : GodotSingleton<AudioRoot>
     {
     }
 }
-
-AudioRoot.Instance.ToString();
-AudioRoot.Dispose();
 ```
 
-当前 Godot 行为：
+`GodotSingleton<T>` 需要 Godot `Node` 生命周期。普通配置或服务仍用纯 C# 单例。
 
-- `T` 约束为 `where T : GodotSingleton<T>, new()`。
-- `Instance` 不存在时会创建节点，并尝试挂到当前 `SceneTree.Root`。
-- `_EnterTree()` 会注册实例。
-- `_ExitTree()` 会清除实例引用。
-- 如果已有实例，再注册另一个不同实例会释放后者。
+## 工作台诊断
 
-## 常见问题
+SingletonKit 页面用于查看已登记单例、后端来源、存活状态和释放状态。
+
+| 在工作台里看什么 | 用途 |
+|---|---|
+| 单例列表 | 确认目标单例是否已经创建。 |
+| 类型 / 来源 | 区分纯 C#、Unity MonoSingleton、GodotSingleton。 |
+| Alive / Disposed | 判断生命周期是否已经结束。 |
+| 创建信息 | 排查重复创建或初始化顺序问题。 |
+
+列表为空只说明当前没有实例登记，不代表项目里没有单例类型。
+
+## 常见坑
 
 | 问题 | 处理方式 |
-|------|----------|
-| 纯 C# 单例创建失败 | 确认类型实现 `ISingleton`，并提供无参构造函数。 |
-| IL2CPP 下无法创建 | 显式引用类型，或使用 Preserve 防止构造函数被裁剪。 |
-| Unity 中出现两个单例对象 | 检查场景中手动挂载对象和自动创建对象是否并存。 |
-| 只需要配置服务却用了 `MonoSingleton` | 改为 `Singleton<T>` 或 `SingletonKit<T>`，减少不必要的宿主依赖。 |
+|---|---|
+| 纯 C# 单例创建失败 | 确认实现 `ISingleton` 并有无参构造函数。 |
+| IL2CPP 下无法反射创建 | 显式引用或 Preserve 构造函数。 |
+| Unity 出现两个对象 | 检查场景手动挂载对象和自动创建对象是否并存。 |
+| 配置服务用了 `MonoSingleton` | 改成 `Singleton<T>` 或 `SingletonKit<T>`。 |

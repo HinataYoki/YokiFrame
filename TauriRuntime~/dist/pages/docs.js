@@ -9,13 +9,7 @@ let docScrollSpy = null;    // 当前文档的 IntersectionObserver（切换/离
 let docsVisibilitySignature = '';
 
 async function renderDocsPage() {
-    setHero(
-        'YokiFrame 文档',
-        '框架指南、架构说明和模块参考，适合长时间阅读。',
-        '文档',
-        'docs',
-        '<button class="btn btn-secondary btn-sm" onclick="reloadDocs()">重新加载</button>'
-    );
+    clearHero();
     clearMetrics();
     clearTabs();
 
@@ -55,7 +49,10 @@ async function renderDocsPage() {
 
     $pageBody.innerHTML = `
         <div class="doc-layout">
-            <aside class="doc-nav">${navHtml}</aside>
+            <aside class="doc-nav">
+                <div class="doc-nav-list">${navHtml}</div>
+                <button class="doc-nav-refresh btn btn-secondary btn-sm" type="button" onclick="reloadDocs()">重新加载</button>
+            </aside>
             <article class="doc-article" id="doc-article">
                 <div class="empty-state"><div class="empty-state-icon">≡</div><div class="empty-state-text">正在加载…</div></div>
             </article>

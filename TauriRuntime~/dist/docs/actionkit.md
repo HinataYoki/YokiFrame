@@ -1,39 +1,14 @@
 # ActionKit 动作
 
-ActionKit 用于组合延迟、回调、并行、重复、协程和 Task 等运行时动作。代码命名空间统一为 `YokiFrame`；当前核心调度位于纯 C# Runtime，Unity 和 Godot 适配器分别在宿主帧循环中驱动 tick。
-
-## 基本概念
+## 核心概念
 
 | 类型 | 作用 |
-|------|------|
-| `IAction` | 单个动作的接口，包含初始化、执行、完成和回收生命周期。 |
+|---|---|
+| `IAction` | 单个动作。 |
 | `ISequence` | 顺序执行多个动作。 |
-| `IParallel` | 并行执行多个动作，可选择等待全部完成或任一完成。 |
-| `IRepeat` | 重复执行一组动作。 |
-| `IActionController` | `Start()` 后返回的控制器，可暂停、恢复、取消。 |
-
-## IAction 属性
-
-| 属性 | 说明 |
-|------|------|
-| `ActionID` | 动作唯一标识。 |
-| `ActionState` | 当前状态：`NotStart`、`Started`、`Finished`、`Cancelled`。 |
-| `Paused` | 是否暂停。 |
-| `Deinited` | 是否已释放。 |
-| `GetDebugInfo()` | 获取调试信息字符串。 |
-
-## IActionController 属性
-
-| 属性 | 说明 |
-|------|------|
-| `CurExecuteActionID` | 当前正在执行的动作 ID。 |
-| `Action` | 关联的 `IAction` 对象。 |
-| `UpdateMode` | 更新模式：`ScaledDeltaTime` 或 `UnscaledDeltaTime`。 |
-| `Paused` | 是否暂停。 |
-| `IsCancelled` | 是否已取消。 |
-| `Finish` | 完成回调。 |
-
-动作通过对象池复用。正常使用时，不需要手动回收 Action；完成或取消后由框架回收。
+| `IParallel` | 并行执行多个动作。 |
+| `IRepeat` | 重复一组动作。 |
+| `IActionController` | `Start()` 返回的控制器，用于暂停、恢复、取消。 |
 
 ## 顺序动作
 
@@ -61,14 +36,7 @@ public sealed class SequenceDemo : MonoBehaviour
 }
 ```
 
-`Start()` 默认使用 `ActionUpdateModes.ScaledDeltaTime`。需要不受 timeScale 影响时，可以修改控制器：
-
-```csharp
-var controller = ActionKit.Delay(1f, OnFinished).Start();
-controller.UpdateMode = ActionUpdateModes.UnscaledDeltaTime;
-```
-
-## 并行动作
+## 并行和重复
 
 ```csharp
 ActionKit.Sequence()
@@ -81,77 +49,30 @@ ActionKit.Sequence()
     .Start();
 ```
 
-`waitAll: true` 表示全部子动作完成后才结束；`waitAll: false` 表示任一子动作完成后结束。
-
-也可以直接创建并行动作：
-
 ```csharp
-ActionKit.Parallel(waitAll: true)
-    .Delay(0.5f)
-    .Callback(OnFinished)
-    .Start();
-```
-
-## 重复动作
-
-```csharp
-int count = 0;
-
 ActionKit.Sequence()
     .Repeat(repeat =>
     {
-        repeat.Callback(() => count++);
+        repeat.Callback(OnTick);
         repeat.Delay(0.2f);
     }, count: 3)
     .Start();
 ```
 
-`ActionKit.Repeat(repeatCount, condition)` 和链式 `.Repeat(...)` 都支持重复次数。`repeatCount <= 0` 表示不按次数限制，通常应配合 `condition` 使用，避免无限运行。
+`waitAll: true` 等全部子动作完成；`false` 任一子动作完成即结束。无限重复必须有会结束的 condition。
 
-## 常用叶子动作
+## 常用动作
 
-| 动作 | 创建方式 | 说明 |
-|------|----------|------|
-| Delay | `ActionKit.Delay(seconds, callback)` 或 `.Delay(seconds, callback)` | 按秒延迟。 |
-| DelayFrame | `ActionKit.DelayFrame(frameCount, callback)` 或 `.DelayFrame(frameCount, callback)` | 按帧延迟。 |
-| NextFrame | `ActionKit.NextFrame(callback)` 或 `.NextFrame(callback)` | 下一帧执行。 |
-| Callback | `ActionKit.Callback(callback)` 或 `.Callback(callback)` | 立即执行回调并完成。 |
-| Condition | `.Condition(condition)` | 条件满足时完成。 |
-| Lerp | `ActionKit.Lerp(...)` 或 `.Lerp(...)` | 按时间插值。 |
-| Lerp01 | `.Lerp01(duration, onLerp, onFinish)` | 从 0 到 1 插值。 |
-
-插值示例：
-
-```csharp
-ActionKit.Sequence()
-    .Lerp01(
-        duration: 0.5f,
-        onLerp: t => canvasGroup.alpha = t,
-        onLerpFinish: OnFadeInFinished)
-    .Start();
-```
-
-## Coroutine 和 Task
-
-```csharp
-ActionKit.Sequence()
-    .Coroutine(LoadRoutine)
-    .Task(LoadRemoteConfigAsync)
-    .Callback(OnLoaded)
-    .Start();
-```
-
-也可以把已有对象转成 Action：
-
-```csharp
-IEnumerator routine = LoadRoutine();
-IAction routineAction = routine.ToAction();
-
-Task task = LoadRemoteConfigAsync();
-IAction taskAction = task.ToAction();
-```
-
-Task 动作内部通过返回 `Task` 的工作方法执行；异常会被捕获、输出到宿主日志，并让动作进入结束流程。
+| 动作 | 创建方式 |
+|---|---|
+| 延迟秒 | `Delay(seconds, callback)` |
+| 延迟帧 | `DelayFrame(frameCount, callback)` |
+| 下一帧 | `NextFrame(callback)` |
+| 回调 | `Callback(callback)` |
+| 条件 | `.Condition(condition)` |
+| 插值 | `Lerp(...)` / `.Lerp01(...)` |
+| 协程 | `Coroutine(Func<IEnumerator>)` |
+| Task | `Task(Func<Task>)` |
 
 ## 控制器
 
@@ -164,17 +85,30 @@ controller.TogglePause();
 controller.Cancel();
 ```
 
-注意：
+不受 `timeScale` 影响：
 
-- `Cancel()` 会取消后续执行并触发清理。
-- `Pause()` 只暂停当前控制器关联的 Action。
-- 拥有者销毁时建议取消仍在运行的控制器，避免回调访问已销毁对象。
+```csharp
+controller.UpdateMode = ActionUpdateModes.UnscaledDeltaTime;
+```
 
-## 常见问题
+## 工作台诊断
+
+ActionKit 页面用于查看当前动作是否正在运行、是否卡住、是否忘记取消。
+
+| 在工作台里看什么 | 用途 |
+|---|---|
+| 动作树 / 控制器列表 | 确认 `Start()` 后是否真的创建了动作。 |
+| 运行状态 | 区分 Running、Paused、Completed、Cancelled。 |
+| 最近动作事件 | 查看动作开始、完成、取消的顺序。 |
+| Stack Trace 开关 | 短时间开启，用于定位是谁创建了长期未结束的动作。 |
+
+排查顺序：先看控制器是否存在，再看状态是否暂停，最后看创建来源。对象销毁后仍有动作运行时，回到拥有者生命周期里补 `Cancel()`。
+
+## 常见坑
 
 | 问题 | 处理方式 |
-|------|----------|
-| 动作没有继续执行 | 确认已调用 `Start()`，并且控制器没有处于暂停状态。 |
-| 对象销毁后回调报错 | 在 `OnDestroy()` 或对应生命周期中调用 `Cancel()`。 |
-| Repeat 无限运行 | 给 `Repeat` 设置次数，或提供会变为 `false` 的 condition。 |
-| Godot 下动作不执行 | 确认 `GodotBootstrap` 或 `GodotActionKitInstaller.TickActionKit()` 已在 `_Process` 中驱动调度器。 |
+|---|---|
+| 动作不执行 | 确认调用了 `Start()`，宿主 Adapter 正在驱动 ActionKit。 |
+| 对象销毁后回调报错 | 在 `OnDestroy()` 或停止生命周期中 `Cancel()`。 |
+| Repeat 无限运行 | 设置次数或会变为 `false` 的 condition。 |
+| Godot 下不动 | 确认 `GodotBootstrap` 或 installer 在 `_Process` 中 tick。 |
