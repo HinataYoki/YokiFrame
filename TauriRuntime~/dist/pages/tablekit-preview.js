@@ -323,6 +323,10 @@ function bindTableKitEditor() {
             renderTableKitRegistryStatus();
         });
     });
+
+    if (typeof bindTableKitGraphEditor === 'function') {
+        bindTableKitGraphEditor();
+    }
 }
 
 async function pickTableKitPath(field) {

@@ -2764,6 +2764,287 @@ button.audio-channel-strip {
   place-items: center;
 }
 
+.tablekit-graph-section {
+  gap: var(--sp-md);
+}
+
+.tablekit-graph-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  padding: 0 var(--sp-md);
+}
+
+.tablekit-graph-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(360px, 1fr) minmax(240px, 300px);
+  gap: var(--sp-md);
+  min-height: 420px;
+  padding: 0 var(--sp-md);
+}
+
+.tablekit-graph-library,
+.tablekit-graph-canvas-shell,
+.tablekit-graph-inspector,
+.tablekit-graph-contract,
+.tablekit-graph-validation {
+  min-height: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.tablekit-graph-library,
+.tablekit-graph-inspector {
+  display: flex;
+  flex-direction: column;
+}
+
+.tablekit-graph-library__head {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-3);
+}
+
+.tablekit-graph-library__head strong,
+.tablekit-graph-contract .tablekit-subsection__title,
+.tablekit-graph-validation .tablekit-subsection__title {
+  color: var(--ink);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+}
+
+.tablekit-graph-search {
+  width: 100%;
+}
+
+.tablekit-graph-library__list {
+  display: grid;
+  gap: var(--sp-xs);
+  min-height: 0;
+  padding: var(--sp-sm);
+  overflow: auto;
+}
+
+.tablekit-graph-type {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tablekit-graph-type:hover,
+.tablekit-graph-type.active {
+  border-color: rgba(47, 111, 159, 0.42);
+  background: var(--surface-3);
+}
+
+.tablekit-graph-type__color {
+  width: 10px;
+  height: 42px;
+  border-radius: var(--r-pill);
+  background: var(--node-color, var(--accent));
+}
+
+.tablekit-graph-type span:last-of-type {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.tablekit-graph-type strong,
+.tablekit-graph-type em,
+.tablekit-graph-type code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tablekit-graph-type strong {
+  color: var(--ink);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+}
+
+.tablekit-graph-type em,
+.tablekit-graph-type code {
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+  font-style: normal;
+}
+
+.tablekit-graph-type code {
+  grid-column: 2;
+  font-family: var(--font-mono);
+}
+
+.tablekit-graph-canvas-shell {
+  background:
+    linear-gradient(var(--hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hairline) 1px, transparent 1px),
+    var(--surface-2);
+  background-size: 24px 24px;
+}
+
+.tablekit-graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+.tablekit-graph-canvas__bg {
+  fill: transparent;
+}
+
+.tablekit-graph-edge {
+  fill: none;
+  stroke: rgba(79, 95, 115, 0.62);
+  stroke-linecap: round;
+  stroke-width: 3;
+  marker-end: url("#tablekit-graph-arrow");
+}
+
+#tablekit-graph-arrow path {
+  fill: rgba(79, 95, 115, 0.72);
+}
+
+.tablekit-graph-node {
+  cursor: pointer;
+}
+
+.tablekit-graph-node__body {
+  fill: var(--surface-1);
+  stroke: rgba(79, 95, 115, 0.28);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.08));
+}
+
+.tablekit-graph-node:hover .tablekit-graph-node__body,
+.tablekit-graph-node.active .tablekit-graph-node__body {
+  stroke: var(--node-color, var(--accent));
+  stroke-width: 2;
+}
+
+.tablekit-graph-node__bar {
+  fill: var(--node-color, var(--accent));
+}
+
+.tablekit-graph-node__title {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tablekit-graph-node__type,
+.tablekit-graph-node__meta {
+  fill: var(--ink-subtle);
+  font-size: 11px;
+}
+
+.tablekit-graph-port {
+  fill: var(--surface-1);
+  stroke: var(--node-color, var(--accent));
+  stroke-width: 2;
+}
+
+.tablekit-graph-port--output {
+  fill: var(--node-color, var(--accent));
+}
+
+.tablekit-graph-inspector__shell {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.tablekit-graph-inspector__body {
+  display: grid;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm);
+  overflow: auto;
+}
+
+.tablekit-graph-port-list {
+  display: grid;
+  gap: 6px;
+}
+
+.tablekit-graph-port-list span {
+  padding: 7px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+}
+
+.tablekit-graph-port-list strong {
+  color: var(--ink);
+}
+
+.tablekit-graph-field {
+  margin: 0;
+}
+
+.tablekit-graph-output-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(260px, 0.9fr) minmax(360px, 1.25fr);
+  gap: var(--sp-md);
+  padding: 0 var(--sp-md) var(--sp-md);
+}
+
+.tablekit-graph-contract,
+.tablekit-graph-validation {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-sm);
+  padding: var(--sp-md);
+}
+
+.tablekit-graph-handler-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+}
+
+.tablekit-graph-handler-list code {
+  padding: 4px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+
+.tablekit-graph-xml-panel {
+  margin: 0;
+}
+
+@media (max-width: 1180px) {
+  .tablekit-graph-layout,
+  .tablekit-graph-output-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tablekit-graph-canvas {
+    min-height: 360px;
+  }
+}
+
 .kit-pool-object-sections {
   display: grid;
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
@@ -2829,6 +3110,11 @@ button.audio-channel-strip {
 .kit-state-pill--muted {
   background: var(--surface-3);
   color: var(--ink-subtle);
+}
+
+.kit-state-pill--danger {
+  background: var(--error-soft);
+  color: var(--error);
 }
 
 .kit-timeline-row {

@@ -4,6 +4,7 @@ const TABLEKIT_LUBAN_DEFINE = 'YOKIFRAME_LUBAN_SUPPORT';
 const TABLEKIT_CONFIG_STORAGE_KEY = 'yokiframe.tablekit.generator.v1';
 const TABLEKIT_CONSOLE_STORAGE_KEY = 'yokiframe.tablekit.console.v1';
 const TABLEKIT_COLLAPSE_STORAGE_KEY = 'yokiframe.tablekit.collapsed.v1';
+const TABLEKIT_GRAPH_STORAGE_KEY = 'yokiframe.tablekit.graph.v1';
 const TABLEKIT_TARGET_OPTIONS = ['client', 'server', 'all'];
 const TABLEKIT_CODE_TARGET_OPTIONS = ['cs-bin', 'cs-simple-json', 'cs-newtonsoft-json'];
 const TABLEKIT_DATA_TARGET_OPTIONS = ['bin', 'json', 'lua'];
@@ -42,6 +43,7 @@ const TABLEKIT_DEFAULT_CONFIG = Object.freeze({
 let tableKitConfig = loadTableKitConfig();
 let tableKitConsoleEntries = loadTableKitConsoleEntries();
 let tableKitCollapsedSections = loadTableKitCollapsedSections();
+let tableKitGraphProject = loadTableKitGraphProject();
 const tableKitPreviewState = {
     searchTerm: '',
     selectedTableName: '',
@@ -49,6 +51,10 @@ const tableKitPreviewState = {
     previewData: null,
     previewVersion: 0,
     tables: [],
+};
+const tableKitGraphState = {
+    searchTerm: '',
+    selectedNodeId: tableKitGraphProject.graph.nodes[1]?.id || tableKitGraphProject.graph.nodes[0]?.id || '',
 };
 const tableKitEditorState = { renderSignature: '' };
 
@@ -67,6 +73,28 @@ function loadTableKitConfig() {
         // 读取失败时回退默认配置，避免损坏的本地配置阻断页面。
     }
     return sanitizeTableKitConfig({});
+}
+
+function loadTableKitGraphProject() {
+    try {
+        const raw = localStorage.getItem(TABLEKIT_GRAPH_STORAGE_KEY);
+        if (raw) return sanitizeTableKitGraphProject(JSON.parse(raw));
+    } catch (_) {
+        // 损坏的本地图数据不应阻断 TableKit 生成器使用。
+    }
+    return sanitizeTableKitGraphProject({});
+}
+
+function persistTableKitGraphProject() {
+    tableKitGraphProject = sanitizeTableKitGraphProject(tableKitGraphProject);
+    localStorage.setItem(TABLEKIT_GRAPH_STORAGE_KEY, JSON.stringify(tableKitGraphProject));
+}
+
+function resetTableKitGraphProject() {
+    tableKitGraphProject = sanitizeTableKitGraphProject({});
+    tableKitGraphState.selectedNodeId = tableKitGraphProject.graph.nodes[1]?.id || tableKitGraphProject.graph.nodes[0]?.id || '';
+    tableKitGraphState.searchTerm = '';
+    persistTableKitGraphProject();
 }
 
 function persistTableKitConfig() {
@@ -269,4 +297,12 @@ function getTableKitPreviewSignature() {
         signaturePart(tableKitPreviewState.selectedRowIndex),
         Array.isArray(tableKitPreviewState.tables) ? tableKitPreviewState.tables.length : 0,
     ].join('|');
+}
+
+function getTableKitGraphSignature() {
+    return makeStableSignature({
+        selectedNodeId: tableKitGraphState.selectedNodeId,
+        searchTerm: tableKitGraphState.searchTerm,
+        project: tableKitGraphProject,
+    });
 }
