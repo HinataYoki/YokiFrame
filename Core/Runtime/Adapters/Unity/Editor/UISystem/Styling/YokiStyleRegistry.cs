@@ -61,7 +61,7 @@ namespace YokiFrame.Unity
             sAllStyles = new List<YokiStyleInfo>(32);
 
             // 扫描所有程序集的 assembly 级别特性
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var assembly in LoadedAssemblyProvider.GetLoadedAssemblies())
             {
                 try
                 {

@@ -143,7 +143,7 @@ namespace YokiFrame
 
         private static void DiscoverInstallers(YokiFrameEngine engine)
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = LoadedAssemblyProvider.GetLoadedAssemblies();
             for (var i = 0; i < assemblies.Length; i++)
             {
                 Type[] types;

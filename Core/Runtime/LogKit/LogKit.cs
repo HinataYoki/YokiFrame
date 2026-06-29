@@ -227,7 +227,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNITY_ENABLE_CHECKS")]
         public static void DebugLog(string message)
         {
             Debug(message);
@@ -238,7 +238,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNITY_ENABLE_CHECKS")]
         public static void DebugWarning(string message)
         {
             Warning(message);
@@ -249,7 +249,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNITY_ENABLE_CHECKS")]
         public static void DebugError(string message)
         {
             Error(message);

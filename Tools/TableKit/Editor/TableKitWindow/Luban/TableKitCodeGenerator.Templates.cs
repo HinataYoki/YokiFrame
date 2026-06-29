@@ -58,6 +58,9 @@ namespace YokiFrame.Unity
                 sb.AppendLine("using System.Threading;");
             }
             sb.AppendLine("using Luban;");
+            sb.AppendLine("#if UNITY_6000_5_OR_NEWER && !GODOT");
+            sb.AppendLine("using UnityEngine.Assemblies;");
+            sb.AppendLine("#endif");
             if (useAsyncLoading)
             {
                 sb.AppendLine("#if YOKIFRAME_UNITASK_SUPPORT");
@@ -167,7 +170,7 @@ namespace YokiFrame.Unity
             sb.AppendLine();
             sb.AppendLine("        if (sJsonParseMethod == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var jsonType = AppDomain.CurrentDomain.GetAssemblies()");
+            sb.AppendLine("            var jsonType = GetLoadedAssemblies()");
             sb.AppendLine("                .Where(a => !a.IsDynamic)");
             sb.AppendLine("                .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })");
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
@@ -191,6 +194,15 @@ namespace YokiFrame.Unity
             sb.AppendLine("            return null;");
             sb.AppendLine("        }");
             sb.AppendLine("        return new ByteBuf(bytes);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    private static Assembly[] GetLoadedAssemblies()");
+            sb.AppendLine("    {");
+            sb.AppendLine("#if UNITY_6000_5_OR_NEWER && !GODOT");
+            sb.AppendLine("        return CurrentAssemblies.GetLoadedAssemblies();");
+            sb.AppendLine("#else");
+            sb.AppendLine("        return AppDomain.CurrentDomain.GetAssemblies();");
+            sb.AppendLine("#endif");
             sb.AppendLine("    }");
         }
 
@@ -325,7 +337,7 @@ namespace YokiFrame.Unity
             sb.AppendLine();
             sb.AppendLine("        if (sJsonParseMethod == null)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var jsonType = AppDomain.CurrentDomain.GetAssemblies()");
+            sb.AppendLine("            var jsonType = GetLoadedAssemblies()");
             sb.AppendLine("                .Where(a => !a.IsDynamic)");
             sb.AppendLine("                .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })");
             sb.AppendLine("                .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");
@@ -339,7 +351,6 @@ namespace YokiFrame.Unity
             sb.AppendLine();
             sb.AppendLine("        return sJsonParseMethod.Invoke(null, new object[] { asset.text });");
             sb.AppendLine("    }");
-            sb.AppendLine();
             sb.AppendLine("    private static ByteBuf LoadBinaryEditor(string fileName)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = $\"{EditorDataPath}{fileName}.bytes\";");

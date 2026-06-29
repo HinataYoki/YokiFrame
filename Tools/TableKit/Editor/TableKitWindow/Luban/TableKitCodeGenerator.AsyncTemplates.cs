@@ -159,7 +159,7 @@ namespace YokiFrame.Unity
             sb.AppendLine();
             sb.AppendLine("                if (sJsonParseMethod == null)");
             sb.AppendLine("                {");
-            sb.AppendLine("                    var jsonType = AppDomain.CurrentDomain.GetAssemblies()");
+            sb.AppendLine("                    var jsonType = GetLoadedAssemblies()");
             sb.AppendLine("                        .Where(a => !a.IsDynamic)");
             sb.AppendLine("                        .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })");
             sb.AppendLine("                        .FirstOrDefault(t => t.FullName == \"Luban.SimpleJson.JSON\" || t.FullName == \"SimpleJSON.JSON\");");

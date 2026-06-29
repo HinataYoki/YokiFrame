@@ -18,7 +18,7 @@ namespace YokiFrame
             if (type != default)
                 return type;
 
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = LoadedAssemblyProvider.GetLoadedAssemblies();
             for (var i = 0; i < assemblies.Length; i++)
             {
                 type = assemblies[i].GetType(typeName, false);

@@ -25,7 +25,7 @@ namespace YokiFrame.Unity
             try
             {
                 // 尝试查找 Luban.SimpleJson.JSONNode 类型
-                var newType = AppDomain.CurrentDomain.GetAssemblies()
+                var newType = TableKitLoadedAssemblyProvider.GetLoadedAssemblies()
                     .Where(a => !a.IsDynamic)
                     .SelectMany(a =>
                     {
@@ -41,7 +41,7 @@ namespace YokiFrame.Unity
                 }
 
                 // 尝试查找旧的 SimpleJSON.JSONNode 类型
-                var oldType = AppDomain.CurrentDomain.GetAssemblies()
+                var oldType = TableKitLoadedAssemblyProvider.GetLoadedAssemblies()
                     .Where(a => !a.IsDynamic)
                     .SelectMany(a =>
                     {
@@ -69,7 +69,7 @@ namespace YokiFrame.Unity
 
             var typeName = IsNewNamespace() ? "Luban.SimpleJson.JSONNode" : "SimpleJSON.JSONNode";
             
-            sJSONNodeType = AppDomain.CurrentDomain.GetAssemblies()
+            sJSONNodeType = TableKitLoadedAssemblyProvider.GetLoadedAssemblies()
                 .Where(a => !a.IsDynamic)
                 .SelectMany(a =>
                 {
@@ -88,7 +88,7 @@ namespace YokiFrame.Unity
         {
             var typeName = IsNewNamespace() ? "Luban.SimpleJson.JSON" : "SimpleJSON.JSON";
             
-            return AppDomain.CurrentDomain.GetAssemblies()
+            return TableKitLoadedAssemblyProvider.GetLoadedAssemblies()
                 .Where(a => !a.IsDynamic)
                 .SelectMany(a =>
                 {

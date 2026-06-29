@@ -78,7 +78,7 @@ namespace YokiFrame
                 return null;
             }
 
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = LoadedAssemblyProvider.GetLoadedAssemblies();
             for (var i = 0; i < assemblies.Length; i++)
             {
                 handlerType = assemblies[i].GetType(typeNameOnly, false);

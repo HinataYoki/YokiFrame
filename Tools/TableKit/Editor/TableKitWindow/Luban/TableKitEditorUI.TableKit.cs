@@ -153,7 +153,7 @@ namespace YokiFrame.Unity
 
         private Type FindTablesType()
         {
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var asm in TableKitLoadedAssemblyProvider.GetLoadedAssemblies())
             {
                 var type = asm.GetType("cfg.Tables");
                 if (type != null) return type;
@@ -163,7 +163,7 @@ namespace YokiFrame.Unity
 
         private Type FindTableKitType()
         {
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var asm in TableKitLoadedAssemblyProvider.GetLoadedAssemblies())
             {
                 var type = asm.GetType("TableKit");
                 if (type != null) return type;

@@ -1,9 +1,13 @@
 #if !GODOT
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
+#if UNITY_6000_5_OR_NEWER
+using UnityEngine.Assemblies;
+#endif
 
 namespace YokiFrame.Unity
 {
@@ -233,7 +237,7 @@ namespace YokiFrame.Unity
 
         private static bool HasLoadedTypeWithExistingAssembly(string typeName)
         {
-            var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = LoadedAssemblyProvider.GetLoadedAssemblies();
             for (var i = 0; i < assemblies.Length; i++)
             {
                 var assembly = assemblies[i];
@@ -246,7 +250,8 @@ namespace YokiFrame.Unity
 
                 try
                 {
-                    if (!string.IsNullOrEmpty(assembly.Location) && File.Exists(assembly.Location))
+                    var assemblyPath = GetLoadedAssemblyPath(assembly);
+                    if (!string.IsNullOrEmpty(assemblyPath) && File.Exists(assemblyPath))
                         return true;
                 }
                 catch
@@ -256,6 +261,15 @@ namespace YokiFrame.Unity
             }
 
             return false;
+        }
+
+        private static string GetLoadedAssemblyPath(Assembly assembly)
+        {
+#if UNITY_6000_5_OR_NEWER
+            return assembly.GetLoadedAssemblyPath();
+#else
+            return assembly.Location;
+#endif
         }
 
         private static HashSet<string> GetCurrentDefines()
