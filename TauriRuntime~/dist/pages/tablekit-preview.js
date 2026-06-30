@@ -324,9 +324,6 @@ function bindTableKitEditor() {
         });
     });
 
-    if (typeof bindTableKitGraphEditor === 'function') {
-        bindTableKitGraphEditor();
-    }
 }
 
 async function pickTableKitPath(field) {

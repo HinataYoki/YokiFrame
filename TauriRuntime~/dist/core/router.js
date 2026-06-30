@@ -87,6 +87,7 @@ function navigateTo(pageId) {
     $pageBody.classList.remove('content-body--inputkit');
     $pageBody.classList.remove('content-body--uikit');
     $pageBody.classList.remove('content-body--tablekit');
+    $pageBody.classList.remove('content-body--graphkit');
     $pageBody.classList.remove('content-body--singletonkit');
     $pageBody.classList.add(`content-body--${pageId}`);
     // 更新侧边栏。

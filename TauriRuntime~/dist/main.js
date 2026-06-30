@@ -21,6 +21,7 @@ function registerYokiFramePages() {
     registerPage('inputkit', { render: renderInputKitPage });
     registerPage('uikit', { render: renderUIKitPage });
     registerPage('tablekit', { render: renderTableKitPage });
+    registerPage('graphkit', { render: renderGraphKitPage });
     registerPage('singletonkit', { render: renderSingletonKitPage });
 
     registerKitReactiveRefresh('fsmkit', {

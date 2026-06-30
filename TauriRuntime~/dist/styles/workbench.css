@@ -132,6 +132,7 @@
 .content-body--spatialkit,
 .content-body--inputkit,
 .content-body--uikit,
+.content-body--graphkit,
 .content-body--architecture,
 .content-body--singletonkit {
   display: flex;

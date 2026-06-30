@@ -11,7 +11,6 @@ function renderTableKitRegistryStatus() {
         collapsed: tableKitCollapsedSections,
         console: getTableKitConsoleSignature(),
         preview: getTableKitPreviewSignature(),
-        graph: getTableKitGraphSignature(),
     });
     renderWorkbenchHtmlStable(tableKitEditorState, html, signature, bindTableKitEditor);
 }
@@ -50,7 +49,6 @@ function renderTableKitGeneratorStatus(status, config) {
                     ${renderTableKitConsole(status, config)}
                 </div>
             </section>
-            ${renderTableKitGraphPanel(status, config)}
             ${renderTableKitPreviewPanel(status, config)}
         </div>
     </div>`;
