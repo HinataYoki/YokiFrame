@@ -83,6 +83,7 @@ async function loadAudioKitWorkbench() {
 
 function renderAudioKitPageContent(runtimeHtml) {
     clearMetrics();
+    syncAudioKitProjectStorageScope();
     audioKitIndexConfig = sanitizeAudioKitIndexConfig(audioKitIndexConfig);
     const html = `<div class="audiokit-page-workbench">
         <div class="audiokit-page-runtime">${runtimeHtml}</div>

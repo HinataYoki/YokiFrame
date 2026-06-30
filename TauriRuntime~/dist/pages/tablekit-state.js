@@ -39,9 +39,10 @@ const TABLEKIT_DEFAULT_CONFIG = Object.freeze({
     useAsyncLoading: false,
     extraOutputTargets: [],
 });
-let tableKitConfig = loadTableKitConfig();
-let tableKitConsoleEntries = loadTableKitConsoleEntries();
-let tableKitCollapsedSections = loadTableKitCollapsedSections();
+let tableKitStorageScope = null;
+let tableKitConfig = sanitizeTableKitConfig({});
+let tableKitConsoleEntries = [];
+let tableKitCollapsedSections = {};
 const tableKitPreviewState = {
     searchTerm: '',
     selectedTableName: '',
@@ -52,16 +53,53 @@ const tableKitPreviewState = {
 };
 const tableKitEditorState = { renderSignature: '' };
 
-if (!tableKitConsoleEntries.length) {
+syncTableKitProjectStorageScope({ force: true });
+
+function getTableKitConfigStorageKey() {
+    return getProjectScopedStorageKey(TABLEKIT_CONFIG_STORAGE_KEY);
+}
+
+function getTableKitConsoleStorageKey() {
+    return getProjectScopedStorageKey(TABLEKIT_CONSOLE_STORAGE_KEY);
+}
+
+function getTableKitCollapseStorageKey() {
+    return getProjectScopedStorageKey(TABLEKIT_COLLAPSE_STORAGE_KEY);
+}
+
+function syncTableKitProjectStorageScope(options = {}) {
+    const nextScope = getProjectStorageScopeIdentifier();
+    if (!options.force && tableKitStorageScope === nextScope) return false;
+
+    tableKitStorageScope = nextScope;
+    tableKitConfig = loadTableKitConfig();
+    tableKitConsoleEntries = loadTableKitConsoleEntries();
+    tableKitCollapsedSections = loadTableKitCollapsedSections();
+    ensureTableKitConsoleEntries();
+
+    if (!options.force) {
+        tableKitPreviewState.previewData = null;
+        tableKitPreviewState.previewVersion += 1;
+        tableKitPreviewState.tables = [];
+        tableKitPreviewState.selectedTableName = '';
+        tableKitPreviewState.selectedRowIndex = 0;
+        tableKitEditorState.renderSignature = '';
+    }
+    return true;
+}
+
+function ensureTableKitConsoleEntries() {
+    if (tableKitConsoleEntries.length) return;
     tableKitConsoleEntries = [
-        makeTableKitConsoleEntry('info', '已从 localStorage 恢复 TableKit 配置。'),
+        makeTableKitConsoleEntry('info', '已从当前项目缓存恢复 TableKit 配置。'),
         makeTableKitConsoleEntry('info', 'Tauri Luban 执行器已准备调用本地 dotnet Luban.dll。'),
     ];
     persistTableKitConsoleEntries();
 }
+
 function loadTableKitConfig() {
     try {
-        const raw = localStorage.getItem(TABLEKIT_CONFIG_STORAGE_KEY);
+        const raw = readProjectScopedStorageItem(TABLEKIT_CONFIG_STORAGE_KEY);
         if (raw) return sanitizeTableKitConfig(JSON.parse(raw));
     } catch (_) {
         // 读取失败时回退默认配置，避免损坏的本地配置阻断页面。
@@ -71,7 +109,7 @@ function loadTableKitConfig() {
 
 function persistTableKitConfig() {
     tableKitConfig = sanitizeTableKitConfig(tableKitConfig);
-    localStorage.setItem(TABLEKIT_CONFIG_STORAGE_KEY, JSON.stringify(tableKitConfig));
+    localStorage.setItem(getTableKitConfigStorageKey(), JSON.stringify(tableKitConfig));
 }
 
 function sanitizeTableKitConfig(raw) {
@@ -132,7 +170,7 @@ function sanitizeTableKitExtraOutputTargets(rawTargets) {
 
 function loadTableKitConsoleEntries() {
     try {
-        const raw = localStorage.getItem(TABLEKIT_CONSOLE_STORAGE_KEY);
+        const raw = readProjectScopedStorageItem(TABLEKIT_CONSOLE_STORAGE_KEY);
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed)) return [];
         return parsed.map(entry => ({
@@ -147,12 +185,12 @@ function loadTableKitConsoleEntries() {
 }
 
 function persistTableKitConsoleEntries() {
-    localStorage.setItem(TABLEKIT_CONSOLE_STORAGE_KEY, JSON.stringify(tableKitConsoleEntries.slice(-TABLEKIT_CONSOLE_MAX_ENTRIES)));
+    localStorage.setItem(getTableKitConsoleStorageKey(), JSON.stringify(tableKitConsoleEntries.slice(-TABLEKIT_CONSOLE_MAX_ENTRIES)));
 }
 
 function loadTableKitCollapsedSections() {
     try {
-        const raw = localStorage.getItem(TABLEKIT_COLLAPSE_STORAGE_KEY);
+        const raw = readProjectScopedStorageItem(TABLEKIT_COLLAPSE_STORAGE_KEY);
         const parsed = raw ? JSON.parse(raw) : {};
         if (!parsed || typeof parsed !== 'object') return {};
 
@@ -167,7 +205,7 @@ function loadTableKitCollapsedSections() {
 }
 
 function persistTableKitCollapsedSections() {
-    localStorage.setItem(TABLEKIT_COLLAPSE_STORAGE_KEY, JSON.stringify(tableKitCollapsedSections));
+    localStorage.setItem(getTableKitCollapseStorageKey(), JSON.stringify(tableKitCollapsedSections));
 }
 
 function isTableKitSectionCollapsed(id) {

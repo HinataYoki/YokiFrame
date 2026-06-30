@@ -823,7 +823,7 @@ test('main sidebar groups Kits by dependency layer and sorts each layer alphabet
     assert.deepEqual(groups[0].labels, ['框架', '文档']);
     assert.deepEqual(groups[1].labels, ['Architecture']);
     assert.deepEqual(groups[2].labels, ['EventKit', 'FsmKit', 'LogKit', 'PoolKit', 'ResKit', 'SingletonKit']);
-    assert.deepEqual(groups[3].labels, ['ActionKit', 'AudioKit', 'InputKit', 'LocalizationKit', 'SaveKit', 'SceneKit', 'SpatialKit', 'TableKit', 'UIKit']);
+    assert.deepEqual(groups[3].labels, ['ActionKit', 'AudioKit', 'GraphKit', 'InputKit', 'LocalizationKit', 'SaveKit', 'SceneKit', 'SpatialKit', 'TableKit', 'UIKit']);
     assert.doesNotMatch(html, /<div class="sidebar-group-header">工具<\/div>/);
 });
 
@@ -3219,7 +3219,7 @@ test('TableKit page reads Luban availability from engine registry instead of run
     assert.match(tableKitSource, /TABLEKIT_COLLAPSE_STORAGE_KEY/);
     assert.match(tableKitSource, /function loadTableKitCollapsedSections/);
     assert.match(tableKitSource, /function toggleTableKitCollapsedSection/);
-    assert.match(tableKitSource, /localStorage\.setItem\(TABLEKIT_COLLAPSE_STORAGE_KEY/);
+    assert.match(tableKitSource, /getProjectScopedStorageKey\(TABLEKIT_COLLAPSE_STORAGE_KEY\)/);
     assert.match(tableKitSource, /tablekit-config-log-shell/);
     assert.match(tableKitSource, /tablekit-config-log-grid/);
     assert.match(environmentSource, /renderTableKitCollapsibleGroup\('lubanEnvironment',\s*'Luban 环境'/);
@@ -3263,7 +3263,7 @@ test('TableKit page reads Luban availability from engine registry instead of run
     assert.match(js, /outputCodeDir:\s*'Assets\/Scripts\/TableKit\//);
     assert.match(tableKitSource, /function renderTableKitConsole/);
     assert.match(tableKitSource, /function renderTableKitPreviewPanel/);
-    assert.match(tableKitSource, /localStorage\.setItem\(TABLEKIT_CONFIG_STORAGE_KEY/);
+    assert.match(tableKitSource, /getProjectScopedStorageKey\(TABLEKIT_CONFIG_STORAGE_KEY\)/);
     assert.doesNotMatch(environmentSource, /tablekit-section--wide/);
     assert.doesNotMatch(environmentSource, /宿主模式/);
     assert.doesNotMatch(environmentSource, /data-tablekit-field="engineMode"/);
@@ -3325,6 +3325,34 @@ test('TableKit page reads Luban availability from engine registry instead of run
     assert.match(tablekitDoc, /页面不会读取 `TableKit\/state` snapshot/);
     assert.match(tablekitDoc, /Tauri 后端通过 `dotnet Luban\.dll` 执行生成和验证/);
     assert.doesNotMatch(tablekitDoc, /当前页面只完成|后续 Tauri 后端命令接入|Luban 执行器待接入/);
+});
+
+test('project level editor caches are scoped by connected project path', () => {
+    const appStateSource = readDistFile('core/app-state.js');
+    const appStatusSource = readDistFile('core/app-status.js');
+    const tableKitSource = readDistFile('pages/tablekit-state.js');
+    const audioKitSource = readDistFile('pages/audiokit-index.js');
+    const graphKitSource = readDistFile('pages/graphkit-state.js');
+
+    assert.match(appStateSource, /function getProjectScopedStorageKey\(/);
+    assert.match(appStateSource, /function getProjectStorageScopeIdentifier\(/);
+    assert.match(appStateSource, /encodeURIComponent\(scope\)/);
+    assert.doesNotMatch(appStateSource, /localStorage\.getItem\(baseKey\)/);
+    assert.match(appStatusSource, /syncProjectScopedEditorStorage\(\)/);
+
+    assert.match(tableKitSource, /syncTableKitProjectStorageScope\(/);
+    assert.match(tableKitSource, /getProjectScopedStorageKey\(TABLEKIT_CONFIG_STORAGE_KEY\)/);
+    assert.match(tableKitSource, /getProjectScopedStorageKey\(TABLEKIT_CONSOLE_STORAGE_KEY\)/);
+    assert.match(tableKitSource, /getProjectScopedStorageKey\(TABLEKIT_COLLAPSE_STORAGE_KEY\)/);
+    assert.doesNotMatch(tableKitSource, /localStorage\.setItem\(TABLEKIT_CONFIG_STORAGE_KEY/);
+
+    assert.match(audioKitSource, /syncAudioKitProjectStorageScope\(/);
+    assert.match(audioKitSource, /getProjectScopedStorageKey\(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY\)/);
+    assert.doesNotMatch(audioKitSource, /localStorage\.setItem\(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY/);
+
+    assert.match(graphKitSource, /syncGraphKitProjectStorageScope\(/);
+    assert.match(graphKitSource, /getProjectScopedStorageKey\(GRAPHKIT_STORAGE_KEY\)/);
+    assert.doesNotMatch(graphKitSource, /localStorage\.setItem\(GRAPHKIT_STORAGE_KEY/);
 });
 
 test('runtime Kit pages guard command bridge calls before sending to editor-only hosts', () => {

@@ -10,7 +10,8 @@ const AUDIOKIT_INDEX_DEFAULT_CONFIG = Object.freeze({
     startId: 1001,
 });
 
-let audioKitIndexConfig = loadAudioKitIndexConfig();
+let audioKitIndexStorageScope = null;
+let audioKitIndexConfig = sanitizeAudioKitIndexConfig({});
 const audioKitIndexState = {
     entries: [],
     log: 'AudioKit ID 生成器已准备就绪，扫描后会生成 AudioIds 与 AudioPaths.Map。',
@@ -18,9 +19,30 @@ const audioKitIndexState = {
     busy: '',
 };
 
+syncAudioKitProjectStorageScope({ force: true });
+
+function getAudioKitIndexConfigStorageKey() {
+    return getProjectScopedStorageKey(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY);
+}
+
+function syncAudioKitProjectStorageScope(options = {}) {
+    const nextScope = getProjectStorageScopeIdentifier();
+    if (!options.force && audioKitIndexStorageScope === nextScope) return false;
+
+    audioKitIndexStorageScope = nextScope;
+    audioKitIndexConfig = loadAudioKitIndexConfig();
+    if (!options.force) {
+        audioKitIndexState.entries = [];
+        audioKitIndexState.generatedFile = '';
+        audioKitIndexState.busy = '';
+        audioKitIndexState.log = '已切换到当前项目的 AudioKit ID 生成器配置。';
+    }
+    return true;
+}
+
 function loadAudioKitIndexConfig() {
     try {
-        const raw = localStorage.getItem(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY);
+        const raw = readProjectScopedStorageItem(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY);
         if (raw) return sanitizeAudioKitIndexConfig(JSON.parse(raw));
     } catch (_) {
         // 损坏的本地配置不应阻断 AudioKit 页面。
@@ -30,7 +52,7 @@ function loadAudioKitIndexConfig() {
 
 function persistAudioKitIndexConfig() {
     audioKitIndexConfig = sanitizeAudioKitIndexConfig(audioKitIndexConfig);
-    localStorage.setItem(AUDIOKIT_INDEX_CONFIG_STORAGE_KEY, JSON.stringify(audioKitIndexConfig));
+    localStorage.setItem(getAudioKitIndexConfigStorageKey(), JSON.stringify(audioKitIndexConfig));
 }
 
 function sanitizeAudioKitIndexConfig(raw) {

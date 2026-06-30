@@ -3,11 +3,12 @@
 const GRAPHKIT_STORAGE_KEY = 'yokiframe.graphkit.project.v1';
 const GRAPHKIT_HISTORY_LIMIT = 48;
 
-let graphKitProject = loadGraphKitProject();
+let graphKitStorageScope = null;
+let graphKitProject = sanitizeGraphKitProject({});
 const graphKitState = {
     searchTerm: '',
-    selectedNodeId: getGraphKitInitialNodeId(graphKitProject),
-    selectedNodeIds: [getGraphKitInitialNodeId(graphKitProject)].filter(Boolean),
+    selectedNodeId: '',
+    selectedNodeIds: [],
     selectedEdgeId: '',
     selectedBlackboardName: '',
     selectedNoteId: '',
@@ -71,9 +72,48 @@ const graphKitState = {
     renderSignature: '',
 };
 
+syncGraphKitProjectStorageScope({ force: true });
+
+function getGraphKitStorageKey() {
+    return getProjectScopedStorageKey(GRAPHKIT_STORAGE_KEY);
+}
+
+function syncGraphKitProjectStorageScope(options = {}) {
+    const nextScope = getProjectStorageScopeIdentifier();
+    if (!options.force && graphKitStorageScope === nextScope) return false;
+
+    graphKitStorageScope = nextScope;
+    graphKitProject = loadGraphKitProject();
+    const selectedNodeId = getGraphKitInitialNodeId(graphKitProject);
+    graphKitState.selectedNodeId = selectedNodeId;
+    graphKitState.selectedNodeIds = selectedNodeId ? [selectedNodeId] : [];
+    graphKitState.selectedEdgeId = '';
+    graphKitState.selectedBlackboardName = '';
+    graphKitState.selectedNoteId = '';
+    graphKitState.selectedPlacematId = '';
+    graphKitState.selectedNodeTypeId = '';
+    graphKitState.searchTerm = '';
+    graphKitState.pendingPortEndpoint = '';
+    graphKitState.noticeLevel = options.force ? graphKitState.noticeLevel : 'info';
+    graphKitState.noticeText = options.force ? graphKitState.noticeText : '已切换到当前项目的 GraphKit 草稿。';
+    graphKitState.lubanRun = null;
+    graphKitState.viewport = { scale: 1, offsetX: 0, offsetY: 0 };
+    graphKitState.panels = { blackboardCollapsed: false, inspectorCollapsed: false };
+    graphKitState.issuesOpen = false;
+    graphKitState.searchOverlay = { open: false, query: '', scope: 'current', activeIndex: 0 };
+    graphKitState.clipboardNodes = [];
+    graphKitState.clipboardEdges = [];
+    graphKitState.undoStack = [];
+    graphKitState.redoStack = [];
+    graphKitState.dirty = false;
+    graphKitState.renderSignature = '';
+    if (!options.force && typeof resetGraphKitFileState === 'function') resetGraphKitFileState();
+    return true;
+}
+
 function loadGraphKitProject() {
     try {
-        const raw = localStorage.getItem(GRAPHKIT_STORAGE_KEY);
+        const raw = readProjectScopedStorageItem(GRAPHKIT_STORAGE_KEY);
         if (raw) return sanitizeGraphKitProject(JSON.parse(raw));
     } catch (_) {
         // 损坏的本地图数据不应阻断 GraphKit 页面打开。
@@ -83,7 +123,7 @@ function loadGraphKitProject() {
 
 function persistGraphKitProject() {
     graphKitProject = sanitizeGraphKitProject(graphKitProject);
-    localStorage.setItem(GRAPHKIT_STORAGE_KEY, JSON.stringify(graphKitProject));
+    localStorage.setItem(getGraphKitStorageKey(), JSON.stringify(graphKitProject));
 }
 
 function resetGraphKitProject() {
@@ -114,6 +154,7 @@ function resetGraphKitProject() {
 }
 
 function renderGraphKitPage() {
+    syncGraphKitProjectStorageScope();
     $pageBody.classList.add('content-body--graphkit');
     graphKitState.renderSignature = '';
     setHero(

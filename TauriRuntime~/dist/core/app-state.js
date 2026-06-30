@@ -267,3 +267,53 @@ let sidebarIndicatorMotionTimer = 0;
 let tabIndicatorMotionTimer = 0;
 const HERO_CARD_TARGET_SELECTOR = '.kit-toolbar, .audio-master-strip, .tablekit-command-center, .kit-panel, .panel, .doc-hero, .developer-context-strip';
 const HERO_INTRO_CARD_PAGE_IDS = new Set(['fsmkit', 'eventkit', 'logkit', 'poolkit', 'reskit', 'singletonkit']);
+
+function normalizeProjectStorageScopePath(value) {
+    const normalized = String(value ?? '').replace(/\\/g, '/').trim().replace(/\/+$/, '');
+    if (/^[A-Za-z]:\//.test(normalized)) {
+        return `${normalized.charAt(0).toLowerCase()}${normalized.slice(1)}`;
+    }
+    return normalized;
+}
+
+function getProjectStorageScopeIdentifier(status = latestStatusRaw, summary = latestStatusSummary) {
+    const summaryPath = summary?.projectPath && summary.projectPath !== '--'
+        ? normalizeProjectStorageScopePath(summary.projectPath)
+        : '';
+    if (summaryPath) return summaryPath;
+
+    const engines = Array.isArray(status?.engines) ? status.engines : [];
+    const engine = engines.find(candidate => candidate?.projectPath && candidate.connected !== false)
+        || engines.find(candidate => candidate?.projectPath);
+    return engine?.projectPath && engine.projectPath !== '--'
+        ? normalizeProjectStorageScopePath(engine.projectPath)
+        : '';
+}
+
+function getProjectScopedStorageKey(baseKey) {
+    const scope = getProjectStorageScopeIdentifier();
+    return scope ? `${baseKey}::project::${encodeURIComponent(scope)}` : baseKey;
+}
+
+function readProjectScopedStorageItem(baseKey) {
+    const scopedKey = getProjectScopedStorageKey(baseKey);
+    return localStorage.getItem(scopedKey);
+}
+
+function writeProjectScopedStorageItem(baseKey, value) {
+    localStorage.setItem(getProjectScopedStorageKey(baseKey), value);
+}
+
+function syncProjectScopedEditorStorage() {
+    let changed = false;
+    if (typeof syncTableKitProjectStorageScope === 'function') {
+        changed = syncTableKitProjectStorageScope() || changed;
+    }
+    if (typeof syncAudioKitProjectStorageScope === 'function') {
+        changed = syncAudioKitProjectStorageScope() || changed;
+    }
+    if (typeof syncGraphKitProjectStorageScope === 'function') {
+        changed = syncGraphKitProjectStorageScope() || changed;
+    }
+    return changed;
+}

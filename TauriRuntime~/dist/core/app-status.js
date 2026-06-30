@@ -83,6 +83,7 @@ async function pollStatus({ force = false } = {}) {
         const status = JSON.parse(result);
         latestStatusRaw = status;
         latestStatusSummary = summarizeStatus(status);
+        const scopedStorageChanged = syncProjectScopedEditorStorage();
         syncSidebarKitAvailability();
         const isConnected = status.connected;
         if (isConnected !== lastConnectedState) {
@@ -103,6 +104,10 @@ async function pollStatus({ force = false } = {}) {
         }
         if (activePage === 'tablekit') {
             renderTableKitRegistryStatus();
+        } else if (scopedStorageChanged && activePage === 'audiokit') {
+            renderAudioKitCachedPage();
+        } else if (scopedStorageChanged && activePage === 'graphkit') {
+            renderGraphKitWorkbench();
         }
     } catch (_) { /* IPC unavailable */ }
     finally {

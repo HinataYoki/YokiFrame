@@ -2,6 +2,7 @@
 // TableKit 表单渲染：环境、输出路径、额外目标、console 和整体工作台。
 function renderTableKitRegistryStatus() {
     clearMetrics();
+    syncTableKitProjectStorageScope();
     tableKitConfig = sanitizeTableKitConfig(tableKitConfig);
     const status = getTableKitLubanStatus();
     const html = renderTableKitGeneratorStatus(status, tableKitConfig);

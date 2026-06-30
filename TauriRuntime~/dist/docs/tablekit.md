@@ -21,7 +21,7 @@
 | 控制台 | 生成和验证输出。 |
 | 数据预览 | 查看验证阶段生成的临时 JSON。 |
 
-配置保存在 Tauri 前端 `localStorage`，键为 `yokiframe.tablekit.generator.v1`。
+配置保存在 Tauri 前端 `localStorage`，并按当前 engine registry 的 `projectPath` 派生项目级 key，避免多个 Unity/Godot 项目共用同一份 TableKit 路径配置。
 
 ## 生成产物
 
@@ -60,6 +60,9 @@ TableKit.SetJsonLoader(fileName => LoadTextFromProjectRuntime(fileName));
 ## 工作台使用
 
 TableKit 页面是配置表生成工作台，不是运行时 Kit 状态页。
+Tauri 的 TableKit 页面只读取 engine registry 中的 Luban 可用性和项目路径，不通过运行时 `TableKit/*` 命令获取状态。
+页面不会读取 `TableKit/state` snapshot，也不会把 TableKit 当成运行时诊断页轮询。
+Tauri 后端通过 `dotnet Luban.dll` 执行生成和验证，输出日志会写入页面控制台。
 
 | 在工作台里做什么 | 用途 |
 |---|---|
