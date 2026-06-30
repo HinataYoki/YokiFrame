@@ -298,8 +298,13 @@ function getTableKitEffectiveEngine(status) {
     return status.engine && status.engine !== '--' ? status.engine : 'auto';
 }
 
-function getTableKitLoaderText(engine) {
-    return 'ResKit.LoadRaw / LoadRawText';
+function getTableKitLoaderText(config, engine) {
+    if (String(engine || '').toLowerCase() === 'godot') {
+        return 'ResKit.LoadRaw / LoadRawText';
+    }
+    return config?.useRawResourceLoading === false
+        ? 'ResKit.Load<TextAsset>'
+        : 'ResKit.LoadRaw / LoadRawText';
 }
 
 function formatTableKitOption(option) {

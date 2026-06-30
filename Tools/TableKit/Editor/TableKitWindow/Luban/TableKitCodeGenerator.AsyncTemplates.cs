@@ -8,7 +8,7 @@ namespace YokiFrame.Unity
     public static partial class TableKitCodeGenerator
     {
         private static void AppendAsyncLoadingSection(CodeGenLineBuilder sb, string tablesNamespace, bool hasYokiFrame,
-            string[] tableFileNames)
+            string[] tableFileNames, bool useRawResourceLoading)
         {
             sb.AppendLine();
             sb.AppendLine("#if YOKIFRAME_UNITASK_SUPPORT");
@@ -29,7 +29,7 @@ namespace YokiFrame.Unity
             AppendAsyncCacheHelpers(sb);
 
             // 榛樿寮傛鍔犺浇鍣?
-            AppendDefaultAsyncLoaders(sb, hasYokiFrame);
+            AppendDefaultAsyncLoaders(sb, hasYokiFrame, useRawResourceLoading);
 
             sb.AppendLine();
             sb.AppendLine("    #endregion");
@@ -200,20 +200,52 @@ namespace YokiFrame.Unity
             sb.AppendLine("    }");
         }
 
-        private static void AppendDefaultAsyncLoaders(CodeGenLineBuilder sb, bool hasYokiFrame)
+        private static void AppendDefaultAsyncLoaders(CodeGenLineBuilder sb, bool hasYokiFrame, bool useRawResourceLoading)
         {
             sb.AppendLine();
             sb.AppendLine("    // 默认异步加载器：统一委托给 ResKit，具体 Unity/Godot/自定义后端由 ResKit Provider 决定。");
             sb.AppendLine("    private static async UniTask<byte[]> DefaultAsyncBinaryLoader(string fileName, CancellationToken ct)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-            sb.AppendLine("        return await YokiFrame.ResKit.LoadRawAsync(path, ct);");
+            if (useRawResourceLoading)
+            {
+                sb.AppendLine("        return await YokiFrame.ResKit.LoadRawAsync(path, ct);");
+            }
+            else
+            {
+                sb.AppendLine("        var asset = await YokiFrame.ResKit.LoadAsync<UnityEngine.TextAsset>(path, ct);");
+                sb.AppendLine("        if (asset == null) return null;");
+                sb.AppendLine("        try");
+                sb.AppendLine("        {");
+                sb.AppendLine("            return asset.bytes;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        finally");
+                sb.AppendLine("        {");
+                sb.AppendLine("            YokiFrame.ResKit.Release(asset);");
+                sb.AppendLine("        }");
+            }
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    private static async UniTask<string> DefaultAsyncJsonLoader(string fileName, CancellationToken ct)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-            sb.AppendLine("        return await YokiFrame.ResKit.LoadRawTextAsync(path, ct);");
+            if (useRawResourceLoading)
+            {
+                sb.AppendLine("        return await YokiFrame.ResKit.LoadRawTextAsync(path, ct);");
+            }
+            else
+            {
+                sb.AppendLine("        var asset = await YokiFrame.ResKit.LoadAsync<UnityEngine.TextAsset>(path, ct);");
+                sb.AppendLine("        if (asset == null) return null;");
+                sb.AppendLine("        try");
+                sb.AppendLine("        {");
+                sb.AppendLine("            return asset.text;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        finally");
+                sb.AppendLine("        {");
+                sb.AppendLine("            YokiFrame.ResKit.Release(asset);");
+                sb.AppendLine("        }");
+            }
             sb.AppendLine("    }");
         }
 

@@ -3260,6 +3260,9 @@ test('TableKit page reads Luban availability from engine registry instead of run
     assert.match(environmentSource, /data-tablekit-toggle="useAssemblyDefinition"/);
     assert.match(environmentSource, /data-tablekit-toggle="generateExternalTypeUtil"/);
     assert.match(environmentSource, /data-tablekit-toggle="useAsyncLoading"/);
+    assert.match(environmentSource, /data-tablekit-toggle="useRawResourceLoading"/);
+    assert.match(environmentSource, /原始资源加载/);
+    assert.match(tableKitSource, /useRawResourceLoading:\s*true/);
     assert.match(js, /outputCodeDir:\s*'Assets\/Scripts\/TableKit\//);
     assert.match(tableKitSource, /function renderTableKitConsole/);
     assert.match(tableKitSource, /function renderTableKitPreviewPanel/);

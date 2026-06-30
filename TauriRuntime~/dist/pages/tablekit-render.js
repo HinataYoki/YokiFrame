@@ -60,6 +60,10 @@ function renderTableKitEnvironmentPanel(status, config, effectiveEngine) {
     const assemblyNote = isGodot
         ? 'Godot 使用 .csproj/Directory.Build.props 管理编译宏；没有 Unity asmdef 语义。'
         : 'Unity 启用后会在代码输出目录生成 asmdef，并引用 Luban.Runtime。';
+    const rawLoadingNote = isGodot
+        ? 'Godot 当前强制使用 ResKit.LoadRaw / LoadRawText。'
+        : '关闭后生成代码会用 ResKit.Load<TextAsset> 读取普通资源，并在构造完成后释放 TextAsset。';
+    const useRawResourceLoading = isGodot ? true : !!config.useRawResourceLoading;
     return `<section class="kit-panel tablekit-section tablekit-section--environment">
         <div class="kit-panel__head">
             <div>
@@ -101,6 +105,7 @@ function renderTableKitEnvironmentPanel(status, config, effectiveEngine) {
                     ${renderKitToggle('使用独立程序集', !!config.useAssemblyDefinition, 'data-tablekit-toggle="useAssemblyDefinition"', assemblyNote)}
                     ${renderKitToggle('生成 ExternalTypeUtil', !!config.generateExternalTypeUtil, 'data-tablekit-toggle="generateExternalTypeUtil"', 'Luban 在 vector 转 Unity/Godot 类型时可追加转换工具')}
                     ${renderKitToggle('异步加载模式', !!config.useAsyncLoading, 'data-tablekit-toggle="useAsyncLoading"', '生成 InitAsync 入口；需要异步加载时启用')}
+                    ${renderKitToggle('原始资源加载', useRawResourceLoading, 'data-tablekit-toggle="useRawResourceLoading"', rawLoadingNote)}
                 </div>
                 ${renderTableKitTextField('assemblyName', '程序集名称', config.assemblyName, 'Unity asmdef 名称；Godot 仅作为项目侧组织信息', !config.useAssemblyDefinition)}
             </div>
@@ -108,6 +113,7 @@ function renderTableKitEnvironmentPanel(status, config, effectiveEngine) {
                 <div><span>Package</span><strong>${escapeHtml(status.packageName)}</strong></div>
                 <div><span>Asmdef</span><strong>${escapeHtml(status.asmdefName)}</strong></div>
                 <div><span>Type</span><strong>${escapeHtml(status.typeName)}</strong></div>
+                <div><span>Loader</span><strong>${escapeHtml(getTableKitLoaderText(config, effectiveEngine))}</strong></div>
             </div>
         </div>
     </section>`;

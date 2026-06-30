@@ -13,7 +13,7 @@ namespace YokiFrame.Unity
         /// </summary>
         private static void GenerateTableKit(string outputDir, string tablesNamespace, bool hasYokiFrame,
             string runtimePathPattern, string editorDataPath,
-            bool useAsyncLoading = false, string[] tableFileNames = null)
+            bool useAsyncLoading = false, string[] tableFileNames = null, bool useRawResourceLoading = true)
         {
             // 转义路径中的特殊字符
             var escapedRuntimePath = runtimePathPattern.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -26,10 +26,10 @@ namespace YokiFrame.Unity
                 AppendTableKitLoaderSetters(sb);
                 AppendTableKitInit(sb, tablesNamespace);
                 AppendTableKitLoadMethods(sb);
-                AppendDefaultLoaders(sb);
+                AppendDefaultLoaders(sb, useRawResourceLoading);
                 if (useAsyncLoading)
                 {
-                    AppendAsyncLoadingSection(sb, tablesNamespace, hasYokiFrame, tableFileNames);
+                    AppendAsyncLoadingSection(sb, tablesNamespace, hasYokiFrame, tableFileNames, useRawResourceLoading);
                 }
 
                 AppendTableKitReloadAndClear(sb, useAsyncLoading);
@@ -206,7 +206,7 @@ namespace YokiFrame.Unity
             sb.AppendLine("    }");
         }
 
-        private static void AppendDefaultLoaders(CodeGenLineBuilder sb)
+        private static void AppendDefaultLoaders(CodeGenLineBuilder sb, bool useRawResourceLoading)
         {
             sb.AppendLine();
             sb.AppendLine("    #region Default Loaders");
@@ -216,13 +216,45 @@ namespace YokiFrame.Unity
             sb.AppendLine("    private static byte[] DefaultBinaryLoader(string fileName)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-            sb.AppendLine("        return YokiFrame.ResKit.LoadRaw(path);");
+            if (useRawResourceLoading)
+            {
+                sb.AppendLine("        return YokiFrame.ResKit.LoadRaw(path);");
+            }
+            else
+            {
+                sb.AppendLine("        var asset = YokiFrame.ResKit.Load<UnityEngine.TextAsset>(path);");
+                sb.AppendLine("        if (asset == null) return null;");
+                sb.AppendLine("        try");
+                sb.AppendLine("        {");
+                sb.AppendLine("            return asset.bytes;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        finally");
+                sb.AppendLine("        {");
+                sb.AppendLine("            YokiFrame.ResKit.Release(asset);");
+                sb.AppendLine("        }");
+            }
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    private static string DefaultJsonLoader(string fileName)");
             sb.AppendLine("    {");
             sb.AppendLine("        var path = string.Format(RuntimePathPattern, fileName);");
-            sb.AppendLine("        return YokiFrame.ResKit.LoadRawText(path);");
+            if (useRawResourceLoading)
+            {
+                sb.AppendLine("        return YokiFrame.ResKit.LoadRawText(path);");
+            }
+            else
+            {
+                sb.AppendLine("        var asset = YokiFrame.ResKit.Load<UnityEngine.TextAsset>(path);");
+                sb.AppendLine("        if (asset == null) return null;");
+                sb.AppendLine("        try");
+                sb.AppendLine("        {");
+                sb.AppendLine("            return asset.text;");
+                sb.AppendLine("        }");
+                sb.AppendLine("        finally");
+                sb.AppendLine("        {");
+                sb.AppendLine("            YokiFrame.ResKit.Release(asset);");
+                sb.AppendLine("        }");
+            }
             sb.AppendLine("    }");
             
             sb.AppendLine();

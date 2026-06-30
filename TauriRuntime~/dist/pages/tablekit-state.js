@@ -37,6 +37,7 @@ const TABLEKIT_DEFAULT_CONFIG = Object.freeze({
     assemblyName: 'YokiFrame.TableKit',
     generateExternalTypeUtil: false,
     useAsyncLoading: false,
+    useRawResourceLoading: true,
     extraOutputTargets: [],
 });
 let tableKitStorageScope = null;
@@ -136,6 +137,7 @@ function sanitizeTableKitConfig(raw) {
     config.assemblyName = normalizeTableKitString(config.assemblyName, TABLEKIT_DEFAULT_CONFIG.assemblyName);
     config.generateExternalTypeUtil = normalizeTableKitBool(config.generateExternalTypeUtil);
     config.useAsyncLoading = normalizeTableKitBool(config.useAsyncLoading);
+    config.useRawResourceLoading = normalizeTableKitBool(config.useRawResourceLoading);
     config.extraOutputTargets = sanitizeTableKitExtraOutputTargets(config.extraOutputTargets);
     return config;
 }

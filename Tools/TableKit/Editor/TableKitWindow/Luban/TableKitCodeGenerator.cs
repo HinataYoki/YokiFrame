@@ -27,6 +27,7 @@ namespace YokiFrame.Unity
         /// <param name="useAsyncLoading">是否生成异步加载代码</param>
         /// <param name="dataDir">数据文件目录，用于扫描表文件名（异步模式需要）</param>
         /// <param name="dataTarget">数据格式（bin/json），用于确定文件扩展名</param>
+        /// <param name="useRawResourceLoading">是否使用 ResKit raw 加载配置表资源</param>
         public static void Generate(
             string outputDir,
             bool useAssemblyDefinition,
@@ -38,7 +39,8 @@ namespace YokiFrame.Unity
             string codeTarget = "cs-bin",
             bool useAsyncLoading = false,
             string dataDir = "",
-            string dataTarget = "bin")
+            string dataTarget = "bin",
+            bool useRawResourceLoading = true)
         {
             if (string.IsNullOrEmpty(outputDir))
             {
@@ -70,7 +72,7 @@ namespace YokiFrame.Unity
             }
 
             GenerateTableKit(outputDir, tablesNamespace, hasYokiFrame, runtimePathPattern, editorDataPath,
-                useAsyncLoading, tableFileNames);
+                useAsyncLoading, tableFileNames, useRawResourceLoading);
             
             if (generateExternalTypeUtil)
             {
