@@ -65,6 +65,7 @@ namespace YokiFrame
         private static readonly string[] sFsmFeatures = { "runtime", "events", "snapshots", "telemetry" };
         private static readonly string[] sTableKitFeatures = { "tauri_config", "registry_optional_dependencies" };
         private static readonly string[] sUIKitFeatures = { "runtime", "snapshots", "telemetry", "ui_editor_tools" };
+        private static readonly string[] sManagedRuntimeFeatures = { "runtime_selection", "workflow_actions", "build_pipeline", "backend_settings", "registry_optional_dependencies" };
 
         private static readonly KitDescriptor[] sDescriptors =
         {
@@ -76,6 +77,7 @@ namespace YokiFrame
             new KitDescriptor("PoolKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("ResKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("SingletonKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
+            new KitDescriptor("ManagedRuntimeKit", BOTH_MASK, sManagedRuntimeFeatures, null, null),
             new KitDescriptor("ActionKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("AudioKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("InputKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),

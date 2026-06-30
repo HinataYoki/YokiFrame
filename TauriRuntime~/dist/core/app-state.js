@@ -158,6 +158,15 @@ const FRAMEWORK_COMMAND_CATALOG = {
         { action: 'stats', label: 'stats', descriptionKey: 'command.singletonkit.stats' },
         { action: 'list_singletons', label: 'list_singletons', descriptionKey: 'command.singletonkit.list_singletons' },
     ],
+    ManagedRuntimeKit: [
+        { action: 'get_workbench_snapshot', label: 'get_workbench_snapshot', descriptionKey: 'command.managedruntimekit.get_workbench_snapshot' },
+        { action: 'list_backends', label: 'list_backends', descriptionKey: 'command.managedruntimekit.list_backends' },
+        { action: 'validate', label: 'validate', descriptionKey: 'command.managedruntimekit.validate' },
+        { action: 'select_backend', label: 'select_backend', descriptionKey: 'command.managedruntimekit.select_backend' },
+        { action: 'run_action', label: 'run_action', descriptionKey: 'command.managedruntimekit.run_action' },
+        { action: 'get_backend_settings', label: 'get_backend_settings', descriptionKey: 'command.managedruntimekit.get_backend_settings' },
+        { action: 'save_backend_settings', label: 'save_backend_settings', descriptionKey: 'command.managedruntimekit.save_backend_settings' },
+    ],
 };
 const KIT_PAGE_ID_TO_KIT = {
     architecture: 'Architecture',
@@ -167,6 +176,7 @@ const KIT_PAGE_ID_TO_KIT = {
     poolkit: 'PoolKit',
     reskit: 'ResKit',
     singletonkit: 'SingletonKit',
+    managedruntime: 'ManagedRuntimeKit',
     actionkit: 'ActionKit',
     audiokit: 'AudioKit',
     inputkit: 'InputKit',
@@ -184,6 +194,7 @@ const KIT_EVENT_ALIASES = {
     log: 'logkit',
     architecture: 'architecture',
     singleton: 'singletonkit',
+    managedruntime: 'managedruntime',
     res: 'reskit',
     table: 'tablekit',
     audio: 'audiokit',

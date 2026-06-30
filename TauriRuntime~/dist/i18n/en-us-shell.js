@@ -198,6 +198,13 @@ function enUSShellTranslations() {
         'command.singletonkit.get_workbench_snapshot': 'Read singleton workbench snapshot',
         'command.singletonkit.stats': 'Read singleton statistics',
         'command.singletonkit.list_singletons': 'List singletons',
+        'command.managedruntimekit.get_workbench_snapshot': 'Read managed runtime workbench snapshot',
+        'command.managedruntimekit.list_backends': 'List managed runtime backends',
+        'command.managedruntimekit.validate': 'Validate current managed runtime backend',
+        'command.managedruntimekit.select_backend': 'Select managed runtime backend',
+        'command.managedruntimekit.run_action': 'Run managed runtime workflow action',
+        'command.managedruntimekit.get_backend_settings': 'Read managed runtime backend settings',
+        'command.managedruntimekit.save_backend_settings': 'Save managed runtime backend settings',
         'command.select_from_catalog': 'Select a read-only diagnostic request from the command bridge catalog.',
 
         // ── Sidebar ──
@@ -208,6 +215,7 @@ function enUSShellTranslations() {
         'sidebar.docs': 'Docs',
         'sidebar.core': 'Core',
         'sidebar.tool': 'Tool',
+        'sidebar.managedruntime': 'Managed Runtime',
         'sidebar.page_tabs': 'Page tabs',
 
         // ── System Page ──

@@ -198,6 +198,13 @@ function zhCNShellTranslations() {
         'command.singletonkit.get_workbench_snapshot': '读取单例工作台快照',
         'command.singletonkit.stats': '读取单例统计',
         'command.singletonkit.list_singletons': '列出单例',
+        'command.managedruntimekit.get_workbench_snapshot': '读取托管运行时工作台快照',
+        'command.managedruntimekit.list_backends': '列出托管运行时后端',
+        'command.managedruntimekit.validate': '验证当前托管运行时后端',
+        'command.managedruntimekit.select_backend': '选择托管运行时后端',
+        'command.managedruntimekit.run_action': '执行托管运行时工作流动作',
+        'command.managedruntimekit.get_backend_settings': '读取托管运行时后端设置',
+        'command.managedruntimekit.save_backend_settings': '保存托管运行时后端设置',
         'command.select_from_catalog': '从命令桥支持动作中选择一个只读诊断请求。',
 
         // ── 侧边栏 ──
@@ -208,6 +215,7 @@ function zhCNShellTranslations() {
         'sidebar.docs': '文档',
         'sidebar.core': 'Core',
         'sidebar.tool': 'Tool',
+        'sidebar.managedruntime': '托管运行时',
         'sidebar.page_tabs': '页面标签',
 
         // ── System 页面 ──

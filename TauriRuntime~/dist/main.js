@@ -23,6 +23,7 @@ function registerYokiFramePages() {
     registerPage('tablekit', { render: renderTableKitPage });
     registerPage('graphkit', { render: renderGraphKitPage });
     registerPage('singletonkit', { render: renderSingletonKitPage });
+    registerPage('managedruntime', { render: renderManagedRuntimePage });
 
     registerKitReactiveRefresh('fsmkit', {
         pageId: 'fsmkit',

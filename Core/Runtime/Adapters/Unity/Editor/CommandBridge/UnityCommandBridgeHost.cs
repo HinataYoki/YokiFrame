@@ -81,6 +81,8 @@ namespace YokiFrame.Unity
             Dispatcher.Register(new EventKitCommandHandler());
             Dispatcher.Register(new SingletonKitCommandHandler());
             Dispatcher.Register(new ArchitectureCommandHandler());
+            UnityManagedRuntimeBackendRegistration.EnsureRegistered();
+            Dispatcher.Register(new ManagedRuntimeKitCommandHandler());
             Dispatcher.Register(new AudioKitCommandHandler());
             RegisterOptionalToolCommandHandlers();
         }
@@ -125,6 +127,7 @@ namespace YokiFrame.Unity
         private static void OnEditorUpdate()
         {
             EnsureDefaultLogger();
+            UnityManagedRuntimeBackendRegistration.EnsureRegistered();
 
             var nowUtc = DateTime.UtcNow;
             if (ShouldPollCommandBridge(nowUtc))

@@ -17,6 +17,10 @@
   grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr) minmax(280px, 0.95fr);
 }
 
+.kit-workbench-grid--managedruntime {
+  grid-template-columns: minmax(280px, 0.76fr) minmax(620px, 1.84fr);
+}
+
 .kit-workbench--audio {
   display: flex;
   flex: 1 1 auto;
@@ -1568,6 +1572,10 @@ button.audio-channel-strip {
 
 .kit-detail-summary--singleton {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kit-detail-summary--managedruntime {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .kit-detail-summary--pool {
@@ -5251,6 +5259,189 @@ button.audio-channel-strip {
 .kit-state-pill--danger {
   background: var(--error-soft);
   color: var(--error);
+}
+
+.managedruntime-actions {
+  display: grid;
+  gap: var(--sp-sm);
+  padding: 0 var(--sp-md) var(--sp-md);
+}
+
+.managedruntime-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.managedruntime-action:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.managedruntime-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.managedruntime-action strong,
+.managedruntime-action em {
+  display: block;
+}
+
+.managedruntime-action strong {
+  font-size: var(--fs-body);
+}
+
+.managedruntime-action em,
+.managedruntime-action small {
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+  font-style: normal;
+}
+
+.managedruntime-action--danger:not(:disabled) {
+  border-color: var(--warning);
+}
+
+.managedruntime-settings {
+  display: grid;
+  gap: var(--sp-sm);
+  margin: 0 var(--sp-md) var(--sp-md);
+  padding: var(--sp-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.managedruntime-settings--empty {
+  padding: var(--sp-sm);
+}
+
+.managedruntime-settings__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+
+.managedruntime-settings__head strong,
+.managedruntime-settings__head span {
+  display: block;
+}
+
+.managedruntime-settings__head span {
+  margin-top: 2px;
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+}
+
+.managedruntime-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-xs);
+}
+
+.managedruntime-setting-grid {
+  padding: 0;
+}
+
+.managedruntime-settings-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-sm);
+}
+
+.managedruntime-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.managedruntime-settings-field > span {
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+}
+
+.managedruntime-settings-textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.managedruntime-settings__meta {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+}
+
+.managedruntime-settings__meta code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.managedruntime-feedback {
+  display: grid;
+  gap: var(--sp-sm);
+  margin: 0 var(--sp-md) var(--sp-md);
+}
+
+.managedruntime-result {
+  display: grid;
+  gap: 6px;
+  padding: var(--sp-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.managedruntime-result--ok {
+  border-color: var(--success);
+}
+
+.managedruntime-result--error {
+  border-color: var(--error);
+}
+
+.managedruntime-result pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  color: var(--ink-subtle);
+  font-size: var(--fs-caption);
+}
+
+.managedruntime-diagnostics {
+  display: grid;
+  gap: 6px;
+}
+
+.managedruntime-diagnostics > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+}
+
+@media (max-width: 1180px) {
+  .kit-workbench-grid--managedruntime {
+    grid-template-columns: 1fr;
+  }
+
+  .managedruntime-settings-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .kit-timeline-row {

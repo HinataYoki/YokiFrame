@@ -89,6 +89,7 @@ function navigateTo(pageId) {
     $pageBody.classList.remove('content-body--tablekit');
     $pageBody.classList.remove('content-body--graphkit');
     $pageBody.classList.remove('content-body--singletonkit');
+    $pageBody.classList.remove('content-body--managedruntime');
     $pageBody.classList.add(`content-body--${pageId}`);
     // 更新侧边栏。
     document.querySelectorAll('.sidebar-item').forEach(item => {

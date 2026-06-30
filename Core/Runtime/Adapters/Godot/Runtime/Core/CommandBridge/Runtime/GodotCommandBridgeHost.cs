@@ -48,6 +48,7 @@ namespace YokiFrame.Godot
             GodotFsmKitEventBridge.Init(mBridgeRootPath);
             GodotEventKitEventBridge.Init(mBridgeRootPath);
             GodotKitStateSnapshotPublisher.Init(mBridgeRootPath);
+            GodotManagedRuntimeBackendRegistration.EnsureRegistered();
 
             mDispatcher.DefaultEngineId = ENGINE_ID;
             mDispatcher.Register(new SystemCommandHandler(
@@ -66,6 +67,7 @@ namespace YokiFrame.Godot
             mDispatcher.Register(new EventKitCommandHandler());
             mDispatcher.Register(new SingletonKitCommandHandler());
             mDispatcher.Register(new ArchitectureCommandHandler());
+            mDispatcher.Register(new ManagedRuntimeKitCommandHandler());
             mDispatcher.Register(new AudioKitCommandHandler());
             RegisterOptionalToolCommandHandlers();
             mCore = new YokiCommandBridgeCore(Path.Combine(mBridgeRootPath, "engines", ENGINE_ID), mDispatcher,
