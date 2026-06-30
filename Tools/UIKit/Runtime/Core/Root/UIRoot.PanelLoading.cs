@@ -105,7 +105,7 @@ namespace YokiFrame
                 handler.Prefab = prefab;
                 handler.Loader = loader;
 
-#if UNITY_2022_3_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
                 StartCoroutine(InstantiatePanelAsync(handler, onComplete));
 #else
                 var panel = Instantiate(prefab).GetComponent<UIPanel>();
@@ -116,7 +116,7 @@ namespace YokiFrame
             });
         }
 
-#if UNITY_2022_3_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
         private IEnumerator InstantiatePanelAsync(PanelHandler handler, Action<IPanel> onComplete)
         {
             var op = InstantiateAsync(handler.Prefab);
@@ -164,7 +164,7 @@ namespace YokiFrame
             handler.Prefab = prefab;
             handler.Loader = loader;
 
-#if UNITY_2022_3_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
 #if YOKIFRAME_UNITASK_SUPPORT
             var op = InstantiateAsync(prefab);
             await op.ToUniTask(cancellationToken: ct);
