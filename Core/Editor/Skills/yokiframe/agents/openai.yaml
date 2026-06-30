@@ -1,7 +1,7 @@
 interface:
   display_name: "YokiFrame 使用指南"
-  short_description: "YokiFrame Kit、工作台与命令桥入口"
-  default_prompt: "Use $yokiframe to build with YokiFrame Kits, query snapshots or telemetry, and choose the right existing module before writing game code."
+  short_description: "YokiFrame Kit、工作台、GraphKit/TableKit 与命令桥入口"
+  default_prompt: "Use $yokiframe to build with cross-engine YokiFrame Kits, query snapshots or telemetry, use TableKit/GraphKit through the Tauri workbench, and choose the right existing module before writing game code."
 
 policy:
   allow_implicit_invocation: true

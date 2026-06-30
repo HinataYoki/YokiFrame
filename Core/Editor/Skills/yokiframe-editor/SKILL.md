@@ -4,6 +4,7 @@ description: >-
   YokiFrame 编辑器和工作台使用指南。Use when Codex 需要帮助用户打开 YokiFrame 工作台、
   查看 Kit 调试页面、安装 YokiFrame Skill、读取日志、使用快捷命令、查看 EventKit/FsmKit/PoolKit/ResKit/
   SingletonKit/AudioKit/SaveKit/LocalizationKit/SceneKit/SpatialKit/InputKit/UIKit 状态，
+  使用 TableKit/Luban 配置表生成、GraphKit 图编辑和 runtime contract 预览，
   或通过工作台和命令桥完成项目诊断。
 ---
 
@@ -24,8 +25,9 @@ description: >-
 1. 先打开工作台，确认宿主连接为在线。
 2. 在对应 Kit 页面查看当前状态；高频状态优先依赖 telemetry 或 snapshot。
 3. 需要一次性详情、历史或显式动作时，再使用快捷命令或 `yokiframe-command-bridge` Skill。
-4. 命令超时或页面无数据时，先看系统页的桥状态和运行日志。
-5. 需要给 AI 安装使用说明时，打开系统页的“安装Skill”卡片，把包内 Skill 安装到目标助手目录。
+4. 需要配置表或节点图工具时，进入 TableKit 或 GraphKit 页面；它们不是 runtime snapshot 页面。
+5. 命令超时或页面无数据时，先看系统页的桥状态和运行日志。
+6. 需要给 AI 安装使用说明时，打开系统页的“安装Skill”卡片，把包内 Skill 安装到目标助手目录。
 
 ## 系统页
 
@@ -117,6 +119,24 @@ description: >-
 - 运行时命令桥只读，不通过 `.yokiframe` 打开、关闭、显示、隐藏、压栈或弹栈。
 - Unity Editor 工具命令依赖当前 Selection，只在用户明确要求时执行。
 
+## 工具页面
+
+### TableKit
+
+- TableKit 是 Luban 配置表生成工作台，不是 runtime Kit 状态页。
+- 先看 `环境与路径`：Luban 工作目录、`Luban.dll`、代码输出目录、数据输出目录、运行时路径模式。
+- 推荐顺序：配置路径 -> 验证 -> 查看数据预览和控制台 -> 生成。
+- 生成产物属于用户项目，通常包括 `Assets/Scripts/TableKit/Luban/`、`TableKit.cs` 和表数据目录。
+- 运行时找不到表时，优先检查生成产物、数据输出目录、`RuntimePathPattern` 和 ResKit Provider。
+
+### GraphKit
+
+- GraphKit 是节点图编辑和数据建模页面，不是 runtime Kit 状态页，也不是 CommandBridge handler。
+- 可编辑 graph project、node types、ports、fields、blackboard、placemats、notes、edges、subgraph 和 portal。
+- 可预览/复制 graph JSON、Luban Definition XML、Luban Data XML 和 GraphRuntime contract。
+- 可导出 Luban XML 到 TableKit/Luban 工作目录；之后进入 TableKit 页面验证和生成。
+- 运行时执行器、handler 语义和 graph 解释逻辑由用户项目接入；YokiFrame 工作台只提供编辑、导出和契约预览。
+
 ## 快捷命令
 
 优先使用这些只读命令确认状态：
@@ -125,6 +145,8 @@ description: >-
 - `System/status`：查看引擎基础状态。
 - `System/bridge_status`：查看队列、deadletter、lastError 和 backpressure。
 - `<Kit>/get_workbench_snapshot`：获取对应 Kit 的一次性诊断快照。
+
+TableKit 和 GraphKit 不在快捷命令范围内；它们通过 Tauri 页面和 Tauri 后端工具执行，不通过 `.yokiframe` runtime command。
 
 变更型命令必须谨慎：
 
@@ -135,6 +157,7 @@ description: >-
 - LocalizationKit：`set_language`。
 - SceneKit：`unload_scene`。
 - UIKit：Editor 工具命令依赖当前 Selection。
+- 不存在 `TableKit/*` 或 `GraphKit/*` runtime 诊断命令。
 
 ## 常见排查
 
@@ -153,6 +176,13 @@ description: >-
 2. 查看对应 snapshot 是否存在，例如 `.yokiframe/engines/<engineId>/snapshots/FsmKit/state.json`。
 3. 发送 `<Kit>/get_workbench_snapshot`。
 4. 再发送 `System/bridge_status` 检查 lastError、pending、processing 和 deadletter。
+
+### TableKit 或 GraphKit 页面异常
+
+1. TableKit 先检查环境与路径、Luban 可用状态、输出目录和控制台日志。
+2. GraphKit 先检查页面 issues、graph project JSON、Luban XML 和 GraphRuntime contract。
+3. GraphKit 导出到 TableKit 后，回到 TableKit 执行验证和生成。
+4. 不要用 `TableKit/get_workbench_snapshot` 或 `GraphKit/get_workbench_snapshot` 排查；它们不是 runtime command handler。
 
 ### AI Skill 安装失败
 

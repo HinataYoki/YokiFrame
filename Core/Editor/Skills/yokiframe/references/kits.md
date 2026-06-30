@@ -470,6 +470,57 @@ var seq = ActionKit.Sequence()
 - 复用内部对象池，避免临时 Action 大量分配。
 - 新增 Action 时补充对应 Tests，并检查 Godot package compatibility。
 
+## TableKit
+
+TableKit 是 Tauri 工作台里的 Luban 配置表生成流程，不是 Runtime command handler。它配置 Luban 工作目录、`Luban.dll`、代码输出目录、数据输出目录和运行时路径模式，生成产物落在用户项目中。
+
+默认生成产物：
+
+```text
+Assets/Scripts/TableKit/Luban/
+Assets/Scripts/TableKit/TableKit.cs
+Assets/Resources/Art/Table/
+```
+
+生成的 `TableKit.cs` 默认通过 ResKit 读取表数据：
+
+```csharp
+TableKit.RuntimePathPattern = "Art/Table/{0}";
+TableKit.Init();
+
+var tables = TableKit.Tables;
+```
+
+规则：
+
+- 在工作台 TableKit 页面检查 Luban 环境、路径、构建选项、验证日志和生成日志。
+- 配置保存在 Tauri 前端 `localStorage`，键为 `yokiframe.tablekit.generator.v1`。
+- TableKit 页面是配置表生成工作台，不展示 runtime snapshot。
+- AI 不发送 `TableKit/*` 命令，不读取 `TableKit/state`。
+- 运行时找不到表时，先检查生成产物、数据输出目录、`RuntimePathPattern` 和 ResKit Provider。
+
+## GraphKit
+
+GraphKit 是 Tauri 工作台里的节点图编辑和数据建模页面，不是 Runtime Kit，也不是 CommandBridge handler。它用于编辑 graph project、node types、ports、fields、blackboard、placemats、notes、edges、subgraph/portal，并预览或导出 Luban XML 与 GraphRuntime contract。
+
+GraphKit 当前产物/预览包括：
+
+```text
+graph project JSON
+Luban Definition XML
+Luban Data XML
+GraphRuntime contract JSON
+```
+
+规则：
+
+- 在工作台 GraphKit 页面编辑图结构、节点类型、黑板变量、子图和 portal route。
+- 使用 GraphKit 的 Luban 导出功能把 graph definition/data XML 写入 TableKit/Luban 工作目录。
+- 使用 runtime contract 预览给项目侧图执行器或 handler scaffold 对接。
+- GraphKit 当前是编辑器工具流；运行时执行器、handler 语义和 graph 解释逻辑由用户项目接入。
+- AI 不发送 `GraphKit/*` 命令，不读取 `GraphKit/state`。
+- 排查 GraphKit 问题时先看 Tauri 页面状态、导出的 XML/contract、TableKit 生成产物和项目侧执行器代码。
+
 ## Tauri 编辑器
 
 Unity 菜单：
@@ -494,3 +545,15 @@ FsmKit 页面：
 - 左侧活动状态机列表优先 telemetry/snapshot。
 - 详情、状态流图和历史通过 `get_workbench_snapshot` 或 fallback 命令补齐。
 - 高频刷新只更新必要区域，不应阻塞滚动或点击。
+
+TableKit 页面：
+
+- 用于 Luban 配置表验证与生成，不是 Kit runtime 状态页。
+- 先看环境与路径，再执行验证，最后生成代码和数据。
+- 生成结果属于用户项目代码，不属于 YokiFrame 包内 Runtime。
+
+GraphKit 页面：
+
+- 用于节点图编辑、节点类型管理、黑板变量、子图、placemat、note 和连线。
+- 可预览/复制 graph JSON、Luban Definition/Data XML 和 GraphRuntime contract。
+- 导出到 TableKit 后，再由 TableKit 验证和生成项目侧代码/数据。

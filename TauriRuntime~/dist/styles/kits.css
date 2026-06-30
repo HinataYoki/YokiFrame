@@ -3045,6 +3045,2142 @@ button.audio-channel-strip {
   }
 }
 
+.graphkit-window {
+  --graphkit-bg: #151515;
+  --graphkit-panel: #090909;
+  --graphkit-panel-2: #1f1f1f;
+  --graphkit-panel-3: #303030;
+  --graphkit-line: rgba(255, 255, 255, 0.1);
+  --graphkit-line-strong: rgba(255, 255, 255, 0.18);
+  --graphkit-ink: #e6e2d8;
+  --graphkit-muted: #aaa69d;
+  --graphkit-dim: #77736c;
+  --graphkit-flow: #d3a10c;
+  --graphkit-port: #d68916;
+  --graphkit-select: #2fb8ff;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #2d2d2d;
+  border-radius: 6px;
+  background: var(--graphkit-bg);
+  color: var(--graphkit-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.graphkit-window .kit-state-pill {
+  min-width: auto;
+  height: 22px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.graphkit-window-toolbar {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 0;
+  border-bottom: 1px solid #262626;
+  border-radius: 0;
+  background: #323232;
+  box-shadow: none;
+}
+
+.graphkit-window-toolbar__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.graphkit-tab-strip {
+  display: flex;
+  min-width: 0;
+}
+
+.graphkit-tab {
+  display: inline-flex;
+  align-items: center;
+  max-width: 260px;
+  min-height: 24px;
+  padding: 0 11px;
+  border: 1px solid #454545;
+  border-radius: 4px 4px 0 0;
+  background: #242424;
+  color: var(--graphkit-ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-tab--active {
+  border-bottom-color: #242424;
+  background: #242424;
+}
+
+.graphkit-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 420px;
+  gap: 4px;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.graphkit-breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 150px;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #b8c0c8;
+  cursor: pointer;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-breadcrumb__item:hover:not(:disabled) {
+  border-color: #454545;
+  background: #292929;
+}
+
+.graphkit-breadcrumb__item.is-active {
+  color: var(--graphkit-ink);
+  cursor: default;
+}
+
+.graphkit-breadcrumb__sep {
+  color: #6d757c;
+}
+
+.graphkit-window-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.graphkit-window-toolbar__actions {
+  gap: 6px;
+}
+
+.graphkit-template-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: #aeb6be;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.graphkit-template-picker__select {
+  width: 150px;
+  min-height: 26px;
+  padding: 0 24px 0 8px;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  background: #252525;
+  color: var(--graphkit-ink);
+  font-size: 12px;
+}
+
+.graphkit-window-toolbar .btn {
+  min-height: 26px;
+  border-color: #454545;
+  border-radius: 4px;
+  background: #252525;
+  color: var(--graphkit-ink);
+}
+
+.graphkit-window-toolbar .btn:hover {
+  border-color: #606060;
+  background: #383838;
+}
+
+.graphkit-editor-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--graphkit-bg);
+}
+
+.graphkit-canvas-grid {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--graphkit-bg);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-position:
+    var(--graphkit-grid-x, 0) var(--graphkit-grid-y, 0),
+    var(--graphkit-grid-x, 0) var(--graphkit-grid-y, 0),
+    var(--graphkit-grid-x, 0) var(--graphkit-grid-y, 0),
+    var(--graphkit-grid-x, 0) var(--graphkit-grid-y, 0);
+  background-size:
+    calc(16px * var(--graphkit-grid-scale, 1)) calc(16px * var(--graphkit-grid-scale, 1)),
+    calc(16px * var(--graphkit-grid-scale, 1)) calc(16px * var(--graphkit-grid-scale, 1)),
+    calc(80px * var(--graphkit-grid-scale, 1)) calc(80px * var(--graphkit-grid-scale, 1)),
+    calc(80px * var(--graphkit-grid-scale, 1)) calc(80px * var(--graphkit-grid-scale, 1));
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+}
+
+.graphkit-canvas-grid.is-panning {
+  cursor: grabbing;
+}
+
+.graphkit-canvas-grid.is-selecting {
+  cursor: crosshair;
+}
+
+.graphkit-canvas-grid.is-blackboard-drop-target {
+  outline: 2px solid rgba(97, 178, 232, 0.72);
+  outline-offset: -3px;
+  background-color: #242d31;
+}
+
+.graphkit-canvas {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.graphkit-scene {
+  transform-box: fill-box;
+  transform-origin: 0 0;
+}
+
+.graphkit-edge {
+  fill: none;
+  stroke: var(--graphkit-flow);
+  stroke-linecap: round;
+  stroke-width: 3;
+  marker-end: url("#graphkit-arrow");
+  opacity: 0.95;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.graphkit-edge:hover,
+.graphkit-edge.active {
+  stroke: var(--graphkit-select);
+  stroke-width: 4;
+  opacity: 1;
+}
+
+.graphkit-edge-group {
+  pointer-events: visiblePainted;
+}
+
+.graphkit-edge-label {
+  pointer-events: none;
+}
+
+.graphkit-edge-label__box {
+  fill: rgba(24, 24, 24, 0.92);
+  stroke: #4f565e;
+  stroke-width: 1;
+}
+
+.graphkit-edge-label.active .graphkit-edge-label__box {
+  stroke: var(--graphkit-select);
+}
+
+.graphkit-edge-label text {
+  font-family: var(--font-mono);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: 0;
+}
+
+.graphkit-edge-label__title {
+  fill: #d6edf8;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-edge-label__condition {
+  fill: #9aa7b2;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.graphkit-edge-handle {
+  fill: var(--surface-1);
+  stroke: var(--graphkit-select);
+  stroke-width: 2;
+  cursor: crosshair;
+  opacity: 0;
+  pointer-events: all;
+}
+
+.graphkit-edge-group:hover .graphkit-edge-handle,
+.graphkit-edge-group.active .graphkit-edge-handle,
+.graphkit-edge-handle:hover,
+.graphkit-edge-handle.active {
+  opacity: 1;
+}
+
+.graphkit-wire-preview {
+  fill: none;
+  stroke: #72d1ff;
+  stroke-dasharray: 9 6;
+  stroke-linecap: round;
+  stroke-width: 3.5;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.graphkit-wire-preview.is-compatible {
+  stroke: #9ddfa8;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+#graphkit-arrow path {
+  fill: var(--graphkit-flow);
+}
+
+.graphkit-placemat {
+  cursor: pointer;
+}
+
+.graphkit-placemat.is-locked {
+  cursor: default;
+}
+
+.graphkit-placemat text,
+.graphkit-sticky-note text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.graphkit-placemat__body {
+  fill: color-mix(in srgb, var(--organization-color, #34566f) 20%, transparent);
+  stroke: color-mix(in srgb, var(--organization-color, #34566f) 78%, #ffffff 8%);
+  stroke-width: 1.5;
+}
+
+.graphkit-placemat:hover .graphkit-placemat__body,
+.graphkit-placemat.active .graphkit-placemat__body {
+  stroke: var(--graphkit-select);
+  stroke-width: 2.5;
+}
+
+.graphkit-placemat.is-dragging .graphkit-placemat__body {
+  stroke: #72d1ff;
+  stroke-dasharray: 10 6;
+}
+
+.graphkit-placemat.is-resizing .graphkit-placemat__body {
+  stroke: #72d1ff;
+  stroke-width: 2.5;
+}
+
+.graphkit-placemat.is-locked .graphkit-placemat__body {
+  fill: color-mix(in srgb, var(--organization-color, #34566f) 14%, transparent);
+  stroke-dasharray: 7 5;
+}
+
+.graphkit-placemat.is-collapsed .graphkit-placemat__body {
+  fill: color-mix(in srgb, var(--organization-color, #34566f) 28%, transparent);
+}
+
+.graphkit-placemat__title {
+  fill: #eee8d8;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.graphkit-placemat__meta {
+  fill: #b7c4ce;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.graphkit-placemat__resize {
+  cursor: nwse-resize;
+  fill: color-mix(in srgb, var(--organization-color, #34566f) 68%, #ffffff 20%);
+  opacity: 0;
+  pointer-events: all;
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 1.2;
+}
+
+.graphkit-placemat:hover .graphkit-placemat__resize,
+.graphkit-placemat.active .graphkit-placemat__resize,
+.graphkit-placemat.is-resizing .graphkit-placemat__resize {
+  opacity: 1;
+}
+
+.graphkit-placemat.is-locked .graphkit-placemat__resize,
+.graphkit-placemat.is-collapsed .graphkit-placemat__resize {
+  display: none;
+}
+
+.graphkit-sticky-note {
+  cursor: pointer;
+}
+
+.graphkit-sticky-note__body {
+  fill: color-mix(in srgb, var(--organization-color, #6f5a2e) 38%, #161616 62%);
+  stroke: color-mix(in srgb, var(--organization-color, #6f5a2e) 76%, #ffffff 10%);
+  stroke-width: 1.4;
+  filter: drop-shadow(0 9px 14px rgba(0, 0, 0, 0.34));
+}
+
+.graphkit-sticky-note__head {
+  fill: color-mix(in srgb, var(--organization-color, #6f5a2e) 62%, #111111 38%);
+}
+
+.graphkit-sticky-note:hover .graphkit-sticky-note__body,
+.graphkit-sticky-note.active .graphkit-sticky-note__body {
+  stroke: var(--graphkit-select);
+  stroke-width: 2.4;
+}
+
+.graphkit-sticky-note.is-dragging .graphkit-sticky-note__body {
+  stroke: #72d1ff;
+}
+
+.graphkit-sticky-note__title {
+  fill: #fff5dc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.graphkit-sticky-note__text {
+  fill: #eadcb9;
+  font-size: 11px;
+}
+
+.graphkit-node {
+  cursor: pointer;
+}
+
+.graphkit-node text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.graphkit-node__body {
+  fill: #343434;
+  stroke: #555555;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 9px 14px rgba(0, 0, 0, 0.32));
+}
+
+.graphkit-node__header {
+  fill: #3f3f3f;
+}
+
+.graphkit-node__header-mask {
+  fill: #343434;
+}
+
+.graphkit-node:hover .graphkit-node__body,
+.graphkit-node.active .graphkit-node__body {
+  stroke: var(--graphkit-select);
+  stroke-width: 2.5;
+}
+
+.graphkit-node.is-multi-selected .graphkit-node__body {
+  stroke: #72d1ff;
+  stroke-dasharray: 7 4;
+  stroke-width: 2.5;
+}
+
+.graphkit-node.active.is-multi-selected .graphkit-node__body {
+  stroke-dasharray: none;
+  stroke-width: 3;
+}
+
+.graphkit-node.is-collapsed .graphkit-node__body {
+  fill: #303437;
+}
+
+.graphkit-node.is-lod-compact .graphkit-node__body {
+  filter: none;
+  stroke-width: 1;
+}
+
+.graphkit-node.is-lod-compact .graphkit-node__type {
+  opacity: 0.72;
+}
+
+.graphkit-node.is-dragging .graphkit-node__body {
+  stroke: #72d1ff;
+  stroke-width: 3;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.4));
+}
+
+.graphkit-node.is-dragging {
+  cursor: grabbing;
+}
+
+.graphkit-node.active .graphkit-node__header {
+  stroke: var(--graphkit-select);
+  stroke-width: 1.5;
+}
+
+.graphkit-node__title {
+  fill: #f1eee5;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.graphkit-node__type,
+.graphkit-node__handler {
+  fill: #aaa69f;
+  font-size: 10px;
+}
+
+.graphkit-node__icon {
+  fill: var(--node-color, var(--graphkit-flow));
+  font-size: 13px;
+}
+
+.graphkit-node-collapse {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.graphkit-node-collapse__hit {
+  fill: rgba(10, 10, 10, 0.42);
+  stroke: rgba(245, 245, 245, 0.18);
+  stroke-width: 1;
+}
+
+.graphkit-node-collapse:hover .graphkit-node-collapse__hit {
+  fill: rgba(114, 209, 255, 0.22);
+  stroke: rgba(160, 220, 255, 0.82);
+}
+
+.graphkit-node-collapse__icon {
+  fill: #d9e2e8;
+  font-size: 14px;
+  font-weight: 900;
+  text-anchor: middle;
+}
+
+.graphkit-node-field__dot {
+  fill: #1e1e1e;
+  stroke: var(--node-color, var(--graphkit-port));
+  stroke-width: 1.5;
+}
+
+.graphkit-node-field__name {
+  fill: #c7c2b7;
+  font-size: 11px;
+}
+
+.graphkit-node-field__value {
+  fill: #e1d2b0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.graphkit-port-target {
+  cursor: crosshair;
+}
+
+.graphkit-port-hit {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+
+.graphkit-port {
+  fill: #1b1b1b;
+  stroke: var(--node-color, var(--graphkit-port));
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.graphkit-port--output {
+  fill: var(--node-color, var(--graphkit-port));
+}
+
+.graphkit-port-target:hover .graphkit-port,
+.graphkit-port-target.active .graphkit-port,
+.graphkit-port:hover,
+.graphkit-port.active {
+  fill: var(--graphkit-select);
+  stroke: #f8f3e8;
+  stroke-width: 3;
+}
+
+.graphkit-port-target.is-compatible-target .graphkit-port,
+.graphkit-port.is-compatible-target {
+  fill: #9ddfa8;
+  stroke: #f8fff3;
+  stroke-width: 4;
+}
+
+.graphkit-selection-rect {
+  fill: rgba(47, 184, 255, 0.12);
+  stroke: #72d1ff;
+  stroke-dasharray: 8 5;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.graphkit-blackboard,
+.graphkit-inspector {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  max-height: calc(100% - 52px);
+  overflow: hidden;
+  border-color: #222222;
+  border-style: solid;
+  background: rgba(8, 8, 8, 0.94);
+  color: var(--graphkit-ink);
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.graphkit-blackboard {
+  left: 0;
+  width: min(300px, 34vw);
+  border-width: 0 1px 1px 0;
+  border-radius: 0 0 4px 0;
+}
+
+.graphkit-inspector {
+  right: 0;
+  width: min(304px, 34vw);
+  border-width: 0 0 1px 1px;
+  border-radius: 0 0 0 4px;
+}
+
+.graphkit-window.is-blackboard-collapsed .graphkit-blackboard {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(-100% - 1px));
+}
+
+.graphkit-window.is-inspector-collapsed .graphkit-inspector {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(100% + 1px));
+}
+
+.graphkit-panel-rail {
+  position: absolute;
+  z-index: 5;
+  top: 42px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 28px;
+  height: 132px;
+  padding: 7px 3px;
+  border: 1px solid #3e3e3e;
+  background: #202020;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  writing-mode: vertical-rl;
+}
+
+.graphkit-panel-rail:hover {
+  border-color: #52697b;
+  background: #2b3339;
+  color: #ffffff;
+}
+
+.graphkit-panel-rail span,
+.graphkit-panel-rail strong {
+  display: block;
+  line-height: 1;
+}
+
+.graphkit-panel-rail strong {
+  color: var(--graphkit-select);
+  font-size: 14px;
+}
+
+.graphkit-panel-rail--blackboard {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.graphkit-panel-rail--inspector {
+  right: 0;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.graphkit-window.is-blackboard-collapsed .graphkit-panel-rail--blackboard,
+.graphkit-window.is-inspector-collapsed .graphkit-panel-rail--inspector {
+  display: flex;
+}
+
+.graphkit-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-bottom: 1px solid #1f1f1f;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.graphkit-panel-head__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.graphkit-panel-head > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.graphkit-panel-head span {
+  color: var(--graphkit-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.graphkit-panel-head strong {
+  overflow: hidden;
+  color: var(--graphkit-ink);
+  font-size: 13px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-panel-head em {
+  overflow: hidden;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-panel-icon,
+.graphkit-tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #454545;
+  border-radius: 3px;
+  background: #2b2b2b;
+  color: #d8d4ca;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.graphkit-panel-icon:hover,
+.graphkit-tool-button:hover {
+  border-color: #66717d;
+  background: #38434e;
+  color: #ffffff;
+}
+
+.graphkit-blackboard-list,
+.graphkit-node-library__list,
+.graphkit-inspector__body {
+  scrollbar-color: #555555 #151515;
+}
+
+.graphkit-blackboard-list {
+  display: grid;
+  gap: 8px;
+  max-height: 136px;
+  padding: 8px 10px 10px;
+  overflow: auto;
+}
+
+.graphkit-blackboard-section {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.graphkit-blackboard-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 2px;
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.graphkit-blackboard-section__head strong,
+.graphkit-blackboard-section__head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-blackboard-section__head strong {
+  min-width: 0;
+  color: #c7c1b6;
+}
+
+.graphkit-blackboard-section__head span {
+  flex: 0 0 auto;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  text-transform: none;
+}
+
+.graphkit-blackboard-item {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid #4b4b4b;
+  border-left: 4px solid var(--graphkit-port);
+  border-radius: 4px;
+  background: #373737;
+  color: var(--graphkit-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graphkit-blackboard-item[draggable="true"] {
+  cursor: grab;
+}
+
+.graphkit-blackboard-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.graphkit-blackboard-item:hover {
+  border-color: #686868;
+  border-left-color: #f0a32a;
+  background: #404040;
+}
+
+.graphkit-blackboard-item.active {
+  border-color: var(--graphkit-select);
+  border-left-color: var(--graphkit-select);
+  background: #26343a;
+}
+
+.graphkit-blackboard-item__mark {
+  width: 6px;
+  height: 13px;
+  border-right: 2px solid var(--graphkit-port);
+  border-left: 2px solid var(--graphkit-port);
+  transform: skewX(-18deg);
+}
+
+.graphkit-blackboard-item span:last-of-type {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.graphkit-blackboard-item strong,
+.graphkit-blackboard-item em,
+.graphkit-blackboard-item code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-blackboard-item strong {
+  color: var(--graphkit-ink);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.graphkit-blackboard-item em,
+.graphkit-blackboard-item code {
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.graphkit-blackboard-item code {
+  max-width: 76px;
+  font-family: var(--font-mono);
+}
+
+.graphkit-node-library {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border-top: 1px solid #202020;
+}
+
+.graphkit-node-library__head {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.graphkit-node-library__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.graphkit-node-library__head strong {
+  color: var(--graphkit-ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.graphkit-search {
+  width: 100%;
+  height: 28px;
+  border-color: #363636;
+  border-radius: 3px;
+  background: #171717;
+  color: var(--graphkit-ink);
+  font-size: 11px;
+}
+
+.graphkit-search:focus {
+  border-color: #52697b;
+  box-shadow: 0 0 0 1px rgba(47, 184, 255, 0.18);
+}
+
+.graphkit-node-library__list {
+  display: grid;
+  gap: 5px;
+  max-height: 210px;
+  min-height: 0;
+  padding: 0 10px 10px;
+  overflow: auto;
+}
+
+.graphkit-node-type-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 5px;
+  align-items: stretch;
+}
+
+.graphkit-node-type {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 1px solid #353535;
+  border-radius: 4px;
+  background: #202020;
+  color: var(--graphkit-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graphkit-node-type:hover,
+.graphkit-node-type.active {
+  border-color: #4f697d;
+  background: #292f34;
+}
+
+.graphkit-node-type__color {
+  width: 6px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--node-color, var(--graphkit-flow));
+}
+
+.graphkit-node-type span:last-of-type {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.graphkit-node-type strong,
+.graphkit-node-type em,
+.graphkit-node-type code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-node-type strong {
+  color: var(--graphkit-ink);
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.graphkit-node-type em,
+.graphkit-node-type code {
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.graphkit-node-type code {
+  grid-column: 2;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+}
+
+.graphkit-node-type__edit {
+  min-width: 0;
+  border: 1px solid #353535;
+  border-radius: 4px;
+  background: #1b1b1b;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.graphkit-node-type__edit:hover {
+  border-color: #4f697d;
+  color: var(--graphkit-ink);
+}
+
+.graphkit-type-registry-list {
+  max-height: 230px;
+}
+
+.graphkit-inspector__shell {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.graphkit-inspector__head {
+  align-items: center;
+}
+
+.graphkit-inspector__body {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 230px);
+  padding: 10px;
+  overflow: auto;
+}
+
+.graphkit-property-group {
+  display: grid;
+  gap: 8px;
+}
+
+.graphkit-mapping-grid {
+  display: grid;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid #2d2d2d;
+  border-radius: 4px;
+  background: #1b1b1b;
+}
+
+.graphkit-type-registry-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.graphkit-type-registry-head > div {
+  display: flex;
+  gap: 5px;
+}
+
+.graphkit-type-registry-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.graphkit-type-registry-row {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #2d2d2d;
+  border-radius: 4px;
+  background: #1b1b1b;
+}
+
+.graphkit-fold-title {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 25px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #272727;
+  background: transparent;
+  color: var(--graphkit-ink);
+  cursor: default;
+  font-size: 12px;
+  font-weight: 760;
+  text-align: left;
+}
+
+.graphkit-property-field {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.44fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+.graphkit-property-field > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding-top: 5px;
+}
+
+.graphkit-property-field > span em {
+  overflow: hidden;
+  color: var(--graphkit-dim);
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-property-field .cmd-input,
+.graphkit-inspector .cmd-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  border-color: #313131;
+  border-radius: 3px;
+  background: #222222;
+  color: var(--graphkit-ink);
+  font-size: 11px;
+}
+
+.graphkit-property-field .cmd-input:focus,
+.graphkit-inspector .cmd-input:focus {
+  border-color: #52697b;
+  box-shadow: 0 0 0 1px rgba(47, 184, 255, 0.18);
+}
+
+.graphkit-property-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 6px;
+  accent-color: var(--graphkit-select);
+}
+
+.graphkit-property-textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.graphkit-port-list {
+  display: grid;
+  gap: 5px;
+}
+
+.graphkit-port-list span {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #303030;
+  border-radius: 3px;
+  background: #1d1d1d;
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.graphkit-port-list strong {
+  color: var(--graphkit-ink);
+}
+
+.graphkit-bottom-toolbar {
+  position: absolute;
+  z-index: 4;
+  left: 10px;
+  right: calc(min(304px, 34vw) + 484px);
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 30px;
+  padding: 3px 5px;
+  border: 1px solid #434343;
+  border-radius: 4px;
+  background: #272727;
+  color: var(--graphkit-ink);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.graphkit-window.is-inspector-collapsed .graphkit-bottom-toolbar {
+  right: 528px;
+}
+
+.graphkit-layout-tools {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.graphkit-tool-button:disabled {
+  border-color: #353535;
+  background: #202020;
+  color: #696969;
+  cursor: default;
+  opacity: 0.72;
+}
+
+.graphkit-tool-button:disabled:hover {
+  border-color: #353535;
+  background: #202020;
+  color: #696969;
+}
+
+.graphkit-zoom-label {
+  min-width: 44px;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.graphkit-selection-count {
+  min-width: 70px;
+  color: #b9dff1;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.graphkit-toolbar-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: #454545;
+}
+
+.graphkit-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.graphkit-toolbar-status.is-ok {
+  color: #9ddfa8;
+}
+
+.graphkit-toolbar-status.is-error {
+  color: #f09a90;
+}
+
+.graphkit-minimap {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  right: calc(min(304px, 34vw) + 12px);
+  width: 212px;
+  padding: 8px 10px 10px;
+  border: 1px solid #3f3f3f;
+  border-radius: 4px;
+  background: rgba(30, 30, 30, 0.92);
+  color: var(--graphkit-muted);
+  box-shadow: 0 9px 20px rgba(0, 0, 0, 0.34);
+  cursor: crosshair;
+  user-select: none;
+}
+
+.graphkit-window.is-inspector-collapsed .graphkit-minimap {
+  right: 44px;
+}
+
+.graphkit-minimap.is-dragging {
+  border-color: #72d1ff;
+  cursor: grabbing;
+}
+
+.graphkit-minimap__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.graphkit-minimap__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graphkit-minimap__head strong {
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.graphkit-minimap__fit {
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid #3b3b3b;
+  border-radius: 3px;
+  background: #252525;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.graphkit-minimap__fit:hover {
+  border-color: #5d7482;
+  background: #30383d;
+  color: #ffffff;
+}
+
+.graphkit-minimap__svg {
+  display: block;
+  width: 190px;
+  height: 95px;
+  border: 1px solid #2c2c2c;
+  border-radius: 3px;
+  background: #141414;
+}
+
+.graphkit-minimap__canvas {
+  fill: #151515;
+}
+
+.graphkit-minimap__node {
+  fill: var(--node-color, var(--graphkit-flow));
+  opacity: 0.74;
+}
+
+.graphkit-minimap__viewport {
+  fill: rgba(114, 209, 255, 0.12);
+  stroke: #72d1ff;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+}
+
+.graphkit-minimap.is-dragging .graphkit-minimap__viewport {
+  fill: rgba(114, 209, 255, 0.22);
+  stroke: #a8e4ff;
+}
+
+.graphkit-issues-overlay {
+  position: absolute;
+  z-index: 4;
+  right: calc(min(304px, 34vw) + 12px);
+  bottom: 54px;
+  width: min(420px, calc(100% - min(304px, 34vw) - 360px));
+  min-width: 280px;
+  max-height: min(38%, 300px);
+  overflow: hidden;
+  border: 1px solid #444444;
+  border-radius: 4px;
+  background: rgba(22, 22, 22, 0.96);
+  color: var(--graphkit-muted);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.36);
+}
+
+.graphkit-window.is-inspector-collapsed .graphkit-issues-overlay {
+  right: 44px;
+  width: min(420px, calc(100% - 384px));
+}
+
+.graphkit-issues-overlay__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #2b2b2b;
+  background: rgba(0, 0, 0, 0.54);
+}
+
+.graphkit-issues-overlay__head > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.graphkit-issues-overlay__head span {
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-issues-overlay__head strong {
+  color: var(--graphkit-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.graphkit-issue-list {
+  display: grid;
+  gap: 6px;
+  max-height: 238px;
+  padding: 8px;
+  overflow: auto;
+  scrollbar-color: #555555 #151515;
+}
+
+.graphkit-issue-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 3px 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid #303030;
+  border-radius: 4px;
+  background: #1d1d1d;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graphkit-issue-row:hover,
+.graphkit-issue-row:focus-visible {
+  border-color: #52697b;
+  background: #252b30;
+  outline: none;
+}
+
+.graphkit-issue-row span {
+  align-self: start;
+  color: #f09a90;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.graphkit-issue-row--warning span {
+  color: #e0c66f;
+}
+
+.graphkit-issue-row strong {
+  min-width: 0;
+  color: var(--graphkit-ink);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.graphkit-issue-row em {
+  grid-column: 2;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.graphkit-issue-empty {
+  padding: 10px;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+.graphkit-search-overlay {
+  position: absolute;
+  z-index: 7;
+  top: 12px;
+  left: 50%;
+  display: grid;
+  width: min(520px, calc(100% - 720px));
+  min-width: 320px;
+  max-height: min(62%, 520px);
+  overflow: hidden;
+  transform: translateX(-50%);
+  border: 1px solid #4d4d4d;
+  border-radius: 5px;
+  background: rgba(18, 18, 18, 0.98);
+  color: var(--graphkit-ink);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
+}
+
+.graphkit-search-overlay__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #2c2c2c;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.graphkit-search-overlay__field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.graphkit-search-overlay__field span {
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-search-overlay__field .cmd-input {
+  height: 30px;
+  border-color: #3a3a3a;
+  background: #111111;
+  color: var(--graphkit-ink);
+}
+
+.graphkit-search-scope {
+  display: inline-flex;
+  gap: 3px;
+  padding: 6px 8px 0;
+}
+
+.graphkit-search-scope__button {
+  flex: 0 0 auto;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid #303030;
+  border-radius: 4px;
+  background: #1c1c1c;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-search-scope__button:hover,
+.graphkit-search-scope__button:focus-visible {
+  border-color: #52697b;
+  background: #252b30;
+  color: var(--graphkit-ink);
+  outline: none;
+}
+
+.graphkit-search-scope__button.active {
+  border-color: #5d7482;
+  background: #30383d;
+  color: #ffffff;
+}
+
+.graphkit-search-overlay__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid #282828;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.graphkit-search-overlay__meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-search-overlay__meta strong {
+  flex: 0 0 auto;
+  color: var(--graphkit-dim);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-search-results {
+  display: grid;
+  gap: 6px;
+  max-height: min(420px, 48vh);
+  padding: 8px;
+  overflow: auto;
+  scrollbar-color: #555555 #151515;
+}
+
+.graphkit-search-result {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 3px 8px;
+  width: 100%;
+  min-height: 54px;
+  padding: 7px 8px;
+  border: 1px solid #303030;
+  border-radius: 4px;
+  background: #1d1d1d;
+  color: var(--graphkit-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graphkit-search-result:hover,
+.graphkit-search-result:focus-visible,
+.graphkit-search-result.is-active {
+  border-color: #5d7482;
+  background: #232b30;
+  outline: none;
+}
+
+.graphkit-search-result span {
+  align-self: start;
+  color: #72d1ff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.graphkit-search-result strong {
+  min-width: 0;
+  color: var(--graphkit-ink);
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-search-result em {
+  grid-column: 2;
+  min-width: 0;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-search-result code {
+  grid-column: 2;
+  min-width: 0;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-search-empty {
+  padding: 18px 12px;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+.graphkit-context-menu {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  gap: 8px;
+  width: 316px;
+  max-height: min(76%, 520px);
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid #4d4d4d;
+  border-radius: 5px;
+  background: rgba(18, 18, 18, 0.98);
+  color: var(--graphkit-ink);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
+}
+
+.graphkit-context-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 7px;
+  border-bottom: 1px solid #2c2c2c;
+}
+
+.graphkit-context-menu__head span {
+  min-width: 0;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.graphkit-context-menu__actions,
+.graphkit-context-menu__library,
+.graphkit-context-menu__types {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.graphkit-context-menu__library {
+  min-height: 0;
+}
+
+.graphkit-context-menu__types {
+  max-height: 286px;
+  overflow: auto;
+  scrollbar-color: #555555 #151515;
+}
+
+.graphkit-context-menu__search {
+  display: grid;
+  gap: 5px;
+}
+
+.graphkit-context-menu__search span {
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.graphkit-context-menu__search .cmd-input {
+  height: 30px;
+  border-color: #3a3a3a;
+  background: #111111;
+  color: var(--graphkit-ink);
+}
+
+.graphkit-context-action,
+.graphkit-context-type {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--graphkit-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graphkit-context-action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 30px;
+  padding: 6px 8px;
+}
+
+.graphkit-context-action:hover,
+.graphkit-context-action:focus-visible,
+.graphkit-context-type:hover,
+.graphkit-context-type:focus-visible {
+  border-color: #52697b;
+  background: #252b30;
+  outline: none;
+}
+
+.graphkit-context-action span,
+.graphkit-context-type strong,
+.graphkit-context-type em,
+.graphkit-context-type code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-context-action span {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.graphkit-context-action em {
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.graphkit-context-type {
+  grid-template-columns: 12px minmax(0, 1fr) minmax(64px, auto);
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 7px;
+}
+
+.graphkit-context-type strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.graphkit-context-type em,
+.graphkit-context-type code {
+  display: block;
+  color: var(--graphkit-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.graphkit-context-type code {
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.graphkit-xml-dock,
+.graphkit-scaffold-dock,
+.graphkit-luban-dock,
+.graphkit-runtime-contract-dock {
+  position: absolute;
+  z-index: 4;
+  right: calc(min(304px, 34vw) + 12px);
+  width: min(460px, calc(100% - min(304px, 34vw) - 340px));
+  min-width: 260px;
+  max-height: 32px;
+  overflow: hidden;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  background: #202020;
+  color: var(--graphkit-muted);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.graphkit-xml-dock {
+  bottom: 10px;
+}
+
+.graphkit-scaffold-dock {
+  bottom: 50px;
+  z-index: 5;
+}
+
+.graphkit-luban-dock {
+  bottom: 90px;
+  z-index: 6;
+}
+
+.graphkit-runtime-contract-dock {
+  bottom: 130px;
+  z-index: 7;
+}
+
+.graphkit-xml-dock[open] {
+  max-height: min(46%, 360px);
+  background: #171717;
+}
+
+.graphkit-scaffold-dock[open] {
+  max-height: min(42%, 340px);
+  background: #171717;
+}
+
+.graphkit-luban-dock[open] {
+  max-height: min(54%, 470px);
+  background: #171717;
+}
+
+.graphkit-runtime-contract-dock[open] {
+  max-height: min(42%, 340px);
+  background: #171717;
+}
+
+.graphkit-window.is-inspector-collapsed .graphkit-xml-dock,
+.graphkit-window.is-inspector-collapsed .graphkit-scaffold-dock,
+.graphkit-window.is-inspector-collapsed .graphkit-luban-dock,
+.graphkit-window.is-inspector-collapsed .graphkit-runtime-contract-dock {
+  right: 44px;
+  width: min(460px, calc(100% - 384px));
+}
+
+.graphkit-xml-dock > summary,
+.graphkit-scaffold-dock > summary,
+.graphkit-luban-dock > summary,
+.graphkit-runtime-contract-dock > summary {
+  min-height: 30px;
+  padding: 7px 10px;
+  border-bottom: 1px solid transparent;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+.graphkit-xml-dock[open] > summary,
+.graphkit-scaffold-dock[open] > summary,
+.graphkit-luban-dock[open] > summary,
+.graphkit-runtime-contract-dock[open] > summary {
+  border-bottom-color: #2a2a2a;
+}
+
+.graphkit-xml-dock__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+
+.graphkit-xml-dock__meta span {
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid #303030;
+  border-radius: 3px;
+  background: #202020;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.graphkit-xml-dock__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+
+.graphkit-xml-code {
+  max-height: 250px;
+  padding: 8px 10px 10px;
+  color: #c9d0d7;
+  font-size: 10px;
+  scrollbar-color: #555555 #151515;
+}
+
+.graphkit-xml-input {
+  width: calc(100% - 20px);
+  min-height: 220px;
+  margin: 8px 10px 10px;
+  border-color: #313131;
+  background: #151515;
+  resize: vertical;
+  color: #c9d0d7;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+  scrollbar-color: #555555 #151515;
+  white-space: pre;
+}
+
+.graphkit-scaffold-output {
+  min-height: 210px;
+}
+
+.graphkit-luban-output-label {
+  display: block;
+  margin: 8px 10px 0;
+  color: var(--graphkit-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.graphkit-luban-output {
+  min-height: 150px;
+  margin-top: 5px;
+}
+
+.graphkit-luban-run-summary {
+  margin: 8px 10px 0;
+  padding: 8px;
+  border: 1px solid #313131;
+  border-left-width: 3px;
+  border-radius: 4px;
+  background: #1d1d1d;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+.graphkit-luban-run-summary.is-success {
+  border-left-color: #68b684;
+}
+
+.graphkit-luban-run-summary.is-error {
+  border-left-color: #d86d6d;
+}
+
+.graphkit-luban-run-summary.is-empty {
+  border-left-color: #555555;
+}
+
+.graphkit-luban-run-summary__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.graphkit-luban-run-summary__title {
+  min-width: 0;
+  color: #e0e0e0;
+  font-weight: 800;
+}
+
+.graphkit-luban-run-summary__time {
+  flex: 0 0 auto;
+  color: var(--graphkit-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.graphkit-luban-run-summary__detail {
+  margin-top: 4px;
+  color: var(--graphkit-muted);
+  line-height: 1.4;
+}
+
+.graphkit-luban-run-summary__files {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.graphkit-luban-run-summary__files li {
+  min-width: 0;
+  overflow: hidden;
+  color: #c7cdd3;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphkit-luban-run-summary__log {
+  max-height: 70px;
+  margin: 6px 0 0;
+  padding: 6px;
+  overflow: auto;
+  border: 1px solid #2b2b2b;
+  border-radius: 3px;
+  background: #151515;
+  color: #bfc5cc;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.graphkit-empty-line {
+  padding: 8px;
+  color: var(--graphkit-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 1240px) {
+  .graphkit-blackboard {
+    width: 260px;
+  }
+
+  .graphkit-inspector {
+    width: 272px;
+  }
+
+  .graphkit-minimap {
+    right: 284px;
+  }
+
+  .graphkit-xml-dock,
+  .graphkit-scaffold-dock,
+  .graphkit-luban-dock,
+  .graphkit-runtime-contract-dock {
+    right: 12px;
+    width: min(420px, calc(100% - 300px));
+  }
+
+  .graphkit-bottom-toolbar {
+    right: 444px;
+  }
+}
+
+@media (max-width: 860px) {
+  .graphkit-window-meta,
+  .graphkit-minimap,
+  .graphkit-xml-dock,
+  .graphkit-scaffold-dock,
+  .graphkit-luban-dock,
+  .graphkit-runtime-contract-dock {
+    display: none;
+  }
+
+  .graphkit-bottom-toolbar {
+    right: 10px;
+  }
+
+  .graphkit-search-overlay {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    min-width: 0;
+    transform: none;
+  }
+
+  .graphkit-blackboard,
+  .graphkit-inspector {
+    width: min(240px, 46vw);
+  }
+
+  .graphkit-window-toolbar {
+    align-items: flex-start;
+  }
+}
+
 .kit-pool-object-sections {
   display: grid;
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
