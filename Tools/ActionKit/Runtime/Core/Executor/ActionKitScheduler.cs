@@ -90,9 +90,16 @@ namespace YokiFrame
         {
             if (controller == null || controller.Action == null) return;
 
+            var removedFromPrepare = false;
             lock (sPrepareExecutionActions)
             {
-                sPrepareExecutionActions.Remove(controller);
+                removedFromPrepare = sPrepareExecutionActions.Remove(controller);
+            }
+
+            if (removedFromPrepare)
+            {
+                CancelControllerNow(controller);
+                return;
             }
 
             lock (sPendingCancelControllers)
@@ -247,22 +254,25 @@ namespace YokiFrame
                     if (controller == null || controller.Action == null) continue;
 
                     if (sExecutingActions.Remove(controller.Action))
-                    {
-                        try
-                        {
-                            controller.OnEnd();
-                        }
-                        catch (Exception e)
-                        {
-                            ActionKitRuntimeLog.Error("[ActionKit] 取消 Action 异常: " + e.Message);
-                        }
-                        CancelledCount++;
-                        sPendingRecycleControllers.Add(controller);
-                    }
+                        CancelControllerNow(controller);
                 }
                 sPendingCancelControllers.Clear();
                 sPendingCancelSet.Clear();
             }
+        }
+
+        private static void CancelControllerNow(IActionController controller)
+        {
+            try
+            {
+                controller.OnEnd();
+            }
+            catch (Exception e)
+            {
+                ActionKitRuntimeLog.Error("[ActionKit] 取消 Action 异常: " + e.Message);
+            }
+            CancelledCount++;
+            sPendingRecycleControllers.Add(controller);
         }
 
         private static void MovePreparedActionsToExecuting()

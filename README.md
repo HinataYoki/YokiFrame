@@ -73,7 +73,7 @@ flowchart LR
     end
 
     subgraph PublicApi["统一 API 层"]
-        CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log"]
+        CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log / ManagedRuntime"]
         ToolKits["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Localization / UI / Table"]
     end
 
@@ -163,6 +163,7 @@ flowchart TB
     Core --> ResKit["ResKit"]
     Core --> SingletonKit["SingletonKit"]
     Core --> LogKit["LogKit"]
+    Core --> ManagedRuntimeKit["ManagedRuntimeKit"]
 
     Tools --> ActionKit["ActionKit"]
     Tools --> AudioKit["AudioKit"]
@@ -195,6 +196,7 @@ flowchart TB
 | ResKit | 资源加载、raw 文件、场景资源后端、引用计数和 Provider 替换。 |
 | SingletonKit | 纯 C# 单例、Unity `MonoSingleton<T>`、Godot `GodotSingleton<T>`。 |
 | LogKit | 引擎日志适配、文件日志和工作台日志诊断。 |
+| ManagedRuntimeKit | 托管 C# 运行时后端选择、能力声明、后端设置和诊断；LeanCLR、Mono、IL2CPP、Godot .NET 等具体实现由可选 Adapter 注册。Unity LeanCLR 设置可在工作台镜像读写同一份 `ProjectSettings/LeanCLR.asset`，并可打开原生 Unity Project Settings 面板。 |
 | ActionKit | Delay、Callback、Sequence、Parallel、Task / Coroutine 组合和动作调试。 |
 | AudioKit | 音效、音乐、音量总线、active voice 诊断和音频 ID 辅助。 |
 | SaveKit | 多槽位存档、序列化/加密/迁移后端和自动保存状态。 |
@@ -599,6 +601,8 @@ controller.Resume();
 controller.Cancel();
 ```
 
+`Start(onFinish)` 会先用 `dt = 0` 推进一次；正常完成时才会触发 Action 的 `OnFinish()` 和 `Start(onFinish)` 回调。`Cancel()` 是取消并释放当前 controller，不会触发完成回调，也不会把插值或 DOTween 自动跳到终点。同一目标属性需要互斥控制时，保存当前 controller，启动新动作前先取消旧动作；需要“提前完成并落最终状态”时，显式设置最终状态，或保留具体 `IAction` / tween 引用使用对应完成语义。
+
 ### SpatialKit
 
 ```csharp
@@ -642,6 +646,8 @@ Assets/YokiFrame/Core/Editor/Skills/
 - Godot 接入面向 Godot 4.x `.NET / C#` 项目，当前主要目标为 Godot 4.7。
 - C# 代码保持 C# 9.0 兼容。
 - Core Runtime 不直接依赖 Unity、Godot、Tauri、YooAsset、DOTween、FMOD 或 Luban 等具体宿主或工具实现。
+- ManagedRuntimeKit 的 Core 层只保留接口、默认后端、能力和诊断模型；LeanCLR、HybridCLR、Unity 构建管线或 Godot .NET 接入必须放在可选 Adapter / Editor / Installer 中。
+- Unity 开发项目可通过 `Packages/manifest.json` 接入 `com.code-philosophy.leanclr`：`https://github.com/focus-creative-games/leanclr-unity.git`；YokiFrame Unity Editor Adapter 只通过 PackageManager 探测该包并注册 `LeanCLR` 后端，不直接引用 LeanCLR API。
 - 文件桥使用 FileBridge v2 engine-scoped 路径；新命令和响应不走历史 root command/result 目录。
 - 高频状态不逐次写 `.yokiframe` 文件；用 snapshot、telemetry、事件采样和显式 trace 承担诊断刷新。
 - 变更型命令必须经过用户意图、payload 校验、CommandPolicy 和可回退路径。

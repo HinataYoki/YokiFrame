@@ -1,6 +1,6 @@
 ---
 name: yokiframe-command-bridge
-description: 通过 YokiFrame 文件命令桥查询和调试框架 Kit 状态、snapshot、命令响应、文件桥健康、Unity/Godot engine registry、TableKit/Luban 环境、GraphKit 编辑器产物边界，以及 System、Architecture、FsmKit、EventKit、PoolKit、LogKit、ResKit、SingletonKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit 的命令桥入口。
+description: 通过 YokiFrame 文件命令桥查询和调试框架 Kit 状态、snapshot、命令响应、文件桥健康、Unity/Godot engine registry、TableKit/Luban 环境、GraphKit 编辑器产物边界，以及 System、Architecture、FsmKit、EventKit、PoolKit、LogKit、ResKit、SingletonKit、ManagedRuntimeKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit 的命令桥入口。
 ---
 
 # YokiFrame CommandBridge - AI 文件命令桥
@@ -58,7 +58,7 @@ CommandBridge 使用 `.yokiframe/` 文件 I/O 协议。AI 或 Tauri 写入命令
 
 ```text
 System, Architecture, FsmKit, EventKit, PoolKit, LogKit, ResKit, SingletonKit,
-ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit
+ManagedRuntimeKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit
 ```
 
 已验证 snapshot：
@@ -82,6 +82,7 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 | `LogKit` | `stats`, `get_settings`, `set_settings`, `reset_settings`, `get_history`, `get_workbench_snapshot`, `clear_history`, `open_log_folder`, `decrypt_log_file`, `read_log_file` | `LogKit/state` |
 | `ResKit` | `stats`, `get_workbench_snapshot`, `list_resources`, `get_resource_detail`, `diagnose_resource`, `get_unload_history`, `clear_history`, `set_tracking` | `ResKit/state` |
 | `SingletonKit` | `stats`, `get_workbench_snapshot`, `list_singletons`, `get_singleton_detail` | `SingletonKit/state` |
+| `ManagedRuntimeKit` | `get_workbench_snapshot`, `list_backends`, `validate`, `select_backend`, `run_action`, `get_backend_settings`, `save_backend_settings` | - |
 | `ActionKit` | `stats`, `get_workbench_snapshot`, `set_stack_trace`, `clear_stack_trace` | `ActionKit/state` |
 | `AudioKit` | `stats`, `list_voices`, `list_buses`, `get_history`, `get_workbench_snapshot`, `clear_history`, `stop_voice`, `stop_all`, `stop_bus`, `set_master_volume`, `set_bus_volume`, `mute_master`, `mute_bus` | `AudioKit/state` |
 | `SaveKit` | `stats`, `list_slots`, `get_workbench_snapshot`, `delete_slot`, `disable_auto_save` | `SaveKit/state` |
@@ -100,6 +101,7 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 - LogKit：优先 `LogKit/state`、`stats`、`get_settings`、`get_history`；Unity Editor 额外支持 `open_log_folder`、`decrypt_log_file`、`read_log_file`。
 - ResKit：单资源 payload 使用 `{"path":"Configs/GameConfig","typeName":"MyConfig"}`；`set_tracking` 使用 `{"loadLocationTrackingEnabled":true}`。
 - SingletonKit：详情 payload 使用 `{"fullName":"..."}` 或 `{"typeName":"..."}`；只显示已登记实例。
+- ManagedRuntimeKit：`get_workbench_snapshot` 返回当前后端、后端列表、工作流动作和可选后端设置；`get_backend_settings`/`save_backend_settings` 读写宿主后端暴露的设置 JSON，例如 Unity LeanCLR 的 `ProjectSettings/LeanCLR.asset`；`run_action` 使用 `{"backendId":"LeanCLR","actionId":"enable_backend","payload":{"confirmed":true}}` 这类 payload。Unity LeanCLR 的 IL2CPP 安装、Player Build 等变更型动作必须有明确用户确认；Godot 通过自己的后端暴露同名动作槽位，不套用 Unity IL2CPP 替换流程。
 - ActionKit：`set_stack_trace` 使用 `{"enabled":true}`，默认关闭，排查后用 `clear_stack_trace`。
 - AudioKit：停止、音量和静音命令会改变运行时状态，只在用户明确要求或测试场景中执行。
 - SaveKit：`delete_slot` 和 `disable_auto_save` 是维护命令；存档业务 payload 不通过文件桥暴露。

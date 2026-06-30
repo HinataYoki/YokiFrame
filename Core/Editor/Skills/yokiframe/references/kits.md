@@ -467,6 +467,10 @@ var seq = ActionKit.Sequence()
 规则：
 
 - ActionKit 核心不依赖 Unity PlayerLoop；Unity 侧由 `UnityActionKitInstaller` 驱动，Godot 侧由 `GodotActionKitInstaller` 在 `_Process` 中驱动。
+- `Start(onFinish)` 会创建 controller 并先用 `dt = 0` 推进一次；未完成时进入调度队列，后续由宿主 tick 推进。不要用直接调用 `action.Update()` 来代替 controller 调度，否则不会触发 `Start(onFinish)` 的 controller 完成回调。
+- 正常完成才触发 Action 的 `OnFinish()` 和 `Start(onFinish)`；`controller.Cancel()` 是取消并释放，不触发完成回调。取消等待队列中的 controller 也必须释放已经零帧启动过的子动作。
+- `IAction.Finish()` 是 action 级标记完成 API，不是 controller 级 `Complete()`。当前没有 `IActionController.Complete()`；需要提前完成并落最终状态时，业务层显式设置最终状态，或保留具体 `IAction` / tween 引用使用对应完成语义。
+- 同一目标属性需要互斥时，用一个 controller 管一个动作通道，启动新动作前先取消旧 controller。DOTweenAction 默认 `killOnCancel: true`，取消时 `Kill(false)`，不会跳到终点。
 - 复用内部对象池，避免临时 Action 大量分配。
 - 新增 Action 时补充对应 Tests，并检查 Godot package compatibility。
 
