@@ -24,6 +24,7 @@ namespace YokiFrame
         #region 焦点状态
 
         private UIInputMode mCurrentInputMode = UIInputMode.Pointer;
+        private InputMode mCurrentDetailedInputMode = InputMode.Mouse;
         private GameObject mLastFocusedObject;
         private readonly Dictionary<IPanel, GameObject> mPanelFocusMemory = new();
 
@@ -158,7 +159,13 @@ namespace YokiFrame
             if (target == default || EventSystem == default) return;
             if (target.TryGetComponent<Selectable>(out var selectable) && selectable.interactable)
             {
+                var previous = CurrentFocus;
                 EventSystem.SetSelectedGameObject(target);
+                if (mConfig.EnableFocusSystem)
+                {
+                    SetInputMode(UIInputMode.Navigation, InputMode.Keyboard);
+                    NotifyFocusChanged(previous, CurrentFocus);
+                }
             }
         }
 
@@ -168,7 +175,7 @@ namespace YokiFrame
         public void SetFocus(Selectable selectable)
         {
             if (selectable == default || !selectable.interactable || EventSystem == default) return;
-            EventSystem.SetSelectedGameObject(selectable.gameObject);
+            SetFocus(selectable.gameObject);
         }
 
         /// <summary>
@@ -176,7 +183,15 @@ namespace YokiFrame
         /// </summary>
         public void ClearFocus()
         {
-            if (EventSystem != default) EventSystem.SetSelectedGameObject(null);
+            if (EventSystem != default)
+            {
+                var previous = CurrentFocus;
+                EventSystem.SetSelectedGameObject(null);
+                if (mConfig.EnableFocusSystem)
+                {
+                    NotifyFocusChanged(previous, CurrentFocus);
+                }
+            }
         }
 
         /// <summary>
@@ -303,13 +318,59 @@ namespace YokiFrame
             var current = CurrentFocus;
             if (current != mLastFocusedObject)
             {
-                mLastFocusedObject = current;
+                NotifyFocusChanged(mLastFocusedObject, current);
             }
         }
 
         #endregion
 
         #region 辅助方法
+
+        private void SetInputMode(UIInputMode inputMode, InputMode detailedInputMode)
+        {
+            if (mCurrentInputMode == inputMode && mCurrentDetailedInputMode == detailedInputMode) return;
+
+            mCurrentInputMode = inputMode;
+            mCurrentDetailedInputMode = detailedInputMode;
+            EventKit.Type.Send(new UIInputModeChangedEvent { Mode = detailedInputMode });
+
+            if (mFocusHighlight != default && inputMode == UIInputMode.Pointer)
+            {
+                mFocusHighlight.SetTarget(null);
+            }
+        }
+
+        private void NotifyFocusChanged(GameObject previous, GameObject current)
+        {
+            if (previous == current) return;
+
+            mLastFocusedObject = current;
+            EventKit.Type.Send(new UIFocusChangedEvent
+            {
+                Previous = GetSelectable(previous),
+                Current = GetSelectable(current)
+            });
+            UpdateFocusHighlight(current);
+        }
+
+        private void UpdateFocusHighlight(GameObject current)
+        {
+            if (mFocusHighlight == default) return;
+            if (mCurrentInputMode == UIInputMode.Navigation)
+            {
+                mFocusHighlight.SetTarget(current);
+            }
+            else
+            {
+                mFocusHighlight.SetTarget(null);
+            }
+        }
+
+        private static Selectable GetSelectable(GameObject target)
+        {
+            if (target == default) return null;
+            return target.GetComponent<Selectable>();
+        }
 
         private Selectable FindFirstSelectable(Transform root)
         {

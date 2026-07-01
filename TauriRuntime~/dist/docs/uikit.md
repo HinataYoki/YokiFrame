@@ -77,6 +77,147 @@ UIKit.GetPanelLoader().UseAddressableLocation = true;
 UIKit.SetPanelLoader(new MyPanelLoaderPool());
 ```
 
+## 预加载与缓存
+
+UIKit 有两类缓存：已经打开或使用过的面板缓存，以及独立的预加载缓存。预加载面板会先创建并隐藏，后续 `OpenPanel` 命中时会从预加载缓存迁移到已打开缓存，减少第一次打开时的加载抖动。
+
+```csharp
+var success = await UIKit.PreloadPanelAsync<HeavyPanel>(
+    UILevel.Common,
+    cts.Token);
+
+if (success && UIKit.IsPanelPreloaded<HeavyPanel>())
+{
+    var panel = UIKit.OpenPanel<HeavyPanel>(UILevel.Common);
+}
+```
+
+常用缓存查询：
+
+```csharp
+bool cached = UIKit.IsPanelCached<MainMenuPanel>();
+bool preloaded = UIKit.IsPanelPreloaded<HeavyPanel>();
+
+var cachedTypes = UIKit.GetCachedPanelTypes();
+var cachedPanels = UIKit.GetCachedPanels();
+```
+
+预加载缓存有独立容量，满时会按 LRU 淘汰最久未访问的预加载面板：
+
+```csharp
+UIKit.SetCacheCapacity(20);
+int capacity = UIKit.GetCacheCapacity();
+
+UIKit.ClearPreloadedCache<HeavyPanel>();
+UIKit.ClearAllPreloadedCache();
+```
+
+已打开缓存由热度系统管理。`HotCacheEnabled` 关闭后，`Hot` 模式面板关闭即销毁，不再按热度保留：
+
+```csharp
+UIKit.HotCacheEnabled = true;
+UIKit.OpenHot = 3;
+UIKit.GetHot = 2;
+UIKit.Weaken = 1;
+```
+
+`PreloadPanelAsync` 在启用 UniTask 时返回 `UniTask<bool>`，否则返回 `Task<bool>`。取消流程建议传入当前对象生命周期绑定的 `CancellationToken`。
+
+## 焦点系统
+
+焦点系统默认关闭。需要键盘/手柄导航、默认选中项或焦点高亮时，先启用：
+
+```csharp
+UIKit.FocusSystemEnabled = true;
+
+var mode = UIKit.GetInputMode();
+// UIInputMode.Pointer: 鼠标/触摸
+// UIInputMode.Navigation: 键盘/手柄导航
+```
+
+手动控制焦点：
+
+```csharp
+UIKit.SetFocus(startButton);
+UIKit.SetFocus(startButton.gameObject);
+
+var current = UIKit.GetCurrentFocus();
+if (current != default)
+{
+    Debug.Log("当前焦点: " + current.name);
+}
+
+UIKit.ClearFocus();
+```
+
+面板可以配置默认焦点。`AutoFocusOnShow` 只在导航模式下生效，避免纯鼠标/触摸界面打开后抢焦点：
+
+```csharp
+public sealed class MainMenuPanel : UIPanel
+{
+    protected override void Awake()
+    {
+        base.Awake();
+        SetAutoFocusOnShow(true);
+        SetDefaultSelectable(startButton);
+    }
+}
+```
+
+焦点变化和输入模式变化会通过 EventKit 派发：
+
+```csharp
+EventKit.Type.Register<UIFocusChangedEvent>(OnFocusChanged);
+EventKit.Type.Register<UIInputModeChangedEvent>(OnInputModeChanged);
+
+private void OnFocusChanged(UIFocusChangedEvent evt)
+{
+    var current = evt.Current != default ? evt.Current.name : "null";
+    Debug.Log("焦点: " + current);
+}
+
+private void OnInputModeChanged(UIInputModeChangedEvent evt)
+{
+    Debug.Log("输入设备: " + evt.Mode);
+}
+```
+
+## 手柄/键盘导航
+
+手柄/键盘导航基于焦点系统。项目启用 Unity Input System 并定义 `YOKIFRAME_INPUTSYSTEM_SUPPORT` 后，`GamepadNavigator` 会处理方向、确认、取消、肩键切页和菜单键。运行时可这样启用：
+
+```csharp
+UIKit.FocusSystemEnabled = true;
+
+if (UIRoot.Instance != default)
+{
+    UIRoot.Instance.GamepadEnabled = true;
+}
+```
+
+默认方向输入包含手柄左摇杆、D-Pad、方向键和 WASD；确认包含手柄 South、Enter 和 Space；取消包含手柄 East 和 Escape。当前模式可通过 `UIKit.GetInputMode()` 判断。
+
+复杂布局建议显式配置导航关系：
+
+```csharp
+var group = menuRoot.GetComponent<SelectableGroup>();
+group.DefaultSelectable = startButton;
+group.SetJumpTarget(MoveDirection.Right, settingsGroup);
+
+var grid = inventoryRoot.GetComponent<UINavigationGrid>();
+grid.ColumnsPerRow = 5;
+grid.ConfigureNavigation();
+```
+
+单个控件需要覆盖方向目标时，可以添加 `UISelectableExtension`：
+
+```csharp
+var extension = startButton.GetComponent<UISelectableExtension>();
+extension.SetNavigationOverride(MoveDirection.Down, optionsButton);
+```
+
+`GamepadConfig` 可配置死区、重复延迟、重复间隔、是否允许对角线导航、焦点高亮颜色和手柄模式下光标显示策略。
+
 ## 绑定和代码生成
 
 这套绑定和生成系统用于 Unity Editor 里的 Unity UI Prefab。它负责把 Prefab 上的 `Bind` 标记转换成 `UIPanel`、`UIElement`、`UIComponent` 的 C# partial 类，并在 Unity 编译后把引用回填到 Prefab。
@@ -407,6 +548,61 @@ public static class MyUIKitBindStrategyBootstrap
 | `Component` 下有 `Element` 报错 | 把 `Element` 移到 Panel 或 Element 下，或者改成 `Component`。 |
 | `代码未生成` | 对 Prefab 执行“生成 UI 代码”，并确认脚本目录在 `Assets` 下。 |
 | 修改 `.Designer.cs` 后丢失 | `.Designer.cs` 会重写；把逻辑移到同名非 Designer partial 文件。 |
+
+## 模态面板与点击阻断
+
+弹窗、确认框、输入框和加载遮罩这类必须先处理的 UI，应该设为模态。模态面板会在面板下方自动创建全屏 `ModalBlocker`，用半透明黑色 `Image` 吃掉下层 UI 的射线事件。
+
+```csharp
+var panel = UIKit.OpenPanel<ConfirmDialog>(UILevel.Pop);
+UIKit.SetPanelModal(panel, true);
+```
+
+推荐在面板内部统一处理：
+
+```csharp
+public sealed class ConfirmDialog : UIPanel
+{
+    protected override void OnOpen(IUIData data = null)
+    {
+        base.OnOpen(data);
+        UIKit.SetPanelModal(this, true);
+    }
+
+    protected override void OnClose()
+    {
+        base.OnClose();
+    }
+}
+```
+
+面板关闭或销毁时，UIKit 会回收对应的 `ModalBlocker`。如果只是临时解除阻断，可以动态取消：
+
+```csharp
+UIKit.SetPanelModal(panel, false);
+```
+
+查询当前是否有模态阻断：
+
+```csharp
+if (UIKit.HasModalBlocker())
+{
+    Debug.Log("当前有模态面板，延后执行下层操作。");
+    return;
+}
+```
+
+### 缩放动画和点击穿透
+
+缩放动画只改变弹窗面板本体。若未设置模态，面板从 `Vector3.zero` 或很小尺寸放大时，下层 UI 仍可能收到点击。设置模态后，阻断点击的是全屏 `ModalBlocker`，不是正在缩放的面板，所以显示动画完成前也不会穿透到底层。
+
+### 多层模态
+
+UIKit 支持多层模态面板。每个模态面板都有自己的 blocker，blocker 会紧贴在对应面板下方；打开新的模态面板后，只有最顶层面板可交互，关闭顶层后下一层会恢复。
+
+### 与对话框系统的关系
+
+继承 `UIDialogPanel` 的对话框会在 `OnOpen` 时自动设为模态，并在 `OnClose` 时解除。`Alert`、`Confirm`、`Prompt` 等快捷入口使用你注册的默认对话框类型，因此也应按 `UIDialogPanel` 的方式制作对话框 Prefab。
 
 ## 对话框
 

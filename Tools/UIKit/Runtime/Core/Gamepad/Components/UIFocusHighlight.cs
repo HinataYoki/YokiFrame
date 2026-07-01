@@ -75,6 +75,11 @@ namespace YokiFrame
 
         private void Awake()
         {
+            InitializeComponents();
+        }
+
+        private void InitializeComponents()
+        {
             mRectTransform = GetComponent<RectTransform>();
             mImage = GetComponent<Image>();
             mCanvasGroup = GetComponent<CanvasGroup>();
@@ -337,6 +342,7 @@ namespace YokiFrame
 
             var highlight = go.GetComponent<UIFocusHighlight>();
             highlight.mConfig = config;
+            highlight.InitializeComponents();
 
             // 设置默认颜色，确保 Image 保持禁用状态
             var image = go.GetComponent<Image>();

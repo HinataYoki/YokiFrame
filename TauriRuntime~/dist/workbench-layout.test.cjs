@@ -3434,6 +3434,16 @@ test('docs navigation includes runtime API plus workbench and command bridge not
     assert.match(uikitDoc, /list_panels/);
     assert.match(uikitDoc, /list_stacks/);
     assert.match(uikitDoc, /IUIBackend/);
+    assert.match(uikitDoc, /SetPanelModal/);
+    assert.match(uikitDoc, /HasModalBlocker/);
+    assert.match(uikitDoc, /UIDialogPanel/);
+    assert.match(uikitDoc, /ModalBlocker/);
+    assert.match(uikitDoc, /PreloadPanelAsync/);
+    assert.match(uikitDoc, /IsPanelPreloaded/);
+    assert.match(uikitDoc, /FocusSystemEnabled/);
+    assert.match(uikitDoc, /UIFocusChangedEvent/);
+    assert.match(uikitDoc, /UINavigationGrid/);
+    assert.match(uikitDoc, /UISelectableExtension/);
     assert.match(savekitDoc, /get_workbench_snapshot/);
     assert.match(savekitDoc, /delete_slot/);
     assert.match(savekitDoc, /disable_auto_save/);

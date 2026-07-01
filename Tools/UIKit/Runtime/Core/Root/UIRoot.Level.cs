@@ -39,18 +39,10 @@ namespace YokiFrame
                 if (sModalBlockerPool == default)
                 {
                     sModalBlockerPool = new SimplePoolKit<GameObject>(
-                        factoryMethod: static () =>
-                        {
-                            var obj = new GameObject("ModalBlocker");
-                            var rect = obj.AddComponent<RectTransform>();
-                            var image = obj.AddComponent<Image>();
-                            image.color = new Color(0, 0, 0, 0.5f);
-                            image.raycastTarget = true;
-                            return obj;
-                        },
+                        factoryMethod: CreateModalBlockerObject,
                         resetMethod: static obj =>
                         {
-                            if (obj != default)
+                            if (obj != null)
                             {
                                 obj.SetActive(false);
                                 obj.transform.SetParent(null);
@@ -163,6 +155,11 @@ namespace YokiFrame
             }
             newList.Add(panel);
 
+            if (panel.Handler.IsModal)
+            {
+                MoveModalBlockerToPanelParent(panel);
+            }
+
             SortLevel(oldLevel);
             SortLevel(newLevel);
         }
@@ -252,14 +249,56 @@ namespace YokiFrame
                 return a.Handler.OpenTimestamp.CompareTo(b.Handler.OpenTimestamp);
             });
 
+            ApplyLevelSiblingOrder(list);
+        }
+
+        private void ApplyLevelSiblingOrder(List<IPanel> list)
+        {
+            if (list == default || list.Count == 0) return;
+
+            var nextSiblingByParent = new Dictionary<Transform, int>();
             for (int i = 0; i < list.Count; i++)
             {
                 var panel = list[i];
-                if (panel != default && panel.Transform != default)
+                if (panel == default || panel.Transform == default) continue;
+
+                var parent = panel.Transform.parent;
+                if (parent == default) continue;
+
+                if (!nextSiblingByParent.TryGetValue(parent, out var siblingIndex))
                 {
-                    panel.Transform.SetSiblingIndex(i);
+                    siblingIndex = 0;
                 }
+
+                if (panel.Handler != default &&
+                    panel.Handler.IsModal &&
+                    mModalBlockers.TryGetValue(panel, out var blocker) &&
+                    blocker != null)
+                {
+                    var blockerTransform = blocker.transform;
+                    if (blockerTransform.parent != parent)
+                    {
+                        blockerTransform.SetParent(parent, false);
+                    }
+                    blockerTransform.SetSiblingIndex(siblingIndex);
+                    siblingIndex++;
+                }
+
+                panel.Transform.SetSiblingIndex(siblingIndex);
+                siblingIndex++;
+                nextSiblingByParent[parent] = siblingIndex;
             }
+        }
+
+        private static GameObject CreateModalBlockerObject()
+        {
+            var obj = new GameObject("ModalBlocker");
+            obj.AddComponent<RectTransform>();
+            var image = obj.AddComponent<Image>();
+            image.color = new Color(0, 0, 0, 0.5f);
+            image.raycastTarget = true;
+            obj.SetActive(false);
+            return obj;
         }
 
         #endregion
@@ -290,12 +329,17 @@ namespace YokiFrame
         private void ShowModalBlocker(IPanel panel)
         {
             if (panel == default || panel.Transform == default) return;
-            if (mModalBlockers.ContainsKey(panel)) return;
+            if (mModalBlockers.TryGetValue(panel, out var existingBlocker))
+            {
+                if (existingBlocker != null) return;
+                mModalBlockers.Remove(panel);
+            }
 
             var blocker = CreateModalBlocker(panel);
-            if (blocker != default)
+            if (blocker != null)
             {
                 mModalBlockers[panel] = blocker;
+                SortLevel(panel.Handler.Level);
                 UpdateModalBlockerInteractivity();
             }
         }
@@ -306,13 +350,36 @@ namespace YokiFrame
 
             if (mModalBlockers.TryGetValue(panel, out var blocker))
             {
-                if (blocker != default)
+                if (blocker != null)
                 {
                     // 归还到对象池
                     ModalBlockerPool.Recycle(blocker);
                 }
                 mModalBlockers.Remove(panel);
+                if (panel.Handler != default)
+                {
+                    SortLevel(panel.Handler.Level);
+                }
                 UpdateModalBlockerInteractivity();
+            }
+        }
+
+        private void MoveModalBlockerToPanelParent(IPanel panel)
+        {
+            if (panel == default || panel.Transform == default) return;
+            if (!mModalBlockers.TryGetValue(panel, out var blocker) || blocker == null)
+            {
+                mModalBlockers.Remove(panel);
+                ShowModalBlocker(panel);
+                return;
+            }
+
+            var parent = panel.Transform.parent;
+            if (parent == default) return;
+
+            if (blocker.transform.parent != parent)
+            {
+                blocker.transform.SetParent(parent, false);
             }
         }
 
@@ -322,10 +389,12 @@ namespace YokiFrame
             if (parent == default) return null;
 
             // 从对象池获取遮罩
-            var blocker = ModalBlockerPool.Allocate();
+            var blocker = AllocateModalBlocker();
+            if (blocker == null) return null;
+
             blocker.SetActive(true);
             var rect = blocker.GetComponent<RectTransform>();
-            rect.SetParent(parent);
+            rect.SetParent(parent, false);
 
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -337,6 +406,15 @@ namespace YokiFrame
             rect.SetSiblingIndex(Mathf.Max(0, panelIndex));
 
             return blocker;
+        }
+
+        private static GameObject AllocateModalBlocker()
+        {
+            var blocker = ModalBlockerPool.Allocate();
+            if (blocker != null) return blocker;
+
+            // Unity 已销毁对象可能在编辑器测试间残留在静态池里。
+            return CreateModalBlockerObject();
         }
 
         private void UpdateModalBlockerInteractivity()
