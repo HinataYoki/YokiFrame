@@ -145,15 +145,6 @@ function enUSToolKitTranslations() {
         'spatialkit.indexes': 'Indexes',
         'spatialkit.no_indexes': 'No spatial indexes.',
 
-        // ── InputKit ──
-        'inputkit.title': 'InputKit Input Workbench',
-        'inputkit.subtitle': 'View input actions and input contexts.',
-        'inputkit.tab': 'Tool · INPUTKIT',
-        'inputkit.actions': 'Actions',
-        'inputkit.contexts': 'Contexts',
-        'inputkit.no_actions': 'No input actions.',
-        'inputkit.no_contexts': 'No input contexts.',
-
         // ── UIKit ──
         'uikit.title': 'UIKit UI Workbench',
         'uikit.subtitle': 'View UI panel cache and panel stacks.',

@@ -1,6 +1,6 @@
 ---
 name: yokiframe-command-bridge
-description: 通过 YokiFrame 文件命令桥查询和调试框架 Kit 状态、snapshot、命令响应、文件桥健康、Unity/Godot engine registry、TableKit/Luban 环境、GraphKit 编辑器产物边界，以及 System、Architecture、FsmKit、EventKit、PoolKit、LogKit、ResKit、SingletonKit、ManagedRuntimeKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit 的命令桥入口。
+description: 通过 YokiFrame 文件命令桥查询和调试框架 Kit 状态、snapshot、命令响应、文件桥健康、Unity/Godot engine registry、TableKit/Luban 环境、GraphKit 编辑器产物边界，以及 System、Architecture、FsmKit、EventKit、PoolKit、LogKit、ResKit、SingletonKit、ManagedRuntimeKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit 的命令桥入口。
 ---
 
 # YokiFrame CommandBridge - AI 文件命令桥
@@ -58,14 +58,14 @@ CommandBridge 使用 `.yokiframe/` 文件 I/O 协议。AI 或 Tauri 写入命令
 
 ```text
 System, Architecture, FsmKit, EventKit, PoolKit, LogKit, ResKit, SingletonKit,
-ManagedRuntimeKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit
+ManagedRuntimeKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, UIKit
 ```
 
 已验证 snapshot：
 
 ```text
 FsmKit, EventKit, PoolKit, ResKit, SingletonKit, AudioKit, LogKit,
-SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit, ActionKit
+SaveKit, LocalizationKit, SceneKit, SpatialKit, UIKit, ActionKit
 ```
 
 TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command handler；AI 只读 `engine.json` 的 optional dependency、Tauri 页面状态和项目生成目录，不发送 `TableKit/*`、`GraphKit/*` 命令，不读取 `TableKit/state` 或 `GraphKit/state`。
@@ -89,7 +89,6 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 | `LocalizationKit` | `stats`, `list_languages`, `get_workbench_snapshot`, `set_language` | `LocalizationKit/state` |
 | `SceneKit` | `stats`, `list_scenes`, `get_workbench_snapshot`, `unload_scene` | `SceneKit/state` |
 | `SpatialKit` | `stats`, `list_indexes`, `get_workbench_snapshot` | `SpatialKit/state` |
-| `InputKit` | `stats`, `list_actions`, `list_contexts`, `get_workbench_snapshot` | `InputKit/state` |
 | `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection` | `UIKit/state` |
 
 ## Kit 调试入口
@@ -108,7 +107,6 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 - LocalizationKit：`set_language` 使用 `{"language":"English"}` 或 `{"languageId":2}`，只在用户要求切换语言时执行。
 - SceneKit：`unload_scene` 使用 `{"sceneName":"Menu"}` 或 `{"name":"Menu"}`，只在用户要求维护场景时执行。
 - SpatialKit：命令桥只读，不通过 `.yokiframe` 插入、更新、删除或查询实体。
-- InputKit：命令桥只读，不通过 `.yokiframe` 注入按键、模拟输入、重绑定或切换上下文。
 - UIKit：运行时只读；Unity Editor 工具命令需要明确用户意图和当前 Selection。
 
 ## TableKit / GraphKit / Luban

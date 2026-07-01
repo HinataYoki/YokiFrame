@@ -17,7 +17,7 @@
 
 ## One-Line Introduction
 
-YokiFrame 2.0 is a cross-engine game development framework. Gameplay code is written against the unified Kit APIs in the `YokiFrame` namespace, while Unity, Godot, or future hosts provide engine-specific capabilities through adapters: logging, time, resources, input, scenes, UI, audio, and more.
+YokiFrame 2.0 is a cross-engine game development framework. Gameplay code is written against the unified Kit APIs in the `YokiFrame` namespace, while Unity, Godot, or future hosts provide engine-specific capabilities through adapters: logging, time, resources, scenes, UI, audio, and more. Project input should use the host engine's native input system directly.
 
 It also ships with the `.yokiframe/` file protocol, allowing AI agents, the Tauri workbench, scripts, and game hosts to exchange commands, responses, snapshots, events, and realtime telemetry reliably. AI tools do not need to guess Unity objects or depend on a single editor plugin; they can discover online engines, inspect framework state, run read-only diagnostics, or execute explicitly authorized maintenance commands.
 
@@ -45,7 +45,7 @@ flowchart TB
     Game["Game Code<br/>gameplay flow / systems / logic"]
     API["YokiFrame Kit API<br/>EventKit / FsmKit / ResKit / UIKit / ..."]
     Core["Core Runtime<br/>pure C# contracts, services, protocols, core Kits"]
-    Tools["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Table"]
+    Tools["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Table"]
     Adapter["Engine Adapters<br/>Unity / Godot / Future Host"]
     Host["Engine Host<br/>Unity Editor / Godot / Server Runtime"]
     Bridge[".yokiframe FileBridge v2<br/>commands / results / snapshots / events / telemetry"]
@@ -74,12 +74,12 @@ flowchart LR
 
     subgraph PublicApi["Unified API Layer"]
         CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log"]
-        ToolKits["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Localization / UI / Table"]
+        ToolKits["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Localization / UI / Table"]
     end
 
     subgraph Contracts["Cross-Engine Contracts"]
         Interfaces["Interfaces<br/>IEngineLogger / IEngineTime / IResourceProvider / ..."]
-        Backends["Backends<br/>IAudioBackend / IInputBackend / ISceneBackend / IUIBackend"]
+        Backends["Backends<br/>IAudioBackend / ISceneBackend / IUIBackend"]
         CommandBridge["CommandBridge<br/>string JSON protocol"]
     end
 
@@ -122,7 +122,7 @@ Assets/YokiFrame/
 │   │   └── Skills/
 │   └── Tests/
 ├── Tools/
-│   ├── ActionKit, AudioKit, InputKit, LocalizationKit
+│   ├── ActionKit, AudioKit, LocalizationKit
 │   ├── SaveKit, SceneKit, SpatialKit, TableKit, UIKit
 │   └── */Runtime, */Editor, */Tests
 ├── TauriRuntime~/        # packaged workbench runtime copy
@@ -167,7 +167,6 @@ flowchart TB
     Tools --> ActionKit["ActionKit"]
     Tools --> AudioKit["AudioKit"]
     Tools --> SaveKit["SaveKit"]
-    Tools --> InputKit["InputKit"]
     Tools --> SceneKit["SceneKit"]
     Tools --> SpatialKit["SpatialKit"]
     Tools --> LocalizationKit["LocalizationKit"]
@@ -198,7 +197,6 @@ flowchart TB
 | ActionKit | Delay, Callback, Sequence, Parallel, Task / Coroutine composition, and action debugging. |
 | AudioKit | SFX, music, volume buses, active voice diagnostics, and audio ID helpers. |
 | SaveKit | Multi-slot saves, serialization / encryption / migration backends, and auto-save state. |
-| InputKit | Input backends, action state, input buffers, and input context stacks. |
 | SceneKit | Cross-engine scene loading, preloading, activation, and unloading. |
 | SpatialKit | HashGrid, Quadtree, Octree spatial indexes, and query diagnostics. |
 | LocalizationKit | Language providers, formatters, caches, binders, and language switching. |
@@ -219,7 +217,7 @@ flowchart TB
     Install["Install Core Kit and Tool Kit backends"]
     Runtime["Create IYokiFrameRuntime"]
     Tick["External main loop drives<br/>YokiFrameKit.Tick(deltaSeconds)"]
-    KitTick["Each Kit installer ticks<br/>Action / Input / Bridge / Telemetry / ..."]
+    KitTick["Each Kit installer ticks<br/>Action / Bridge / Telemetry / ..."]
     Shutdown["On exit: YokiFrameKit.Shutdown()"]
     Cleanup["Close installers in reverse order<br/>release subscriptions, resources, backends, diagnostics"]
 
@@ -381,7 +379,7 @@ flowchart TB
 In Unity / Godot editors, the workbench is usually opened with `Ctrl+E`. It can be used to:
 
 - Inspect engine connection, heartbeat, engine registry, FileBridge health, and command catalog.
-- Inspect Architecture, EventKit, FsmKit, PoolKit, ResKit, LogKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, InputKit, UIKit, TableKit, and SingletonKit state.
+- Inspect Architecture, EventKit, FsmKit, PoolKit, ResKit, LogKit, ActionKit, AudioKit, SaveKit, LocalizationKit, SceneKit, SpatialKit, UIKit, TableKit, and SingletonKit state.
 - Scan code relationships, such as EventKit send / listen / unregister locations.
 - Open source code locations through the host's default code editor.
 - Inspect runtime logs, errors, snapshots, telemetry freshness, and stale states.

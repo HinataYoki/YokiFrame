@@ -17,7 +17,7 @@
 
 ## 一句话介绍
 
-YokiFrame 2.0 是一套跨引擎游戏开发框架。业务代码面向 `YokiFrame` 的统一 Kit API 编写，Unity、Godot 或未来其它宿主只负责通过 Adapter 提供日志、时间、资源、输入、场景、UI、音频等能力。
+YokiFrame 2.0 是一套跨引擎游戏开发框架。业务代码面向 `YokiFrame` 的统一 Kit API 编写，Unity、Godot 或未来其它宿主只负责通过 Adapter 提供日志、时间、资源、场景、UI、音频等能力；项目输入直接使用宿主原生输入系统。
 
 它同时内置 `.yokiframe/` 文件协议，让 AI Agent、Tauri 工作台、脚本和游戏宿主之间可以可靠交换命令、响应、快照、事件和实时遥测。AI 不需要直接猜 Unity 对象或依赖某个编辑器插件，就能发现在线引擎、读取框架状态、发起只读诊断或触发明确授权的维护命令。
 
@@ -45,7 +45,7 @@ flowchart TB
     Game["Game Code<br/>业务代码 / 游戏流程 / 系统逻辑"]
     API["YokiFrame Kit API<br/>EventKit / FsmKit / ResKit / UIKit / ..."]
     Core["Core Runtime<br/>纯 C# 契约、服务、协议、通用 Kit"]
-    Tools["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Table"]
+    Tools["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Table"]
     Adapter["Engine Adapters<br/>Unity / Godot / Future Host"]
     Host["Engine Host<br/>Unity Editor / Godot / Server Runtime"]
     Bridge[".yokiframe FileBridge v2<br/>commands / results / snapshots / events / telemetry"]
@@ -74,12 +74,12 @@ flowchart LR
 
     subgraph PublicApi["统一 API 层"]
         CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log / ManagedRuntime"]
-        ToolKits["Tool Kits<br/>Action / Audio / Save / Input / Scene / Spatial / Localization / UI / Table"]
+        ToolKits["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Localization / UI / Table"]
     end
 
     subgraph Contracts["跨引擎契约"]
         Interfaces["Interfaces<br/>IEngineLogger / IEngineTime / IResourceProvider / ..."]
-        Backends["Backends<br/>IAudioBackend / IInputBackend / ISceneBackend / IUIBackend"]
+        Backends["Backends<br/>IAudioBackend / ISceneBackend / IUIBackend"]
         CommandBridge["CommandBridge<br/>string JSON protocol"]
     end
 
@@ -122,7 +122,7 @@ Assets/YokiFrame/
 │   │   └── Skills/
 │   └── Tests/
 ├── Tools/
-│   ├── ActionKit, AudioKit, InputKit, LocalizationKit
+│   ├── ActionKit, AudioKit, LocalizationKit
 │   ├── SaveKit, SceneKit, SpatialKit, TableKit, UIKit
 │   └── */Runtime, */Editor, */Tests
 ├── TauriRuntime~/        # 包内工作台运行副本
@@ -168,7 +168,6 @@ flowchart TB
     Tools --> ActionKit["ActionKit"]
     Tools --> AudioKit["AudioKit"]
     Tools --> SaveKit["SaveKit"]
-    Tools --> InputKit["InputKit"]
     Tools --> SceneKit["SceneKit"]
     Tools --> SpatialKit["SpatialKit"]
     Tools --> LocalizationKit["LocalizationKit"]
@@ -200,7 +199,6 @@ flowchart TB
 | ActionKit | Delay、Callback、Sequence、Parallel、Task / Coroutine 组合和动作调试。 |
 | AudioKit | 音效、音乐、音量总线、active voice 诊断和音频 ID 辅助。 |
 | SaveKit | 多槽位存档、序列化/加密/迁移后端和自动保存状态。 |
-| InputKit | 输入后端、动作状态、输入缓冲和输入上下文栈。 |
 | SceneKit | 跨引擎场景加载、预加载、激活和卸载。 |
 | SpatialKit | HashGrid、Quadtree、Octree 空间索引和查询诊断。 |
 | LocalizationKit | 多语言 Provider、formatter、缓存、binder 和语言切换。 |
@@ -221,7 +219,7 @@ flowchart TB
     Install["安装 Core Kit 和 Tool Kit 后端"]
     Runtime["创建 IYokiFrameRuntime"]
     Tick["外部主循环驱动<br/>YokiFrameKit.Tick(deltaSeconds)"]
-    KitTick["各 Kit Installer Tick<br/>Action / Input / Bridge / Telemetry / ..."]
+    KitTick["各 Kit Installer Tick<br/>Action / Bridge / Telemetry / ..."]
     Shutdown["退出时 YokiFrameKit.Shutdown()"]
     Cleanup["反向关闭 Installer<br/>释放订阅、资源、后端和诊断通道"]
 
@@ -383,7 +381,7 @@ flowchart TB
 在 Unity / Godot 编辑器中通常可通过 `Ctrl+E` 打开工作台。工作台可用于：
 
 - 查看引擎连接、heartbeat、engine registry、FileBridge 健康和命令目录。
-- 查看 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、SingletonKit 状态。
+- 查看 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit、TableKit、SingletonKit 状态。
 - 扫描代码关系，例如 EventKit 发送/监听/注销位置。
 - 打开源码位置，由宿主默认代码编辑器处理。
 - 查看运行日志、错误、快照、telemetry freshness 和 stale 状态。

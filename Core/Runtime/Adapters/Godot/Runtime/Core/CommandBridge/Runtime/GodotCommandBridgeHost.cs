@@ -24,7 +24,6 @@ namespace YokiFrame.Godot
         private const string LOCALIZATION_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.LocalizationKitCommandHandler, YokiFrame.LocalizationKit";
         private const string SCENE_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SceneKitCommandHandler, YokiFrame.SceneKit";
         private const string SPATIAL_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SpatialKitCommandHandler, YokiFrame.SpatialKit";
-        private const string INPUT_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.InputKitCommandHandler, YokiFrame.InputKit";
         private const string ACTION_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.ActionKitCommandHandler, YokiFrame.ActionKit";
 
         private readonly KitCommandDispatcher mDispatcher = new KitCommandDispatcher();
@@ -87,7 +86,6 @@ namespace YokiFrame.Godot
             OptionalKitCommandHandlerRegistry.TryRegister(mDispatcher, LOCALIZATION_KIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(mDispatcher, SCENE_KIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(mDispatcher, SPATIAL_KIT_COMMAND_HANDLER_TYPE);
-            OptionalKitCommandHandlerRegistry.TryRegister(mDispatcher, INPUT_KIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(mDispatcher, ACTION_KIT_COMMAND_HANDLER_TYPE);
         }
 

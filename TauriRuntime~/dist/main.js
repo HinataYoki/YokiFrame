@@ -18,7 +18,6 @@ function registerYokiFramePages() {
     registerPage('localizationkit', { render: renderLocalizationKitPage });
     registerPage('scenekit', { render: renderSceneKitPage });
     registerPage('spatialkit', { render: renderSpatialKitPage });
-    registerPage('inputkit', { render: renderInputKitPage });
     registerPage('uikit', { render: renderUIKitPage });
     registerPage('tablekit', { render: renderTableKitPage });
     registerPage('graphkit', { render: renderGraphKitPage });
@@ -70,10 +69,6 @@ function registerYokiFramePages() {
     registerKitReactiveRefresh('spatialkit', {
         pageId: 'spatialkit',
         refresh: refreshSpatialKitReactive,
-    });
-    registerKitReactiveRefresh('inputkit', {
-        pageId: 'inputkit',
-        refresh: refreshInputKitReactive,
     });
     registerKitReactiveRefresh('uikit', {
         pageId: 'uikit',

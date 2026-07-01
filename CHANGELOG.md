@@ -6,6 +6,12 @@ YokiFrame 2.0 是一次跨引擎架构重启，不再沿用 1.x 的 Unity 单宿
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，版本号遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
+## Unreleased
+
+### Removed
+
+- 移除 InputKit 作为 YokiFrame 官方 Kit。Unity / Godot 项目直接使用各自宿主输入系统，不再通过 YokiFrame 统一输入门面或命令桥诊断页接入。
+
 ## [2.0.0-pre] - 2026-06-24
 
 ### Added
@@ -26,7 +32,7 @@ YokiFrame 2.0 是一次跨引擎架构重启，不再沿用 1.x 的 Unity 单宿
   - 协议包含安全标识符校验、根目录约束、标准终态响应、命令认领、archive / deadletter、重复响应复用和存储清理模型。
 - 新增 Tauri 版 YokiFrame Editor 工作台。
   - System 页面展示 engine registry、heartbeat、FileBridge 健康、命令目录和日志。
-  - Kit 页面覆盖 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit、TableKit、SingletonKit 和 Docs。
+  - Kit 页面覆盖 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit、TableKit、SingletonKit 和 Docs。
   - 工作台页面优先读 telemetry，其次读 snapshot，缺失或用户显式操作时才走 command/result。
   - Docs 页面承载快速上手、Kit 文档、API 速查、第三方依赖建议和前端结构说明。
 - 新增包内 AI Skill 入口。
@@ -43,7 +49,7 @@ YokiFrame 2.0 是一次跨引擎架构重启，不再沿用 1.x 的 Unity 单宿
   - Godot CommandBridge host、event writer、EventKit bridge、FsmKit bridge、Kit snapshot publisher 和 Godot editor plugin 入口。
   - Godot `.NET / C#` 项目通过 `addons/yokiframe/package/YokiFrame` 安装布局接入。
 - 新增 Tool Kit 工作台与命令桥覆盖。
-  - ActionKit、AudioKit、SaveKit、InputKit、LocalizationKit、SceneKit、SpatialKit、UIKit 以及核心 Kit 诊断已提供 command handler 或 snapshot 工作流。
+  - ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit 以及核心 Kit 诊断已提供 command handler 或 snapshot 工作流。
   - TableKit 作为 Tauri 内 Luban 配置表生成工作流呈现，不作为运行时 Kit 发布。
 - 新增 2.0 预发布包元数据。
   - `package.json` 版本更新为 `2.0.0-pre`。

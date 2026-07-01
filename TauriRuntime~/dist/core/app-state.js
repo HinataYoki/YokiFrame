@@ -135,12 +135,6 @@ const FRAMEWORK_COMMAND_CATALOG = {
         { action: 'stats', label: 'stats', descriptionKey: 'command.spatialkit.stats' },
         { action: 'list_indexes', label: 'list_indexes', descriptionKey: 'command.spatialkit.list_indexes' },
     ],
-    InputKit: [
-        { action: 'get_workbench_snapshot', label: 'get_workbench_snapshot', descriptionKey: 'command.inputkit.get_workbench_snapshot' },
-        { action: 'stats', label: 'stats', descriptionKey: 'command.inputkit.stats' },
-        { action: 'list_actions', label: 'list_actions', descriptionKey: 'command.inputkit.list_actions' },
-        { action: 'list_contexts', label: 'list_contexts', descriptionKey: 'command.inputkit.list_contexts' },
-    ],
     UIKit: [
         { action: 'get_workbench_snapshot', label: 'get_workbench_snapshot', descriptionKey: 'command.uikit.get_workbench_snapshot' },
         { action: 'stats', label: 'stats', descriptionKey: 'command.uikit.stats' },
@@ -179,7 +173,6 @@ const KIT_PAGE_ID_TO_KIT = {
     managedruntime: 'ManagedRuntimeKit',
     actionkit: 'ActionKit',
     audiokit: 'AudioKit',
-    inputkit: 'InputKit',
     localizationkit: 'LocalizationKit',
     savekit: 'SaveKit',
     scenekit: 'SceneKit',
@@ -202,7 +195,6 @@ const KIT_EVENT_ALIASES = {
     localization: 'localizationkit',
     scene: 'scenekit',
     spatial: 'spatialkit',
-    input: 'inputkit',
     ui: 'uikit',
     action: 'actionkit',
 };

@@ -30,7 +30,6 @@ namespace YokiFrame.Unity
         public const string ACTIONKIT = "actionkit";
         public const string AUDIOKIT = "audiokit";
         public const string DIALOGUEKIT = "dialoguekit";
-        public const string INPUTKIT = "inputkit";
         public const string LOCALIZATIONKIT = "localizationkit";
         public const string SAVEKIT = "savekit";
         public const string SCENEKIT = "scenekit";

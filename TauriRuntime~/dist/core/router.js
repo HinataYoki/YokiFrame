@@ -84,7 +84,6 @@ function navigateTo(pageId) {
     $pageBody.classList.remove('content-body--localizationkit');
     $pageBody.classList.remove('content-body--scenekit');
     $pageBody.classList.remove('content-body--spatialkit');
-    $pageBody.classList.remove('content-body--inputkit');
     $pageBody.classList.remove('content-body--uikit');
     $pageBody.classList.remove('content-body--tablekit');
     $pageBody.classList.remove('content-body--graphkit');

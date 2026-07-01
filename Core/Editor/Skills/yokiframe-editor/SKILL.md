@@ -3,7 +3,7 @@ name: yokiframe-editor
 description: >-
   YokiFrame 编辑器和工作台使用指南。Use when Codex 需要帮助用户打开 YokiFrame 工作台、
   查看 Kit 调试页面、安装 YokiFrame Skill、读取日志、使用快捷命令、查看 EventKit/FsmKit/PoolKit/ResKit/
-  SingletonKit/AudioKit/SaveKit/LocalizationKit/SceneKit/SpatialKit/InputKit/UIKit 状态，
+  SingletonKit/AudioKit/SaveKit/LocalizationKit/SceneKit/SpatialKit/UIKit 状态，
   使用 TableKit/Luban 配置表生成、GraphKit 图编辑和 runtime contract 预览，
   或通过工作台和命令桥完成项目诊断。
 ---
@@ -107,11 +107,6 @@ description: >-
 
 - 查看空间索引类型、实体数量、分区数量、平面和边界。
 - 命令桥只读；实体插入、更新、删除和查询留在运行时代码中完成。
-
-### InputKit
-
-- 查看输入后端、动作状态、设备、输入缓冲和上下文栈。
-- 命令桥只读；按键注入、输入模拟、重绑定和上下文切换不通过 `.yokiframe` 执行。
 
 ### UIKit
 

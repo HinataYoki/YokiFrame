@@ -32,7 +32,7 @@ public sealed class GameStartup : MonoBehaviour
 
 如果希望使用 Unity 生命周期外壳，也可以放置或创建 `UnityBootstrap`，它会负责初始化、Tick 和 Shutdown。
 
-只使用 `EventKit`、`FsmKit`、`PoolKit` 或纯 C# 单例时不强制初始化；只要用到资源、音频、输入、场景、存档或 UI 后端，就先初始化。
+只使用 `EventKit`、`FsmKit`、`PoolKit` 或纯 C# 单例时不强制初始化；只要用到资源、音频、场景、存档或 UI 后端，就先初始化。项目输入直接使用 Unity / Godot 原生输入系统。
 
 Unity Adapter 类型额外使用：
 
@@ -320,7 +320,6 @@ public sealed class ActionDemo : MonoBehaviour
 |---|---|---|
 | ActionKit | `ActionKit` | `Sequence()`、`Parallel()`、`Repeat()`、`Delay()`、`Callback()` |
 | AudioKit | `AudioKit` | `SetBackend()`、`PlaySfx()`、`PlayMusic()`、`Stop()`、`SetGlobalVolume()` |
-| InputKit | `InputKit` | `Update()`、`IsPressed()`、`WasPressedThisFrame()`、`GetValue()`、`PushContext()` |
 | LocalizationKit | `LocalizationKit` | `SetProvider()`、`SetLanguage()`、`Get()`、`GetPlural()` |
 | SaveKit | `SaveKit` | `CreateSaveData()`、`Save()`、`Load()`、`GetAllSlots()` |
 | SceneKit | `SceneKit` | `LoadSceneAsync()`、`PreloadSceneAsync()`、`UnloadSceneAsync()` |
@@ -334,7 +333,6 @@ public sealed class ActionDemo : MonoBehaviour
 |---|---|
 | `IResourceProvider` / `IRawResourceProvider` | 资源和 raw 文件读取后端。 |
 | `IAudioBackend` | 音频播放、停止、音量和活跃 voice。 |
-| `IInputBackend` | 输入轮询、设备状态和 ActionMap。 |
 | `ISceneBackend` | 场景加载、预加载和卸载。 |
 | `IUIBackend` | 面板打开、显示、隐藏和关闭。 |
 | `ISaveStorage` | 存档读写、删除和槽位扫描。 |

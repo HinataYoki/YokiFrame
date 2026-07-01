@@ -46,7 +46,6 @@
   --kit-icon-reskit: #ffb300;
   --kit-icon-singletonkit: #ea4335;
   --kit-icon-actionkit: #fbbc04;
-  --kit-icon-inputkit: #18b7c9;
   --kit-icon-localizationkit: #20c7d8;
   --kit-icon-savekit: #4d92df;
   --kit-icon-scenekit: #e94235;
@@ -147,7 +146,6 @@ html[data-theme="dark"] {
   --kit-icon-reskit: #ffd60a;
   --kit-icon-singletonkit: #ff6961;
   --kit-icon-actionkit: #ffd60a;
-  --kit-icon-inputkit: #64d2ff;
   --kit-icon-localizationkit: #00d4e8;
   --kit-icon-savekit: #5e9cff;
   --kit-icon-scenekit: #ff6961;

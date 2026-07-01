@@ -22,7 +22,6 @@ namespace YokiFrame.Unity
         private const string LOCALIZATIONKIT_COMMAND_HANDLER_TYPE = "YokiFrame.LocalizationKitCommandHandler, YokiFrame.LocalizationKit";
         private const string SCENEKIT_COMMAND_HANDLER_TYPE = "YokiFrame.SceneKitCommandHandler, YokiFrame.SceneKit";
         private const string SPATIALKIT_COMMAND_HANDLER_TYPE = "YokiFrame.SpatialKitCommandHandler, YokiFrame.SpatialKit";
-        private const string INPUTKIT_COMMAND_HANDLER_TYPE = "YokiFrame.InputKitCommandHandler, YokiFrame.InputKit";
         private const string UIKIT_COMMAND_HANDLER_TYPE = "YokiFrame.UnityUIKitCommandHandler, YokiFrame.UIKit.Editor";
         private const string ACTIONKIT_COMMAND_HANDLER_TYPE = "YokiFrame.ActionKitCommandHandler, YokiFrame.ActionKit";
 
@@ -94,7 +93,6 @@ namespace YokiFrame.Unity
             OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, LOCALIZATIONKIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, SCENEKIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, SPATIALKIT_COMMAND_HANDLER_TYPE);
-            OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, INPUTKIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, UIKIT_COMMAND_HANDLER_TYPE);
             OptionalKitCommandHandlerRegistry.TryRegister(Dispatcher, ACTIONKIT_COMMAND_HANDLER_TYPE);
         }

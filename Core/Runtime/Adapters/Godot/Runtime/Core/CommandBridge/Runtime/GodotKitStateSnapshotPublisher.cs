@@ -27,8 +27,6 @@ namespace YokiFrame.Godot
         private const string SCENE_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SceneKitCommandHandler, YokiFrame.SceneKit";
         private const string SPATIAL_KIT_NAME = "SpatialKit";
         private const string SPATIAL_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SpatialKitCommandHandler, YokiFrame.SpatialKit";
-        private const string INPUT_KIT_NAME = "InputKit";
-        private const string INPUT_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.InputKitCommandHandler, YokiFrame.InputKit";
         private const string ACTION_KIT_NAME = "ActionKit";
         private const string ACTION_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.ActionKitCommandHandler, YokiFrame.ActionKit";
         private const double POOL_PUBLISH_INTERVAL_SECONDS = 0.05d;
@@ -43,7 +41,6 @@ namespace YokiFrame.Godot
         private static IKitCommandHandler sLocalizationHandler;
         private static IKitCommandHandler sSceneHandler;
         private static IKitCommandHandler sSpatialHandler;
-        private static IKitCommandHandler sInputHandler;
         private static IKitCommandHandler sActionHandler;
 
         private static readonly CommandBridgeSnapshotPublisher sPoolPublisher =
@@ -64,8 +61,6 @@ namespace YokiFrame.Godot
             new CommandBridgeSnapshotPublisher(ENGINE_ID, SCENE_KIT_NAME, SNAPSHOT_NAME, BuildScenePayloadJson);
         private static readonly CommandBridgeSnapshotPublisher sSpatialPublisher =
             new CommandBridgeSnapshotPublisher(ENGINE_ID, SPATIAL_KIT_NAME, SNAPSHOT_NAME, BuildSpatialPayloadJson);
-        private static readonly CommandBridgeSnapshotPublisher sInputPublisher =
-            new CommandBridgeSnapshotPublisher(ENGINE_ID, INPUT_KIT_NAME, SNAPSHOT_NAME, BuildInputPayloadJson);
         private static readonly CommandBridgeSnapshotPublisher sActionPublisher =
             new CommandBridgeSnapshotPublisher(ENGINE_ID, ACTION_KIT_NAME, SNAPSHOT_NAME, BuildActionPayloadJson);
 
@@ -91,8 +86,6 @@ namespace YokiFrame.Godot
         private static string sLastSceneInvalidationKey;
         private static string sLastSpatialPayloadJson;
         private static string sLastSpatialInvalidationKey;
-        private static string sLastInputPayloadJson;
-        private static string sLastInputInvalidationKey;
         private static string sLastActionPayloadJson;
         private static string sLastActionInvalidationKey;
 
@@ -145,7 +138,6 @@ namespace YokiFrame.Godot
             PublishOptionalIfInvalidated(LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, force, PushLocalizationSnapshotUpdatedEvent);
             PublishOptionalIfInvalidated(SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, force, PushSceneSnapshotUpdatedEvent);
             PublishOptionalIfInvalidated(SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, force, PushSpatialSnapshotUpdatedEvent);
-            PublishOptionalIfInvalidated(INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, force, PushInputSnapshotUpdatedEvent);
             PublishOptionalIfInvalidated(ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, force, PushActionSnapshotUpdatedEvent);
         }
 
@@ -297,15 +289,6 @@ namespace YokiFrame.Godot
             return OptionalKitCommandHandlerRegistry.TryCreate(SPATIAL_KIT_COMMAND_HANDLER_TYPE, out sSpatialHandler);
         }
 
-        private static bool EnsureInputHandler()
-        {
-            if (sInputHandler != null)
-                return true;
-
-            // InputKit 可独立于 Godot Adapter 安装；通过 Base optional helper 接入统一 snapshot 链路。
-            return OptionalKitCommandHandlerRegistry.TryCreate(INPUT_KIT_COMMAND_HANDLER_TYPE, out sInputHandler);
-        }
-
         private static bool EnsureActionHandler()
         {
             if (sActionHandler != null)
@@ -357,11 +340,6 @@ namespace YokiFrame.Godot
         private static void PushSpatialSnapshotUpdatedEvent()
         {
             GodotEventStreamWriter.Write("spatial_update", "{\"event\":\"snapshot_updated\",\"kit\":\"SpatialKit\"}");
-        }
-
-        private static void PushInputSnapshotUpdatedEvent()
-        {
-            GodotEventStreamWriter.Write("input_update", "{\"event\":\"snapshot_updated\",\"kit\":\"InputKit\"}");
         }
 
         private static void PushActionSnapshotUpdatedEvent()
@@ -436,14 +414,6 @@ namespace YokiFrame.Godot
                 return "{}";
 
             return sSpatialHandler.HandleAction("get_workbench_snapshot", "{}");
-        }
-
-        private static string BuildInputPayloadJson()
-        {
-            if (!EnsureInputHandler())
-                return "{}";
-
-            return sInputHandler.HandleAction("get_workbench_snapshot", "{}");
         }
 
         private static string BuildActionPayloadJson()

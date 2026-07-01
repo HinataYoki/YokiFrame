@@ -80,7 +80,6 @@ namespace YokiFrame
             new KitDescriptor("ManagedRuntimeKit", BOTH_MASK, sManagedRuntimeFeatures, null, null),
             new KitDescriptor("ActionKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("AudioKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
-            new KitDescriptor("InputKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("LocalizationKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("SaveKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),
             new KitDescriptor("SceneKit", BOTH_MASK, sRuntimeSnapshotTelemetryFeatures, null, null),

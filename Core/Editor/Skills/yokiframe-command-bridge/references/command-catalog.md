@@ -43,7 +43,6 @@
 | `LocalizationKit` | `stats`, `list_languages`, `get_workbench_snapshot`, `set_language` | `LocalizationKit/state` |
 | `SceneKit` | `stats`, `list_scenes`, `get_workbench_snapshot`, `unload_scene` | `SceneKit/state` |
 | `SpatialKit` | `stats`, `list_indexes`, `get_workbench_snapshot` | `SpatialKit/state` |
-| `InputKit` | `stats`, `list_actions`, `list_contexts`, `get_workbench_snapshot` | `InputKit/state` |
 | `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection` | `UIKit/state` |
 
 ## 各 Kit 调试入口
@@ -185,10 +184,6 @@ Load 定位只影响开启后的新加载。
 ### SpatialKit
 
 使用 `SpatialKit/state`、`stats`、`list_indexes`、`get_workbench_snapshot`。命令桥只读，不通过 `.yokiframe` 插入、更新、删除或查询实体。
-
-### InputKit
-
-使用 `InputKit/state`、`stats`、`list_actions`、`list_contexts`、`get_workbench_snapshot`。命令桥只读，不通过 `.yokiframe` 注入按键、模拟输入、重绑定或切换上下文。
 
 ### UIKit
 

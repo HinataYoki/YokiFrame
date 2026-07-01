@@ -145,15 +145,6 @@ function zhCNToolKitTranslations() {
         'spatialkit.indexes': '索引',
         'spatialkit.no_indexes': '暂无空间索引。',
 
-        // ── InputKit ──
-        'inputkit.title': 'InputKit 输入工作台',
-        'inputkit.subtitle': '查看输入动作和输入上下文。',
-        'inputkit.tab': '工具 · INPUTKIT',
-        'inputkit.actions': '动作',
-        'inputkit.contexts': '上下文',
-        'inputkit.no_actions': '暂无输入动作。',
-        'inputkit.no_contexts': '暂无输入上下文。',
-
         // ── UIKit ──
         'uikit.title': 'UIKit UI 工作台',
         'uikit.subtitle': '查看 UI 面板缓存和面板栈。',

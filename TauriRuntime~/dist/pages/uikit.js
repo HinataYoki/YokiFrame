@@ -35,7 +35,6 @@ function renderUIKitPage() {
     $pageBody.classList.remove('content-body--localizationkit');
     $pageBody.classList.remove('content-body--scenekit');
     $pageBody.classList.remove('content-body--spatialkit');
-    $pageBody.classList.remove('content-body--inputkit');
     $pageBody.classList.remove('content-body--singletonkit');
     setHero(
         t('uikit.title'),

@@ -56,7 +56,6 @@ namespace YokiFrame.Unity
             // Tools
             GenerateIcon(KitIcons.ACTIONKIT);
             GenerateIcon(KitIcons.AUDIOKIT);
-            GenerateIcon(KitIcons.INPUTKIT);
             GenerateIcon(KitIcons.LOCALIZATIONKIT);
             GenerateIcon(KitIcons.SAVEKIT);
             GenerateIcon(KitIcons.SCENEKIT);
@@ -213,9 +212,6 @@ namespace YokiFrame.Unity
                     break;
                 case KitIcons.AUDIOKIT:
                     DrawSpeakerIcon(tex, blue);
-                    break;
-                case KitIcons.INPUTKIT:
-                    DrawGamepadIcon(tex, cyan);
                     break;
                 case KitIcons.LOCALIZATIONKIT:
                     DrawGlobeIcon(tex, cyan);

@@ -136,7 +136,6 @@ function buildKitFocusSelector(element) {
         'data-audiokit-search',
         'data-savekit-search',
         'data-spatialkit-search',
-        'data-inputkit-search',
         'data-uikit-search',
     ];
     for (let i = 0; i < attrs.length; i++) {

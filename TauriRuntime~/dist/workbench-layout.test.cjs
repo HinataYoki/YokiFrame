@@ -113,7 +113,6 @@ function readFrontendScripts() {
         'pages/localizationkit.js',
         'pages/scenekit.js',
         'pages/spatialkit.js',
-        'pages/inputkit.js',
         'pages/uikit-editor-tools.js',
         'pages/uikit-render.js',
         'pages/uikit.js',
@@ -785,8 +784,6 @@ test('workbench shell defaults to Chinese and exposes framework, docs, Core/Tool
     assert.match(html, />LogKit</);
     assert.match(html, /data-page="audiokit"/);
     assert.match(html, />AudioKit</);
-    assert.match(html, /data-page="inputkit"/);
-    assert.match(html, />InputKit</);
     assert.match(html, /data-page="uikit"/);
     assert.match(html, />UIKit</);
     assert.doesNotMatch(html, /data-page="buffkit"/);
@@ -823,7 +820,7 @@ test('main sidebar groups Kits by dependency layer and sorts each layer alphabet
     assert.deepEqual(groups[0].labels, ['框架', '文档']);
     assert.deepEqual(groups[1].labels, ['Architecture']);
     assert.deepEqual(groups[2].labels, ['EventKit', 'FsmKit', 'LogKit', 'PoolKit', 'ResKit', 'SingletonKit']);
-    assert.deepEqual(groups[3].labels, ['ActionKit', 'AudioKit', 'GraphKit', 'InputKit', 'LocalizationKit', 'SaveKit', 'SceneKit', 'SpatialKit', 'TableKit', 'UIKit']);
+    assert.deepEqual(groups[3].labels, ['ActionKit', 'AudioKit', 'GraphKit', 'LocalizationKit', 'SaveKit', 'SceneKit', 'SpatialKit', 'TableKit', 'UIKit']);
     assert.doesNotMatch(html, /<div class="sidebar-group-header">工具<\/div>/);
 });
 
@@ -837,7 +834,7 @@ test('sidebar and docs hide Kit entries that the selected engine does not implem
     const navigateToBody = js.slice(js.indexOf('function navigateTo(pageId)'), js.indexOf('// 侧边栏点击处理'));
     const syncSidebarBody = js.slice(js.indexOf('function syncSidebarKitAvailability()'), js.indexOf('async function openKitCodeLocation'));
     const docsPageBody = js.slice(js.indexOf('async function renderDocsPage()'), js.indexOf('function getDocNavTitle'));
-    const godotImplementedKits = '["System","Architecture","EventKit","FsmKit","LogKit","PoolKit","ResKit","SingletonKit","ActionKit","InputKit","LocalizationKit","SaveKit","SceneKit","SpatialKit","TableKit"]';
+    const godotImplementedKits = '["System","Architecture","EventKit","FsmKit","LogKit","PoolKit","ResKit","SingletonKit","ActionKit","LocalizationKit","SaveKit","SceneKit","SpatialKit","TableKit"]';
     const normalizeRegistrySource = source => source.replace(/\\/g, '');
 
     assert.match(html, /data-page="uikit"[\s\S]*?data-kit="UIKit"/);
@@ -893,7 +890,6 @@ test('Tauri workbench keeps colorful sidebar Kit icons without deleted BuffKit e
         'reskit',
         'singletonkit',
         'actionkit',
-        'inputkit',
         'localizationkit',
         'savekit',
         'scenekit',
@@ -1891,7 +1887,6 @@ test('runtime Kit state pages delegate command fallback to the shared kit bridge
         ['localizationkit.js', 'LocalizationKit', 'fetchLocalizationKitWorkbenchState'],
         ['scenekit.js', 'SceneKit', 'fetchSceneKitWorkbenchState'],
         ['spatialkit.js', 'SpatialKit', 'fetchSpatialKitWorkbenchState'],
-        ['inputkit.js', 'InputKit', 'fetchInputKitWorkbenchState'],
         ['uikit.js', 'UIKit', 'fetchUIKitWorkbenchState'],
     ];
 
@@ -1910,7 +1905,7 @@ test('runtime Kit state pages delegate command fallback to the shared kit bridge
     }
 });
 
-test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneKit SpatialKit InputKit and UIKit prefer telemetry snapshots before command fallback', () => {
+test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneKit SpatialKit and UIKit prefer telemetry snapshots before command fallback', () => {
     const js = readFrontendScripts();
     const rust = readTauriSourceFile('src-tauri', 'src', 'main.rs');
     const publisher = readWorkspaceFile('Assets', 'YokiFrame', 'Core', 'Runtime', 'Adapters', 'Unity', 'Editor', 'TauriBridge', 'CommandBridge', 'KitStateSnapshotPublisher.cs');
@@ -1938,17 +1933,12 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
         'SpatialKit should provide a Runtime command bridge handler'
     );
     assert.ok(
-        workspaceFileExists('Assets', 'YokiFrame', 'Tools', 'InputKit', 'Runtime', 'CommandBridge', 'InputKitCommandHandler.cs'),
-        'InputKit should provide a Runtime command bridge handler'
-    );
-    assert.ok(
         workspaceFileExists('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Runtime', 'CommandBridge', 'UIKitCommandHandler.cs'),
         'UIKit should provide a Runtime command bridge handler'
     );
     const localizationHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'LocalizationKit', 'Runtime', 'CommandBridge', 'LocalizationKitCommandHandler.cs');
     const sceneHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'SceneKit', 'Runtime', 'CommandBridge', 'SceneKitCommandHandler.cs');
     const spatialHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'SpatialKit', 'Runtime', 'CommandBridge', 'SpatialKitCommandHandler.cs');
-    const inputHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'InputKit', 'Runtime', 'CommandBridge', 'InputKitCommandHandler.cs');
     const uiHandler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Runtime', 'CommandBridge', 'UIKitCommandHandler.cs');
 
     assert.match(js, /function fetchKitWorkbenchState\(kit,\s*normalize,\s*options = \{\}\)/);
@@ -2008,10 +1998,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(js, /fetchKitWorkbenchState\('SpatialKit',\s*normalizeSpatialKitStatePayload/);
     assert.doesNotMatch(js, /fetchSpatialKitWorkbenchStateFromCommands/);
     assert.doesNotMatch(js, /sendKitCommandData\('SpatialKit',\s*'(insert|update|remove)/);
-    assert.match(js, /function fetchInputKitWorkbenchState\(\)/);
-    assert.match(js, /fetchKitWorkbenchState\('InputKit',\s*normalizeInputKitStatePayload/);
-    assert.doesNotMatch(js, /fetchInputKitWorkbenchStateFromCommands/);
-    assert.doesNotMatch(js, /sendKitCommandData\('InputKit',\s*'(simulate|press|inject|rebind|set_binding)/);
     assert.match(js, /function fetchUIKitWorkbenchState\(\)/);
     assert.match(js, /fetchKitWorkbenchState\('UIKit',\s*normalizeUIKitStatePayload/);
     assert.doesNotMatch(js, /fetchUIKitWorkbenchStateFromCommands/);
@@ -2031,7 +2017,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(js, /registerKitReactiveRefresh\('localizationkit'/);
     assert.match(js, /registerKitReactiveRefresh\('scenekit'/);
     assert.match(js, /registerKitReactiveRefresh\('spatialkit'/);
-    assert.match(js, /registerKitReactiveRefresh\('inputkit'/);
     assert.match(js, /registerKitReactiveRefresh\('uikit'/);
     assert.match(js, /data-poolkit-search/);
     assert.match(js, /data-reskit-search/);
@@ -2043,7 +2028,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(js, /data-localizationkit-search/);
     assert.match(js, /data-scenekit-search/);
     assert.match(js, /data-spatialkit-search/);
-    assert.match(js, /data-inputkit-search/);
     assert.match(js, /data-uikit-search/);
 
     assert.match(rust, /kit:\s*"PoolKit"/);
@@ -2055,7 +2039,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(rust, /kit:\s*"LocalizationKit"/);
     assert.match(rust, /kit:\s*"SceneKit"/);
     assert.match(rust, /kit:\s*"SpatialKit"/);
-    assert.match(rust, /kit:\s*"InputKit"/);
     assert.match(rust, /kit:\s*"UIKit"/);
 
     assert.match(publisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*POOL_KIT_NAME,\s*SNAPSHOT_NAME/);
@@ -2085,9 +2068,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(publisher, /SPATIAL_KIT_NAME/);
     assert.match(publisher, /SPATIAL_KIT_COMMAND_HANDLER_TYPE/);
     assert.match(publisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*SPATIAL_KIT_NAME,\s*SNAPSHOT_NAME/);
-    assert.match(publisher, /INPUT_KIT_NAME/);
-    assert.match(publisher, /INPUT_KIT_COMMAND_HANDLER_TYPE/);
-    assert.match(publisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*INPUT_KIT_NAME,\s*SNAPSHOT_NAME/);
     assert.match(publisher, /UI_KIT_NAME/);
     assert.match(publisher, /UI_KIT_COMMAND_HANDLER_TYPE/);
     assert.match(publisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*UI_KIT_NAME,\s*SNAPSHOT_NAME/);
@@ -2110,7 +2090,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(host, /LOCALIZATIONKIT_COMMAND_HANDLER_TYPE/);
     assert.match(host, /SCENEKIT_COMMAND_HANDLER_TYPE/);
     assert.match(host, /SPATIALKIT_COMMAND_HANDLER_TYPE/);
-    assert.match(host, /INPUTKIT_COMMAND_HANDLER_TYPE/);
     assert.match(host, /UIKIT_COMMAND_HANDLER_TYPE/);
     assert.match(host, /OptionalKitCommandHandlerRegistry\.TryRegister/);
     assert.match(hostHeartbeat, /\\\"snapshots\\\",\\\"telemetry\\\"/);
@@ -2120,8 +2099,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(godotHost, /OptionalKitCommandHandlerRegistry\.TryRegister\(mDispatcher,\s*SCENE_KIT_COMMAND_HANDLER_TYPE\)/);
     assert.match(godotHost, /SPATIAL_KIT_COMMAND_HANDLER_TYPE/);
     assert.match(godotHost, /OptionalKitCommandHandlerRegistry\.TryRegister\(mDispatcher,\s*SPATIAL_KIT_COMMAND_HANDLER_TYPE\)/);
-    assert.match(godotHost, /INPUT_KIT_COMMAND_HANDLER_TYPE/);
-    assert.match(godotHost, /OptionalKitCommandHandlerRegistry\.TryRegister\(mDispatcher,\s*INPUT_KIT_COMMAND_HANDLER_TYPE\)/);
     assert.match(godotHost, /\\\"snapshots\\\",\\\"telemetry\\\"/);
     assert.match(godotPublisher, /LOCALIZATION_KIT_NAME/);
     assert.match(godotPublisher, /LOCALIZATION_KIT_COMMAND_HANDLER_TYPE/);
@@ -2134,10 +2111,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(godotPublisher, /SPATIAL_KIT_COMMAND_HANDLER_TYPE/);
     assert.match(godotPublisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*SPATIAL_KIT_NAME,\s*SNAPSHOT_NAME/);
     assert.match(godotPublisher, /spatial_update/);
-    assert.match(godotPublisher, /INPUT_KIT_NAME/);
-    assert.match(godotPublisher, /INPUT_KIT_COMMAND_HANDLER_TYPE/);
-    assert.match(godotPublisher, /CommandBridgeSnapshotPublisher\(ENGINE_ID,\s*INPUT_KIT_NAME,\s*SNAPSHOT_NAME/);
-    assert.match(godotPublisher, /input_update/);
     assert.match(godotPublisher, /AdapterSharedMemoryTelemetry\.TryWriteLatest/);
     assert.match(poolHandler, /"get_workbench_snapshot"/);
     assert.match(poolHandler, /private static string GetWorkbenchSnapshot\(/);
@@ -2181,13 +2154,6 @@ test('PoolKit ResKit SingletonKit LogKit AudioKit SaveKit LocalizationKit SceneK
     assert.match(spatialHandler, /BuildWorkbenchSnapshotJson/);
     assert.match(spatialHandler, /BuildStatsJson/);
     assert.match(spatialHandler, /BuildIndexesJson/);
-    assert.match(inputHandler, /"get_workbench_snapshot"/);
-    assert.match(inputHandler, /"list_actions"/);
-    assert.match(inputHandler, /"list_contexts"/);
-    assert.match(inputHandler, /BuildWorkbenchSnapshotJson/);
-    assert.match(inputHandler, /BuildStatsJson/);
-    assert.match(inputHandler, /BuildActionsJson/);
-    assert.match(inputHandler, /BuildContextsJson/);
     assert.match(uiHandler, /"get_workbench_snapshot"/);
     assert.match(uiHandler, /"list_panels"/);
     assert.match(uiHandler, /"list_stacks"/);
@@ -3400,14 +3366,12 @@ test('docs navigation includes runtime API plus workbench and command bridge not
     const singletonkitDoc = readDistFile('docs/singletonkit.md');
     const actionkitDoc = readDistFile('docs/actionkit.md');
     const audiokitDoc = readDistFile('docs/audiokit.md');
-    const inputkitDoc = readDistFile('docs/inputkit.md');
     const savekitDoc = readDistFile('docs/savekit.md');
     const thirdPartyRecommendationsDoc = readDistFile('docs/third-party-recommendations.md');
     const thirdPartyIndexDoc = readDistFile('docs/third-party-index.md');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'localizationkit.md')), 'LocalizationKit Tauri doc should exist');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'scenekit.md')), 'SceneKit Tauri doc should exist');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'spatialkit.md')), 'SpatialKit Tauri doc should exist');
-    assert.ok(fs.existsSync(path.join(distDir, 'docs', 'inputkit.md')), 'InputKit Tauri doc should exist');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'uikit.md')), 'UIKit Tauri doc should exist');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'third-party-recommendations.md')), 'third-party recommendation doc should exist');
     assert.ok(fs.existsSync(path.join(distDir, 'docs', 'third-party-index.md')), 'third-party index doc should exist');
@@ -3424,7 +3388,6 @@ test('docs navigation includes runtime API plus workbench and command bridge not
     assert.doesNotMatch(docsIndex, /api-reference/);
     assert.match(docsIndex, /actionkit/);
     assert.match(docsIndex, /audiokit/);
-    assert.match(docsIndex, /inputkit/);
     assert.doesNotMatch(docsIndex, /buffkit/);
     assert.match(docsIndex, /savekit/);
     assert.match(docsIndex, /localizationkit/);
@@ -3443,7 +3406,6 @@ test('docs navigation includes runtime API plus workbench and command bridge not
         singletonkitDoc,
         actionkitDoc,
         audiokitDoc,
-        inputkitDoc,
         savekitDoc,
         localizationkitDoc,
         scenekitDoc,
@@ -3467,11 +3429,6 @@ test('docs navigation includes runtime API plus workbench and command bridge not
     assert.match(audiokitDoc, /stats/);
     assert.match(audiokitDoc, /voices/);
     assert.match(audiokitDoc, /history/);
-    assert.match(inputkitDoc, /InputKit\/state/);
-    assert.match(inputkitDoc, /get_workbench_snapshot/);
-    assert.match(inputkitDoc, /list_actions/);
-    assert.match(inputkitDoc, /list_contexts/);
-    assert.match(inputkitDoc, /IInputBackend/);
     assert.match(uikitDoc, /UIKit\/state/);
     assert.match(uikitDoc, /get_workbench_snapshot/);
     assert.match(uikitDoc, /list_panels/);
@@ -3524,14 +3481,14 @@ test('docs sidebar uses dependency-layer groups and colorful icon navigation ent
     const referenceIds = docsIndex.docs.filter(doc => doc.group === 'Reference').map(doc => doc.id);
 
     assert.deepEqual(coreIds, ['codegenkit', 'eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit']);
-    assert.deepEqual(toolIds, ['actionkit', 'audiokit', 'inputkit', 'localizationkit', 'savekit', 'scenekit', 'spatialkit', 'tablekit', 'uikit']);
+    assert.deepEqual(toolIds, ['actionkit', 'audiokit', 'localizationkit', 'savekit', 'scenekit', 'spatialkit', 'tablekit', 'uikit']);
     assert.deepEqual(referenceIds, ['third-party-recommendations', 'third-party-index']);
 
     for (const id of ['eventkit', 'fsmkit', 'poolkit', 'reskit', 'singletonkit', 'codegenkit']) {
         assert.equal(groupById[id], 'Core');
     }
 
-    for (const id of ['actionkit', 'audiokit', 'inputkit', 'uikit', 'savekit', 'localizationkit', 'scenekit', 'spatialkit', 'tablekit']) {
+    for (const id of ['actionkit', 'audiokit', 'uikit', 'savekit', 'localizationkit', 'scenekit', 'spatialkit', 'tablekit']) {
         assert.equal(groupById[id], 'Tool');
     }
 
@@ -3549,7 +3506,6 @@ test('docs sidebar uses dependency-layer groups and colorful icon navigation ent
         tablekit: 'TableKit',
         actionkit: 'ActionKit',
         audiokit: 'AudioKit',
-        inputkit: 'InputKit',
         uikit: 'UIKit',
         savekit: 'SaveKit',
         localizationkit: 'LocalizationKit',
@@ -3570,7 +3526,6 @@ test('docs sidebar uses dependency-layer groups and colorful icon navigation ent
         'singletonkit',
         'actionkit',
         'audiokit',
-        'inputkit',
         'localizationkit',
         'savekit',
         'scenekit',

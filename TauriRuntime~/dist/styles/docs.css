@@ -231,10 +231,6 @@
   --kit-icon-color: var(--kit-icon-audiokit);
 }
 
-.doc-nav-item-icon[data-doc-icon-tone="inputkit"] {
-  --kit-icon-color: var(--kit-icon-inputkit);
-}
-
 .doc-nav-item-icon[data-doc-icon-tone="localizationkit"] {
   --kit-icon-color: var(--kit-icon-localizationkit);
 }

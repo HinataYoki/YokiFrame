@@ -108,16 +108,6 @@
       "summary": "音频后端、播放停止、总线音量、voice 和历史诊断。"
     },
     {
-      "id": "inputkit",
-      "title": "InputKit 输入",
-      "navTitle": "InputKit",
-      "group": "Tool",
-      "icon": "input",
-      "iconTone": "inputkit",
-      "file": "docs/inputkit.md",
-      "summary": "动作输入、输入缓冲、上下文栈和只读诊断。"
-    },
-    {
       "id": "localizationkit",
       "title": "LocalizationKit 本地化",
       "navTitle": "LocalizationKit",

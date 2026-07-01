@@ -10,7 +10,7 @@
 | 推荐 | ZString | 高频日志、快照、诊断字符串构建较多。 |
 | 按需 | DOTween | 需要 UI 动画、流程动画或补间演出。 |
 | 按需 | FMOD | 需要事件音频、动态音乐、复杂混音。 |
-| 按需 | Unity Input System | 需要重绑定、多设备、手柄、触屏。 |
+| 按需 | Unity Input System | 需要 Unity 项目输入、重绑定、多设备、手柄或触屏。 |
 | 按需 | Nino | 存档数据大、读写频繁、需要二进制序列化。 |
 | TableKit 必需 | Luban | 使用 TableKit 配置表生成。 |
 
@@ -41,7 +41,7 @@ AIBridge 是本仓库 Unity 自动化入口。Codex 修改 C# 后，优先用它
 | ZString | 减少热路径字符串分配。 | 使用 `StringBuilder` 或普通字符串实现。 |
 | DOTween | UIKit / ActionKit 可接入补间动画。 | 使用内置动画或普通 Action。 |
 | FMOD | AudioKit 可接 FMOD 事件路径。 | 使用 Unity AudioSource 或项目音频后端。 |
-| Input System | InputKit 可接 Unity 新输入系统。 | 使用 legacy / 自定义后端。 |
+| Input System | 项目 gameplay 输入直接使用 Unity Input System；UIKit 可按需开启 Unity 侧导航集成。 | 使用 Unity legacy 输入或项目自定义输入层。 |
 | Nino | SaveKit 可接高性能二进制序列化。 | 使用内置或项目自定义序列化。 |
 | Luban | TableKit 可生成配置表代码和数据。 | TableKit 只能做环境提示和配置编辑。 |
 

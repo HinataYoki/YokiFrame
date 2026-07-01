@@ -31,7 +31,7 @@ const LUBAN_PACKAGE_NAME = "com.code-philosophy.luban"
 const LUBAN_RUNTIME_ASSEMBLY_NAME = "Luban.Runtime"
 const LUBAN_RUNTIME_TYPE_NAME = "Luban.ByteBuf"
 const DIRECTORY_BUILD_PROPS_FILE = "Directory.Build.props"
-const GODOT_IMPLEMENTED_KITS_JSON = "[\"System\",\"Architecture\",\"EventKit\",\"FsmKit\",\"LogKit\",\"PoolKit\",\"ResKit\",\"SingletonKit\",\"ActionKit\",\"InputKit\",\"LocalizationKit\",\"SaveKit\",\"SceneKit\",\"SpatialKit\",\"TableKit\"]"
+const GODOT_IMPLEMENTED_KITS_JSON = "[\"System\",\"Architecture\",\"EventKit\",\"FsmKit\",\"LogKit\",\"PoolKit\",\"ResKit\",\"SingletonKit\",\"ActionKit\",\"LocalizationKit\",\"SaveKit\",\"SceneKit\",\"SpatialKit\",\"TableKit\"]"
 const GODOT_EDITOR_KIT_FEATURES_JSON = "{\"System\":[\"commands\",\"bridge_status\"],\"EventKit\":[\"static_scan\"],\"TableKit\":[\"tauri_config\",\"registry_optional_dependencies\"]}"
 
 var _heartbeat_timer: Timer = null

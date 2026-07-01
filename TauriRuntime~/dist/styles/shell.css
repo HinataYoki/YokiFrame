@@ -586,10 +586,6 @@
   --kit-icon-color: var(--kit-icon-actionkit);
 }
 
-.sidebar-item[data-page="inputkit"] {
-  --kit-icon-color: var(--kit-icon-inputkit);
-}
-
 .sidebar-item[data-page="localizationkit"] {
   --kit-icon-color: var(--kit-icon-localizationkit);
 }

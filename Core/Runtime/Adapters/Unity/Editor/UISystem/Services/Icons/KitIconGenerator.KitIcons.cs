@@ -274,7 +274,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 手柄图标 - InputKit
+        /// 手柄图标
         /// </summary>
         private static void DrawGamepadIcon(Texture2D tex, Color32 color)
         {

@@ -3,8 +3,7 @@
     "rootNamespace": "YokiFrame.Godot",
     "references": [
         "YokiFrame",
-        "YokiFrame.AudioKit",
-        "YokiFrame.InputKit"
+        "YokiFrame.AudioKit"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

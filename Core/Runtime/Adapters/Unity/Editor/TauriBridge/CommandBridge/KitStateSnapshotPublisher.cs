@@ -8,7 +8,7 @@ using UnityEngine;
 namespace YokiFrame.Unity
 {
     /// <summary>
-    /// PoolKit、ResKit、SingletonKit、AudioKit、LogKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、InputKit、UIKit 的编辑器快照发布器。
+    /// PoolKit、ResKit、SingletonKit、AudioKit、LogKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit 的编辑器快照发布器。
     /// 这些 Kit 没有专用运行时推送事件，因此在 Editor update 里节流汇总当前状态，避免热路径写文件。
     /// </summary>
     internal static class KitStateSnapshotPublisher
@@ -28,8 +28,6 @@ namespace YokiFrame.Unity
         private const string SCENE_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SceneKitCommandHandler, YokiFrame.SceneKit";
         private const string SPATIAL_KIT_NAME = "SpatialKit";
         private const string SPATIAL_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.SpatialKitCommandHandler, YokiFrame.SpatialKit";
-        private const string INPUT_KIT_NAME = "InputKit";
-        private const string INPUT_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.InputKitCommandHandler, YokiFrame.InputKit";
         private const string UI_KIT_NAME = "UIKit";
         private const string UI_KIT_COMMAND_HANDLER_TYPE = "YokiFrame.UIKitCommandHandler, YokiFrame.UIKit";
         private const string ACTION_KIT_NAME = "ActionKit";
@@ -47,7 +45,6 @@ namespace YokiFrame.Unity
         private static IKitCommandHandler sLocalizationHandler;
         private static IKitCommandHandler sSceneHandler;
         private static IKitCommandHandler sSpatialHandler;
-        private static IKitCommandHandler sInputHandler;
         private static IKitCommandHandler sUIKitHandler;
         private static IKitCommandHandler sActionHandler;
 
@@ -69,8 +66,6 @@ namespace YokiFrame.Unity
             new CommandBridgeSnapshotPublisher(ENGINE_ID, SCENE_KIT_NAME, SNAPSHOT_NAME, BuildScenePayloadJson);
         private static readonly CommandBridgeSnapshotPublisher sSpatialPublisher =
             new CommandBridgeSnapshotPublisher(ENGINE_ID, SPATIAL_KIT_NAME, SNAPSHOT_NAME, BuildSpatialPayloadJson);
-        private static readonly CommandBridgeSnapshotPublisher sInputPublisher =
-            new CommandBridgeSnapshotPublisher(ENGINE_ID, INPUT_KIT_NAME, SNAPSHOT_NAME, BuildInputPayloadJson);
         private static readonly CommandBridgeSnapshotPublisher sUIKitPublisher =
             new CommandBridgeSnapshotPublisher(ENGINE_ID, UI_KIT_NAME, SNAPSHOT_NAME, BuildUIKitPayloadJson);
         private static readonly CommandBridgeSnapshotPublisher sActionPublisher =
@@ -94,8 +89,6 @@ namespace YokiFrame.Unity
         private static string sLastSceneInvalidationKey;
         private static string sLastSpatialPayloadJson;
         private static string sLastSpatialInvalidationKey;
-        private static string sLastInputPayloadJson;
-        private static string sLastInputInvalidationKey;
         private static string sLastUIKitPayloadJson;
         private static string sLastUIKitInvalidationKey;
         private static string sLastActionPayloadJson;
@@ -119,7 +112,6 @@ namespace YokiFrame.Unity
             PublishOptionalIfInvalidated(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, false);
             PublishOptionalIfInvalidated(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, false);
             PublishOptionalIfInvalidated(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, false);
-            PublishOptionalIfInvalidated(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, false);
             PublishOptionalIfInvalidated(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, () => sUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, ref sLastUIKitInvalidationKey, false);
             PublishOptionalIfInvalidated(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, false);
         }
@@ -135,7 +127,6 @@ namespace YokiFrame.Unity
             PublishOptionalIfInvalidated(yokiframeRoot, LOCALIZATION_KIT_NAME, sLocalizationPublisher, EnsureLocalizationHandler, () => sLocalizationHandler, BuildLocalizationPayloadJson, ref sLastLocalizationPayloadJson, ref sLastLocalizationInvalidationKey, true);
             PublishOptionalIfInvalidated(yokiframeRoot, SCENE_KIT_NAME, sScenePublisher, EnsureSceneHandler, () => sSceneHandler, BuildScenePayloadJson, ref sLastScenePayloadJson, ref sLastSceneInvalidationKey, true);
             PublishOptionalIfInvalidated(yokiframeRoot, SPATIAL_KIT_NAME, sSpatialPublisher, EnsureSpatialHandler, () => sSpatialHandler, BuildSpatialPayloadJson, ref sLastSpatialPayloadJson, ref sLastSpatialInvalidationKey, true);
-            PublishOptionalIfInvalidated(yokiframeRoot, INPUT_KIT_NAME, sInputPublisher, EnsureInputHandler, () => sInputHandler, BuildInputPayloadJson, ref sLastInputPayloadJson, ref sLastInputInvalidationKey, true);
             PublishOptionalIfInvalidated(yokiframeRoot, UI_KIT_NAME, sUIKitPublisher, EnsureUIKitHandler, () => sUIKitHandler, BuildUIKitPayloadJson, ref sLastUIKitPayloadJson, ref sLastUIKitInvalidationKey, true);
             PublishOptionalIfInvalidated(yokiframeRoot, ACTION_KIT_NAME, sActionPublisher, EnsureActionHandler, () => sActionHandler, BuildActionPayloadJson, ref sLastActionPayloadJson, ref sLastActionInvalidationKey, true);
         }
@@ -311,15 +302,6 @@ namespace YokiFrame.Unity
             return OptionalKitCommandHandlerRegistry.TryCreate(SPATIAL_KIT_COMMAND_HANDLER_TYPE, out sSpatialHandler);
         }
 
-        private static bool EnsureInputHandler()
-        {
-            if (sInputHandler != null)
-                return true;
-
-            // InputKit 后端由宿主安装，诊断 handler 仍通过 optional helper 接入，避免 Unity/Godot 各写一套反射胶水。
-            return OptionalKitCommandHandlerRegistry.TryCreate(INPUT_KIT_COMMAND_HANDLER_TYPE, out sInputHandler);
-        }
-
         private static bool EnsureUIKitHandler()
         {
             if (sUIKitHandler != null)
@@ -420,14 +402,6 @@ namespace YokiFrame.Unity
                 return "{}";
 
             return sSpatialHandler.HandleAction("get_workbench_snapshot", "{}");
-        }
-
-        private static string BuildInputPayloadJson()
-        {
-            if (!EnsureInputHandler())
-                return "{}";
-
-            return sInputHandler.HandleAction("get_workbench_snapshot", "{}");
         }
 
         private static string BuildUIKitPayloadJson()

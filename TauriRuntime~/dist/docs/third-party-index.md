@@ -4,12 +4,12 @@
 
 | 库 | 推荐级别 | 宏定义 | 影响范围 |
 |---|---|---|---|
-| UniTask | 推荐 | `YOKIFRAME_UNITASK_SUPPORT` | ResKit、SceneKit、AudioKit、UIKit、InputKit、LocalizationKit 等异步入口。 |
+| UniTask | 推荐 | `YOKIFRAME_UNITASK_SUPPORT` | ResKit、SceneKit、AudioKit、UIKit、LocalizationKit 等异步入口。 |
 | YooAsset | 推荐 | `YOKIFRAME_YOOASSET_SUPPORT` | ResKit、SceneKit、UIKit 默认面板加载。 |
 | Luban | TableKit 必需 | `YOKIFRAME_LUBAN_SUPPORT` | TableKit 生成、验证和运行时代码。 |
 | FMOD | 按需 | `YOKIFRAME_FMOD_SUPPORT` | AudioKit FMOD 后端。 |
 | DOTween | 按需 | `YOKIFRAME_DOTWEEN_SUPPORT` | UIKit / ActionKit 动画集成。 |
-| Unity Input System | 按需 | `YOKIFRAME_INPUTSYSTEM_SUPPORT` | InputKit Unity 输入后端。 |
+| Unity Input System | 按需 | `YOKIFRAME_INPUTSYSTEM_SUPPORT` | UIKit 手柄/键盘导航等 Unity 侧可选输入集成。 |
 | ZString | 推荐 | `YOKIFRAME_ZSTRING_SUPPORT` | 高频字符串构建优化。 |
 | Nino | 按需 | `YOKIFRAME_NINO_SUPPORT` | SaveKit 序列化后端。 |
 
@@ -50,7 +50,7 @@ UIKit / ActionKit 可选动画集成。安装后需要运行 DOTween Setup，确
 
 ### Unity Input System
 
-InputKit 的 Unity 新输入系统后端。需要重绑、多设备、手柄和触屏时安装。
+Unity 侧可选输入包。YokiFrame 不再提供统一输入门面；项目 gameplay 输入直接使用 Unity Input System，YokiFrame 仅在 UIKit 等 Unity 侧功能需要时使用该宏开启可选集成。
 
 ### ZString
 

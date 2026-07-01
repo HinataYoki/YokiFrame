@@ -42,7 +42,6 @@
         "actionkit",
         "audiokit",
         "savekit",
-        "inputkit",
         "scenekit",
         "spatialkit",
         "localizationkit",
