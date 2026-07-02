@@ -103,7 +103,7 @@ namespace YokiFrame
                 TriggerOnFocus(previousPanel);
             }
 
-            if (autoClose) panel.Close();
+            if (autoClose) ClosePanelInternal(panel);
             return panel;
         }
 
@@ -153,7 +153,7 @@ namespace YokiFrame
                     var panel = stack.Last.Value;
                     stack.RemoveLast();
                     panel.Handler.OnStack = null;
-                    panel.Close();
+                    ClosePanelInternal(panel);
                 }
             }
             else
@@ -325,7 +325,7 @@ namespace YokiFrame
                 {
                     await uiPanel.HideUniTaskAsync(ct);
                 }
-                panel.Close();
+                ClosePanelInternal(panel);
             }
 
             return panel;

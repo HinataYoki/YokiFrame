@@ -52,6 +52,8 @@ namespace YokiFrame
         /// </summary>
         private bool mIsDestroying;
         private bool mHideLifecycleCompleted;
+        private bool mCloseLifecycleInProgress;
+        private bool mCloseLifecycleCompleted;
 
         #region 动画配置
 
@@ -114,7 +116,8 @@ namespace YokiFrame
 
         #endregion
 
-        private List<Action> mOnClosed = new();
+        private readonly List<Action> mOnClosed = new();
+        private readonly List<Action> mCloseCompletionCallbacks = new();
 
         protected virtual void Awake()
         {
@@ -134,6 +137,9 @@ namespace YokiFrame
         public void Open(IUIData data = null)
         {
             mHideLifecycleCompleted = false;
+            mCloseLifecycleInProgress = false;
+            mCloseLifecycleCompleted = false;
+            mCloseCompletionCallbacks.Clear();
             State = PanelState.Open;
             OnOpen(data);
         }
@@ -356,10 +362,48 @@ namespace YokiFrame
             mHideLifecycleCompleted = true;
         }
 
+        internal void Close(Action onComplete)
+        {
+            CloseInternal(onComplete);
+        }
+
         void IPanel.Close()
         {
+            CloseInternal(null);
+        }
+
+        private void CloseInternal(Action onComplete)
+        {
+            if (mCloseLifecycleCompleted)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (onComplete != default)
+            {
+                mCloseCompletionCallbacks.Add(onComplete);
+            }
+
+            if (mCloseLifecycleInProgress) return;
+
+            mCloseLifecycleInProgress = true;
+
             if (!mHideLifecycleCompleted)
-                Hide();
+            {
+                Hide(CompleteClose);
+                return;
+            }
+
+            CompleteClose();
+        }
+
+        private void CompleteClose()
+        {
+            if (mCloseLifecycleCompleted) return;
+
+            mCloseLifecycleInProgress = false;
+            mCloseLifecycleCompleted = true;
             State = PanelState.Close;
 
             foreach (var action in mOnClosed)
@@ -368,6 +412,12 @@ namespace YokiFrame
             }
             mOnClosed.Clear();
             OnClose();
+
+            for (int i = 0; i < mCloseCompletionCallbacks.Count; i++)
+            {
+                mCloseCompletionCallbacks[i]?.Invoke();
+            }
+            mCloseCompletionCallbacks.Clear();
         }
 
         public void OnClosed(Action onClosed) => mOnClosed.Add(onClosed);

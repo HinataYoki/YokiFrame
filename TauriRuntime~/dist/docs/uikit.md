@@ -112,7 +112,9 @@ UIKit.ClearPreloadedCache<HeavyPanel>();
 UIKit.ClearAllPreloadedCache();
 ```
 
-已打开缓存由热度系统管理。`HotCacheEnabled` 关闭后，`Hot` 模式面板关闭即销毁，不再按热度保留：
+已打开缓存由热度系统管理。热度缓存是“复用面板实例”，不是“跳过面板生命周期”：缓存命中后再次 `OpenPanel` 仍会更新 data、level、tag，并再次执行 `Open` 和 `Show`；`ClosePanel` 仍会先完成隐藏流程，再执行关闭流程。建议把一次性组件查找和长生命周期资源放在 `OnInit`，把每次打开的数据刷新放在 `OnOpen` / `OnShow`，把显示退出和订阅清理放在 `OnHide` / `OnClose`。
+
+默认热度参数来自 `UIRootConfig`，也可以在运行时通过 `UIKit` 静态入口调整：
 
 ```csharp
 UIKit.HotCacheEnabled = true;
@@ -120,6 +122,34 @@ UIKit.OpenHot = 3;
 UIKit.GetHot = 2;
 UIKit.Weaken = 1;
 ```
+
+| 配置 | 默认值 | 说明 |
+|---|---:|---|
+| `HotCacheEnabled` | `true` | 是否启用 `Hot` 模式的热度保留。关闭后，`Hot` 模式面板在后续关闭时按临时面板处理。 |
+| `OpenHot` | `3` | 创建面板或 `OpenPanel` 命中缓存时增加的热度。 |
+| `GetHot` | `2` | `GetPanel` 命中缓存时增加的热度；`ShowPanel<T>()`、`HidePanel<T>()` 也会通过 `GetPanel<T>()` 触发。 |
+| `Weaken` | `1` | 每次热度衰减扣除的值。热度降到 `0` 及以下后，已关闭的 `Hot` 面板会被销毁并移出已打开缓存。 |
+| `CacheCapacity` | `10` | 预加载缓存容量，只影响预加载 LRU，不限制已打开缓存。 |
+
+面板缓存模式：
+
+| 模式 | 行为 |
+|---|---|
+| `PanelCacheMode.Hot` | 默认模式。根据热度决定关闭后是否继续保留；`HotCacheEnabled = false` 时关闭即销毁。 |
+| `PanelCacheMode.Persistent` | 常驻模式。关闭后仍保留实例，不会被热度衰减自动淘汰。适合全局常驻入口，使用前要确认内存成本。 |
+| `PanelCacheMode.Temporary` | 临时模式。关闭即销毁，不进入热度保留。适合只用一次或数据很重的面板。 |
+
+普通 `OpenPanel` 和 `PreloadPanelAsync` 创建的 handler 默认是 `Hot`。需要特殊策略时，可以在拿到面板后显式设置：
+
+```csharp
+var panel = UIKit.OpenPanel<InventoryPanel>(UILevel.Common);
+if (panel != default && panel.Handler != default)
+{
+    panel.Handler.CacheMode = PanelCacheMode.Persistent;
+}
+```
+
+关闭热度缓存只影响已打开缓存的 `Hot` 保留策略，不会关闭预加载缓存；预加载仍由 `SetCacheCapacity` 和 LRU 规则管理。
 
 `PreloadPanelAsync` 在启用 UniTask 时返回 `UniTask<bool>`，否则返回 `Task<bool>`。取消流程建议传入当前对象生命周期绑定的 `CancellationToken`。
 

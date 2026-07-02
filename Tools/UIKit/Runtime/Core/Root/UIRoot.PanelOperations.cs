@@ -230,7 +230,19 @@ namespace YokiFrame
                 return;
             }
 
+            if (panel is UIPanel uiPanel)
+            {
+                uiPanel.Close(() => CompletePanelCloseInternal(panel));
+                return;
+            }
+
             panel.Close();
+            CompletePanelCloseInternal(panel);
+        }
+
+        private void CompletePanelCloseInternal(IPanel panel)
+        {
+            if (panel == default) return;
             if (panel.Handler == default) return;
 
             RemoveFromStack(panel);
@@ -251,7 +263,14 @@ namespace YokiFrame
             if (panel != default && panel.Transform != default && panel.Transform.gameObject != default)
             {
                 panel.Cleanup();
-                Destroy(panel.Transform.gameObject);
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(panel.Transform.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(panel.Transform.gameObject);
+                }
             }
         }
 

@@ -200,11 +200,12 @@ namespace YokiFrame
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, mode, data, false);
             RegisterHandler(handler);
             SendSceneLoadStart(handler);
+            OnSceneProgress(handler, 0f, onProgress);
 
             var request = new SceneLoadRequest(sceneName, INVALID_BUILD_INDEX, mode, suspendAtProgress, data, false);
             handler.Operation = backend.LoadSceneAsync(
                 request,
-                result => OnSceneLoaded(handler, result, onComplete),
+                result => OnSceneLoaded(handler, result, onComplete, onProgress),
                 progress => OnSceneProgress(handler, progress, onProgress),
                 () => OnSceneSuspended(handler));
             return handler;
@@ -257,11 +258,12 @@ namespace YokiFrame
             var handler = CreateHandler(sceneName, buildIndex, mode, data, false);
             RegisterHandler(handler);
             SendSceneLoadStart(handler);
+            OnSceneProgress(handler, 0f, onProgress);
 
             var request = new SceneLoadRequest(sceneName, buildIndex, mode, suspendAtProgress, data, false);
             handler.Operation = backend.LoadSceneAsync(
                 request,
-                result => OnSceneLoaded(handler, result, onComplete),
+                result => OnSceneLoaded(handler, result, onComplete, onProgress),
                 progress => OnSceneProgress(handler, progress, onProgress),
                 () => OnSceneSuspended(handler));
             return handler;
@@ -300,11 +302,12 @@ namespace YokiFrame
             var handler = CreateHandler(sceneName, INVALID_BUILD_INDEX, SceneLoadMode.Additive, null, true);
             RegisterHandler(handler);
             SendSceneLoadStart(handler);
+            OnSceneProgress(handler, 0f, onProgress);
 
             var request = new SceneLoadRequest(sceneName, INVALID_BUILD_INDEX, SceneLoadMode.Additive, suspendAtProgress, null, true);
             handler.Operation = EnsureBackend().LoadSceneAsync(
                 request,
-                result => OnSceneLoaded(handler, result, onComplete),
+                result => OnSceneLoaded(handler, result, onComplete, onProgress),
                 progress => OnSceneProgress(handler, progress, onProgress),
                 () =>
                 {
@@ -563,12 +566,16 @@ namespace YokiFrame
             BumpDiagnosticVersion();
         }
 
-        private static void OnSceneLoaded(SceneHandler handler, SceneLoadResult result, Action<SceneHandler> onComplete)
+        private static void OnSceneLoaded(
+            SceneHandler handler,
+            SceneLoadResult result,
+            Action<SceneHandler> onComplete,
+            Action<float> onProgress)
         {
             handler.Scene = result.Scene;
             if (handler.State == SceneState.Unloading)
             {
-                handler.UpdateProgress(COMPLETE_PROGRESS);
+                OnSceneProgress(handler, COMPLETE_PROGRESS, onProgress);
                 handler.IsSuspended = false;
                 if (onComplete != null)
                     onComplete(handler);
@@ -577,7 +584,7 @@ namespace YokiFrame
             }
 
             handler.SetState(SceneState.Loaded);
-            handler.UpdateProgress(COMPLETE_PROGRESS);
+            OnSceneProgress(handler, COMPLETE_PROGRESS, onProgress);
             handler.IsSuspended = false;
 
             if (handler.LoadMode == SceneLoadMode.Single || sActiveSceneHandler == null)
