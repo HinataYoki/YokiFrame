@@ -157,15 +157,31 @@ namespace YokiFrame
                 sb.Append(JsonHelper.EscapeString(settings.ScaleMode.ToString()));
                 sb.Append("\",\"referenceResolution\":\"");
                 sb.Append(JsonHelper.EscapeString(FormatVector2(settings.ReferenceResolution)));
-                sb.Append("\",\"screenMatchMode\":\"");
+                sb.Append("\",\"referenceResolutionX\":");
+                AppendFloat(sb, settings.ReferenceResolution.x);
+                sb.Append(",\"referenceResolutionY\":");
+                AppendFloat(sb, settings.ReferenceResolution.y);
+                sb.Append(",\"screenMatchMode\":\"");
                 sb.Append(JsonHelper.EscapeString(settings.ScreenMatchMode.ToString()));
                 sb.Append("\",\"matchWidthOrHeight\":");
-                sb.Append(settings.MatchWidthOrHeight.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                AppendFloat(sb, settings.MatchWidthOrHeight);
                 sb.Append(",\"referencePixelsPerUnit\":");
-                sb.Append(settings.ReferencePixelsPerUnit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                AppendFloat(sb, settings.ReferencePixelsPerUnit);
+                sb.Append(",\"physicalUnit\":\"");
+                sb.Append(JsonHelper.EscapeString(settings.PhysicalUnit.ToString()));
+                sb.Append("\",\"fallbackScreenDPI\":");
+                AppendFloat(sb, settings.FallbackScreenDPI);
+                sb.Append(",\"defaultSpriteDPI\":");
+                AppendFloat(sb, settings.DefaultSpriteDPI);
+                sb.Append(",\"dynamicPixelsPerUnit\":");
+                AppendFloat(sb, settings.DynamicPixelsPerUnit);
+                sb.Append(",\"ignoreReversedGraphics\":");
+                sb.Append(settings.IgnoreReversedGraphics ? "true" : "false");
                 sb.Append(",\"blockingObjects\":\"");
                 sb.Append(JsonHelper.EscapeString(settings.BlockingObjects.ToString()));
-                sb.Append("\"}");
+                sb.Append("\",\"blockingMask\":");
+                sb.Append(settings.BlockingMask.value);
+                sb.Append("}");
                 return sb.ToString();
             }
             finally
@@ -179,6 +195,11 @@ namespace YokiFrame
         {
             return value.x.ToString(System.Globalization.CultureInfo.InvariantCulture) + " x " +
                    value.y.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static void AppendFloat(StringBuilder sb, float value)
+        {
+            sb.Append(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         private static void DestroyTemporarySettings(UIKitSettings settings)

@@ -307,5 +307,8 @@ function syncProjectScopedEditorStorage() {
     if (typeof syncGraphKitProjectStorageScope === 'function') {
         changed = syncGraphKitProjectStorageScope() || changed;
     }
+    if (typeof syncUIKitProjectStorageScope === 'function') {
+        changed = syncUIKitProjectStorageScope() || changed;
+    }
     return changed;
 }

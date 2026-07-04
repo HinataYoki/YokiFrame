@@ -89,7 +89,7 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 | `LocalizationKit` | `stats`, `list_languages`, `get_workbench_snapshot`, `set_language` | `LocalizationKit/state` |
 | `SceneKit` | `stats`, `list_scenes`, `get_workbench_snapshot`, `unload_scene` | `SceneKit/state` |
 | `SpatialKit` | `stats`, `list_indexes`, `get_workbench_snapshot` | `SpatialKit/state` |
-| `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection` | `UIKit/state` |
+| `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection`, `get_ui_root_settings`, `save_ui_root_settings`, `reset_ui_root_settings` | `UIKit/state` |
 
 ## Kit 调试入口
 
@@ -107,7 +107,7 @@ TableKit 和 GraphKit 是 Tauri 编辑器工具流，不是 Runtime command hand
 - LocalizationKit：`set_language` 使用 `{"language":"English"}` 或 `{"languageId":2}`，只在用户要求切换语言时执行。
 - SceneKit：`unload_scene` 使用 `{"sceneName":"Menu"}` 或 `{"name":"Menu"}`，只在用户要求维护场景时执行。
 - SpatialKit：命令桥只读，不通过 `.yokiframe` 插入、更新、删除或查询实体。
-- UIKit：运行时只读；Unity Editor 工具命令需要明确用户意图和当前 Selection。
+- UIKit：运行时只读；Unity Editor 工具命令需要明确用户意图。Prefab/Bind 命令依赖当前 Selection；UIRoot settings 命令读写 `Assets/Settings/Resources/UIKitSettings.asset`，保存后在下一次 UIRoot 初始化时生效。
 
 ## TableKit / GraphKit / Luban
 

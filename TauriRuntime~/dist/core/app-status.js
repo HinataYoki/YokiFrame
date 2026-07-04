@@ -108,6 +108,8 @@ async function pollStatus({ force = false } = {}) {
             renderAudioKitCachedPage();
         } else if (scopedStorageChanged && activePage === 'graphkit') {
             renderGraphKitWorkbench();
+        } else if (scopedStorageChanged && activePage === 'uikit') {
+            void loadUIKitWorkbench();
         }
     } catch (_) { /* IPC unavailable */ }
     finally {

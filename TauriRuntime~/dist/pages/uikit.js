@@ -1,5 +1,8 @@
 // pages/uikit.js
 // 页面：UIKit
+const UIKIT_EDITOR_FORM_STORAGE_KEY = 'yokiframe.uikit.editorForm.v1';
+let uikitEditorFormStorageScope = null;
+
 const uikitState = {
     stats: {},
     panels: [],
@@ -11,7 +14,36 @@ const uikitState = {
     editorToolState: null,
     editorStatusMessage: '',
     editorStatusKind: 'info',
-    editorForm: {
+    rootSettingsAvailable: false,
+    rootSettingsStatusMessage: '',
+    rootSettingsStatusKind: 'info',
+    rootSettingsForm: {
+        RenderMode: 'ScreenSpaceOverlay',
+        SortOrder: 0,
+        TargetDisplay: 0,
+        PixelPerfect: false,
+        ScaleMode: 'ScaleWithScreenSize',
+        ReferenceResolutionX: 3840,
+        ReferenceResolutionY: 2160,
+        ScreenMatchMode: 'MatchWidthOrHeight',
+        MatchWidthOrHeight: 0,
+        ReferencePixelsPerUnit: 100,
+        PhysicalUnit: 'Points',
+        FallbackScreenDPI: 96,
+        DefaultSpriteDPI: 96,
+        DynamicPixelsPerUnit: 1,
+        IgnoreReversedGraphics: false,
+        BlockingObjects: 'None',
+        BlockingMask: -1,
+    },
+    editorForm: getDefaultUIKitEditorForm(),
+    renderSignature: '',
+};
+
+syncUIKitProjectStorageScope({ force: true });
+
+function getDefaultUIKitEditorForm() {
+    return {
         panelName: '',
         scriptNamespace: 'GameUI',
         prefabFolder: 'Assets/Resources/Art/UIPrefab',
@@ -20,11 +52,60 @@ const uikitState = {
         assemblyName: 'Assembly-CSharp',
         codeTemplate: 'Default',
         overwrite: false,
-    },
-    renderSignature: '',
-};
+    };
+}
+
+function normalizeUIKitEditorForm(value) {
+    const defaults = getDefaultUIKitEditorForm();
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+        panelName: String(source.panelName ?? defaults.panelName),
+        scriptNamespace: normalizeUIKitEditorFormString(source.scriptNamespace, defaults.scriptNamespace),
+        prefabFolder: normalizeUIKitEditorFormString(source.prefabFolder, defaults.prefabFolder),
+        scriptFolder: normalizeUIKitEditorFormString(source.scriptFolder, defaults.scriptFolder),
+        prefabPath: String(source.prefabPath ?? defaults.prefabPath),
+        assemblyName: normalizeUIKitEditorFormString(source.assemblyName, defaults.assemblyName),
+        codeTemplate: normalizeUIKitEditorFormString(source.codeTemplate, defaults.codeTemplate),
+        overwrite: source.overwrite === true || source.overwrite === 'true' || source.overwrite === 1 || source.overwrite === '1',
+    };
+}
+
+function normalizeUIKitEditorFormString(value, fallback) {
+    const text = String(value ?? '').trim();
+    return text || fallback;
+}
+
+function loadUIKitEditorForm() {
+    try {
+        const raw = readProjectScopedStorageItem(UIKIT_EDITOR_FORM_STORAGE_KEY);
+        if (raw) return normalizeUIKitEditorForm(JSON.parse(raw));
+    } catch (_) {
+        // 损坏的本地表单缓存不应阻断 UIKit 页面打开。
+    }
+    return normalizeUIKitEditorForm({});
+}
+
+function saveUIKitEditorForm() {
+    uikitState.editorForm = normalizeUIKitEditorForm(uikitState.editorForm);
+    writeProjectScopedStorageItem(UIKIT_EDITOR_FORM_STORAGE_KEY, JSON.stringify(uikitState.editorForm));
+}
+
+function syncUIKitProjectStorageScope(options = {}) {
+    const nextScope = getProjectStorageScopeIdentifier();
+    if (!options.force && uikitEditorFormStorageScope === nextScope) return false;
+
+    uikitEditorFormStorageScope = nextScope;
+    uikitState.editorForm = loadUIKitEditorForm();
+    uikitState.renderSignature = '';
+    if (!options.force) {
+        uikitState.editorStatusKind = 'info';
+        uikitState.editorStatusMessage = '已切换到当前项目的 UI 面板创建参数。';
+    }
+    return true;
+}
 
 function renderUIKitPage() {
+    syncUIKitProjectStorageScope();
     const targetEngine = getSelectedEngineForNavigation();
     uikitState.editorToolsAvailable = engineSupportsKitFeature(targetEngine, 'UIKit', 'ui_editor_tools');
     $pageBody.classList.add('content-body--uikit');
@@ -86,14 +167,17 @@ async function loadUIKitWorkbench() {
         if (uikitState.editorToolsAvailable) {
             await refreshUIKitEditorToolState();
             syncUIKitEditorFormDefaults(uikitState.editorToolState);
+            await refreshUIKitRootSettings({ silent: true });
         } else {
             uikitState.editorToolState = null;
+            uikitState.rootSettingsAvailable = false;
         }
 
         const state = await fetchUIKitWorkbenchState();
         uikitState.stats = state.stats;
         uikitState.panels = state.panels;
         uikitState.stacks = state.stacks;
+        syncUIKitRootSettingsFromStats(uikitState.stats);
         reconcileUIKitSelection();
         clearMetrics();
 
@@ -109,6 +193,10 @@ async function loadUIKitWorkbench() {
             editorStatusMessage: uikitState.editorStatusMessage,
             editorStatusKind: uikitState.editorStatusKind,
             editorForm: uikitState.editorForm,
+            rootSettingsAvailable: uikitState.rootSettingsAvailable,
+            rootSettingsStatusMessage: uikitState.rootSettingsStatusMessage,
+            rootSettingsStatusKind: uikitState.rootSettingsStatusKind,
+            rootSettingsForm: uikitState.rootSettingsForm,
         });
         renderWorkbenchHtmlStable(uikitState, html, signature, bindUIKitWorkbenchActions);
     } catch (e) {
@@ -159,6 +247,10 @@ function renderUIKitWorkbenchFromState() {
         editorStatusMessage: uikitState.editorStatusMessage,
         editorStatusKind: uikitState.editorStatusKind,
         editorForm: uikitState.editorForm,
+        rootSettingsAvailable: uikitState.rootSettingsAvailable,
+        rootSettingsStatusMessage: uikitState.rootSettingsStatusMessage,
+        rootSettingsStatusKind: uikitState.rootSettingsStatusKind,
+        rootSettingsForm: uikitState.rootSettingsForm,
     });
     renderWorkbenchHtmlStable(uikitState, html, signature, bindUIKitWorkbenchActions);
 }

@@ -16,13 +16,18 @@ function renderUIKitWorkbench(stats, panels, stacks) {
                 <span class="kit-state-pill ${stats?.isInitialized ? 'kit-state-pill--ok' : 'kit-state-pill--muted'}">${escapeHtml(stats?.isInitialized ? 'Initialized' : 'No Backend')}</span>
             </div>
         </section>
-        ${editorTools}
-        <div class="kit-workbench-grid kit-workbench-grid--uikit">
+        <div class="uikit-setup-grid" data-uikit-setup-grid>
+            ${editorTools}
+            ${renderUIKitRootSettingsSection(stats?.rootSettings ?? {})}
+        </div>
+        ${renderUIKitRuntimeSummarySection(stats, stacks)}
+        <div class="uikit-inspector-layout">
+            <div class="kit-workbench-grid kit-workbench-grid--uikit">
             <section class="kit-panel kit-panel--list">
                 <div class="kit-panel__head">
                     <div>
                         <div class="kit-panel__title">${renderKitTitle('ui', '面板与栈')}</div>
-                        <div class="kit-panel__desc">当前缓存面板、面板栈和层级状态</div>
+                        <div class="kit-panel__desc">运行时面板缓存和栈状态</div>
                     </div>
                     <span class="kit-panel__count" data-uikit-visible-count>${escapeHtml(visiblePanels.length)} / ${escapeHtml(panels.length)}</span>
                 </div>
@@ -33,7 +38,7 @@ function renderUIKitWorkbench(stats, panels, stacks) {
                 <div class="kit-resource-list" data-kit-scroll-key="ui-stacks" data-uikit-stack-list>${renderUIKitStackRows(visibleStacks)}</div>
             </section>
             ${renderUIKitDetailSection(selectedPanel, selectedStack)}
-            ${renderUIKitStatsSection(stats, stacks)}
+            </div>
         </div>
     </div>`;
 }
@@ -146,41 +151,43 @@ function renderUIKitStackPanelNames(stackData) {
     </div>`).join('');
 }
 
-function renderUIKitStatsSection(stats, stacks) {
-    const rootSettings = stats?.rootSettings ?? {};
-    const pixelPerfect = typeof rootSettings.pixelPerfect === 'boolean' ? (rootSettings.pixelPerfect ? '是' : '否') : '--';
-    return `<section class="kit-panel kit-panel--events">
-        <div class="kit-panel__head">
-            <div>
-                <div class="kit-panel__title">${renderKitTitle('ui', '运行统计')}</div>
-                <div class="kit-panel__desc">后端、缓存、栈深度和面板可见状态</div>
+function renderUIKitRuntimeSummarySection(stats, stacks) {
+    const panelCount = Number(stats?.panelCount ?? 0);
+    const stackCount = Number(stats?.stackCount ?? stacks.length ?? 0);
+    const openCount = Number(stats?.openPanelCount ?? 0);
+    const cachedCount = Number(stats?.cachedPanelCount ?? 0);
+    const hiddenCount = Number(stats?.hiddenPanelCount ?? 0);
+    const closedCount = Number(stats?.closedPanelCount ?? 0);
+    const totalStackDepth = Number(stats?.totalStackDepth ?? 0);
+    return `<section class="uikit-runtime-strip" data-uikit-runtime-summary>
+        <div class="uikit-runtime-strip__identity">
+            <span class="kit-state-pill ${stats?.isInitialized ? 'kit-state-pill--ok' : 'kit-state-pill--muted'}">${escapeHtml(stats?.isInitialized ? '已初始化' : '未初始化')}</span>
+            <strong>${escapeHtml(stats?.backendName || '--')}</strong>
+            <em>Default 顶部：${escapeHtml(stats?.defaultTopPanelName || '--')}</em>
+        </div>
+        <div class="uikit-runtime-strip__metrics">
+            ${renderUIKitRuntimeMetric('面板', panelCount, `${openCount} 打开 / ${cachedCount} 缓存`)}
+            ${renderUIKitRuntimeMetric('栈', stackCount, `${totalStackDepth} 总深度`)}
+            ${renderUIKitRuntimeMetric('隐藏', hiddenCount, `${closedCount} 关闭`)}
+        </div>
+        <details class="uikit-runtime-strip__details">
+            <summary>诊断细节</summary>
+            <div class="uikit-runtime-strip__detail-grid">
+                <span>数据源</span><strong>telemetry / snapshot / command</strong>
+                <span>面板总数</span><strong>${escapeHtml(panelCount)}</strong>
+                <span>缓存面板</span><strong>${escapeHtml(cachedCount)}</strong>
+                <span>栈数量</span><strong>${escapeHtml(stackCount)}</strong>
             </div>
-        </div>
-        <div class="kit-detail-summary kit-detail-summary--save-auto">
-            <div><span>后端</span><strong>${escapeHtml(stats?.backendName || '--')}</strong></div>
-            <div><span>已初始化</span><strong>${escapeHtml(stats?.isInitialized ? '是' : '否')}</strong></div>
-            <div><span>面板总数</span><strong>${escapeHtml(stats?.panelCount ?? 0)}</strong></div>
-            <div><span>缓存面板</span><strong>${escapeHtml(stats?.cachedPanelCount ?? 0)}</strong></div>
-            <div><span>打开</span><strong>${escapeHtml(stats?.openPanelCount ?? 0)}</strong></div>
-            <div><span>隐藏</span><strong>${escapeHtml(stats?.hiddenPanelCount ?? 0)}</strong></div>
-            <div><span>关闭</span><strong>${escapeHtml(stats?.closedPanelCount ?? 0)}</strong></div>
-            <div><span>栈数量</span><strong>${escapeHtml(stats?.stackCount ?? stacks.length ?? 0)}</strong></div>
-            <div><span>栈深度</span><strong>${escapeHtml(stats?.totalStackDepth ?? 0)}</strong></div>
-            <div><span>Default 顶部</span><strong>${escapeHtml(stats?.defaultTopPanelName || '--')}</strong></div>
-        </div>
-        <div class="kit-note" data-uikit-root-settings>UIRoot 设置</div>
-        <div class="kit-detail-summary kit-detail-summary--save-auto">
-            <div><span>Render Mode</span><strong>${escapeHtml(rootSettings.renderMode || '--')}</strong></div>
-            <div><span>Sort Order</span><strong>${escapeHtml(rootSettings.sortOrder ?? '--')}</strong></div>
-            <div><span>Target Display</span><strong>${escapeHtml(rootSettings.targetDisplay ?? '--')}</strong></div>
-            <div><span>Pixel Perfect</span><strong>${escapeHtml(pixelPerfect)}</strong></div>
-            <div><span>Scale Mode</span><strong>${escapeHtml(rootSettings.scaleMode || '--')}</strong></div>
-            <div><span>Reference</span><strong>${escapeHtml(rootSettings.referenceResolution || '--')}</strong></div>
-            <div><span>Match</span><strong>${escapeHtml(rootSettings.matchWidthOrHeight ?? '--')}</strong></div>
-            <div><span>Blocking</span><strong>${escapeHtml(rootSettings.blockingObjects || '--')}</strong></div>
-        </div>
-        <div class="kit-note">快照由 Adapter 节流发布到 UIKit/state；页面优先读 telemetry，再读 snapshot，缺失时才走命令桥。</div>
+        </details>
     </section>`;
+}
+
+function renderUIKitRuntimeMetric(label, value, hint) {
+    return `<div class="uikit-runtime-strip__metric">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+        <em>${escapeHtml(hint)}</em>
+    </div>`;
 }
 
 function makeUIKitPanelKey(panel) {

@@ -125,6 +125,9 @@ function buildKitFocusSelector(element) {
     if (element.hasAttribute('data-tablekit-extra-field')) {
         return `[data-tablekit-extra-index="${escapeCssAttributeValue(element.dataset.tablekitExtraIndex)}"][data-tablekit-extra-field="${escapeCssAttributeValue(element.dataset.tablekitExtraField)}"]`;
     }
+    if (element.hasAttribute('data-uikit-root-setting')) {
+        return `[data-uikit-root-setting="${escapeCssAttributeValue(element.dataset.uikitRootSetting)}"]`;
+    }
     const attrs = [
         'data-poolkit-search',
         'data-architecture-search',

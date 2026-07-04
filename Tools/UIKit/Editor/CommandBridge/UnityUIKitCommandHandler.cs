@@ -23,7 +23,10 @@ namespace YokiFrame
             "create_panel_prefab",
             "generate_code_for_selection",
             "add_bind_to_selection",
-            "remove_bind_from_selection"
+            "remove_bind_from_selection",
+            "get_ui_root_settings",
+            "save_ui_root_settings",
+            "reset_ui_root_settings"
         };
 
         private readonly UIKitCommandHandler mRuntimeHandler = new UIKitCommandHandler();
@@ -52,6 +55,12 @@ namespace YokiFrame
                     return AddBindToSelection().ToJson();
                 case "remove_bind_from_selection":
                     return RemoveBindFromSelection().ToJson();
+                case "get_ui_root_settings":
+                    return UIKitRootSettingsCommand.BuildSettingsJson();
+                case "save_ui_root_settings":
+                    return UIKitRootSettingsCommand.SaveSettings(payloadJson);
+                case "reset_ui_root_settings":
+                    return UIKitRootSettingsCommand.ResetSettings();
                 default:
                     return mRuntimeHandler.HandleAction(action, payloadJson);
             }
