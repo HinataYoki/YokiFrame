@@ -464,13 +464,26 @@ namespace YokiFrame.Unity
             packageInfo = null;
             try
             {
-                packageInfo = PackageManagerPackageInfo.FindForPackageName(PackageName);
-                return packageInfo != null;
+                var packages = PackageManagerPackageInfo.GetAllRegisteredPackages();
+                if (packages == null)
+                    return false;
+
+                for (var i = 0; i < packages.Length; i++)
+                {
+                    var candidate = packages[i];
+                    if (candidate != null && string.Equals(candidate.name, PackageName, StringComparison.Ordinal))
+                    {
+                        packageInfo = candidate;
+                        return true;
+                    }
+                }
             }
             catch (Exception)
             {
                 return false;
             }
+
+            return false;
         }
 
         private static string BuildInstalledDescription(PackageManagerPackageInfo packageInfo)
