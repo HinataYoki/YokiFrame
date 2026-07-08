@@ -61,25 +61,11 @@ namespace YokiFrame.Unity
         /// <returns>加载到的资源；不存在或类型不匹配时返回 null。</returns>
         public T Load<T>(string path) where T : class
         {
-            var obj = Resources.Load(path);
-            if (obj == default)
+            var obj = LoadObject(path, typeof(T));
+            if (obj == null)
                 return null;
 
-            if (typeof(T) == typeof(GameObject))
-                return obj as T;
-
-            if (typeof(T) == typeof(IEngineObject))
-            {
-                var go = obj as GameObject;
-                if (go != default)
-                    return new UnityEngineObject(go) as T;
-            }
-
-            // 对于其他类型（Texture2D, Sprite, AudioClip 等），直接返回
-            if (obj is T typedObj)
-                return typedObj;
-
-            return null;
+            return ConvertResource<T>(obj);
         }
 
         /// <summary>
@@ -96,11 +82,11 @@ namespace YokiFrame.Unity
 #endif
         {
 #if YOKIFRAME_UNITASK_SUPPORT
-            var obj = await LoadObjectAsync(path, token);
+            var obj = await LoadObjectAsync(path, typeof(T), token);
 #else
-            var obj = await LoadObjectAsync(path, token).ConfigureAwait(false);
+            var obj = await LoadObjectAsync(path, typeof(T), token).ConfigureAwait(false);
 #endif
-            if (obj == default)
+            if (obj == null)
                 return null;
 
             return ConvertResource<T>(obj);
@@ -258,11 +244,31 @@ namespace YokiFrame.Unity
             if (typeof(T) == typeof(IEngineObject))
             {
                 var go = obj as GameObject;
-                if (go != default)
+                if (go != null)
                     return new UnityEngineObject(go) as T;
             }
 
             return obj as T;
+        }
+
+        /// <summary>
+        /// 按调用方请求的类型加载 Unity Resources 资源，避免 Sprite 等子资源被无类型加载解析为主资源。
+        /// </summary>
+        private static UnityEngine.Object LoadObject(string path, Type requestedType)
+        {
+            var resourceType = ResolveResourceType(requestedType);
+            return resourceType != null ? Resources.Load(path, resourceType) : Resources.Load(path);
+        }
+
+        /// <summary>
+        /// 把框架抽象类型转换为 Unity Resources 可识别的资源类型。
+        /// </summary>
+        private static Type ResolveResourceType(Type requestedType)
+        {
+            if (requestedType == typeof(IEngineObject))
+                return typeof(GameObject);
+
+            return typeof(UnityEngine.Object).IsAssignableFrom(requestedType) ? requestedType : null;
         }
 
         private sealed class UnitySceneBackend : IResSceneBackend
@@ -441,11 +447,12 @@ namespace YokiFrame.Unity
             return request.asset as TextAsset;
         }
 
-        private static async UniTask<UnityEngine.Object> LoadObjectAsync(string path, CancellationToken token)
+        private static async UniTask<UnityEngine.Object> LoadObjectAsync(string path, Type requestedType, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
-            var request = Resources.LoadAsync(path);
+            var resourceType = ResolveResourceType(requestedType);
+            var request = resourceType != null ? Resources.LoadAsync(path, resourceType) : Resources.LoadAsync(path);
             await request.ToUniTask(cancellationToken: token);
             return request.asset;
         }
@@ -480,12 +487,13 @@ namespace YokiFrame.Unity
             }
         }
 
-        private static async Task<UnityEngine.Object> LoadObjectAsync(string path, CancellationToken token)
+        private static async Task<UnityEngine.Object> LoadObjectAsync(string path, Type requestedType, CancellationToken token)
         {
             if (token.IsCancellationRequested)
                 token.ThrowIfCancellationRequested();
 
-            var request = Resources.LoadAsync(path);
+            var resourceType = ResolveResourceType(requestedType);
+            var request = resourceType != null ? Resources.LoadAsync(path, resourceType) : Resources.LoadAsync(path);
             var tcs = new TaskCompletionSource<ResourceRequest>();
             var registration = token.Register(() =>
             {
