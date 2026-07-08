@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace YokiFrame
@@ -31,7 +32,9 @@ namespace YokiFrame
         public const string MINIMAL_CODE_TEMPLATE = "Minimal";
 
         private const string PENDING_SESSION_KEY = "YokiFrame.UIKit.PendingPanelPrefabs";
+        private const string PENDING_OPEN_STAGE_SESSION_KEY = "YokiFrame.UIKit.PendingPanelPrefabStages";
         private const char PENDING_SEPARATOR = '|';
+        private const int MAX_OPEN_STAGE_BIND_RETRY_COUNT = 60;
 
         private static readonly HashSet<string> sCSharpKeywords = new(StringComparer.Ordinal)
         {
@@ -77,17 +80,19 @@ namespace YokiFrame
             {
                 panelRoot = CreatePanelRoot(request.PanelName);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(panelRoot, prefabPath);
-                GenerateCodeForPrefab(prefab, request, scriptFolder);
-                AddPendingPrefab(request.PanelName, request.ScriptNamespace, prefabPath, scriptFolder, request.AssemblyName);
+                var scriptsChanged = GenerateCodeForPrefab(prefab, request, scriptFolder);
+                AddPendingPrefab(request.PanelName, request.ScriptNamespace, prefabPath, scriptFolder, request.AssemblyName, false);
                 AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
+                if (scriptsChanged)
+                    AssetDatabase.Refresh();
+                ProcessPendingPrefabBindingsIfReady(scriptsChanged);
 
                 return UIKitEditorCommandResult.Success(
                     "UIPrefab 已创建",
                     prefabPath,
                     GetPanelScriptPath(request, scriptFolder),
                     GetPanelDesignerPath(request, scriptFolder),
-                    true);
+                    scriptsChanged);
             }
             finally
             {
@@ -107,17 +112,69 @@ namespace YokiFrame
             request.ApplyDefaultsFromPrefab(prefab.name);
             ValidateRequest(request);
             var scriptFolder = NormalizeAssetFolder(request.ScriptFolder, DEFAULT_SCRIPT_FOLDER);
-            GenerateCodeForPrefab(prefab, request, scriptFolder);
-            AddPendingPrefab(request.PanelName, request.ScriptNamespace, AssetDatabase.GetAssetPath(prefab), scriptFolder, request.AssemblyName);
+            var scriptsChanged = GenerateCodeForPrefab(prefab, request, scriptFolder);
+            var prefabPath = AssetDatabase.GetAssetPath(prefab);
+            AddPendingPrefab(request.PanelName, request.ScriptNamespace, prefabPath, scriptFolder, request.AssemblyName, false);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            if (scriptsChanged)
+                AssetDatabase.Refresh();
+            ProcessPendingPrefabBindingsIfReady(scriptsChanged);
 
             return UIKitEditorCommandResult.Success(
                 "UI 代码已生成",
-                AssetDatabase.GetAssetPath(prefab),
+                prefabPath,
                 GetPanelScriptPath(request, scriptFolder),
                 GetPanelDesignerPath(request, scriptFolder),
-                true);
+                scriptsChanged);
+        }
+
+        /// <summary>
+        /// 为当前打开的 Prefab Stage 内容重新生成 UIKit 绑定脚本，避免离线保存同一 Prefab 资源。
+        /// </summary>
+        public static UIKitEditorCommandResult GenerateCodeForPrefabContents(
+            GameObject prefabContentsRoot,
+            string prefabPath,
+            UIKitPanelCreateRequest request)
+        {
+            if (prefabContentsRoot == default)
+                throw new ArgumentNullException(nameof(prefabContentsRoot));
+
+            request.ApplyDefaultsFromPrefab(prefabContentsRoot.name);
+            ValidateRequest(request);
+            var scriptFolder = NormalizeAssetFolder(request.ScriptFolder, DEFAULT_SCRIPT_FOLDER);
+            var scriptsChanged = GenerateCodeForPrefab(prefabContentsRoot, request, scriptFolder);
+            AssetDatabase.SaveAssets();
+            if (scriptsChanged)
+            {
+                AddPendingPrefab(request.PanelName, request.ScriptNamespace, prefabPath, scriptFolder, request.AssemblyName, true);
+                AssetDatabase.Refresh();
+                ProcessPendingPrefabBindingsIfReady(true);
+            }
+            else
+            {
+                var bound = UIKitPrefabBindingProcessor.TryBindGeneratedPanelContents(
+                    request.PanelName,
+                    request.ScriptNamespace,
+                    prefabContentsRoot,
+                    scriptFolder,
+                    request.AssemblyName);
+                if (bound && prefabContentsRoot.scene.IsValid())
+                    EditorSceneManager.MarkSceneDirty(prefabContentsRoot.scene);
+                if (bound)
+                    ClearOpenPrefabStageBinding(prefabPath);
+                if (!bound)
+                {
+                    AddPendingPrefab(request.PanelName, request.ScriptNamespace, prefabPath, scriptFolder, request.AssemblyName, true);
+                    ProcessPendingPrefabBindingsIfReady(false);
+                }
+            }
+
+            return UIKitEditorCommandResult.Success(
+                "UI 代码已生成",
+                prefabPath,
+                GetPanelScriptPath(request, scriptFolder),
+                GetPanelDesignerPath(request, scriptFolder),
+                scriptsChanged);
         }
 
         /// <summary>
@@ -125,22 +182,109 @@ namespace YokiFrame
         /// </summary>
         public static void ProcessPendingPrefabBindings()
         {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += ProcessPendingPrefabBindings;
+                return;
+            }
+
             var pending = SessionState.GetString(PENDING_SESSION_KEY, string.Empty);
             if (string.IsNullOrEmpty(pending))
                 return;
 
             var remaining = new List<string>();
+            var retrySoon = false;
             var lines = pending.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < lines.Length; i++)
             {
                 if (!TryParsePendingEntry(lines[i], out var panelName, out var scriptNamespace, out var prefabPath, out var scriptFolder, out var assemblyName))
                     continue;
 
+                var requiresOpenPrefabStage = IsOpenPrefabStageBindingPending(prefabPath);
+                bool handledByOpenPrefabStage;
+                var openStageBound = TryBindOpenPrefabStage(
+                    panelName,
+                    scriptNamespace,
+                    prefabPath,
+                    scriptFolder,
+                    assemblyName,
+                    out handledByOpenPrefabStage);
+                if (handledByOpenPrefabStage)
+                {
+                    if (!openStageBound)
+                    {
+                        remaining.Add(lines[i]);
+                        if (requiresOpenPrefabStage && ShouldRetryOpenPrefabStageBinding(prefabPath))
+                            retrySoon = true;
+                    }
+                    else
+                    {
+                        ClearOpenPrefabStageBinding(prefabPath);
+                    }
+                    continue;
+                }
+
+                if (requiresOpenPrefabStage)
+                {
+                    remaining.Add(lines[i]);
+                    if (ShouldRetryOpenPrefabStageBinding(prefabPath))
+                        retrySoon = true;
+                    continue;
+                }
+
                 if (!TryBindGeneratedPanel(panelName, scriptNamespace, prefabPath, scriptFolder, assemblyName))
                     remaining.Add(lines[i]);
             }
 
             SessionState.SetString(PENDING_SESSION_KEY, string.Join("\n", remaining.ToArray()));
+            if (retrySoon)
+                EditorApplication.delayCall += ProcessPendingPrefabBindings;
+        }
+
+        private static void ProcessPendingPrefabBindingsIfReady(bool scriptsChanged)
+        {
+            if (scriptsChanged || EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += ProcessPendingPrefabBindings;
+                return;
+            }
+
+            ProcessPendingPrefabBindings();
+        }
+
+        private static bool TryBindOpenPrefabStage(
+            string panelName,
+            string scriptNamespace,
+            string prefabPath,
+            string scriptFolder,
+            string assemblyName,
+            out bool handled)
+        {
+            handled = false;
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (prefabStage == null ||
+                prefabStage.prefabContentsRoot == null ||
+                string.IsNullOrEmpty(prefabStage.prefabAssetPath) ||
+                string.IsNullOrEmpty(prefabPath) ||
+                !string.Equals(
+                    NormalizeAssetPathForComparison(prefabStage.prefabAssetPath),
+                    NormalizeAssetPathForComparison(prefabPath),
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            handled = true;
+            var bound = UIKitPrefabBindingProcessor.TryBindGeneratedPanelContents(
+                panelName,
+                scriptNamespace,
+                prefabStage.prefabContentsRoot,
+                scriptFolder,
+                assemblyName);
+            if (bound && prefabStage.scene.IsValid())
+                EditorSceneManager.MarkSceneDirty(prefabStage.scene);
+
+            return bound;
         }
 
         private static GameObject CreatePanelRoot(string panelName)

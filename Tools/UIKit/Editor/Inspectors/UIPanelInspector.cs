@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -170,7 +171,8 @@ namespace YokiFrame
 
         private void GenerateUICode()
         {
-            var prefab = ResolvePrefabAsset();
+            GameObject activePrefabContentsRoot;
+            var prefab = ResolvePrefabAsset(out activePrefabContentsRoot);
             if (prefab == null)
             {
                 EditorUtility.DisplayDialog("无法生成 UI 代码", "请在 Prefab 资源或 Prefab 实例上使用生成入口。", "确定");
@@ -179,14 +181,23 @@ namespace YokiFrame
 
             try
             {
-                UIKitPanelPrefabCreator.GenerateCodeForPrefab(prefab, new UIKitPanelCreateRequest
+                var request = new UIKitPanelCreateRequest
                 {
                     PanelName = prefab.name,
                     ScriptFolder = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER,
                     ScriptNamespace = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE,
                     AssemblyName = UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME,
                     CodeTemplate = UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE
-                });
+                };
+                if (activePrefabContentsRoot != null)
+                {
+                    var prefabPath = AssetDatabase.GetAssetPath(prefab);
+                    UIKitPanelPrefabCreator.GenerateCodeForPrefabContents(activePrefabContentsRoot, prefabPath, request);
+                }
+                else
+                {
+                    UIKitPanelPrefabCreator.GenerateCodeForPrefab(prefab, request);
+                }
                 RefreshBindTree();
             }
             catch (Exception ex)
@@ -196,11 +207,22 @@ namespace YokiFrame
             }
         }
 
-        private GameObject ResolvePrefabAsset()
+        private GameObject ResolvePrefabAsset(out GameObject activePrefabContentsRoot)
         {
+            activePrefabContentsRoot = null;
             var panel = target as UIPanel;
             if (panel == null)
                 return null;
+
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (prefabStage != null &&
+                prefabStage.prefabContentsRoot != null &&
+                panel.gameObject.scene == prefabStage.prefabContentsRoot.scene &&
+                IsChildOf(panel.transform, prefabStage.prefabContentsRoot.transform))
+            {
+                activePrefabContentsRoot = prefabStage.prefabContentsRoot;
+                return AssetDatabase.LoadAssetAtPath<GameObject>(prefabStage.prefabAssetPath);
+            }
 
             var assetPath = AssetDatabase.GetAssetPath(panel.gameObject);
             if (!string.IsNullOrEmpty(assetPath))
@@ -208,6 +230,20 @@ namespace YokiFrame
 
             assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(panel.gameObject);
             return string.IsNullOrEmpty(assetPath) ? null : AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        }
+
+        private static bool IsChildOf(Transform child, Transform parent)
+        {
+            var current = child;
+            while (current != null)
+            {
+                if (current == parent)
+                    return true;
+
+                current = current.parent;
+            }
+
+            return false;
         }
 
         private void OpenPanelScript()

@@ -1,9 +1,5 @@
 #if UNITY_EDITOR
-using System;
 using System.Collections.Generic;
-using System.IO;
-using UnityEditor;
-using UnityEngine;
 
 namespace YokiFrame
 {
@@ -74,108 +70,12 @@ namespace YokiFrame
 
         private static bool TryBindGeneratedPanel(string panelName, string scriptNamespace, string prefabPath, string scriptFolder, string assemblyName)
         {
-            var panelType = ResolveType(scriptNamespace + "." + panelName, assemblyName);
-            if (panelType == default || !typeof(UIPanel).IsAssignableFrom(panelType))
-                return false;
-
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            if (prefab == default)
-                return true;
-
-            var root = PrefabUtility.LoadPrefabContents(prefabPath);
-            try
-            {
-                if (root.GetComponent(panelType) == default)
-                    root.AddComponent(panelType);
-
-                var request = new UIKitPanelCreateRequest
-                {
-                    PanelName = panelName,
-                    ScriptNamespace = scriptNamespace,
-                    ScriptFolder = scriptFolder,
-                    PrefabFolder = Path.GetDirectoryName(prefabPath),
-                    AssemblyName = string.IsNullOrEmpty(assemblyName) ? DEFAULT_ASSEMBLY_NAME : assemblyName
-                };
-                var context = new UIKitPanelCodeGenContext(panelName, scriptFolder, scriptNamespace);
-                var bindInfo = CollectBindInfo(root, panelName);
-                AssignBindReferences(root, panelType, bindInfo, context);
-                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-                AssetDatabase.ImportAsset(prefabPath);
-                return true;
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        private static void AssignBindReferences(GameObject root, Type panelType, BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
-        {
-            var panel = root.GetComponent(panelType);
-            if (panel == default)
-                return;
-
-            var serialized = new SerializedObject(panel);
-            AssignBindReferencesRecursive(serialized, bindInfo, context);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        private static void AssignBindReferencesRecursive(SerializedObject serialized, BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
-        {
-            var children = GetSortedChildren(bindInfo);
-            for (var i = 0; i < children.Count; i++)
-            {
-                var child = children[i];
-                var fieldName = GetBindFieldName(child);
-                if (string.IsNullOrEmpty(fieldName))
-                    continue;
-
-                var objectReference = ResolveBindObjectReference(child, context);
-                var property = serialized.FindProperty(fieldName);
-                if (property != default && property.propertyType == SerializedPropertyType.ObjectReference)
-                    property.objectReferenceValue = objectReference;
-
-                var childComponent = objectReference as Component;
-                var strategy = BindStrategyRegistry.Get(child.Bind);
-                if (childComponent == default || strategy == default || !strategy.RequiresClassFile)
-                    continue;
-
-                var childSerialized = new SerializedObject(childComponent);
-                AssignBindReferencesRecursive(childSerialized, child, context);
-                childSerialized.ApplyModifiedPropertiesWithoutUndo();
-            }
-        }
-
-        private static UnityEngine.Object ResolveBindObjectReference(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
-        {
-            if (bindInfo == default || bindInfo.Self == default)
-                return default;
-
-            if (bindInfo.Bind == BindType.Member)
-            {
-                var memberType = ResolveType(bindInfo.Type);
-                if (memberType != default && typeof(Component).IsAssignableFrom(memberType))
-                    return bindInfo.Self.GetComponent(memberType);
-
-                if (memberType == typeof(GameObject))
-                    return bindInfo.Self;
-            }
-
-            return AssignGeneratedBindComponent(bindInfo, context);
-        }
-
-        private static Component AssignGeneratedBindComponent(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
-        {
-            var typeName = GetBindFieldType(bindInfo, context);
-            var type = ResolveType(typeName);
-            if (type == default || !typeof(Component).IsAssignableFrom(type) || bindInfo.Self == default)
-                return default;
-
-            var component = bindInfo.Self.GetComponent(type);
-            if (component == default)
-                component = bindInfo.Self.AddComponent(type);
-
-            return component;
+            return UIKitPrefabBindingProcessor.TryBindGeneratedPanel(
+                panelName,
+                scriptNamespace,
+                prefabPath,
+                scriptFolder,
+                assemblyName);
         }
     }
 }

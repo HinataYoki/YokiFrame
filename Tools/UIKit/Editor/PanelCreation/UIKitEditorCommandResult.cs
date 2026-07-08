@@ -14,6 +14,11 @@ namespace YokiFrame
         private readonly int mSkippedCount;
         private readonly bool mRequiresCompile;
 
+        /// <summary>
+        /// 本次生成是否写入了 C# 文件并需要等待 Unity 编译。
+        /// </summary>
+        public bool RequiresCompile => mRequiresCompile;
+
         private UIKitEditorCommandResult(
             string message,
             string prefabPath,

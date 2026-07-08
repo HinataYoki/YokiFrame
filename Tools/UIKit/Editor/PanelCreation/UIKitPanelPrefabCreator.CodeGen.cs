@@ -6,16 +6,18 @@ namespace YokiFrame
 {
     internal static partial class UIKitPanelPrefabCreator
     {
-        private static void GenerateCodeForPrefab(GameObject prefab, UIKitPanelCreateRequest request, string scriptFolder)
+        private static bool GenerateCodeForPrefab(GameObject prefab, UIKitPanelCreateRequest request, string scriptFolder)
         {
             if (prefab == default)
                 throw new System.ArgumentNullException(nameof(prefab));
 
             var bindInfo = CollectBindInfo(prefab, request.PanelName);
             var context = new UIKitPanelCodeGenContext(request.PanelName, scriptFolder, request.ScriptNamespace);
-            WritePanelScript(request, scriptFolder);
-            WritePanelDesignerScript(request, scriptFolder, bindInfo, context);
-            WriteBindTypeScripts(bindInfo, context);
+            var scriptsChanged = false;
+            scriptsChanged |= WritePanelScript(request, scriptFolder);
+            scriptsChanged |= WritePanelDesignerScript(request, scriptFolder, bindInfo, context);
+            scriptsChanged |= WriteBindTypeScripts(bindInfo, context);
+            return scriptsChanged;
         }
 
         private static BindCodeInfo CollectBindInfo(GameObject prefab, string panelName)
@@ -31,13 +33,13 @@ namespace YokiFrame
             return bindInfo;
         }
 
-        private static void WritePanelScript(UIKitPanelCreateRequest request, string scriptFolder)
+        private static bool WritePanelScript(UIKitPanelCreateRequest request, string scriptFolder)
         {
             var panelPath = GetPanelScriptPath(request, scriptFolder);
             if (File.Exists(panelPath))
-                return;
+                return false;
 
-            GenerateCSharpFile(panelPath, request.ScriptNamespace, false, scope =>
+            return GenerateCSharpFile(panelPath, request.ScriptNamespace, false, scope =>
             {
                 scope.Class(request.PanelName + "Data", "IUIData", false, false, cls => cls.AsSealed());
                 scope.EmptyLine();
@@ -80,10 +82,10 @@ namespace YokiFrame
                 .WithBody(body => body.Custom("mData = uiData as " + panelName + "Data ?? new " + panelName + "Data();")));
         }
 
-        private static void WritePanelDesignerScript(UIKitPanelCreateRequest request, string scriptFolder, BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
+        private static bool WritePanelDesignerScript(UIKitPanelCreateRequest request, string scriptFolder, BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
         {
             var designerPath = GetPanelDesignerPath(request, scriptFolder);
-            GenerateCSharpFile(designerPath, request.ScriptNamespace, true, scope =>
+            return GenerateCSharpFile(designerPath, request.ScriptNamespace, true, scope =>
             {
                 scope.Class(request.PanelName, default, true, false, cls =>
                 {
@@ -105,8 +107,9 @@ namespace YokiFrame
             });
         }
 
-        private static void WriteBindTypeScripts(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
+        private static bool WriteBindTypeScripts(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context)
         {
+            var scriptsChanged = false;
             var children = GetSortedChildren(bindInfo);
             for (var i = 0; i < children.Count; i++)
             {
@@ -115,34 +118,36 @@ namespace YokiFrame
                 if (strategy == default || !strategy.RequiresClassFile)
                     continue;
 
-                WriteBindUserScript(child, context, strategy);
-                WriteBindDesignerScript(child, context, strategy);
-                WriteBindTypeScripts(child, context);
+                scriptsChanged |= WriteBindUserScript(child, context, strategy);
+                scriptsChanged |= WriteBindDesignerScript(child, context, strategy);
+                scriptsChanged |= WriteBindTypeScripts(child, context);
             }
+
+            return scriptsChanged;
         }
 
-        private static void WriteBindUserScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)
+        private static bool WriteBindUserScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)
         {
             var scriptPath = strategy.GetScriptPath(bindInfo, context, false);
             if (string.IsNullOrEmpty(scriptPath) || File.Exists(scriptPath))
-                return;
+                return false;
 
             var typeNamespace = strategy.GetNamespace(context);
             var baseClassName = strategy.GetBaseClassName();
-            GenerateCSharpFile(scriptPath, typeNamespace, false, scope =>
+            return GenerateCSharpFile(scriptPath, typeNamespace, false, scope =>
             {
                 scope.Class(bindInfo.Type, baseClassName, true, false, default);
             });
         }
 
-        private static void WriteBindDesignerScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)
+        private static bool WriteBindDesignerScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)
         {
             var scriptPath = strategy.GetScriptPath(bindInfo, context, true);
             if (string.IsNullOrEmpty(scriptPath))
-                return;
+                return false;
 
             var typeNamespace = strategy.GetNamespace(context);
-            GenerateCSharpFile(scriptPath, typeNamespace, true, scope =>
+            return GenerateCSharpFile(scriptPath, typeNamespace, true, scope =>
             {
                 scope.Class(bindInfo.Type, default, true, false, cls =>
                 {
