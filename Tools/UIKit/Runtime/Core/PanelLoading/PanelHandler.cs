@@ -5,6 +5,15 @@ using UnityEngine;
 
 namespace YokiFrame
 {
+    internal enum PanelRootCloseState
+    {
+        None,
+        Pending,
+        Finalizing,
+        DestroyedFinalizing,
+        Finalized
+    }
+
     public class PanelHandler : IPoolable
     {
         /// <summary>
@@ -70,20 +79,40 @@ namespace YokiFrame
         /// </summary>
         public string Tag = null;
 
+        /// <summary>
+        /// 当前打开轮次的 UIRoot 关闭阶段。
+        /// </summary>
+        internal PanelRootCloseState RootCloseState;
+
+        /// <summary>
+        /// 区分同一 Handler 上先后发生的根关闭轮次。
+        /// </summary>
+        internal int RootCloseVersion;
+
         public bool IsRecycled { get; set; }
 
         public static PanelHandler Allocate() => SafePoolKit<PanelHandler>.Instance.Allocate();
 
         public void Recycle() => SafePoolKit<PanelHandler>.Instance.Recycle(this);
 
+        /// <summary>
+        /// 解除面板所有权并重置池化字段。
+        /// </summary>
         void IPoolable.OnRecycled()
         {
+            var panel = Panel;
+            if (panel != default && ReferenceEquals(panel.Handler, this))
+            {
+                panel.Handler = null;
+            }
+
             Type = null;
             Level = default;
             OnStack = null;
             Prefab = null;
             Panel = null;
             Data = null;
+            Hot = 0;
             if (Loader != default) Loader.UnLoadAndRecycle();
             Loader = null;
             StackName = "main";
@@ -92,6 +121,8 @@ namespace YokiFrame
             OpenTimestamp = 0;
             CacheMode = PanelCacheMode.Hot;
             Tag = null;
+            RootCloseState = PanelRootCloseState.None;
+            RootCloseVersion = 0;
         }
     }
 }

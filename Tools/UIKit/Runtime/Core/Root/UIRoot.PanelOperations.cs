@@ -210,67 +210,188 @@ namespace YokiFrame
         {
             if (panel == default) return;
             panel.Open(data);
+            RegisterPanelToLevel(panel);
             panel.Show();
         }
 
+        /// <summary>
+        /// 发起一次由 UIRoot 管理的幂等关闭流程。
+        /// </summary>
         internal void ClosePanelInternal(IPanel panel)
         {
             if (panel == default) return;
 
-            var unityObj = panel as UnityEngine.Object;
-            if (unityObj == default)
+            var handler = panel.Handler;
+            if (handler == default) return;
+            if (!ReferenceEquals(handler.Panel, panel))
             {
-                if (panel.Handler != default)
-                {
-                    RemoveFromStack(panel);
-                    UnregisterPanelFromLevel(panel);
-                    RemoveFromOpenedCache(panel.Handler.Type);
-                    panel.Handler.Recycle();
-                }
+                if (ReferenceEquals(panel.Handler, handler)) panel.Handler = null;
+                return;
+            }
+            if (handler.IsRecycled || handler.Type == default)
+            {
+                if (ReferenceEquals(panel.Handler, handler)) panel.Handler = null;
                 return;
             }
 
+            if (panel is UnityEngine.Object unityPanel && unityPanel == null)
+            {
+                CompleteDestroyedPanelCloseInternal(panel, handler);
+                return;
+            }
+
+            if (handler.RootCloseState != PanelRootCloseState.None) return;
+
+            handler.RootCloseState = PanelRootCloseState.Pending;
+            handler.RootCloseVersion = unchecked(handler.RootCloseVersion + 1);
+            var closeVersion = handler.RootCloseVersion;
+
             if (panel is UIPanel uiPanel)
             {
-                uiPanel.Close(() => CompletePanelCloseInternal(panel));
+                uiPanel.Close(() => CompletePanelCloseInternal(panel, handler, closeVersion));
                 return;
             }
 
             panel.Close();
-            CompletePanelCloseInternal(panel);
+            CompletePanelCloseInternal(panel, handler, closeVersion);
         }
 
-        private void CompletePanelCloseInternal(IPanel panel)
+        /// <summary>
+        /// 完成指定 Handler 所属打开轮次的栈、层级、缓存和销毁清理。
+        /// </summary>
+        private void CompletePanelCloseInternal(IPanel panel, PanelHandler handler, int closeVersion)
         {
-            if (panel == default) return;
-            if (panel.Handler == default) return;
+            if (panel == default || handler == default) return;
+
+            if (panel is UnityEngine.Object unityPanel && unityPanel == null)
+            {
+                if (!handler.IsRecycled && ReferenceEquals(panel.Handler, handler) &&
+                    ReferenceEquals(handler.Panel, panel))
+                {
+                    CompleteDestroyedPanelCloseInternal(panel, handler);
+                }
+                return;
+            }
+
+            if (!IsCurrentPanelClose(panel, handler, closeVersion, PanelRootCloseState.Pending)) return;
+
+            bool shouldDestroy = ShouldDestroyOnClose(handler);
+            var panelType = handler.Type;
+            handler.RootCloseState = PanelRootCloseState.Finalizing;
+            if (shouldDestroy)
+            {
+                RemoveFromOpenedCache(panelType, handler);
+            }
 
             RemoveFromStack(panel);
+            if (panel is UnityEngine.Object currentUnityPanel && currentUnityPanel == null)
+            {
+                if (!handler.IsRecycled && handler.RootCloseVersion == closeVersion &&
+                    ReferenceEquals(panel.Handler, handler) && ReferenceEquals(handler.Panel, panel))
+                {
+                    CompleteDestroyedPanelCloseInternal(panel, handler);
+                }
+                return;
+            }
+            if (!IsCurrentPanelClose(panel, handler, closeVersion, PanelRootCloseState.Finalizing)) return;
+
             UnregisterPanelFromLevel(panel);
             OnPanelCloseFocus(panel);
+            handler.RootCloseState = PanelRootCloseState.Finalized;
 
-            // 根据 CacheMode 决策是否销毁
-            if (ShouldDestroyOnClose(panel.Handler))
+            if (shouldDestroy)
             {
                 DestroyPanelInternal(panel);
-                RemoveFromOpenedCache(panel.Handler.Type);
-                panel.Handler.Recycle();
+                handler.Recycle();
             }
         }
 
+        /// <summary>
+        /// 清理已被外部销毁、但仍由当前 Handler 持有的面板记录。
+        /// </summary>
+        private void CompleteDestroyedPanelCloseInternal(IPanel panel, PanelHandler handler)
+        {
+            if (handler == default || handler.IsRecycled || handler.Type == default) return;
+            if (!ReferenceEquals(panel.Handler, handler) || !ReferenceEquals(handler.Panel, panel)) return;
+            if (handler.RootCloseState == PanelRootCloseState.DestroyedFinalizing) return;
+
+            var panelType = handler.Type;
+            var closeVersion = handler.RootCloseVersion;
+            handler.RootCloseState = PanelRootCloseState.DestroyedFinalizing;
+            RemoveFromOpenedCache(panelType, handler);
+            RemoveFromStack(panel);
+            if (!IsCurrentDestroyedPanelClose(panel, handler, closeVersion)) return;
+
+            UnregisterPanelFromLevel(panel);
+            OnPanelCloseFocus(panel);
+            handler.RootCloseState = PanelRootCloseState.Finalized;
+
+            if (ReferenceEquals(panel.Handler, handler)) panel.Handler = null;
+            if (ReferenceEquals(handler.Panel, panel)) handler.Panel = null;
+            handler.Recycle();
+        }
+
+        /// <summary>
+        /// 判断回调是否仍属于面板当前的根关闭轮次。
+        /// </summary>
+        private static bool IsCurrentPanelClose(IPanel panel, PanelHandler handler, int closeVersion,
+            PanelRootCloseState expectedState)
+        {
+            if (panel == default || handler == default || handler.IsRecycled) return false;
+            if (panel is UnityEngine.Object unityPanel && unityPanel == null) return false;
+            if (handler.RootCloseState != expectedState || handler.RootCloseVersion != closeVersion)
+                return false;
+            return ReferenceEquals(panel.Handler, handler) && ReferenceEquals(handler.Panel, panel) &&
+                   handler.Type != default;
+        }
+
+        /// <summary>
+        /// 判断 fake-null 清理是否仍持有同一面板和关闭轮次。
+        /// </summary>
+        private static bool IsCurrentDestroyedPanelClose(IPanel panel, PanelHandler handler, int closeVersion)
+        {
+            if (panel == default || handler == default || handler.IsRecycled) return false;
+            if (handler.RootCloseState != PanelRootCloseState.DestroyedFinalizing ||
+                handler.RootCloseVersion != closeVersion || handler.Type == default)
+                return false;
+            if (panel is not UnityEngine.Object unityPanel || unityPanel != null) return false;
+            return ReferenceEquals(panel.Handler, handler) && ReferenceEquals(handler.Panel, panel);
+        }
+
+        /// <summary>
+        /// 清理面板资源、解除 Handler 所有权并销毁宿主对象。
+        /// </summary>
         internal void DestroyPanelInternal(IPanel panel)
         {
-            if (panel != default && panel.Transform != default && panel.Transform.gameObject != default)
+            if (panel == default) return;
+            if (panel is UnityEngine.Object unityPanel && unityPanel == null) return;
+
+            var panelTransform = panel.Transform;
+            if (panelTransform == default || panelTransform.gameObject == default) return;
+
+            var panelObject = panelTransform.gameObject;
+            var handler = panel.Handler;
+            panel.Cleanup();
+
+            bool panelIsAlive = !(panel is UnityEngine.Object currentUnityPanel) || currentUnityPanel != null;
+            if (panelIsAlive && handler != default && ReferenceEquals(panel.Handler, handler))
             {
-                panel.Cleanup();
-                if (UnityEngine.Application.isPlaying)
-                {
-                    Destroy(panel.Transform.gameObject);
-                }
-                else
-                {
-                    DestroyImmediate(panel.Transform.gameObject);
-                }
+                panel.Handler = null;
+            }
+            if (handler != default && ReferenceEquals(handler.Panel, panel))
+            {
+                handler.Panel = null;
+            }
+
+            if (panelObject == default) return;
+
+            if (UnityEngine.Application.isPlaying)
+            {
+                Destroy(panelObject);
+            }
+            else
+            {
+                DestroyImmediate(panelObject);
             }
         }
 

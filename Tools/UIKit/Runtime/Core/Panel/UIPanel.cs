@@ -136,6 +136,11 @@ namespace YokiFrame
 
         public void Open(IUIData data = null)
         {
+            if (Handler != default)
+            {
+                Handler.RootCloseState = PanelRootCloseState.None;
+            }
+
             mHideLifecycleCompleted = false;
             mCloseLifecycleInProgress = false;
             mCloseLifecycleCompleted = false;

@@ -170,13 +170,23 @@ namespace YokiFrame
         /// </summary>
         internal bool RemoveFromOpenedCache(Type type)
         {
-            if (mOpenedCache.TryGetValue(type, out var handler))
+            return RemoveFromOpenedCache(type, null);
+        }
+
+        /// <summary>
+        /// 仅当缓存仍由预期 Handler 持有时移除，避免旧关闭轮次误删新缓存。
+        /// </summary>
+        internal bool RemoveFromOpenedCache(Type type, PanelHandler expectedHandler)
+        {
+            if (type == default) return false;
+
+            if (!mOpenedCache.TryGetValue(type, out var handler)) return false;
+            if (expectedHandler != default && !ReferenceEquals(handler, expectedHandler)) return false;
+
+            if (!string.IsNullOrEmpty(handler.Tag) && mTagIndex.TryGetValue(handler.Tag, out var set))
             {
-                if (!string.IsNullOrEmpty(handler.Tag) && mTagIndex.TryGetValue(handler.Tag, out var set))
-                {
-                    set.Remove(type);
-                    if (set.Count == 0) mTagIndex.Remove(handler.Tag);
-                }
+                set.Remove(type);
+                if (set.Count == 0) mTagIndex.Remove(handler.Tag);
             }
             return mOpenedCache.Remove(type);
         }
@@ -225,6 +235,9 @@ namespace YokiFrame
                 {
                     var handler = kvp.Value;
                     if (handler == default) continue;
+                    if (handler.RootCloseState is PanelRootCloseState.Pending or
+                        PanelRootCloseState.Finalizing or PanelRootCloseState.DestroyedFinalizing)
+                        continue;
 
                     handler.Hot -= Weaken;
 
@@ -244,9 +257,9 @@ namespace YokiFrame
                     var type = toRemove[i];
                     if (mOpenedCache.TryGetValue(type, out var handler))
                     {
+                        if (!RemoveFromOpenedCache(type, handler)) continue;
                         DestroyPanelInternal(handler.Panel);
                         handler.Recycle();
-                        mOpenedCache.Remove(type);
                     }
                 }
             });
