@@ -37,6 +37,7 @@ namespace YokiFrame.Unity
     public static class YooInit
     {
         private static readonly Dictionary<string, ResourcePackage> sPackages = new();
+        private static bool sEditorSimulateMode;
 
         /// <summary>
         /// 获取 YooAsset 是否已经完成初始化。
@@ -164,7 +165,8 @@ namespace YokiFrame.Unity
             if (DefaultPackage == null)
                 throw new InvalidOperationException("[YooInit] 没有可用资源包，请检查 YooInitConfig.PackageNames。");
 
-            InstallProvider(DefaultPackage);
+            sEditorSimulateMode = config.PlayMode == EPlayMode.EditorSimulateMode;
+            InstallProvider(DefaultPackage, sEditorSimulateMode);
             Initialized = true;
         }
 
@@ -200,12 +202,25 @@ namespace YokiFrame.Unity
             sPackages[package.PackageName] = package;
 
 #if YOOASSET_3_0_OR_NEWER
-            ResKit.SetProvider(new YooAssetResourceProvider(package));
+            ResKit.SetProvider(new YooAssetResourceProvider(package, sEditorSimulateMode));
 #else
             YooAssets.SetDefaultPackage(package);
             ResKit.SetProvider(new YooAssetResourceProvider());
 #endif
         }
+
+#if YOOASSET_3_0_OR_NEWER
+        private static void InstallProvider(ResourcePackage package, bool editorSimulateMode)
+        {
+            if (package == null)
+                throw new ArgumentNullException(nameof(package));
+
+            DefaultPackage = package;
+            DefaultPackageName = package.PackageName;
+            sPackages[package.PackageName] = package;
+            ResKit.SetProvider(new YooAssetResourceProvider(package, editorSimulateMode));
+        }
+#endif
 
         /// <summary>
         /// 尝试获取指定名称的资源包。
@@ -236,6 +251,7 @@ namespace YokiFrame.Unity
         {
             ResKit.ClearAll();
             Initialized = false;
+            sEditorSimulateMode = false;
             DefaultPackage = null;
             DefaultPackageName = null;
             sPackages.Clear();

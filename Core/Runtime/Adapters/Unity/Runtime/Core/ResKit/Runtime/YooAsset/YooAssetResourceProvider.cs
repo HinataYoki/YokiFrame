@@ -81,6 +81,11 @@ namespace YokiFrame.Unity
         {
         }
 
+        internal YooAssetResourceProvider(ResourcePackage package, bool editorSimulateMode)
+            : this(new YooAssetV3ResourceBackend(package), new YooAssetV3RawFileBackend(package, editorSimulateMode), new YooAssetV3SceneBackend(package))
+        {
+        }
+
         /// <summary>
         /// 使用指定资源包名称创建资源提供者。
         /// </summary>

@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using YooAsset;
+using UnityEngine;
 #if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
 #else
@@ -17,10 +18,17 @@ namespace YokiFrame.Unity
 
         private readonly ResourcePackage mPackage;
         private readonly string mPackageName;
+        private readonly bool mEditorSimulateMode;
 
         public YooAssetV3RawFileBackend(ResourcePackage package)
         {
             mPackage = package ?? throw new ArgumentNullException(nameof(package));
+        }
+
+        internal YooAssetV3RawFileBackend(ResourcePackage package, bool editorSimulateMode)
+        {
+            mPackage = package ?? throw new ArgumentNullException(nameof(package));
+            mEditorSimulateMode = editorSimulateMode;
         }
 
         public YooAssetV3RawFileBackend(string packageName)
@@ -28,13 +36,27 @@ namespace YokiFrame.Unity
             mPackageName = string.IsNullOrEmpty(packageName) ? DEFAULT_PACKAGE_NAME : packageName;
         }
 
+        internal YooAssetV3RawFileBackend(string packageName, bool editorSimulateMode)
+        {
+            mPackageName = string.IsNullOrEmpty(packageName) ? DEFAULT_PACKAGE_NAME : packageName;
+            mEditorSimulateMode = editorSimulateMode;
+        }
+
         public byte[] LoadRaw(string path)
         {
-            var handle = ResolvePackage().LoadAssetSync<RawFileObject>(path);
+            var handle = mEditorSimulateMode
+                ? ResolvePackage().LoadAssetSync<TextAsset>(path)
+                : ResolvePackage().LoadAssetSync<RawFileObject>(path);
             try
             {
+                if (mEditorSimulateMode)
+                {
+                    var textAsset = handle.GetAssetObject<TextAsset>();
+                    return textAsset != null ? textAsset.bytes : null;
+                }
+
                 var rawObject = handle.GetAssetObject<RawFileObject>();
-                return rawObject != default ? rawObject.GetBytes() : null;
+                return rawObject != null ? rawObject.GetBytes() : null;
             }
             finally
             {
@@ -44,11 +66,19 @@ namespace YokiFrame.Unity
 
         public string LoadRawText(string path)
         {
-            var handle = ResolvePackage().LoadAssetSync<RawFileObject>(path);
+            var handle = mEditorSimulateMode
+                ? ResolvePackage().LoadAssetSync<TextAsset>(path)
+                : ResolvePackage().LoadAssetSync<RawFileObject>(path);
             try
             {
+                if (mEditorSimulateMode)
+                {
+                    var textAsset = handle.GetAssetObject<TextAsset>();
+                    return textAsset != null ? textAsset.text : null;
+                }
+
                 var rawObject = handle.GetAssetObject<RawFileObject>();
-                return rawObject != default ? rawObject.GetText() : null;
+                return rawObject != null ? rawObject.GetText() : null;
             }
             finally
             {
@@ -58,7 +88,9 @@ namespace YokiFrame.Unity
 
         public string GetRawFilePath(string path)
         {
-            var handle = ResolvePackage().LoadAssetSync<RawFileObject>(path);
+            var handle = mEditorSimulateMode
+                ? ResolvePackage().LoadAssetSync<TextAsset>(path)
+                : ResolvePackage().LoadAssetSync<RawFileObject>(path);
             try
             {
                 return handle.GetAssetInfo().AssetPath;
@@ -75,7 +107,9 @@ namespace YokiFrame.Unity
         public async Task<byte[]> LoadRawAsync(string path, CancellationToken token)
 #endif
         {
-            var handle = ResolvePackage().LoadAssetAsync<RawFileObject>(path);
+            var handle = mEditorSimulateMode
+                ? ResolvePackage().LoadAssetAsync<TextAsset>(path)
+                : ResolvePackage().LoadAssetAsync<RawFileObject>(path);
             try
             {
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -83,8 +117,14 @@ namespace YokiFrame.Unity
 #else
                 await YooAssetHandleAwaiter.WaitAsync(handle, token).ConfigureAwait(false);
 #endif
+                if (mEditorSimulateMode)
+                {
+                    var textAsset = handle.GetAssetObject<TextAsset>();
+                    return textAsset != null ? textAsset.bytes : null;
+                }
+
                 var rawObject = handle.GetAssetObject<RawFileObject>();
-                return rawObject != default ? rawObject.GetBytes() : null;
+                return rawObject != null ? rawObject.GetBytes() : null;
             }
             finally
             {
@@ -98,7 +138,9 @@ namespace YokiFrame.Unity
         public async Task<string> LoadRawTextAsync(string path, CancellationToken token)
 #endif
         {
-            var handle = ResolvePackage().LoadAssetAsync<RawFileObject>(path);
+            var handle = mEditorSimulateMode
+                ? ResolvePackage().LoadAssetAsync<TextAsset>(path)
+                : ResolvePackage().LoadAssetAsync<RawFileObject>(path);
             try
             {
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -106,8 +148,14 @@ namespace YokiFrame.Unity
 #else
                 await YooAssetHandleAwaiter.WaitAsync(handle, token).ConfigureAwait(false);
 #endif
+                if (mEditorSimulateMode)
+                {
+                    var textAsset = handle.GetAssetObject<TextAsset>();
+                    return textAsset != null ? textAsset.text : null;
+                }
+
                 var rawObject = handle.GetAssetObject<RawFileObject>();
-                return rawObject != default ? rawObject.GetText() : null;
+                return rawObject != null ? rawObject.GetText() : null;
             }
             finally
             {
