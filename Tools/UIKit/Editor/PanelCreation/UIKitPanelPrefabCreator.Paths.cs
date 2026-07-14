@@ -72,6 +72,26 @@ namespace YokiFrame
             request.CodeTemplate = NormalizeCodeTemplateName(request.CodeTemplate);
         }
 
+        /// <summary>
+        /// 校验并规范化可在工作台与 Unity Editor 入口间共享的生成参数。
+        /// </summary>
+        internal static void NormalizeEditorSettings(UIKitPanelCreateRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            request.ApplyDefaults();
+            if (!IsValidNamespace(request.ScriptNamespace))
+                throw new InvalidOperationException("命名空间不合法: " + request.ScriptNamespace);
+
+            request.PrefabFolder = NormalizeAssetFolder(request.PrefabFolder, DEFAULT_PREFAB_FOLDER);
+            request.ScriptFolder = NormalizeAssetFolder(request.ScriptFolder, DEFAULT_SCRIPT_FOLDER);
+            request.AssemblyName = string.IsNullOrWhiteSpace(request.AssemblyName)
+                ? DEFAULT_ASSEMBLY_NAME
+                : request.AssemblyName.Trim();
+            request.CodeTemplate = NormalizeCodeTemplateName(request.CodeTemplate);
+        }
+
         internal static string NormalizeCodeTemplateName(string templateName)
         {
             if (string.Equals(templateName, MINIMAL_CODE_TEMPLATE, StringComparison.OrdinalIgnoreCase))

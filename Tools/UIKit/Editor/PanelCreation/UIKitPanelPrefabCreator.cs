@@ -65,6 +65,7 @@ namespace YokiFrame
         {
             var request = UIKitPanelCreateRequest.FromJson(payloadJson);
             ValidateRequest(request);
+            UIKitEditorSettings.Save(request);
 
             var prefabFolder = NormalizeAssetFolder(request.PrefabFolder, DEFAULT_PREFAB_FOLDER);
             var scriptFolder = NormalizeAssetFolder(request.ScriptFolder, DEFAULT_SCRIPT_FOLDER);

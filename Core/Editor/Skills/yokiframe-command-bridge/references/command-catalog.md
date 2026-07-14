@@ -43,7 +43,7 @@
 | `LocalizationKit` | `stats`, `list_languages`, `get_workbench_snapshot`, `set_language` | `LocalizationKit/state` |
 | `SceneKit` | `stats`, `list_scenes`, `get_workbench_snapshot`, `unload_scene` | `SceneKit/state` |
 | `SpatialKit` | `stats`, `list_indexes`, `get_workbench_snapshot` | `SpatialKit/state` |
-| `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection`, `get_ui_root_settings`, `save_ui_root_settings`, `reset_ui_root_settings` | `UIKit/state` |
+| `UIKit` | `stats`, `list_panels`, `list_stacks`, `get_workbench_snapshot`, `get_editor_tool_state`, `save_editor_tool_settings`, `create_panel_prefab`, `generate_code_for_selection`, `add_bind_to_selection`, `remove_bind_from_selection`, `get_ui_root_settings`, `save_ui_root_settings`, `reset_ui_root_settings` | `UIKit/state` |
 
 ## 各 Kit 调试入口
 
@@ -191,6 +191,7 @@ Load 定位只影响开启后的新加载。
 
 ```text
 get_editor_tool_state
+save_editor_tool_settings
 create_panel_prefab
 generate_code_for_selection
 add_bind_to_selection
@@ -200,7 +201,7 @@ save_ui_root_settings
 reset_ui_root_settings
 ```
 
-`save_ui_root_settings` 写入 `Assets/Settings/Resources/UIKitSettings.asset`，保存后在下一次 UIRoot 初始化时生效。Runtime 命令桥不打开、关闭、显示、隐藏、压栈或弹栈面板。Prefab/Bind Editor 工具命令需要用户意图和当前 Unity Selection。
+`save_editor_tool_settings` 接收面板创建 payload 中的 `PrefabFolder`、`ScriptFolder`、`ScriptNamespace`、`AssemblyName` 和 `CodeTemplate`，保存为当前 Unity 项目的编辑器参数，供工作台、Inspector 和快捷菜单共用。`save_ui_root_settings` 写入 `Assets/Settings/Resources/UIKitSettings.asset`，保存后在下一次 UIRoot 初始化时生效。Runtime 命令桥不打开、关闭、显示、隐藏、压栈或弹栈面板。Prefab/Bind Editor 工具命令需要用户意图和当前 Unity Selection。
 
 ## TableKit / GraphKit
 

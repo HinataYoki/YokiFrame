@@ -39,3 +39,7 @@ $RECYCLE.BIN/
 **/*Spec*.asmdef.meta
 **/*Spec*.asmref
 **/*Spec*.asmref.meta
+
+# Local UIKit regression tests are not included in the release package
+/Tools/UIKit/Editor/Regression/
+/Tools/UIKit/Editor/Regression.meta

@@ -2,6 +2,7 @@
 // 页面：UIKit
 const UIKIT_EDITOR_FORM_STORAGE_KEY = 'yokiframe.uikit.editorForm.v1';
 let uikitEditorFormStorageScope = null;
+let uikitEditorFormLoadedFromStorage = false;
 
 const uikitState = {
     stats: {},
@@ -37,6 +38,7 @@ const uikitState = {
         BlockingMask: -1,
     },
     editorForm: getDefaultUIKitEditorForm(),
+    editorSettingsSyncSignature: '',
     renderSignature: '',
 };
 
@@ -78,16 +80,21 @@ function normalizeUIKitEditorFormString(value, fallback) {
 function loadUIKitEditorForm() {
     try {
         const raw = readProjectScopedStorageItem(UIKIT_EDITOR_FORM_STORAGE_KEY);
-        if (raw) return normalizeUIKitEditorForm(JSON.parse(raw));
+        if (raw) {
+            uikitEditorFormLoadedFromStorage = true;
+            return normalizeUIKitEditorForm(JSON.parse(raw));
+        }
     } catch (_) {
         // 损坏的本地表单缓存不应阻断 UIKit 页面打开。
     }
+    uikitEditorFormLoadedFromStorage = false;
     return normalizeUIKitEditorForm({});
 }
 
 function saveUIKitEditorForm() {
     uikitState.editorForm = normalizeUIKitEditorForm(uikitState.editorForm);
     writeProjectScopedStorageItem(UIKIT_EDITOR_FORM_STORAGE_KEY, JSON.stringify(uikitState.editorForm));
+    uikitEditorFormLoadedFromStorage = true;
 }
 
 function syncUIKitProjectStorageScope(options = {}) {
@@ -96,6 +103,7 @@ function syncUIKitProjectStorageScope(options = {}) {
 
     uikitEditorFormStorageScope = nextScope;
     uikitState.editorForm = loadUIKitEditorForm();
+    uikitState.editorSettingsSyncSignature = '';
     uikitState.renderSignature = '';
     if (!options.force) {
         uikitState.editorStatusKind = 'info';
@@ -167,6 +175,7 @@ async function loadUIKitWorkbench() {
         if (uikitState.editorToolsAvailable) {
             await refreshUIKitEditorToolState();
             syncUIKitEditorFormDefaults(uikitState.editorToolState);
+            await saveUIKitEditorSettings({ silent: true });
             await refreshUIKitRootSettings({ silent: true });
         } else {
             uikitState.editorToolState = null;

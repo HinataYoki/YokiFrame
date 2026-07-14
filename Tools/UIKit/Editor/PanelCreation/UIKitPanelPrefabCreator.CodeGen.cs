@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace YokiFrame
@@ -37,7 +39,7 @@ namespace YokiFrame
         {
             var panelPath = GetPanelScriptPath(request, scriptFolder);
             if (File.Exists(panelPath))
-                return false;
+                return UpdateExistingUserScriptNamespace(panelPath, request.PanelName, request.ScriptNamespace);
 
             return GenerateCSharpFile(panelPath, request.ScriptNamespace, false, scope =>
             {
@@ -129,15 +131,70 @@ namespace YokiFrame
         private static bool WriteBindUserScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)
         {
             var scriptPath = strategy.GetScriptPath(bindInfo, context, false);
-            if (string.IsNullOrEmpty(scriptPath) || File.Exists(scriptPath))
+            if (string.IsNullOrEmpty(scriptPath))
                 return false;
 
             var typeNamespace = strategy.GetNamespace(context);
+            if (File.Exists(scriptPath))
+                return UpdateExistingUserScriptNamespace(scriptPath, bindInfo.Type, typeNamespace);
+
             var baseClassName = strategy.GetBaseClassName();
             return GenerateCSharpFile(scriptPath, typeNamespace, false, scope =>
             {
                 scope.Class(bindInfo.Type, baseClassName, true, false, default);
             });
+        }
+
+        /// <summary>
+        /// 只迁移已有用户脚本的块级命名空间，保留类型内的全部用户代码。
+        /// </summary>
+        private static bool UpdateExistingUserScriptNamespace(string scriptPath, string typeName, string targetNamespace)
+        {
+            if (string.IsNullOrEmpty(scriptPath) || !File.Exists(scriptPath))
+                return false;
+            if (string.IsNullOrEmpty(typeName))
+                throw new ArgumentException("生成类型名不能为空。", nameof(typeName));
+            if (string.IsNullOrEmpty(targetNamespace) || !IsValidNamespace(targetNamespace))
+                throw new InvalidOperationException("命名空间不合法: " + targetNamespace);
+
+            var source = File.ReadAllText(scriptPath);
+            var classMatch = Regex.Match(
+                source,
+                @"\bpartial\s+class\s+" + Regex.Escape(typeName) + @"\b",
+                RegexOptions.CultureInvariant);
+            if (!classMatch.Success)
+            {
+                throw new InvalidOperationException(
+                    "已有用户脚本未找到 partial class " + typeName + "，无法安全迁移命名空间: " + scriptPath);
+            }
+
+            var namespaceMatches = Regex.Matches(
+                source,
+                @"(?m)^[ \t]*namespace[ \t]+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[ \t]*(?:\r?\n[ \t]*)?\{",
+                RegexOptions.CultureInvariant);
+            Match namespaceMatch = null;
+            for (var i = 0; i < namespaceMatches.Count; i++)
+            {
+                if (namespaceMatches[i].Index >= classMatch.Index)
+                    break;
+
+                namespaceMatch = namespaceMatches[i];
+            }
+
+            if (namespaceMatch == null)
+            {
+                throw new InvalidOperationException(
+                    "已有用户脚本未找到包含 " + typeName + " 的块级命名空间，无法安全迁移: " + scriptPath);
+            }
+
+            var nameGroup = namespaceMatch.Groups["name"];
+            if (string.Equals(nameGroup.Value, targetNamespace, StringComparison.Ordinal))
+                return false;
+
+            var migrated = source.Substring(0, nameGroup.Index) + targetNamespace +
+                           source.Substring(nameGroup.Index + nameGroup.Length);
+            File.WriteAllText(scriptPath, migrated, new System.Text.UTF8Encoding(false));
+            return true;
         }
 
         private static bool WriteBindDesignerScript(BindCodeInfo bindInfo, UIKitPanelCodeGenContext context, IBindTypeStrategy strategy)

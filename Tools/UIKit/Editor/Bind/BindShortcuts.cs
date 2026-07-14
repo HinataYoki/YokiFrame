@@ -19,14 +19,9 @@ namespace YokiFrame
 
             try
             {
-                UIKitPanelPrefabCreator.GenerateCodeForPrefab(prefab, new UIKitPanelCreateRequest
-                {
-                    PanelName = prefab.name,
-                    ScriptFolder = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER,
-                    ScriptNamespace = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE,
-                    AssemblyName = UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME,
-                    CodeTemplate = UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE
-                });
+                UIKitPanelPrefabCreator.GenerateCodeForPrefab(
+                    prefab,
+                    UIKitEditorSettings.CreateRequest(prefab.name));
             }
             catch (Exception ex)
             {

@@ -181,14 +181,7 @@ namespace YokiFrame
 
             try
             {
-                var request = new UIKitPanelCreateRequest
-                {
-                    PanelName = prefab.name,
-                    ScriptFolder = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER,
-                    ScriptNamespace = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE,
-                    AssemblyName = UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME,
-                    CodeTemplate = UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE
-                };
+                var request = UIKitEditorSettings.CreateRequest(prefab.name);
                 if (activePrefabContentsRoot != null)
                 {
                     var prefabPath = AssetDatabase.GetAssetPath(prefab);
@@ -252,7 +245,7 @@ namespace YokiFrame
             if (panel == null)
                 return;
 
-            var path = UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER + "/" + panel.gameObject.name + "/" + panel.gameObject.name + ".cs";
+            var path = UIKitEditorSettings.GetPanelScriptPath(panel.gameObject.name);
             var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
             if (asset != null)
                 AssetDatabase.OpenAsset(asset);

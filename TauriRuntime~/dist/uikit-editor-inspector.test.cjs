@@ -147,3 +147,38 @@ test('UIKit restores bind component shortcut menus', () => {
     assert.match(source, /Undo\.DestroyObjectImmediate/);
     assert.match(source, /UIKitPanelPrefabCreator\.GenerateCodeForPrefab/);
 });
+
+test('UIKit editor generation entries share persisted workbench settings', () => {
+    assertWorkspaceFileExists('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'PanelCreation', 'UIKitEditorSettings.cs');
+
+    const settings = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'PanelCreation', 'UIKitEditorSettings.cs');
+    const inspector = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'Inspectors', 'UIPanelInspector.cs');
+    const shortcuts = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'Bind', 'BindShortcuts.cs');
+    const handler = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'CommandBridge', 'UnityUIKitCommandHandler.cs');
+    const workbenchSettings = readWorkspaceFile('Assets', 'YokiFrame', 'TauriRuntime~', 'dist', 'pages', 'uikit-editor-settings.js');
+
+    assert.match(settings, /EditorPrefs/);
+    assert.match(settings, /CreateRequest\(/);
+    assert.match(settings, /Save\(/);
+    assert.match(inspector, /UIKitEditorSettings\.CreateRequest\(prefab\.name\)/);
+    assert.match(inspector, /UIKitEditorSettings\.GetPanelScriptPath\(panel\.gameObject\.name\)/);
+    assert.doesNotMatch(inspector, /ScriptFolder\s*=\s*UIKitPanelPrefabCreator\.DEFAULT_SCRIPT_FOLDER/);
+    assert.doesNotMatch(inspector, /ScriptNamespace\s*=\s*UIKitPanelPrefabCreator\.DEFAULT_SCRIPT_NAMESPACE/);
+    assert.match(shortcuts, /UIKitEditorSettings\.CreateRequest\(prefab\.name\)/);
+    assert.match(handler, /"save_editor_tool_settings"/);
+    assert.match(handler, /UIKitEditorSettings\.Save\(/);
+    assert.match(workbenchSettings, /sendKitCommandData\('UIKit',\s*'save_editor_tool_settings'/);
+});
+
+test('UIKit namespace changes migrate existing user scripts without overwriting them', () => {
+    const codeGen = readWorkspaceFile('Assets', 'YokiFrame', 'Tools', 'UIKit', 'Editor', 'PanelCreation', 'UIKitPanelPrefabCreator.CodeGen.cs');
+
+    assert.match(codeGen, /WritePanelScript[\s\S]*UpdateExistingUserScriptNamespace\(panelPath,\s*request\.PanelName,\s*request\.ScriptNamespace\)/);
+    assert.match(codeGen, /WriteBindUserScript[\s\S]*UpdateExistingUserScriptNamespace\(scriptPath,\s*bindInfo\.Type,\s*typeNamespace\)/);
+    assert.match(codeGen, /private static bool UpdateExistingUserScriptNamespace\(/);
+    assert.match(codeGen, /var source = File\.ReadAllText\(scriptPath\)/);
+    assert.match(codeGen, /partial\\s\+class/);
+    assert.match(codeGen, /var migrated = source\.Substring/);
+    assert.match(codeGen, /File\.WriteAllText\(scriptPath,\s*migrated/);
+    assert.doesNotMatch(codeGen, /GenerateCSharpFile\(scriptPath,\s*typeNamespace[\s\S]*if \(File\.Exists\(scriptPath\)\)/);
+});

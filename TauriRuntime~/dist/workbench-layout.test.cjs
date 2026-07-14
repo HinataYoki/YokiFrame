@@ -292,6 +292,7 @@ test('large frontend modules are split by functional responsibility', () => {
         ['pages/actionkit-interactions.js', /function bindActionKitWorkbenchActions\(/],
         ['pages/logkit-render.js', /function renderLogKitWorkbench\(/],
         ['pages/logkit-viewer.js', /function syncLogKitViewerDom\(/],
+        ['pages/uikit-editor-settings.js', /async function saveUIKitEditorSettings\(/],
         ['pages/uikit-editor-tools.js', /function renderUIKitEditorToolsSection\(/],
         ['pages/uikit-render.js', /function renderUIKitWorkbench\(/],
         ['pages/tablekit-preview.js', /function renderTableKitPreviewPanel\(/],

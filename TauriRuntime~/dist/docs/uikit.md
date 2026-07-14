@@ -289,6 +289,10 @@ Godot 项目可以继续使用 UIKit 的运行时抽象，但当前这套 Prefab
 | `目标 Prefab` | 为空时使用 Unity 当前 Selection；也可以填具体 Prefab 路径。 |
 | `覆盖 Prefab` | 只影响创建同名 Prefab；不会保护 `.Designer.cs`。 |
 
+工作台会按 Unity 项目保存 Prefab/脚本目录、命名空间、程序集和代码模板。`UIPanel` Inspector、Project 视图快捷菜单和“打开脚本”会读取同一份参数，不会退回另一套默认路径。
+
+重新生成时 `.Designer.cs` 会完整刷新；已有的 Panel、Element 和 Component 用户脚本不会被覆盖。命名空间发生变化时，生成器只迁移这些用户脚本的 namespace 声明，其余用户代码保持不变。
+
 ### Bind 字段
 
 | 字段 | 说明 |

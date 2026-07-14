@@ -20,6 +20,7 @@ namespace YokiFrame
             "list_stacks",
             "get_workbench_snapshot",
             "get_editor_tool_state",
+            "save_editor_tool_settings",
             "create_panel_prefab",
             "generate_code_for_selection",
             "add_bind_to_selection",
@@ -47,6 +48,8 @@ namespace YokiFrame
             {
                 case "get_editor_tool_state":
                     return BuildEditorToolStateJson();
+                case "save_editor_tool_settings":
+                    return SaveEditorToolSettings(payloadJson);
                 case "create_panel_prefab":
                     return UIKitPanelPrefabCreator.CreatePanelPrefab(payloadJson).ToJson();
                 case "generate_code_for_selection":
@@ -72,19 +75,30 @@ namespace YokiFrame
             var activePath = active != null ? AssetDatabase.GetAssetPath(active) : string.Empty;
             var selectedCount = Selection.gameObjects != null ? Selection.gameObjects.Length : 0;
             var canGenerate = TryResolvePrefabForSelection(null, out _);
+            var settings = UIKitEditorSettings.CreateRequest(string.Empty);
 
             return "{\"available\":true" +
                    ",\"selectedObjectCount\":" + selectedCount +
                    ",\"activeAssetPath\":\"" + JsonHelper.EscapeString(activePath) + "\"" +
                    ",\"canGenerateCode\":" + (canGenerate ? "true" : "false") +
-                   ",\"defaults\":{\"prefabFolder\":\"" + JsonHelper.EscapeString(UIKitPanelPrefabCreator.DEFAULT_PREFAB_FOLDER) +
-                   "\",\"scriptFolder\":\"" + JsonHelper.EscapeString(UIKitPanelPrefabCreator.DEFAULT_SCRIPT_FOLDER) +
-                   "\",\"namespace\":\"" + JsonHelper.EscapeString(UIKitPanelPrefabCreator.DEFAULT_SCRIPT_NAMESPACE) +
-                   "\",\"assemblyName\":\"" + JsonHelper.EscapeString(UIKitPanelPrefabCreator.DEFAULT_ASSEMBLY_NAME) +
-                   "\",\"codeTemplate\":\"" + JsonHelper.EscapeString(UIKitPanelPrefabCreator.DEFAULT_CODE_TEMPLATE) + "\"}" +
+                   ",\"defaults\":{\"prefabFolder\":\"" + JsonHelper.EscapeString(settings.PrefabFolder) +
+                   "\",\"scriptFolder\":\"" + JsonHelper.EscapeString(settings.ScriptFolder) +
+                   "\",\"namespace\":\"" + JsonHelper.EscapeString(settings.ScriptNamespace) +
+                   "\",\"assemblyName\":\"" + JsonHelper.EscapeString(settings.AssemblyName) +
+                   "\",\"codeTemplate\":\"" + JsonHelper.EscapeString(settings.CodeTemplate) + "\"}" +
                    ",\"assemblies\":" + BuildAssembliesJson() +
                    ",\"codeTemplates\":" + BuildCodeTemplatesJson() +
                    "}";
+        }
+
+        /// <summary>
+        /// 保存工作台表单中的 UIKit 编辑器生成参数。
+        /// </summary>
+        private static string SaveEditorToolSettings(string payloadJson)
+        {
+            var request = UIKitPanelCreateRequest.FromJson(payloadJson);
+            UIKitEditorSettings.Save(request);
+            return BuildEditorToolStateJson();
         }
 
         private static string BuildAssembliesJson()
@@ -147,6 +161,7 @@ namespace YokiFrame
         private static UIKitEditorCommandResult GenerateCodeForSelection(string payloadJson)
         {
             var request = UIKitPanelCreateRequest.FromJson(payloadJson);
+            UIKitEditorSettings.Save(request);
             if (!TryResolvePrefabForSelection(request.PrefabPath, out var prefab))
             {
                 throw new InvalidOperationException("请选择一个 UIPrefab，或在 payload.prefabPath 中传入 Prefab 路径。");
