@@ -13,17 +13,28 @@ namespace YokiFrame
     {
         private void EnsureDefaultValues()
         {
+            // 多选编辑时必须逐个写入名称，避免多对象 SerializedProperty 将活动对象名称广播给全部对象。
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var currentBind = targets[i] as AbstractBind;
+                if (currentBind == null || currentBind.Bind == BindType.Leaf)
+                    continue;
+
+                var currentSerializedObject = new SerializedObject(currentBind);
+                var currentNameProperty = currentSerializedObject.FindProperty("Name");
+                if (!string.IsNullOrEmpty(currentNameProperty.stringValue))
+                    continue;
+
+                currentNameProperty.stringValue = ToPascalIdentifier(currentBind.gameObject.name);
+                currentSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            serializedObject.Update();
             var bind = target as AbstractBind;
             if (bind == null)
                 return;
 
             var changed = false;
-            if (string.IsNullOrEmpty(mNameProp.stringValue) && CurrentBindType() != BindType.Leaf)
-            {
-                mNameProp.stringValue = ToPascalIdentifier(bind.gameObject.name);
-                changed = true;
-            }
-
             if (string.IsNullOrEmpty(mAutoTypeProp.stringValue) && mComponentNames.Count > 0)
             {
                 mAutoTypeProp.stringValue = mComponentNames[mComponentNames.Count - 1];
