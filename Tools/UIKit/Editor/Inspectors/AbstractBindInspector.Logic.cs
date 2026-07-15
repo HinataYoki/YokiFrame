@@ -13,48 +13,89 @@ namespace YokiFrame
     {
         private void EnsureDefaultValues()
         {
-            // 多选编辑时必须逐个写入名称，避免多对象 SerializedProperty 将活动对象名称广播给全部对象。
+            // 多选编辑时必须逐个初始化，避免多对象 SerializedProperty 将活动对象的默认值广播给全部对象。
             for (var i = 0; i < targets.Length; i++)
             {
                 var currentBind = targets[i] as AbstractBind;
-                if (currentBind == null || currentBind.Bind == BindType.Leaf)
+                if (currentBind == null)
                     continue;
 
                 var currentSerializedObject = new SerializedObject(currentBind);
                 var currentNameProperty = currentSerializedObject.FindProperty("Name");
-                if (!string.IsNullOrEmpty(currentNameProperty.stringValue))
-                    continue;
+                var currentAutoTypeProperty = currentSerializedObject.FindProperty("AutoType");
+                var currentCustomTypeProperty = currentSerializedObject.FindProperty("CustomType");
+                var currentTypeProperty = currentSerializedObject.FindProperty("Type");
+                var changed = false;
 
-                currentNameProperty.stringValue = ToPascalIdentifier(currentBind.gameObject.name);
-                currentSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+                if (string.IsNullOrEmpty(currentNameProperty.stringValue) && currentBind.Bind != BindType.Leaf)
+                {
+                    currentNameProperty.stringValue = ToPascalIdentifier(currentBind.gameObject.name);
+                    changed = true;
+                }
+
+                var components = currentBind.GetComponents<Component>();
+                var inferredAutoType = string.Empty;
+                var hasStoredAutoType = false;
+                var hasStoredType = false;
+                for (var componentIndex = components.Length - 1; componentIndex >= 0; componentIndex--)
+                {
+                    var component = components[componentIndex];
+                    if (component == null || component is AbstractBind)
+                        continue;
+
+                    var componentTypeName = component.GetType().FullName;
+                    if (string.IsNullOrEmpty(inferredAutoType))
+                        inferredAutoType = componentTypeName;
+                    if (string.Equals(componentTypeName, currentAutoTypeProperty.stringValue, StringComparison.Ordinal))
+                        hasStoredAutoType = true;
+                    if (string.Equals(componentTypeName, currentTypeProperty.stringValue, StringComparison.Ordinal))
+                        hasStoredType = true;
+                }
+
+                if (string.IsNullOrEmpty(currentCustomTypeProperty.stringValue))
+                {
+                    currentCustomTypeProperty.stringValue = ToPascalIdentifier(currentBind.gameObject.name);
+                    changed = true;
+                }
+
+                if (currentBind.Bind == BindType.Member)
+                {
+                    var resolvedMemberType = hasStoredType
+                        ? currentTypeProperty.stringValue
+                        : hasStoredAutoType
+                            ? currentAutoTypeProperty.stringValue
+                            : inferredAutoType;
+                    if (!string.Equals(currentAutoTypeProperty.stringValue, resolvedMemberType, StringComparison.Ordinal))
+                    {
+                        currentAutoTypeProperty.stringValue = resolvedMemberType;
+                        changed = true;
+                    }
+                    if (!string.Equals(currentTypeProperty.stringValue, resolvedMemberType, StringComparison.Ordinal))
+                    {
+                        currentTypeProperty.stringValue = resolvedMemberType;
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(currentAutoTypeProperty.stringValue))
+                    {
+                        currentAutoTypeProperty.stringValue = inferredAutoType;
+                        changed = true;
+                    }
+                    if (string.IsNullOrEmpty(currentTypeProperty.stringValue) &&
+                        (currentBind.Bind == BindType.Element || currentBind.Bind == BindType.Component))
+                    {
+                        currentTypeProperty.stringValue = currentCustomTypeProperty.stringValue;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                    currentSerializedObject.ApplyModifiedPropertiesWithoutUndo();
             }
 
             serializedObject.Update();
-            var bind = target as AbstractBind;
-            if (bind == null)
-                return;
-
-            var changed = false;
-            if (string.IsNullOrEmpty(mAutoTypeProp.stringValue) && mComponentNames.Count > 0)
-            {
-                mAutoTypeProp.stringValue = mComponentNames[mComponentNames.Count - 1];
-                changed = true;
-            }
-
-            if (string.IsNullOrEmpty(mCustomTypeProp.stringValue))
-            {
-                mCustomTypeProp.stringValue = ToPascalIdentifier(bind.gameObject.name);
-                changed = true;
-            }
-
-            if (string.IsNullOrEmpty(mTypeProp.stringValue))
-            {
-                mTypeProp.stringValue = ResolveCurrentTypeName(CurrentBindType());
-                changed = true;
-            }
-
-            if (changed)
-                serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private void ConvertTo(BindType targetType)
