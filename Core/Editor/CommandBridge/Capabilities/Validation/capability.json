@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "Validation",
+    "state": "Available",
+    "role": "Diagnostics",
+    "snapshotNames": [],
+    "telemetryNames": [],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "inspect_status",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "engine.kind=Unity", "editor.available"],
+        "verifyRecipe": "unity-validation-status-read"
+      },
+      {
+        "action": "get_console_errors",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "engine.kind=Unity", "editor.available"],
+        "verifyRecipe": "unity-console-errors-read"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "unity-validation-status-read",
+        "description": "Observe current Unity compilation state without triggering compilation.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "compilation-status-observed"
+        ],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "unity-console-errors-read",
+        "description": "Read a bounded Unity Console Error snapshot and require scanComplete before treating zero errors as evidence.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "console-scan-complete",
+          "console-error-count-observed"
+        ],
+        "evidence": ["command-response"]
+      }
+    ],
+    "sourcePath": "Core/Adapters/Unity/Editor/Harness/Validation/YokiFrameUnityValidationStatus.cs",
+    "sourceHash": "003b10467462dc0543f1e0752e1a189074b532fa298391db5f393c2691f8e9bc"
+  }
+}

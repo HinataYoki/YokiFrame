@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/YokiFrame.Cli/YokiFrame.Cli.csproj" />
+    <Project Path="src/YokiFrame.Client/YokiFrame.Client.csproj" />
+    <Project Path="src/YokiFrame.Installer.Core/YokiFrame.Installer.Core.csproj" />
+    <Project Path="src/YokiFrame.Packaging/YokiFrame.Packaging.csproj" />
+    <Project Path="src/YokiFrame.Protocol/YokiFrame.Protocol.csproj" />
+    <Project Path="src/YokiFrame.Tooling.Application/YokiFrame.Tooling.Application.csproj" />
+    <Project Path="src/YokiFrame.Workbench.Avalonia/YokiFrame.Workbench.Avalonia.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/YokiFrame.Client.Tests/YokiFrame.Client.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Cli.Tests/YokiFrame.Cli.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Godot.Runtime.Tests/YokiFrame.Godot.Runtime.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Godot.Player.Tests/YokiFrame.Godot.Player.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Godot.Editor.Tests/YokiFrame.Godot.Editor.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Installer.Core.Tests/YokiFrame.Installer.Core.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Packaging.Tests/YokiFrame.Packaging.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Workbench.Avalonia.Tests/YokiFrame.Workbench.Avalonia.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Tooling.Application.Tests/YokiFrame.Tooling.Application.Tests.csproj" />
+    <Project Path="tests/YokiFrame.Protocol.Tests/YokiFrame.Protocol.Tests.csproj" />
+  </Folder>
+</Solution>

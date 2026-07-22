@@ -1,0 +1,25 @@
+{
+    "name": "YokiFrame.UIKit.Unity.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Editor",
+        "YokiFrame.Unity.Editor",
+        "YokiFrame.Unity.Inspector.Runtime",
+        "YokiFrame.Unity.Inspector.Editor",
+        "YokiFrame.UIKit.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_2022_3_OR_NEWER"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

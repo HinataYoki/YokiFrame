@@ -6,64 +6,109 @@ using System.Runtime.CompilerServices;
 namespace YokiFrame
 {
     /// <summary>
-    /// 基于开放寻址的轻量字典，面向热路径查找并减少 GC 压力。
+    /// 使用线性探测开放寻址的轻量字典，适合已知元素峰值且高频查询的运行时路径。
     /// </summary>
-    public class FastDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    /// <typeparam name="TKey">键类型。</typeparam>
+    /// <typeparam name="TValue">值类型。</typeparam>
+    public partial class FastDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
     {
-        private struct Entry
-        {
-            /// <summary>缓存的哈希值。<c>-1</c> 表示空槽，<c>-2</c> 表示墓碑槽。</summary>
-            public int HashCode;
-            public TKey Key;
-            public TValue Value;
-        }
+        private const int DEFAULT_CAPACITY = 16;
+        private const int MINIMUM_SLOT_COUNT = 17;
+        private const int LOAD_FACTOR_NUMERATOR = 3;
+        private const int LOAD_FACTOR_DENOMINATOR = 4;
+        private const int EMPTY_HASH_CODE = -1;
+        private const int TOMBSTONE_HASH_CODE = -2;
 
         private Entry[] mEntries;
-        private int mCount;
-        private int mFreeCount;
+        private int mOccupiedCount;
+        private int mTombstoneCount;
+        private int mResizeThreshold;
+        private int mVersion;
         private readonly IEqualityComparer<TKey> mComparer;
 
-        private const int DEFAULT_CAPACITY = 16;
-        private const float LOAD_FACTOR = 0.75f;
-
-        /// <summary>当前存储的有效键值对数量。</summary>
-        public int Count => mCount - mFreeCount;
-
-        /// <summary>当前底层数组容量。</summary>
-        public int Capacity => mEntries.Length;
-
+        /// <summary>
+        /// 创建指定预计元素峰值和键比较器的快速字典。
+        /// </summary>
+        /// <param name="capacity">不触发扩容时预计保存的元素数量。</param>
+        /// <param name="comparer">自定义键比较器；为空时使用默认比较器。</param>
         public FastDictionary(int capacity = DEFAULT_CAPACITY, IEqualityComparer<TKey> comparer = null)
         {
-            int size = GetPrime(capacity);
-            mEntries = new Entry[size];
+            if (capacity < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            }
+
+            int slotCount = GetPrime(GetRequiredSlotCount(capacity));
+            mEntries = new Entry[slotCount];
             mComparer = comparer ?? EqualityComparer<TKey>.Default;
             InitializeEntries();
+            UpdateResizeThreshold();
         }
 
+        /// <summary>
+        /// 获取当前有效键值对数量，不包含已经删除的墓碑槽。
+        /// </summary>
+        public int Count
+        {
+            get { return mOccupiedCount - mTombstoneCount; }
+        }
+
+        /// <summary>
+        /// 获取当前底层开放寻址数组容量。
+        /// </summary>
+        public int Capacity
+        {
+            get { return mEntries.Length; }
+        }
+
+        /// <summary>
+        /// 按键读取或写入值；读取不存在的键会抛出 KeyNotFoundException。
+        /// </summary>
+        /// <param name="key">需要读取或写入的键。</param>
+        /// <returns>键关联的值。</returns>
         public TValue this[TKey key]
         {
             get
             {
                 int index = FindEntry(key);
                 if (index < 0)
-                    throw new KeyNotFoundException($"Key '{key}' does not exist.");
+                {
+                    throw new KeyNotFoundException("Key '" + key + "' does not exist.");
+                }
+
                 return mEntries[index].Value;
             }
-            set => Insert(key, value, false);
+            set { Insert(key, value, InsertionBehavior.Overwrite, out _); }
         }
 
+        /// <summary>
+        /// 添加键值对；键为空或已经存在时抛出异常。
+        /// </summary>
+        /// <param name="key">需要添加的键。</param>
+        /// <param name="value">需要添加的值。</param>
         public void Add(TKey key, TValue value)
         {
-            if (key is null) throw new ArgumentNullException(nameof(key));
-            Insert(key, value, true);
+            Insert(key, value, InsertionBehavior.ThrowOnExisting, out _);
         }
 
+        /// <summary>
+        /// 尝试添加键值对；键为空或已经存在时返回 false。
+        /// </summary>
+        /// <param name="key">需要添加的键。</param>
+        /// <param name="value">需要添加的值。</param>
+        /// <returns>实际添加成功时返回 true。</returns>
         public bool TryAdd(TKey key, TValue value)
         {
-            if (key is null) return false;
-            return Insert(key, value, true, throwOnExisting: false);
+            return key is not null
+                && Insert(key, value, InsertionBehavior.KeepExisting, out _);
         }
 
+        /// <summary>
+        /// 尝试读取指定键的值，不存在时返回 false 和默认值。
+        /// </summary>
+        /// <param name="key">需要查询的键。</param>
+        /// <param name="value">查询成功时返回关联值。</param>
+        /// <returns>键存在时返回 true。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(TKey key, out TValue value)
         {
@@ -73,10 +118,17 @@ namespace YokiFrame
                 value = mEntries[index].Value;
                 return true;
             }
+
             value = default;
             return false;
         }
 
+        /// <summary>
+        /// 读取指定键的值；不存在时返回调用方提供的默认值。
+        /// </summary>
+        /// <param name="key">需要查询的键。</param>
+        /// <param name="defaultValue">键不存在时返回的值。</param>
+        /// <returns>已保存值或调用方默认值。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TValue GetValueOrDefault(TKey key, TValue defaultValue = default)
         {
@@ -84,190 +136,152 @@ namespace YokiFrame
             return index >= 0 ? mEntries[index].Value : defaultValue;
         }
 
+        /// <summary>
+        /// 通过单次探测返回已有值，或保存并返回指定值。
+        /// </summary>
+        /// <param name="key">需要读取或添加的键。</param>
+        /// <param name="value">键不存在时添加的值。</param>
+        /// <returns>已有值或新添加的值。</returns>
         public TValue GetOrAdd(TKey key, TValue value)
         {
-            if (key is null) throw new ArgumentNullException(nameof(key));
-            int index = FindEntry(key);
-            if (index >= 0) return mEntries[index].Value;
-            Insert(key, value, true);
-            return value;
+            Insert(key, value, InsertionBehavior.KeepExisting, out TValue storedValue);
+            return storedValue;
         }
 
+        /// <summary>
+        /// 返回已有值；键不存在时调用工厂创建、保存并返回新值。
+        /// </summary>
+        /// <param name="key">需要读取或添加的键。</param>
+        /// <param name="valueFactory">只在键不存在时调用的值工厂；工厂不得并发修改当前字典。</param>
+        /// <returns>已有值或工厂创建的新值。</returns>
         public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
         {
-            if (key is null) throw new ArgumentNullException(nameof(key));
-            if (valueFactory is null) throw new ArgumentNullException(nameof(valueFactory));
+            RequireKey(key);
+            if (valueFactory == null)
+            {
+                throw new ArgumentNullException(nameof(valueFactory));
+            }
+
             int index = FindEntry(key);
-            if (index >= 0) return mEntries[index].Value;
-            var value = valueFactory(key);
-            Insert(key, value, true);
-            return value;
+            if (index >= 0)
+            {
+                return mEntries[index].Value;
+            }
+
+            TValue value = valueFactory.Invoke(key);
+            Insert(key, value, InsertionBehavior.KeepExisting, out TValue storedValue);
+            return storedValue;
         }
 
-        public bool ContainsKey(TKey key) => FindEntry(key) >= 0;
+        /// <summary>
+        /// 判断字典中是否存在指定键；空键返回 false。
+        /// </summary>
+        /// <param name="key">需要查询的键。</param>
+        /// <returns>键存在时返回 true。</returns>
+        public bool ContainsKey(TKey key)
+        {
+            return FindEntry(key) >= 0;
+        }
 
+        /// <summary>
+        /// 删除指定键并把槽位标记为可复用墓碑。
+        /// </summary>
+        /// <param name="key">需要删除的键。</param>
+        /// <returns>实际删除键值对时返回 true。</returns>
         public bool Remove(TKey key)
         {
-            if (key is null) return false;
-            int hashCode = mComparer.GetHashCode(key) & 0x7FFFFFFF;
-            int bucket = hashCode % mEntries.Length;
-            int probeCount = 0;
-
-            while (probeCount < mEntries.Length)
+            int index = FindEntry(key);
+            if (index < 0)
             {
-                ref Entry entry = ref mEntries[bucket];
-                if (entry.HashCode == -1) return false;
-                if (entry.HashCode == hashCode && mComparer.Equals(entry.Key, key))
-                {
-                    entry.HashCode = -2;
-                    entry.Key = default;
-                    entry.Value = default;
-                    mFreeCount++;
-                    return true;
-                }
-                bucket = (bucket + 1) % mEntries.Length;
-                probeCount++;
+                return false;
             }
-            return false;
+
+            mEntries[index].HashCode = TOMBSTONE_HASH_CODE;
+            mEntries[index].Key = default;
+            mEntries[index].Value = default;
+            mTombstoneCount++;
+            mVersion++;
+            ResetTombstonesWhenEmpty();
+            return true;
         }
 
+        /// <summary>
+        /// 清空全部键值对及其引用，同时保留当前底层容量供后续复用。
+        /// </summary>
         public void Clear()
         {
-            if (mCount > 0)
+            if (mOccupiedCount == 0)
             {
-                InitializeEntries();
-                mCount = 0;
-                mFreeCount = 0;
+                return;
             }
+
+            InitializeEntries();
+            mOccupiedCount = 0;
+            mTombstoneCount = 0;
+            mVersion++;
         }
 
+        /// <summary>
+        /// 依次访问全部有效键值对；回调期间不得修改当前字典。
+        /// </summary>
+        /// <param name="action">接收键和值的访问回调。</param>
         public void ForEach(Action<TKey, TValue> action)
         {
-            if (action is null) throw new ArgumentNullException(nameof(action));
-            for (int i = 0; i < mEntries.Length; i++)
+            if (action == null)
             {
-                ref Entry entry = ref mEntries[i];
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            int version = mVersion;
+            Entry[] entries = mEntries;
+            for (var index = 0; index < entries.Length; index++)
+            {
+                ref Entry entry = ref entries[index];
                 if (entry.HashCode >= 0)
-                    action(entry.Key, entry.Value);
-            }
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            for (int i = 0; i < mEntries.Length; i++)
-            {
-                if (mEntries[i].HashCode >= 0)
-                    yield return new KeyValuePair<TKey, TValue>(mEntries[i].Key, mEntries[i].Value);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        private void InitializeEntries()
-        {
-            for (int i = 0; i < mEntries.Length; i++)
-                mEntries[i].HashCode = -1;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int FindEntry(TKey key)
-        {
-            if (key is null) return -1;
-            int hashCode = mComparer.GetHashCode(key) & 0x7FFFFFFF;
-            int bucket = hashCode % mEntries.Length;
-            int probeCount = 0;
-            while (probeCount < mEntries.Length)
-            {
-                ref Entry entry = ref mEntries[bucket];
-                if (entry.HashCode == -1) return -1;
-                if (entry.HashCode == hashCode && mComparer.Equals(entry.Key, key))
-                    return bucket;
-                bucket = (bucket + 1) % mEntries.Length;
-                probeCount++;
-            }
-            return -1;
-        }
-
-        private bool Insert(TKey key, TValue value, bool add, bool throwOnExisting = true)
-        {
-            int hashCode = mComparer.GetHashCode(key) & 0x7FFFFFFF;
-            int bucket = hashCode % mEntries.Length;
-            int tombstone = -1;
-            int probeCount = 0;
-            while (probeCount < mEntries.Length)
-            {
-                ref Entry entry = ref mEntries[bucket];
-                if (entry.HashCode == -1)
                 {
-                    int targetBucket = tombstone >= 0 ? tombstone : bucket;
-                    ref Entry target = ref mEntries[targetBucket];
-                    target.HashCode = hashCode;
-                    target.Key = key;
-                    target.Value = value;
-                    if (tombstone >= 0) mFreeCount--;
-                    else mCount++;
-                    if (mCount > mEntries.Length * LOAD_FACTOR) Resize();
-                    return true;
+                    action.Invoke(entry.Key, entry.Value);
+                    EnsureVersion(version);
                 }
-                if (entry.HashCode == -2)
-                {
-                    if (tombstone < 0) tombstone = bucket;
-                }
-                else if (entry.HashCode == hashCode && mComparer.Equals(entry.Key, key))
-                {
-                    if (add)
-                    {
-                        if (throwOnExisting) throw new ArgumentException($"Key '{key}' already exists.");
-                        return false;
-                    }
-                    entry.Value = value;
-                    return true;
-                }
-                bucket = (bucket + 1) % mEntries.Length;
-                probeCount++;
-            }
-            Resize();
-            return Insert(key, value, add, throwOnExisting);
-        }
-
-        private void Resize()
-        {
-            int newSize = GetPrime(mEntries.Length * 2);
-            var oldEntries = mEntries;
-            mEntries = new Entry[newSize];
-            InitializeEntries();
-            mCount = 0;
-            mFreeCount = 0;
-            for (int i = 0; i < oldEntries.Length; i++)
-            {
-                if (oldEntries[i].HashCode >= 0)
-                    Insert(oldEntries[i].Key, oldEntries[i].Value, true);
             }
         }
 
-        private static int GetPrime(int min)
+        /// <summary>
+        /// 返回直接 foreach 不产生迭代器对象分配的结构体枚举器。
+        /// </summary>
+        /// <returns>当前字典的结构体枚举器。</returns>
+        public Enumerator GetEnumerator()
         {
-            int[] primes = { 17, 37, 79, 163, 331, 673, 1361, 2729, 5471, 10949, 21911, 43853, 87719, 175447, 350899, 701819, 1403641 };
-            foreach (int prime in primes)
-            {
-                if (prime >= min) return prime;
-            }
-            for (int i = min | 1; i < int.MaxValue; i += 2)
-            {
-                if (IsPrime(i)) return i;
-            }
-            return min;
+            return new Enumerator(this);
         }
 
-        private static bool IsPrime(int candidate)
+        /// <summary>
+        /// 通过泛型 IEnumerable 契约返回枚举器；接口调用会装箱结构体枚举器。
+        /// </summary>
+        /// <returns>泛型键值对枚举器。</returns>
+        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
         {
-            if ((candidate & 1) == 0) return candidate == 2;
-            int limit = (int)Math.Sqrt(candidate);
-            for (int divisor = 3; divisor <= limit; divisor += 2)
+            return GetEnumerator();
+        }
+
+        /// <summary>
+        /// 通过非泛型 IEnumerable 契约返回枚举器；接口调用会装箱结构体枚举器。
+        /// </summary>
+        /// <returns>非泛型键值对枚举器。</returns>
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        /// <summary>
+        /// 校验枚举期间字典没有发生结构或值修改。
+        /// </summary>
+        /// <param name="version">枚举开始时保存的版本。</param>
+        private void EnsureVersion(int version)
+        {
+            if (version != mVersion)
             {
-                if (candidate % divisor == 0) return false;
+                throw new InvalidOperationException("The dictionary was modified during enumeration.");
             }
-            return true;
         }
     }
 }

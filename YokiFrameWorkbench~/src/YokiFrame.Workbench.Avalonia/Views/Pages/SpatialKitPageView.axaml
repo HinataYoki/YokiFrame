@@ -1,0 +1,344 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:model="using:YokiFrame.Tooling.Application.Models.SpatialKit"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.SpatialKitPageView"
+             x:DataType="vm:SpatialKitPageViewModel"
+             Classes="spatialkit-page"
+             SizeChanged="OnPageSizeChanged"
+             ToolTip.ShowDelay="300"
+             AutomationProperties.AutomationId="workbench.spatialkit.page">
+  <Grid RowDefinitions="Auto,10,*">
+    <Border x:Name="SpatialStatusStrip" Classes="spatialkit-status-strip">
+      <Grid ColumnDefinitions="*,Auto,1,Auto,1,Auto" ColumnSpacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Border Classes="spatialkit-source-chip">
+            <TextBlock Text="{CompiledBinding Source}" Classes="mono spatialkit-chip-text" />
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="6"
+                      IsVisible="{CompiledBinding HasStaleReason}"
+                      VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource Icon.TriangleAlert}"
+                      Width="14" Height="14"
+                      Foreground="{DynamicResource Brush.Status.WarningText}" />
+            <TextBlock Text="{CompiledBinding StaleReason}"
+                       Classes="spatialkit-warning-text"
+                       MaxWidth="360"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{CompiledBinding StaleReason}"
+                       AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="索引" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{CompiledBinding ActiveIndexCount}" Classes="mono spatialkit-metric-value" />
+        </StackPanel>
+        <Border Grid.Column="2" Classes="spatialkit-divider" />
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="实体" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{CompiledBinding EntityCount}" Classes="mono spatialkit-metric-value" />
+        </StackPanel>
+        <Border Grid.Column="4" Classes="spatialkit-divider" />
+        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="分区" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{CompiledBinding PartitionCount}" Classes="mono spatialkit-metric-value" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid x:Name="SpatialWorkspace" Grid.Row="2" IsVisible="{CompiledBinding HasIndexes}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="0.34*" MinWidth="280" MaxWidth="360" />
+        <ColumnDefinition Width="8" />
+        <ColumnDefinition Width="*" MinWidth="480" />
+      </Grid.ColumnDefinitions>
+
+      <Border x:Name="SpatialIndexPanel" Classes="panel spatialkit-index-panel" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <Border Classes="kit-panel-header spatialkit-panel-header">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="运行中的索引" Classes="spatialkit-section-title" />
+              <TextBlock Grid.Column="1" Text="{CompiledBinding IndexCountText}"
+                         Classes="mono spatialkit-caption" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <ListBox x:Name="SpatialIndexList"
+                   Grid.Row="1"
+                   Classes="spatialkit-index-list kit-selection-list"
+                   ItemsSource="{CompiledBinding Indexes}"
+                   SelectedItem="{CompiledBinding SelectedIndex, Mode=TwoWay}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   SelectionMode="Single"
+                   AutomationProperties.Name="SpatialKit 索引实例列表">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel Orientation="Vertical" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="model:WorkbenchSpatialIndex">
+                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5"
+                      AutomationProperties.Name="{CompiledBinding DiagnosticsId}"
+                      AutomationProperties.HelpText="{CompiledBinding EntityTypeName}">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{CompiledBinding IndexKind}"
+                               Classes="spatialkit-index-title"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding IndexKind}" />
+                    <Border Grid.Column="1" Classes="spatialkit-plane-chip">
+                      <TextBlock Text="{CompiledBinding PlaneBadge}" Classes="mono spatialkit-chip-text" />
+                    </Border>
+                  </Grid>
+                  <TextBlock Grid.Row="1" Text="{CompiledBinding EntityTypeName}"
+                             Classes="spatialkit-entity-type"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding EntityTypeName}" />
+                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{CompiledBinding DiagnosticsId}"
+                               Classes="mono spatialkit-caption"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding DiagnosticsId}" />
+                    <TextBlock Grid.Column="1" Text="{CompiledBinding Count, StringFormat={}{0} 实体}"
+                               Classes="mono spatialkit-count" />
+                  </Grid>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    Classes="spatialkit-master-splitter"
+                    ResizeDirection="Columns"
+                    ResizeBehavior="PreviousAndNext"
+                    Background="Transparent"
+                    AutomationProperties.Name="调整索引列表和密度详情宽度" />
+
+      <Border x:Name="SpatialDetailPanel" Grid.Column="2"
+              Classes="panel spatialkit-detail-panel" Padding="0">
+        <Grid>
+          <Grid x:Name="SpatialDetailContent"
+                RowDefinitions="Auto,Auto,Auto,*"
+                IsVisible="{CompiledBinding HasSelection}">
+            <Border Classes="spatialkit-detail-header">
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{CompiledBinding SelectedIndex.IndexKind}"
+                             Classes="spatialkit-selected-title"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SelectedIndex.IndexKind}" />
+                  <TextBlock Text="{CompiledBinding SelectedIndex.EntityTypeName}"
+                             Classes="spatialkit-entity-type"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SelectedIndex.EntityTypeName}" />
+                  <TextBlock Text="{CompiledBinding SelectedDiagnosticsId}"
+                             Classes="mono spatialkit-caption"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SelectedDiagnosticsId}" />
+                </StackPanel>
+                <Border Grid.Column="1" Classes="spatialkit-plane-chip" VerticalAlignment="Top">
+                  <TextBlock Text="{CompiledBinding SelectedIndex.ProjectionDescription}"
+                             Classes="mono spatialkit-chip-text" />
+                </Border>
+                <Border Grid.Column="2" Classes="spatialkit-stale-chip"
+                        IsVisible="{CompiledBinding HasStaleReason}"
+                        VerticalAlignment="Top">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="12" Height="12" />
+                    <TextBlock Text="数据过期" Classes="spatialkit-chip-text" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Classes="spatialkit-context-band">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <WrapPanel Orientation="Horizontal">
+                  <StackPanel Classes="spatialkit-context-cell" Spacing="2">
+                    <TextBlock Text="实体" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{CompiledBinding SelectedIndex.Count}" Classes="mono spatialkit-context-value" />
+                  </StackPanel>
+                  <StackPanel Classes="spatialkit-context-cell" Spacing="2">
+                    <TextBlock Text="分区" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{CompiledBinding SelectedIndex.PartitionCount}" Classes="mono spatialkit-context-value" />
+                  </StackPanel>
+                  <StackPanel Classes="spatialkit-context-cell" Spacing="2">
+                    <TextBlock Text="Cell Size" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{CompiledBinding SelectedIndex.CellSize, StringFormat={}{0:0.###}}" Classes="mono spatialkit-context-value" />
+                  </StackPanel>
+                  <StackPanel Classes="spatialkit-context-cell" Spacing="2">
+                    <TextBlock Text="最大深度" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{CompiledBinding SelectedIndex.MaxDepth}" Classes="mono spatialkit-context-value" />
+                  </StackPanel>
+                  <StackPanel Classes="spatialkit-context-cell" Spacing="2">
+                    <TextBlock Text="网格" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{CompiledBinding DensityResolutionText}" Classes="mono spatialkit-context-value" />
+                  </StackPanel>
+                </WrapPanel>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                  <TextBlock Text="session" Classes="mono spatialkit-caption" />
+                  <TextBlock Text="{CompiledBinding SessionId}"
+                             Classes="mono spatialkit-caption"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SessionId}" />
+                  <TextBlock Text="· generation" Classes="mono spatialkit-caption" />
+                  <TextBlock Text="{CompiledBinding Generation}" Classes="mono spatialkit-caption" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="2" Classes="spatialkit-stale-banner"
+                    IsVisible="{CompiledBinding HasStaleReason}">
+              <TextBlock Text="{CompiledBinding StaleReason}"
+                         Classes="spatialkit-warning-text"
+                         TextWrapping="Wrap"
+                         AutomationProperties.LiveSetting="Polite" />
+            </Border>
+
+            <Grid Grid.Row="3" RowDefinitions="Auto,*" Margin="14,12,14,14">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="9">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="密度热力图" Classes="spatialkit-section-title" />
+                    <TextBlock Text="{CompiledBinding DensitySummaryText}"
+                               Classes="mono spatialkit-caption"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding DensitySummaryText}" />
+                  </StackPanel>
+                  <Border Grid.Column="1" Classes="spatialkit-health-chip"
+                          Classes.warning="{CompiledBinding HasHealthWarning}"
+                          Classes.positive="{CompiledBinding IsHealthPositive}"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="{CompiledBinding HealthText}"
+                               Classes="spatialkit-chip-text"
+                               MaxWidth="300"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding HealthText}"
+                               AutomationProperties.LiveSetting="Polite" />
+                  </Border>
+                </Grid>
+
+                <UniformGrid Grid.Row="1" Columns="4" Rows="1">
+                  <Border Classes="spatialkit-density-stat">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="占用" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{CompiledBinding DensityOccupancyText}" Classes="mono spatialkit-context-value" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="spatialkit-density-stat">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="平均" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{CompiledBinding DensityMeanCount}" Classes="mono spatialkit-context-value" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="spatialkit-density-stat">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="P95" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{CompiledBinding DensityP95Count}" Classes="mono spatialkit-context-value" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="spatialkit-density-stat">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="最大" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{CompiledBinding DensityMaxCount}" Classes="mono spatialkit-context-value" />
+                    </StackPanel>
+                  </Border>
+                </UniformGrid>
+              </Grid>
+
+              <Grid x:Name="HeatmapViewport" Grid.Row="1" Margin="0,12,0,0"
+                    SizeChanged="OnHeatmapViewportSizeChanged">
+                <Border x:Name="HeatmapHost"
+                        Classes="spatialkit-heatmap"
+                        Classes.stale="{CompiledBinding HasStaleReason}"
+                        IsVisible="{CompiledBinding HasDensity}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="workbench.spatialkit.heatmap"
+                        AutomationProperties.Name="SpatialKit 密度热力图">
+                  <ItemsControl ItemsSource="{CompiledBinding DensityCells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Rows="{CompiledBinding DensityRows}"
+                                     Columns="{CompiledBinding DensityColumns}" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SpatialDensityCellViewModel">
+                        <Border Classes="spatialkit-heatmap-cell"
+                                Background="{CompiledBinding Brush}"
+                                ToolTip.Tip="{CompiledBinding TooltipText}"
+                                AutomationProperties.Name="{CompiledBinding TooltipText}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+
+                <Border Classes="kit-empty-state spatialkit-density-empty"
+                        IsVisible="{CompiledBinding ShowDensityEmpty}"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Spacing="10" MaxWidth="360">
+                    <PathIcon Data="{StaticResource Icon.Navigation.SpatialKit}"
+                              Width="36" Height="36"
+                              Foreground="{DynamicResource Brush.Icon.SpatialKit}"
+                              HorizontalAlignment="Center" />
+                    <TextBlock Text="当前索引暂无密度数据"
+                               Classes="spatialkit-empty-title"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="实体注册后，空间占用与热点会显示在这里。"
+                               Classes="spatialkit-caption"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          <Border Classes="kit-empty-state spatialkit-density-empty"
+                  IsVisible="{CompiledBinding ShowNoSelection}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Spacing="10" MaxWidth="380">
+              <PathIcon Data="{StaticResource Icon.Crosshair}"
+                        Width="36" Height="36"
+                        Foreground="{DynamicResource Brush.Icon.SpatialKit}"
+                        HorizontalAlignment="Center" />
+              <TextBlock Text="选择一个空间索引"
+                         Classes="spatialkit-empty-title"
+                         HorizontalAlignment="Center" />
+              <TextBlock Text="选择后可查看参数上下文、密度热力图与健康诊断。"
+                         Classes="spatialkit-caption"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Classes="kit-empty-state spatialkit-page-empty"
+            IsVisible="{CompiledBinding IsEmpty}">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Spacing="10" MaxWidth="420">
+        <PathIcon Data="{StaticResource Icon.Navigation.SpatialKit}"
+                  Width="42" Height="42"
+                  Foreground="{DynamicResource Brush.Icon.SpatialKit}"
+                  HorizontalAlignment="Center" />
+        <TextBlock Text="暂无运行中的 SpatialKit 索引"
+                   Classes="spatialkit-empty-title"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="等待运行时创建空间索引并通过 telemetry 或 snapshot 发布诊断数据。"
+                   Classes="spatialkit-caption"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

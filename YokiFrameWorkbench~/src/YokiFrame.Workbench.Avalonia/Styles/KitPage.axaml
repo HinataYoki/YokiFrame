@@ -1,0 +1,279 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Kit 页面共用的组件层样式。
+    页面只保留领域布局和状态差异，面板、统计卡、列表与空状态统一从这里继承视觉语言。
+  -->
+  <Style Selector="Border.panel, Border.kit-panel">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Panel}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Shadow.Panel}" />
+  </Style>
+  <Style Selector="Border.page-header, Border.kit-page-header">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.PanelHeader}" />
+  </Style>
+  <Style Selector="Border.kit-panel-header">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Navigation}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="Border.card, Border.kit-card">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Card}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Shadow.Card}" />
+  </Style>
+  <Style Selector="Border.card:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Border.metric-card.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Positive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.metric-card.accent">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.kit-stat">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Stat}" />
+    <Setter Property="MinWidth" Value="112" />
+  </Style>
+  <Style Selector="Border.kit-stat.positive, Border.kit-status.positive, Border.status-card.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Positive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.kit-stat.warning, Border.kit-status.warning, Border.status-card.warning">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Border.kit-stat.danger, Border.kit-status.danger, Border.status-card.danger">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="Border.kit-stat.accent, Border.kit-status.accent, Border.status-card.accent">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.kit-status, Border.status-card">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Stat}" />
+  </Style>
+  <Style Selector="Border.kit-empty-state">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.EmptyState}" />
+  </Style>
+  <Style Selector="Border.kit-help-box">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="BorderThickness" Value="3,1,1,1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="Border.skill-target-row">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Margin" Value="0,0,0,3" />
+    <Setter Property="Padding" Value="6,4" />
+  </Style>
+  <Style Selector="TextBlock.kit-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.kit-page-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.kit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.kit-caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Xs}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.kit-micro">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Micro}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.kit-data">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Micro}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.kit-subtitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.kit-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.kit-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="ListBox.kit-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <!-- 为列表内部的滚动内容预留滚动条专属槽位，避免滚动条覆盖最后一列内容。 -->
+  <Style Selector="ListBox, TreeView">
+    <Setter Property="ScrollViewer.Padding" Value="{DynamicResource Padding.ScrollGutter}" />
+  </Style>
+  <Style Selector="ScrollViewer">
+    <Setter Property="Padding" Value="{DynamicResource Padding.ScrollGutter}" />
+  </Style>
+  <Style Selector="ScrollBar">
+    <Setter Property="Margin" Value="{DynamicResource Margin.ScrollBar}" />
+  </Style>
+  <Style Selector="ListBox.kit-list ListBoxItem">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.ListItem}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.kit-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.kit-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <!--
+    语义化列表组件层：页面只选择列表密度和交互语义，Kit 样式负责领域颜色。
+    selection 用于可扫描的主选择项，data 用于密集表格行，timeline 用于时间序列。
+  -->
+  <Style Selector="ListBox.kit-selection-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.kit-selection-list ListBoxItem">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.kit-selection-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="ListBox.kit-selection-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="ListBox.kit-selection-list ListBoxItem:focus-visible">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.kit-selection-list.rich ListBoxItem">
+    <Setter Property="MinHeight" Value="92" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.kit-data-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.kit-data-list ListBoxItem">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.kit-data-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.kit-data-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+
+  <Style Selector="ListBox.kit-timeline-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.kit-timeline-list ListBoxItem">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.kit-timeline-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.kit-timeline-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+
+  <Style Selector="TreeView.kit-flow-tree">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Border.kit-flow-row">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="4,0,7,0" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.kit-data-row">
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.kit-data-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="TabItem.kit-tab">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="12,7" />
+  </Style>
+  <Style Selector="Button.kit-action">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Action}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="TextBox.kit-input, ComboBox.kit-input">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Input}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+</Styles>

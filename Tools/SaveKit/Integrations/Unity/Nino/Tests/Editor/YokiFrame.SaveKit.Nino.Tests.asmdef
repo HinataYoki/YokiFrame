@@ -1,0 +1,30 @@
+{
+    "name": "YokiFrame.SaveKit.Nino.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.SaveKit",
+        "YokiFrame.SaveKit.Nino",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Nino.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Nino.Core.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "UNITY_2022_3_OR_NEWER",
+        "YOKIFRAME_NINO_SUPPORT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

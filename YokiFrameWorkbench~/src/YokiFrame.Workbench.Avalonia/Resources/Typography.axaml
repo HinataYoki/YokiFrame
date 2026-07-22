@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+  <FontFamily x:Key="Font.Sans">Inter, Segoe UI, Microsoft YaHei UI, PingFang SC</FontFamily>
+  <FontFamily x:Key="Font.Mono">Cascadia Mono, Consolas, Microsoft YaHei UI</FontFamily>
+  <sys:Double x:Key="FontSize.Xs">11</sys:Double>
+  <sys:Double x:Key="FontSize.Micro">10</sys:Double>
+  <sys:Double x:Key="FontSize.Sm">12</sys:Double>
+  <sys:Double x:Key="FontSize.Body">13</sys:Double>
+  <sys:Double x:Key="FontSize.Md">14</sys:Double>
+  <sys:Double x:Key="FontSize.Lg">17</sys:Double>
+  <sys:Double x:Key="FontSize.Xl">22</sys:Double>
+  <sys:Double x:Key="FontSize.2Xl">30</sys:Double>
+</ResourceDictionary>

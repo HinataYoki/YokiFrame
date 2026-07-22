@@ -1,28 +1,16 @@
 {
-    "name":  "YokiFrame.SceneKit",
+    "name": "YokiFrame.SceneKit",
     "rootNamespace": "YokiFrame",
-    "references":  [
-                       "GUID:224151c835b786a4f8efadaa1799380d",
-                       "UniTask",
-                       "YooAsset"
-                   ],
-    "includePlatforms":  [
-
-                         ],
-    "excludePlatforms":  [
-
-                         ],
-    "allowUnsafeCode":  false,
-    "overrideReferences":  false,
-    "precompiledReferences":  [
-
-                              ],
-    "autoReferenced":  true,
-    "defineConstraints":  [
-
-                          ],
-    "versionDefines":  [
-
-                       ],
-    "noEngineReferences":  false
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
 }

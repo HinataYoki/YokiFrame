@@ -1,0 +1,213 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="using:YokiFrame.Workbench.Avalonia.Components"
+             xmlns:graph="using:YokiFrame.Workbench.Avalonia.ViewModels.FsmKit"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:fsm="using:YokiFrame.Tooling.Application.Models.FsmKit"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.FsmKitPageView"
+             x:DataType="vm:FsmKitPageViewModel"
+             AutomationProperties.AutomationId="workbench.fsm.page">
+  <Grid>
+    <Grid>
+      <Grid IsVisible="{CompiledBinding IsEmptyWorkspaceVisible}">
+        <Border Classes="kit-empty-state panel fsm-empty-state"
+                Padding="28">
+          <StackPanel MaxWidth="480"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="10">
+            <TextBlock Text="{CompiledBinding EmptyStateTitle}"
+                       Classes="h2"
+                       TextAlignment="Center" />
+            <TextBlock Text="{CompiledBinding EmptyStateDescription}"
+                       Classes="body"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Grid IsVisible="{CompiledBinding HasMachines}"
+            ColumnDefinitions="252,*,300"
+            ColumnSpacing="12">
+        <Border Classes="panel"
+                Padding="12">
+          <Grid RowDefinitions="Auto,Auto,*"
+                RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2">
+                <TextBlock Text="活动状态机" Classes="section-title" />
+                <TextBlock Text="{CompiledBinding InstanceCountText}" Classes="muted mono kit-caption" />
+              </StackPanel>
+              <Border Grid.Column="1" Classes="badge" Padding="8,3" VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding InstanceCountText}" Classes="kit-micro" />
+              </Border>
+            </Grid>
+            <TextBox Grid.Row="1"
+                     Text="{CompiledBinding SearchText}"
+                     PlaceholderText="搜索名称 / 状态 / instanceId"
+                     AutomationProperties.Name="搜索活动状态机"
+                     AutomationProperties.AutomationId="workbench.fsm.search" />
+            <ListBox Grid.Row="2"
+                     Classes="fsm-instance-list kit-selection-list"
+                     ItemsSource="{CompiledBinding Machines}"
+                     SelectedItem="{CompiledBinding SelectedMachine, Mode=TwoWay}"
+                     AutomationProperties.Name="活动状态机列表"
+                     AutomationProperties.AutomationId="workbench.fsm.instances">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="graph:FsmMachineListItemViewModel">
+                  <StackPanel Spacing="5"
+                              ToolTip.Tip="{CompiledBinding InstanceId}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                      <TextBlock Text="{CompiledBinding Name}"
+                                 FontWeight="SemiBold"
+                                 TextWrapping="Wrap"
+                                 ToolTip.Tip="{CompiledBinding Name}" />
+                      <Border Grid.Column="1" Classes="badge positive" Padding="7,2">
+                        <TextBlock Text="{CompiledBinding MachineState}" Classes="kit-micro" />
+                      </Border>
+                    </Grid>
+                    <TextBlock Text="{CompiledBinding CurrentState}" Classes="accent mono" FontSize="12" />
+                    <TextBlock Classes="muted kit-micro">
+                      <Run Text="{CompiledBinding StateCount}" />
+                      <Run Text=" 个状态" />
+                    </TextBlock>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Column="1"
+              RowDefinitions="Auto,*"
+              RowSpacing="10">
+          <Grid ColumnDefinitions="1.55*,1*,1*"
+                ColumnSpacing="10">
+            <Border Classes="card fsm-current-card" Padding="12">
+              <StackPanel Spacing="3">
+                <TextBlock Text="当前状态" Classes="muted" FontSize="11" />
+                <TextBlock Text="{CompiledBinding CurrentState}"
+                           Classes="mono"
+                           FontWeight="SemiBold"
+                           FontSize="18"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding CurrentState}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="{CompiledBinding SelectedMachineName}"
+                           Classes="muted"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding SelectedMachineName}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card" Padding="12">
+              <StackPanel Spacing="3">
+                <TextBlock Text="状态总量" Classes="muted" FontSize="11" />
+                <TextBlock Text="{CompiledBinding StateCountText}" Classes="mono accent" FontWeight="SemiBold" />
+                <TextBlock Text="{CompiledBinding MachineState}" Classes="muted mono" FontSize="10" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="card" Padding="12">
+              <StackPanel Spacing="3">
+                <TextBlock Text="观测历史" Classes="muted" FontSize="11" />
+                <TextBlock Text="{CompiledBinding HistoryCountText}" Classes="mono" FontWeight="SemiBold" />
+                <TextBlock Text="仅运行历史" Classes="muted" FontSize="10" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Border Grid.Row="1"
+                  Classes="panel fsm-graph-panel"
+                  Padding="12">
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="已观测转换图" Classes="section-title" />
+                  <TextBlock Text="边只来自运行历史，不代表静态许可规则" Classes="muted" FontSize="11" />
+                  <TextBlock Text="{CompiledBinding StaleReason}" Classes="muted" TextWrapping="Wrap" FontSize="11" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="secondary icon-button"
+                          Content="-"
+                          ToolTip.Tip="缩小状态流图"
+                          AutomationProperties.Name="缩小状态流图"
+                          Click="OnGraphZoomOut" />
+                  <TextBlock x:Name="GraphZoomLabel"
+                             Text="100%"
+                             Classes="mono muted"
+                             MinWidth="48"
+                             TextAlignment="Center"
+                             VerticalAlignment="Center" />
+                  <Button Classes="secondary icon-button"
+                          Content="+"
+                          ToolTip.Tip="放大状态流图"
+                          AutomationProperties.Name="放大状态流图"
+                          Click="OnGraphZoomIn" />
+                  <Button Classes="secondary compact-action"
+                          Content="适应"
+                          ToolTip.Tip="适应当前视口"
+                          Click="OnGraphFit" />
+                </StackPanel>
+              </Grid>
+              <Grid Grid.Row="1">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch">
+                  <components:ObservedFsmGraph x:Name="ObservedGraph"
+                                               Model="{CompiledBinding GraphModel}"
+                                               Background="{DynamicResource Brush.Surface.Card}"
+                                               AutomationProperties.Name="已观测状态转换图"
+                                               AutomationProperties.AutomationId="workbench.fsm.observed-graph" />
+                </ScrollViewer>
+                <Border Classes="kit-empty-state fsm-graph-empty"
+                        IsVisible="{CompiledBinding IsGraphEmpty}">
+                  <StackPanel MaxWidth="360" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="等待完整状态图" FontWeight="SemiBold" TextAlignment="Center" />
+                    <TextBlock Text="{CompiledBinding GraphEmptyHint}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Grid>
+          </Border>
+        </Grid>
+
+        <Border Grid.Column="2"
+                Classes="panel"
+                Padding="12">
+          <Grid RowDefinitions="Auto,*" RowSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="转换历史" Classes="section-title" />
+              <TextBlock Text="{CompiledBinding HistoryCountText}" Classes="muted mono" FontSize="11" />
+            </StackPanel>
+            <ListBox Grid.Row="1"
+                     Classes="kit-timeline-list"
+                     ItemsSource="{CompiledBinding Transitions}"
+                     AutomationProperties.Name="状态转换历史">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="fsm:WorkbenchFsmTransition">
+                  <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8" Margin="2,4">
+                    <TextBlock Text="{CompiledBinding Time}" Classes="muted mono" FontSize="10" />
+                    <TextBlock Grid.Column="1"
+                               Text="{CompiledBinding From}"
+                               Classes="mono"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding From}" />
+                    <TextBlock Grid.Column="2" Text="→" Classes="accent" />
+                    <TextBlock Grid.Column="3"
+                               Text="{CompiledBinding To}"
+                               Classes="mono"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding To}" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

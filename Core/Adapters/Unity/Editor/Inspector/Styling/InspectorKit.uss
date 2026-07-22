@@ -1,0 +1,473 @@
+/* InspectorKit L2：基于 YokiFrame Editor Tokens 的 Inspector 专属组件。 */
+
+.yoki-editor-inspector {
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-inspector__section {
+    margin-top: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-xs);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-xs);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-editor-inspector__section-title {
+    color: var(--yoki-brand-info);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__info {
+    margin-top: var(--yoki-spacing-xs);
+    margin-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    border-left-width: 3px;
+    border-left-color: var(--yoki-brand-info);
+    border-top-left-radius: var(--yoki-radius-sm);
+    border-top-right-radius: var(--yoki-radius-sm);
+    border-bottom-left-radius: var(--yoki-radius-sm);
+    border-bottom-right-radius: var(--yoki-radius-sm);
+    background-color: var(--yoki-brand-info-muted);
+}
+
+.yoki-editor-inspector__info--success {
+    border-left-color: var(--yoki-brand-success);
+    background-color: var(--yoki-brand-success-muted);
+}
+
+.yoki-editor-inspector__info--warning {
+    border-left-color: var(--yoki-brand-warning);
+    background-color: var(--yoki-brand-warning-muted);
+}
+
+.yoki-editor-inspector__info--error {
+    border-left-color: var(--yoki-brand-danger);
+    background-color: var(--yoki-brand-danger-muted);
+}
+
+.yoki-editor-inspector__info-label {
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-sm);
+    white-space: normal;
+}
+
+.yoki-editor-inspector__field--readonly {
+    opacity: 0.72;
+}
+
+.yoki-editor-inspector__actions {
+    margin-top: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    border-top-width: 1px;
+    border-top-color: var(--yoki-border-subtle);
+}
+
+.yoki-editor-inspector__action {
+    min-height: 24px;
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+/* 可组合配置面板 */
+.yoki-editor-inspector__panel {
+    margin-top: var(--yoki-spacing-xs);
+    margin-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-surface);
+    border-radius: var(--yoki-radius-lg);
+}
+
+.yoki-editor-inspector__panel-title {
+    margin-left: 2px;
+    margin-bottom: var(--yoki-spacing-sm);
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-base);
+    -unity-font-style: bold;
+}
+
+/* 可持久化折叠卡片 */
+.yoki-editor-inspector__card {
+    margin-bottom: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    border-radius: var(--yoki-radius-lg);
+    overflow: hidden;
+}
+
+.yoki-editor-inspector__card-header {
+    min-height: 30px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-elevated);
+}
+
+.yoki-editor-inspector__card-header:hover {
+    background-color: var(--yoki-layer-hover);
+}
+
+.yoki-editor-inspector__card-arrow {
+    width: 14px;
+    margin-right: var(--yoki-spacing-xs);
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+    -unity-text-align: middle-center;
+}
+
+.yoki-editor-inspector__card-title {
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__card-body {
+    padding-left: var(--yoki-spacing-md);
+    padding-right: var(--yoki-spacing-md);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+}
+
+/* 紧凑字段行 */
+.yoki-editor-inspector__row {
+    min-height: 26px;
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--yoki-spacing-xs);
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__row-label {
+    width: 132px;
+    min-width: 132px;
+    padding-right: var(--yoki-spacing-sm);
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__row-field {
+    flex-grow: 1;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.yoki-editor-inspector__row--stacked {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-inspector__row--stacked > .yoki-editor-inspector__row-label {
+    width: auto;
+    min-width: 0;
+    margin-bottom: var(--yoki-spacing-xs);
+    padding-right: 0;
+    white-space: normal;
+}
+
+.yoki-editor-inspector__row--stacked > .yoki-editor-inspector__row-field {
+    width: auto;
+    min-width: 0;
+}
+
+.yoki-editor-inspector__secondary-text {
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-xs);
+    white-space: normal;
+}
+
+.yoki-editor-inspector__code-block {
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-base);
+    border-radius: var(--yoki-radius-sm);
+    color: var(--yoki-brand-success);
+    font-size: var(--yoki-font-xs);
+    white-space: normal;
+}
+
+.yoki-editor-inspector__managed-reference {
+    margin-top: var(--yoki-spacing-xs);
+    margin-left: 96px;
+    padding-left: var(--yoki-spacing-sm);
+    border-left-width: 2px;
+    border-left-color: var(--yoki-border-strong);
+}
+
+/* 滑块开关 */
+.yoki-editor-inspector__switch.yoki-editor-inspector__row-field {
+    width: 36px;
+    min-width: 36px;
+    height: 20px;
+    flex-grow: 0;
+    margin-left: auto;
+    padding-left: 1px;
+    padding-right: 1px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 10px;
+}
+
+.yoki-editor-inspector__switch:focus {
+    border-color: var(--yoki-border-focus);
+}
+
+.yoki-editor-inspector__switch-track {
+    width: 32px;
+    height: 16px;
+    justify-content: center;
+    background-color: var(--yoki-layer-navigation);
+    border-width: 1px;
+    border-color: var(--yoki-border-strong);
+    border-radius: 8px;
+}
+
+.yoki-editor-inspector__switch-thumb {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: 12px;
+    height: 12px;
+    background-color: var(--yoki-text-tertiary);
+    border-radius: 6px;
+}
+
+.yoki-editor-inspector__switch--on .yoki-editor-inspector__switch-track {
+    background-color: var(--yoki-brand-primary);
+    border-color: var(--yoki-brand-primary-hover);
+}
+
+.yoki-editor-inspector__switch--on .yoki-editor-inspector__switch-thumb {
+    left: 17px;
+    background-color: var(--yoki-text-on-brand);
+}
+
+/* 卡片内嵌套折叠区 */
+.yoki-editor-inspector__foldout {
+    margin-top: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-xs);
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-navigation);
+    border-radius: var(--yoki-radius-md);
+}
+
+.yoki-editor-inspector__foldout-header {
+    min-height: 24px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-editor-inspector__foldout-header:hover {
+    background-color: var(--yoki-layer-hover);
+}
+
+.yoki-editor-inspector__foldout-arrow {
+    width: 14px;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+    -unity-text-align: middle-center;
+}
+
+.yoki-editor-inspector__foldout-title {
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__foldout-body {
+    padding-top: var(--yoki-spacing-xs);
+    padding-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__foldout--animation > .yoki-editor-inspector__foldout-header {
+    background-color: rgba(91, 69, 105, 0.28);
+}
+
+.yoki-editor-inspector__foldout--focus > .yoki-editor-inspector__foldout-header {
+    background-color: rgba(65, 101, 79, 0.28);
+}
+
+/* 语义信息标题 */
+.yoki-editor-inspector__info-title {
+    margin-bottom: var(--yoki-spacing-xs);
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+}
+
+/* 操作按钮 */
+.yoki-editor-inspector__button-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-inspector__button {
+    min-height: 26px;
+    margin-left: 0;
+    margin-right: var(--yoki-spacing-xs);
+    background-color: var(--yoki-layer-elevated);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    border-radius: var(--yoki-radius-sm);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-editor-inspector__button:hover {
+    background-color: var(--yoki-layer-hover);
+    border-color: var(--yoki-border-strong);
+    color: var(--yoki-text-primary);
+}
+
+.yoki-editor-inspector__button--grow {
+    flex-grow: 1;
+}
+
+.yoki-editor-inspector__button--primary {
+    background-color: var(--yoki-brand-primary);
+    border-color: var(--yoki-brand-primary);
+    color: var(--yoki-text-on-brand);
+}
+
+.yoki-editor-inspector__button--success {
+    border-color: var(--yoki-brand-success);
+    color: var(--yoki-brand-success);
+}
+
+.yoki-editor-inspector__button--warning {
+    border-color: var(--yoki-brand-warning);
+    color: var(--yoki-brand-warning);
+}
+
+.yoki-editor-inspector__button--danger {
+    border-color: var(--yoki-brand-danger);
+    color: var(--yoki-brand-danger);
+}
+
+.yoki-editor-inspector__button-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: var(--yoki-spacing-xs);
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__button-group > .yoki-editor-inspector__button {
+    min-height: 22px;
+    margin-bottom: var(--yoki-spacing-xs);
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-inspector__separator {
+    height: 1px;
+    margin-top: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-border-subtle);
+}
+
+/* 序列化字符串列表 */
+.yoki-editor-inspector__list {
+    margin-top: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-inspector__list-title {
+    margin-bottom: var(--yoki-spacing-sm);
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__list-items {
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-navigation);
+    border-radius: var(--yoki-radius-md);
+}
+
+.yoki-editor-inspector__list-item {
+    min-height: 26px;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__list-marker {
+    width: 48px;
+    min-width: 48px;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__list-marker--primary {
+    color: var(--yoki-brand-primary);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__list-field {
+    flex-grow: 1;
+}
+
+.yoki-editor-inspector__list-remove {
+    width: 26px;
+    min-width: 26px;
+    margin-left: var(--yoki-spacing-xs);
+    margin-right: 0;
+}
+
+.yoki-editor-inspector__list-add {
+    margin-top: var(--yoki-spacing-xs);
+    margin-right: 0;
+}
+
+/* 按需对象选择列表 */
+.yoki-editor-inspector__selection-list-item {
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: var(--yoki-spacing-sm);
+    margin-bottom: var(--yoki-spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-editor-inspector__selection-list-header {
+    min-height: 26px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.yoki-editor-inspector__selection-list-name {
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+    -unity-text-align: middle-left;
+}
+
+.yoki-editor-inspector__selection-list-detail {
+    margin-top: var(--yoki-spacing-xs);
+    margin-left: 48px;
+}

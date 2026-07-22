@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- 开发构建缓存留在当前工具链内；正式工具运行时由 Packaging 写入目标项目 .yokiframe。 -->
+    <YokiFrameWorkbenchBuildRoot Condition="'$(YokiFrameWorkbenchBuildRoot)' == ''">$(MSBuildThisFileDirectory).artifacts</YokiFrameWorkbenchBuildRoot>
+    <BaseOutputPath>$(YokiFrameWorkbenchBuildRoot)/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(YokiFrameWorkbenchBuildRoot)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

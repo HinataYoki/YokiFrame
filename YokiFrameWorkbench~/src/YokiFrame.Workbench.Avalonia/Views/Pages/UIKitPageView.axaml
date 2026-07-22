@@ -1,0 +1,457 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:model="using:YokiFrame.Tooling.Application.Models.UIKit"
+             xmlns:pages="using:YokiFrame.Workbench.Avalonia.Views.Pages"
+             xmlns:converters="using:YokiFrame.Workbench.Avalonia.Converters"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.UIKitPageView"
+             x:DataType="vm:UIKitPageViewModel"
+             Classes="uikit-page"
+             SizeChanged="OnPageSizeChanged"
+             ToolTip.ShowDelay="300"
+             AutomationProperties.AutomationId="workbench.uikit.page">
+  <UserControl.Resources>
+    <converters:UIKitDisplayTextConverter x:Key="UIKitDisplayText" />
+  </UserControl.Resources>
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="9">
+    <Border Classes="kit-panel uikit-task-strip">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button Command="{CompiledBinding ShowRuntimeTaskCommand}"
+                  Classes="uikit-task-button"
+                  Classes.active="{CompiledBinding IsRuntimeTask}"
+                  AutomationProperties.Name="UIKit 运行时诊断">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource Icon.Eye}"
+                        Width="13" Height="13"
+                        Foreground="{DynamicResource Brush.Icon.UIKit}" />
+              <TextBlock Text="运行时诊断" Classes="uikit-task-text" />
+            </StackPanel>
+          </Button>
+          <Button Command="{CompiledBinding ShowEditorToolsTaskCommand}"
+                  Classes="uikit-task-button"
+                  Classes.active="{CompiledBinding IsEditorToolsTask}"
+                  AutomationProperties.Name="UIKit Unity 编辑器工具">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource Icon.Navigation.UIKit}" Width="13" Height="13"
+                        Foreground="{DynamicResource Brush.Icon.UIKit}" />
+              <TextBlock Text="编辑器工具" Classes="uikit-task-text" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"
+                    IsVisible="{CompiledBinding IsRuntimeTask}">
+          <TextBlock Text="{CompiledBinding CopyStatusText}"
+                     IsVisible="{CompiledBinding HasCopyStatus}"
+                     Classes="uikit-caption"
+                     MaxWidth="160"
+                     TextTrimming="CharacterEllipsis"
+                     AutomationProperties.LiveSetting="Polite" />
+          <Button Command="{CompiledBinding CopySnapshotCommand}"
+                  Classes="secondary icon-button"
+                  ToolTip.Tip="复制 UIKit 运行时诊断"
+                  AutomationProperties.Name="复制 UIKit 运行时诊断">
+            <PathIcon Data="{StaticResource Icon.Copy}" Width="14" Height="14" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="6"
+          IsVisible="{CompiledBinding IsRuntimeTask}">
+      <Border Classes="kit-status uikit-status-strip">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+          <Border Classes="uikit-chip"
+                  Classes.positive="{CompiledBinding RootExists}"
+                  Classes.warning="{CompiledBinding RootMissing}">
+            <TextBlock Text="{CompiledBinding RootStatusText}" Classes="uikit-chip-text" />
+          </Border>
+          <Border Grid.Column="1" Classes="uikit-chip">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="数据来源" Classes="uikit-label" />
+              <TextBlock Text="{CompiledBinding Source}" Classes="mono uikit-chip-text" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Classes="uikit-chip">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="更新时间" Classes="uikit-label" />
+              <TextBlock Text="{CompiledBinding UpdatedAtText}" Classes="mono uikit-chip-text" />
+            </StackPanel>
+          </Border>
+          <TextBlock Grid.Column="4" Text="{CompiledBinding CoverageText}"
+                     Classes="mono uikit-caption"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+      <Border Grid.Row="1" Classes="uikit-stale-banner"
+              IsVisible="{CompiledBinding HasStaleReason}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+          <PathIcon Data="{StaticResource Icon.TriangleAlert}"
+                    Width="14" Height="14"
+                    Foreground="{DynamicResource Brush.Status.WarningText}"
+                    VerticalAlignment="Top" />
+          <TextBlock Grid.Column="1" Text="{CompiledBinding StaleReason}"
+                     Foreground="{DynamicResource Brush.Status.WarningText}"
+                     TextWrapping="Wrap"
+                     AutomationProperties.LiveSetting="Polite" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Grid x:Name="UIKitRuntimeLayout" Grid.Row="2" IsVisible="{CompiledBinding IsRuntimeTask}">
+      <Grid x:Name="UIKitWideLayout"
+            ColumnDefinitions="230,7,*,7,320"
+            ColumnSpacing="0">
+      <Border x:Name="UIKitMetricsPanel" Classes="kit-panel uikit-metrics-panel" Padding="0">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border Classes="uikit-metric-section">
+              <StackPanel Spacing="7">
+                <TextBlock Text="运行状态概览" Classes="uikit-section-title" />
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="面板" Classes="uikit-label" />
+                  <TextBlock Grid.Column="1" Text="{CompiledBinding PanelCount}" Classes="mono uikit-value" />
+                </Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="命名栈" Classes="uikit-label" />
+                  <TextBlock Grid.Column="1" Text="{CompiledBinding StackCount}" Classes="mono uikit-value" />
+                </Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="栈成员" Classes="uikit-label" />
+                  <TextBlock Grid.Column="1" Text="{CompiledBinding StackMembershipCount}" Classes="mono uikit-value" />
+                </Grid>
+              </StackPanel>
+            </Border>
+            <Border Classes="uikit-metric-section">
+              <StackPanel Spacing="5">
+                <TextBlock Text="生命周期" Classes="uikit-section-title" Margin="0,0,0,2" />
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已预加载" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding PreloadedCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="打开中" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding OpeningCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已打开" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding OpenCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="隐藏中" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding HidingCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已隐藏" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding HiddenCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="关闭中" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ClosingCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已缓存" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding CachedCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已关闭" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ClosedCount}" Classes="mono" /></Grid>
+              </StackPanel>
+            </Border>
+            <Border Classes="uikit-metric-section">
+              <StackPanel Spacing="5">
+                <TextBlock Text="缓存" Classes="uikit-section-title" Margin="0,0,0,2" />
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="容量" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding CacheCapacity}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="临时" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding TransientCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="可复用" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ReusableCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="已缓存可复用" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ReusableCachedCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="持久" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding PersistentCount}" Classes="mono" /></Grid>
+              </StackPanel>
+            </Border>
+            <Border Classes="uikit-metric-section" BorderThickness="0">
+              <StackPanel Spacing="5">
+                <TextBlock Text="模态" Classes="uikit-section-title" Margin="0,0,0,2" />
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="面板数" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ModalPanelCount}" Classes="mono" /></Grid>
+                <Grid Classes="uikit-metric-row" ColumnDefinitions="*,Auto"><TextBlock Text="遮罩" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding ModalStatusText}" Classes="mono" /></Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Classes="uikit-splitter"
+                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                    Background="Transparent"
+                    AutomationProperties.Name="调整 UIKit 指标和集合宽度" />
+
+      <Border Grid.Column="2" Classes="kit-panel uikit-collection-panel" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <Border Classes="kit-panel-header uikit-collection-header">
+            <Grid ColumnDefinitions="*,260" ColumnSpacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="运行时集合" Classes="uikit-section-title" />
+                <TextBlock Text="{CompiledBinding CoverageText}" Classes="mono uikit-caption" />
+              </StackPanel>
+              <TextBox Grid.Column="1" Text="{CompiledBinding SearchText, Mode=TwoWay}"
+                       PlaceholderText="搜索名称 / 类型 / 状态"
+                       AutomationProperties.Name="搜索 UIKit 面板和命名栈"
+                       AutomationProperties.AutomationId="workbench.uikit.search" />
+            </Grid>
+          </Border>
+          <TabControl Grid.Row="1" SelectedIndex="{CompiledBinding SelectedCollectionIndex, Mode=TwoWay}">
+            <TabItem Header="面板" Classes="kit-tab uikit-tab">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <Grid Margin="10,7" ColumnDefinitions="80,*,2*,90" ColumnSpacing="8">
+                  <TextBlock Text="状态" Classes="uikit-label" />
+                  <TextBlock Grid.Column="1" Text="名称" Classes="uikit-label" />
+                  <TextBlock Grid.Column="2" Text="类型" Classes="uikit-label" />
+                  <TextBlock Grid.Column="3" Text="层级" Classes="uikit-label" />
+                </Grid>
+                <Grid Grid.Row="1">
+                  <ListBox x:Name="UIKitWidePanelList" Classes="uikit-list kit-data-list"
+                           ItemsSource="{CompiledBinding Panels}"
+                           SelectedItem="{CompiledBinding SelectedPanel, Mode=TwoWay}"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto"
+                           SelectionMode="Single"
+                           AutomationProperties.Name="UIKit 面板列表">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="model:WorkbenchUIKitPanel">
+                        <Grid ColumnDefinitions="80,*,2*,90" ColumnSpacing="8">
+                          <Border Classes="uikit-state-chip" HorizontalAlignment="Left">
+                            <TextBlock Text="{CompiledBinding State, Converter={StaticResource UIKitDisplayText}, ConverterParameter=state}" Classes="uikit-chip-text" />
+                          </Border>
+                          <TextBlock Grid.Column="1" Text="{CompiledBinding Name}" Classes="mono" TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding Name}" />
+                          <TextBlock Grid.Column="2" Text="{CompiledBinding Type}" Classes="mono uikit-caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding Type}" />
+                          <TextBlock Grid.Column="3" Text="{CompiledBinding Level, Converter={StaticResource UIKitDisplayText}, ConverterParameter=level}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding IsEmpty}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7" MaxWidth="330">
+                      <TextBlock Text="{CompiledBinding EmptyTitleText}" Classes="uikit-section-title" HorizontalAlignment="Center" />
+                      <TextBlock Text="{CompiledBinding EmptyHintText}" Classes="uikit-caption" TextAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <Border Grid.Row="2" Classes="uikit-truncated-banner" IsVisible="{CompiledBinding PanelsTruncated}">
+                  <TextBlock Text="{CompiledBinding CoverageText}" Foreground="{DynamicResource Brush.Status.WarningText}" />
+                </Border>
+              </Grid>
+            </TabItem>
+            <TabItem Header="命名栈" Classes="kit-tab uikit-tab">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <Grid Margin="10,7" ColumnDefinitions="70,*,*,2*" ColumnSpacing="8">
+                  <TextBlock Text="深度" Classes="uikit-label" />
+                  <TextBlock Grid.Column="1" Text="名称" Classes="uikit-label" />
+                  <TextBlock Grid.Column="2" Text="栈顶名称" Classes="uikit-label" />
+                  <TextBlock Grid.Column="3" Text="栈顶类型" Classes="uikit-label" />
+                </Grid>
+                <Grid Grid.Row="1">
+                  <ListBox x:Name="UIKitWideStackList" Classes="uikit-list kit-data-list"
+                           ItemsSource="{CompiledBinding Stacks}"
+                           SelectedItem="{CompiledBinding SelectedStack, Mode=TwoWay}"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto"
+                           SelectionMode="Single"
+                           AutomationProperties.Name="UIKit 命名栈列表">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="model:WorkbenchUIKitStack">
+                        <Grid ColumnDefinitions="70,*,*,2*" ColumnSpacing="8">
+                          <TextBlock Text="{CompiledBinding Depth}" Classes="mono uikit-value" />
+                          <TextBlock Grid.Column="1" Text="{CompiledBinding Name}" Classes="mono" TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding Name}" />
+                          <TextBlock Grid.Column="2" Text="{CompiledBinding TopPanelName}" Classes="mono" TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding TopPanelName}" />
+                          <TextBlock Grid.Column="3" Text="{CompiledBinding TopPanelType}" Classes="mono uikit-caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding TopPanelType}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding IsEmpty}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7" MaxWidth="330">
+                      <TextBlock Text="{CompiledBinding EmptyTitleText}" Classes="uikit-section-title" HorizontalAlignment="Center" />
+                      <TextBlock Text="{CompiledBinding EmptyHintText}" Classes="uikit-caption" TextAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <Border Grid.Row="2" Classes="uikit-truncated-banner" IsVisible="{CompiledBinding StacksTruncated}">
+                  <TextBlock Text="{CompiledBinding CoverageText}" Foreground="{DynamicResource Brush.Status.WarningText}" />
+                </Border>
+              </Grid>
+            </TabItem>
+          </TabControl>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="3" Classes="uikit-splitter"
+                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                    Background="Transparent"
+                    AutomationProperties.Name="调整 UIKit 集合和详情宽度" />
+
+      <Border x:Name="UIKitDetailPanel" Grid.Column="4" Classes="kit-panel uikit-detail-panel" Padding="0">
+        <Grid>
+          <Grid IsVisible="{CompiledBinding ShowPanelDetails}" RowDefinitions="Auto,*">
+            <Border Classes="kit-panel-header uikit-detail-header">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{CompiledBinding SelectedPanel.Name}" Classes="uikit-section-title" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="面板详情" Classes="uikit-caption" />
+                </StackPanel>
+                <Button Grid.Column="1" Command="{CompiledBinding CopySelectedCommand}" Classes="secondary icon-button"
+                        ToolTip.Tip="复制当前面板诊断" AutomationProperties.Name="复制当前面板诊断">
+                  <PathIcon Data="{StaticResource Icon.Copy}" Width="14" Height="14" />
+                </Button>
+              </Grid>
+            </Border>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="类型" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.Type}" Classes="mono" TextWrapping="Wrap" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="状态" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.State, Converter={StaticResource UIKitDisplayText}, ConverterParameter=state}" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="层级" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.Level, Converter={StaticResource UIKitDisplayText}, ConverterParameter=level}" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="层级顺序" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.LevelOrder}" Classes="mono" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="子层级" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.SubLevel}" Classes="mono" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="缓存策略" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.CachePolicy, Converter={StaticResource UIKitDisplayText}, ConverterParameter=cache}" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="模态" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.IsModal, Converter={StaticResource UIKitDisplayText}, ConverterParameter=boolean}" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="命名栈" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedPanel.StackName}" Classes="mono" TextWrapping="Wrap" /></Grid></Border>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+          <Grid IsVisible="{CompiledBinding ShowStackDetails}" RowDefinitions="Auto,*">
+            <Border Classes="kit-panel-header uikit-detail-header">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{CompiledBinding SelectedStack.Name}" Classes="uikit-section-title" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="命名栈详情" Classes="uikit-caption" />
+                </StackPanel>
+                <Button Grid.Column="1" Command="{CompiledBinding CopySelectedCommand}" Classes="secondary icon-button"
+                        ToolTip.Tip="复制当前命名栈诊断" AutomationProperties.Name="复制当前命名栈诊断">
+                  <PathIcon Data="{StaticResource Icon.Copy}" Width="14" Height="14" />
+                </Button>
+              </Grid>
+            </Border>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="深度" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedStack.Depth}" Classes="mono" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="栈顶名称" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedStack.TopPanelName}" Classes="mono" TextWrapping="Wrap" /></Grid></Border>
+                <Border Classes="uikit-field-row"><Grid ColumnDefinitions="100,*"><TextBlock Text="栈顶类型" Classes="uikit-label" /><TextBlock Grid.Column="1" Text="{CompiledBinding SelectedStack.TopPanelType}" Classes="mono" TextWrapping="Wrap" /></Grid></Border>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+          <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding ShowNoSelection}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7" MaxWidth="240">
+              <TextBlock Text="选择运行时条目" Classes="uikit-section-title" HorizontalAlignment="Center" />
+              <TextBlock Text="选择后可查看完整只读字段" Classes="uikit-caption" TextAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+      </Grid>
+
+      <Grid x:Name="UIKitCompactLayout" RowDefinitions="Auto,*,220" RowSpacing="9">
+      <WrapPanel Orientation="Horizontal">
+        <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="面板" Classes="uikit-label" /><TextBlock Text="{CompiledBinding PanelCount}" Classes="mono uikit-summary-value" /></StackPanel></Border>
+        <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="命名栈 / 栈成员" Classes="uikit-label" /><TextBlock Text="{CompiledBinding StackCoverageText}" Classes="mono uikit-summary-value" /></StackPanel></Border>
+        <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="可复用缓存" Classes="uikit-label" /><TextBlock Text="{CompiledBinding ReusableCachedCount, StringFormat={}{0} 已缓存}" Classes="mono uikit-summary-value" /></StackPanel></Border>
+        <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="模态" Classes="uikit-label" /><TextBlock Text="{CompiledBinding ModalStatusText}" Classes="mono uikit-summary-value" /></StackPanel></Border>
+      </WrapPanel>
+
+      <Border Grid.Row="1" Classes="kit-panel uikit-collection-panel" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <Border Classes="kit-panel-header uikit-collection-header">
+            <Grid ColumnDefinitions="*,230" ColumnSpacing="10">
+              <TextBlock Text="运行时集合" Classes="uikit-section-title" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{CompiledBinding SearchText, Mode=TwoWay}"
+                       PlaceholderText="搜索运行时条目"
+                       AutomationProperties.Name="搜索 UIKit 运行时条目" />
+            </Grid>
+          </Border>
+          <TabControl Grid.Row="1" SelectedIndex="{CompiledBinding SelectedCollectionIndex, Mode=TwoWay}">
+            <TabItem Header="面板" Classes="kit-tab uikit-tab">
+              <Grid>
+                <ListBox x:Name="UIKitCompactPanelList" Classes="uikit-list kit-data-list"
+                         ItemsSource="{CompiledBinding Panels}"
+                         SelectedItem="{CompiledBinding SelectedPanel, Mode=TwoWay}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         SelectionMode="Single">
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="model:WorkbenchUIKitPanel">
+                      <Grid ColumnDefinitions="80,*,2*,90" ColumnSpacing="8">
+                        <Border Classes="uikit-state-chip" HorizontalAlignment="Left"><TextBlock Text="{CompiledBinding State, Converter={StaticResource UIKitDisplayText}, ConverterParameter=state}" Classes="uikit-chip-text" /></Border>
+                        <TextBlock Grid.Column="1" Text="{CompiledBinding Name}" Classes="mono" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="{CompiledBinding Type}" Classes="mono uikit-caption" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{CompiledBinding Level, Converter={StaticResource UIKitDisplayText}, ConverterParameter=level}" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding IsEmpty}">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7">
+                    <TextBlock Text="{CompiledBinding EmptyTitleText}" Classes="uikit-section-title" HorizontalAlignment="Center" />
+                    <TextBlock Text="{CompiledBinding EmptyHintText}" Classes="uikit-caption" TextAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </TabItem>
+            <TabItem Header="命名栈" Classes="kit-tab uikit-tab">
+              <Grid>
+                <ListBox x:Name="UIKitCompactStackList" Classes="uikit-list kit-data-list"
+                         ItemsSource="{CompiledBinding Stacks}"
+                         SelectedItem="{CompiledBinding SelectedStack, Mode=TwoWay}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         SelectionMode="Single">
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="model:WorkbenchUIKitStack">
+                      <Grid ColumnDefinitions="70,*,*,2*" ColumnSpacing="8">
+                        <TextBlock Text="{CompiledBinding Depth}" Classes="mono uikit-value" />
+                        <TextBlock Grid.Column="1" Text="{CompiledBinding Name}" Classes="mono" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="{CompiledBinding TopPanelName}" Classes="mono" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{CompiledBinding TopPanelType}" Classes="mono uikit-caption" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding IsEmpty}">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7">
+                    <TextBlock Text="{CompiledBinding EmptyTitleText}" Classes="uikit-section-title" HorizontalAlignment="Center" />
+                    <TextBlock Text="{CompiledBinding EmptyHintText}" Classes="uikit-caption" TextAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </TabItem>
+          </TabControl>
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="2" Classes="kit-panel uikit-detail-panel" Padding="0">
+        <Grid>
+          <Grid IsVisible="{CompiledBinding ShowPanelDetails}" RowDefinitions="Auto,*">
+            <Border Classes="kit-panel-header uikit-detail-header">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{CompiledBinding SelectedPanel.Name}" Classes="uikit-section-title" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Command="{CompiledBinding CopySelectedCommand}" Classes="secondary icon-button"
+                        ToolTip.Tip="复制当前面板诊断" AutomationProperties.Name="复制当前面板诊断">
+                  <PathIcon Data="{StaticResource Icon.Copy}" Width="14" Height="14" />
+                </Button>
+              </Grid>
+            </Border>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <WrapPanel Margin="10" Orientation="Horizontal">
+                <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="类型" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedPanel.Type}" Classes="mono" TextTrimming="CharacterEllipsis" /></StackPanel></Border>
+                <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="状态 / 层级" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedPanel.State, Converter={StaticResource UIKitDisplayText}, ConverterParameter=state}" /><TextBlock Text="{CompiledBinding SelectedPanel.Level, Converter={StaticResource UIKitDisplayText}, ConverterParameter=level}" Classes="uikit-caption" /></StackPanel></Border>
+                <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="缓存 / 模态" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedPanel.CachePolicy, Converter={StaticResource UIKitDisplayText}, ConverterParameter=cache}" /><TextBlock Text="{CompiledBinding SelectedPanel.IsModal, Converter={StaticResource UIKitDisplayText}, ConverterParameter=boolean, StringFormat={}模态: {0}}" Classes="uikit-caption" /></StackPanel></Border>
+                <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="命名栈" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedPanel.StackName}" Classes="mono" TextTrimming="CharacterEllipsis" /></StackPanel></Border>
+              </WrapPanel>
+            </ScrollViewer>
+          </Grid>
+          <Grid IsVisible="{CompiledBinding ShowStackDetails}" RowDefinitions="Auto,*">
+            <Border Classes="kit-panel-header uikit-detail-header">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{CompiledBinding SelectedStack.Name}" Classes="uikit-section-title" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Command="{CompiledBinding CopySelectedCommand}" Classes="secondary icon-button"
+                        ToolTip.Tip="复制当前命名栈诊断" AutomationProperties.Name="复制当前命名栈诊断">
+                  <PathIcon Data="{StaticResource Icon.Copy}" Width="14" Height="14" />
+                </Button>
+              </Grid>
+            </Border>
+            <WrapPanel Grid.Row="1" Margin="10" Orientation="Horizontal">
+              <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="深度" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedStack.Depth}" Classes="mono uikit-summary-value" /></StackPanel></Border>
+              <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="栈顶名称" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedStack.TopPanelName}" Classes="mono" TextTrimming="CharacterEllipsis" /></StackPanel></Border>
+              <Border Classes="kit-stat uikit-summary-metric"><StackPanel Spacing="2"><TextBlock Text="栈顶类型" Classes="uikit-label" /><TextBlock Text="{CompiledBinding SelectedStack.TopPanelType}" Classes="mono" TextTrimming="CharacterEllipsis" /></StackPanel></Border>
+            </WrapPanel>
+          </Grid>
+          <Border Classes="kit-empty-state uikit-empty-state" IsVisible="{CompiledBinding ShowNoSelection}">
+            <TextBlock Text="选择一个运行时条目" Classes="uikit-section-title" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </Grid>
+      </Border>
+      </Grid>
+    </Grid>
+
+    <pages:UIKitEditorToolsView Grid.Row="1" Grid.RowSpan="2"
+                                IsVisible="{CompiledBinding IsEditorToolsTask}" />
+  </Grid>
+</UserControl>

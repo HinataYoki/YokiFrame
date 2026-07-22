@@ -1,29 +1,16 @@
 {
-    "name":  "YokiFrame.LocalizationKit",
+    "name": "YokiFrame.LocalizationKit",
     "rootNamespace": "YokiFrame",
-    "references":  [
-                       "GUID:224151c835b786a4f8efadaa1799380d",
-                       "GUID:6055be8ebefd69e48b49212b09b47b2f",
-                       "GUID:3c78026e8f7c6bb4da6cf8c58b8ddb02",
-                       "UniTask"
-                   ],
-    "includePlatforms":  [
-
-                         ],
-    "excludePlatforms":  [
-
-                         ],
-    "allowUnsafeCode":  false,
-    "overrideReferences":  false,
-    "precompiledReferences":  [
-
-                              ],
-    "autoReferenced":  true,
-    "defineConstraints":  [
-
-                          ],
-    "versionDefines":  [
-
-                       ],
-    "noEngineReferences":  false
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
 }

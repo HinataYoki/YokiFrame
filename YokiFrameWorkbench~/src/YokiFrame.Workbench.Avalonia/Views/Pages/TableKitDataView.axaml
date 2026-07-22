@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.TableKitDataView"
+             x:DataType="vm:TableKitPageViewModel">
+  <Grid ColumnDefinitions="260,6,220,6,*" MinWidth="760">
+    <Border Grid.Column="0" Classes="tablekit-data-pane tablekit-table-pane">
+      <Grid RowDefinitions="Auto,Auto,*">
+        <Grid Margin="14,12,14,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock Text="配置表" Classes="section-title" />
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding PreviewCountText}"
+                     Classes="mono tablekit-kicker"
+                     VerticalAlignment="Center" />
+        </Grid>
+        <TextBox Grid.Row="1"
+                 Margin="12,0,12,9"
+                 Text="{CompiledBinding PreviewSearch, Mode=TwoWay}"
+                 PlaceholderText="搜索表名..."
+                 AutomationProperties.Name="搜索 TableKit 预览表" />
+        <ListBox x:Name="TableKitPreviewTableList"
+                 Grid.Row="2"
+                 ItemsSource="{CompiledBinding FilteredPreviewTables}"
+                 SelectedItem="{CompiledBinding SelectedPreviewTable, Mode=TwoWay}"
+                 Classes="tablekit-preview-list kit-selection-list"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:TableKitPreviewTableViewModel">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{CompiledBinding Name}"
+                           Classes="mono tablekit-preview-name"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding Name}" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding Count, StringFormat='{}{0} 条'}"
+                           Classes="mono tablekit-kicker"
+                           VerticalAlignment="Center" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+
+    <GridSplitter Grid.Column="1"
+                  Classes="tablekit-data-splitter"
+                  ResizeDirection="Columns"
+                  ResizeBehavior="PreviousAndNext"
+                  AutomationProperties.Name="调整 TableKit 表列表宽度" />
+
+    <Border Grid.Column="2" Classes="tablekit-data-pane tablekit-record-pane">
+      <Grid RowDefinitions="Auto,*">
+        <Grid Margin="14,12,14,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock Text="记录" Classes="section-title" />
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding SelectedPreviewTableSummary}"
+                     Classes="mono tablekit-kicker"
+                     VerticalAlignment="Center" />
+        </Grid>
+        <ListBox x:Name="TableKitPreviewRecordList"
+                 Grid.Row="1"
+                 ItemsSource="{CompiledBinding SelectedPreviewRecords}"
+                 SelectedItem="{CompiledBinding SelectedPreviewRecord, Mode=TwoWay}"
+                 Classes="tablekit-record-list kit-data-list"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:TableKitPreviewRecordViewModel">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="3">
+                <TextBlock Text="{CompiledBinding Title}"
+                           Classes="mono tablekit-record-title"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding Title}" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{CompiledBinding Kind}" Classes="mono tablekit-kicker" />
+                  <TextBlock Grid.Column="1" Text="{CompiledBinding FieldCountText}" Classes="mono tablekit-kicker" />
+                </Grid>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+
+    <GridSplitter Grid.Column="3"
+                  Classes="tablekit-data-splitter"
+                  ResizeDirection="Columns"
+                  ResizeBehavior="PreviousAndNext"
+                  AutomationProperties.Name="调整 TableKit 记录列表宽度" />
+
+    <Border Grid.Column="4" Classes="tablekit-data-detail">
+      <Grid RowDefinitions="Auto,Auto,1,*">
+        <Grid Margin="14,12,14,10" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{CompiledBinding SelectedPreviewRecord.Title, FallbackValue=记录详情}"
+                       Classes="mono section-title"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{CompiledBinding SelectedPreviewTable.Name, FallbackValue=等待选择}"
+                       Classes="mono tablekit-hint"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding SelectedPreviewRecordSummary}"
+                     Classes="mono tablekit-kicker"
+                     VerticalAlignment="Center" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1"
+                      MaxHeight="230"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="14,0,16,10">
+          <ItemsControl ItemsSource="{CompiledBinding SelectedPreviewFields}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TableKitPreviewFieldViewModel">
+                <Border Classes="tablekit-field-card"
+                        Classes.string="{CompiledBinding IsString}"
+                        Classes.number="{CompiledBinding IsNumber}"
+                        Classes.boolean="{CompiledBinding IsBoolean}"
+                        Classes.complex="{CompiledBinding IsComplex}"
+                        Width="210"
+                        Margin="0,0,8,8"
+                        ToolTip.Tip="{CompiledBinding FullValueText}">
+                  <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                      <TextBlock Text="{CompiledBinding Name}"
+                                 Classes="mono tablekit-field-name"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{CompiledBinding TypeName}"
+                                 Classes="mono tablekit-field-type" />
+                    </Grid>
+                    <TextBlock Grid.Row="1"
+                               Text="{CompiledBinding ValueText}"
+                               Classes="mono tablekit-field-value"
+                               MaxHeight="42"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Classes="tablekit-detail-divider" />
+
+        <Grid Grid.Row="3" RowDefinitions="Auto,*" MinHeight="160">
+          <Grid Margin="14,8,14,7" ColumnDefinitions="*,Auto">
+            <TextBlock Text="原始 JSON" Classes="section-title" />
+            <TextBlock Grid.Column="1"
+                       Text="只读"
+                       Classes="mono tablekit-kicker"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <TextBox Grid.Row="1"
+                   Text="{CompiledBinding SelectedPreviewJson}"
+                   Classes="tablekit-json-preview"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

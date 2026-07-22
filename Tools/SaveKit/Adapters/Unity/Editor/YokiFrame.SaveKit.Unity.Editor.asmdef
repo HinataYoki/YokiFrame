@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.SaveKit.Unity.Editor",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.SaveKit",
+        "YokiFrame.SaveKit.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

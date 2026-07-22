@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFileBridgeContract.cs" Link="EditorContracts\CommandBridge\YokiFrameFileBridgeContract.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFileBridgeLayout.cs" Link="EditorContracts\CommandBridge\YokiFrameFileBridgeLayout.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameSafeIdContract.cs" Link="EditorContracts\CommandBridge\YokiFrameSafeIdContract.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFastChannelContract.cs" Link="EditorContracts\CommandBridge\YokiFrameFastChannelContract.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFastChannelFrameHeader.cs" Link="EditorContracts\CommandBridge\YokiFrameFastChannelFrameHeader.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFastChannelFrame.cs" Link="EditorContracts\CommandBridge\YokiFrameFastChannelFrame.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFastChannelFrameCodec.cs" Link="EditorContracts\CommandBridge\YokiFrameFastChannelFrameCodec.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\FastChannel\Transport\YokiFrameFastChannelFrameStream.cs" Link="EditorSupport\FastChannel\YokiFrameFastChannelFrameStream.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\FastChannel\Queue\YokiFrameFastChannelRequestQueue.cs" Link="EditorSupport\FastChannel\YokiFrameFastChannelRequestQueue.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Protocol\YokiFrameFastChannelProtocolException.cs" Link="EditorContracts\CommandBridge\YokiFrameFastChannelProtocolException.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\SharedMemory\YokiFrameSharedMemoryTelemetryContract.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetryContract.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\SharedMemory\YokiFrameSharedMemoryTelemetryCrc32.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetryCrc32.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\SharedMemory\YokiFrameSharedMemoryTelemetryEngineIdHash.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetryEngineIdHash.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\Identity\YokiFrameSharedMemoryTelemetryProjectScopeId.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetryProjectScopeId.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\SharedMemory\YokiFrameSharedMemoryTelemetrySegmentName.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetrySegmentName.cs" />
+    <Compile Include="..\..\..\Core\Editor\Telemetry\SharedMemory\YokiFrameSharedMemoryTelemetryNotificationName.cs" Link="EditorContracts\Telemetry\YokiFrameSharedMemoryTelemetryNotificationName.cs" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);YOKIFRAME_TOOLING</DefineConstants>
+  </PropertyGroup>
+
+</Project>

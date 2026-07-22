@@ -1,0 +1,178 @@
+using UnityEngine;
+
+namespace YokiFrame.Smoke
+{
+    /// <summary>
+    /// 在 Play Mode 中创建不写入 Scene 资产的临时 FSM 对象。
+    /// </summary>
+    public static class FsmSmokeBootstrap
+    {
+        private const string RUNTIME_OBJECT_NAME = "YokiFrame.FsmSmoke.Runtime";
+
+        /// <summary>在子系统重建阶段创建一次性运行对象，兼容关闭 Domain Reload 与 Scene Reload 的项目。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void EnsureRuntimeTarget()
+        {
+            if (GameObject.Find(RUNTIME_OBJECT_NAME) != default)
+            {
+                return;
+            }
+
+            var target = new GameObject(RUNTIME_OBJECT_NAME)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            Object.DontDestroyOnLoad(target);
+            target.AddComponent<FsmSmokeController>();
+        }
+
+        /// <summary>在首个 Scene 加载前补充创建，覆盖不触发 SubsystemRegistration 的宿主配置。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void EnsureBeforeSceneLoad()
+        {
+            EnsureRuntimeTarget();
+        }
+
+        /// <summary>在首个 Scene 加载后再次幂等确认，覆盖禁用 Scene Reload 的 Unity 版本差异。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void EnsureAfterSceneLoad()
+        {
+            EnsureRuntimeTarget();
+        }
+    }
+
+    /// <summary>
+    /// 在受控 Unity fixture 中驱动一个确定性的三状态 FsmKit 流程。
+    /// </summary>
+    public sealed class FsmSmokeController : MonoBehaviour
+    {
+        private const string FSM_NAME = "FsmSmokeTarget";
+
+        [SerializeField]
+        private float mActiveAfterSeconds = 0.25f;
+
+        [SerializeField]
+        private float mCompletedAfterSeconds = 0.50f;
+
+        private FSM<FsmSmokeStateId> mFsm;
+        private FsmSmokeBlackboard mBlackboard;
+
+        /// <summary>获取当前状态名称，供 Inspector 与 Runtime 证据读取。</summary>
+        public string CurrentStateName => mFsm == null ? string.Empty : mFsm.CurEnum.ToString();
+
+        /// <summary>创建状态机、注册三个状态并从 Idle 启动。</summary>
+        private void Awake()
+        {
+            mBlackboard = new FsmSmokeBlackboard(mActiveAfterSeconds, mCompletedAfterSeconds);
+            mFsm = new FSM<FsmSmokeStateId>(FSM_NAME);
+            mFsm.Add(FsmSmokeStateId.Idle, new IdleState(mFsm, mBlackboard));
+            mFsm.Add(FsmSmokeStateId.Active, new ActiveState(mFsm, mBlackboard));
+            mFsm.Add(FsmSmokeStateId.Completed, new CompletedState(mFsm, mBlackboard));
+            mFsm.Start(FsmSmokeStateId.Idle);
+        }
+
+        /// <summary>推进确定性计时并把当前帧交给 FsmKit 状态。</summary>
+        private void Update()
+        {
+            mBlackboard.ElapsedSeconds += Time.deltaTime;
+            mFsm.Update();
+        }
+
+        /// <summary>在组件销毁时释放状态机，保证诊断注册表不保留失效实例。</summary>
+        private void OnDestroy()
+        {
+            if (mFsm == null)
+            {
+                return;
+            }
+
+            ((IState)mFsm).Dispose();
+            mFsm = null;
+        }
+
+        /// <summary>约束 Inspector 配置，使 Completed 阈值始终晚于 Active 阈值。</summary>
+        private void OnValidate()
+        {
+            mActiveAfterSeconds = Mathf.Max(0.01f, mActiveAfterSeconds);
+            mCompletedAfterSeconds = Mathf.Max(mActiveAfterSeconds + 0.01f, mCompletedAfterSeconds);
+        }
+
+        /// <summary>定义 smoke fixture 的稳定状态标识。</summary>
+        private enum FsmSmokeStateId
+        {
+            Idle,
+            Active,
+            Completed
+        }
+
+        /// <summary>保存三个状态共享的确定性计时与阈值。</summary>
+        private sealed class FsmSmokeBlackboard
+        {
+            /// <summary>创建只读阈值配置。</summary>
+            /// <param name="activeAfterSeconds">进入 Active 的时间。</param>
+            /// <param name="completedAfterSeconds">进入 Completed 的时间。</param>
+            public FsmSmokeBlackboard(float activeAfterSeconds, float completedAfterSeconds)
+            {
+                ActiveAfterSeconds = activeAfterSeconds;
+                CompletedAfterSeconds = completedAfterSeconds;
+            }
+
+            /// <summary>获取进入 Active 的时间。</summary>
+            public float ActiveAfterSeconds { get; }
+
+            /// <summary>获取进入 Completed 的时间。</summary>
+            public float CompletedAfterSeconds { get; }
+
+            /// <summary>获取或设置当前累计运行时间。</summary>
+            public float ElapsedSeconds { get; set; }
+        }
+
+        /// <summary>等待 Active 阈值并发起第一次状态切换。</summary>
+        private sealed class IdleState : AbstractState<FsmSmokeStateId, FsmSmokeBlackboard>
+        {
+            /// <summary>创建 Idle 状态。</summary>
+            public IdleState(FSM<FsmSmokeStateId> fsm, FsmSmokeBlackboard blackboard)
+                : base(fsm, blackboard)
+            {
+            }
+
+            /// <summary>达到首个阈值后切换到 Active。</summary>
+            protected override void OnUpdate()
+            {
+                if (mBlack.ElapsedSeconds >= mBlack.ActiveAfterSeconds)
+                {
+                    mFSM.Change(FsmSmokeStateId.Active);
+                }
+            }
+        }
+
+        /// <summary>等待 Completed 阈值并发起最终状态切换。</summary>
+        private sealed class ActiveState : AbstractState<FsmSmokeStateId, FsmSmokeBlackboard>
+        {
+            /// <summary>创建 Active 状态。</summary>
+            public ActiveState(FSM<FsmSmokeStateId> fsm, FsmSmokeBlackboard blackboard)
+                : base(fsm, blackboard)
+            {
+            }
+
+            /// <summary>达到最终阈值后切换到 Completed。</summary>
+            protected override void OnUpdate()
+            {
+                if (mBlack.ElapsedSeconds >= mBlack.CompletedAfterSeconds)
+                {
+                    mFSM.Change(FsmSmokeStateId.Completed);
+                }
+            }
+        }
+
+        /// <summary>表示 smoke 流程已经完成的稳定终态。</summary>
+        private sealed class CompletedState : AbstractState<FsmSmokeStateId, FsmSmokeBlackboard>
+        {
+            /// <summary>创建 Completed 状态。</summary>
+            public CompletedState(FSM<FsmSmokeStateId> fsm, FsmSmokeBlackboard blackboard)
+                : base(fsm, blackboard)
+            {
+            }
+        }
+    }
+}

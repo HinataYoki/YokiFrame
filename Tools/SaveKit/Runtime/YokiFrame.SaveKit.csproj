@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>YokiFrame.SaveKit</AssemblyName>
+    <RootNamespace>YokiFrame</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(YokiFrameToolsBuild)' == 'True'">
+    <DefineConstants>$(DefineConstants);GODOT;TOOLS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="bin/**/*.cs;obj/**/*.cs;Adapters/**/*.cs;Integrations/**/*.cs;Editor/**/*.cs;Tests/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Core/Runtime/YokiFrame.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=$(YokiFrameToolsBuild)</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

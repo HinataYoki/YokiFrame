@@ -1,66 +1,83 @@
+#if UNITY_EDITOR || (GODOT && TOOLS)
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// ActionKit 堆栈追踪服务。默认关闭，仅在诊断面板显式开启后记录 Start 调用来源。
+    /// 按需记录活动根 Action 的 Start 堆栈；默认关闭并使用固定容量上限。
     /// </summary>
     public static class ActionStackTraceService
     {
-        private static readonly Dictionary<ulong, StackTrace> sStackTraces = new Dictionary<ulong, StackTrace>(64);
+        private const int MAX_STACK_TRACES = 256;
+        private static readonly object sSyncRoot = new();
+        private static readonly Dictionary<ulong, StackTrace> sStackTraces = new(64);
+        private static bool sEnabled;
 
-        /// <summary>
-        /// 是否启用 Action 启动堆栈追踪。
-        /// </summary>
-        public static bool Enabled { get; set; }
+        /// <summary>获取或设置是否为后续 Start 捕获堆栈；关闭时立即释放现有记录。</summary>
+        public static bool Enabled
+        {
+            get => sEnabled;
+            set
+            {
+                if (sEnabled == value) return;
+                sEnabled = value;
+                if (!value) Clear();
+                ActionKitScheduler.NotifyStateChanged();
+            }
+        }
 
-        /// <summary>
-        /// 当前记录的堆栈数量。
-        /// </summary>
+        /// <summary>获取当前活动堆栈记录数量。</summary>
         public static int Count
         {
-            get { return sStackTraces.Count; }
+            get { lock (sSyncRoot) return sStackTraces.Count; }
         }
 
         /// <summary>
-        /// 注册指定 Action 的启动堆栈。
+        /// 为活动根注册堆栈；达到上限后停止新增，避免诊断功能形成无界内存占用。
         /// </summary>
-        /// <param name="actionId">Action 运行时编号。</param>
-        /// <param name="stackTrace">启动堆栈。</param>
+        /// <param name="actionId">非零根 Action ID。</param>
+        /// <param name="stackTrace">Start 调用堆栈。</param>
         public static void Register(ulong actionId, StackTrace stackTrace)
         {
-            if (!Enabled || actionId == 0 || stackTrace == null)
-                return;
-
-            sStackTraces[actionId] = stackTrace;
+            if (!sEnabled || actionId == 0 || stackTrace == null) return;
+            lock (sSyncRoot)
+            {
+                if (sStackTraces.Count >= MAX_STACK_TRACES && !sStackTraces.ContainsKey(actionId)) return;
+                sStackTraces[actionId] = stackTrace;
+            }
+            ActionKitScheduler.NotifyStateChanged();
         }
 
         /// <summary>
-        /// 尝试获取指定 Action 的启动堆栈。
+        /// 尝试读取活动根堆栈。
         /// </summary>
-        /// <param name="actionId">Action 运行时编号。</param>
-        /// <param name="stackTrace">启动堆栈。</param>
+        /// <param name="actionId">根 Action ID。</param>
+        /// <param name="stackTrace">匹配记录。</param>
+        /// <returns>存在记录时返回 true。</returns>
         public static bool TryGet(ulong actionId, out StackTrace stackTrace)
         {
-            return sStackTraces.TryGetValue(actionId, out stackTrace);
+            lock (sSyncRoot) return sStackTraces.TryGetValue(actionId, out stackTrace);
         }
 
         /// <summary>
-        /// 移除指定 Action 的启动堆栈。
+        /// 在正常完成、取消或故障时移除对应根堆栈。
         /// </summary>
-        /// <param name="actionId">Action 运行时编号。</param>
+        /// <param name="actionId">根 Action ID。</param>
         public static void Remove(ulong actionId)
         {
-            sStackTraces.Remove(actionId);
+            bool removed;
+            lock (sSyncRoot) removed = sStackTraces.Remove(actionId);
+            if (removed) ActionKitScheduler.NotifyStateChanged();
         }
 
-        /// <summary>
-        /// 清理所有启动堆栈。
-        /// </summary>
+        /// <summary>释放全部堆栈记录。</summary>
         public static void Clear()
         {
-            sStackTraces.Clear();
+            lock (sSyncRoot) sStackTraces.Clear();
+            ActionKitScheduler.NotifyStateChanged();
         }
     }
 }
+#endif

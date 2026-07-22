@@ -1,0 +1,444 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="using:YokiFrame.Workbench.Avalonia.Components"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:res="using:YokiFrame.Workbench.Avalonia.ViewModels.ResKit"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.ResKitPageView"
+             x:DataType="vm:ResKitPageViewModel"
+             AutomationProperties.AutomationId="workbench.reskit.page">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Spacing="7">
+      <Border Classes="reskit-warning"
+              Padding="10,7"
+              IsVisible="{CompiledBinding HasGlobalWarning}">
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="8">
+          <PathIcon Data="{StaticResource Icon.TriangleAlert}"
+                    Width="14"
+                    Height="14"
+                    VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding GlobalWarningText}"
+                     Classes="reskit-warning-text"
+                     TextWrapping="Wrap" />
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <Grid Grid.Row="1"
+          Margin="0,10,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="330" MinWidth="290" MaxWidth="430" />
+        <ColumnDefinition Width="9" />
+        <ColumnDefinition Width="*" MinWidth="520" />
+      </Grid.ColumnDefinitions>
+
+      <Border x:Name="ResourceMasterPanel"
+              Classes="panel reskit-master-panel"
+              Padding="0">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Border Classes="kit-panel-header reskit-master-header">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="7"
+                          VerticalAlignment="Center">
+                <components:NavigationIcon IconKey="reskit" Width="15" Height="15" />
+                <TextBlock Text="已加载资源"
+                           Classes="reskit-section-title" />
+              </StackPanel>
+              <Border Grid.Column="1"
+                      Classes="badge accent"
+                      Padding="9,3"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding VisibleCountText}"
+                           Classes="mono reskit-caption" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <TextBox Grid.Row="1"
+                   Margin="12,10"
+                   Text="{CompiledBinding SearchText, Mode=TwoWay}"
+                   PlaceholderText="搜索路径、类型、Provider 或 lease"
+                   AutomationProperties.Name="搜索 ResKit 已加载资源"
+                   AutomationProperties.AutomationId="workbench.reskit.search" />
+
+          <Grid Grid.Row="2"
+                Margin="8,0,4,8">
+            <ListBox x:Name="ResourceList"
+                     Classes="reskit-resource-list kit-selection-list"
+                     ItemsSource="{CompiledBinding Resources}"
+                     SelectedItem="{CompiledBinding SelectedResource, Mode=TwoWay}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AutomationProperties.Name="ResKit 已加载资源列表">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="res:ResKitResourceListItemViewModel">
+                  <Grid RowDefinitions="Auto,Auto"
+                        ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8"
+                        RowSpacing="3"
+                        AutomationProperties.Name="{CompiledBinding AutomationName}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                      <components:NavigationIcon IconKey="reskit" Width="13" Height="13" />
+                      <TextBlock Text="{CompiledBinding DisplayName}"
+                                 Classes="reskit-resource-name"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding Path}" />
+                    </StackPanel>
+                    <Border Grid.Column="1"
+                            Classes="reskit-lease-badge"
+                            Classes.active="{CompiledBinding HasLeases}">
+                      <TextBlock Classes="mono reskit-caption">
+                        <Run Text="lease " />
+                        <Run Text="{CompiledBinding LeaseCount}" />
+                      </TextBlock>
+                    </Border>
+                    <TextBlock Grid.Row="1"
+                               Text="{CompiledBinding ParentPath}"
+                               Classes="mono reskit-caption"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding Path}" />
+                    <StackPanel Grid.Row="1"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="5"
+                                HorizontalAlignment="Right">
+                      <TextBlock Text="{CompiledBinding State}"
+                                 Classes="reskit-resource-state"
+                                 Classes.ready="{CompiledBinding IsReady}" />
+                      <TextBlock Text="{CompiledBinding TypeDisplayName}"
+                                 Classes="mono reskit-caption"
+                                 MaxWidth="92"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding TypeName}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        IsVisible="{CompiledBinding IsWaitingForData}">
+              <ProgressBar Width="120"
+                           Height="4"
+                           IsIndeterminate="True" />
+              <TextBlock Text="等待 ResKit 状态..."
+                         Classes="reskit-empty-text" />
+            </StackPanel>
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Margin="24"
+                        IsVisible="{CompiledBinding HasNoRuntimeResources}">
+              <components:NavigationIcon IconKey="reskit" Width="24" Height="24" />
+              <TextBlock Text="暂无已加载资源"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="资源获得 lease 后会随下一帧诊断状态显示。"
+                         Classes="reskit-empty-text"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock Text="{CompiledBinding SearchEmptyText}"
+                       Classes="reskit-empty-text"
+                       IsVisible="{CompiledBinding HasNoSearchResults}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="24"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+          </Grid>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    Classes="reskit-master-splitter"
+                    ResizeDirection="Columns"
+                    ResizeBehavior="PreviousAndNext"
+                    Cursor="SizeWestEast" />
+
+      <Border x:Name="ResourceDetailPanel"
+              Grid.Column="2"
+              Classes="panel reskit-detail-panel"
+              Padding="0">
+        <Grid>
+          <Border Classes="kit-empty-state reskit-detail-empty"
+                  Margin="12"
+                  IsVisible="{CompiledBinding IsSelectionEmpty}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+              <components:NavigationIcon IconKey="reskit" Width="24" Height="24" />
+              <TextBlock Text="选择一个资源"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="Provider、lease 和按需加载来源将在这里显示。"
+                         Classes="reskit-empty-text"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Grid IsVisible="{CompiledBinding HasSelection}"
+                RowDefinitions="Auto,*">
+            <Border Classes="reskit-detail-header">
+              <Grid RowDefinitions="Auto,10,Auto">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{CompiledBinding SelectedPath}"
+                             Classes="reskit-detail-title"
+                             MaxLines="2"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SelectedPath}" />
+                  <TextBlock Text="{CompiledBinding SelectedTypeName}"
+                             Classes="mono reskit-caption"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding SelectedTypeName}" />
+                </StackPanel>
+
+                <Border Grid.Row="2"
+                        Classes="reskit-detail-metrics">
+                  <Grid ColumnDefinitions="1.5*,1.15*,*,*,*">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Provider" Classes="reskit-metric-label" />
+                      <TextBlock Text="{CompiledBinding SelectedProviderName}"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding SelectedProviderName}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="2">
+                      <TextBlock Text="状态" Classes="reskit-metric-label" />
+                      <TextBlock Text="{CompiledBinding SelectedState}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="2">
+                      <TextBlock Text="当前 lease" Classes="reskit-metric-label" />
+                      <TextBlock Text="{CompiledBinding SelectedLeaseCount}" Classes="mono reskit-metric-value" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Spacing="2">
+                      <TextBlock Text="generation" Classes="reskit-metric-label" />
+                      <TextBlock Text="{CompiledBinding SelectedProviderGeneration}" Classes="mono" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Spacing="2">
+                      <TextBlock Text="已跟踪来源" Classes="reskit-metric-label" />
+                      <TextBlock Text="{CompiledBinding SelectedTrackedSourceCount}" Classes="mono" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Classes="reskit-source-section"
+                    Margin="12">
+              <Grid RowDefinitions="Auto,*">
+                <Border Classes="reskit-source-header">
+                  <Grid ColumnDefinitions="*,Auto,Auto"
+                        ColumnSpacing="8">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Lease 来源"
+                                 Classes="reskit-section-title" />
+                      <TextBlock Text="{CompiledBinding SourceStatusText}"
+                                 Classes="reskit-caption"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1"
+                               Text="{CompiledBinding SourceCountText}"
+                               Classes="mono reskit-caption"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="2"
+                            Command="{CompiledBinding LoadSourcesCommand}"
+                            Classes="secondary compact-action"
+                            AutomationProperties.Name="读取 ResKit lease 来源">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
+                        <TextBlock Text="读取来源" />
+                      </StackPanel>
+                    </Button>
+                  </Grid>
+                </Border>
+
+                <Grid Grid.Row="1">
+                  <ListBox x:Name="LeaseSourceList"
+                           Classes="reskit-source-list kit-data-list"
+                           ItemsSource="{CompiledBinding Sources}"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           AutomationProperties.Name="ResKit Lease 来源列表">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Vertical" />
+                      </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="res:ResKitLoadSourceItemViewModel">
+                        <Grid RowDefinitions="Auto,Auto"
+                              ColumnDefinitions="*,Auto,Auto"
+                              ColumnSpacing="9"
+                              RowSpacing="4">
+                          <TextBlock Text="{CompiledBinding Display}"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{CompiledBinding Display}" />
+                          <Border Grid.Column="1"
+                                  Classes="reskit-ref-badge">
+                            <TextBlock Classes="mono reskit-caption">
+                              <Run Text="ref " />
+                              <Run Text="{CompiledBinding RefCount}" />
+                            </TextBlock>
+                          </Border>
+                          <Button Grid.Column="2"
+                                  Grid.RowSpan="2"
+                                  Width="30"
+                                  Height="30"
+                                  Command="{CompiledBinding OpenCommand}"
+                                  Classes="ghost compact-action reskit-locate-button"
+                                  ToolTip.Tip="{CompiledBinding OpenAutomationName}"
+                                  AutomationProperties.Name="{CompiledBinding OpenAutomationName}">
+                            <PathIcon Data="{StaticResource Icon.Crosshair}" Width="14" Height="14" />
+                          </Button>
+                          <Grid Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                ColumnDefinitions="*,Auto,Auto"
+                                ColumnSpacing="6">
+                            <TextBlock Classes="mono reskit-caption"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{CompiledBinding FilePath}">
+                              <Run Text="{CompiledBinding FilePath}" />
+                              <Run Text=":" />
+                              <Run Text="{CompiledBinding Line}" />
+                            </TextBlock>
+                            <Border Grid.Column="1"
+                                    Classes="reskit-source-chip tracked"
+                                    IsVisible="{CompiledBinding IsTracked}">
+                              <TextBlock Text="已跟踪" Classes="reskit-caption" />
+                            </Border>
+                            <Border Grid.Column="2"
+                                    Classes="reskit-source-chip anonymous"
+                                    IsVisible="{CompiledBinding IsAnonymous}">
+                              <TextBlock Text="匿名" Classes="reskit-caption" />
+                            </Border>
+                          </Grid>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+
+                  <StackPanel HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Spacing="8"
+                              IsVisible="{CompiledBinding IsSourceLoading}">
+                    <ProgressBar Width="120"
+                                 Height="4"
+                                 IsIndeterminate="True" />
+                    <TextBlock Text="正在读取 Lease 来源..."
+                               Classes="reskit-empty-text" />
+                  </StackPanel>
+
+                  <TextBlock Text="{CompiledBinding SourceEmptyText}"
+                             Classes="reskit-empty-text"
+                             IsVisible="{CompiledBinding ShowSourceEmpty}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Margin="24"
+                             TextAlignment="Center"
+                             TextWrapping="Wrap" />
+                </Grid>
+              </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Expander x:Name="HistoryDrawer"
+              Grid.Row="2"
+              Classes="reskit-history-drawer"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Stretch"
+              IsExpanded="False">
+      <Expander.Header>
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+              ColumnSpacing="10">
+          <TextBlock Text="卸载历史"
+                     FontWeight="SemiBold" />
+          <TextBlock Grid.Column="1"
+                     Text="最新优先"
+                     Classes="reskit-caption" />
+          <TextBlock Grid.Column="2"
+                     Text="{CompiledBinding HistoryCountText}"
+                     Classes="mono reskit-caption" />
+          <TextBlock Grid.Column="3"
+                     Text="{CompiledBinding DroppedHistoryText}"
+                     Classes="reskit-warning-text"
+                     IsVisible="{CompiledBinding HasDroppedHistory}" />
+        </Grid>
+      </Expander.Header>
+
+      <Grid MinHeight="120"
+            MaxHeight="220"
+            RowDefinitions="Auto,*">
+        <Border Classes="reskit-history-header">
+          <Grid ColumnDefinitions="180,200,*,180"
+                ColumnSpacing="10">
+            <TextBlock Text="卸载时间" />
+            <TextBlock Grid.Column="1" Text="类型" />
+            <TextBlock Grid.Column="2" Text="资源路径" />
+            <TextBlock Grid.Column="3" Text="Provider" />
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+          <ListBox Classes="reskit-history-list kit-timeline-list"
+                   ItemsSource="{CompiledBinding History}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   AutomationProperties.Name="ResKit 卸载历史">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel Orientation="Vertical" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="res:ResKitHistoryListItemViewModel">
+                <Grid ColumnDefinitions="180,200,*,180"
+                      ColumnSpacing="10">
+                  <TextBlock Text="{CompiledBinding UnloadTimeText}"
+                             Classes="mono reskit-caption"
+                             ToolTip.Tip="{CompiledBinding UnloadTimeUtc}" />
+                  <TextBlock Grid.Column="1"
+                             Text="{CompiledBinding TypeName}"
+                             Classes="mono reskit-caption"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding TypeName}" />
+                  <TextBlock Grid.Column="2"
+                             Text="{CompiledBinding Path}"
+                             FontWeight="SemiBold"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding Path}" />
+                  <TextBlock Grid.Column="3"
+                             Text="{CompiledBinding ProviderName}"
+                             Classes="reskit-caption"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding ProviderName}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <TextBlock Text="暂无卸载历史"
+                     Classes="reskit-empty-text"
+                     IsVisible="{CompiledBinding IsHistoryEmpty}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     TextAlignment="Center" />
+        </Grid>
+      </Grid>
+    </Expander>
+  </Grid>
+</UserControl>

@@ -1,0 +1,42 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YokiFrame.Workbench.Avalonia.WorkbenchApp"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Colors.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Icons.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Typography.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Spacing.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Radius.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Shadows.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Text.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Buttons.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Inputs.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Panels.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Badges.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Navigation.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/EventKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/FsmKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/LogKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/PoolKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/ResKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/ActionKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/AudioKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/SpatialKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/UIKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/TableKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/LocalizationKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/SaveKit.axaml"/>
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/Terminal.axaml"/>
+    <!-- 共享 Kit 组件层最后加载，确保不会被旧页面的基础样式覆盖。 -->
+    <StyleInclude Source="avares://YokiFrame.Workbench.Avalonia/Styles/KitPage.axaml"/>
+  </Application.Styles>
+</Application>

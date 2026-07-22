@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:web="using:Avalonia.Controls"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.DocumentationPageView"
+             x:DataType="vm:DocumentationPageViewModel"
+             Loaded="OnLoaded"
+             AutomationProperties.AutomationId="workbench.docs.page">
+  <Border Background="{DynamicResource Brush.Surface.Panel}">
+    <web:NativeWebView x:Name="DocumentationWebView"
+                       Classes="docs-webview"
+                       AutomationProperties.AutomationId="workbench.docs.webview"
+                       WebMessageReceived="OnWebMessageReceived"
+                       NavigationCompleted="OnNavigationCompleted" />
+  </Border>
+</UserControl>

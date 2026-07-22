@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "LogKit",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "logkit.diagnostics.available"
+        ],
+        "verifyRecipe": "logkit-read-only"
+      },
+      {
+        "action": "read_log_file",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "logkit.file-preview.available"
+        ],
+        "verifyRecipe": "logkit-read-only"
+      },
+      {
+        "action": "set_settings",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [
+          "logkit.runtime-settings.changed"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "logkit.settings-apply.available"
+        ],
+        "verifyRecipe": "logkit-user-action"
+      },
+      {
+        "action": "reset_settings",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [
+          "logkit.runtime-settings.changed"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "logkit.settings-apply.available"
+        ],
+        "verifyRecipe": "logkit-user-action"
+      },
+      {
+        "action": "clear_history",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [
+          "logkit.history.cleared"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "logkit.diagnostics.available"
+        ],
+        "verifyRecipe": "logkit-user-action"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "logkit-read-only",
+        "description": "Verify a read-only LogKit response against the current engine identity and bounded payload contract.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "logkit-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "logkit-user-action",
+        "description": "Verify an explicit LogKit session mutation and the complete state returned after it.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "logkit-state-reflects-action"
+        ],
+        "evidence": [
+          "command-response",
+          "state-snapshot"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/LogKit/Interaction/LogKitInteractionProvider.cs",
+    "sourceHash": "b80be3e7e858e21ac76992dca2f3d3ab6ec3715e3ec5772e503d5026c84462bb"
+  }
+}

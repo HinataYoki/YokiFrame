@@ -1,0 +1,326 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:model="using:YokiFrame.Tooling.Application.Models.SaveKit"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.SaveKitPageView"
+             x:DataType="vm:SaveKitPageViewModel"
+             Padding="0">
+  <UserControl.Styles>
+    <Style Selector="ToggleButton.savekit-filter">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+      <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+      <Setter Property="BorderThickness" Value="1,1,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="ToggleButton.savekit-filter.last">
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="0,4,4,0" />
+    </Style>
+    <Style Selector="ToggleButton.savekit-filter:checked">
+      <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+      <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*" RowSpacing="10">
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="6">
+      <Border Classes="kit-stat savekit-stat">
+        <StackPanel Spacing="1">
+          <TextBlock Text="Slot 文件" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+          <TextBlock Text="{CompiledBinding SlotCount}" FontSize="{DynamicResource FontSize.Lg}" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Classes="kit-stat savekit-stat">
+        <StackPanel Spacing="1">
+          <TextBlock Text="Global 文件" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+          <TextBlock Text="{CompiledBinding GlobalCount}" FontSize="{DynamicResource FontSize.Lg}" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Classes="kit-stat savekit-stat">
+        <StackPanel Spacing="1">
+          <TextBlock Text="文件总数" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+          <TextBlock Text="{CompiledBinding FileCount}" FontSize="{DynamicResource FontSize.Lg}" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="3"
+              Classes="kit-stat savekit-config-summary"
+              HorizontalAlignment="Stretch">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <TextBlock Text="配置文件" Classes="muted" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding ConfigPath}"
+                     Classes="mono savekit-path"
+                     ToolTip.Tip="{CompiledBinding ConfigPath}"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="350" MinWidth="300" MaxWidth="440" />
+        <ColumnDefinition Width="12" />
+        <ColumnDefinition Width="*" MinWidth="360" />
+      </Grid.ColumnDefinitions>
+
+      <Border Grid.Column="0" Classes="kit-panel" Padding="14" ClipToBounds="True">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="3">
+                <TextBlock Text="存档配置" Classes="section-title" />
+                <TextBlock Text="配置会写入当前引擎的 Runtime Settings。"
+                           Classes="muted"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Command="{CompiledBinding RefreshCommand}"
+                      Classes="secondary icon"
+                      ToolTip.Tip="重新读取 SaveKit 配置和文件列表"
+                      AutomationProperties.Name="刷新 SaveKit 配置">
+                <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
+              </Button>
+            </Grid>
+
+            <StackPanel Spacing="5">
+              <TextBlock Text="存档目录" Classes="muted" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <TextBox Text="{CompiledBinding StoragePath, Mode=TwoWay}"
+                         PlaceholderText="${persistentDataPath}/YokiFrame/Saves"
+                         AutomationProperties.Name="SaveKit 存档目录" />
+                <Button Grid.Column="1"
+                        Command="{CompiledBinding BrowseFolderCommand}"
+                        Classes="secondary icon"
+                        ToolTip.Tip="选择目录"
+                        AutomationProperties.Name="选择 SaveKit 存档目录">
+                  <PathIcon Data="{StaticResource Icon.Folder}" Width="15" Height="15" />
+                </Button>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+              <TextBlock Text="文件扩展名" Classes="muted" />
+              <TextBox Text="{CompiledBinding FileExtension, Mode=TwoWay}"
+                       PlaceholderText=".yoki"
+                       AutomationProperties.Name="SaveKit 文件扩展名" />
+            </StackPanel>
+
+            <Border Classes="savekit-resolved-path">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBlock Text="实际扫描路径"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Xs}"
+                             VerticalAlignment="Center" />
+                  <Border Grid.Column="1"
+                          Classes="savekit-path-state ready"
+                          IsVisible="{CompiledBinding DirectoryExists}">
+                    <TextBlock Text="可访问" />
+                  </Border>
+                  <Border Grid.Column="1"
+                          Classes="savekit-path-state warning"
+                          IsVisible="{CompiledBinding !DirectoryExists}">
+                    <TextBlock Text="未就绪" />
+                  </Border>
+                </Grid>
+                <TextBlock Grid.Row="1"
+                           Text="{CompiledBinding ResolvedStoragePath}"
+                           Classes="mono savekit-resolved-path-text"
+                           ToolTip.Tip="{CompiledBinding ResolvedStoragePath}"
+                           TextWrapping="Wrap" />
+              </Grid>
+            </Border>
+
+            <StackPanel Spacing="6">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Text="运行时状态" Classes="section-title" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding RuntimeStatusText}"
+                           Classes="muted"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           VerticalAlignment="Center" />
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                <TextBlock Text="Storage" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding RuntimeStorageText}"
+                           Classes="mono"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeStorageText}" />
+                <TextBlock Grid.Row="1" Text="Serializer" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+                <TextBlock Grid.Row="1" Grid.Column="1"
+                           Text="{CompiledBinding RuntimeSerializerText}"
+                           Classes="mono"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeSerializerText}" />
+                <TextBlock Grid.Row="2" Text="加密" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+                <TextBlock Grid.Row="2" Grid.Column="1"
+                           Text="{CompiledBinding RuntimeEncryptorText}"
+                           Classes="mono"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeEncryptorText}" />
+                <TextBlock Grid.Row="3" Text="自动保存" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+                <TextBlock Grid.Row="3" Grid.Column="1"
+                           Text="{CompiledBinding RuntimeAutoSaveText}"
+                           Classes="mono"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeAutoSaveText}" />
+                <TextBlock Grid.Row="4" Text="容器头" Classes="muted" FontSize="{DynamicResource FontSize.Xs}" />
+                <TextBlock Grid.Row="4" Grid.Column="1"
+                           Text="{CompiledBinding RuntimeMetadataText}"
+                           Classes="mono"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeMetadataText}" />
+              </Grid>
+              <TextBlock Text="{CompiledBinding RuntimeWarningText}"
+                         Foreground="{DynamicResource Brush.Terminal.Error}"
+                         FontSize="{DynamicResource FontSize.Xs}"
+                         TextWrapping="Wrap"
+                         IsVisible="{CompiledBinding HasRuntimeWarning}"
+                         AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+
+            <Border IsVisible="{CompiledBinding !IsSupported}" Classes="card">
+              <TextBlock Text="当前 engine 尚未提供 SaveKit 配置适配。"
+                         Classes="muted"
+                         TextWrapping="Wrap" />
+            </Border>
+            <TextBlock Text="{CompiledBinding ErrorText}"
+                       Foreground="{DynamicResource Brush.Terminal.Error}"
+                       TextWrapping="Wrap"
+                       IsVisible="{CompiledBinding HasError}"
+                       AutomationProperties.LiveSetting="Polite" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Command="{CompiledBinding ResetCommand}"
+                      Classes="secondary compact-action"
+                      Content="恢复默认" />
+              <Button Command="{CompiledBinding SaveCommand}"
+                      Classes="primary compact-action"
+                      Content="保存配置" />
+            </StackPanel>
+            <TextBlock Text="{CompiledBinding StatusText}"
+                       Classes="muted"
+                       FontSize="{DynamicResource FontSize.Xs}"
+                       TextWrapping="Wrap"
+                       AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    Classes="savekit-master-splitter"
+                    ResizeDirection="Columns"
+                    ResizeBehavior="PreviousAndNext"
+                    Cursor="SizeWestEast"
+                    AutomationProperties.Name="调整 SaveKit 配置与文件区域宽度" />
+
+      <Border Grid.Column="2" Classes="kit-panel" Padding="0" ClipToBounds="True">
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0" Classes="savekit-files-header">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="9">
+              <StackPanel Spacing="2">
+                <TextBlock Text="存档文件" Classes="section-title" />
+                <TextBlock Text="按 Slot / Global 分类浏览文件大小和最近修改时间。"
+                           Classes="muted"
+                           FontSize="{DynamicResource FontSize.Xs}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Width="220"
+                         MaxWidth="220"
+                         HorizontalAlignment="Left"
+                         Text="{CompiledBinding SearchText, Mode=TwoWay}"
+                         PlaceholderText="搜索文件..."
+                         AutomationProperties.Name="搜索 SaveKit 文件" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                  <ToggleButton Classes="savekit-filter"
+                                Command="{CompiledBinding SelectAllCommand}"
+                                IsChecked="{CompiledBinding IsAllFilter, Mode=OneWay}">全部</ToggleButton>
+                  <ToggleButton Classes="savekit-filter"
+                                Command="{CompiledBinding SelectSlotCommand}"
+                                IsChecked="{CompiledBinding IsSlotFilter, Mode=OneWay}">Slot</ToggleButton>
+                  <ToggleButton Classes="savekit-filter last"
+                                Command="{CompiledBinding SelectGlobalCommand}"
+                                IsChecked="{CompiledBinding IsGlobalFilter, Mode=OneWay}">Global</ToggleButton>
+                </StackPanel>
+              </Grid>
+            </Grid>
+          </Border>
+
+          <Grid Grid.Row="1">
+            <ListBox Classes="savekit-files kit-data-list"
+                     ItemsSource="{CompiledBinding FilteredFiles}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="model:WorkbenchSaveKitFile">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                    <Border Classes="badge">
+                      <TextBlock Text="{CompiledBinding Kind}" FontSize="{DynamicResource FontSize.Xs}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="2">
+                      <TextBlock Text="{CompiledBinding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{CompiledBinding FullPath}"
+                                 Classes="mono muted"
+                                 FontSize="{DynamicResource FontSize.Xs}"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding FullPath}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2"
+                               Text="{CompiledBinding SizeText}"
+                               Classes="mono muted"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3"
+                               Text="{CompiledBinding ModifiedText}"
+                               Classes="mono muted"
+                               FontSize="{DynamicResource FontSize.Xs}"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel IsVisible="{CompiledBinding IsEmpty}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="7"
+                        MaxWidth="320"
+                        Margin="24"
+                        IsHitTestVisible="False">
+              <PathIcon Data="{StaticResource Icon.Folder}"
+                        Width="26"
+                        Height="26"
+                        Foreground="{DynamicResource Brush.Text.Muted}"
+                        HorizontalAlignment="Center" />
+              <TextBlock Text="当前筛选下没有存档文件"
+                         Classes="muted"
+                         HorizontalAlignment="Center"
+                         TextAlignment="Center" />
+              <TextBlock Text="目录不存在、仍为空，或路径需要运行时解析。"
+                         Classes="muted"
+                         FontSize="{DynamicResource FontSize.Xs}"
+                         HorizontalAlignment="Center"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

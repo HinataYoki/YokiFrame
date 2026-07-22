@@ -1,0 +1,56 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- 运行日志、Kit 控制台和代码输出统一使用同一终端表面。 -->
+  <Style Selector="Border.terminal, Border.kit-console, Border.architecture-code-path">
+    <Setter Property="Background" Value="{DynamicResource Brush.Terminal.Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+  <Style Selector="TextBlock.terminal-line">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.terminal-line.outbound">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Terminal.Outbound}" />
+  </Style>
+  <Style Selector="TextBlock.terminal-line.inbound">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Terminal.Inbound}" />
+  </Style>
+  <Style Selector="TextBlock.terminal-line.error">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="ListBox.terminal-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.terminal-list ListBoxItem">
+    <Setter Property="Padding" Value="0,3" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="TextBox.terminal-textbox">
+    <Setter Property="Background" Value="{DynamicResource Brush.Terminal.Background}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Border}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Terminal}" />
+  </Style>
+  <Style Selector="ListBox.installer-log">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ListBox.installer-log ListBoxItem">
+    <Setter Property="Padding" Value="0,3" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.installer-log ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ProgressBar.installer-progress">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="MinHeight" Value="5" />
+  </Style>
+</Styles>

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "FsmKit",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "list_all",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "fsm.diagnostics.available"
+        ],
+        "verifyRecipe": "fsm-read-only"
+      },
+      {
+        "action": "get_state",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "fsm.diagnostics.available"
+        ],
+        "verifyRecipe": "fsm-read-only"
+      },
+      {
+        "action": "get_history",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "fsm.diagnostics.available"
+        ],
+        "verifyRecipe": "fsm-read-only"
+      },
+      {
+        "action": "get_state_events",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "fsm.diagnostics.available"
+        ],
+        "verifyRecipe": "fsm-read-only"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "fsm.diagnostics.available"
+        ],
+        "verifyRecipe": "fsm-read-only"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "fsm-read-only",
+        "description": "Verify a read-only FsmKit response against the current engine identity and payload contract.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "fsm-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/FsmKit/Interaction/FsmKitInteractionProvider.cs",
+    "sourceHash": "b420ca903b8119729be1948831e2fce32accca4ea45a240ab23c4bebe8fe5794"
+  }
+}

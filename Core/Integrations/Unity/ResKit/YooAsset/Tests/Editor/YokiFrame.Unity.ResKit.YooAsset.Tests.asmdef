@@ -1,0 +1,42 @@
+{
+    "name": "YokiFrame.Unity.ResKit.YooAsset.Tests",
+    "rootNamespace": "YokiFrame.Unity.Tests",
+    "references": [
+        "YokiFrame.Unity.ResKit.YooAsset",
+        "YokiFrame.Unity.ResKit.YooAsset.Editor",
+        "YokiFrame.Unity.Inspector.Runtime",
+        "YokiFrame.Unity.Inspector.Editor",
+        "YooAsset",
+        "YooAsset.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "YOKIFRAME_YOOASSET_SUPPORT",
+        "YOKIFRAME_YOOASSET_2_OR_3"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "[2.3.0,4.0.0)",
+            "define": "YOKIFRAME_YOOASSET_2_OR_3"
+        },
+        {
+            "name": "com.tuyoogame.yooasset",
+            "expression": "[3.0.0-beta,4.0.0)",
+            "define": "YOKIFRAME_YOOASSET_3"
+        }
+    ],
+    "noEngineReferences": false
+}

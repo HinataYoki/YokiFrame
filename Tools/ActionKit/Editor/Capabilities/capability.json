@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "ActionKit",
+    "state": "Available",
+    "role": "Tool",
+    "snapshotNames": ["state"],
+    "telemetryNames": ["state"],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "actionkit.runtime.loaded"],
+        "verifyRecipe": "actionkit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "actionkit.runtime.loaded"],
+        "verifyRecipe": "actionkit-observe"
+      },
+      {
+        "action": "set_stack_trace",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.actionkit.stack-trace-setting"],
+        "preconditions": ["engine.reachable", "actionkit.runtime.loaded"],
+        "verifyRecipe": "actionkit-user-action"
+      },
+      {
+        "action": "clear_stack_trace",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.actionkit.stack-trace-records"],
+        "preconditions": ["engine.reachable", "actionkit.runtime.loaded"],
+        "verifyRecipe": "actionkit-user-action"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "actionkit-observe",
+        "description": "Verify bounded ActionKit roots, terminal events and counters against the current engine identity.",
+        "gates": ["runtime-response-success", "engine-identity-current", "actionkit-payload-valid"],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "actionkit-user-action",
+        "description": "Verify explicit ActionKit stack trace settings against the returned state.",
+        "gates": ["runtime-response-success", "engine-identity-current", "actionkit-stack-state-updated"],
+        "evidence": ["command-response", "actionkit-state"]
+      }
+    ],
+    "sourcePath": "Tools/ActionKit/Editor/Interaction/ActionKitInteractionProvider.cs",
+    "sourceHash": "ec01679cf03c5d10f8a577afb69525c1ca9eb77a5ef0445513fee472b4a2ffd2"
+  }
+}

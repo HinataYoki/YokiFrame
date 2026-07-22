@@ -1,40 +1,39 @@
 namespace YokiFrame
 {
+    /// <summary>把 ResKit 场景加载操作适配为 SceneKit 操作。</summary>
     internal sealed class ResSceneLoadOperationAdapter : ISceneLoadOperation
     {
         private readonly IResSceneLoadOperation mOperation;
 
-        public ResSceneLoadOperationAdapter(IResSceneLoadOperation operation)
+        /// <summary>创建操作适配器。</summary>
+        /// <param name="operation">ResKit Provider 返回的操作。</param>
+        internal ResSceneLoadOperationAdapter(IResSceneLoadOperation operation)
         {
             mOperation = operation;
         }
 
-        public bool IsSuspended
-        {
-            get { return mOperation != null && mOperation.IsSuspended; }
-        }
+        /// <inheritdoc />
+        public float Progress => mOperation == null ? 0f : mOperation.Progress;
 
-        public float Progress
-        {
-            get { return mOperation != null ? mOperation.Progress : 0f; }
-        }
+        /// <inheritdoc />
+        public bool IsSuspended => mOperation != null && mOperation.IsSuspended;
 
+        /// <inheritdoc />
         public void SuspendLoad()
         {
-            if (mOperation != null)
-                mOperation.SuspendLoad();
+            mOperation?.SuspendLoad();
         }
 
+        /// <inheritdoc />
         public void ResumeLoad()
         {
-            if (mOperation != null)
-                mOperation.ResumeLoad();
+            mOperation?.ResumeLoad();
         }
 
+        /// <inheritdoc />
         public void Recycle()
         {
-            if (mOperation != null)
-                mOperation.Recycle();
+            mOperation?.Recycle();
         }
     }
 }

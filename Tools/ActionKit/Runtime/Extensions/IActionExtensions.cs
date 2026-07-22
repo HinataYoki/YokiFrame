@@ -3,79 +3,49 @@ using System;
 namespace YokiFrame
 {
     /// <summary>
-    /// <see cref="IAction"/> 的调度扩展方法。
+    /// 提供 IAction 的启动、手动推进和完成标记入口。
     /// </summary>
     public static class IActionExtensions
     {
         /// <summary>
-        /// 启动 Action，具体宿主由 Adapter 驱动 ActionKitScheduler。
+        /// 在 Scheduler 宿主线程创建稳定 controller，并同步执行一次 dt=0 首推。
         /// </summary>
-        /// <param name="self">要启动的 Action。</param>
-        /// <param name="onFinish">Action 完成后调用的回调。</param>
+        /// <param name="self">待启动根 Action。</param>
+        /// <param name="onFinish">仅在正常完成时调用的 controller 回调。</param>
+        /// <returns>不会被复用给其它动作的 controller handle。</returns>
         public static IActionController Start(this IAction self, Action<IActionController> onFinish = null)
         {
-            var controller = ActionController.Allocate();
-            controller.CurExecuteActionID = self.ActionID;
-            controller.Action = self;
-            controller.UpdateMode = ActionUpdateModes.ScaledDeltaTime;
-            controller.Finish = onFinish;
-
-            if (ActionStackTraceService.Enabled)
-                ActionStackTraceService.Register(self.ActionID, new System.Diagnostics.StackTrace(1, true));
-
-            ActionKitScheduler.Execute(controller);
-            return controller;
+            if (self == null) throw new ArgumentNullException(nameof(self));
+            return ActionKitScheduler.Execute(self, onFinish);
         }
 
         /// <summary>
-        /// 执行一次 Action 更新。
+        /// 在 Scheduler 宿主线程手动推进单个 Action；自定义宿主通常应驱动 Scheduler，而不是逐个调用本方法。
         /// </summary>
-        /// <param name="self">要更新的 Action。</param>
-        /// <param name="dt">本次更新的时间步长。</param>
+        /// <param name="self">待推进 Action。</param>
+        /// <param name="dt">本次推进秒数。</param>
+        /// <returns>当前 Action 正常完成时返回 true。</returns>
         public static bool Update(this IAction self, float dt)
         {
-            if (self.Paused) return false;
-            try
-            {
-                switch (self.ActionState)
-                {
-                    case ActionStatus.NotStart:
-                        self.OnStart();
-                        if (self.ActionState == ActionStatus.Finished)
-                        {
-                            self.OnFinish();
-                            ActionEditorHooks.OnActionFinished?.Invoke(self);
-                            return true;
-                        }
-                        self.ActionState = ActionStatus.Started;
-                        ActionEditorHooks.OnActionStarted?.Invoke(self);
-                        break;
-                    case ActionStatus.Started:
-                        self.OnExecute(dt);
-                        if (self.ActionState == ActionStatus.Finished)
-                        {
-                            self.OnFinish();
-                            ActionEditorHooks.OnActionFinished?.Invoke(self);
-                            return true;
-                        }
-                        break;
-                    case ActionStatus.Finished:
-                        self.OnFinish();
-                        ActionEditorHooks.OnActionFinished?.Invoke(self);
-                        return true;
-                }
-            }
-            catch (Exception e)
-            {
-                ActionKitRuntimeLog.Error("[ActionKit] " + self.GetDebugInfo() + " 执行出错: " + e.Message);
-            }
-            return false;
+            ActionKitScheduler.EnsureHostThread();
+            if (self == null) throw new ArgumentNullException(nameof(self));
+            if (dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt)) throw new ArgumentOutOfRangeException(nameof(dt));
+            ActionOwnership.EnsureCanManuallyUpdate(self);
+            if (self is ActionBase actionBase && self.ActionID == 0)
+                actionBase.PrepareExecution(ActionKitScheduler.NextActionId());
+            else if (!(self is ActionBase) && self.ActionID == 0)
+                throw new InvalidOperationException("A custom IAction that does not derive from ActionBase must provide a non-zero ActionID.");
+            return ActionKitScheduler.UpdateDetachedAction(self, dt);
         }
 
         /// <summary>
-        /// 将 Action 标记为完成。
+        /// 将当前 Action 标记为正常完成；Scheduler 会在本次推进返回后调用 OnFinish。
         /// </summary>
-        /// <param name="self">要标记完成的 Action。</param>
-        public static void Finish(this IAction self) => self.ActionState = ActionStatus.Finished;
+        /// <param name="self">待完成 Action。</param>
+        public static void Finish(this IAction self)
+        {
+            if (self == null) throw new ArgumentNullException(nameof(self));
+            self.ActionState = ActionStatus.Finished;
+        }
     }
 }

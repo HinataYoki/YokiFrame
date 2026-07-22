@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.UIKit.InputSystem",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "GUID:70f72e85051a8df4fa8542144c429d1f",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_2022_3_OR_NEWER",
+        "YOKIFRAME_INPUTSYSTEM_SUPPORT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

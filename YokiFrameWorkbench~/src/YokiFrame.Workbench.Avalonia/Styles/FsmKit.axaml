@@ -1,0 +1,62 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:components="using:YokiFrame.Workbench.Avalonia.Components">
+  <Style Selector="Border.fsm-session-strip">
+    <Setter Property="MinHeight" Value="66" />
+  </Style>
+  <Style Selector="ListBox.fsm-instance-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.fsm-instance-list ListBoxItem">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+    <Setter Property="Padding" Value="10" />
+  </Style>
+  <Style Selector="ListBox.fsm-instance-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.fsm-instance-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="ListBox.fsm-instance-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Border.fsm-current-card">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.fsm-graph-panel">
+    <Setter Property="MinHeight" Value="480" />
+  </Style>
+  <Style Selector="Border.fsm-graph-empty">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="24" />
+  </Style>
+  <Style Selector="Border.fsm-empty-state">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Panel}" />
+  </Style>
+  <Style Selector="components|ObservedFsmGraph">
+    <Setter Property="EdgeBrush" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="AccentBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="NodeBackground" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="CurrentNodeBackground" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="StrongBorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+    <Setter Property="TextBrush" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="MutedTextBrush" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+</Styles>

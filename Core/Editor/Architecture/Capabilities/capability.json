@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "Architecture",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "list_architectures",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "architecture.diagnostics.available"
+        ],
+        "verifyRecipe": "architecture-read-only"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "architecture.diagnostics.available"
+        ],
+        "verifyRecipe": "architecture-read-only"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "architecture-read-only",
+        "description": "Verify a read-only Architecture response against the current engine identity and payload contract.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "architecture-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/Architecture/Interaction/ArchitectureInteractionProvider.cs",
+    "sourceHash": "4c1d1f575d32a7168195688667e34628cd27bec07796dc2f0f24af93a8d71580"
+  }
+}

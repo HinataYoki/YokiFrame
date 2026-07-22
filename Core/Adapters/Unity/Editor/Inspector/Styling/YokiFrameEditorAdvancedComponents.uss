@@ -1,0 +1,395 @@
+/* YokiFrame Editor L1：扩展状态、验证和工具组件。class 统一使用 yoki-editor-* 命名空间。 */
+
+.yoki-editor-progress-bar-fill {
+    height: 100%;
+    background-color: var(--yoki-brand-primary);
+    border-radius: 2px;
+    transition-property: width;
+    transition-duration: var(--yoki-duration-slow);
+}
+
+/* ========== 历史记录项 ========== */
+.yoki-editor-history-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    margin: var(--yoki-spacing-xs) var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    transition-property: background-color, translate;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-editor-history-item:hover {
+    background-color: var(--yoki-layer-hover);
+    translate: 2px 0;
+}
+
+.yoki-editor-history-time {
+    width: 60px;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-sm);
+}
+
+.yoki-editor-history-badge {
+    padding: 3px 10px;
+    border-radius: var(--yoki-radius-sm);
+    margin-right: var(--yoki-spacing-sm);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+.yoki-editor-history-badge.yoki-editor-register { background-color: rgba(76, 175, 80, 0.2); color: var(--yoki-brand-success); }
+.yoki-editor-history-badge.yoki-editor-unregister { background-color: rgba(244, 67, 54, 0.2); color: var(--yoki-brand-danger); }
+.yoki-editor-history-badge.yoki-editor-send { background-color: var(--yoki-brand-primary-muted); color: var(--yoki-brand-primary); }
+.yoki-editor-history-badge.yoki-editor-start { background-color: rgba(76, 175, 80, 0.2); color: var(--yoki-brand-success); }
+.yoki-editor-history-badge.yoki-editor-change { background-color: var(--yoki-brand-primary-muted); color: var(--yoki-brand-primary); }
+.yoki-editor-history-badge.yoki-editor-enum { background-color: rgba(156, 39, 176, 0.2); color: rgb(186, 104, 200); }
+.yoki-editor-history-badge.yoki-editor-type { background-color: rgba(76, 175, 80, 0.2); color: var(--yoki-brand-success); }
+.yoki-editor-history-badge.yoki-editor-string { background-color: rgba(255, 152, 0, 0.2); color: var(--yoki-brand-warning); }
+
+.yoki-editor-history-key {
+    flex-grow: 1;
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-history-args {
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-sm);
+}
+
+/* ========== 状态项 ========== */
+.yoki-editor-state-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-md);
+    margin: var(--yoki-spacing-xs) var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-left-width: 0;
+    border-left-color: transparent;
+    transition-property: background-color, border-left-width, border-left-color, translate;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-editor-state-item:hover {
+    background-color: var(--yoki-layer-hover);
+    translate: 2px 0;
+}
+
+.yoki-editor-state-item.yoki-editor-current {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-left-width: 3px;
+    border-left-color: var(--yoki-brand-success);
+}
+
+.yoki-editor-state-indicator {
+    width: 24px;
+    color: var(--yoki-brand-success);
+    font-size: var(--yoki-font-sm);
+}
+
+.yoki-editor-state-name {
+    width: 150px;
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-base);
+}
+
+.yoki-editor-state-item.yoki-editor-current .yoki-editor-state-name {
+    -unity-font-style: bold;
+    color: var(--yoki-brand-success);
+}
+
+.yoki-editor-state-type {
+    flex-grow: 1;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-sm);
+}
+
+
+/* ========== 通用区块样式 (Section) ========== */
+.yoki-editor-section {
+    margin-bottom: var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-card);
+    border-radius: var(--yoki-radius-md);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    overflow: hidden;
+}
+
+.yoki-editor-section__header {
+    background-color: var(--yoki-layer-navigation);
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+    color: var(--yoki-text-primary);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--yoki-border-subtle);
+}
+
+.yoki-editor-section__content {
+    padding: var(--yoki-spacing-md);
+}
+
+/* ========== 通用字段行样式 ========== */
+.yoki-editor-field-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--yoki-spacing-sm);
+    min-height: 22px;
+}
+
+.yoki-editor-field-row__label {
+    width: 100px;
+    min-width: 100px;
+    color: var(--yoki-text-secondary);
+    font-size: var(--yoki-font-sm);
+    -unity-text-align: middle-left;
+}
+
+.yoki-editor-field-row__field {
+    flex-grow: 1;
+    margin: 0;
+}
+
+/* ========== 验证提示样式 ========== */
+.yoki-editor-validation {
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    border-radius: var(--yoki-radius-sm);
+    font-size: var(--yoki-font-xs);
+    white-space: normal;
+    margin-top: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-validation--success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--yoki-brand-success);
+    border-width: 1px;
+    border-color: var(--yoki-brand-success);
+}
+
+.yoki-editor-validation--error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: var(--yoki-brand-danger);
+    border-width: 1px;
+    border-color: var(--yoki-brand-danger);
+}
+
+.yoki-editor-validation--warning {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: var(--yoki-brand-warning);
+    border-width: 1px;
+    border-color: var(--yoki-brand-warning);
+}
+
+/* ========== 帮助提示框 ========== */
+.yoki-editor-helpbox {
+    flex-direction: row;
+    background-color: rgba(33, 150, 243, 0.1);
+    border-radius: var(--yoki-radius-sm);
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-md);
+    border-width: 1px;
+    border-color: rgba(33, 150, 243, 0.3);
+}
+
+.yoki-editor-helpbox__icon {
+    width: 18px;
+    min-width: 18px;
+    font-size: var(--yoki-font-base);
+    color: var(--yoki-brand-primary);
+    margin-right: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-helpbox__text {
+    flex-grow: 1;
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-secondary);
+    white-space: normal;
+}
+
+/* ========== 输入框样式 ========== */
+.yoki-editor-input {
+    background-color: var(--yoki-layer-elevated);
+    border-color: var(--yoki-border-default);
+    border-radius: var(--yoki-radius-sm);
+    padding: 2px var(--yoki-spacing-xs);
+}
+
+.yoki-editor-input:hover {
+    border-color: var(--yoki-border-strong);
+}
+
+.yoki-editor-input:focus {
+    border-color: var(--yoki-brand-primary);
+}
+
+/* ========== 小按钮样式 ========== */
+.yoki-editor-btn-sm {
+    padding: var(--yoki-spacing-xs) var(--yoki-spacing-md);
+    background-color: var(--yoki-layer-hover);
+    border-radius: var(--yoki-radius-sm);
+    border-width: 1px;
+    border-color: var(--yoki-border-strong);
+    font-size: var(--yoki-font-xs);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-editor-btn-sm:hover {
+    background-color: var(--yoki-layer-elevated);
+    color: var(--yoki-text-primary);
+}
+
+/* ========== 滚动条美化 ========== */
+.unity-scroller--vertical .unity-base-slider__drag-container {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    width: 100%;
+}
+
+.unity-scroller--vertical {
+    width: 12px;
+}
+
+.unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-width: 0;
+    border-radius: 6px;
+}
+
+.unity-scroller--vertical .unity-base-slider__dragger {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    border-width: 0;
+    transition-property: background-color;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.unity-scroller--vertical .unity-base-slider__dragger:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+.unity-scroller--vertical .unity-base-slider__dragger:active {
+    background-color: var(--yoki-brand-primary);
+}
+
+.unity-scroller .unity-repeat-button {
+    display: none;
+}
+
+/* ========== Unity 输入框统一样式 ========== */
+.unity-base-field__input {
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    padding: var(--yoki-spacing-sm) var(--yoki-spacing-md);
+    color: var(--yoki-text-primary);
+    transition-property: border-color, background-color;
+    transition-duration: var(--yoki-duration-normal);
+}
+
+.unity-base-field__input:hover {
+    border-color: var(--yoki-border-strong);
+}
+
+.unity-base-field__input:focus {
+    border-color: var(--yoki-brand-primary);
+    background-color: var(--yoki-layer-card);
+}
+
+.unity-toggle__checkmark {
+    background-color: var(--yoki-layer-elevated);
+    border-radius: var(--yoki-radius-sm);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    transition-property: background-color, border-color;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.unity-toggle:hover .unity-toggle__checkmark {
+    border-color: var(--yoki-brand-primary);
+}
+
+.unity-toggle:checked .unity-toggle__checkmark {
+    background-color: var(--yoki-brand-primary);
+    border-color: var(--yoki-brand-primary);
+}
+
+
+/* ========== 卡片修饰符 ========== */
+.yoki-editor-card--spaced {
+    margin: var(--yoki-spacing-md);
+}
+
+/* ========== 内容区域修饰符 ========== */
+.yoki-editor-content-area--padded {
+    padding: var(--yoki-spacing-md);
+}
+
+/* ========== Toggle 区域 ========== */
+.yoki-editor-toggle-section {
+    margin-bottom: var(--yoki-spacing-md);
+}
+
+/* ========== 配置区域 ========== */
+.yoki-editor-config-section {
+    margin-top: var(--yoki-spacing-sm);
+}
+
+.yoki-editor-config-section__title {
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+    color: var(--yoki-text-secondary);
+    margin-bottom: var(--yoki-spacing-md);
+}
+
+/* ========== 信息值修饰符 ========== */
+.yoki-editor-info-value--wrap {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ========== 工具栏标签 ========== */
+.yoki-editor-toolbar-label {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-tertiary);
+    margin-left: var(--yoki-spacing-md);
+}
+
+/* ========== 工具栏 Toggle ========== */
+.yoki-editor-toolbar-toggle {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--yoki-spacing-xs) var(--yoki-spacing-md);
+    margin: 0 var(--yoki-spacing-xs);
+    border-radius: var(--yoki-radius-sm);
+    background-color: var(--yoki-layer-card);
+    border-width: 1px;
+    border-color: var(--yoki-border-default);
+    transition-property: background-color, border-color;
+    transition-duration: var(--yoki-duration-fast);
+}
+
+.yoki-editor-toolbar-toggle:hover {
+    background-color: var(--yoki-layer-hover);
+    border-color: var(--yoki-border-strong);
+}
+
+.yoki-editor-toolbar-toggle.yoki-editor-checked {
+    background-color: var(--yoki-brand-primary-muted);
+    border-color: var(--yoki-brand-primary);
+}
+
+.yoki-editor-toolbar-toggle-label {
+    font-size: var(--yoki-font-sm);
+    color: var(--yoki-text-secondary);
+}
+
+.yoki-editor-toolbar-toggle.yoki-editor-checked .yoki-editor-toolbar-toggle-label {
+    color: var(--yoki-brand-primary);
+}

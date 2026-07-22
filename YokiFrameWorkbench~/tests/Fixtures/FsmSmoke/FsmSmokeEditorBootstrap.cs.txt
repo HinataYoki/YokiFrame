@@ -1,0 +1,79 @@
+#if UNITY_EDITOR
+using UnityEditor;
+
+namespace YokiFrame.Smoke
+{
+    /// <summary>
+    /// 从独立 Editor 程序集观察 Play Mode，确保关闭 Domain Reload 与 Scene Reload 时仍创建 FSM fixture。
+    /// </summary>
+    [InitializeOnLoad]
+    internal static class FsmSmokeEditorBootstrap
+    {
+        private static bool sRuntimeEnsured;
+
+        /// <summary>在 Editor 程序集加载时注册稳定的 Play Mode 回调。</summary>
+        static FsmSmokeEditorBootstrap()
+        {
+            RegisterCallbacks();
+        }
+
+        /// <summary>在 Unity 扫描 InitializeOnLoadMethod 时再次确保回调已经注册。</summary>
+        [InitializeOnLoadMethod]
+        private static void RegisterFromInitializeOnLoadMethod()
+        {
+            RegisterCallbacks();
+        }
+
+        /// <summary>脚本重载完成后重新注册回调，覆盖禁用 Play Mode Domain Reload 的项目。</summary>
+        [UnityEditor.Callbacks.DidReloadScripts]
+        private static void RegisterAfterScriptsReloaded()
+        {
+            RegisterCallbacks();
+        }
+
+        /// <summary>幂等注册 Play Mode 与 Editor update 两条观察路径。</summary>
+        private static void RegisterCallbacks()
+        {
+            EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+            EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+            EditorApplication.update -= HandleEditorUpdate;
+            EditorApplication.update += HandleEditorUpdate;
+        }
+
+        /// <summary>进入 Play Mode 后调用 Runtime 程序集中的幂等创建入口。</summary>
+        /// <param name="state">Unity Editor 的 Play Mode 生命周期状态。</param>
+        private static void HandlePlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode)
+            {
+                sRuntimeEnsured = false;
+                return;
+            }
+
+            if (state == PlayModeStateChange.EnteredPlayMode)
+            {
+                FsmSmokeBootstrap.EnsureRuntimeTarget();
+                sRuntimeEnsured = true;
+            }
+        }
+
+        /// <summary>在事件注册时机错过 EnteredPlayMode 时，通过 Editor update 兜底创建一次。</summary>
+        private static void HandleEditorUpdate()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                sRuntimeEnsured = false;
+                return;
+            }
+
+            if (sRuntimeEnsured)
+            {
+                return;
+            }
+
+            FsmSmokeBootstrap.EnsureRuntimeTarget();
+            sRuntimeEnsured = true;
+        }
+    }
+}
+#endif

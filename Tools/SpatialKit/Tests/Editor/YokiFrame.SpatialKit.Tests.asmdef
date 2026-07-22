@@ -1,0 +1,25 @@
+{
+    "name": "YokiFrame.SpatialKit.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:8e62f2f1c4b54a22a65cf2e98aa12920",
+        "GUID:4b9c5ea3c7b84c8f9f2d1e6a6b4f0c31",
+        "GUID:7d6a4c23e5c84f6f9c5b3a2d1e0f8b77"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

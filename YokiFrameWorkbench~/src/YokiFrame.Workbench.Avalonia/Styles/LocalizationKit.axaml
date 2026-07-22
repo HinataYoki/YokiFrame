@@ -1,0 +1,133 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- LocalizationKit 复用统一 Kit 面板，但保留三栏诊断的行式密度。 -->
+  <Style Selector="Border.localization-pane-header">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Navigation}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="MinHeight" Value="52" />
+  </Style>
+  <Style Selector="Border.localization-filterbar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="Border.localization-column-header">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Base}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,8,16,8" />
+  </Style>
+  <Style Selector="Border.localization-entry-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.localization-entry-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.localization-entry-list ListBoxItem">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.localization-entry-list ListBoxItem:selected Border.localization-entry-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.localization-state">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="6,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.localization-state.complete">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="Border.localization-state.missing">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Error}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="Border.localization-summary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,10,16,10" />
+  </Style>
+  <Style Selector="Border.localization-value-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="14,11,18,11" />
+    <Setter Property="MinHeight" Value="66" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.localization-value-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Border.localization-value-row.missing">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+  </Style>
+  <Style Selector="Border.localization-coverage-summary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,10,16,10" />
+  </Style>
+  <Style Selector="Border.localization-coverage-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,11,16,11" />
+    <Setter Property="MinHeight" Value="72" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.localization-coverage-row.missing">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+  </Style>
+  <Style Selector="ProgressBar.localization-coverage-progress">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.SuccessText}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+  </Style>
+  <Style Selector="ProgressBar.localization-coverage-progress.missing">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.localization-pane-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.localization-key">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.localization-language">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.localization-translation">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="LineHeight" Value="20" />
+  </Style>
+  <Style Selector="TextBlock.localization-meta">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+</Styles>

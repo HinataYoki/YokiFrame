@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "fsm-control-plane-smoke-v1",
+  "engineKind": "Unity",
+  "scenePath": "Assets/Scenes/SampleScene.unity",
+  "objectPath": "YokiFrame.FsmSmoke.Runtime",
+  "componentType": "YokiFrame.Smoke.FsmSmokeController",
+  "sourceTemplate": "FsmSmokeController.cs.txt",
+  "targetScript": "Assets/AiGenerated/FsmSmoke/FsmSmokeController.cs",
+  "editorSourceTemplate": "FsmSmokeEditorBootstrap.cs.txt",
+  "editorTargetScript": "Assets/AiGenerated/FsmSmoke/Editor/FsmSmokeEditorBootstrap.cs",
+  "targetScriptGuid": "ae08fbbefb387f943850fa354ba31bb6",
+  "editorTargetScriptGuid": "29a0e46daec09c64a81d8d6a22814f03",
+  "targetMode": "replace-existing",
+  "editorTargetMode": "create-new",
+  "preserveMeta": true,
+  "expectedPlaceholderSha256": "12a0538c589632064a0e786747966bc2b4e2f6992504aff892acc46fd9653290",
+  "expectedEditorPlaceholderSha256": "f6f4e2c94d194e263ddb605a3d51fba99c81d79896b1eeb396aaf1efff363445",
+  "sourceTemplateSha256": "37871d427e689faf38415c3a69da8fee90c564d66e75ce655f46fb47124e7086",
+  "editorSourceTemplateSha256": "b6512f0734ef39e781013ec9f5db10ea19f8a737b70ceb21d80df33919d65528",
+  "stateSequence": [
+    "Idle",
+    "Active",
+    "Completed"
+  ],
+  "serializedProperties": {
+    "mActiveAfterSeconds": 0.25,
+    "mCompletedAfterSeconds": 0.5
+  },
+  "requiredEvidence": [
+    "project-model",
+    "capability-catalog",
+    "plan",
+    "changeset",
+    "approval",
+    "unity-compile",
+    "console-errors",
+    "playmode-fsm-state",
+    "rollback-verdict"
+  ]
+}

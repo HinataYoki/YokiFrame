@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!-- Core、Tools 与宿主项目的普通构建产物不得写入源码发布包。 -->
+    <YokiFramePackageRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</YokiFramePackageRoot>
+    <YokiFrameBuildScope>$([MSBuild]::StableStringHash('$(YokiFramePackageRoot)'))</YokiFrameBuildScope>
+    <YokiFrameBuildRoot Condition="'$(YokiFrameBuildRoot)' == ''">$([System.IO.Path]::GetTempPath())YokiFrame/build/$(YokiFrameBuildScope)</YokiFrameBuildRoot>
+    <YokiFrameBuildProfile Condition="'$(YokiFrameToolsBuild)' == 'True'">tools</YokiFrameBuildProfile>
+    <YokiFrameBuildProfile Condition="'$(YokiFrameBuildProfile)' == ''">runtime</YokiFrameBuildProfile>
+    <BaseOutputPath>$(YokiFrameBuildRoot)/$(YokiFrameBuildProfile)/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/$(YokiFrameBuildProfile)/$(Configuration)/</IntermediateOutputPath>
+  </PropertyGroup>
+</Project>

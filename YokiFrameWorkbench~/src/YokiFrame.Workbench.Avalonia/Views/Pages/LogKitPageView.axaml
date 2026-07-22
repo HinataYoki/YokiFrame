@@ -1,0 +1,379 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.LogKitPageView"
+             x:DataType="vm:LogKitPageViewModel">
+  <Border x:Name="SettingsPanel"
+          Classes="panel logkit-settings-panel"
+          Padding="0">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <Border Classes="logkit-runtime-banner">
+        <Grid ColumnDefinitions="Auto,1,2*,1,Auto,1,Auto,1,Auto"
+              ColumnSpacing="12">
+          <Border Classes="logkit-runtime-status"
+                  Classes.positive="{CompiledBinding RuntimeEnabled}"
+                  VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="7">
+              <Ellipse Width="8"
+                       Height="8"
+                       Classes="logkit-runtime-dot"
+                       VerticalAlignment="Center" />
+              <TextBlock Text="{CompiledBinding RuntimeStatusText}"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1"
+                  Classes="logkit-runtime-separator" />
+
+          <Grid Grid.Column="2"
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="7"
+                VerticalAlignment="Center">
+            <TextBlock Text="Logger"
+                       Classes="logkit-runtime-label" />
+            <TextBlock Grid.Column="1"
+                       Text="{CompiledBinding LoggerName}"
+                       Classes="mono logkit-runtime-value"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{CompiledBinding LoggerName}" />
+          </Grid>
+
+          <Border Grid.Column="3"
+                  Classes="logkit-runtime-separator" />
+
+          <StackPanel Grid.Column="4"
+                      Orientation="Horizontal"
+                      Spacing="7"
+                      VerticalAlignment="Center">
+            <TextBlock Text="最低"
+                       Classes="logkit-runtime-label" />
+            <TextBlock Text="{CompiledBinding RuntimeMinimumLevel}"
+                       Classes="logkit-runtime-value" />
+          </StackPanel>
+
+          <Border Grid.Column="5"
+                  Classes="logkit-runtime-separator" />
+
+          <StackPanel Grid.Column="6"
+                      Orientation="Horizontal"
+                      Spacing="7"
+                      VerticalAlignment="Center">
+            <TextBlock Text="内存历史"
+                       Classes="logkit-runtime-label" />
+            <TextBlock Text="{CompiledBinding RuntimeHistoryText}"
+                       Classes="logkit-runtime-value"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{CompiledBinding RuntimeHistoryText}" />
+          </StackPanel>
+
+          <Border Grid.Column="7"
+                  Classes="logkit-runtime-separator" />
+
+          <StackPanel Grid.Column="8"
+                      Orientation="Horizontal"
+                      Spacing="7"
+                      VerticalAlignment="Center">
+            <TextBlock Text="来源"
+                       Classes="logkit-runtime-label" />
+            <TextBlock Text="{CompiledBinding DataChannelText}"
+                       Classes="mono logkit-runtime-value"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{CompiledBinding DataChannelText}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ScrollViewer Grid.Row="1"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
+                    Padding="0,0,16,0"
+                    AutomationProperties.Name="LogKit 配置">
+        <Grid x:Name="ConfigGrid"
+              Margin="16"
+              ColumnDefinitions="*,*"
+              RowDefinitions="Auto,Auto"
+              ColumnSpacing="16"
+              RowSpacing="16"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Top"
+              IsEnabled="{CompiledBinding ProjectCanPersist}">
+          <Border x:Name="OutputSettingsCard"
+                  Grid.Row="1"
+                  Grid.Column="0"
+                  Classes="card logkit-section-card">
+              <StackPanel Spacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="输出目标"
+                             Classes="logkit-section-title" />
+                  <TextBlock Text="选择 Runtime 将日志写入哪些目标。"
+                             Classes="logkit-helper" />
+                </StackPanel>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        Tag="LogKitEnabledToggle"
+                        PointerPressed="OnSettingLabelPointerPressed">
+                    <TextBlock Text="LogKit 输出"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch x:Name="LogKitEnabledToggle"
+                                  Grid.Column="1"
+                                  Classes="logkit-editor"
+                                  OnContent="启用"
+                                  OffContent="关闭"
+                                  IsChecked="{CompiledBinding SettingsDraft.Enabled, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        Tag="EditorFileWriteToggle"
+                        PointerPressed="OnSettingLabelPointerPressed">
+                    <TextBlock x:Name="EditorFileWriteLabel"
+                               Text="Editor 文件写入"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch x:Name="EditorFileWriteToggle"
+                                  Grid.Column="1"
+                                  Classes="logkit-editor"
+                                  OnContent="启用"
+                                  OffContent="关闭"
+                                  IsChecked="{CompiledBinding SettingsDraft.SaveLogInEditor, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        Tag="PlayerFileWriteToggle"
+                        PointerPressed="OnSettingLabelPointerPressed">
+                    <TextBlock Text="Player 文件写入"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch x:Name="PlayerFileWriteToggle"
+                                  Grid.Column="1"
+                                  Classes="logkit-editor"
+                                  OnContent="启用"
+                                  OffContent="关闭"
+                                  IsChecked="{CompiledBinding SettingsDraft.SaveLogInPlayer, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        Tag="PlayerImGuiToggle"
+                        PointerPressed="OnSettingLabelPointerPressed">
+                    <TextBlock Text="Player IMGUI"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch x:Name="PlayerImGuiToggle"
+                                  Grid.Column="1"
+                                  Classes="logkit-editor"
+                                  OnContent="启用"
+                                  OffContent="关闭"
+                                  IsChecked="{CompiledBinding SettingsDraft.EnableImGuiInPlayer, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto,Auto"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        Tag="EncryptionToggle"
+                        PointerPressed="OnSettingLabelPointerPressed">
+                    <TextBlock Text="日志加密"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{CompiledBinding EncryptionStatusText}"
+                               Classes="logkit-capability-value"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0" />
+                    <ToggleSwitch x:Name="EncryptionToggle"
+                                  Grid.Column="2"
+                                  Classes="logkit-editor"
+                                  OnContent="启用"
+                                  OffContent="关闭"
+                                  IsEnabled="{CompiledBinding SupportsEncryption}"
+                                  ToolTip.Tip="{CompiledBinding EncryptionToggleToolTip}"
+                                  IsChecked="{CompiledBinding EncryptionToggleValue, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent">
+                    <TextBlock Text="日志解密"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{CompiledBinding DecryptionStatusText}"
+                               Classes="logkit-capability-value"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+
+                <Border Classes="logkit-setting-row last">
+                  <Grid ColumnDefinitions="*,Auto"
+                        Background="Transparent">
+                    <TextBlock Text="加密方式"
+                               Classes="logkit-setting-label"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{CompiledBinding EncryptionMethodText}"
+                               Classes="logkit-capability-value"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding EncryptionMethodText}"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Border>
+
+          <Border x:Name="FileSettingsCard"
+                  Grid.Row="0"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="2"
+                  Classes="card logkit-section-card">
+              <StackPanel Spacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="日志文件"
+                             Classes="logkit-section-title" />
+                  <TextBlock Text="配置日志目录以及 Editor、Player 的文件名称。"
+                             Classes="logkit-helper" />
+                </StackPanel>
+                <Grid x:Name="FileFieldsGrid"
+                      ColumnDefinitions="2*,*,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      ColumnSpacing="16"
+                      RowSpacing="10">
+                <StackPanel x:Name="LogDirectoryField"
+                            Spacing="4">
+                  <TextBlock Text="日志目录"
+                             Classes="logkit-field-label" />
+                  <TextBox x:Name="LogDirectoryInput"
+                           Classes="logkit-editor"
+                           Text="{CompiledBinding SettingsDraft.LogDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="Application.persistentDataPath/LogFiles" />
+                </StackPanel>
+                <StackPanel x:Name="EditorFileNameField"
+                            Grid.Column="1"
+                            Spacing="4">
+                  <TextBlock Text="Editor 文件名"
+                             Classes="logkit-field-label" />
+                  <TextBox Classes="logkit-editor"
+                           Text="{CompiledBinding SettingsDraft.EditorFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel x:Name="PlayerFileNameField"
+                            Grid.Column="2"
+                            Spacing="4">
+                  <TextBlock Text="Player 文件名"
+                             Classes="logkit-field-label" />
+                  <TextBox Classes="logkit-editor"
+                           Text="{CompiledBinding SettingsDraft.PlayerFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                </Grid>
+              </StackPanel>
+          </Border>
+
+          <Border x:Name="CapacitySettingsCard"
+                  Grid.Row="1"
+                  Grid.Column="1"
+                  VerticalAlignment="Top"
+                  Classes="card logkit-section-card">
+            <StackPanel Spacing="10">
+              <StackPanel Spacing="3">
+                <TextBlock Text="等级与容量"
+                           Classes="logkit-section-title" />
+                <TextBlock Text="设置过滤阈值、内存队列和日志文件保留策略。"
+                           Classes="logkit-helper" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto,Auto"
+                    ColumnSpacing="16"
+                    RowSpacing="16">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="最低等级"
+                             Classes="logkit-field-label" />
+                  <ComboBox Classes="logkit-editor"
+                            ItemsSource="{CompiledBinding SettingsLevelOptions}"
+                            SelectedItem="{CompiledBinding SettingsDraft.MinimumLevel, Mode=TwoWay}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Spacing="4">
+                  <TextBlock Text="队列上限"
+                             Classes="logkit-field-label" />
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxQueueSize, Mode=TwoWay}"
+                                 Classes="logkit-number logkit-editor"
+                                 Minimum="1" Maximum="2147483647" Increment="100" FormatString="0" />
+                </StackPanel>
+                <StackPanel Grid.Row="1"
+                            Spacing="4">
+                  <TextBlock Text="重复阈值"
+                             Classes="logkit-field-label" />
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxSameLogCount, Mode=TwoWay}"
+                                 Classes="logkit-number logkit-editor"
+                                 Minimum="0" Maximum="2147483647" Increment="1" FormatString="0" />
+                </StackPanel>
+                <StackPanel Grid.Row="1"
+                            Grid.Column="1"
+                            Spacing="4">
+                  <TextBlock Text="保留天数"
+                             Classes="logkit-field-label" />
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxRetentionDays, Mode=TwoWay}"
+                                 Classes="logkit-number logkit-editor"
+                                 Minimum="1" Maximum="3650" Increment="1" FormatString="0" />
+                </StackPanel>
+                <StackPanel Grid.Row="2"
+                            Spacing="4">
+                  <TextBlock Text="单文件上限 MB"
+                             Classes="logkit-field-label" />
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxFileSizeMb, Mode=TwoWay}"
+                                 Classes="logkit-number logkit-editor"
+                                 Minimum="1" Maximum="2147483647" Increment="10" FormatString="0" />
+                </StackPanel>
+                <StackPanel Grid.Row="2"
+                            Grid.Column="1"
+                            Spacing="4">
+                  <TextBlock Text="IMGUI 条数"
+                             Classes="logkit-field-label" />
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.ImGuiMaxLogCount, Mode=TwoWay}"
+                                 Classes="logkit-number logkit-editor"
+                                 Minimum="1" Maximum="2147483647" Increment="10" FormatString="0" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </ScrollViewer>
+
+      <Border Grid.Row="2"
+              Classes="logkit-settings-footer">
+        <Grid ColumnDefinitions="*,2*"
+              ColumnSpacing="16">
+          <TextBlock Text="{CompiledBinding SettingsStatusText}"
+                     FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{CompiledBinding SettingsStatusText}"
+                     VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding ProjectSettingsPath}"
+                     Classes="mono logkit-config-path"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{CompiledBinding ProjectSettingsPath}"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

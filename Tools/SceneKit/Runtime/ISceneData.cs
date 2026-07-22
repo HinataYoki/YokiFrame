@@ -1,9 +1,9 @@
+using YokiFrame;
+
 namespace YokiFrame
 {
-    /// <summary>
-    /// 场景附加数据标记接口。
-    /// </summary>
-    public interface ISceneData
+    /// <summary>标记可以随 SceneKit 加载请求传递的业务数据。</summary>
+    public interface ISceneData : IResSceneData
     {
     }
 }

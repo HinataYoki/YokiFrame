@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:pages="using:YokiFrame.Workbench.Avalonia.Views.Pages"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.TableKitPageView"
+             x:DataType="vm:TableKitPageViewModel"
+             Classes="tablekit-page"
+             ToolTip.ShowDelay="300"
+             AutomationProperties.AutomationId="workbench.tablekit.page">
+  <Grid x:Name="TableKitRootLayout" RowDefinitions="Auto,*,0,36" MinHeight="500">
+    <Border Classes="tablekit-status-strip" Margin="0,0,0,8">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,1,Auto" ColumnSpacing="9">
+        <Border Classes="tablekit-status-chip"
+                Classes.positive="{CompiledBinding LubanAvailable}"
+                Classes.warning="{CompiledBinding LubanUnavailable}">
+          <TextBlock Text="{CompiledBinding LubanStatusText}"
+                     Classes="mono tablekit-kicker"
+                     Foreground="{DynamicResource Brush.Text.Primary}" />
+        </Border>
+        <TextBlock Grid.Column="1"
+                   Text="{CompiledBinding StatusText}"
+                   Classes="tablekit-status-text"
+                   VerticalAlignment="Center"
+                   AutomationProperties.LiveSetting="Polite" />
+        <TextBlock Grid.Column="2"
+                   Text="{CompiledBinding EnvironmentMessage}"
+                   Classes="tablekit-status-detail"
+                   VerticalAlignment="Center"
+                   ToolTip.Tip="{CompiledBinding EnvironmentMessage}"
+                   AutomationProperties.LiveSetting="Polite" />
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+          <TextBlock Text="表管理器" Classes="tablekit-metric-label" />
+          <TextBlock Text="{CompiledBinding TablesType}"
+                     Classes="mono tablekit-metric-value"
+                     MaxWidth="180"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{CompiledBinding TablesType}" />
+        </StackPanel>
+        <Border Grid.Column="4" Classes="tablekit-divider" />
+        <TextBlock Grid.Column="5"
+                   Text="{CompiledBinding PreviewCountText}"
+                   Classes="mono tablekit-status-detail"
+                   VerticalAlignment="Center"
+                   ToolTip.Tip="{CompiledBinding PreviewStatusText}" />
+      </Grid>
+    </Border>
+
+    <TabControl x:Name="TableKitWorkspaceTabs"
+                Grid.Row="1"
+                SelectedIndex="{CompiledBinding SelectedWorkspaceIndex, Mode=TwoWay}"
+                Classes="tablekit-workspace-tabs">
+      <TabItem AutomationProperties.Name="TableKit 配置任务">
+        <TabItem.Header>
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <TextBlock Text="配置" />
+          </StackPanel>
+        </TabItem.Header>
+        <pages:TableKitConfigurationView x:Name="TableKitConfigView" />
+      </TabItem>
+      <TabItem IsEnabled="{CompiledBinding HasPreviewTables}"
+               AutomationProperties.Name="TableKit 数据任务">
+        <TabItem.Header>
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <TextBlock Text="数据" />
+            <TextBlock Text="{CompiledBinding PreviewCountText}" Classes="mono tablekit-tab-count" />
+          </StackPanel>
+        </TabItem.Header>
+        <pages:TableKitDataView x:Name="TableKitDataView" />
+      </TabItem>
+    </TabControl>
+
+    <GridSplitter x:Name="TableKitConsoleSplitter"
+                  Grid.Row="2"
+                  Classes="tablekit-console-splitter"
+                  ResizeDirection="Rows"
+                  ResizeBehavior="PreviousAndNext"
+                  IsVisible="False"
+                  AutomationProperties.Name="调整 TableKit 控制台高度" />
+
+    <Border x:Name="TableKitConsolePanel"
+            Grid.Row="3"
+            Classes="tablekit-console-panel">
+      <Grid RowDefinitions="36,*">
+        <Border Grid.Row="0" Classes="tablekit-console-header">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="7">
+            <TextBlock Text="控制台" Classes="section-title" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{CompiledBinding ConsoleSummaryText}"
+                       Classes="mono tablekit-console-summary"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{CompiledBinding CommandPreviewText}" />
+            <ToggleButton x:Name="TableKitConsoleToggle"
+                          Grid.Column="2"
+                          IsChecked="{CompiledBinding IsConsoleExpanded, Mode=TwoWay}"
+                          Classes="secondary compact-action"
+                          AutomationProperties.Name="展开或收起 TableKit 控制台">
+              <TextBlock Text="{CompiledBinding ConsoleToggleText}" />
+            </ToggleButton>
+            <Button Grid.Column="3"
+                    Command="{CompiledBinding CopyConsoleCommand}"
+                    Classes="secondary compact-action"
+                    AutomationProperties.Name="复制 TableKit 控制台">
+              <TextBlock Text="复制" />
+            </Button>
+            <Button Grid.Column="4"
+                    Command="{CompiledBinding ClearConsoleCommand}"
+                    Classes="secondary compact-action"
+                    AutomationProperties.Name="清空 TableKit 控制台">
+              <TextBlock Text="清空" />
+            </Button>
+          </Grid>
+        </Border>
+        <ListBox x:Name="TableKitConsoleList"
+                 Grid.Row="1"
+                 ItemsSource="{CompiledBinding ConsoleEntries}"
+                 Classes="tablekit-console-list terminal-list"
+                 IsVisible="False"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 AutomationProperties.AutomationId="tablekit.console">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:TableKitConsoleEntryViewModel">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" ColumnSpacing="4" Margin="0,2">
+                <TextBlock Text="[" Classes="terminal-line muted" />
+                <TextBlock Grid.Column="1" Text="{CompiledBinding Time}" Classes="terminal-line muted" />
+                <TextBlock Grid.Column="2" Text="]" Classes="terminal-line muted" />
+                <TextBlock Grid.Column="3" Text="{CompiledBinding Level}" Classes="terminal-line outbound" />
+                <TextBlock Grid.Column="4" Text="{CompiledBinding Message}" Classes="terminal-line" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

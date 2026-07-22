@@ -1,0 +1,16 @@
+{
+    "name": "YokiFrame.Unity.Inspector.Runtime",
+    "rootNamespace": "YokiFrame.Unity.Inspector",
+    "references": [
+        "YokiFrame"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

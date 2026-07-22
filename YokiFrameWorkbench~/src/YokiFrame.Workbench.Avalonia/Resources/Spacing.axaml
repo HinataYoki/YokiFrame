@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+  <sys:Double x:Key="Space.1">4</sys:Double>
+  <sys:Double x:Key="Space.2">8</sys:Double>
+  <sys:Double x:Key="Space.3">12</sys:Double>
+  <sys:Double x:Key="Space.4">16</sys:Double>
+  <sys:Double x:Key="Space.5">20</sys:Double>
+  <sys:Double x:Key="Space.6">24</sys:Double>
+  <sys:Double x:Key="Space.7">32</sys:Double>
+  <Thickness x:Key="Padding.Card">12</Thickness>
+  <Thickness x:Key="Padding.CardLarge">16</Thickness>
+  <Thickness x:Key="Padding.PanelHeader">0,0,0,12</Thickness>
+  <Thickness x:Key="Padding.Badge">10,4</Thickness>
+  <Thickness x:Key="Padding.Action">10,6</Thickness>
+  <Thickness x:Key="Padding.Input">10,7</Thickness>
+  <Thickness x:Key="Padding.Terminal">10</Thickness>
+  <Thickness x:Key="Padding.ScrollGutter">0,0,8,0</Thickness>
+  <Thickness x:Key="Margin.ScrollBar">4,2</Thickness>
+  <Thickness x:Key="Padding.Stat">12,9</Thickness>
+  <Thickness x:Key="Padding.EmptyState">24</Thickness>
+  <Thickness x:Key="Padding.ListItem">12,10</Thickness>
+  <Thickness x:Key="Padding.Page">16</Thickness>
+  <Thickness x:Key="Padding.InstallerPage">20,20,20,16</Thickness>
+</ResourceDictionary>

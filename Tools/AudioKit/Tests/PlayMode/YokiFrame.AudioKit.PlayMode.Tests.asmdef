@@ -1,0 +1,24 @@
+{
+    "name": "YokiFrame.AudioKit.PlayMode.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Unity.Runtime",
+        "YokiFrame.AudioKit",
+        "YokiFrame.AudioKit.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

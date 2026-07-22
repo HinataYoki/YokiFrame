@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "SpatialKit",
+    "state": "Available",
+    "role": "Tool",
+    "snapshotNames": ["state"],
+    "telemetryNames": ["state"],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "spatialkit.runtime.loaded"],
+        "verifyRecipe": "spatialkit-observe"
+      },
+      {
+        "action": "list_indexes",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "spatialkit.runtime.loaded"],
+        "verifyRecipe": "spatialkit-observe"
+      },
+      {
+        "action": "density",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "spatialkit.runtime.loaded"],
+        "verifyRecipe": "spatialkit-observe"
+      },
+      {
+        "action": "analyze",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "spatialkit.runtime.loaded"],
+        "verifyRecipe": "spatialkit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "spatialkit.runtime.loaded"],
+        "verifyRecipe": "spatialkit-observe"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "spatialkit-observe",
+        "description": "Verify SpatialKit index counts, projected planes and fixed bounds against the current engine identity.",
+        "gates": ["runtime-response-success", "engine-identity-current", "spatialkit-payload-valid"],
+        "evidence": ["command-response"]
+      }
+    ],
+    "sourcePath": "Tools/SpatialKit/Editor/Interaction/SpatialKitInteractionProvider.cs"
+  }
+}

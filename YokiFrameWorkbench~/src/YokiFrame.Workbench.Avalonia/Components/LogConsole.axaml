@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Components.LogConsole"
+             x:DataType="vm:WorkbenchShellViewModel">
+  <Border Classes="panel">
+    <Grid RowDefinitions="Auto,*">
+      <Grid ColumnDefinitions="*,Auto,Auto"
+            Margin="16,8">
+        <TextBlock Text="▤  运行日志"
+                   FontWeight="SemiBold" />
+        <Button Grid.Column="1"
+                Content="复制"
+                Classes="secondary"
+                Click="OnCopyLogsButtonClick" />
+        <Button Grid.Column="2"
+                Content="清空"
+                Command="{CompiledBinding ClearLogCommand}"
+                Classes="secondary"
+                Margin="8,0,0,0" />
+      </Grid>
+      <Border Grid.Row="1"
+              Classes="terminal">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{CompiledBinding LogLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WorkbenchLogLine">
+                <Grid ColumnDefinitions="70,*"
+                      ColumnSpacing="8"
+                      Margin="0,0,0,6">
+                  <TextBlock Text="{CompiledBinding Timestamp}"
+                             Classes="accent mono"
+                             FontSize="{DynamicResource FontSize.Sm}" />
+                  <TextBlock Grid.Column="1"
+                             Text="{CompiledBinding Message}"
+                             Classes="terminal-line"
+                             Classes.outbound="{CompiledBinding IsOutbound}"
+                             Classes.inbound="{CompiledBinding IsInbound}"
+                             Classes.error="{CompiledBinding IsError}"
+                             TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

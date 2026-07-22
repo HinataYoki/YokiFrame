@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "UIKit",
+    "state": "Available",
+    "role": "Tool",
+    "snapshotNames": ["state"],
+    "telemetryNames": ["state"],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "uikit.runtime.loaded"],
+        "verifyRecipe": "uikit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "uikit.runtime.loaded"],
+        "verifyRecipe": "uikit-observe"
+      },
+      {
+        "action": "get_editor_context",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "unity.editor.selection.available"],
+        "verifyRecipe": "uikit-editor-tools"
+      },
+      {
+        "action": "create_panel_prefab",
+        "kind": "UserAction",
+        "engineKinds": ["Unity"],
+        "sideEffects": ["asset.write", "source.write"],
+        "preconditions": ["engine.reachable", "payload.valid"],
+        "verifyRecipe": "uikit-editor-tools"
+      },
+      {
+        "action": "generate_code_for_selection",
+        "kind": "UserAction",
+        "engineKinds": ["Unity"],
+        "sideEffects": ["source.write", "prefab.write"],
+        "preconditions": ["engine.reachable", "selection.current", "payload.valid"],
+        "verifyRecipe": "uikit-editor-tools"
+      },
+      {
+        "action": "add_bind_to_selection",
+        "kind": "UserAction",
+        "engineKinds": ["Unity"],
+        "sideEffects": ["component.write"],
+        "preconditions": ["engine.reachable", "selection.current"],
+        "verifyRecipe": "uikit-editor-tools"
+      },
+      {
+        "action": "remove_bind_from_selection",
+        "kind": "UserAction",
+        "engineKinds": ["Unity"],
+        "sideEffects": ["component.write"],
+        "preconditions": ["engine.reachable", "selection.current"],
+        "verifyRecipe": "uikit-editor-tools"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "uikit-observe",
+        "description": "Verify bounded Unity UIKit panels, stacks, root, modal and cache state without creating UIRoot.",
+        "gates": ["runtime-response-success", "engine-identity-current", "uikit-payload-valid"],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "uikit-editor-tools",
+        "description": "Verify explicit Unity Editor UIKit actions against the current selection context revision.",
+        "gates": ["runtime-response-success", "engine-identity-current", "selection-context-current"],
+        "evidence": ["command-response", "selection-context"]
+      }
+    ],
+    "sourcePath": "Tools/UIKit/Adapters/Unity/Editor/Interaction/UIKitInteractionProvider.cs",
+    "sourceHash": "6b0b3ff9e4e968418c84fef2afbea962169df95adc6753ea1d33281269438b89"
+  }
+}

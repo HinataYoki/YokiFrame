@@ -1,0 +1,97 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Button">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Action}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Padding" Value="16,7" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.PrimaryHover}" />
+  </Style>
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Button.secondary:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.PrimaryActive}" />
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Terminal.Error}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+  <Style Selector="Button.skill-option-card">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Margin" Value="2" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
+  </Style>
+  <Style Selector="Button.skill-option-card:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Button.skill-option-card.active">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Button.icon-button, ToggleButton.icon-button">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.chrome-button">
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.close-button:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+  </Style>
+  <Style Selector="Button.path-picker">
+    <Setter Property="MinHeight" Value="40" />
+  </Style>
+  <Style Selector="Button.compact-action">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.65" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+</Styles>

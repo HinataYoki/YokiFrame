@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs"
+             Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs"
+             Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs"
+             Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
+    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs"
+             Link="RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs" />
+    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs"
+             Link="RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs" />
+  </ItemGroup>
+
+</Project>

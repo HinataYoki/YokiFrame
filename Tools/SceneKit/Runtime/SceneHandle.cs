@@ -2,48 +2,33 @@ using System;
 
 namespace YokiFrame
 {
-    /// <summary>
-    /// 表示由引擎后端返回的跨引擎场景句柄。
-    /// </summary>
-    public struct SceneHandle : IEquatable<SceneHandle>
+    /// <summary>表示由 SceneKit 返回的跨引擎场景句柄。</summary>
+    public readonly struct SceneHandle : IEquatable<SceneHandle>
     {
-        /// <summary>
-        /// 场景名称。
-        /// </summary>
-        public readonly string SceneName;
-
-        /// <summary>
-        /// 构建索引。
-        /// </summary>
-        public readonly int BuildIndex;
-
-        /// <summary>
-        /// 句柄是否有效。
-        /// </summary>
-        public readonly bool IsValid;
-
-        /// <summary>
-        /// 创建场景句柄。
-        /// </summary>
-        /// <param name="sceneName">场景名称。</param>
-        /// <param name="buildIndex">构建索引。</param>
-        /// <param name="isValid">句柄是否有效。</param>
+        /// <summary>创建场景句柄。</summary>
         public SceneHandle(string sceneName, int buildIndex, bool isValid)
         {
-            SceneName = sceneName;
+            SceneName = sceneName ?? string.Empty;
             BuildIndex = buildIndex;
             IsValid = isValid;
         }
 
+        /// <summary>获取场景名称或 Provider 路径。</summary>
+        public string SceneName { get; }
+
+        /// <summary>获取场景构建索引。</summary>
+        public int BuildIndex { get; }
+
+        /// <summary>获取句柄是否有效。</summary>
+        public bool IsValid { get; }
+
         /// <inheritdoc />
         public bool Equals(SceneHandle other)
         {
-            return SceneName == other.SceneName && BuildIndex == other.BuildIndex && IsValid == other.IsValid;
+            return string.Equals(SceneName, other.SceneName, StringComparison.Ordinal)
+                && BuildIndex == other.BuildIndex
+                && IsValid == other.IsValid;
         }
-
-        public static bool operator ==(SceneHandle left, SceneHandle right) => left.Equals(right);
-
-        public static bool operator !=(SceneHandle left, SceneHandle right) => !left.Equals(right);
 
         /// <inheritdoc />
         public override bool Equals(object obj)
@@ -56,5 +41,11 @@ namespace YokiFrame
         {
             return HashCode.Combine(SceneName, BuildIndex, IsValid);
         }
+
+        /// <summary>比较两个场景句柄是否相等。</summary>
+        public static bool operator ==(SceneHandle left, SceneHandle right) => left.Equals(right);
+
+        /// <summary>比较两个场景句柄是否不等。</summary>
+        public static bool operator !=(SceneHandle left, SceneHandle right) => !left.Equals(right);
     }
 }

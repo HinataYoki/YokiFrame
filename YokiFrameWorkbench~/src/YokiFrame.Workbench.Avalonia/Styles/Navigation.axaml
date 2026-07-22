@@ -1,0 +1,48 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="ListBox.nav-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.nav-list ListBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="MinHeight" Value="40" />
+  </Style>
+  <Style Selector="ListBox.nav-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.nav-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="Padding" Value="7,8,10,8" />
+  </Style>
+  <Style Selector="ListBox.docs-nav-list ListBoxItem">
+    <Setter Property="Padding" Value="7,7" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.docs-nav-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.DocsNavHover}" />
+  </Style>
+  <Style Selector="ListBox.docs-nav-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.DocsNavSelected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.DocsAccent}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+  </Style>
+  <Style Selector="ListBox.docs-toc-list ListBoxItem">
+    <Setter Property="Padding" Value="5,3,4,3" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="MinHeight" Value="28" />
+  </Style>
+  <Style Selector="ListBox.docs-toc-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.DocsTocSelected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.DocsToc}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+  </Style>
+</Styles>

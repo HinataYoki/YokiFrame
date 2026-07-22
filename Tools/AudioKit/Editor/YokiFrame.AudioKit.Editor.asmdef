@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.AudioKit.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Editor",
+        "YokiFrame.AudioKit"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

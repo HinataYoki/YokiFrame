@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "SaveKit",
+    "state": "Available",
+    "role": "Tool",
+    "snapshotNames": ["state"],
+    "telemetryNames": [],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "savekit.runtime.loaded"],
+        "verifyRecipe": "savekit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "savekit.runtime.loaded"],
+        "verifyRecipe": "savekit-observe"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "savekit-observe",
+        "description": "Verify SaveKit backend configuration, autosave summary and bounded container headers against the current engine identity without reading payload.",
+        "gates": ["runtime-response-success", "engine-identity-current", "savekit-payload-valid"],
+        "evidence": ["command-response"]
+      }
+    ],
+    "sourcePath": "Tools/SaveKit/Editor/Interaction/SaveKitInteractionProvider.cs"
+  }
+}

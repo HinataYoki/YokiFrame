@@ -1,0 +1,16 @@
+{
+    "name": "YokiFrame.LocalizationKit.TableKit",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame.LocalizationKit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

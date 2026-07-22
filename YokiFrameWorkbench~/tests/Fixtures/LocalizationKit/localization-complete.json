@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "languages": [
+    { "id": "ChineseSimplified" },
+    { "id": "English" },
+    { "id": "Japanese" }
+  ],
+  "texts": [
+    { "id": 1000, "key": "menu.start", "values": { "ChineseSimplified": "开始游戏", "English": "Start Game", "Japanese": "ゲーム開始" } },
+    { "id": 1001, "key": "menu.settings", "values": { "ChineseSimplified": "设置", "English": "Settings", "Japanese": "設定" } },
+    { "id": 2000, "key": "inventory.items", "plural": { "ChineseSimplified": { "Other": "{0} 个物品" }, "English": { "One": "{0} item", "Other": "{0} items" }, "Japanese": { "Other": "{0} 個のアイテム" } } }
+  ]
+}

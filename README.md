@@ -1,670 +1,204 @@
 # YokiFrame
 
-<p align="center">
-  <a href="README.md">中文</a> | <a href="README.en.md">English</a>
-</p>
+> 面向 Unity 与 Godot .NET 的跨引擎 C# 游戏框架。
 
-<p align="center">
-  <img src="Core/Editor/Resources/yoki.png" alt="YokiFrame Logo" width="128" height="128">
-</p>
+YokiFrame 是一个用 C# 构建游戏业务与工具链的模块化框架。它把可复用的游戏规则放在不依赖引擎的 Core 中，把 Unity、Godot 的 API 与生命周期差异隔离在独立 Adapter 中；同一套业务能力可以按项目需要组合，而不是被锁定在某个引擎或单体框架里。
 
-<p align="center">
-  <b>不绑定具体游戏引擎的 C# 游戏 Kit 框架</b><br>
-  通过统一 Runtime API、跨引擎 Adapter、AI 文件协议和 Tauri 编辑器工作台，把游戏运行时、工具链和 AI Agent 接到同一套协作平面上。
-</p>
+它适合希望在 C# 游戏项目中获得清晰业务边界、可替换宿主实现，以及配套诊断与安装工具的团队。运行时保持 C# 9 兼容；Workbench、Installer 和 `yoki` CLI 使用 .NET 10，且不会进入游戏 Player。
 
----
+**安装入口：**Unity 通过 Package Manager 的 Git URL 安装；Godot .NET 必须使用 Installer 安装，Installer 由源码包中的自举脚本在目标项目现场构建后启动。详细步骤见[安装](#安装)。
 
-## 一句话介绍
+## 能做什么
 
-YokiFrame 2.0 是一套跨引擎游戏开发框架。业务代码面向 `YokiFrame` 的统一 Kit API 编写，Unity、Godot 或未来其它宿主只负责通过 Adapter 提供日志、时间、资源、场景、UI、音频等能力；项目输入直接使用宿主原生输入系统。
-
-它同时内置 `.yokiframe/` 文件协议，让 AI Agent、Tauri 工作台、脚本和游戏宿主之间可以可靠交换命令、响应、快照、事件和实时遥测。AI 不需要直接猜 Unity 对象或依赖某个编辑器插件，就能发现在线引擎、读取框架状态、发起只读诊断或触发明确授权的维护命令。
-
-YokiFrame 还提供了完整的 Tauri 可视化编辑器工具，用于查看 Kit 状态、命令桥健康、运行时快照、代码扫描、配置生成器、日志和内置文档。
-
----
-
-## 核心定位
-
-| 问题 | YokiFrame 的回答 |
+| 你的目标 | YokiFrame 提供的能力 |
 | --- | --- |
-| 游戏逻辑是否必须绑定 Unity 或 Godot？ | 不必。业务层使用统一 Kit API，宿主差异下沉到 Adapter、Provider 和 Backend。 |
-| AI 如何理解运行时状态？ | 通过 `.yokiframe/engines/<engineId>` 发现宿主，读取 snapshot / telemetry，必要时发送 command。 |
-| 编辑器工具是否只是一个启动器？ | 不是。Tauri 工作台是独立调试控制台，覆盖 Kit 状态、文件桥、代码扫描、生成器和文档。 |
-| 框架是否会强迫使用某个资源或 UI 方案？ | 不会。ResKit、SceneKit、UIKit、AudioKit 等都通过 Provider / Backend 替换宿主实现。 |
+| 组织项目级业务 | `Architecture<T>` 用于组合服务、模型与系统，并管理初始化和释放。 |
+| 构建游戏流程 | EventKit 提供类型/枚举事件；FsmKit 提供普通和带启动参数的状态机；ActionKit 用于顺序、并行、循环等动作编排。 |
+| 管理常用运行时基础设施 | PoolKit、SingletonKit、LogKit、ResKit 与 SceneKit 分别覆盖对象复用、单例、日志、资源和场景生命周期。 |
+| 实现常见游戏功能 | AudioKit、SaveKit、LocalizationKit、SpatialKit 与 TableKit 覆盖音频、存档、本地化、空间索引和数据表生成。 |
+| 制作 Unity UI 与编辑器工具 | UIKit 提供面板、层级、动画、对话框、绑定和代码生成；InspectorKit 与 CodeGenKit 支持 Inspector 与结构化 C# 生成。 |
+| 查看和维护项目 | Avalonia Workbench、`yoki` CLI 和 Installer 提供文档、状态诊断、受控操作、安装、更新与回滚。 |
 
----
+## 核心设计
 
-## 总体结构
+- **纯 C# Core**：业务规则不引用 Unity、Godot、Avalonia 或可选第三方库。
+- **宿主 Adapter 隔离**：引擎 API、生命周期和默认后端位于独立 Adapter，依赖方向始终是 Adapter → Core。
+- **按需组合**：Kit 可以独立使用；UniTask、YooAsset、DOTween、Luban、Nino 等接入保持可选。
+- **运行时与工具链分离**：游戏代码走 Runtime API；诊断、项目配置、安装和命令行工作流留在 Editor/Tools 与 .NET 工具链中。
+- **先读后写的工具协议**：Workbench 与 CLI 默认读取项目和运行态证据；会改写项目或宿主状态的操作必须显式触发。
 
-YokiFrame 的核心思想是：业务代码只认识框架能力，不认识具体引擎。
+## 能力地图
 
-```mermaid
-flowchart TB
-    Game["Game Code<br/>业务代码 / 游戏流程 / 系统逻辑"]
-    API["YokiFrame Kit API<br/>EventKit / FsmKit / ResKit / UIKit / ..."]
-    Core["Core Runtime<br/>纯 C# 契约、服务、协议、通用 Kit"]
-    Tools["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Table"]
-    Adapter["Engine Adapters<br/>Unity / Godot / Future Host"]
-    Host["Engine Host<br/>Unity Editor / Godot / Server Runtime"]
-    Bridge[".yokiframe FileBridge v2<br/>commands / results / snapshots / events / telemetry"]
-    Workbench["Tauri Workbench<br/>可视化编辑器工具"]
-    AI["AI Agent / Script<br/>Codex / Claude / CLI / automation"]
+### 跨引擎 Runtime
 
-    Game --> API
-    API --> Core
-    API --> Tools
-    Core --> Adapter
-    Tools --> Adapter
-    Adapter --> Host
-    Host <--> Bridge
-    Bridge <--> Workbench
-    Bridge <--> AI
-```
-
-### 运行时分层
-
-```mermaid
-flowchart LR
-    subgraph Business["业务层"]
-        GameLogic["游戏逻辑"]
-        GameplaySystems["Gameplay Systems"]
-    end
-
-    subgraph PublicApi["统一 API 层"]
-        CoreKits["Core Kits<br/>Architecture / Event / FSM / Pool / Res / Singleton / Log / ManagedRuntime"]
-        ToolKits["Tool Kits<br/>Action / Audio / Save / Scene / Spatial / Localization / UI / Table"]
-    end
-
-    subgraph Contracts["跨引擎契约"]
-        Interfaces["Interfaces<br/>IEngineLogger / IEngineTime / IResourceProvider / ..."]
-        Backends["Backends<br/>IAudioBackend / ISceneBackend / IUIBackend"]
-        CommandBridge["CommandBridge<br/>string JSON protocol"]
-    end
-
-    subgraph Hosts["宿主实现"]
-        Unity["Unity Adapter<br/>UnityResourceProvider / MonoSingleton / Editor tools"]
-        Godot["Godot Adapter<br/>GodotResourceProvider / GodotSingleton / plugin"]
-        Future["Future Host<br/>Server / custom engine"]
-    end
-
-    GameLogic --> CoreKits
-    GameplaySystems --> ToolKits
-    CoreKits --> Interfaces
-    ToolKits --> Interfaces
-    ToolKits --> Backends
-    Interfaces --> Unity
-    Interfaces --> Godot
-    Interfaces --> Future
-    Backends --> Unity
-    Backends --> Godot
-    CommandBridge --> Unity
-    CommandBridge --> Godot
-```
-
-### 目录结构
-
-```text
-Assets/YokiFrame/
-├── Core/
-│   ├── Runtime/
-│   │   ├── Architecture, EventKit, FsmKit, PoolKit, ResKit
-│   │   ├── Singleton, LogKit, ToolClass, FluentApi, Settings
-│   │   ├── Interfaces/
-│   │   ├── CommandBridge/
-│   │   └── Adapters/
-│   │       ├── Unity/
-│   │       └── Godot/
-│   ├── Editor/
-│   │   ├── CodeGenKit/
-│   │   ├── Resources/
-│   │   └── Skills/
-│   └── Tests/
-├── Tools/
-│   ├── ActionKit, AudioKit, LocalizationKit
-│   ├── SaveKit, SceneKit, SpatialKit, TableKit, UIKit
-│   └── */Runtime, */Editor, */Tests
-├── TauriRuntime~/        # 包内工作台运行副本
-├── Installer~/           # 包内安装器
-└── Documentation~/       # README 使用的图片和补充材料
-
-YokiFrameTools/
-├── TauriEditor/          # Tauri 工作台源码
-├── Installer/            # 安装器源码
-└── scripts/
-
-.yokiframe/               # 运行期文件协议目录
-```
-
----
-
-## Kit 能力地图
-
-YokiFrame 把常见游戏框架能力整理成 Kit。业务侧优先调用统一入口，宿主细节由安装器和 Adapter 接入。
-
-```mermaid
-flowchart TB
-    Root["YokiFrame Kits"]
-    Core["Core Runtime Kits"]
-    Tools["Tool Kits"]
-    AI["AI Native Runtime"]
-    Editor["Editor Tooling"]
-
-    Root --> Core
-    Root --> Tools
-    Root --> AI
-    Root --> Editor
-
-    Core --> Architecture["Architecture"]
-    Core --> EventKit["EventKit"]
-    Core --> FsmKit["FsmKit"]
-    Core --> PoolKit["PoolKit"]
-    Core --> ResKit["ResKit"]
-    Core --> SingletonKit["SingletonKit"]
-    Core --> LogKit["LogKit"]
-    Core --> ManagedRuntimeKit["ManagedRuntimeKit"]
-
-    Tools --> ActionKit["ActionKit"]
-    Tools --> AudioKit["AudioKit"]
-    Tools --> SaveKit["SaveKit"]
-    Tools --> SceneKit["SceneKit"]
-    Tools --> SpatialKit["SpatialKit"]
-    Tools --> LocalizationKit["LocalizationKit"]
-    Tools --> UIKit["UIKit"]
-    Tools --> TableKit["TableKit"]
-
-    AI --> CommandBridge["CommandBridge"]
-    AI --> Snapshot["Snapshot"]
-    AI --> Telemetry["Telemetry"]
-    AI --> EventStream["Event Stream"]
-    AI --> Skills["Agent Skills"]
-
-    Editor --> Workbench["Tauri Workbench"]
-    Editor --> CodeScan["Code Scan"]
-    Editor --> Generators["Generators"]
-    Editor --> Diagnostics["Diagnostics"]
-```
-
-| Kit | 主要用途 |
+| 分类 | Kit |
 | --- | --- |
-| Architecture | 服务注册、模块组织、架构实例和运行时诊断。 |
-| EventKit | 类型事件、枚举事件和兼容事件通道，用于模块解耦。 |
-| FsmKit | 普通 FSM、参数化 FSM、状态流和转换历史诊断。 |
-| PoolKit | 对象池、可回收对象池、集合池和池状态快照。 |
-| ResKit | 资源加载、raw 文件、场景资源后端、引用计数和 Provider 替换。 |
-| SingletonKit | 纯 C# 单例、Unity `MonoSingleton<T>`、Godot `GodotSingleton<T>`。 |
-| LogKit | 引擎日志适配、文件日志和工作台日志诊断。 |
-| ManagedRuntimeKit | 托管 C# 运行时后端选择、能力声明、后端设置和诊断；LeanCLR、Mono、IL2CPP、Godot .NET 等具体实现由可选 Adapter 注册。Unity LeanCLR 设置可在工作台镜像读写同一份 `ProjectSettings/LeanCLR.asset`，并可打开原生 Unity Project Settings 面板。 |
-| ActionKit | Delay、Callback、Sequence、Parallel、Task / Coroutine 组合和动作调试。 |
-| AudioKit | 音效、音乐、音量总线、active voice 诊断和音频 ID 辅助。 |
-| SaveKit | 多槽位存档、序列化/加密/迁移后端和自动保存状态。 |
-| SceneKit | 跨引擎场景加载、预加载、激活和卸载。 |
-| SpatialKit | HashGrid、Quadtree、Octree 空间索引和查询诊断。 |
-| LocalizationKit | 多语言 Provider、formatter、缓存、binder 和语言切换。 |
-| UIKit | UI 后端、面板栈、层级、面板创建和绑定辅助。 |
-| TableKit | 基于 Tauri 的 Luban 配置表生成、参数管理和输出校验。 |
+| 项目组合与通用类型 | Architecture、ToolClass |
+| 事件、状态与日志 | EventKit、FsmKit、LogKit |
+| 资源与生命周期 | ResKit、SceneKit、PoolKit、SingletonKit |
+| 游戏功能 | ActionKit、AudioKit、SaveKit、LocalizationKit、SpatialKit |
+| 数据与生成 | TableKit、CodeGenKit |
 
----
+### Unity 专属能力
 
-## 生命周期
+| 分类 | Kit |
+| --- | --- |
+| UI 框架 | UIKit：面板、层级、模态、动画、对话框、绑定与代码生成 |
+| 编辑器基础设施 | InspectorKit 与 UIKit Inspector/生成工作流 |
 
-宿主启动时只需要声明当前引擎。`YokiFrameKit` 会发现并安装当前引擎可用的 Kit installer，之后由宿主每帧驱动 Tick，退出时统一 Shutdown。
+`UIKit` 当前仅支持 Unity；它不会为 Godot 提供兼容壳。TableKit 是离线生成入口，只有生成项目代码后才会出现对应的 Runtime 类型。各 Kit 的 Runtime、运行态观察和 Workbench 页面完成度彼此独立，请以 [状态与入口](Documentation~/Api/00-GettingStarted/Kit_Status.md) 为准。
 
-```mermaid
-flowchart TB
-    Host["Unity / Godot / Server Host"]
-    Init["YokiFrameKit.Initialize(engine)"]
-    Discover["发现当前引擎的 Kit Installer"]
-    Install["安装 Core Kit 和 Tool Kit 后端"]
-    Runtime["创建 IYokiFrameRuntime"]
-    Tick["外部主循环驱动<br/>YokiFrameKit.Tick(deltaSeconds)"]
-    KitTick["各 Kit Installer Tick<br/>Action / Bridge / Telemetry / ..."]
-    Shutdown["退出时 YokiFrameKit.Shutdown()"]
-    Cleanup["反向关闭 Installer<br/>释放订阅、资源、后端和诊断通道"]
+## 使用方式
 
-    Host --> Init
-    Init --> Discover
-    Discover --> Install
-    Install --> Runtime
-    Runtime --> Tick
-    Tick --> KitTick
-    KitTick --> Tick
-    Runtime --> Shutdown
-    Shutdown --> Cleanup
-```
-
-Unity 可以直接调用统一入口：
+业务代码直接依赖对应 Kit 的公开 API；宿主 Adapter 会在第一次真正需要时注册当前引擎的默认实现，项目也可以显式注入自己的 Provider 或 Backend。
 
 ```csharp
 using YokiFrame;
 
-YokiFrameKit.Initialize(YokiFrameEngine.Unity);
-```
-
-也可以在场景中使用 `UnityBootstrap`，它会负责初始化、`Update` 中 Tick、`OnDestroy` 中 Shutdown。
-
-Godot 插件启用后会创建 bootstrap / autoload，运行时由 `GodotBootstrap` 在 `_Ready`、`_Process`、`_ExitTree` 中完成同样的生命周期。
-
----
-
-## AI 文件协议
-
-YokiFrame 把 AI 通信设计成框架级能力，而不是某个 IDE 插件的私有通道。当前协议入口是 engine-scoped 目录：
-
-```text
-.yokiframe/
-└── engines/
-    └── <engineId>/
-        ├── engine.json
-        ├── status/heartbeat.json
-        ├── commands/<requestId>.json
-        ├── commands/processing/<requestId>.json
-        ├── commands/archive/
-        ├── commands/deadletter/
-        ├── results/<requestId>-response.json
-        └── snapshots/<Kit>/<name>.json
-
-.yokiframe/
-└── events/<type>.jsonl
-```
-
-### 通信平面
-
-```mermaid
-flowchart LR
-    AI["AI Agent / CLI"]
-    Tauri["Tauri Workbench"]
-    Registry["Engine Registry<br/>engines/*/engine.json"]
-    Command["Command Plane<br/>commands -> results"]
-    Snapshot["Snapshot Plane<br/>snapshots/Kit/name.json"]
-    Event["Event Plane<br/>events/*.jsonl"]
-    Telemetry["Realtime Telemetry<br/>shared memory latest frame"]
-    Engine["Engine Host<br/>Unity / Godot"]
-
-    AI --> Registry
-    Tauri --> Registry
-    AI --> Snapshot
-    AI --> Command
-    Tauri --> Telemetry
-    Tauri --> Snapshot
-    Tauri --> Command
-    Engine --> Registry
-    Engine <--> Command
-    Engine --> Snapshot
-    Engine --> Event
-    Engine --> Telemetry
-```
-
-| 通道 | 使用场景 | 读写特点 |
-| --- | --- | --- |
-| Engine Registry | 发现在线 Unity / Godot / runtime host。 | 先读 `engine.json`，再选择目标 engineId。 |
-| Command Plane | 请求-响应、详情查询、显式操作、维护命令。 | 写 `commands/<requestId>.json`，读 `results/<requestId>-response.json`。 |
-| Snapshot Plane | 当前状态、面板初始数据、AI 默认只读查询。 | 覆盖式 JSON 快照，适合稳定读取。 |
-| Event Plane | 重要离散事件、生命周期、采样后的状态变化。 | 根级 JSONL 事件流。 |
-| Realtime Telemetry | Tauri 页面的人类感知实时刷新。 | 共享内存最新帧，不用于 AI 默认查询。 |
-| Trace Plane | 用户显式开启的短期高频诊断。 | ring buffer，受时长、数量和大小限制。 |
-
-### 命令流
-
-```mermaid
-sequenceDiagram
-    participant Agent as AI Agent / Tauri
-    participant Registry as .yokiframe/engines
-    participant Command as commands/request.json
-    participant Host as Unity / Godot Host
-    participant Result as results/response.json
-    participant Snapshot as snapshots/Kit/state.json
-
-    Agent->>Registry: 读取 engine.json 发现在线宿主
-    Agent->>Snapshot: 优先读取当前状态快照
-    alt 需要详情或显式操作
-        Agent->>Command: 原子写入 command JSON
-        Host->>Command: 移入 processing 并执行
-        Host->>Result: 写入 terminal response
-        Agent->>Result: 读取成功、失败、拒绝或超时结果
-    end
-```
-
-一个命令请求大致长这样：
-
-```json
+public sealed class CombatFlow
 {
-  "protocolVersion": 2,
-  "requestId": "codex-ping-001",
-  "engineId": "unity-editor",
-  "source": "codex",
-  "kit": "System",
-  "action": "ping",
-  "payload": {},
-  "createdAtUtc": "2026-06-24T00:00:00Z",
-  "timeoutMs": 10000
+    private readonly FSM<CombatState> mStateMachine = new();
+
+    public void Start()
+    {
+        EventKit.Type.Send(new CombatStarted());
+        mStateMachine.ChangeState(CombatState.Opening);
+    }
 }
 ```
 
-协议约定：
+从一个清晰的业务边界开始，选择一个 Kit，而不是先接入所有模块。更多最小示例和生命周期约束见[框架概览](Documentation~/Api/00-GettingStarted/Entrypoints.md)。
 
-1. 新命令、新响应和新状态读取使用 `.yokiframe/engines/<engineId>`，不把历史 root 目录当作当前入口。
-2. `requestId`、`engineId`、`source`、`kit`、`action` 使用安全 ASCII 标识符。
-3. 写命令和响应时使用临时文件加原子重命名，避免轮询方读到半写文件。
-4. 已接受命令必须产出 terminal response；未知 Kit/action、解析失败、策略拒绝、超时和异常都要有结果或 deadletter 证据。
-5. 高频状态不要通过 `send_command` 轮询；Tauri 优先 telemetry，AI 优先 snapshot。
+## 支持范围
 
----
+| 项目 | 当前范围 |
+| --- | --- |
+| Unity | `2022.3+`；支持本地 embedded package 与 Git URL 安装。 |
+| Godot | 仅支持 .NET 版本；当前开发和验证基线为 `4.7 .NET`，这不是产品支持上限。 |
+| Runtime | C# 9 兼容的跨宿主 Core 与匹配 Adapter。 |
+| 工具链 | .NET 10 + Avalonia Workbench、Installer 与 `yoki` CLI。 |
 
-## Tauri 编辑器工作台
-
-YokiFrame Editor 是 Tauri + Web 技术栈构建的桌面工作台。它面向调试和开发循环，不是营销页面。
-
-```mermaid
-flowchart TB
-    Workbench["YokiFrame Workbench"]
-    System["System<br/>连接、heartbeat、命令桥健康、日志"]
-    RuntimePages["Runtime Kit Pages<br/>Event / FSM / Pool / Res / UI / ..."]
-    Tools["Tool Pages<br/>TableKit / Code Scan / Generators"]
-    Docs["Docs<br/>快速上手、Kit 文档、API 速查"]
-    Bridge["Rust Backend<br/>send_command / read_snapshot / read_telemetry"]
-    Protocol[".yokiframe Protocol"]
-    Host["Unity / Godot"]
-
-    Workbench --> System
-    Workbench --> RuntimePages
-    Workbench --> Tools
-    Workbench --> Docs
-    System --> Bridge
-    RuntimePages --> Bridge
-    Tools --> Bridge
-    Bridge <--> Protocol
-    Protocol <--> Host
-```
-
-在 Unity / Godot 编辑器中通常可通过 `Ctrl+E` 打开工作台。工作台可用于：
-
-- 查看引擎连接、heartbeat、engine registry、FileBridge 健康和命令目录。
-- 查看 Architecture、EventKit、FsmKit、PoolKit、ResKit、LogKit、ActionKit、AudioKit、SaveKit、LocalizationKit、SceneKit、SpatialKit、UIKit、TableKit、SingletonKit 状态。
-- 扫描代码关系，例如 EventKit 发送/监听/注销位置。
-- 打开源码位置，由宿主默认代码编辑器处理。
-- 查看运行日志、错误、快照、telemetry freshness 和 stale 状态。
-- 管理 TableKit / Luban 配置生成参数和输出校验。
-- 安装或同步面向 Codex、Claude Code、Cursor、Windsurf、GitHub Copilot 等 Agent 的 YokiFrame Skill。
-
-### 工作台预览
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-console.png" alt="YokiFrame Kit 调试工作台" width="960">
-</p>
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-fsmkit.png" alt="FsmKit 状态机工作台" width="960">
-</p>
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-workbench-uikit.png" alt="UIKit 面板与栈" width="960">
-</p>
-
-前端开发源码位于：
-
-```text
-YokiFrameTools/TauriEditor/dist
-YokiFrameTools/TauriEditor/src-tauri
-```
-
-包内运行副本位于：
-
-```text
-Assets/YokiFrame/TauriRuntime~/dist
-```
-
----
+YokiFrame 不替代 Unity 或 Godot 的 Scene、Prefab、Asset、Play Mode、截图和输入自动化能力；这些仍应由对应引擎或专用工具负责。
 
 ## 安装
 
-### 安装器
+### 安装前准备
 
-推荐使用随包发布的轻量安装器安装到 Unity 或 Godot 项目：
-
-```text
-Assets/YokiFrame/Installer~/win-x64/YokiFramePackageTool.exe
-```
-
-<p align="center">
-  <img src="Documentation~/images/yokiframe-installer.png" alt="YokiFrame Installer" width="720">
-</p>
-
-| 目标项目 | 安装方式 | 说明 |
-| --- | --- | --- |
-| Unity | 本地包 | 复制到目标项目 `Packages/com.hinatayoki.yokiframe`，适合离线使用或本地改源码。 |
-| Unity | Git 包 | 写入目标项目 `Packages/manifest.json`，后续可通过 Unity Package Manager 更新。 |
-| Godot | 本地包 | 安装到 Godot `.NET / C#` 项目的 `addons/yokiframe/package/YokiFrame`，并创建插件入口。 |
-
-### Unity Package Manager
-
-Unity 项目也可以直接通过 Git URL 安装：
-
-```text
-https://github.com/HinataYoki/YokiFrame.git
-```
-
-操作路径：
-
-1. 打开 `Window > Package Manager`。
-2. 点击 `+`，选择 `Add package from git URL`。
-3. 输入上面的 Git URL。
-
-当前 package 根目录位于仓库根目录，因此默认 URL 不带 `?path=`。需要锁定分支、tag 或 commit 时，可在末尾追加 `#branch-or-tag`。
-
-### Godot
-
-Godot 安装器会创建：
-
-```text
-addons/yokiframe/plugin.cfg
-addons/yokiframe/plugin.gd
-addons/yokiframe/package/YokiFrame/
-```
-
-启用插件后，Godot 会注册 bootstrap、autoload、`.yokiframe` 工作目录和 engine registry。运行时命令通过 `.yokiframe/engines/godot-runtime/commands/*.json` 进入，响应从同 engine 的 `results` 目录读取。
-
----
-
-## 快速接入
-
-### Unity
-
-```csharp
-using YokiFrame;
-
-public sealed class GameEntry
-{
-    public void Start()
-    {
-        YokiFrameKit.Initialize(YokiFrameEngine.Unity);
-    }
-
-    public void Update(float deltaSeconds)
-    {
-        YokiFrameKit.Tick(deltaSeconds);
-    }
-
-    public void Stop()
-    {
-        YokiFrameKit.Shutdown();
-    }
-}
-```
-
-如果项目希望由 Unity 生命周期自动驱动，可以在场景中使用 `UnityBootstrap`：
-
-```csharp
-using UnityEngine;
-using YokiFrame.Unity;
-
-public sealed class GameStartup : MonoBehaviour
-{
-    private void Awake()
-    {
-        _ = UnityBootstrap.Instance;
-    }
-}
-```
-
-### Godot
-
-安装器创建的插件入口会自动处理 bootstrap。手动接入时可以调用：
-
-```csharp
-using YokiFrame;
-
-YokiFrameKit.Initialize(YokiFrameEngine.Godot);
-```
-
-### 替换资源后端
-
-SceneKit 默认委托 ResKit 的场景后端，UIKit 默认面板加载器也通过 ResKit 加载面板。因此接入 YooAsset 或自定义资源系统时，优先替换 ResKit Provider。
-
-```csharp
-using YokiFrame;
-using YokiFrame.Unity;
-
-ResKit.SetProvider(new YooAssetResourceProvider());
-```
-
----
-
-## 常用代码
-
-### EventKit
-
-```csharp
-using YokiFrame;
-
-public readonly struct PlayerDiedEvent
-{
-    public readonly string PlayerName;
-
-    public PlayerDiedEvent(string playerName)
-    {
-        PlayerName = playerName;
-    }
-}
-
-EventKit.Type.Register<PlayerDiedEvent>(OnPlayerDied);
-EventKit.Type.Send(new PlayerDiedEvent("Player"));
-EventKit.Type.UnRegister<PlayerDiedEvent>(OnPlayerDied);
-```
-
-### FsmKit
-
-```csharp
-using YokiFrame;
-
-var fsm = new FSM<PlayerState>("PlayerFSM");
-fsm.Add(PlayerState.Idle, new IdleState(fsm, owner));
-fsm.Add(PlayerState.Run, new RunState(fsm, owner));
-fsm.Start(PlayerState.Idle);
-
-fsm.Change(PlayerState.Run);
-fsm.Update();
-```
-
-### ResKit
-
-```csharp
-using YokiFrame;
-
-var handle = ResKit.LoadAsset<MyConfig>("Configs/GameConfig");
-try
-{
-    Use(handle.Asset);
-}
-finally
-{
-    handle.Release();
-}
-```
-
-### ActionKit
-
-```csharp
-using YokiFrame;
-
-IActionController controller = ActionKit.Sequence()
-    .Callback(OnStarted)
-    .Delay(0.5f)
-    .Callback(OnFinished)
-    .Start();
-
-controller.Pause();
-controller.Resume();
-controller.Cancel();
-```
-
-`Start(onFinish)` 会先用 `dt = 0` 推进一次；正常完成时才会触发 Action 的 `OnFinish()` 和 `Start(onFinish)` 回调。`Cancel()` 是取消并释放当前 controller，不会触发完成回调，也不会把插值或 DOTween 自动跳到终点。同一目标属性需要互斥控制时，保存当前 controller，启动新动作前先取消旧动作；需要“提前完成并落最终状态”时，显式设置最终状态，或保留具体 `IAction` / tween 引用使用对应完成语义。
-
-### SpatialKit
-
-```csharp
-using YokiFrame;
-
-var bounds = new YokiBounds(YokiVector3.Zero, new YokiVector3(1000f, 1000f, 1000f));
-var octree = SpatialKit.CreateOctree<MySpatialEntity>(bounds);
-
-octree.Insert(entity);
-octree.QueryRadius(entity.Position, sensorRange, results);
-```
-
----
-
-## AI 使用入口
-
-包内包含面向 Agent 的 Skill 文档：
-
-```text
-Assets/YokiFrame/Core/Editor/Skills/
-├── yokiframe/
-├── yokiframe-command-bridge/
-└── yokiframe-editor/
-```
-
-推荐 AI 查询顺序：
-
-1. 读取 `.yokiframe/engines/<engineId>/engine.json`，确认当前在线宿主和能力。
-2. 查询当前状态时优先读取 `snapshots/<Kit>/<name>.json`。
-3. 需要详情、历史、只读诊断或明确维护操作时，再写入 command 并等待 result。
-4. 请求超时时查看 `processing`、`deadletter`、heartbeat 和 `System/bridge_status`。
-
-不要把高频 UI 刷新做成 `send_command` 轮询；命令桥是可靠控制面，不是运行时帧同步总线。
-
----
-
-## 技术约束
-
-- 当前 package 版本：`2.0.0-preview`。
-- Unity 包声明兼容 Unity `2022.3+`。
-- Godot 接入面向 Godot 4.x `.NET / C#` 项目，当前主要目标为 Godot 4.7。
-- C# 代码保持 C# 9.0 兼容。
-- Core Runtime 不直接依赖 Unity、Godot、Tauri、YooAsset、DOTween、FMOD 或 Luban 等具体宿主或工具实现。
-- ManagedRuntimeKit 的 Core 层只保留接口、默认后端、能力和诊断模型；LeanCLR、HybridCLR、Unity 构建管线或 Godot .NET 接入必须放在可选 Adapter / Editor / Installer 中。
-- Unity 开发项目可通过 `Packages/manifest.json` 接入 `com.code-philosophy.leanclr`：`https://github.com/focus-creative-games/leanclr-unity.git`；YokiFrame Unity Editor Adapter 只通过 PackageManager 探测该包并注册 `LeanCLR` 后端，不直接引用 LeanCLR API。
-- 文件桥使用 FileBridge v2 engine-scoped 路径；新命令和响应不走历史 root command/result 目录。
-- 高频状态不逐次写 `.yokiframe` 文件；用 snapshot、telemetry、事件采样和显式 trace 承担诊断刷新。
-- 变更型命令必须经过用户意图、payload 校验、CommandPolicy 和可回退路径。
-
----
-
-## 文档入口
-
-| 目标 | 位置 |
+| 目标 | 必要条件 |
 | --- | --- |
-| 快速上手和 Kit 文档 | `Assets/YokiFrame/TauriRuntime~/dist/docs` 或 Tauri 工作台 `Docs` 页面 |
-| Tauri 工作台源码 | `YokiFrameTools/TauriEditor` |
-| 安装器源码 | `YokiFrameTools/Installer` |
-| AI 命令桥 Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe-command-bridge/SKILL.md` |
-| YokiFrame 使用 Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe/SKILL.md` |
-| 编辑器工作台 Skill | `Assets/YokiFrame/Core/Editor/Skills/yokiframe-editor/SKILL.md` |
+| Unity | Unity `2022.3+`，并让 Unity Package Manager 可使用 Git。首次打开 Workbench 时，本机还需要 .NET 10 SDK 来构建项目工具 Runtime。 |
+| Godot | Godot **.NET** 版本、本机 .NET 10 SDK，以及一个完整的本地 YokiFrame 源码包。标准版 Godot 不支持 C#，不能使用本框架。 |
 
----
+YokiFrame 的 Git URL 和源码包不携带 Workbench、Installer 或 CLI 二进制。工具 Runtime 会在需要时按当前源码生成到目标项目的 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/`；它是项目缓存，可以删除后重新生成，绝不会写回源码包。
 
-## License
+### Unity：通过 Git URL 安装
 
-MIT License
+1. 在 Unity 中打开目标项目，进入 `Window > Package Manager`。
+2. 点击左上角 `+`，选择 **Add package from git URL**。
+3. 输入以下地址并确认：
+
+   ```text
+   https://github.com/HinataYoki/YokiFrame.git
+   ```
+
+   需要固定版本时，在地址后追加 `#<tag-or-commit>`，例如：
+
+   ```text
+   https://github.com/HinataYoki/YokiFrame.git#<tag-or-commit>
+   ```
+
+4. 等待 Package Manager 完成解析和编译。导入完成后，通过 `YokiFrame/Workbench/Open` 或 `Ctrl+E` 打开 Workbench。
+5. 若当前项目没有可复用的 Workbench，首次 `Ctrl+E` 会使用本机 .NET 10 SDK，把与当前 Git 源码匹配的工具 Runtime 构建到该 Unity 项目的 `.yokiframe` 缓存中，再打开 Workbench。
+
+也可以手动在 `Packages/manifest.json` 中声明 Git 依赖：
+
+```json
+{
+  "dependencies": {
+    "com.hinatayoki.yokiframe": "https://github.com/HinataYoki/YokiFrame.git#<tag-or-commit>"
+  }
+}
+```
+
+Unity Git URL 与 Installer 管理的本地 embedded package 是互斥来源；同一项目只能选择其中一种。不要把 Git URL 包直接复制到 `Assets/`，也不要手动修改 Unity 的 Package Cache。
+
+### Godot .NET：从源码包启动 Installer
+
+Godot 不支持直接把 Git URL 或源码目录复制到 `addons/yokiframe`。必须由 Installer 完成安装、校验、备份和替换。开始前获取完整源码包，例如：
+
+```powershell
+git clone https://github.com/HinataYoki/YokiFrame.git
+```
+
+这里的“源码包根”是包含 `package.json`、`Core/`、`Tools/` 与 `YokiFrameWorkbench~/` 的目录。请从**源码包**运行下列脚本，传入目标 Godot 项目根；不要从目标项目的 `addons/yokiframe` 或 `.yokiframe` 缓存目录运行它。
+
+#### Windows
+
+```powershell
+$packageRoot = "D:\Source\YokiFrame"
+$godotProjectRoot = "D:\Games\MyGodotGame"
+
+& "$packageRoot\YokiFrameWorkbench~\scripts\runtime-bootstrap\install-godot.cmd" --project $godotProjectRoot
+```
+
+#### Linux
+
+```sh
+package_root="/path/to/YokiFrame"
+godot_project_root="/path/to/MyGodotGame"
+
+sh "$package_root/YokiFrameWorkbench~/scripts/runtime-bootstrap/install-godot.sh" --project "$godot_project_root"
+```
+
+#### macOS
+
+```sh
+package_root="/path/to/YokiFrame"
+godot_project_root="/path/to/MyGodotGame"
+
+sh "$package_root/YokiFrameWorkbench~/scripts/runtime-bootstrap/install-godot.command" --project "$godot_project_root"
+```
+
+脚本会执行以下工作：
+
+1. 检查本机是否可用 .NET 10 SDK。
+2. 根据当前源码计算指纹，在**目标 Godot 项目**的 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/` 构建或复用当前平台的 Workbench、Installer 和 `yoki` Runtime。
+3. 将该项目缓存标记为当前源码版本，然后自动打开 Installer，并预填源码包与 Godot 项目路径。
+
+Installer 打开后，选择或确认 **Godot local** 模式，核对源码包和目标项目路径，先生成安装 plan；确认 plan 后再执行 apply。Installer 会完整暂存并校验新的 `addons/yokiframe`，备份旧目录，再原子替换；失败时会恢复备份。
+
+安装完成后重新打开 Godot 项目，等待插件导入完成。更新时从新的或更新后的源码包重复运行同一 `install-godot` 脚本，再在 Installer 中审阅 plan 并 apply。不要手动修改 `addons/yokiframe`：Godot 更新不会进行文件级合并，受管目录中的手工修改会在完整替换时丢失。
+
+如果 Installer 提示 Runtime 缓存缺失、过期或与所选源码包指纹不一致，请再次从该源码包运行 `install-godot`；也可以在 Installer 中使用“构建 Runtime 并重新打开”恢复。
+
+## 工具链
+
+- **Workbench**：以图形界面查看框架、Kit、离线文档、项目状态和已接入的运行态诊断。
+- **`yoki` CLI**：用于脚本化查询、诊断和已声明的受控操作；默认以只读查询为主。
+- **Installer**：支持 Unity embedded package、Unity Git URL 和 Godot 本地安装；每次安装或更新都会先生成 plan，并提供校验与回滚边界。
+
+完整的工具命令、安装事务和运行时诊断说明见[工具链指南](Documentation~/Guides/Tooling.md)。
+
+## 从这里开始阅读
+
+- [框架概览与第一个 Runtime API](Documentation~/Api/00-GettingStarted/Entrypoints.md)
+- [状态与入口](Documentation~/Api/00-GettingStarted/Kit_Status.md)
+- [Core API](Documentation~/Api/02-Core)
+- [游戏功能 Kit](Documentation~/Api/03-Tool)
+- [Workbench、CLI 与 Installer](Documentation~/Guides/Tooling.md)
+- [第三方依赖建议](Documentation~/Api/04-Reference/01-ThirdPartyRecommendations.md)
+
+## 仓库结构
+
+```text
+Core/                 跨引擎 Runtime、共享 Editor 能力与宿主 Adapter
+Tools/                可选游戏功能 Kit
+Documentation~/       公开 API 与使用指南，可由 Workbench 离线浏览
+YokiFrameWorkbench~/  Avalonia Workbench、Installer、CLI 与测试源码
+```
+
+## 版本与兼容性
+
+YokiFrame 2.x 是一次全新架构落地，不承担 1.x 的 API、序列化资产、配置或存档兼容。历史更新记录不再维护；请以当前 README、[Kit 状态](Documentation~/Api/00-GettingStarted/Kit_Status.md) 和各 Kit 文档判断可用能力与边界。
+
+许可见 [LICENSE](LICENSE)。

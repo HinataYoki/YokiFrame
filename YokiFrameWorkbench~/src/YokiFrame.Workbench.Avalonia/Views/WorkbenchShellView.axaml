@@ -1,0 +1,681 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:chrome="using:Avalonia.Controls.Chrome"
+             xmlns:components="using:YokiFrame.Workbench.Avalonia.Components"
+             xmlns:doc="using:Avalonia.Controls.Documents"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:pages="using:YokiFrame.Workbench.Avalonia.Views.Pages"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.WorkbenchShellView"
+             x:DataType="vm:WorkbenchShellViewModel">
+  <Grid RowDefinitions="60,*"
+        Background="{DynamicResource Brush.App.Background}"
+        doc:TextElement.FontFamily="{CompiledBinding SelectedDisplayFontFamily}">
+    <components:AppTitleBar ZIndex="1" />
+    <StackPanel x:Name="BrandArea"
+            Grid.Row="0"
+            Orientation="Horizontal"
+            Width="224"
+            Height="60"
+            Margin="16,0,0,0"
+            Spacing="10"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Center"
+            ZIndex="2"
+            chrome:WindowDecorationProperties.ElementRole="User">
+      <Image Source="avares://YokiFrame.Workbench.Avalonia/Assets/Brand/yoki.png"
+             Width="48"
+             Height="48"
+             Stretch="Uniform" />
+      <TextBlock Text="YokiFrame"
+                 FontSize="20"
+                 FontWeight="Bold"
+                 VerticalAlignment="Center" />
+    </StackPanel>
+
+    <Grid Grid.Row="1"
+          ColumnDefinitions="224,*"
+          Margin="16,0,16,16"
+          ColumnSpacing="16">
+      <components:SideNavigation />
+
+      <Border x:Name="ToolWindowCard"
+              Grid.Column="1"
+              Classes="panel"
+              Padding="20">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="12">
+          <Border Classes="page-header">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="20">
+              <StackPanel x:Name="PageIntroduction"
+                          Spacing="3"
+                          MinWidth="180"
+                          MaxWidth="280"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding CurrentPageTitle}"
+                           Classes="h2 page-title" />
+                <TextBlock Text="{CompiledBinding CurrentPageDescription}"
+                           Classes="muted"
+                           FontSize="{DynamicResource FontSize.Sm}"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="8"
+                          VerticalAlignment="Center">
+                <StackPanel IsVisible="{CompiledBinding IsDocumentationPage}"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            VerticalAlignment="Center">
+                  <TextBox Width="248"
+                           Text="{CompiledBinding DocumentationPage.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="搜索文档关键字"
+                           KeyDown="OnDocumentationSearchKeyDown"
+                           AutomationProperties.Name="搜索离线文档关键字"
+                           AutomationProperties.AutomationId="workbench.docs.search" />
+                  <Button Command="{CompiledBinding DocumentationPage.SearchCommand}"
+                          Classes="secondary icon"
+                          ToolTip.Tip="搜索标题、路径和正文"
+                          AutomationProperties.Name="执行文档关键字搜索">
+                    <PathIcon Data="{StaticResource Icon.Search}" Width="14" Height="14" />
+                  </Button>
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsTableKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            VerticalAlignment="Center">
+                  <Button Command="{CompiledBinding TableKitPage.ResetCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="还原当前项目的 TableKit 默认配置"
+                          AutomationProperties.Name="还原 TableKit 默认配置">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
+                      <TextBlock Text="还原默认" />
+                    </StackPanel>
+                  </Button>
+                  <Button Command="{CompiledBinding TableKitPage.OpenConfigDirectoryCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="在系统文件管理器中打开 Luban Datas 目录"
+                          AutomationProperties.Name="打开 TableKit 配置目录">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
+                      <TextBlock Text="打开配置" />
+                    </StackPanel>
+                  </Button>
+                  <Button Command="{CompiledBinding TableKitPage.SaveCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="保存当前项目的 TableKit 配置"
+                          AutomationProperties.Name="保存 TableKit 配置">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <PathIcon Data="{StaticResource Icon.Save}" Width="13" Height="13" />
+                      <TextBlock Text="保存" />
+                    </StackPanel>
+                  </Button>
+                  <Button Command="{CompiledBinding TableKitPage.ValidateCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="验证 Luban 配置并读取临时 JSON 预览，不修改正式输出目录"
+                          AutomationProperties.Name="验证 TableKit 配置">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
+                      <TextBlock Text="验证" />
+                    </StackPanel>
+                  </Button>
+                  <Button Command="{CompiledBinding TableKitPage.GenerateCommand}"
+                          Classes="primary compact-action"
+                          AutomationProperties.Name="生成 TableKit 配置表">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <PathIcon Data="{StaticResource Icon.Download}" Width="13" Height="13" />
+                      <TextBlock Text="生成" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsLocalizationKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <Border Classes="badge">
+                    <TextBlock Text="{CompiledBinding LocalizationKitPage.ProviderText}" Classes="mono" />
+                  </Border>
+                  <TextBlock Text="{CompiledBinding LocalizationKitPage.SummaryText}"
+                             Classes="muted mono"
+                             FontSize="{DynamicResource FontSize.Sm}"
+                             VerticalAlignment="Center" />
+                  <TextBlock Text="{CompiledBinding LocalizationKitPage.StatusText}"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Sm}"
+                             MaxWidth="180"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding LocalizationKitPage.StatusText}"
+                             VerticalAlignment="Center" />
+                  <Button Command="{CompiledBinding LocalizationKitPage.RefreshCommand}"
+                          Classes="secondary icon"
+                          ToolTip.Tip="刷新本地化目录"
+                          AutomationProperties.Name="刷新本地化目录">
+                    <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
+                  </Button>
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsEventKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <TextBox Width="260"
+                           Text="{CompiledBinding EventKitPage.SearchText}"
+                           PlaceholderText="搜索事件、参数或源码文件"
+                           AutomationProperties.Name="搜索 EventKit 关系"
+                           AutomationProperties.AutomationId="workbench.eventkit.search" />
+                  <ComboBox Width="108"
+                            ItemsSource="{CompiledBinding EventKitPage.ChannelOptions}"
+                            SelectedItem="{CompiledBinding EventKitPage.SelectedChannel}"
+                            AutomationProperties.Name="EventKit 通道筛选" />
+                  <CheckBox Content="排除 Editor"
+                            IsChecked="{CompiledBinding EventKitPage.ExcludeEditor}"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="扫描时排除 Editor 目录" />
+                  <TextBlock Text="{CompiledBinding EventKitPage.ScanStatusText}"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Xs}"
+                             MaxWidth="118"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding EventKitPage.ScanFileCountText}"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsLogKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <Button x:Name="OpenLogDirectoryButton"
+                          Command="{CompiledBinding LogKitPage.OpenDirectoryCommand}"
+                          Classes="secondary icon"
+                          ToolTip.Tip="打开当前 Runtime 日志文件夹"
+                          AutomationProperties.Name="打开当前 Runtime 日志文件夹"
+                          AutomationProperties.HelpText="{CompiledBinding LogKitPage.LogDirectoryPathText}">
+                    <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
+                  </Button>
+                  <Button Content="恢复默认"
+                          Command="{CompiledBinding LogKitPage.ResetSettingsCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="恢复默认草稿，保存后才生效" />
+                   <Button Content="{CompiledBinding LogKitPage.SaveSettingsButtonText}"
+                           Command="{CompiledBinding LogKitPage.SaveSettingsCommand}"
+                           Classes="primary compact-action" />
+                 </StackPanel>
+                 <Button IsVisible="{CompiledBinding IsSaveKitPage}"
+                         Command="{CompiledBinding SaveKitPage.OpenDirectoryCommand}"
+                         Classes="secondary icon"
+                         ToolTip.Tip="打开配置的 SaveKit 存档目录"
+                         AutomationProperties.Name="打开配置的 SaveKit 存档目录">
+                   <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
+                 </Button>
+                 <Button IsVisible="{CompiledBinding IsSaveKitPage}"
+                         Command="{CompiledBinding SaveKitPage.ResetCommand}"
+                         Classes="secondary icon"
+                         ToolTip.Tip="恢复当前引擎的默认存档目录和扩展名"
+                         AutomationProperties.Name="恢复 SaveKit 默认设置">
+                   <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
+                 </Button>
+                 <StackPanel IsVisible="{CompiledBinding IsPoolKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="{CompiledBinding PoolKitPage.OperationStatusText}"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Sm}"
+                             MaxWidth="220"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding PoolKitPage.OperationStatusText}"
+                             AutomationProperties.LiveSetting="Polite"
+                             VerticalAlignment="Center" />
+                  <ToggleButton IsChecked="{CompiledBinding PoolKitPage.TrackingEnabled, Mode=OneWay}"
+                                Command="{CompiledBinding PoolKitPage.ToggleTrackingCommand}"
+                                Classes="poolkit-toolbar-toggle"
+                                AutomationProperties.Name="切换 PoolKit 对象跟踪">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
+                      <TextBlock Text="{CompiledBinding PoolKitPage.TrackingButtonText}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <ToggleButton IsChecked="{CompiledBinding PoolKitPage.StackTraceEnabled, Mode=OneWay}"
+                                Command="{CompiledBinding PoolKitPage.ToggleLocationCommand}"
+                                Classes="poolkit-toolbar-toggle"
+                                ToolTip.Tip="开启定位会同时开启对象跟踪与事件历史"
+                                AutomationProperties.Name="切换 PoolKit 堆栈定位">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Crosshair}" Width="13" Height="13" />
+                      <TextBlock Text="{CompiledBinding PoolKitPage.LocationButtonText}" />
+                    </StackPanel>
+                  </ToggleButton>
+                   <Button Command="{CompiledBinding PoolKitPage.CheckLeaksCommand}"
+                           Classes="secondary compact-action"
+                           ToolTip.Tip="扫描当前仍有借出对象的池，并自动定位首个候选"
+                           AutomationProperties.HelpText="检查只提供疑似未归还线索，不会直接判定内存泄漏"
+                           AutomationProperties.Name="检查 PoolKit 疑似未归还对象">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="13" Height="13" />
+                      <TextBlock Text="泄漏检查" />
+                    </StackPanel>
+                  </Button>
+                  <Button Command="{CompiledBinding PoolKitPage.ClearHistoryCommand}"
+                          Classes="secondary compact-action">
+                    <Button.Content>
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
+                        <TextBlock Text="清空历史" />
+                      </StackPanel>
+                    </Button.Content>
+                  </Button>
+                  <Button Command="{CompiledBinding RefreshCommand}"
+                          Classes="primary compact-action"
+                          AutomationProperties.Name="刷新 PoolKit">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
+                      <TextBlock Text="刷新" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsResKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="{CompiledBinding ResKitPage.OperationStatusText}"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Sm}"
+                             MaxWidth="180"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding ResKitPage.OperationStatusText}"
+                             AutomationProperties.LiveSetting="Polite"
+                             VerticalAlignment="Center" />
+                  <ToggleButton IsChecked="{CompiledBinding ResKitPage.TrackingEnabled}"
+                                Command="{CompiledBinding ResKitPage.ToggleTrackingCommand}"
+                                Classes="reskit-toolbar-toggle"
+                                ToolTip.Tip="仅新建 lease 会记录加载来源"
+                                AutomationProperties.Name="切换 ResKit 加载位置跟踪"
+                                AutomationProperties.HelpText="开启后新建 lease 会记录源码位置">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Crosshair}" Width="13" Height="13" />
+                      <TextBlock Text="{CompiledBinding ResKitPage.TrackingButtonText}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <Button
+                          Command="{CompiledBinding ResKitPage.ClearHistoryCommand}"
+                          Classes="secondary compact-action"
+                          AutomationProperties.Name="清空 ResKit 卸载历史">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
+                      <TextBlock Text="清空历史" />
+                    </StackPanel>
+                  </Button>
+                  <Button
+                          Command="{CompiledBinding RefreshCommand}"
+                          Classes="primary compact-action"
+                          AutomationProperties.Name="刷新 ResKit">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
+                      <TextBlock Text="刷新" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+                <StackPanel IsVisible="{CompiledBinding IsActionKitPage}"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="{CompiledBinding ActionKitPage.OperationStatusText}"
+                             Classes="muted"
+                             FontSize="{DynamicResource FontSize.Sm}"
+                             MaxWidth="170"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{CompiledBinding ActionKitPage.OperationStatusText}"
+                             AutomationProperties.Name="ActionKit 操作状态"
+                             AutomationProperties.LiveSetting="Polite"
+                             VerticalAlignment="Center" />
+                  <ToggleButton Command="{CompiledBinding ActionKitPage.ToggleStackTraceCommand}"
+                                IsChecked="{CompiledBinding ActionKitPage.StackTraceEnabled, Mode=OneWay}"
+                                Classes="actionkit-toolbar-toggle"
+                                ToolTip.Tip="为后续启动的根 Action 捕获调用堆栈"
+                                AutomationProperties.Name="切换 ActionKit 堆栈捕获">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
+                      <TextBlock Text="{CompiledBinding ActionKitPage.StackTraceButtonText}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <Button Command="{CompiledBinding ActionKitPage.ClearStackTraceCommand}"
+                          Classes="secondary compact-action"
+                          ToolTip.Tip="清空当前活动根已捕获的 Start 调用帧，不影响最近终态记录"
+                          AutomationProperties.Name="清空 ActionKit Start 调用帧历史"
+                          AutomationProperties.HelpText="只清空当前活动根已捕获的 Start 调用帧，不影响最近终态记录">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
+                      <TextBlock Text="清空历史" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+                <Button Content="刷新"
+                        Command="{CompiledBinding RefreshCommand}"
+                        Classes="secondary"
+                        IsVisible="{CompiledBinding IsOverviewPage}" />
+                <Button Content="刷新"
+                        Command="{CompiledBinding RefreshCommand}"
+                        Classes="secondary"
+                        IsVisible="{CompiledBinding IsDetailPage}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Grid Grid.Row="1">
+          <Grid IsVisible="{CompiledBinding IsOverviewPage}">
+            <Grid x:Name="OverviewDesignSurface"
+                  ColumnDefinitions="*,420"
+                  ColumnSpacing="12">
+              <Grid RowDefinitions="Auto,52,*"
+                    RowSpacing="8">
+                <Border Classes="panel"
+                        Padding="10">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="运行状态"
+                               Classes="section-title" />
+                    <ItemsControl ItemsSource="{CompiledBinding SummaryCards}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WorkbenchMetricCard">
+                          <components:MetricCard Classes="overview-metric-card" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{CompiledBinding EngineCards}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WorkbenchMetricCard">
+                          <components:MetricCard Classes="overview-metric-card" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Classes="panel"
+                        Padding="8">
+                  <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,132"
+                        ColumnSpacing="6">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="命令桥"
+                                 FontSize="{DynamicResource FontSize.Md}"
+                                 FontWeight="SemiBold"
+                                 VerticalAlignment="Center" />
+                      <Border Classes="badge"
+                              Padding="6,2">
+                        <TextBlock Text="{CompiledBinding ConnectionBadgeText}"
+                                   Foreground="{DynamicResource Brush.Status.SuccessText}"
+                                   FontSize="{DynamicResource FontSize.Xs}"
+                                   FontWeight="SemiBold" />
+                      </Border>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Content="Ping"
+                            Command="{CompiledBinding PingCommand}"
+                            Classes="primary compact-action" />
+                    <Button Grid.Column="2"
+                            Content="状态"
+                            Command="{CompiledBinding BridgeStatusCommand}"
+                            Classes="secondary compact-action" />
+                    <Button Grid.Column="3"
+                            Content="目录"
+                            Command="{CompiledBinding RefreshCommandCatalogCommand}"
+                            Classes="secondary compact-action" />
+                    <TextBlock Grid.Column="5"
+                               Text="字体"
+                               Classes="muted"
+                               FontSize="{DynamicResource FontSize.Sm}"
+                               VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="6"
+                              MinHeight="30"
+                              ItemsSource="{CompiledBinding DisplayFontOptions}"
+                              SelectedItem="{CompiledBinding SelectedDisplayFontName, Mode=TwoWay}" />
+                  </Grid>
+                </Border>
+
+                <components:LogConsole Grid.Row="2" />
+              </Grid>
+
+              <Border Grid.Column="1"
+                      Classes="panel overview-skill-panel"
+                      Padding="10">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
+                      RowSpacing="8">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="安装 Skill"
+                               Classes="section-title" />
+                    <TextBlock Text="{CompiledBinding SkillInstallStatusText}"
+                               Classes="muted"
+                               FontSize="{DynamicResource FontSize.Sm}"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{CompiledBinding SkillInstallStatusText}" />
+                  </StackPanel>
+
+                  <ItemsControl Grid.Row="1"
+                                ItemsSource="{CompiledBinding SkillStatusCards}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="3" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:WorkbenchMetricCard">
+                        <components:MetricCard Classes="overview-metric-card" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <ItemsControl Grid.Row="2"
+                                ItemsSource="{CompiledBinding SkillOptions}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="3" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:WorkbenchSkillOption">
+                        <Button Command="{CompiledBinding SelectCommand}"
+                                Classes="skill-option-card"
+                                Classes.active="{CompiledBinding IsSelected}"
+                                HorizontalAlignment="Stretch">
+                           <StackPanel Spacing="2">
+                             <TextBlock Text="{CompiledBinding Label}"
+                                        FontWeight="SemiBold"
+                                        MaxLines="1"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTip.Tip="{CompiledBinding Label}" />
+                             <TextBlock Text="{CompiledBinding Description}"
+                                        Classes="mono muted"
+                                        FontSize="{DynamicResource FontSize.Xs}"
+                                        MaxLines="1"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTip.Tip="{CompiledBinding Description}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <ItemsControl Grid.Row="3"
+                                Classes="overview-skill-target-list"
+                                VerticalAlignment="Top"
+                                ItemsSource="{CompiledBinding SkillTargets}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:WorkbenchSkillTarget">
+                        <Border Classes="card skill-target-row">
+                          <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                ColumnSpacing="6">
+                            <StackPanel Spacing="1"
+                                        VerticalAlignment="Center">
+                              <TextBlock Text="{CompiledBinding Label}"
+                                         FontSize="{DynamicResource FontSize.Md}"
+                                         FontWeight="SemiBold"
+                                         MaxLines="1"
+                                         TextTrimming="CharacterEllipsis"
+                                         ToolTip.Tip="{CompiledBinding Label}" />
+                              <TextBlock Text="{CompiledBinding RelativePath}"
+                                         Classes="mono muted"
+                                         FontSize="{DynamicResource FontSize.Xs}"
+                                         MaxLines="1"
+                                         TextTrimming="CharacterEllipsis"
+                                         ToolTip.Tip="{CompiledBinding RelativePath}" />
+                            </StackPanel>
+                            <Border Grid.Column="1"
+                                    Classes="badge"
+                                    Classes.positive="{CompiledBinding IsInstalled}"
+                                    Classes.neutral="{CompiledBinding !IsInstalled}"
+                                    Padding="6,2">
+                              <TextBlock Text="{CompiledBinding StatusText}"
+                                         Classes="muted"
+                                         FontSize="{DynamicResource FontSize.Xs}" />
+                            </Border>
+                            <Button Grid.Column="2"
+                                    Content="安装"
+                                    Command="{CompiledBinding InstallCommand}"
+                                    Classes="primary compact-action" />
+                            <Button Grid.Column="3"
+                                    Content="卸载"
+                                    Command="{CompiledBinding UninstallCommand}"
+                                    Classes="secondary compact-action" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <Grid x:Name="OverviewCustomSkillPanel"
+                        Grid.Row="4"
+                        RowDefinitions="Auto,Auto"
+                        RowSpacing="4">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Text="自定义目录"
+                                 FontSize="{DynamicResource FontSize.Md}"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{CompiledBinding CustomSkillStatusText}"
+                                 Classes="muted"
+                                 FontSize="{DynamicResource FontSize.Xs}"
+                                 MaxLines="1"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding CustomSkillStatusText}" />
+                    </Grid>
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="6">
+                      <TextBox Text="{CompiledBinding CustomSkillPath, Mode=TwoWay}"
+                               PlaceholderText="custom/skills" />
+                      <Button Grid.Column="1"
+                              Content="安装"
+                              Command="{CompiledBinding InstallCustomSkillCommand}"
+                              Classes="secondary" />
+                      <Button Grid.Column="2"
+                              Content="卸载"
+                              Command="{CompiledBinding UninstallCustomSkillCommand}"
+                              Classes="ghost" />
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Border>
+            </Grid>
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsDetailPage}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{CompiledBinding CurrentSections}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WorkbenchDisplaySection">
+                    <Border BorderBrush="{DynamicResource Brush.Border.Subtle}"
+                            BorderThickness="0,0,0,1"
+                            Padding="0,14">
+                      <Grid ColumnDefinitions="180,*"
+                            ColumnSpacing="20">
+                        <TextBlock Text="{CompiledBinding Label}"
+                                   Classes="section-title"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{CompiledBinding Value}"
+                                   Classes="mono"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}"
+                                   TextWrapping="Wrap" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsFsmKitPage}">
+            <pages:FsmKitPageView DataContext="{CompiledBinding FsmKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsEventKitPage}">
+            <pages:EventKitPageView DataContext="{CompiledBinding EventKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsLogKitPage}">
+            <pages:LogKitPageView DataContext="{CompiledBinding LogKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsPoolKitPage}">
+            <pages:PoolKitPageView DataContext="{CompiledBinding PoolKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsResKitPage}">
+            <pages:ResKitPageView DataContext="{CompiledBinding ResKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsActionKitPage}">
+            <pages:ActionKitPageView DataContext="{CompiledBinding ActionKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsAudioKitPage}">
+            <pages:AudioKitPageView DataContext="{CompiledBinding AudioKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsSpatialKitPage}">
+            <pages:SpatialKitPageView DataContext="{CompiledBinding SpatialKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsUIKitPage}">
+            <pages:UIKitPageView DataContext="{CompiledBinding UIKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsTableKitPage}">
+            <pages:TableKitPageView DataContext="{CompiledBinding TableKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsLocalizationKitPage}">
+            <pages:LocalizationKitPageView DataContext="{CompiledBinding LocalizationKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsSaveKitPage}">
+            <pages:SaveKitPageView DataContext="{CompiledBinding SaveKitPage}" />
+          </Grid>
+
+          <Grid IsVisible="{CompiledBinding IsDocumentationPage}">
+            <pages:DocumentationPageView DataContext="{CompiledBinding DocumentationPage}" />
+          </Grid>
+
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

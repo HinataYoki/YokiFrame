@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "System",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "ping",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "system-ping"
+      },
+      {
+        "action": "bridge_status",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "system-bridge-status"
+      },
+      {
+        "action": "list_commands",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "system-command-catalog"
+      },
+      {
+        "action": "refresh_snapshots",
+        "kind": "Maintenance",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "Refreshes snapshot and telemetry artifacts."
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.kind=Unity"
+        ],
+        "verifyRecipe": "system-snapshot-refresh"
+      },
+      {
+        "action": "get_environment",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "engine.kind=Unity"
+        ],
+        "verifyRecipe": "system-environment"
+      },
+      {
+        "action": "open_project_folder",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "Opens the project folder in the host operating system."
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.kind=Unity"
+        ],
+        "verifyRecipe": "system-user-action"
+      },
+      {
+        "action": "open_log",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "Opens the requested log in the host operating system."
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.kind=Unity"
+        ],
+        "verifyRecipe": "system-user-action"
+      },
+      {
+        "action": "open_code_location",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "Opens a validated project C# file in the configured Unity code editor."
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.kind=Unity"
+        ],
+        "verifyRecipe": "system-user-action"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "system-ping",
+        "description": "Verify the current engine identity through a successful ping response.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "system-bridge-status",
+        "description": "Verify that FileBridge returned current storage and lifecycle diagnostics.",
+        "gates": [
+          "runtime-response-success",
+          "bridge-status-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "system-command-catalog",
+        "description": "Verify the command catalog against the current engine session and generation.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "command-catalog-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "system-snapshot-refresh",
+        "description": "Verify that refreshed snapshots belong to the current engine generation.",
+        "gates": [
+          "runtime-response-success",
+          "snapshot-generation-current"
+        ],
+        "evidence": [
+          "command-response",
+          "snapshot"
+        ]
+      },
+      {
+        "id": "system-environment",
+        "description": "Verify that the engine returned a structured environment payload.",
+        "gates": [
+          "runtime-response-success",
+          "environment-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "system-user-action",
+        "description": "Retain the terminal response for an explicitly requested operating-system action.",
+        "gates": [
+          "runtime-response-success"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/CommandBridge/Policies/YokiFrameCommandPolicy.cs",
+    "sourceHash": "8204980a5d5a2766de7d7737454ead38391627c2d3e1f950ea16c6a22efe1182"
+  }
+}

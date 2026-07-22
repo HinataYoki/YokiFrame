@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "ResKit",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "list_resources",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "get_resource_detail",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "diagnose_resource",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "get_unload_history",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-observe"
+      },
+      {
+        "action": "clear_history",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.reskit.unload-history"],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-user-action"
+      },
+      {
+        "action": "set_tracking",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.reskit.source-tracking"],
+        "preconditions": ["engine.reachable", "reskit.diagnostics.available"],
+        "verifyRecipe": "reskit-user-action"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "reskit-observe",
+        "description": "Verify bounded ResKit state against the current engine identity and diagnostic version.",
+        "gates": ["runtime-response-success", "engine-identity-current", "reskit-payload-valid"],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "reskit-user-action",
+        "description": "Verify explicit ResKit diagnostic setting or history changes against the returned state.",
+        "gates": ["runtime-response-success", "engine-identity-current", "reskit-state-updated"],
+        "evidence": ["command-response", "reskit-state"]
+      }
+    ],
+    "sourcePath": "Core/Editor/ResKit/Interaction/ResKitInteractionProvider.cs",
+    "sourceHash": "d69948351514809801b59e10f04e0c9e31a733bda1bffe5f16829d9755de4a4e"
+  }
+}

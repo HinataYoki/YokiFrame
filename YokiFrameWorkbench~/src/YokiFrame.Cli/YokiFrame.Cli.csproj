@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\YokiFrame.Client\YokiFrame.Client.csproj" />
+    <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
+    <ProjectReference Include="..\YokiFrame.Tooling.Application\YokiFrame.Tooling.Application.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

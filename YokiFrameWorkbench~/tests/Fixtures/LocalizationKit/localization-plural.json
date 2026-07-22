@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "languages": [
+    { "id": "ChineseSimplified" },
+    { "id": "English" },
+    { "id": "French" }
+  ],
+  "texts": [
+    { "id": 2000, "key": "inventory.items", "plural": { "ChineseSimplified": { "Other": "{0} 个物品" }, "English": { "One": "{0} item", "Other": "{0} items" }, "French": { "One": "{0} article", "Other": "{0} articles" } } },
+    { "id": 2001, "key": "mail.unread", "values": { "ChineseSimplified": "未读邮件", "English": "Unread mail", "French": "Courrier non lu" } }
+  ]
+}

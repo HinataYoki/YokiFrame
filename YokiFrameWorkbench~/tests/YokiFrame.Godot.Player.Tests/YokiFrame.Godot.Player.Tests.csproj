@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <YokiFramePlayerBuildRoot>$(MSBuildProjectDirectory)/../../.artifacts/godot-player-boundary</YokiFramePlayerBuildRoot>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/yokiframe-player/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <GodotPlayerBoundaryProject Include="..\..\..\Core\Runtime\YokiFrame.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\ActionKit\Runtime\YokiFrame.ActionKit.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\AudioKit\Runtime\YokiFrame.AudioKit.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\SaveKit\Runtime\YokiFrame.SaveKit.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\SpatialKit\Runtime\YokiFrame.SpatialKit.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Core\Adapters\Godot\Runtime\YokiFrame.Godot.Runtime.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\AudioKit\Adapters\Godot\Runtime\YokiFrame.AudioKit.Godot.csproj" />
+    <GodotPlayerBoundaryProject Include="..\..\..\Tools\SaveKit\Adapters\Godot\Runtime\YokiFrame.SaveKit.Godot.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildGodotPlayerBoundaryAssemblies" AfterTargets="Build">
+    <RemoveDir Directories="$(YokiFramePlayerBuildRoot)" />
+    <MSBuild
+      Projects="@(GodotPlayerBoundaryProject)"
+      Targets="Restore"
+      BuildInParallel="false"
+      UnloadProjectsOnCompletion="true"
+      Properties="Configuration=$(Configuration);GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=False;YokiFrameBuildRoot=$(YokiFramePlayerBuildRoot);YokiFrameBoundaryBuildPhase=Restore" />
+    <MSBuild
+      Projects="@(GodotPlayerBoundaryProject)"
+      Targets="Build"
+      BuildInParallel="false"
+      Properties="Configuration=$(Configuration);GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=False;YokiFrameBuildRoot=$(YokiFramePlayerBuildRoot);YokiFrameBoundaryBuildPhase=Build" />
+    <PropertyGroup>
+      <YokiFramePlayerAssemblyOutput>$(TargetDir)player-boundary</YokiFramePlayerAssemblyOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/runtime/bin/YokiFrame/$(Configuration)/netstandard2.1/YokiFrame.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/runtime/bin/YokiFrame.ActionKit/$(Configuration)/netstandard2.1/YokiFrame.ActionKit.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/runtime/bin/YokiFrame.AudioKit/$(Configuration)/netstandard2.1/YokiFrame.AudioKit.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/runtime/bin/YokiFrame.SaveKit/$(Configuration)/netstandard2.1/YokiFrame.SaveKit.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/runtime/bin/YokiFrame.SpatialKit/$(Configuration)/netstandard2.1/YokiFrame.SpatialKit.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/bin/YokiFrame.Godot.Runtime/$(Configuration)/YokiFrame.Godot.Runtime.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/bin/YokiFrame.AudioKit.Godot/$(Configuration)/YokiFrame.AudioKit.Godot.dll" />
+      <GodotPlayerBoundaryAssembly Include="$(YokiFramePlayerBuildRoot)/bin/YokiFrame.SaveKit.Godot/$(Configuration)/YokiFrame.SaveKit.Godot.dll" />
+    </ItemGroup>
+    <MakeDir Directories="$(YokiFramePlayerAssemblyOutput)" />
+    <Copy SourceFiles="@(GodotPlayerBoundaryAssembly)" DestinationFolder="$(YokiFramePlayerAssemblyOutput)" />
+  </Target>
+</Project>

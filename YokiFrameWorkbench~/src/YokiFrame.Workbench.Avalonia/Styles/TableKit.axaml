@@ -1,0 +1,236 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="UserControl.tablekit-page TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+
+  <Style Selector="Border.tablekit-status-strip">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.tablekit-status-chip">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.tablekit-status-chip.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-status-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-status-detail">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="MaxWidth" Value="360" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-metric-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-metric-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.tablekit-divider">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Default}" />
+  </Style>
+
+  <Style Selector="TabControl.tablekit-workspace-tabs">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TabControl.tablekit-workspace-tabs TabItem">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TabControl.tablekit-workspace-tabs TabItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-tab-count">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+
+  <Style Selector="Border.tablekit-config-pane">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Panel}" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.tablekit-config-section">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,0,0,12" />
+  </Style>
+  <Style Selector="Border.tablekit-config-section.last">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Border.tablekit-extra-output-card">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.tablekit-section-accent">
+    <Setter Property="Width" Value="3" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Icon.TableKit}" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-kicker">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-hint">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="Border.tablekit-data-pane">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.tablekit-table-pane, Border.tablekit-record-pane">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+  </Style>
+  <Style Selector="GridSplitter.tablekit-data-splitter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.tablekit-data-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="ListBox.tablekit-preview-list, ListBox.tablekit-record-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,0,14,10" />
+  </Style>
+  <Style Selector="ListBox.tablekit-preview-list ListBoxItem, ListBox.tablekit-record-list ListBoxItem">
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.tablekit-preview-list ListBoxItem:pointerover, ListBox.tablekit-record-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.tablekit-preview-list ListBoxItem:selected, ListBox.tablekit-record-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-preview-name, TextBlock.tablekit-record-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.tablekit-data-detail">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.tablekit-field-card">
+    <Setter Property="MinHeight" Value="72" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.tablekit-field-card.string">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="Border.tablekit-field-card.number">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.tablekit-field-card.boolean">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.tablekit-field-card.complex">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.TableKit}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-field-name">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-field-type">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-field-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="Border.tablekit-detail-divider">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+  <Style Selector="TextBox.tablekit-json-preview">
+    <Setter Property="Background" Value="{DynamicResource Brush.Terminal.Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="13,10,20,12" />
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+
+  <Style Selector="GridSplitter.tablekit-console-splitter">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.tablekit-console-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Border.tablekit-console-panel">
+    <Setter Property="Background" Value="{DynamicResource Brush.Terminal.Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.tablekit-console-header">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="TextBlock.tablekit-console-summary">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="ListBox.tablekit-console-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6,16,8" />
+  </Style>
+</Styles>

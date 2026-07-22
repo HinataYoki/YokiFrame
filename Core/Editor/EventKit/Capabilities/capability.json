@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "EventKit",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity",
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "eventkit.diagnostics.available"
+        ],
+        "verifyRecipe": "eventkit-read-only"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "eventkit-read-only",
+        "description": "Verify a read-only EventKit response against the current engine identity and payload contract.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "eventkit-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/EventKit/Interaction/EventKitInteractionProvider.cs",
+    "sourceHash": "dfb60dbdf15d19e2133d1a30d704a08e7548f6fc70982237b2b18507a4df6ac5"
+  }
+}

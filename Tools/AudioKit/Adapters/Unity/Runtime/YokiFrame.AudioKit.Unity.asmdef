@@ -1,0 +1,17 @@
+{
+    "name": "YokiFrame.AudioKit.Unity",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.AudioKit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

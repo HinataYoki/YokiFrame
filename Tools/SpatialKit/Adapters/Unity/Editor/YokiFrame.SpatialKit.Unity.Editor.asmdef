@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.SpatialKit.Unity.Editor",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.SpatialKit.Editor",
+        "YokiFrame.SpatialKit"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

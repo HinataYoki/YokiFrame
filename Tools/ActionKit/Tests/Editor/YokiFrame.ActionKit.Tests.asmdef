@@ -1,0 +1,25 @@
+{
+    "name": "YokiFrame.ActionKit.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:8e62f2f1c4b54a22a65cf2e98aa12920",
+        "GUID:bfd6b57e437b4c940985132bb8b28cf0",
+        "GUID:9a3c45e07e5a4fc8ba238982e0bb62de"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -1,0 +1,234 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.poolkit-master-panel, Border.poolkit-detail-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.poolkit-master-panel TextBlock, Border.poolkit-detail-panel TextBlock, Border.poolkit-status-footer TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+  </Style>
+  <Style Selector="Border.poolkit-master-header">
+    <Setter Property="MinHeight" Value="42" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-caption, TextBlock.poolkit-empty-text, TextBlock.poolkit-metric-label, TextBlock.poolkit-footer-item">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-pool-name">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-pool-usage">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-pool-usage.warning, TextBlock.poolkit-warning-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="PathIcon.poolkit-warning-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.poolkit-recent-event">
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="ListBox.poolkit-pool-list, ListBox.poolkit-object-list, ListBox.poolkit-event-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.poolkit-pool-list ListBoxItem">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.poolkit-pool-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.poolkit-pool-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="ListBox.poolkit-pool-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="GridSplitter.poolkit-master-splitter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.poolkit-master-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Border.poolkit-detail-header">
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-detail-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.poolkit-leak-candidate">
+    <Setter Property="Padding" Value="9,5" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.poolkit-leak-candidate TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.poolkit-leak-candidate PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="ProgressBar.poolkit-usage">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+  </Style>
+  <Style Selector="ProgressBar.poolkit-usage.warning">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-pressure-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Border.poolkit-metric-strip">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-metric-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TabControl.poolkit-object-tabs">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="TabItem.poolkit-object-tab">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="11,6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TabItem.poolkit-object-tab:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-tab-count">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="Border.poolkit-table-header">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="9,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.poolkit-table-header TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="ListBox.poolkit-object-list ListBoxItem, ListBox.poolkit-event-list ListBoxItem">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="ListBox.poolkit-object-list ListBoxItem:pointerover, ListBox.poolkit-event-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Button.poolkit-source-link">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="Button.poolkit-source-link:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.poolkit-available">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.SuccessText}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Expander.poolkit-event-drawer">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="12,7" />
+  </Style>
+  <Style Selector="Border.poolkit-event-kind">
+    <Setter Property="MinWidth" Value="64" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.poolkit-event-kind.spawn">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.poolkit-event-kind.return">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Positive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.poolkit-event-kind.forced">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.poolkit-detail-empty">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.poolkit-status-footer">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="ToggleButton.poolkit-toolbar-toggle">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.poolkit-toolbar-toggle:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="ToggleButton.poolkit-toolbar-toggle:checked">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+</Styles>

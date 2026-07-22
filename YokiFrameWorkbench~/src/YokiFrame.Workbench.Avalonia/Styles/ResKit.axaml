@@ -1,0 +1,219 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.reskit-master-panel TextBlock, Border.reskit-detail-panel TextBlock, Expander.reskit-history-drawer TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+  </Style>
+
+  <Style Selector="TextBlock.reskit-caption, TextBlock.reskit-empty-text, TextBlock.reskit-metric-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.reskit-metric-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.reskit-warning">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.reskit-warning PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.reskit-warning-text">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+
+  <Style Selector="Border.reskit-master-panel, Border.reskit-detail-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.reskit-master-header">
+    <Setter Property="MinHeight" Value="42" />
+  </Style>
+  <Style Selector="TextBlock.reskit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="ListBox.reskit-resource-list, ListBox.reskit-history-list, ListBox.reskit-source-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.reskit-resource-list ListBoxItem">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.reskit-resource-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.reskit-resource-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+  </Style>
+  <Style Selector="ListBox.reskit-resource-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+  </Style>
+  <Style Selector="TextBlock.reskit-resource-name">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.reskit-lease-badge, Border.reskit-ref-badge">
+    <Setter Property="Padding" Value="6,1" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.reskit-lease-badge.active">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+  </Style>
+  <Style Selector="Border.reskit-lease-badge.active TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.reskit-resource-state">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.reskit-resource-state.ready">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="GridSplitter.reskit-master-splitter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.reskit-master-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+
+  <Style Selector="Border.reskit-detail-header">
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+  </Style>
+  <Style Selector="TextBlock.reskit-detail-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.reskit-detail-metrics">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+
+  <Style Selector="Border.reskit-source-section">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.reskit-source-header">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="ListBox.reskit-source-list ListBoxItem">
+    <Setter Property="MinHeight" Value="54" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="ListBox.reskit-source-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Border.reskit-source-chip">
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.reskit-source-chip.tracked">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Positive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.reskit-source-chip.anonymous">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+  <Style Selector="Button.reskit-locate-button">
+    <Setter Property="MinWidth" Value="30" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Border.reskit-detail-empty">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Expander.reskit-history-drawer">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="Padding" Value="12,7" />
+  </Style>
+  <Style Selector="Border.reskit-history-header">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="9,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.reskit-history-header TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="ListBox.reskit-history-list ListBoxItem">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="ListBox.reskit-history-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+
+  <Style Selector="ToggleButton.reskit-toolbar-toggle">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.reskit-toolbar-toggle:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="ToggleButton.reskit-toolbar-toggle:checked">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="ToggleButton.reskit-toolbar-toggle:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ResKit}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+</Styles>

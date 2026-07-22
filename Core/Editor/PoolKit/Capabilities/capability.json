@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "PoolKit",
+    "state": "Available",
+    "role": "Core",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [
+      "state"
+    ],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "poolkit.diagnostics.available"],
+        "verifyRecipe": "poolkit-observe"
+      },
+      {
+        "action": "check_leak",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "poolkit.diagnostics.available"],
+        "verifyRecipe": "poolkit-observe"
+      },
+      {
+        "action": "set_tracking",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.poolkit.tracking-settings"],
+        "preconditions": ["engine.reachable", "poolkit.diagnostics.available"],
+        "verifyRecipe": "poolkit-user-action"
+      },
+      {
+        "action": "clear_history",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.poolkit.event-history"],
+        "preconditions": ["engine.reachable", "poolkit.diagnostics.available"],
+        "verifyRecipe": "poolkit-user-action"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "poolkit-observe",
+        "description": "Verify PoolKit state against the current engine identity and bounded payload contract.",
+        "gates": ["runtime-response-success", "engine-identity-current", "poolkit-payload-valid"],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "poolkit-user-action",
+        "description": "Verify explicit PoolKit diagnostics settings or history changes against the returned state.",
+        "gates": ["runtime-response-success", "engine-identity-current", "poolkit-state-updated"],
+        "evidence": ["command-response", "poolkit-state"]
+      }
+    ],
+    "sourcePath": "Core/Editor/PoolKit/Interaction/PoolKitInteractionProvider.cs",
+    "sourceHash": "94d3dc6e443636b491150cc94a6427ac4f051e221b940dbfe71b93de57c03087"
+  }
+}

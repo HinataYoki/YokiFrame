@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "AudioKit",
+    "state": "Available",
+    "role": "Tool",
+    "snapshotNames": ["state"],
+    "telemetryNames": ["state"],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "stats",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "audiokit.runtime.loaded"],
+        "verifyRecipe": "audiokit-observe"
+      },
+      {
+        "action": "get_workbench_snapshot",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "audiokit.runtime.loaded"],
+        "verifyRecipe": "audiokit-observe"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "audiokit-observe",
+        "description": "Verify bounded AudioKit buses, active voices and playback history against the current engine identity.",
+        "gates": ["runtime-response-success", "engine-identity-current", "audiokit-payload-valid"],
+        "evidence": ["command-response"]
+      }
+    ],
+    "sourcePath": "Tools/AudioKit/Editor/Interaction/AudioKitInteractionProvider.cs",
+    "sourceHash": "a09fae7b620192843e00eedddba3c1eff3d6ae942ee5e64a7b359269342d9f88"
+  }
+}

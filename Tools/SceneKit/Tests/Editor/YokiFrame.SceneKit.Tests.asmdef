@@ -1,0 +1,26 @@
+{
+    "name": "YokiFrame.SceneKit.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.SceneKit",
+        "UniTask",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

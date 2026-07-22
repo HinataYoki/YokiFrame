@@ -1,18 +1,12 @@
 namespace YokiFrame
 {
-    /// <summary>
-    /// 二维空间索引的投影平面。
-    /// </summary>
+    /// <summary>定义二维空间索引使用的投影平面。</summary>
     public enum SpatialPlane
     {
-        /// <summary>
-        /// XZ 平面，适用于 2.5D 俯视角场景。
-        /// </summary>
+        /// <summary>使用 X 与 Z 轴，适合常见 2.5D 地面场景。</summary>
         XZ,
 
-        /// <summary>
-        /// XY 平面，适用于传统 2D 场景。
-        /// </summary>
+        /// <summary>使用 X 与 Y 轴，适合传统 2D 场景。</summary>
         XY
     }
 }

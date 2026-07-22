@@ -1,0 +1,41 @@
+<Project Sdk="Godot.NET.Sdk/4.7.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>YokiFrame.Godot.Editor</AssemblyName>
+    <RootNamespace>YokiFrame</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);GODOT</DefineConstants>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Godot SDK 会隐式带入同一包；仍显式锁定 4.7.0 以保留可审计的 Editor SDK 边界。 -->
+    <NoWarn>$(NoWarn);NETSDK1023</NoWarn>
+    <OutputPath>$(YokiFrameBuildRoot)/bin/$(MSBuildProjectName)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/$(Configuration)/</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(YokiFrameToolsBuild)' == 'True'">
+    <DefineConstants>$(DefineConstants);TOOLS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(YokiFrameToolsBuild)' == 'True'">
+    <Compile Include="**/*.cs" Exclude="bin/**/*.cs;obj/**/*.cs;.godot/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GodotSharpEditor" Version="4.7.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(YokiFrameToolsBuild)' == 'True'">
+    <ProjectReference Include="../../../Runtime/YokiFrame.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="../../../Editor/YokiFrame.Editor.csproj" />
+    <ProjectReference Include="../Runtime/YokiFrame.Godot.Runtime.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

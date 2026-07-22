@@ -1,0 +1,156 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="UserControl.uikit-page TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+
+  <Style Selector="Border.uikit-task-strip">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="0,0,8,0" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.uikit-status-strip">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Button.uikit-task-button">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Button.uikit-task-button:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Button.uikit-task-button.active">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.uikit-task-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.uikit-chip">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.uikit-chip.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="Border.uikit-chip.warning">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.uikit-chip-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.uikit-caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.uikit-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.uikit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.uikit-value">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.uikit-stale-banner, Border.uikit-truncated-banner">
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+  </Style>
+
+  <Style Selector="Border.uikit-metrics-panel, Border.uikit-collection-panel, Border.uikit-detail-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.uikit-metric-section">
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Grid.uikit-metric-row">
+    <Setter Property="MinHeight" Value="25" />
+  </Style>
+  <Style Selector="Border.uikit-summary-metric">
+    <Setter Property="Width" Value="170" />
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+  </Style>
+  <Style Selector="TextBlock.uikit-summary-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.uikit-collection-header, Border.uikit-detail-header">
+    <Setter Property="MinHeight" Value="45" />
+  </Style>
+  <Style Selector="ListBox.uikit-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.uikit-list ListBoxItem">
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.uikit-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.uikit-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.UIKit}" />
+  </Style>
+  <Style Selector="ListBox.uikit-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="Border.uikit-state-chip">
+    <Setter Property="MinWidth" Value="70" />
+    <Setter Property="Padding" Value="6,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.uikit-field-row">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="GridSplitter.uikit-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Border.uikit-empty-state">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+  </Style>
+  <Style Selector="Border.uikit-editor-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+</Styles>

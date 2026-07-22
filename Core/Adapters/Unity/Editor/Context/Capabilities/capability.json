@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "UnityEditor",
+    "state": "Available",
+    "role": "Host",
+    "snapshotNames": ["state"],
+    "telemetryNames": ["state"],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "get_context",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable", "editor.available"],
+        "verifyRecipe": "unity-editor-context-read"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "unity-editor-context-read",
+        "description": "Read stable Unity Selection, Scene and Prefab Stage context without mutating editor state.",
+        "gates": ["runtime-response-success", "engine-identity-current", "context-payload-valid"],
+        "evidence": ["command-response", "snapshot"]
+      }
+    ],
+    "sourcePath": "Core/Adapters/Unity/Editor/Context/UnityEditorContextInteractionProvider.cs",
+    "sourceHash": "8411bb4363ea9a94a53e464540fa9f907420646b877a30b000f5da2b6588516f"
+  }
+}

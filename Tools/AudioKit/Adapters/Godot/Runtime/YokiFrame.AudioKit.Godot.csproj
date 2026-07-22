@@ -1,0 +1,47 @@
+<Project Sdk="Godot.NET.Sdk/4.7.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>YokiFrame.AudioKit.Godot</AssemblyName>
+    <RootNamespace>YokiFrame.Godot</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GodotProjectDir Condition="'$(GodotProjectDir)' == ''">$(MSBuildProjectDirectory)</GodotProjectDir>
+    <DefineConstants>$(DefineConstants);GODOT</DefineConstants>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OutputPath>$(YokiFrameBuildRoot)/bin/$(MSBuildProjectName)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/$(Configuration)/</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <YokiFrameResolvedToolsBuild Condition="'$(YokiFrameToolsBuild)' != ''">$(YokiFrameToolsBuild)</YokiFrameResolvedToolsBuild>
+    <YokiFrameResolvedToolsBuild Condition="'$(YokiFrameResolvedToolsBuild)' == ''">$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))</YokiFrameResolvedToolsBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(YokiFrameResolvedToolsBuild)' == 'True'">
+    <DefineConstants>$(DefineConstants);TOOLS</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Godot SDK 会在 Player 构建再次注入 TOOLS；必须在编译前按完整 token 移除。 -->
+  <Target Name="RemoveToolsDefineForAudioKitGodotPlayer" BeforeTargets="CoreCompile" Condition="'$(YokiFrameResolvedToolsBuild)' == 'False'">
+    <PropertyGroup>
+      <DefineConstants>$([System.Text.RegularExpressions.Regex]::Replace('$(DefineConstants)', '(^|;)TOOLS(?=;|$)', ''))</DefineConstants>
+    </PropertyGroup>
+  </Target>
+
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="bin/**/*.cs;obj/**/*.cs;.godot/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Runtime/YokiFrame.AudioKit.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=$(YokiFrameResolvedToolsBuild)</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="../../../../../Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=$(YokiFrameResolvedToolsBuild)</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

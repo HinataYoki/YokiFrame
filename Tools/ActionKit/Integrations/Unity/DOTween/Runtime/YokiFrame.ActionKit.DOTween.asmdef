@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.ActionKit.DOTween",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:bfd6b57e437b4c940985132bb8b28cf0"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "YOKIFRAME_DOTWEEN_SUPPORT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

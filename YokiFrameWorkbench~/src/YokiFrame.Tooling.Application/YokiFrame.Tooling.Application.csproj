@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\YokiFrame.Client\YokiFrame.Client.csproj" />
+    <ProjectReference Include="..\YokiFrame.Installer.Core\YokiFrame.Installer.Core.csproj" />
+    <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\LanguageId.cs" Link="RuntimeContracts\LocalizationKit\LanguageId.cs" />
+    <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\PluralCategory.cs" Link="RuntimeContracts\LocalizationKit\PluralCategory.cs" />
+    <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\LocalizationSchema.cs" Link="RuntimeContracts\LocalizationKit\LocalizationSchema.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs"
+             Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs"
+             Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs"
+             Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

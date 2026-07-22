@@ -1,0 +1,30 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.badge, Border.kit-badge">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Badge}" />
+  </Style>
+  <Style Selector="Border.badge.accent, Border.kit-badge.accent">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.badge.positive, Border.kit-badge.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.badge.warning, Border.kit-badge.warning">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Border.badge.danger, Border.kit-badge.danger">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Terminal.Error}" />
+  </Style>
+  <Style Selector="Border.badge.neutral, Border.kit-badge.neutral">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+</Styles>

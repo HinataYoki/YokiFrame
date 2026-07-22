@@ -1,0 +1,326 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:YokiFrame.Workbench.Avalonia.Converters"
+        xmlns:actionViews="using:YokiFrame.Workbench.Avalonia.Views.Pages.ActionKit">
+  <Styles.Resources>
+    <converters:ActionKitTreeIndentConverter x:Key="ActionKitTreeIndentConverter" />
+
+    <ControlTheme x:Key="ActionKitTreeChevronTheme" TargetType="ToggleButton">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="5,0,7,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="Transparent">
+            <PathIcon x:Name="ChevronPath"
+                      Data="{StaticResource Icon.ChevronRight}"
+                      Width="12"
+                      Height="12"
+                      Foreground="{DynamicResource Brush.Text.Muted}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:checked /template/ PathIcon#ChevronPath">
+        <Setter Property="Data" Value="{StaticResource Icon.ChevronDown}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+      </Style>
+    </ControlTheme>
+
+    <ControlTheme x:Key="ActionKitTreeViewItemTheme" TargetType="TreeViewItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="IsExpanded" Value="True" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <StackPanel>
+            <Border Name="PART_LayoutRoot"
+                    Focusable="True"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    MinHeight="{TemplateBinding MinHeight}"
+                    TemplatedControl.IsTemplateFocusTarget="True">
+              <Grid Name="PART_Header" ColumnDefinitions="Auto,*">
+                <Grid.Margin>
+                  <Binding Path="Level"
+                           RelativeSource="{RelativeSource TemplatedParent}"
+                           Converter="{StaticResource ActionKitTreeIndentConverter}" />
+                </Grid.Margin>
+                <ToggleButton Name="PART_ExpandCollapseChevron"
+                              Theme="{StaticResource ActionKitTreeChevronTheme}"
+                              Focusable="False"
+                              IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}" />
+                <ContentPresenter Name="PART_HeaderPresenter"
+                                  Grid.Column="1"
+                                  Focusable="False"
+                                  Background="Transparent"
+                                  Content="{TemplateBinding Header}"
+                                  ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  Margin="{TemplateBinding Padding}" />
+              </Grid>
+            </Border>
+            <ItemsPresenter Name="PART_ItemsPresenter"
+                            IsVisible="{TemplateBinding IsExpanded}"
+                            ItemsPanel="{TemplateBinding ItemsPanel}" />
+          </StackPanel>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+      </Style>
+      <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+        <Setter Property="BorderThickness" Value="2,0,0,0" />
+      </Style>
+      <Style Selector="^:empty /template/ ToggleButton#PART_ExpandCollapseChevron">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
+
+  <Style Selector="Border.actionkit-roots-panel TextBlock, Border.actionkit-tree-panel TextBlock, Border.actionkit-inspector-panel TextBlock, Border.actionkit-drawer TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+  <Style Selector="TextBlock.actionkit-caption, TextBlock.actionkit-detail-label, TextBlock.actionkit-empty-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.actionkit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ToggleButton.actionkit-toolbar-toggle">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+  <Style Selector="ToggleButton.actionkit-toolbar-toggle:checked">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ActionKit}" />
+  </Style>
+  <Style Selector="Border.actionkit-truncation-banner">
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+
+  <Style Selector="Border.actionkit-panel-header">
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+  <Style Selector="GridSplitter.actionkit-master-splitter, GridSplitter.actionkit-inspector-splitter, GridSplitter.actionkit-drawer-splitter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.actionkit-master-splitter:pointerover, GridSplitter.actionkit-inspector-splitter:pointerover, GridSplitter.actionkit-drawer-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+
+  <Style Selector="ListBox.actionkit-root-list, TreeView.actionkit-tree, ListBox.actionkit-event-list, ListBox.actionkit-stack-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.actionkit-root-list ListBoxItem">
+    <Setter Property="MinHeight" Value="50" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.actionkit-root-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.actionkit-root-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ActionKit}" />
+  </Style>
+  <Style Selector="ListBox.actionkit-root-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="TextBlock.actionkit-root-state">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.actionkit-type-badge">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="MinWidth" Value="42" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.actionkit-type-badge TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.actionkit-type-badge.sequence">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.ActionKit.Sequence}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.ActionKit.Sequence}" />
+  </Style>
+  <Style Selector="Border.actionkit-type-badge.parallel">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.ActionKit.Parallel}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.ActionKit.Parallel}" />
+  </Style>
+  <Style Selector="Border.actionkit-type-badge.repeat">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.ActionKit.Repeat}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.ActionKit.Repeat}" />
+  </Style>
+  <Style Selector="Border.actionkit-type-badge.leaf">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.ActionKit.Leaf}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.ActionKit.Leaf}" />
+  </Style>
+
+  <Style Selector="Border.actionkit-flow-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="4,0,7,0" />
+  </Style>
+  <Style Selector="Border.actionkit-flow-row.current-path">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="Border.actionkit-flow-row.paused">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.actionkit-flow-row.faulted">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+  </Style>
+  <Style Selector="Border.actionkit-active-guide">
+    <Setter Property="Background" Value="{DynamicResource Brush.ActionKit.Sequence}" />
+  </Style>
+  <Style Selector="Border.actionkit-parallel-guide">
+    <Setter Property="Background" Value="{DynamicResource Brush.ActionKit.Parallel}" />
+  </Style>
+  <Style Selector="Border.actionkit-repeat-guide">
+    <Setter Property="Background" Value="{DynamicResource Brush.ActionKit.Repeat}" />
+  </Style>
+  <Style Selector="Border.actionkit-depth-badge">
+    <Setter Property="MinWidth" Value="28" />
+    <Setter Property="Padding" Value="4,1" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+  </Style>
+  <Style Selector="Border.actionkit-progress-badge, Border.actionkit-row-status, Border.actionkit-state-badge, Border.actionkit-event-kind">
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+  <Style Selector="Border.actionkit-row-status.faulted">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.actionkit-status-dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.actionkit-status-dot.started">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.actionkit-status-dot.finished">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="Border.actionkit-status-dot.not-started">
+    <Setter Property="Background" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+
+  <Style Selector="Border.actionkit-inspector-header">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.ActionKit}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+  </Style>
+  <Style Selector="Border.actionkit-inspector-header.compact">
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style Selector="Grid.actionkit-inspector-horizontal">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="actionViews|ActionKitNodeInspectorView.drawer Grid.actionkit-inspector-vertical">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="actionViews|ActionKitNodeInspectorView.drawer Grid.actionkit-inspector-horizontal">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="Border.actionkit-debug-card">
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+
+  <Style Selector="Border.actionkit-drawer">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+  </Style>
+  <Style Selector="TabControl.actionkit-drawer-tabs">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TabItem.actionkit-drawer-tab">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="11,6" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.actionkit-tab-count">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="ToggleButton.actionkit-drawer-toggle">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="ToggleButton.actionkit-drawer-toggle:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.actionkit-event-list ListBoxItem, ListBox.actionkit-stack-list ListBoxItem">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="ListBox.actionkit-event-list ListBoxItem:pointerover, ListBox.actionkit-stack-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+</Styles>

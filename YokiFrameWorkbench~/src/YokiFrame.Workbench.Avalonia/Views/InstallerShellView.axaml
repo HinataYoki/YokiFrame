@@ -1,0 +1,492 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:chrome="using:Avalonia.Controls.Chrome"
+             xmlns:shapes="using:Avalonia.Controls.Shapes"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.InstallerShellView"
+             x:DataType="vm:InstallerShellViewModel">
+  <Grid ColumnDefinitions="210,*,286"
+        RowDefinitions="72,*,Auto"
+        Background="{DynamicResource Brush.Surface.Panel}">
+    <Border Grid.RowSpan="3"
+            Classes="installer-rail">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <StackPanel Margin="22,24,18,0"
+                    Spacing="12">
+          <Image Width="42"
+                 Height="42"
+                 HorizontalAlignment="Left"
+                 Source="avares://YokiFrame.Workbench.Avalonia/Assets/Brand/yoki.png"
+                 AutomationProperties.Name="YokiFrame" />
+          <StackPanel Spacing="2">
+            <TextBlock Text="YokiFrame"
+                       Classes="installer-rail-brand" />
+            <TextBlock Text="INSTALLER"
+                       Classes="installer-rail-kicker" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1"
+                    Margin="20,54,16,0"
+                    Spacing="22">
+          <Grid ColumnDefinitions="30,*"
+                ColumnSpacing="11">
+            <Border Classes="installer-step-marker active">
+              <TextBlock Text="1"
+                         Classes="installer-step-number active" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="选择项目"
+                         Classes="installer-step-title active" />
+              <TextBlock Text="识别目标引擎"
+                         Classes="installer-step-caption" />
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="30,*"
+                ColumnSpacing="11">
+            <Border Classes="installer-step-marker">
+              <TextBlock Text="2"
+                         Classes="installer-step-number" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="配置来源"
+                         Classes="installer-step-title" />
+              <TextBlock Text="本地包或 Git"
+                         Classes="installer-step-caption" />
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="30,*"
+                ColumnSpacing="11">
+            <Border Classes="installer-step-marker">
+              <TextBlock Text="3"
+                         Classes="installer-step-number" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="审阅并安装"
+                         Classes="installer-step-title" />
+              <TextBlock Text="备份、替换、校验"
+                         Classes="installer-step-caption" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
+        <Border Grid.Row="2"
+                Classes="installer-rail-status"
+                Margin="18,0,16,22">
+          <StackPanel Spacing="4">
+            <TextBlock Text="当前目标"
+                       Classes="installer-rail-kicker" />
+            <TextBlock Text="{CompiledBinding EngineStatusText}"
+                       Classes="installer-rail-engine"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Column="1"
+            Grid.ColumnSpan="2"
+            Classes="installer-titlebar"
+            chrome:WindowDecorationProperties.ElementRole="TitleBar">
+      <Grid ColumnDefinitions="*,Auto"
+            Margin="28,0,18,0">
+        <StackPanel VerticalAlignment="Center"
+                    Spacing="1">
+          <TextBlock Text="安装 YokiFrame"
+                     Classes="section-title" />
+          <TextBlock Text="选择项目并确认将要发生的变更"
+                     Classes="muted" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Classes="ghost icon-button"
+                Width="36"
+                Height="36"
+                chrome:WindowDecorationProperties.ElementRole="CloseButton"
+                Click="OnCloseInstallerButtonClick"
+                ToolTip.Tip="关闭安装器"
+                AutomationProperties.Name="关闭安装器">
+          <shapes:Path Data="{StaticResource Icon.Close}"
+                       Width="16"
+                       Height="16"
+                       Stroke="{DynamicResource Brush.Text.Primary}"
+                       StrokeThickness="1.7" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1"
+                  Grid.Column="1"
+                  Classes="installer-workspace"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="30,25,30,28"
+                  Spacing="28">
+        <StackPanel Spacing="5">
+          <TextBlock Text="项目与来源"
+                     FontSize="22"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="安装器会根据项目类型显示可用选项"
+                     Classes="secondary" />
+        </StackPanel>
+
+        <StackPanel Spacing="9">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="9">
+            <TextBlock Text="01"
+                       Classes="installer-field-index" />
+            <TextBlock x:Name="TargetProjectRootLabel"
+                       Grid.Column="1"
+                       Text="目标项目"
+                       Classes="label" />
+          </Grid>
+          <Grid ColumnDefinitions="*,84"
+                ColumnSpacing="8">
+            <TextBox Text="{CompiledBinding TargetProjectRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Classes="form-input"
+                     PlaceholderText="选择 Unity 或 Godot 项目根目录"
+                     AutomationProperties.AutomationId="installer.target.path"
+                     AutomationProperties.LabeledBy="{Binding ElementName=TargetProjectRootLabel}" />
+            <Button Grid.Column="1"
+                    Classes="secondary path-picker"
+                    Command="{CompiledBinding PickTargetCommand}"
+                    AutomationProperties.AutomationId="installer.target.pick">
+              <StackPanel Classes="installer-button-content"
+                          Orientation="Horizontal" Spacing="6">
+                <shapes:Path Data="{StaticResource Icon.Folder}"
+                             Width="15"
+                             Height="15"
+                             Stroke="{DynamicResource Brush.Text.Primary}"
+                             StrokeThickness="1.7"
+                             AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="选择" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+
+        <Border Height="1"
+                Background="{DynamicResource Brush.Border.Subtle}" />
+
+        <StackPanel Spacing="16"
+                    IsVisible="{CompiledBinding IsEngineOptionsVisible}">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="9">
+            <TextBlock Text="02"
+                       Classes="installer-field-index" />
+            <TextBlock Grid.Column="1"
+                       Text="安装来源"
+                       Classes="label" />
+          </Grid>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{CompiledBinding IsUnityOptionsVisible}">
+            <TextBlock Text="安装方式" Classes="muted" />
+            <Grid ColumnDefinitions="*,*">
+              <RadioButton GroupName="UnityInstallMode"
+                           Classes="install-mode-option segment-left"
+                           Content="本地包"
+                           IsChecked="{CompiledBinding IsUnityLocalSelected, Mode=TwoWay}"
+                           AutomationProperties.AutomationId="installer.mode.local" />
+              <RadioButton Grid.Column="1"
+                           GroupName="UnityInstallMode"
+                           Classes="install-mode-option segment-right"
+                           Content="Git 包"
+                           IsChecked="{CompiledBinding IsUnityGitSelected, Mode=TwoWay}"
+                           AutomationProperties.AutomationId="installer.mode.git" />
+            </Grid>
+            <TextBlock Text="本地包使用受控整包替换；Git 包只保留 manifest 中的唯一来源"
+                       Classes="muted"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{CompiledBinding IsSourcePathVisible}">
+            <TextBlock x:Name="SourcePackageRootLabel"
+                       Text="YokiFrame 源目录"
+                       Classes="muted" />
+            <Grid ColumnDefinitions="*,84"
+                  ColumnSpacing="8">
+              <TextBox Text="{CompiledBinding SourcePackageRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       Classes="form-input"
+                       PlaceholderText="选择 YokiFrame 包根目录"
+                       AutomationProperties.AutomationId="installer.source.path"
+                       AutomationProperties.LabeledBy="{Binding ElementName=SourcePackageRootLabel}" />
+              <Button Grid.Column="1"
+                      Classes="secondary path-picker"
+                      Command="{CompiledBinding PickSourceCommand}"
+                      AutomationProperties.AutomationId="installer.source.pick">
+                <StackPanel Classes="installer-button-content"
+                            Orientation="Horizontal" Spacing="6">
+                  <shapes:Path Data="{StaticResource Icon.Folder}"
+                               Width="15"
+                               Height="15"
+                               Stroke="{DynamicResource Brush.Text.Primary}"
+                               StrokeThickness="1.7"
+                               AutomationProperties.AccessibilityView="Raw" />
+                  <TextBlock Text="选择" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{CompiledBinding IsGitUrlVisible}">
+            <TextBlock x:Name="GitUrlLabel"
+                       Text="Git URL"
+                       Classes="muted" />
+            <TextBox Text="{CompiledBinding GitUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Classes="form-input"
+                     AutomationProperties.AutomationId="installer.git.url"
+                     AutomationProperties.LabeledBy="{Binding ElementName=GitUrlLabel}" />
+          </StackPanel>
+
+          <StackPanel Spacing="7"
+                      IsVisible="{CompiledBinding IsGodotOptionsVisible}">
+            <TextBlock Text="Godot 项目选项"
+                       Classes="muted" />
+            <CheckBox Content="维护 project.godot 中的 YokiFrame 设置"
+                      IsChecked="{CompiledBinding RepairGodotProjectSettings, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="installer.godot.repair" />
+            <CheckBox Content="登记并启用 YokiFrame 编辑器插件"
+                      IsChecked="{CompiledBinding EnableGodotPlugin, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="installer.godot.enable" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="1"
+            Grid.Column="2"
+            Classes="installer-review-pane">
+      <Grid RowDefinitions="Auto,*">
+        <StackPanel Margin="22,24,20,16"
+                    Spacing="4">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="变更审阅"
+                       Classes="section-title" />
+            <TextBlock Grid.Column="1"
+                       Text="{CompiledBinding CurrentPlatformText}"
+                       Classes="muted"
+                       VerticalAlignment="Center"
+                       IsVisible="{CompiledBinding IsCurrentPlatformVisible}" />
+          </Grid>
+          <TextBlock Text="{CompiledBinding SessionStatusText}"
+                     Classes="secondary"
+                     AutomationProperties.Name="安装状态"
+                     AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="22,0,20,24"
+                      Spacing="18">
+            <Grid RowDefinitions="Auto,Auto,Auto"
+                  RowSpacing="10">
+              <Grid ColumnDefinitions="66,*">
+                <TextBlock Text="引擎" Classes="muted" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding EngineStatusText}"
+                           FontWeight="SemiBold" />
+              </Grid>
+              <Grid Grid.Row="1" ColumnDefinitions="66,*">
+                <TextBlock Text="方式" Classes="muted" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding SelectedInstallModeText}"
+                           FontWeight="SemiBold" />
+              </Grid>
+              <Grid Grid.Row="2" ColumnDefinitions="66,*">
+                <TextBlock Text="位置" Classes="muted" />
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding TargetStatusText}"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding TargetStatusText}" />
+              </Grid>
+            </Grid>
+
+            <Border Height="1"
+                    Background="{DynamicResource Brush.Border.Subtle}" />
+
+            <StackPanel Spacing="7">
+              <TextBlock Text="将执行"
+                         Classes="label" />
+              <TextBlock Text="{CompiledBinding PlanActionsText}"
+                         Classes="body"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Classes="installer-warning-band"
+                    IsVisible="{CompiledBinding IsPlanWarningVisible}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="将覆盖本地修改"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.Status.WarningText}" />
+                <TextBlock Text="{CompiledBinding PlanWarningsText}"
+                           Classes="body"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="installer-result-band"
+                    IsVisible="{CompiledBinding IsCompletionSummaryVisible}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="安装完成" Classes="label" />
+                <TextBlock Text="{CompiledBinding CompletionSummaryText}"
+                           Classes="body"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="installer-error-band"
+                    IsVisible="{CompiledBinding IsOutcomeDetailsVisible}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{CompiledBinding OutcomeDetailsTitle}"
+                           Classes="label" />
+                <TextBlock Text="{CompiledBinding OutcomeDetailsText}"
+                           Classes="body"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <CheckBox Content="我确认接管并替换未受管的旧版 YokiFrame"
+                      IsChecked="{CompiledBinding ConfirmLegacyTakeover, Mode=TwoWay}"
+                      IsVisible="{CompiledBinding IsTakeoverConfirmationVisible}"
+                      AutomationProperties.AutomationId="installer.legacy.takeover" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="2"
+            Grid.Column="1"
+            Grid.ColumnSpan="2"
+            Classes="installer-footer">
+      <Grid RowDefinitions="Auto,Auto,Auto">
+        <Grid Classes="installer-log-header"
+              ColumnDefinitions="*,Auto">
+          <ToggleButton x:Name="LogDrawerToggle"
+                        Classes="installer-log-toggle"
+                        AutomationProperties.Name="展开或收起运行日志">
+            <StackPanel Classes="installer-button-content"
+                        Orientation="Horizontal" Spacing="8">
+              <shapes:Path Data="{StaticResource Icon.ChevronUp}"
+                           Width="14"
+                           Height="14"
+                           Stroke="{DynamicResource Brush.Text.Primary}"
+                           StrokeThickness="1.7" />
+              <TextBlock Text="运行日志"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+          </ToggleButton>
+          <Button Grid.Column="1"
+                  Classes="ghost compact-action"
+                  Margin="8,5,14,5"
+                  Command="{CompiledBinding ClearLogCommand}"
+                  AutomationProperties.AutomationId="installer.log.clear">
+            <StackPanel Classes="installer-button-content"
+                        Orientation="Horizontal" Spacing="6">
+              <shapes:Path Data="{StaticResource Icon.Trash2}"
+                           Width="14"
+                           Height="14"
+                           Stroke="{DynamicResource Brush.Text.Primary}"
+                           StrokeThickness="1.7" />
+              <TextBlock Text="清空" />
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Classes="terminal"
+                Height="124"
+                IsVisible="{Binding IsChecked, ElementName=LogDrawerToggle}">
+          <ListBox x:Name="InstallerLogList"
+                   Classes="installer-log"
+                   ItemsSource="{CompiledBinding LogEntries}"
+                   AutomationProperties.Name="安装日志"
+                   AutomationProperties.LiveSetting="Polite">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:InstallerLogLine">
+                <Grid ColumnDefinitions="72,*" ColumnSpacing="8">
+                  <TextBlock Text="{CompiledBinding TimestampText}"
+                             Classes="terminal-line muted" />
+                  <TextBlock Grid.Column="1"
+                             Text="{CompiledBinding Message}"
+                             Classes="terminal-line"
+                             TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+
+        <Grid Grid.Row="2"
+              Classes="installer-commandbar"
+              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+              ColumnSpacing="9">
+          <StackPanel VerticalAlignment="Center"
+                      Spacing="5">
+            <TextBlock Text="{CompiledBinding SessionStatusText}"
+                       Classes="secondary"
+                       TextTrimming="CharacterEllipsis" />
+            <ProgressBar Classes="installer-progress"
+                         Width="180"
+                         HorizontalAlignment="Left"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="{CompiledBinding ProgressValue}"
+                         IsIndeterminate="{CompiledBinding IsProgressIndeterminate}"
+                         IsVisible="{CompiledBinding IsProgressVisible}" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Classes="secondary icon-button"
+                  Command="{CompiledBinding RetryCommand}"
+                  IsVisible="{CompiledBinding CanRetry}"
+                  ToolTip.Tip="重新检测"
+                  AutomationProperties.Name="重新检测">
+            <shapes:Path Data="{StaticResource Icon.RotateCcw}"
+                         Width="16"
+                         Height="16"
+                         Stroke="{DynamicResource Brush.Text.Primary}"
+                         StrokeThickness="1.7" />
+          </Button>
+          <Button Grid.Column="2"
+                  Classes="secondary"
+                  Command="{CompiledBinding BootstrapGodotRuntimeCommand}"
+                  IsVisible="{CompiledBinding IsGodotRuntimeBootstrapVisible}"
+                  AutomationProperties.AutomationId="installer.godot.bootstrap">
+            <TextBlock Text="构建 Runtime" />
+          </Button>
+          <Button Grid.Column="3"
+                  Classes="secondary"
+                  Command="{CompiledBinding PreviewCommand}"
+                  AutomationProperties.AutomationId="installer.preview">
+            <StackPanel Classes="installer-button-content"
+                        Orientation="Horizontal" Spacing="6">
+              <shapes:Path Data="{StaticResource Icon.Eye}"
+                           Width="16"
+                           Height="16"
+                           Stroke="{DynamicResource Brush.Text.Primary}"
+                           StrokeThickness="1.7" />
+              <TextBlock Text="查看计划" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="4"
+                  Classes="primary"
+                  Command="{CompiledBinding InstallCommand}"
+                  AutomationProperties.AutomationId="installer.apply">
+            <StackPanel Classes="installer-button-content"
+                        Orientation="Horizontal" Spacing="6">
+              <shapes:Path Data="{StaticResource Icon.Download}"
+                           Width="16"
+                           Height="16"
+                           Stroke="White"
+                           StrokeThickness="1.7" />
+              <TextBlock Text="安装 / 更新" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

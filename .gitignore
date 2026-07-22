@@ -1,45 +1,24 @@
-### Windows
-# Windows thumbnail cache files
-Thumbs.db
-
-# Folder config file
-[Dd]esktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows shortcuts
-*.lnk
-
-# Runtime communication workspace
+# YokiFrame vNext local caches and generated build outputs.
 **/.yokiframe/
+!**/.yokiframe/
+**/.yokiframe/*
 
-# Unit test files
-**/Tests/
-**/Tests.meta
-**/UnitTests/
-**/UnitTests.meta
-**/*Test.cs
-**/*Test.cs.meta
-**/*Tests.cs
-**/*Tests.cs.meta
-**/*Test*.asmdef
-**/*Test*.asmdef.meta
-**/*Test*.asmref
-**/*Test*.asmref.meta
-**/Spec/
-**/Spec.meta
-**/Specs/
-**/Specs.meta
-**/*Spec.cs
-**/*Spec.cs.meta
-**/*Specs.cs
-**/*Specs.cs.meta
-**/*Spec*.asmdef
-**/*Spec*.asmdef.meta
-**/*Spec*.asmref
-**/*Spec*.asmref.meta
+# Project Workflow Recipes are author-owned, reviewable source assets; other Workflow data is runtime state.
+!**/.yokiframe/workflows/
+!**/.yokiframe/workflows/recipes/
+!**/.yokiframe/workflows/recipes/*.json
+**/.yokiframe/workflows/runs/
+**/.yokiframe/workflows/changes/
+**/.yokiframe/workflows/approvals/
+**/.yokiframe/workflows/artifacts/
+**/.yokiframe/workflows.lock
+**/bin/
+**/obj/
+**/.vs/
+YokiFrameWorkbench~/.artifacts*/
+YokiFrameWorkbench~/**/.artifacts*/
+YokiFrameWorkbench~/.validation-artifacts*/
+YokiFrameWorkbench~/**/.validation-artifacts*/
 
-# Local UIKit regression tests are not included in the release package
-/Tools/UIKit/Editor/Regression/
-/Tools/UIKit/Editor/Regression.meta
+# Package-local Runtime payloads are forbidden. Rebuildable tool output belongs to each project's .yokiframe cache.
+WorkbenchRuntime~/

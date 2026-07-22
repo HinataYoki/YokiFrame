@@ -1,0 +1,117 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.logkit-settings-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.logkit-settings-panel TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+  </Style>
+  <Style Selector="Border.logkit-runtime-banner">
+    <Setter Property="MinHeight" Value="50" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.logkit-runtime-status">
+    <Setter Property="MinWidth" Value="92" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Ellipse.logkit-runtime-dot">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="Border.logkit-runtime-status.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Positive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Positive}" />
+  </Style>
+  <Style Selector="Border.logkit-runtime-status.positive Ellipse.logkit-runtime-dot">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Icon.LogKit}" />
+  </Style>
+  <Style Selector="Border.logkit-runtime-separator">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Margin" Value="0,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+  <Style Selector="TextBlock.logkit-runtime-label, TextBlock.logkit-helper, TextBlock.logkit-field-label, TextBlock.logkit-config-path">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.logkit-runtime-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.logkit-section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.logkit-field-label">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.logkit-setting-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.logkit-capability-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="MaxWidth" Value="320" />
+  </Style>
+  <Style Selector="Border.logkit-section-card">
+    <Setter Property="Padding" Value="18" />
+  </Style>
+  <Style Selector="Border.logkit-setting-row">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="4,5" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.logkit-setting-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Border.logkit-setting-row.last">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.logkit-setting-row:disabled">
+    <Setter Property="Opacity" Value="0.62" />
+  </Style>
+  <Style Selector="Border.logkit-settings-footer">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="ToggleSwitch.logkit-editor">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinWidth" Value="72" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleSwitch.logkit-editor:checked">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Icon.LogKit}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ComboBox.logkit-editor, TextBox.logkit-editor, NumericUpDown.logkit-editor">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="ComboBox.logkit-editor:pointerover, TextBox.logkit-editor:pointerover, NumericUpDown.logkit-editor:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="TextBox.logkit-editor:focus, NumericUpDown.logkit-editor:focus-within">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="NumericUpDown.logkit-number">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+</Styles>

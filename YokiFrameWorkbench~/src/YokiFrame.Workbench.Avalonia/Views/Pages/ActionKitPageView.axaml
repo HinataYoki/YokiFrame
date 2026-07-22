@@ -1,0 +1,436 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             xmlns:action="using:YokiFrame.Workbench.Avalonia.ViewModels.ActionKit"
+             xmlns:model="using:YokiFrame.Tooling.Application.Models.ActionKit"
+             xmlns:components="using:YokiFrame.Workbench.Avalonia.Components"
+             xmlns:actionViews="using:YokiFrame.Workbench.Avalonia.Views.Pages.ActionKit"
+             x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.ActionKitPageView"
+             x:DataType="vm:ActionKitPageViewModel"
+             MinWidth="980"
+             MinHeight="0"
+             ClipToBounds="True"
+             AutomationProperties.AutomationId="workbench.actionkit.page">
+  <Grid x:Name="RootLayout" Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" MinHeight="320" />
+      <RowDefinition Height="0" />
+      <RowDefinition Height="32" MinHeight="32" MaxHeight="32" />
+    </Grid.RowDefinitions>
+
+    <Border Grid.Row="0"
+            Classes="actionkit-truncation-banner"
+            Margin="0,0,0,7"
+            IsVisible="{CompiledBinding PayloadTruncated}"
+            AutomationProperties.LiveSetting="Polite">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="14" Height="14" />
+        <TextBlock Text="诊断数据已达到有界预算，部分根、节点、深度、堆栈或终态记录未显示。" />
+      </StackPanel>
+    </Border>
+
+    <Grid x:Name="ActionWorkspace"
+          Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="260" MinWidth="220" MaxWidth="360" />
+        <ColumnDefinition Width="8" />
+        <ColumnDefinition Width="*" MinWidth="520" />
+        <ColumnDefinition Width="0" />
+        <ColumnDefinition Width="0" MinWidth="0" MaxWidth="0" />
+      </Grid.ColumnDefinitions>
+
+      <Border Classes="panel actionkit-roots-panel"
+              Padding="0"
+              AutomationProperties.AutomationId="actionkit.roots-panel">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Border Classes="kit-panel-header actionkit-panel-header">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <components:NavigationIcon IconKey="actionkit" Width="14" Height="14" />
+                <StackPanel Spacing="2">
+                  <TextBlock Text="根动作" Classes="actionkit-section-title" />
+                  <TextBlock Text="{CompiledBinding Source}" Classes="actionkit-caption" />
+                </StackPanel>
+              </StackPanel>
+              <Border Grid.Column="1"
+                      Classes="badge"
+                      Padding="8,3"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding FilteredRoots.Count}" Classes="mono" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <TextBox Grid.Row="1"
+                   Margin="10,7"
+                   Text="{CompiledBinding SearchText, Mode=TwoWay}"
+                   PlaceholderText="搜索类型、ID、状态、摘要或执行器"
+                   AutomationProperties.Name="搜索 ActionKit 根动作" />
+
+          <Grid Grid.Row="2" Margin="8,0,4,8">
+            <ListBox x:Name="ActionRoots"
+                     ItemsSource="{CompiledBinding FilteredRoots}"
+                     SelectedItem="{CompiledBinding SelectedRoot}"
+                     Classes="actionkit-root-list kit-selection-list"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AutomationProperties.AutomationId="actionkit.roots"
+                     AutomationProperties.Name="ActionKit 根动作列表">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="action:ActionKitRootViewModel">
+                  <Grid RowDefinitions="Auto,Auto"
+                        ColumnDefinitions="Auto,*"
+                        ColumnSpacing="7"
+                        RowSpacing="4">
+                    <Border Classes="actionkit-type-badge sequence" IsVisible="{CompiledBinding IsSequence}"><TextBlock Text="SEQ" /></Border>
+                    <Border Classes="actionkit-type-badge parallel" IsVisible="{CompiledBinding IsParallel}"><TextBlock Text="PAR" /></Border>
+                    <Border Classes="actionkit-type-badge repeat" IsVisible="{CompiledBinding IsRepeat}"><TextBlock Text="REP" /></Border>
+                    <Border Classes="actionkit-type-badge leaf" IsVisible="{CompiledBinding IsLeaf}"><TextBlock Text="ACT" /></Border>
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Text="{CompiledBinding DisplayName}"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{CompiledBinding ActionId, StringFormat=\#{0}}"
+                                 Classes="mono actionkit-caption"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding ActionId}" />
+                      <TextBlock Grid.Column="2"
+                                 Text="{CompiledBinding Status}"
+                                 Classes="actionkit-root-state" />
+                    </Grid>
+                    <Grid Grid.Row="1"
+                          Grid.Column="1"
+                          ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Text="{CompiledBinding DebugInfo}"
+                                 Classes="actionkit-caption"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding DebugInfo}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{CompiledBinding ProgressLabelText}"
+                                 Classes="mono actionkit-caption"
+                                 IsVisible="{CompiledBinding HasChildren}" />
+                      <TextBlock Grid.Column="2"
+                                 Text="{CompiledBinding UpdateModeShortText}"
+                                 Classes="mono actionkit-caption"
+                                 ToolTip.Tip="{CompiledBinding UpdateMode}" />
+                    </Grid>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel IsVisible="{CompiledBinding IsFilteredEmpty}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="7"
+                        Margin="16">
+              <components:NavigationIcon IconKey="actionkit" Width="22" Height="22" />
+              <TextBlock Text="当前没有匹配的 Action" FontWeight="SemiBold" />
+              <TextBlock Text="{CompiledBinding StaleReason}"
+                         Classes="actionkit-empty-text"
+                         MaxWidth="220"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    Classes="actionkit-master-splitter"
+                    ResizeDirection="Columns"
+                    ResizeBehavior="PreviousAndNext"
+                    Cursor="SizeWestEast" />
+
+      <Border Grid.Column="2"
+              Classes="panel actionkit-tree-panel"
+              Padding="0"
+              ClipToBounds="True"
+              AutomationProperties.AutomationId="actionkit.tree-panel">
+        <Grid RowDefinitions="Auto,*">
+          <Border Classes="kit-panel-header actionkit-panel-header">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="执行流程" Classes="actionkit-section-title" />
+                <TextBlock Text="{CompiledBinding SelectedRoot.RootSummaryText}"
+                           Classes="actionkit-caption"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <Border Grid.Column="1"
+                      Classes="actionkit-state-badge"
+                      VerticalAlignment="Center"
+                      IsVisible="{CompiledBinding HasSelection}">
+                <TextBlock Text="{CompiledBinding SelectedActionStatus}" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <Grid Grid.Row="1" Margin="8,0,4,8">
+            <TreeView ItemsSource="{CompiledBinding SelectedFlowNodes}"
+                      SelectedItem="{CompiledBinding SelectedNode}"
+                      ItemContainerTheme="{StaticResource ActionKitTreeViewItemTheme}"
+                      Classes="actionkit-tree kit-flow-tree"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      AutomationProperties.AutomationId="actionkit.tree"
+                      AutomationProperties.Name="ActionKit 执行流程树">
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="action:ActionKitNodeViewModel"
+                                  ItemsSource="{CompiledBinding Children}">
+                  <Border Classes="actionkit-flow-row kit-flow-row"
+                          Classes.current-path="{CompiledBinding IsCurrentPath}"
+                          Classes.paused="{CompiledBinding Paused}"
+                          Classes.faulted="{CompiledBinding IsFaulted}"
+                          AutomationProperties.Name="{CompiledBinding MetadataText}">
+                    <Grid ColumnDefinitions="3,3,3,Auto,Auto,Auto,*,Auto,Auto"
+                          ColumnSpacing="6"
+                          MinHeight="36">
+                      <Border Classes="actionkit-active-guide"
+                              IsVisible="{CompiledBinding IsCurrentPath}" />
+                      <Border Grid.Column="1"
+                              Classes="actionkit-parallel-guide"
+                              IsVisible="{CompiledBinding IsInsideParallel}" />
+                      <Border Grid.Column="2"
+                              Classes="actionkit-repeat-guide"
+                              IsVisible="{CompiledBinding IsInsideRepeat}" />
+                      <Border Grid.Column="3"
+                              Classes="actionkit-depth-badge"
+                              IsVisible="{CompiledBinding IsDeepNode}">
+                        <TextBlock Text="{CompiledBinding DepthBadgeText}" Classes="mono" />
+                      </Border>
+                      <Border Grid.Column="4" Classes="actionkit-type-badge sequence" IsVisible="{CompiledBinding IsSequence}"><TextBlock Text="SEQ" /></Border>
+                      <Border Grid.Column="4" Classes="actionkit-type-badge parallel" IsVisible="{CompiledBinding IsParallel}"><TextBlock Text="PAR" /></Border>
+                      <Border Grid.Column="4" Classes="actionkit-type-badge repeat" IsVisible="{CompiledBinding IsRepeat}"><TextBlock Text="REP" /></Border>
+                      <Border Grid.Column="4" Classes="actionkit-type-badge leaf" IsVisible="{CompiledBinding IsLeaf}"><TextBlock Text="ACT" /></Border>
+                      <StackPanel Grid.Column="5"
+                                  Orientation="Horizontal"
+                                  Spacing="6"
+                                  MinWidth="130"
+                                  VerticalAlignment="Center">
+                        <Border Classes="actionkit-status-dot started" IsVisible="{CompiledBinding IsStarted}" />
+                        <Border Classes="actionkit-status-dot finished" IsVisible="{CompiledBinding IsFinished}" />
+                        <Border Classes="actionkit-status-dot not-started" IsVisible="{CompiledBinding IsNotStarted}" />
+                        <TextBlock Text="{CompiledBinding DisplayName}"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{CompiledBinding DisplayName}" />
+                        <TextBlock Text="{CompiledBinding ActionId, StringFormat=\#{0}}"
+                                   Classes="mono actionkit-caption"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{CompiledBinding ActionId}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="6"
+                                 Text="{CompiledBinding DebugInfo}"
+                                 Classes="actionkit-caption"
+                                 VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding DebugInfo}" />
+                      <Border Grid.Column="7"
+                              Classes="actionkit-progress-badge"
+                              IsVisible="{CompiledBinding HasChildren}">
+                        <TextBlock Text="{CompiledBinding ProgressLabelText}" Classes="mono" />
+                      </Border>
+                      <Border Grid.Column="8"
+                              Classes="actionkit-row-status"
+                              Classes.faulted="{CompiledBinding IsFaulted}">
+                        <TextBlock Text="{CompiledBinding Status}" />
+                      </Border>
+                    </Grid>
+                  </Border>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+
+            <StackPanel IsVisible="{CompiledBinding IsFlowEmpty}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+              <components:NavigationIcon IconKey="actionkit" Width="24" Height="24" />
+              <TextBlock Text="从左侧选择一个活动根以检查执行流程"
+                         Classes="actionkit-empty-text"
+                         AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <GridSplitter x:Name="InspectorSplitter"
+                    Grid.Column="3"
+                    Classes="actionkit-inspector-splitter"
+                    ResizeDirection="Columns"
+                    ResizeBehavior="PreviousAndNext"
+                    Cursor="SizeWestEast"
+                    IsVisible="False" />
+
+      <Border x:Name="InspectorPanel"
+              Grid.Column="4"
+              Classes="panel actionkit-inspector-panel"
+              Padding="0"
+              IsVisible="False"
+              AutomationProperties.AutomationId="actionkit.inspector-panel">
+        <actionViews:ActionKitNodeInspectorView DataContext="{CompiledBinding .}" />
+      </Border>
+    </Grid>
+
+    <GridSplitter Grid.Row="2"
+                  Classes="actionkit-drawer-splitter"
+                  ResizeDirection="Rows"
+                  ResizeBehavior="PreviousAndNext"
+                  Cursor="SizeNorthSouth" />
+
+    <Border x:Name="DrawerPanel"
+            Grid.Row="3"
+            Classes="panel actionkit-drawer"
+            Padding="0"
+            ClipToBounds="True"
+            AutomationProperties.AutomationId="actionkit.drawer"
+            AutomationProperties.Name="ActionKit 节点详情、调用帧与最近终态抽屉">
+      <Grid>
+        <TabControl x:Name="DrawerTabs"
+                    Classes="actionkit-drawer-tabs"
+                    TabStripPlacement="Top">
+          <TabItem x:Name="CompactInspectorTab"
+                   Classes="actionkit-drawer-tab">
+            <TabItem.Header>
+              <TextBlock Text="节点详情" />
+            </TabItem.Header>
+            <actionViews:ActionKitNodeInspectorView Classes="drawer"
+                                                        DataContext="{CompiledBinding .}" />
+          </TabItem>
+
+          <TabItem x:Name="StackTraceTab"
+                   Classes="actionkit-drawer-tab">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="Start 调用帧" />
+                <TextBlock Text="{CompiledBinding StackTraceCount}" Classes="mono actionkit-tab-count" />
+              </StackPanel>
+            </TabItem.Header>
+            <Grid Margin="10,6,6,8">
+              <ListBox ItemsSource="{CompiledBinding SelectedStackTrace}"
+                       Classes="actionkit-stack-list kit-data-list"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       AutomationProperties.AutomationId="actionkit.stack"
+                       AutomationProperties.Name="ActionKit Start 调用帧列表">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="model:WorkbenchActionKitStackFrame">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <TextBlock Text="{CompiledBinding Method}"
+                                 Classes="mono"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding Method}" />
+                      <TextBlock Grid.Column="1"
+                                 Classes="mono actionkit-caption"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding File}">
+                        <Run Text="{CompiledBinding File}" />
+                        <Run Text=":" />
+                        <Run Text="{CompiledBinding Line}" />
+                      </TextBlock>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="当前根没有已捕获的 Start 调用帧"
+                         IsVisible="{CompiledBinding IsStackTraceEmpty}"
+                         Classes="actionkit-empty-text"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </TabItem>
+
+          <TabItem x:Name="TerminalEventsTab"
+                   Classes="actionkit-drawer-tab">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="最近终态" />
+                <TextBlock Text="{CompiledBinding EventTotal}" Classes="mono actionkit-tab-count" />
+              </StackPanel>
+            </TabItem.Header>
+            <Grid Margin="10,6,6,8">
+              <ListBox ItemsSource="{CompiledBinding Events}"
+                       Classes="actionkit-event-list kit-data-list"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       AutomationProperties.AutomationId="actionkit.events"
+                       AutomationProperties.Name="ActionKit 最近终态列表">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="action:ActionKitEventListItemViewModel">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                          ColumnSpacing="8">
+                      <Border Classes="actionkit-event-kind">
+                        <TextBlock Text="{CompiledBinding OutcomeText}" />
+                      </Border>
+                      <TextBlock Grid.Column="1"
+                                 Text="{CompiledBinding ActionType}"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding ActionType}" />
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{CompiledBinding ActionIdText}"
+                                   Classes="mono actionkit-caption" />
+                        <TextBlock Text="{CompiledBinding ErrorMessage}"
+                                   IsVisible="{CompiledBinding HasError}"
+                                   Classes="actionkit-caption"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{CompiledBinding ErrorMessage}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="3"
+                                 Text="{CompiledBinding FrameText}"
+                                 Classes="mono actionkit-caption" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="暂无终态记录"
+                         IsVisible="{CompiledBinding IsEventEmpty}"
+                         Classes="actionkit-empty-text"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </TabItem>
+        </TabControl>
+
+        <ToggleButton x:Name="DrawerToggleButton"
+                      Classes="actionkit-drawer-toggle"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Top"
+                      Margin="0,2,8,0"
+                      IsChecked="False"
+                      IsCheckedChanged="OnDrawerToggleChanged"
+                      ToolTip.Tip="展开或折叠 ActionKit 诊断抽屉"
+                      AutomationProperties.Name="展开或折叠 ActionKit 诊断抽屉">
+          <Grid>
+            <PathIcon Data="{StaticResource Icon.ChevronUp}"
+                      Width="14"
+                      Height="14"
+                      IsVisible="{Binding !#DrawerToggleButton.IsChecked}" />
+            <PathIcon Data="{StaticResource Icon.ChevronDown}"
+                      Width="14"
+                      Height="14"
+                      IsVisible="{Binding #DrawerToggleButton.IsChecked}" />
+          </Grid>
+        </ToggleButton>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

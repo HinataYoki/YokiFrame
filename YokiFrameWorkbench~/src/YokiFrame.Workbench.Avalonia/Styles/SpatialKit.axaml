@@ -1,0 +1,169 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="UserControl.spatialkit-page TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+
+  <Style Selector="Border.spatialkit-status-strip">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.spatialkit-source-chip, Border.spatialkit-plane-chip, Border.spatialkit-health-chip, Border.spatialkit-stale-chip">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.spatialkit-plane-chip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Accent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.SpatialKit}" />
+  </Style>
+  <Style Selector="Border.spatialkit-health-chip.warning, Border.spatialkit-stale-chip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="Border.spatialkit-health-chip.positive">
+    <Setter Property="Background" Value="{DynamicResource Brush.Status.SuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.SuccessText}" />
+  </Style>
+  <Style Selector="Border.spatialkit-stale-chip PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-chip-text, TextBlock.spatialkit-caption, TextBlock.spatialkit-metric-label, TextBlock.spatialkit-context-label, TextBlock.spatialkit-warning-text">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-caption, TextBlock.spatialkit-metric-label, TextBlock.spatialkit-context-label">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-warning-text">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Status.WarningText}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-metric-value, TextBlock.spatialkit-count, TextBlock.spatialkit-context-value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.spatialkit-divider">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Default}" />
+  </Style>
+
+  <Style Selector="Border.spatialkit-index-panel, Border.spatialkit-detail-panel">
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.spatialkit-panel-header">
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="12,9" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-section-title, TextBlock.spatialkit-selected-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="ListBox.spatialkit-index-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.spatialkit-index-list ListBoxItem">
+    <Setter Property="MinHeight" Value="76" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.spatialkit-index-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="ListBox.spatialkit-index-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.SpatialKit}" />
+  </Style>
+  <Style Selector="ListBox.spatialkit-index-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-index-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-entity-type">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="GridSplitter.spatialkit-master-splitter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="GridSplitter.spatialkit-master-splitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+
+  <Style Selector="Border.spatialkit-detail-header">
+    <Setter Property="MinHeight" Value="72" />
+    <Setter Property="Padding" Value="14,11" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Icon.SpatialKit}" />
+    <Setter Property="BorderThickness" Value="3,0,0,1" />
+  </Style>
+  <Style Selector="Border.spatialkit-context-band">
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Navigation}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="StackPanel.spatialkit-context-cell">
+    <Setter Property="Width" Value="132" />
+    <Setter Property="Margin" Value="0,0,8,4" />
+  </Style>
+  <Style Selector="Border.spatialkit-density-stat">
+    <Setter Property="MinHeight" Value="45" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+  </Style>
+  <Style Selector="Border.spatialkit-stale-banner">
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Warning}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Status.WarningText}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <Style Selector="Border.spatialkit-heatmap">
+    <Setter Property="MinWidth" Value="220" />
+    <Setter Property="MinHeight" Value="220" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Terminal.Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.spatialkit-heatmap.stale">
+    <Setter Property="Opacity" Value="0.62" />
+  </Style>
+  <Style Selector="Border.spatialkit-heatmap-cell">
+    <Setter Property="Margin" Value="1" />
+    <Setter Property="CornerRadius" Value="1" />
+  </Style>
+
+  <Style Selector="Border.spatialkit-density-empty, Border.spatialkit-page-empty">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+  </Style>
+  <Style Selector="TextBlock.spatialkit-empty-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="UserControl.spatialkit-page.spatialkit-compact StackPanel.spatialkit-context-cell">
+    <Setter Property="Width" Value="112" />
+  </Style>
+  <Style Selector="UserControl.spatialkit-page.spatialkit-compact Border.spatialkit-detail-header">
+    <Setter Property="Padding" Value="12,9" />
+  </Style>
+</Styles>

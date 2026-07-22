@@ -1,0 +1,11 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <CornerRadius x:Key="Radius.Panel">8</CornerRadius>
+  <CornerRadius x:Key="Radius.Card">8</CornerRadius>
+  <CornerRadius x:Key="Radius.Control">6</CornerRadius>
+  <CornerRadius x:Key="Radius.Badge">12</CornerRadius>
+  <CornerRadius x:Key="Radius.Small">4</CornerRadius>
+  <CornerRadius x:Key="Radius.Medium">6</CornerRadius>
+  <CornerRadius x:Key="Radius.Large">8</CornerRadius>
+  <CornerRadius x:Key="Radius.XLarge">12</CornerRadius>
+</ResourceDictionary>

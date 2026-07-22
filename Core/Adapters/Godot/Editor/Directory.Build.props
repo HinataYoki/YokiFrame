@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Installer 固定投影布局允许 Editor Adapter 在 restore 与 build 两阶段独立解析宿主根。 -->
+    <YokiFrameInstalledGodotProjectRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../../../../../../'))</YokiFrameInstalledGodotProjectRoot>
+    <YokiFrameBuildRoot Condition="'$(YokiFrameBuildRoot)' == '' and Exists('$(YokiFrameInstalledGodotProjectRoot)/project.godot')">$(YokiFrameInstalledGodotProjectRoot)/.godot/mono/temp/yokiframe</YokiFrameBuildRoot>
+    <YokiFrameBuildScope>$([MSBuild]::StableStringHash('$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)))'))</YokiFrameBuildScope>
+    <YokiFrameBuildRoot Condition="'$(YokiFrameBuildRoot)' == ''">$([System.IO.Path]::GetTempPath())YokiFrame/build/$(YokiFrameBuildScope)</YokiFrameBuildRoot>
+    <BaseOutputPath>$(YokiFrameBuildRoot)/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,119 @@
+/* InspectorKit 紧凑层级列表：绑定树、对象树和同类只读层级视图共用。 */
+
+.yoki-editor-inspector__hierarchy {
+    margin-top: var(--yoki-spacing-xs);
+    margin-bottom: var(--yoki-spacing-sm);
+    padding-left: var(--yoki-spacing-sm);
+    padding-right: var(--yoki-spacing-sm);
+    padding-top: var(--yoki-spacing-sm);
+    padding-bottom: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-base);
+    border-width: 1px;
+    border-color: var(--yoki-border-subtle);
+    border-radius: var(--yoki-radius-md);
+}
+
+.yoki-editor-inspector__hierarchy-row {
+    min-height: 26px;
+    flex-direction: row;
+    align-items: stretch;
+    margin-bottom: 3px;
+}
+
+.yoki-editor-inspector__hierarchy-indent {
+    margin-right: var(--yoki-spacing-xs);
+    border-right-width: 1px;
+    border-right-color: var(--yoki-border-default);
+}
+
+.yoki-editor-inspector__hierarchy-card {
+    min-height: 25px;
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--yoki-spacing-xs);
+    padding-right: var(--yoki-spacing-sm);
+    background-color: var(--yoki-layer-elevated);
+    border-left-width: 3px;
+    border-radius: var(--yoki-radius-sm);
+}
+
+.yoki-editor-inspector__hierarchy-card:hover {
+    background-color: var(--yoki-layer-hover);
+}
+
+.yoki-editor-inspector__hierarchy-toggle,
+.yoki-editor-inspector__hierarchy-toggle-spacer {
+    width: 19px;
+    min-width: 19px;
+    height: 19px;
+    margin-right: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__hierarchy-toggle {
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__hierarchy-marker {
+    width: 18px;
+    min-width: 18px;
+    margin-right: 3px;
+    font-size: var(--yoki-font-sm);
+    -unity-text-align: middle-center;
+}
+
+.yoki-editor-inspector__hierarchy-name {
+    margin-right: var(--yoki-spacing-sm);
+    color: var(--yoki-text-primary);
+    font-size: var(--yoki-font-sm);
+    -unity-font-style: bold;
+}
+
+.yoki-editor-inspector__hierarchy-detail {
+    margin-right: var(--yoki-spacing-sm);
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__hierarchy-category {
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__hierarchy-legend {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__hierarchy-legend-item {
+    flex-direction: row;
+    align-items: center;
+    margin-right: var(--yoki-spacing-md);
+    margin-bottom: var(--yoki-spacing-xs);
+}
+
+.yoki-editor-inspector__hierarchy-legend-marker {
+    width: 14px;
+    min-width: 14px;
+    margin-right: var(--yoki-spacing-xs);
+    font-size: var(--yoki-font-xs);
+    -unity-text-align: middle-center;
+}
+
+.yoki-editor-inspector__hierarchy-legend-text {
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+}
+
+.yoki-editor-inspector__hierarchy-empty {
+    padding-top: var(--yoki-spacing-lg);
+    padding-bottom: var(--yoki-spacing-lg);
+    color: var(--yoki-text-tertiary);
+    font-size: var(--yoki-font-xs);
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+}

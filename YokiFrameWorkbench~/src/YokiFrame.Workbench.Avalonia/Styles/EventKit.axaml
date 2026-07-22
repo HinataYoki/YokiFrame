@@ -1,0 +1,267 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.eventkit-empty-state">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+
+  <Style Selector="ListBox.eventkit-relation-list, ListBox.eventkit-timeline">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem">
+    <Setter Property="MinHeight" Value="92" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem:selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.eventkit-selection-rail">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem:selected Border.eventkit-selection-rail, ListBox.eventkit-relation-list ListBoxItem:focus-visible Border.eventkit-selection-rail">
+    <Setter Property="Background" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="ListBox.eventkit-relation-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Grid.eventkit-column-header">
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Margin" Value="0,0,8,4" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Navigation}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-column-title">
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-column-title.center">
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.eventkit-relation-count">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="Border.eventkit-relation-strip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.eventkit-relation-separator">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-relation-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-relation-label.strong">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-relation-label.center">
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.eventkit-endpoint">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.eventkit-event-hub">
+    <Setter Property="Margin" Value="4" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.eventkit-event-hub.type">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.Type.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Type.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-event-hub.enum">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.Enum.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Enum.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-event-hub.string">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.String.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.String.Border}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-code-file">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-position-count">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-flow-connector">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-relation-empty">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-lifecycle-label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-lifecycle-label.register">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.Enum.Text}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-lifecycle-label.unregister">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.String.Text}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-unregister-empty.warning">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.String.Text}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.eventkit-detail-header">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+    <Setter Property="BorderThickness" Value="3,1,1,1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.eventkit-detail-header.type">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Type.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-detail-header.enum">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Enum.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-detail-header.string">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.String.Border}" />
+  </Style>
+
+  <Style Selector="Button.eventkit-code-summary">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="Button.eventkit-code-summary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="Border.eventkit-code-flyout">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-relation-group-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="Border.eventkit-code-group">
+    <Setter Property="Padding" Value="6,5" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.eventkit-code-group:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+  </Style>
+  <Style Selector="Button.eventkit-code-line">
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.CardHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}" />
+  </Style>
+  <Style Selector="Button.eventkit-code-line.preview">
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="22" />
+  </Style>
+  <Style Selector="Button.eventkit-code-line.preview.register">
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Enum.Border}" />
+  </Style>
+  <Style Selector="Button.eventkit-code-line.preview.unregister">
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.String.Border}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.String.Text}" />
+  </Style>
+
+  <Style Selector="Border.eventkit-health">
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="Padding" Value="5,2" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+  </Style>
+  <Style Selector="Border.eventkit-health TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+
+  <Style Selector="Border.eventkit-channel, Border.eventkit-payload-badge">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.type">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.Type.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Type.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.type TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.Type.Text}" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.enum">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.Enum.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.Enum.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.enum TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.Enum.Text}" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.string">
+    <Setter Property="Background" Value="{DynamicResource Brush.EventKit.String.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.EventKit.String.Border}" />
+  </Style>
+  <Style Selector="Border.eventkit-channel.string TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.EventKit.String.Text}" />
+  </Style>
+
+  <Style Selector="ListBox.eventkit-timeline ListBoxItem">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="TextBlock.eventkit-timeline-kind">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+</Styles>

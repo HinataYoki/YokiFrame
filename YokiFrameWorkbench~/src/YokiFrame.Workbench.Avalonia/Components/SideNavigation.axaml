@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shapes="using:Avalonia.Controls.Shapes"
+             xmlns:components="using:YokiFrame.Workbench.Avalonia.Components"
+             xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
+             x:Class="YokiFrame.Workbench.Avalonia.Components.SideNavigation"
+             x:Name="Root"
+             x:DataType="vm:WorkbenchShellViewModel">
+  <Grid RowDefinitions="*,Auto"
+        RowSpacing="12">
+    <Border x:Name="NavigationCard"
+            Classes="panel">
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    Margin="12,14,12,8">
+        <ItemsControl ItemsSource="{CompiledBinding NavigationGroups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:WorkbenchNavigationGroup">
+              <StackPanel Margin="0,0,0,14"
+                          Spacing="7">
+                <TextBlock Text="{CompiledBinding Title}"
+                           Classes="nav-group-title"
+                           Margin="10,0,0,2" />
+                <ListBox Classes="nav-list"
+                         ItemsSource="{CompiledBinding Items}"
+                         SelectedItem="{Binding DataContext.SelectedNavigationItem, ElementName=Root, Mode=TwoWay}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WorkbenchNavigationItem">
+                      <Grid ColumnDefinitions="24,*"
+                            ColumnSpacing="10">
+                        <components:NavigationIcon IconKey="{CompiledBinding IconKey}"
+                                                   Width="18"
+                                                   Height="18"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{CompiledBinding DisplayName}"
+                                   FontSize="{DynamicResource FontSize.Body}"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+    <Border x:Name="QuickLinksCard"
+            Grid.Row="1"
+            Classes="panel"
+            Padding="10,8">
+      <StackPanel Spacing="10">
+        <Border Classes="badge accent"
+                Padding="10,6">
+          <TextBlock Text="{CompiledBinding VersionText}"
+                     Classes="accent mono"
+                     TextAlignment="Center"
+                     FontSize="{DynamicResource FontSize.Sm}"
+                     FontWeight="SemiBold" />
+        </Border>
+        <Button Classes="ghost compact-action"
+                Command="{CompiledBinding OpenRepositoryCommand}"
+                HorizontalAlignment="Center"
+                HorizontalContentAlignment="Center"
+                ToolTip.Tip="{CompiledBinding RepositoryUrl}"
+                AutomationProperties.Name="打开 YokiFrame GitHub 仓库">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="7">
+            <shapes:Path Width="16"
+                         Height="16"
+                         Data="{StaticResource Icon.GitHub}"
+                         Stroke="{DynamicResource Brush.Text.Primary}"
+                         StrokeThickness="1.6"
+                         StrokeLineCap="Round"
+                         StrokeJoin="Round"
+                         Stretch="Uniform"
+                         IsHitTestVisible="False" />
+            <TextBlock Text="GitHub"
+                       FontSize="{DynamicResource FontSize.Body}"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

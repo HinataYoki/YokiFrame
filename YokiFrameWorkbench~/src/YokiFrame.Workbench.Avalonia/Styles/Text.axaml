@@ -1,0 +1,96 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Sans}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.accent">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}" />
+  </Style>
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.2Xl}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="38" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Xl}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.page-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+  </Style>
+  <Style Selector="TextBlock.page-meta">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Xs}" />
+  </Style>
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Md}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.nav-icon">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Lg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Width" Value="24" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.nav-group-title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Sm}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="LetterSpacing" Value="0" />
+  </Style>
+  <Style Selector="TextBlock.docs-hero-title">
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.DocsHero}" />
+  </Style>
+  <Style Selector="TextBlock.docs-heading">
+    <Setter Property="FontSize" Value="21" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.docs-paragraph">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="LineHeight" Value="24" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.DocsBody}" />
+  </Style>
+  <Style Selector="TextBlock.docs-list-marker">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="TextBlock.docs-code-text">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.DocsCode}" />
+  </Style>
+  <Style Selector="TextBlock.docs-table-cell">
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+  </Style>
+  <Style Selector="TextBlock.docs-nav-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+  </Style>
+  <Style Selector="TextBlock.docs-group-label">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Xs}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="4,10,0,3" />
+  </Style>
+</Styles>

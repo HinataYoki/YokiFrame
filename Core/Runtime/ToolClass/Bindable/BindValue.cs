@@ -4,59 +4,117 @@ using System.Collections.Generic;
 namespace YokiFrame
 {
     /// <summary>
-    /// 基于 EasyEvent&lt;T&gt; 的基础可绑定值实现。
+    /// 基于 EasyEvent 的轻量可绑定值，只在比较结果发生变化时通知监听器。
     /// </summary>
+    /// <typeparam name="T">绑定值类型。</typeparam>
     public class BindValue<T> : IBindable<T>
     {
+        private static Func<T, T, bool> sCompareFunc = EqualityComparer<T>.Default.Equals;
+        private readonly EasyEvent<T> mOnValueChanged = new();
         protected T mValue;
 
-        private readonly EasyEvent<T> mOnValueChanged = new();
-        private static Func<T, T, bool> sCompareFunc = EqualityComparer<T>.Default.Equals;
+        /// <summary>
+        /// 创建带可选初始值的绑定对象；构造过程不会发送变化通知。
+        /// </summary>
+        /// <param name="value">初始值。</param>
+        public BindValue(T value = default)
+        {
+            mValue = value;
+        }
 
         /// <summary>
-        /// 当前值。设置为不同值时会触发已绑定回调。
+        /// 获取或设置当前值；新旧值不同时按注册顺序通知监听器。
         /// </summary>
         public virtual T Value
         {
-            get => mValue;
+            get { return mValue; }
             set
             {
-                if (sCompareFunc(mValue, value)) return;
+                if (sCompareFunc(mValue, value))
+                {
+                    return;
+                }
+
                 mValue = value;
-                mOnValueChanged?.Trigger(mValue);
+                mOnValueChanged.Trigger(mValue);
             }
         }
 
-        /// <summary>创建可绑定值，可传入初始值。</summary>
-        public BindValue(T value = default) => mValue = value;
+        /// <summary>
+        /// 隐式读取绑定对象当前保存的值。
+        /// </summary>
+        /// <param name="bindValue">需要读取的绑定对象。</param>
+        /// <returns>绑定对象当前值。</returns>
+        public static implicit operator T(BindValue<T> bindValue)
+        {
+            if (bindValue == null)
+            {
+                return default;
+            }
 
-        /// <summary>隐式取出当前值。</summary>
-        public static implicit operator T(BindValue<T> bindValue) => bindValue.Value;
+            return bindValue.Value;
+        }
 
-        /// <summary>注册值变化回调。</summary>
+        /// <summary>
+        /// 注册值变化回调。
+        /// </summary>
+        /// <param name="callback">值变化后调用的回调。</param>
+        /// <returns>用于注销当前回调的令牌。</returns>
         public LinkUnRegister<T> Bind(Action<T> callback)
         {
-            if (callback is not null)
-                return mOnValueChanged.Register(callback);
-            throw new ArgumentNullException(nameof(callback));
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+
+            return mOnValueChanged.Register(callback);
         }
 
-        /// <summary>注销一个值变化回调。</summary>
+        /// <summary>
+        /// 注销最后一个匹配的值变化回调；空回调和不存在的回调会静默跳过。
+        /// </summary>
+        /// <param name="callback">需要注销的回调。</param>
         public void UnBind(Action<T> callback)
         {
-            if (callback is not null) mOnValueChanged.UnRegister(callback);
+            if (callback != null)
+            {
+                mOnValueChanged.UnRegister(callback);
+            }
         }
 
-        /// <summary>注销全部值变化回调。</summary>
-        public void UnBindAll() => mOnValueChanged.UnRegisterAll();
+        /// <summary>
+        /// 注销当前绑定值上的全部变化回调。
+        /// </summary>
+        public void UnBindAll()
+        {
+            mOnValueChanged.UnRegisterAll();
+        }
 
-        /// <summary>更新存储值，但不通知监听器。</summary>
-        public void SetValueWithoutEvent(T value) => mValue = value;
+        /// <summary>
+        /// 直接更新保存值但不触发任何回调，适合反序列化或批量同步。
+        /// </summary>
+        /// <param name="value">需要保存的新值。</param>
+        public void SetValueWithoutEvent(T value)
+        {
+            mValue = value;
+        }
 
-        /// <summary>覆盖用于检测变化的值比较函数。</summary>
-        public static void SetCompareFunc(Func<T, T, bool> func) => sCompareFunc = func;
+        /// <summary>
+        /// 为当前泛型值类型设置变化比较函数，后续所有 BindValue 实例共享该函数。
+        /// </summary>
+        /// <param name="compareFunc">返回 true 表示两个值等价的比较函数。</param>
+        public static void SetCompareFunc(Func<T, T, bool> compareFunc)
+        {
+            sCompareFunc = compareFunc ?? throw new ArgumentNullException(nameof(compareFunc));
+        }
 
-        /// <summary>以字符串形式返回当前值。</summary>
-        public override string ToString() => mValue?.ToString() ?? string.Empty;
+        /// <summary>
+        /// 返回当前值的字符串形式；空引用值返回空文本。
+        /// </summary>
+        /// <returns>当前值的字符串形式。</returns>
+        public override string ToString()
+        {
+            return mValue?.ToString() ?? string.Empty;
+        }
     }
 }

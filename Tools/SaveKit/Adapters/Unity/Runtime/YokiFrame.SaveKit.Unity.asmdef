@@ -1,0 +1,17 @@
+{
+    "name": "YokiFrame.SaveKit.Unity",
+    "rootNamespace": "YokiFrame.Unity",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.SaveKit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
