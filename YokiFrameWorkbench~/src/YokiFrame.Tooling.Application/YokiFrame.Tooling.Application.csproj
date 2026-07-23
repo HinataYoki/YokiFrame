@@ -16,6 +16,8 @@
              Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
     <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs"
              Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs"
+             Link="RuntimeCache\RuntimeCachePruner.cs" />
   </ItemGroup>
 
   <ItemGroup>

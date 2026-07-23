@@ -57,13 +57,14 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 读取项目当前 Runtime 指针，并要求它与本次计算出的源码指纹完全一致。
+        /// 读取项目当前 Runtime 指针；源码是否有新版由 Workbench 启动后的后台任务检查。
         /// </summary>
         /// <param name="projectRoot">Unity 项目根。</param>
-        /// <param name="sourceFingerprint">当前 Workbench 源码指纹。</param>
-        /// <returns>当前指纹 Runtime 根；指针缺失、损坏或过期时返回空文本。</returns>
-        private static string ResolveCurrentRuntimeRoot(string projectRoot, string sourceFingerprint)
+        /// <param name="sourceFingerprint">指针记录的当前 Runtime 源码指纹。</param>
+        /// <returns>当前指纹 Runtime 根；指针缺失或损坏时返回空文本。</returns>
+        private static string ResolveCurrentRuntimeRoot(string projectRoot, out string sourceFingerprint)
         {
+            sourceFingerprint = string.Empty;
             var pointerPath = YokiFrameWorkbenchRuntimeCacheLayout.GetCurrentFilePath(projectRoot);
             if (!File.Exists(pointerPath))
             {
@@ -73,12 +74,13 @@ namespace YokiFrame
             var pointer = JsonUtility.FromJson<YokiFrameWorkbenchRuntimePointer>(File.ReadAllText(pointerPath));
             if (pointer == null
                 || pointer.layoutVersion != RUNTIME_CACHE_LAYOUT_VERSION
-                || !string.Equals(pointer.sourceFingerprint, sourceFingerprint, StringComparison.Ordinal))
+                || string.IsNullOrWhiteSpace(pointer.sourceFingerprint))
             {
                 return string.Empty;
             }
 
-            return YokiFrameWorkbenchRuntimeCacheLayout.GetRuntimeRoot(projectRoot, sourceFingerprint);
+            sourceFingerprint = pointer.sourceFingerprint;
+            return YokiFrameWorkbenchRuntimeCacheLayout.GetRuntimeRoot(projectRoot, pointer.sourceFingerprint);
         }
 
         /// <summary>

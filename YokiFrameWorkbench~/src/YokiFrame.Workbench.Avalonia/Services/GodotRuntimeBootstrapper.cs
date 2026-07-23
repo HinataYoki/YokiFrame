@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Text;
 
 namespace YokiFrame.Workbench.Avalonia.Services;
 
@@ -58,7 +56,10 @@ internal sealed class GodotRuntimeBootstrapper : IGodotRuntimeBootstrapper
             fullSourcePackageRoot,
             fullTargetProjectRoot,
             packagingProjectPath);
-        await RunBootstrapProcessAsync(startInfo, cancellationToken).ConfigureAwait(false);
+        await RuntimeBootstrapProcessRunner.RunAsync(
+            startInfo,
+            "Godot Runtime 构建失败",
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -73,70 +74,11 @@ internal sealed class GodotRuntimeBootstrapper : IGodotRuntimeBootstrapper
         string targetProjectRoot,
         string packagingProjectPath)
     {
-        ProcessStartInfo startInfo = new("dotnet")
-        {
-            WorkingDirectory = sourcePackageRoot,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("run");
-        startInfo.ArgumentList.Add("--project");
-        startInfo.ArgumentList.Add(packagingProjectPath);
-        startInfo.ArgumentList.Add("--");
-        startInfo.ArgumentList.Add("runtime");
-        startInfo.ArgumentList.Add("bootstrap");
-        startInfo.ArgumentList.Add("--package-root");
-        startInfo.ArgumentList.Add(sourcePackageRoot);
-        startInfo.ArgumentList.Add("--project-root");
-        startInfo.ArgumentList.Add(targetProjectRoot);
-        startInfo.ArgumentList.Add("--configuration");
-        startInfo.ArgumentList.Add("Release");
-        startInfo.ArgumentList.Add("--open-installer");
-        return startInfo;
-    }
-
-    /// <summary>
-    /// 启动 bootstrap 子进程、等待完成并将失败输出收敛为可显示异常。
-    /// </summary>
-    /// <param name="startInfo">已构造的 dotnet 进程配置。</param>
-    /// <param name="cancellationToken">取消时终止整个构建进程树。</param>
-    /// <returns>进程成功完成任务。</returns>
-    private static async Task RunBootstrapProcessAsync(
-        ProcessStartInfo startInfo,
-        CancellationToken cancellationToken)
-    {
-        using Process process = new() { StartInfo = startInfo, EnableRaisingEvents = true };
-        try
-        {
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("无法启动 .NET Runtime bootstrap 进程。");
-            }
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or Win32Exception)
-        {
-            throw new InvalidOperationException("无法启动 .NET Runtime bootstrap 进程: " + exception.Message, exception);
-        }
-
-        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        try
-        {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            var output = await outputTask.ConfigureAwait(false);
-            var error = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(CreateBootstrapFailureMessage(output, error));
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            await StopProcessAsync(process).ConfigureAwait(false);
-            throw;
-        }
+        return RuntimeBootstrapProcessRunner.CreateStartInfo(
+            sourcePackageRoot,
+            targetProjectRoot,
+            packagingProjectPath,
+            openInstaller: true);
     }
 
     /// <summary>
@@ -158,41 +100,4 @@ internal sealed class GodotRuntimeBootstrapper : IGodotRuntimeBootstrapper
             : throw new DirectoryNotFoundException(displayName + "不存在: " + fullPath);
     }
 
-    /// <summary>
-    /// 将 dotnet 的标准输出和错误输出组合为 Installer 可展示的简体中文失败说明。
-    /// </summary>
-    /// <param name="output">dotnet 标准输出。</param>
-    /// <param name="error">dotnet 标准错误。</param>
-    /// <returns>保留关键构建证据的失败文本。</returns>
-    private static string CreateBootstrapFailureMessage(string output, string error)
-    {
-        var details = new StringBuilder(error).Append(output).ToString().Trim();
-        return string.IsNullOrWhiteSpace(details)
-            ? "Godot Runtime 构建失败，dotnet 未返回额外诊断。"
-            : "Godot Runtime 构建失败:" + Environment.NewLine + details;
-    }
-
-    /// <summary>
-    /// 在用户取消时结束整个 dotnet 构建进程树，避免后台继续占用缓存 staging 目录。
-    /// </summary>
-    /// <param name="process">已启动的 bootstrap 进程。</param>
-    /// <returns>进程确实退出后完成。</returns>
-    private static async Task StopProcessAsync(Process process)
-    {
-        if (process.HasExited)
-        {
-            return;
-        }
-
-        try
-        {
-            process.Kill(entireProcessTree: true);
-        }
-        catch (InvalidOperationException) when (process.HasExited)
-        {
-            return;
-        }
-
-        await process.WaitForExitAsync().ConfigureAwait(false);
-    }
 }

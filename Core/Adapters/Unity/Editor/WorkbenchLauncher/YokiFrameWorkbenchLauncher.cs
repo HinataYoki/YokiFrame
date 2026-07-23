@@ -102,10 +102,10 @@ namespace YokiFrame
             var normalizedPackageRoot = Path.GetFullPath(packageRoot);
             try
             {
-                var sourceFingerprint = YokiFrameWorkbenchSourceFingerprint.Compute(normalizedPackageRoot);
-                var runtimeRoot = ResolveCurrentRuntimeRoot(normalizedProjectRoot, sourceFingerprint);
+                var runtimeRoot = ResolveCurrentRuntimeRoot(normalizedProjectRoot, out var sourceFingerprint);
                 if (string.IsNullOrWhiteSpace(runtimeRoot))
                 {
+                    sourceFingerprint = YokiFrameWorkbenchSourceFingerprint.Compute(normalizedPackageRoot);
                     return CreateBootstrapPlan(
                         normalizedProjectRoot,
                         normalizedPackageRoot,

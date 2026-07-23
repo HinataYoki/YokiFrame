@@ -268,9 +268,9 @@ public sealed partial class WorkbenchShellViewModel
             documentationService,
             copyTextAsync,
             documentationInitializationError);
+        RuntimeUpdate = new WorkbenchRuntimeUpdateViewModel(sourcePackageRoot, projectRoot);
         InitializeWorkbenchLayout();
         InitializeSkillInstaller();
         UpdateCurrentPage();
     }
 }
-

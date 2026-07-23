@@ -30,6 +30,56 @@ internal static class RuntimeManifestIntegrityValidator
         out RuntimeManifestProfileValidation profile,
         out string error)
     {
+        return TryValidateProfile(
+            manifestPath,
+            runtimeRoot,
+            runtimeProfile,
+            requireCli,
+            validateContentHashes: true,
+            out profile,
+            out error);
+    }
+
+    /// <summary>
+    /// 快速解析指定平台入口，只验证 manifest、文件集和长度，不读取全部二进制内容。
+    /// </summary>
+    /// <param name="manifestPath">Runtime manifest 完整路径。</param>
+    /// <param name="runtimeRoot">源码指纹对应的 Runtime 根目录。</param>
+    /// <param name="runtimeProfile">待解析平台 profile。</param>
+    /// <param name="requireCli">是否要求 CLI 入口存在。</param>
+    /// <param name="profile">解析成功后返回可启动入口。</param>
+    /// <param name="error">解析失败原因。</param>
+    /// <returns>结构与磁盘文件集一致时返回 true。</returns>
+    internal static bool TryResolveLaunchProfile(
+        string manifestPath,
+        string runtimeRoot,
+        string runtimeProfile,
+        bool requireCli,
+        out RuntimeManifestProfileValidation profile,
+        out string error)
+    {
+        return TryValidateProfile(
+            manifestPath,
+            runtimeRoot,
+            runtimeProfile,
+            requireCli,
+            validateContentHashes: false,
+            out profile,
+            out error);
+    }
+
+    /// <summary>
+    /// 按调用场景选择完整内容校验或启动快速校验。
+    /// </summary>
+    private static bool TryValidateProfile(
+        string manifestPath,
+        string runtimeRoot,
+        string runtimeProfile,
+        bool requireCli,
+        bool validateContentHashes,
+        out RuntimeManifestProfileValidation profile,
+        out string error)
+    {
         profile = RuntimeManifestProfileValidation.Empty;
         error = string.Empty;
         try
@@ -40,6 +90,7 @@ internal static class RuntimeManifestIntegrityValidator
                 Path.GetFullPath(runtimeRoot),
                 runtimeProfile,
                 requireCli,
+                validateContentHashes,
                 out profile,
                 out error);
         }
@@ -79,6 +130,7 @@ internal static class RuntimeManifestIntegrityValidator
     /// <param name="runtimeRoot">规范化 Runtime 根。</param>
     /// <param name="runtimeProfile">目标 profile。</param>
     /// <param name="requireCli">是否要求 CLI。</param>
+    /// <param name="validateContentHashes">是否读取文件内容并校验 SHA-256。</param>
     /// <param name="profile">可信入口结果。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>完整验证成功时返回 true。</returns>
@@ -87,6 +139,7 @@ internal static class RuntimeManifestIntegrityValidator
         string runtimeRoot,
         string runtimeProfile,
         bool requireCli,
+        bool validateContentHashes,
         out RuntimeManifestProfileValidation profile,
         out string error)
     {
@@ -103,6 +156,7 @@ internal static class RuntimeManifestIntegrityValidator
             runtimeProfile,
             layoutVersion,
             requireCli,
+            validateContentHashes,
             out profile,
             out error);
     }
@@ -183,6 +237,7 @@ internal static class RuntimeManifestIntegrityValidator
     /// <param name="runtimeProfile">目标 profile。</param>
     /// <param name="layoutVersion">manifest 布局版本。</param>
     /// <param name="requireCli">是否要求 CLI。</param>
+    /// <param name="validateContentHashes">是否读取文件内容并校验 SHA-256。</param>
     /// <param name="profile">可信入口结果。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>平台缓存完整时返回 true。</returns>
@@ -192,6 +247,7 @@ internal static class RuntimeManifestIntegrityValidator
         string runtimeProfile,
         int layoutVersion,
         bool requireCli,
+        bool validateContentHashes,
         out RuntimeManifestProfileValidation profile,
         out string error)
     {
@@ -208,6 +264,7 @@ internal static class RuntimeManifestIntegrityValidator
                 platform,
                 runtimeRoot,
                 platformRoot,
+                validateContentHashes,
                 out var files,
                 out error))
         {

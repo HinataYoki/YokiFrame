@@ -108,7 +108,8 @@ YokiFrame 的 Git URL 和源码包不携带 Workbench、Installer 或 CLI 二进
    ```
 
 4. 等待 Package Manager 完成解析和编译。导入完成后，通过 `YokiFrame/Workbench/Open` 或 `Ctrl+E` 打开 Workbench。
-5. 若当前项目没有可复用的 Workbench，首次 `Ctrl+E` 会使用本机 .NET 10 SDK，把与当前 Git 源码匹配的工具 Runtime 构建到该 Unity 项目的 `.yokiframe` 缓存中，再打开 Workbench。
+5. 若当前项目没有可复用的 Workbench，首次 `Ctrl+E` 会使用本机 .NET 10 SDK，把与当前 Git 源码匹配的工具 Runtime 构建到该 Unity 项目的 `.yokiframe` 缓存中，再打开 Workbench；已有 Runtime 时会直接打开，不等待重复编译。
+6. Workbench 打开后会在后台检查源码是否有新版。发现新版时，页头会显示“重新编译新版”按钮；只有点击该按钮才会构建新 Runtime。窗口关闭会取消尚未完成的检查或构建，已被旧进程占用的缓存目录会延迟到后续启动清理。
 
 也可以手动在 `Packages/manifest.json` 中声明 Git 依赖：
 

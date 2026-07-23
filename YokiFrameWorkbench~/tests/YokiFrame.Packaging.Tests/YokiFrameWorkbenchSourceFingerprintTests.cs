@@ -116,6 +116,45 @@ public sealed class YokiFrameWorkbenchSourceFingerprintTests
     }
 
     /// <summary>
+    /// 验证 `bin` 和 `obj` 中的大量生成文件不会进入指纹或影响后台检测结果。
+    /// </summary>
+    [Fact]
+    public void ComputeIgnoresGeneratedBuildDirectories()
+    {
+        var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-fingerprint-tests", Guid.NewGuid().ToString("N"));
+        var sourceRoot = Path.Combine(packageRoot, "YokiFrameWorkbench~", "src");
+        Directory.CreateDirectory(sourceRoot);
+        File.WriteAllText(Path.Combine(sourceRoot, "Source.cs"), "internal sealed class Source {}\n");
+        var before = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
+
+        Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "obj"));
+        Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "bin"));
+        File.WriteAllText(Path.Combine(sourceRoot, "Project", "obj", "Generated.cs"), "generated-a");
+        File.WriteAllText(Path.Combine(sourceRoot, "Project", "bin", "Generated.json"), "generated-b");
+        var after = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
+
+        Assert.Equal(before, after);
+        Directory.Delete(packageRoot, recursive: true);
+    }
+
+    /// <summary>
+    /// 验证已取消的窗口生命周期会立即终止源码指纹扫描。
+    /// </summary>
+    [Fact]
+    public void ComputeHonorsCancellationToken()
+    {
+        var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-fingerprint-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(packageRoot, "YokiFrameWorkbench~", "src"));
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(
+            () => YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot, cancellation.Token));
+
+        Directory.Delete(packageRoot, recursive: true);
+    }
+
+    /// <summary>
     /// 尝试创建目录符号链接；当前测试环境不允许链接时跳过该平台断言。
     /// </summary>
     /// <param name="linkPath">链接路径。</param>

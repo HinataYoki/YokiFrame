@@ -16,7 +16,7 @@ namespace YokiFrame
         private const int MAX_RUNTIME_MANIFEST_FILES = 100000;
 
         /// <summary>
-        /// 验证当前平台 Runtime manifest、完整文件集、文件摘要和入口路径，避免启动损坏或越界产物。
+        /// 快速验证当前平台 Runtime manifest、文件结构和入口路径，避免 Ctrl+E 读取全部 AOT 二进制。
         /// </summary>
         /// <param name="manifestPath">Runtime manifest 完整路径。</param>
         /// <param name="runtimeRoot">当前源码指纹对应的 Runtime 根。</param>
@@ -184,7 +184,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证平台目录的文件数量、长度、SHA-256、路径链和实际文件全集。
+        /// 验证平台目录的文件数量、长度、摘要格式、路径链和实际文件全集。
         /// </summary>
         /// <param name="runtimeRoot">Runtime 根目录。</param>
         /// <param name="runtimeProfile">目标 profile。</param>
@@ -237,11 +237,9 @@ namespace YokiFrame
                 }
 
                 var fileInfo = new FileInfo(fullPath);
-                if (fileInfo.Length != record.sizeBytes
-                    || !string.Equals(ComputeSha256(fullPath), record.sha256, StringComparison.OrdinalIgnoreCase)
-                    || !files.Add(fullPath))
+                if (fileInfo.Length != record.sizeBytes || !files.Add(fullPath))
                 {
-                    error = "Runtime manifest file size, hash, or path uniqueness check failed.";
+                    error = "Runtime manifest file size or path uniqueness check failed.";
                     return false;
                 }
 
@@ -400,25 +398,6 @@ namespace YokiFrame
             }
 
             return false;
-        }
-
-        /// <summary>计算文件 SHA-256，使用 Unity Editor 可用的基础 API。</summary>
-        private static string ComputeSha256(string path)
-        {
-            using (var stream = File.OpenRead(path))
-            using (var hash = SHA256.Create())
-            {
-                var bytes = hash.ComputeHash(stream);
-                var result = new char[bytes.Length * 2];
-                const string hex = "0123456789abcdef";
-                for (var index = 0; index < bytes.Length; index++)
-                {
-                    result[index * 2] = hex[bytes[index] >> 4];
-                    result[index * 2 + 1] = hex[bytes[index] & 0x0F];
-                }
-
-                return new string(result);
-            }
         }
 
         /// <summary>验证 manifest 中的 SHA-256 文本格式。</summary>

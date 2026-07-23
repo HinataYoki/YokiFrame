@@ -14,6 +14,7 @@ internal static class RuntimeManifestFileSetValidator
     /// <param name="platform">目标平台 JSON。</param>
     /// <param name="runtimeRoot">Runtime 根。</param>
     /// <param name="platformRoot">目标平台根。</param>
+    /// <param name="validateContentHashes">是否读取文件内容并校验 SHA-256；启动快速路径传入 false。</param>
     /// <param name="files">验证后的文件完整路径集合。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>清单与物理载荷完全一致时返回 true。</returns>
@@ -21,6 +22,7 @@ internal static class RuntimeManifestFileSetValidator
         JsonElement platform,
         string runtimeRoot,
         string platformRoot,
+        bool validateContentHashes,
         out HashSet<string> files,
         out string error)
     {
@@ -37,7 +39,14 @@ internal static class RuntimeManifestFileSetValidator
         long calculatedBytes = 0;
         foreach (var record in records.EnumerateArray())
         {
-            if (!TryValidateFileRecord(record, runtimeRoot, platformRoot, files, ref calculatedBytes, out error))
+            if (!TryValidateFileRecord(
+                    record,
+                    runtimeRoot,
+                    platformRoot,
+                    validateContentHashes,
+                    files,
+                    ref calculatedBytes,
+                    out error))
             {
                 return false;
             }
@@ -58,6 +67,7 @@ internal static class RuntimeManifestFileSetValidator
     /// <param name="record">文件记录 JSON。</param>
     /// <param name="runtimeRoot">Runtime 根。</param>
     /// <param name="platformRoot">目标平台根。</param>
+    /// <param name="validateContentHashes">是否读取文件内容并校验 SHA-256。</param>
     /// <param name="files">已验证文件集合。</param>
     /// <param name="calculatedBytes">累计文件大小。</param>
     /// <param name="error">失败原因。</param>
@@ -66,6 +76,7 @@ internal static class RuntimeManifestFileSetValidator
         JsonElement record,
         string runtimeRoot,
         string platformRoot,
+        bool validateContentHashes,
         ISet<string> files,
         ref long calculatedBytes,
         out string error)
@@ -84,7 +95,8 @@ internal static class RuntimeManifestFileSetValidator
 
         var actualSize = new FileInfo(fullPath).Length;
         if (actualSize != sizeBytes
-            || !string.Equals(ComputeSha256(fullPath), sha256, StringComparison.OrdinalIgnoreCase)
+            || validateContentHashes
+                && !string.Equals(ComputeSha256(fullPath), sha256, StringComparison.OrdinalIgnoreCase)
             || !files.Add(fullPath))
         {
             error = "Runtime manifest file size, hash, or path uniqueness check failed.";

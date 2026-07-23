@@ -65,6 +65,25 @@
                           Orientation="Horizontal"
                           Spacing="8"
                           VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding RuntimeUpdate.StatusText}"
+                           IsVisible="{CompiledBinding RuntimeUpdate.IsStatusVisible}"
+                           Classes="muted"
+                           FontSize="{DynamicResource FontSize.Sm}"
+                           MaxWidth="220"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{CompiledBinding RuntimeUpdate.StatusText}"
+                           AutomationProperties.LiveSetting="Polite"
+                           VerticalAlignment="Center" />
+                <Button Command="{CompiledBinding RuntimeUpdate.RebuildCommand}"
+                        IsVisible="{CompiledBinding RuntimeUpdate.IsVisible}"
+                        Classes="primary compact-action"
+                        ToolTip.Tip="使用当前源码构建新 Workbench Runtime"
+                        AutomationProperties.Name="重新编译 Workbench 新版">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <PathIcon Data="{StaticResource Icon.Download}" Width="13" Height="13" />
+                    <TextBlock Text="{CompiledBinding RuntimeUpdate.ButtonText}" />
+                  </StackPanel>
+                </Button>
                 <StackPanel IsVisible="{CompiledBinding IsDocumentationPage}"
                             Orientation="Horizontal"
                             Spacing="6"

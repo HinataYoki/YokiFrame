@@ -30,11 +30,13 @@ public sealed class RuntimeCacheService
         if (TryResolvePublishedResult(plan, out var cachedResult))
         {
             mPointerStore.Write(fullProjectRoot, sourceFingerprint);
+            RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
             return new RuntimeCacheBootstrapResult(sourceFingerprint, plan.RuntimeRoot, cachedResult, rebuilt: false);
         }
 
         var publishResult = mPublishService.PublishWithLockHeld(plan);
         mPointerStore.Write(fullProjectRoot, sourceFingerprint);
+        RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
         return new RuntimeCacheBootstrapResult(sourceFingerprint, plan.RuntimeRoot, publishResult, rebuilt: true);
     }
 
@@ -68,6 +70,7 @@ public sealed class RuntimeCacheService
             startupOptimized);
         var publishResult = mPublishService.PublishWithLockHeld(plan);
         mPointerStore.Write(fullProjectRoot, sourceFingerprint);
+        RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
         return new RuntimeCacheBootstrapResult(sourceFingerprint, runtimeRoot, publishResult, rebuilt: true);
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -13,18 +14,23 @@ namespace YokiFrame
     {
         private const string WORKBENCH_DIRECTORY_NAME = "YokiFrameWorkbench~";
         private const string SOURCE_DIRECTORY_NAME = "src";
-        private static readonly EnumerationOptions sSourceEnumerationOptions = new()
-        {
-            RecurseSubdirectories = true,
-            AttributesToSkip = FileAttributes.ReparsePoint
-        };
-
         /// <summary>
         /// 计算给定 YokiFrame 包根的 Workbench 构建输入指纹；测试、缓存和二进制不会参与计算。
         /// </summary>
         /// <param name="packageRoot">YokiFrame 源码包根。</param>
         /// <returns>64 位小写 SHA-256 十六进制指纹。</returns>
         public static string Compute(string packageRoot)
+        {
+            return Compute(packageRoot, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// 计算给定 YokiFrame 包根的 Workbench 构建输入指纹，并允许调用方按窗口生命周期取消后台扫描。
+        /// </summary>
+        /// <param name="packageRoot">YokiFrame 源码包根。</param>
+        /// <param name="cancellationToken">后台检测生命周期取消令牌。</param>
+        /// <returns>64 位小写 SHA-256 十六进制指纹。</returns>
+        public static string Compute(string packageRoot, CancellationToken cancellationToken)
         {
             var fullPackageRoot = RequireDirectory(packageRoot, nameof(packageRoot));
             var workbenchRoot = RequireDirectory(
@@ -33,13 +39,18 @@ namespace YokiFrame
             var sourceRoot = RequireDirectory(
                 Path.Combine(workbenchRoot, SOURCE_DIRECTORY_NAME),
                 nameof(packageRoot));
-            List<string> inputPaths = CollectInputPaths(fullPackageRoot, workbenchRoot, sourceRoot);
+            List<string> inputPaths = CollectInputPaths(
+                fullPackageRoot,
+                workbenchRoot,
+                sourceRoot,
+                cancellationToken);
             using var hash = SHA256.Create();
             foreach (var inputPath in inputPaths)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 AppendText(hash, NormalizeRelativePath(fullPackageRoot, inputPath));
                 AppendByte(hash, 0);
-                AppendFile(hash, inputPath);
+                AppendFile(hash, inputPath, cancellationToken);
                 AppendByte(hash, 0);
             }
 
@@ -54,14 +65,18 @@ namespace YokiFrame
         /// <param name="workbenchRoot">工具链根目录。</param>
         /// <param name="sourceRoot">工具链源码根目录。</param>
         /// <returns>有序、去重后的构建输入完整路径。</returns>
-        private static List<string> CollectInputPaths(string packageRoot, string workbenchRoot, string sourceRoot)
+        private static List<string> CollectInputPaths(
+            string packageRoot,
+            string workbenchRoot,
+            string sourceRoot,
+            CancellationToken cancellationToken)
         {
             List<string> paths = new();
             AddIfExists(paths, Path.Combine(packageRoot, "Directory.Build.props"));
             AddIfExists(paths, Path.Combine(workbenchRoot, "Directory.Build.props"));
-            foreach (var path in Directory.EnumerateFiles(sourceRoot, "*", sSourceEnumerationOptions))
+            foreach (var path in EnumerateSourceFiles(sourceRoot, cancellationToken))
             {
-                if (!IsGeneratedBuildPath(sourceRoot, path) && IsBuildInput(path))
+                if (IsBuildInput(path))
                 {
                     paths.Add(path);
                 }
@@ -71,6 +86,43 @@ namespace YokiFrame
                 NormalizeRelativePath(packageRoot, left),
                 NormalizeRelativePath(packageRoot, right)));
             return paths;
+        }
+
+        /// <summary>
+        /// 递归枚举源码文件并在进入目录前剪枝 `bin`、`obj` 和重解析点，避免扫描大量生成产物。
+        /// </summary>
+        /// <param name="sourceRoot">工具链源码根。</param>
+        /// <param name="cancellationToken">后台检测生命周期取消令牌。</param>
+        /// <returns>可能参与构建的源码文件序列。</returns>
+        private static IEnumerable<string> EnumerateSourceFiles(
+            string sourceRoot,
+            CancellationToken cancellationToken)
+        {
+            Stack<string> pendingDirectories = new();
+            pendingDirectories.Push(sourceRoot);
+            while (pendingDirectories.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var current = pendingDirectories.Pop();
+                foreach (var directory in Directory.EnumerateDirectories(current))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var name = Path.GetFileName(directory);
+                    if (IsGeneratedBuildDirectory(name)
+                        || (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        continue;
+                    }
+
+                    pendingDirectories.Push(directory);
+                }
+
+                foreach (var path in Directory.EnumerateFiles(current))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return path;
+                }
+            }
         }
 
         /// <summary>
@@ -110,18 +162,14 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 判断候选文件是否位于 MSBuild 自动生成目录，避免上次构建的中间 C# 文件改变源码指纹。
+        /// 判断候选目录是否为 MSBuild 自动生成目录，避免枚举上次构建的中间文件。
         /// </summary>
-        /// <param name="sourceRoot">工具链源码根。</param>
-        /// <param name="path">候选文件完整路径。</param>
-        /// <returns>属于 bin 或 obj 目录时返回 true。</returns>
-        private static bool IsGeneratedBuildPath(string sourceRoot, string path)
+        /// <param name="directoryName">候选目录名称。</param>
+        /// <returns>为 bin 或 obj 目录时返回 true。</returns>
+        private static bool IsGeneratedBuildDirectory(string directoryName)
         {
-            var relativePath = NormalizeRelativePath(sourceRoot, path);
-            return relativePath.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)
-                || relativePath.StartsWith("obj/", StringComparison.OrdinalIgnoreCase)
-                || relativePath.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
-                || relativePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(directoryName, "bin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(directoryName, "obj", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -151,13 +199,17 @@ namespace YokiFrame
         /// </summary>
         /// <param name="hash">当前哈希器。</param>
         /// <param name="path">待输入文件。</param>
-        private static void AppendFile(HashAlgorithm hash, string path)
+        private static void AppendFile(
+            HashAlgorithm hash,
+            string path,
+            CancellationToken cancellationToken)
         {
             var buffer = new byte[81920];
             using var stream = File.OpenRead(path);
             int read;
             while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 hash.TransformBlock(buffer, 0, read, buffer, 0);
             }
         }

@@ -84,7 +84,7 @@ public sealed class CombatStateMachine
 
 ## `yoki` CLI
 
-`yoki` 位于当前项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/`；`current.json` 选择源码指纹，目录内 `tool-manifest.json` 的 `cliEntry` 选择当前平台入口。Git URL 和源码包不携带任何 Runtime 二进制。Unity 用户按 `Ctrl+E` 自动生成缺失或过期缓存；Godot 用户显式运行 `YokiFrameWorkbench~/scripts/runtime-bootstrap/install-godot` 对应平台脚本，脚本构建缓存后直接打开 Installer。CLI 没有稳定的 `--help` 契约，应以源码、实际错误提示和 AI Skill 的命令参考为准。
+`yoki` 位于当前项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/`；`current.json` 选择源码指纹，目录内 `tool-manifest.json` 的 `cliEntry` 选择当前平台入口。Git URL 和源码包不携带任何 Runtime 二进制。Unity 用户按 `Ctrl+E` 时仅在缺少可用 Workbench Runtime 的情况下生成缓存；已有 Runtime 会立即打开，Workbench 再后台检查源码更新，并由页头按钮显式触发新版构建。窗口关闭会取消检查或构建；成功发布新指针后会清理旧 fingerprint 目录，仍被旧进程占用的目录延迟到后续启动处理。Godot 用户显式运行 `YokiFrameWorkbench~/scripts/runtime-bootstrap/install-godot` 对应平台脚本，脚本构建缓存后直接打开 Installer。CLI 没有稳定的 `--help` 契约，应以源码、实际错误提示和 AI Skill 的命令参考为准。
 
 | 类别 | 命令 |
 |---|---|

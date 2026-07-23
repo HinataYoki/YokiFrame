@@ -100,6 +100,11 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
     public DocumentationPageViewModel DocumentationPage { get; }
 
     /// <summary>
+    /// 获取 Workbench Runtime 后台新版检测与显式重新编译状态。
+    /// </summary>
+    public WorkbenchRuntimeUpdateViewModel RuntimeUpdate { get; }
+
+    /// <summary>
     /// 获取顶部 engine selector 使用的 engine id 列表。
     /// </summary>
     public IReadOnlyList<string> EngineIds

@@ -18,7 +18,7 @@ Workbench 适合交互式查看 Kit、文档、项目诊断和受控工具操作
 
 在 Unity 中通过 `YokiFrame/Workbench/Open` 或 `Ctrl+E` 启动；在 Godot 中通过 `Project > Tools > YokiFrame > Open Workbench` 或 `Ctrl+E` 启动。若 Godot 的系统快捷键冲突，使用 `Ctrl+Alt+E`。
 
-Git URL 与源码包不携带任何 Workbench、Installer 或 CLI 二进制。Unity 的 `Ctrl+E` 会先激活同一项目中已有的 Workbench，不为该次激活检查或构建 Runtime。只有没有可激活实例，且项目缓存缺失或 `current.json` 的源码指纹与包内 `YokiFrameWorkbench~/src` 不一致时，才会在项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/` 构建当前平台 Runtime；Windows 固定生成 `win-x64-aot`。源码更新后要使用新 Runtime 时，先关闭已有 Workbench，再按一次 `Ctrl+E`。该构建只由用户显式打开 Workbench 触发，不在导入、域加载或后台轮询时执行。
+Git URL 与源码包不携带任何 Workbench、Installer 或 CLI 二进制。Unity 的 `Ctrl+E` 会先激活同一项目中已有的 Workbench，不为该次激活检查或构建 Runtime。只有没有可激活实例，且项目缓存缺失或 `current.json` 指向的 Runtime 不可用时，才会在项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/` 构建当前平台 Runtime；Windows 固定生成 `win-x64-aot`。Workbench 打开后会在后台计算源码指纹；发现新版时，页头显示“重新编译新版”按钮，只有用户点击后才启动构建。构建成功后写入新的 `current.json` 并清理旧 fingerprint 目录；仍被旧 Workbench 进程占用的目录会保留到后续启动再清理。窗口关闭会取消后台检查或构建，避免任务继续访问已销毁的 UI 或进程。
 
 Godot 用户需要先从源码包显式运行安装入口。它会构建项目 `.yokiframe` Runtime 缓存，并直接打开与当前源码版本匹配的新 Installer；不需要手动查找缓存中的 GUI 或 CLI。Windows 示例：
 

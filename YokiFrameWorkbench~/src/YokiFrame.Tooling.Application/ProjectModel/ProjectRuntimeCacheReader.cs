@@ -5,7 +5,7 @@ using YokiFrame.RuntimeCache;
 namespace YokiFrame.Tooling.Application.ProjectModel;
 
 /// <summary>
-/// 读取项目 `.yokiframe` 中与当前源码指纹匹配的 Workbench Runtime 缓存，不回退到包内二进制目录。
+/// 快速读取项目 `.yokiframe` 当前 Workbench Runtime 缓存；源码新版由 Workbench 后台检测。
 /// </summary>
 internal sealed class ProjectRuntimeCacheReader
 {
@@ -26,17 +26,14 @@ internal sealed class ProjectRuntimeCacheReader
             return new ProjectRuntimeCacheState(pointerPath, string.Empty, string.Empty, runtimeIdentifier, string.Empty, string.Empty);
         }
 
-        var sourceFingerprint = TryComputeSourceFingerprint(packageRoot);
-        if (string.IsNullOrWhiteSpace(sourceFingerprint)
-            || !TryReadPointer(pointerPath, out var pointerFingerprint)
-            || !string.Equals(sourceFingerprint, pointerFingerprint, StringComparison.Ordinal))
+        if (!TryReadPointer(pointerPath, out var sourceFingerprint))
         {
             return new ProjectRuntimeCacheState(pointerPath, string.Empty, string.Empty, runtimeIdentifier, string.Empty, string.Empty);
         }
 
         var runtimeRoot = YokiFrameWorkbenchRuntimeCacheLayout.GetRuntimeRoot(projectRoot, sourceFingerprint);
         var manifestPath = Path.Combine(runtimeRoot, "tool-manifest.json");
-        if (!RuntimeManifestIntegrityValidator.TryValidateProfile(
+        if (!RuntimeManifestIntegrityValidator.TryResolveLaunchProfile(
                 manifestPath,
                 runtimeRoot,
                 runtimeIdentifier,
@@ -54,27 +51,6 @@ internal sealed class ProjectRuntimeCacheReader
             runtimeIdentifier,
             profile.GuiPath,
             profile.CliPath);
-    }
-
-    /// <summary>
-    /// 计算源码输入指纹；输入不完整时让调用方以缓存不可用处理，而不把包内旧产物当作回退。
-    /// </summary>
-    /// <param name="packageRoot">当前源码包根。</param>
-    /// <returns>可用于缓存目录的指纹；无法计算时返回空。</returns>
-    private static string TryComputeSourceFingerprint(string packageRoot)
-    {
-        try
-        {
-            return YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
-        }
-        catch (ArgumentException)
-        {
-            return string.Empty;
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return string.Empty;
-        }
     }
 
     /// <summary>

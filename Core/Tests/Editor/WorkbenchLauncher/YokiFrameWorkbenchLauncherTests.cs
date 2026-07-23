@@ -76,6 +76,26 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证项目已有可启动 Runtime 时不因源码后续变化阻塞 Ctrl+E；新版由 Workbench 后台检测。
+        /// </summary>
+        [Test]
+        public void CreateLaunchPlanUsesCurrentRuntimeBeforeCheckingSourceUpdates()
+        {
+            string projectRoot = CreateProjectRoot();
+            string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
+            string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
+            File.AppendAllText(
+                Path.Combine(packageRoot, "YokiFrameWorkbench~", "src", "Workbench.cs"),
+                "// changed after publish");
+
+            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+
+            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
+            Assert.AreEqual(false, GetProperty(plan, "RequiresBootstrap"));
+            Assert.AreEqual(Path.GetFullPath(executablePath), GetProperty(plan, "ExecutablePath"));
+        }
+
+        /// <summary>
         /// 验证 Unity 直接激活使用与 Workbench owner 相同的项目身份哈希，避免两端管道名漂移。
         /// </summary>
         [Test]

@@ -194,6 +194,7 @@ public sealed partial class WorkbenchWindow : Window
         WorkbenchStartupTrace.Mark("window.opened");
         AttachToParentWindowIfRequested();
         ActivateExistingWindow();
+        _ = mShellViewModel.RuntimeUpdate.StartCheckAsync();
         mRefreshTimer.Start();
         StartFsmTelemetryPolling();
         QueueDashboardRefresh();
@@ -256,6 +257,7 @@ public sealed partial class WorkbenchWindow : Window
         mShellViewModel.ActionKitPage.Dispose();
         mShellViewModel.AudioKitPage.Dispose();
         mShellViewModel.SaveKitPage.Dispose();
+        mShellViewModel.RuntimeUpdate.Dispose();
         if (mLifecycleMonitor != null)
         {
             mLifecycleMonitor.Changed -= OnEngineLifecycleChanged;
