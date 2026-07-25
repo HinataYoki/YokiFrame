@@ -144,7 +144,13 @@ namespace YokiFrame
         /// <returns>可登记的 MonoSingleton 实例。</returns>
         private static T FindOrCreateInstance()
         {
+#if UNITY_2023_1_OR_NEWER
+            // 新版本使用不排序的查找 API，保留包含非激活对象的单例语义。
             T instance = UnityObject.FindAnyObjectByType<T>(FindObjectsInactive.Include);
+#else
+            // Unity 2022.3 使用稳定的 includeInactive 重载，避免依赖双参数新签名。
+            T instance = UnityObject.FindObjectOfType<T>(true);
+#endif
             if (instance != null && !IsPendingDestroy(instance))
             {
                 return instance;

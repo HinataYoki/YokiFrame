@@ -73,7 +73,16 @@ namespace YokiFrame
         public static List<UIPanelValidationResult> ValidateAllPanelsInScene()
         {
             List<UIPanelValidationResult> results = new();
+            // Unity 6000.7 起提供不带排序参数的新重载；更早版本继续使用二参数重载。
+#if UNITY_6000_7_OR_NEWER
             UIPanel[] panels = Object.FindObjectsByType<UIPanel>(FindObjectsInactive.Exclude);
+#elif UNITY_2022_2_OR_NEWER
+            UIPanel[] panels = Object.FindObjectsByType<UIPanel>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+#else
+            UIPanel[] panels = Object.FindObjectsOfType<UIPanel>();
+#endif
             for (var index = 0; index < panels.Length; index++)
             {
                 UIPanelValidationResult result = ValidatePanel(panels[index].gameObject);
