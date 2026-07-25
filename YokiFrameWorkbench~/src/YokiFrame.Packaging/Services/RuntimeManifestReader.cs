@@ -8,8 +8,6 @@ namespace YokiFrame.Packaging.Services;
 /// </summary>
 public sealed class RuntimeManifestReader
 {
-    private static readonly JsonSerializerOptions ManifestJsonOptions = new(JsonSerializerDefaults.Web);
-
     /// <summary>
     /// 如果 manifest 文件存在，则读取并反序列化；不存在时返回 null。
     /// </summary>
@@ -24,7 +22,8 @@ public sealed class RuntimeManifestReader
 
         try
         {
-            var manifest = JsonSerializer.Deserialize<RuntimeManifest>(File.ReadAllText(path), ManifestJsonOptions);
+            var manifest = JsonSerializer.Deserialize(
+                File.ReadAllText(path), RuntimePackagingJsonContext.Default.RuntimeManifest);
             return IsStructurallyValid(manifest) ? manifest : null;
         }
         catch (JsonException)

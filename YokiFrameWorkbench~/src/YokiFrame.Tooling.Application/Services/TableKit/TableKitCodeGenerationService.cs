@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using YokiFrame.Tooling.Application.Models.TableKit;
 
 namespace YokiFrame.Tooling.Application.Services.TableKit;
@@ -195,7 +196,7 @@ internal sealed partial class TableKitCodeGenerationService
     private static string Escape(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        string serialized = JsonSerializer.Serialize(value);
+        string serialized = JsonSerializer.Serialize(value, TableKitCodeGenerationJsonContext.Default.String);
         return serialized[1..^1];
     }
 
@@ -205,4 +206,11 @@ internal sealed partial class TableKitCodeGenerationService
         Unity,
         Godot
     }
+}
+
+/// <summary>为 TableKit 生成器提供 Native AOT 可用的字符串 JSON 元数据。</summary>
+[JsonSourceGenerationOptions]
+[JsonSerializable(typeof(string))]
+internal sealed partial class TableKitCodeGenerationJsonContext : JsonSerializerContext
+{
 }

@@ -205,7 +205,11 @@ internal sealed partial class TableKitCodeGenerationService
     private static void AddOptionalCodeTargetReference(JsonArray references, string codeTarget)
     {
         string? optionalReference = ResolveOptionalCodeTargetReference(codeTarget);
-        if (optionalReference != null) references.Add(optionalReference);
+        if (optionalReference != null)
+        {
+            JsonNode? referenceNode = JsonValue.Create(optionalReference);
+            references.Add(referenceNode);
+        }
     }
 
     /// <summary>解析已知 C# JSON target 需要的额外程序集名。</summary>

@@ -57,7 +57,9 @@ public sealed partial class WorkbenchDashboardService
         int line,
         CancellationToken cancellationToken)
     {
-        string payloadJson = JsonSerializer.Serialize(new CodeLocationPayload(relativePath, line));
+        string payloadJson = JsonSerializer.Serialize(
+            new CodeLocationPayload(relativePath, line),
+            DashboardJsonContext.Default.CodeLocationPayload);
         WorkbenchCommandState result = await SendCommandAsync(
             engineId,
             SYSTEM_KIT,
@@ -123,4 +125,11 @@ public sealed partial class WorkbenchDashboardService
     private sealed record CodeLocationPayload(
         [property: JsonPropertyName("filePath")] string FilePath,
         [property: JsonPropertyName("line")] int Line);
+
+    /// <summary>为代码定位命令提供 Native AOT 可用的 JSON 元数据。</summary>
+    [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(CodeLocationPayload))]
+    private sealed partial class DashboardJsonContext : JsonSerializerContext
+    {
+    }
 }

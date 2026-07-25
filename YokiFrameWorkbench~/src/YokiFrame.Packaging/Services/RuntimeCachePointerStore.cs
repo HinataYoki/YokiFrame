@@ -9,11 +9,6 @@ namespace YokiFrame.Packaging.Services;
 public sealed class RuntimeCachePointerStore
 {
     private const int LAYOUT_VERSION = 1;
-    private static readonly JsonSerializerOptions sJsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
-
     /// <summary>
     /// 读取项目当前 Runtime 指针；文件不存在时返回空。
     /// </summary>
@@ -29,7 +24,8 @@ public sealed class RuntimeCachePointerStore
 
         try
         {
-            var pointer = JsonSerializer.Deserialize<RuntimeCachePointer>(File.ReadAllText(path), sJsonOptions);
+            var pointer = JsonSerializer.Deserialize(
+                File.ReadAllText(path), RuntimePackagingJsonContext.Default.RuntimeCachePointer);
             return IsValid(pointer) ? pointer : null;
         }
         catch (JsonException)
@@ -59,7 +55,7 @@ public sealed class RuntimeCachePointerStore
         {
             using (FileStream stream = new(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
-                JsonSerializer.Serialize(stream, pointer, sJsonOptions);
+                JsonSerializer.Serialize(stream, pointer, RuntimePackagingJsonContext.Default.RuntimeCachePointer);
                 stream.Flush(flushToDisk: true);
             }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using YokiFrame.Packaging.Models;
 
 namespace YokiFrame.Packaging.Services;
@@ -8,11 +9,6 @@ namespace YokiFrame.Packaging.Services;
 /// </summary>
 public sealed class RuntimeManifestWriter
 {
-    private static readonly JsonSerializerOptions ManifestJsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
-
     /// <summary>
     /// 将 manifest 写入指定文件。
     /// </summary>
@@ -50,7 +46,8 @@ public sealed class RuntimeManifestWriter
     /// <param name="temporaryPath">临时文件路径。</param>
     private static void WriteTemporaryManifest(RuntimeManifest manifest, string temporaryPath)
     {
-        var json = JsonSerializer.Serialize(manifest, ManifestJsonOptions) + Environment.NewLine;
+        var json = JsonSerializer.Serialize(manifest, RuntimePackagingJsonContext.Default.RuntimeManifest)
+            + Environment.NewLine;
         using var stream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         using var writer = new StreamWriter(stream);
         writer.Write(json);
@@ -73,4 +70,15 @@ public sealed class RuntimeManifestWriter
 
         File.Move(temporaryPath, targetPath);
     }
+}
+
+/// <summary>为 Runtime manifest 和当前指针提供 Native AOT 可用的 JSON 元数据。</summary>
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
+    WriteIndented = true)]
+[JsonSerializable(typeof(RuntimeManifest))]
+[JsonSerializable(typeof(RuntimeCachePointer))]
+internal sealed partial class RuntimePackagingJsonContext : JsonSerializerContext
+{
 }

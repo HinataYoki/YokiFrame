@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using YokiFrame.Tooling.Application.Models.AudioKit;
 
 namespace YokiFrame.Tooling.Application.Services.AudioKit;
@@ -6,20 +7,14 @@ namespace YokiFrame.Tooling.Application.Services.AudioKit;
 /// <summary>承载 AudioKit 索引 manifest 验证和原子持久化。</summary>
 public sealed partial class AudioIndexService
 {
-    private static readonly JsonSerializerOptions sManifestJsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     /// <summary>读取可选 manifest；不存在时创建空分配表。</summary>
     private static AudioIndexManifest ReadManifest(string manifestPath)
     {
         if (!File.Exists(manifestPath)) return new AudioIndexManifest();
         try
         {
-            AudioIndexManifest? manifest = JsonSerializer.Deserialize<AudioIndexManifest>(
-                File.ReadAllText(manifestPath), sManifestJsonOptions);
+            AudioIndexManifest? manifest = JsonSerializer.Deserialize(
+                File.ReadAllText(manifestPath), AudioIndexJsonContext.Default.AudioIndexManifest);
             if (manifest == null || manifest.SchemaVersion != 1 || manifest.Assignments == null)
                 throw new InvalidDataException("AudioKit index manifest requires schemaVersion 1.");
             return manifest;
@@ -75,7 +70,10 @@ public sealed partial class AudioIndexService
                 .OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.OrdinalIgnoreCase)
         };
-        WriteAtomically(manifestPath, JsonSerializer.Serialize(stable, sManifestJsonOptions) + System.Environment.NewLine);
+        WriteAtomically(
+            manifestPath,
+            JsonSerializer.Serialize(stable, AudioIndexJsonContext.Default.AudioIndexManifest)
+                + System.Environment.NewLine);
     }
 
     /// <summary>先提交生成映射，再提交稳定账本；账本失败时恢复映射，避免只推进 ID 分配。</summary>
@@ -182,6 +180,15 @@ public sealed partial class AudioIndexService
     {
         public int SchemaVersion { get; set; } = 1;
         public Dictionary<string, int> Assignments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>为 AudioKit manifest 提供 Native AOT 可用的 JSON 元数据。</summary>
+    [JsonSourceGenerationOptions(
+        PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+        WriteIndented = true)]
+    [JsonSerializable(typeof(AudioIndexManifest))]
+    private sealed partial class AudioIndexJsonContext : JsonSerializerContext
+    {
     }
 
     /// <summary>保存一次生成事务开始前的文本文件状态，供 manifest 提交失败时恢复。</summary>

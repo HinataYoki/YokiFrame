@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace YokiFrame.Tooling.Application.Services.Settings;
 
@@ -75,7 +76,10 @@ public sealed partial class YokiFrameProjectSettingsStore
             end = FindGodotSectionEnd(lines, header);
             foreach (YokiFrameProjectSettingValue value in patch.Values)
             {
-                lines.Insert(end++, patch.Owner + "/" + value.Key + "=" + JsonSerializer.Serialize(value.Value ?? string.Empty));
+                lines.Insert(
+                    end++,
+                    patch.Owner + "/" + value.Key + "="
+                    + JsonSerializer.Serialize(value.Value ?? string.Empty, GodotSettingsJsonContext.Default.String));
             }
         }
 
@@ -130,7 +134,7 @@ public sealed partial class YokiFrameProjectSettingsStore
         {
             try
             {
-                return JsonSerializer.Deserialize<string>(rawValue) ?? string.Empty;
+                return JsonSerializer.Deserialize(rawValue, GodotSettingsJsonContext.Default.String) ?? string.Empty;
             }
             catch (JsonException exception)
             {
@@ -178,4 +182,11 @@ public sealed partial class YokiFrameProjectSettingsStore
         string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         return normalized.TrimEnd('\n').Length == 0 ? Array.Empty<string>() : normalized.TrimEnd('\n').Split('\n');
     }
+}
+
+/// <summary>为 Godot Runtime 字符串设置提供 Native AOT 可用的 JSON 元数据。</summary>
+[JsonSourceGenerationOptions]
+[JsonSerializable(typeof(string))]
+internal sealed partial class GodotSettingsJsonContext : JsonSerializerContext
+{
 }
