@@ -8,6 +8,10 @@ namespace YokiFrame.Tooling.Application.Services.TableKit;
 internal sealed partial class TableKitCodeGenerationService
 {
     private const string GODOT_OWNER_LABEL = "YokiFrame.TableKit";
+    private const string GODOT_CORE_RUNTIME_PROJECT =
+        "addons/yokiframe/package/YokiFrame/Core/Runtime/YokiFrame.csproj";
+    private const string GODOT_TOOLS_CONDITION =
+        "$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))";
 
     /// <summary>生成可选 Unity asmdef，并移除同名 Godot project 防止宿主边界混用。</summary>
     /// <param name="options">包含 asmdef 开关和程序集名的选项。</param>
@@ -27,7 +31,7 @@ internal sealed partial class TableKitCodeGenerationService
             return;
         }
 
-        JsonArray references = new("Luban.Runtime");
+        JsonArray references = new("YokiFrame", "Luban.Runtime", "UniTask");
         AddOptionalCodeTargetReference(references, contract.CodeTarget);
         JsonObject document = new()
         {
@@ -64,9 +68,13 @@ internal sealed partial class TableKitCodeGenerationService
         XDocument mainProject = XDocument.Load(mainProjectPath, LoadOptions.PreserveWhitespace);
         string targetFramework = ReadTargetFramework(mainProject, mainProjectPath);
         string generatedProjectPath = Path.Combine(contract.OutputCodeDirectory, contract.AssemblyName + ".csproj");
+        string coreProjectPath = Path.Combine(options.ProjectRoot, GODOT_CORE_RUNTIME_PROJECT);
+        string coreProjectReference = ToProjectRelativePath(
+            contract.OutputCodeDirectory,
+            coreProjectPath);
         WriteAtomically(
             generatedProjectPath,
-            BuildGodotProjectSource(contract, targetFramework));
+            BuildGodotProjectSource(contract, targetFramework, coreProjectReference));
         files.Add(generatedProjectPath);
         PatchGodotMainProject(mainProjectPath, mainProject, options.ProjectRoot, contract.OutputCodeDirectory, generatedProjectPath);
         files.Add(mainProjectPath);
@@ -75,8 +83,12 @@ internal sealed partial class TableKitCodeGenerationService
     /// <summary>生成纯 C# Godot TableKit 项目，编译门面、加载契约和 Luban 子目录。</summary>
     /// <param name="contract">TableKit 输出与 target 契约。</param>
     /// <param name="targetFramework">Godot 主项目使用的目标框架。</param>
+    /// <param name="coreProjectReference">相对生成项目的 YokiFrame Core project 路径。</param>
     /// <returns>独立 MSBuild 项目文本。</returns>
-    private static string BuildGodotProjectSource(TableKitContract contract, string targetFramework)
+    private static string BuildGodotProjectSource(
+        TableKitContract contract,
+        string targetFramework,
+        string coreProjectReference)
     {
         XDocument project = new(
             new XElement(
@@ -96,14 +108,17 @@ internal sealed partial class TableKitCodeGenerationService
                     new XElement("GodotProjectDir", new XAttribute("Condition", "'$(GodotProjectDir)' == ''"), "$(MSBuildProjectDirectory)"),
                     new XElement("BaseOutputPath", "$(GodotProjectDir)/.godot/yokiframe/tablekit/bin/"),
                     new XElement("BaseIntermediateOutputPath", "$(GodotProjectDir)/.godot/yokiframe/tablekit/obj/")),
-                BuildGodotCompileItems(contract.CodeTarget)));
+                BuildGodotCompileItems(contract.CodeTarget, coreProjectReference)));
         return project.ToString(SaveOptions.DisableFormatting);
     }
 
     /// <summary>构建生成项目的显式源码集合和代码 target 依赖引用。</summary>
     /// <param name="codeTarget">Luban 代码 target。</param>
+    /// <param name="coreProjectReference">相对生成项目的 YokiFrame Core project 路径。</param>
     /// <returns>MSBuild ItemGroup。</returns>
-    private static XElement BuildGodotCompileItems(string codeTarget)
+    private static XElement BuildGodotCompileItems(
+        string codeTarget,
+        string coreProjectReference)
     {
         XElement itemGroup = new(
             "ItemGroup",
@@ -111,7 +126,11 @@ internal sealed partial class TableKitCodeGenerationService
                 "Compile",
                 new XAttribute("Include", "**/*.cs"),
                 new XAttribute("Exclude", "bin/**/*.cs;obj/**/*.cs")),
-            new XElement("Reference", new XAttribute("Include", "Luban.Runtime")));
+            new XElement("Reference", new XAttribute("Include", "Luban.Runtime")),
+            new XElement(
+                "ProjectReference",
+                new XAttribute("Include", coreProjectReference),
+                new XElement("AdditionalProperties", "YokiFrameToolsBuild=$(YokiFrameToolsBuild)")));
         string? optionalReference = ResolveOptionalCodeTargetReference(codeTarget);
         if (optionalReference != null)
         {
@@ -184,7 +203,9 @@ internal sealed partial class TableKitCodeGenerationService
             new XElement(
                 xmlNamespace + "ProjectReference",
                 new XAttribute("Include", projectRelative),
-                new XElement(xmlNamespace + "AdditionalProperties", "GodotProjectDir=$(MSBuildProjectDirectory)")));
+                new XElement(
+                    xmlNamespace + "AdditionalProperties",
+                    "GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=" + GODOT_TOOLS_CONDITION)));
         if (ownedGroups.Length == 1) ownedGroups[0].ReplaceWith(replacement);
         else root.Add(replacement);
         WriteAtomically(mainProjectPath, project.ToString(SaveOptions.DisableFormatting));

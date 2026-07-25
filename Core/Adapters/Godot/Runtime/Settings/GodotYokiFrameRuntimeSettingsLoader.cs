@@ -32,6 +32,12 @@ namespace YokiFrame
             new("save_kit/file_extension", "fileExtension")
         };
 
+        private static readonly SettingBinding[] sTableKitBindings =
+        {
+            new("table_kit/runtime_path_pattern", "runtimePathPattern"),
+            new("table_kit/use_raw_resource_loading", "useRawResourceLoading")
+        };
+
         /// <summary>
         /// 创建仅包含当前 Godot 项目覆盖值的 Store；未配置项继续使用 Kit 代码默认值。
         /// </summary>
@@ -47,6 +53,11 @@ namespace YokiFrame
             for (var index = 0; index < sSaveKitBindings.Length; index++)
             {
                 ApplyBinding(store, sSaveKitBindings[index], "SaveKit");
+            }
+
+            for (var index = 0; index < sTableKitBindings.Length; index++)
+            {
+                ApplyBinding(store, sTableKitBindings[index], "TableKit");
             }
 
             return store;

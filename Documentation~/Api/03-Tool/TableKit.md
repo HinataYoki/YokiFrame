@@ -25,27 +25,28 @@ Workbench Luban 验证/生成页与跨宿主直接代码生成已实现；Kit In
 
 ## 核心 API
 
-生成目录中的 `ITableDataLoader.cs` 使用 `YokiFrame.TableKit` 命名空间，并与门面、Luban 代码编入同一个生成程序集：
+默认模板生成的门面、Luban 类型和 `ITableDataLoader.cs` 统一使用 `YokiFrame` 命名空间，并编入同一个生成程序集：
 
 | API | 说明 |
 |---|---|
-| `ITableDataLoader.Load(string resourcePathPattern, string tablesTypeName)` | 按路径模板同步读取并创建表管理器 |
-| `ITableDataLoader.LoadAsync(string resourcePathPattern, string tablesTypeName)` | 按路径模板异步读取并创建表管理器 |
+| `TableDataResourceLoadMode.Asset / Raw` | 指定项目 Loader 使用普通资源对象或 ResKit Raw 能力 |
+| `ITableDataLoader.Load<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode)` | 按路径模板和资源模式同步读取并创建强类型表管理器 |
+| `ITableDataLoader.LoadAsync<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode)` | 按路径模板和资源模式异步读取；安装 UniTask 时返回 `UniTask<TTables>`，否则返回 `Task<TTables>` |
 
-路径模板中的 `{0}` 由项目 Loader 替换为 Luban 传入的表名，例如 `config`、`item`。生成门面固定提供 `SetLoader`、无参数 `Init/Load`、路径模板 `Init/Load`、`Tables`、`Initialized` 和 `Clear`；启用异步加载时额外生成 `InitAsync/LoadAsync`。
+路径模板中的 `{0}` 由项目 Loader 替换为 Luban 传入的表名，例如 `config`、`item`。生成门面固定提供 `SetLoader`、同步与异步的无参数/显式路径入口、`Tables`、`Initialized` 和 `Clear`。`Init/Load` 始终调用同步 Loader，`InitAsync/LoadAsync` 始终调用异步 Loader，加载方式完全由调用方选择，不存在异步模式开关。
 
 ```csharp
-using YokiFrame.TableKit;
+using YokiFrame;
 
-cfg.TableKit.SetLoader(new GeneratedTableLoader());
-cfg.TableKit.Init();
-cfg.Tables tables = cfg.TableKit.Tables;
+TableKit.SetLoader(new GeneratedTableLoader());
+TableKit.Init();
 
-// 仅在 Workbench 启用异步加载时生成。
-await cfg.TableKit.InitAsync();
+TableKit.Clear();
+await TableKit.InitAsync();
+Tables tables = TableKit.Tables;
 ```
 
-`GeneratedTableLoader` 是项目实现。门面只负责保存强类型 Luban manager、调用统一 Loader 和管理生命周期，不选择 ResKit Provider，也不假设资源一定是 `.bytes` 或 `.json`。
+`GeneratedTableLoader` 是项目实现。门面把 Runtime Settings 中的 `useRawResourceLoading` 转成 `TableDataResourceLoadMode.Raw` 或 `Asset` 并传给每次 Loader 调用；Loader 必须据此选择 `ResKit.LoadRaw/LoadRawText` 或普通资源对象读取。门面只负责保存强类型 Luban manager、调用统一 Loader 和管理生命周期，不选择 ResKit Provider，也不假设资源一定是 `.bytes` 或 `.json`。
 
 ### 资源定位
 
@@ -55,13 +56,17 @@ Workbench 页面只保留一个“资源可寻址”开关和一个非可寻址�
 - 关闭可寻址且模板为空时，Workbench 根据数据输出目录推导模板。Unity `Resources` 输出推导为 `Resources` 相对路径，`StreamingAssets` 输出推导为 `streaming-assets://`；Godot 项目内输出推导为 `res://`。
 - 输出目录无法可靠推导时，验证会提示用户开启可寻址或填写模板。用户填写的模板会原样规范化并追加 `{0}`（已有占位符时不重复追加），可用于项目外目录、Godot `user://` 或其它 C# 引擎资源系统。
 
-Workbench 不探测 Addressables、YooAsset 或其它资源管理方案，也不生成 `LogicalAddress`、`TableDataLocation` 或第二套 Loader。运行时配置只存在于生成代码常量，不写入 Runtime Settings。
+Workbench 不探测 Addressables、YooAsset 或其它资源管理方案，也不生成 `LogicalAddress`、`TableDataLocation` 或第二套 Loader。最终路径模板和 Raw 模式分别保存为 `TableKit/runtimePathPattern`、`TableKit/useRawResourceLoading`；生成门面通过 `KitSettings` 在运行时读取。
 
 ### 配置与生成
 
-具体表管理器类型、代码目标和数据格式均来自当前 `luban.conf` 的 `topModule`、`manager`、`codeTarget` 和 `dataTarget`，不假设默认大小写或固定 `cfg.Tables`。`codeTarget` 与 `dataTarget` 是开放字符串，数据扩展名从 target 推导或读取 `fileExt`。
+具体表管理器类型、代码目标和数据格式均来自当前 `luban.conf` 的 `topModule`、`manager`、`codeTarget` 和 `dataTarget`。YokiFrame 的 Luban 默认模板把 `topModule` 设为 `YokiFrame`，因此默认门面为 `YokiFrame.TableKit`、表管理器为 `YokiFrame.Tables`；项目显式配置其它合法 `topModule` 时仍按配置生成。`codeTarget` 与 `dataTarget` 是开放字符串，数据扩展名从 target 推导或读取 `fileExt`。
 
 Workbench-only 配置保存到当前项目 `ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json`，工具栏“保存”和 Workbench 正常关闭都会持久化完整草稿。配置包含 `IsAddressable` 和 `RuntimePathPattern`；自动推导值不写回，项目重新打开时会按最新输出目录重新计算。
+
+草稿中的 `ProjectRoot` 固定保存为 `.`，所有位于项目内的 Luban 配置、工作目录、执行文件与输出目录统一保存为正斜杠相对路径。读取时再绑定到当前项目根，因此 YokiFrame 安装在 `Assets`、embedded package 或 Git package 都不会写入开发机绝对路径；只有用户明确选择的项目外部工具路径会保留绝对形式。
+
+完整草稿中的编辑器路径、Luban target、数据格式和输出目录不会进入 Player 配置。只有最终路径模板和 Raw 模式投影到 Runtime Settings；这些值变化时不会改写稳定的 `TableKit.cs` 或 `ITableDataLoader.cs`，因此不会仅因运行时配置调整而触发生成程序集重编译。
 
 “自定义编辑器数据路径”关闭时，“编辑器数据”始终由当前“数据输出”目录推断并实时同步；开启后才使用独立选择的目录。重新关闭自定义开关会立即恢复为当前数据输出目录。
 
@@ -75,11 +80,11 @@ Workbench-only 配置保存到当前项目 `ProjectSettings/Packages/com.hinatay
 
 - 生成前先验证 `luban.conf`、目标类型、数据扩展名和项目根 containment；失败时不把半成品视为可用 Runtime
 - 生成门面与宿主程序集属于可再生项目代码；业务扩展放在用户维护的文件中，不直接修改可再生输出
-- TableKit 草稿只属于 Workbench Editor 配置，不进入 Runtime Settings
+- TableKit 完整草稿只属于 Workbench Editor 配置；仅两个运行时消费值进入 Runtime Settings
 
 ## 宿主与工具入口
 
-Unity 使用 `<AssemblyName>.asmdef` 表达程序集边界，并引用 `Luban.Runtime`。Godot .NET 使用 `<AssemblyName>.csproj` 表达独立项目边界，继承主项目 TargetFramework；主项目排除 TableKit 源码 glob 后添加 `ProjectReference`，不能把 Unity `.asmdef` 当作 Godot 配置复用。
+Unity 使用 `<AssemblyName>.asmdef` 表达程序集边界，并直接引用 `YokiFrame`、`Luban.Runtime` 与可选的 `UniTask` 程序集。`DependencyDefineService` 检测到 UniTask 后维护 `YOKIFRAME_UNITASK_SUPPORT`，生成接口和门面的异步返回类型会从 `Task` 自动切换为 `UniTask`。Godot .NET 使用 `<AssemblyName>.csproj` 表达独立项目边界，继承主项目 TargetFramework，并引用安装包中的 Core Runtime project；主项目排除 TableKit 源码 glob 后添加 `ProjectReference`，不能把 Unity `.asmdef` 当作 Godot 配置复用。
 
 两端默认程序集名均为 `YokiFrame.TableKit`，不会生成或引用 `YokiFrame.TableKit.Contracts`。Godot 只生成 `.csproj`，Unity 只生成 `.asmdef`。
 

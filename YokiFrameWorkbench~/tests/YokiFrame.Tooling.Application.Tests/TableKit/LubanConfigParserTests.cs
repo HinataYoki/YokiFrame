@@ -22,7 +22,6 @@ public sealed class LubanConfigParserTests
         Assert.Empty(options.RuntimePathPattern);
         Assert.False(options.UseAssemblyDefinition);
         Assert.False(options.GenerateExternalTypeUtil);
-        Assert.False(options.UseAsyncLoading);
         Assert.True(options.UseRawResourceLoading);
         Assert.Equal("YokiFrame.TableKit", options.AssemblyName);
     }

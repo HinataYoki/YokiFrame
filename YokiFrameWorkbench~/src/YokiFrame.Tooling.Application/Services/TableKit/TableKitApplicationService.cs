@@ -64,7 +64,7 @@ public sealed class TableKitApplicationService
         }
     }
 
-    /// <summary>执行 Luban 并直接生成项目侧 TableKit 代码；不写中转 manifest 或 Runtime Settings。</summary>
+    /// <summary>执行 Luban 并直接生成项目侧 TableKit 代码；不写中转 manifest，Runtime Settings 由配置服务在调用前保存。</summary>
     /// <param name="options">Workbench TableKit 选项。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>生成退出码、日志、契约和文件清单。</returns>

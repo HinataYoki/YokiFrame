@@ -12,7 +12,7 @@ public sealed record TableKitRuntimeLocation
 /// <summary>描述一次 Luban TableKit 验证或生成所需的 Workbench 配置。</summary>
 public sealed record TableKitOptions
 {
-    /// <summary>当前宿主项目根目录。</summary>
+    /// <summary>当前宿主项目根目录；运行时为绝对路径，持久化草稿固定使用 `.`。</summary>
     public required string ProjectRoot { get; init; }
     /// <summary>luban.conf 绝对路径。</summary>
     public required string LubanConfigPath { get; init; }
@@ -34,9 +34,7 @@ public sealed record TableKitOptions
     public bool IsAddressable { get; init; }
     /// <summary>关闭可寻址时使用的运行时路径模板；为空时由宿主输出目录推导。</summary>
     public string RuntimePathPattern { get; init; } = string.Empty;
-    /// <summary>生成的 Runtime 是否提供异步加载入口。</summary>
-    public bool UseAsyncLoading { get; init; }
-    /// <summary>是否允许加载器直接读取原始资源。</summary>
+    /// <summary>Loader 是否通过原始资源能力读取表数据。</summary>
     public bool UseRawResourceLoading { get; init; } = true;
     /// <summary>是否按 Luban mapper 生成外部类型 helper；属性名保留为设置键。</summary>
     public bool GenerateExternalTypeUtil { get; init; }
@@ -113,10 +111,6 @@ public sealed record TableKitContract
     public bool UseAssemblyDefinition { get; init; } = true;
     /// <summary>Unity asmdef 或 Godot csproj 使用的生成程序集名称。</summary>
     public string AssemblyName { get; init; } = "YokiFrame.TableKit";
-    /// <summary>是否生成异步加载入口。</summary>
-    public bool UseAsyncLoading { get; init; } = true;
-    /// <summary>是否允许原始资源读取。</summary>
-    public bool UseRawResourceLoading { get; init; }
     /// <summary>当前 Luban schema 中匹配 target/codeTarget 的外部类型映射。</summary>
     public IReadOnlyList<TableKitExternalTypeMapping> ExternalTypeMappings { get; init; } = Array.Empty<TableKitExternalTypeMapping>();
 }

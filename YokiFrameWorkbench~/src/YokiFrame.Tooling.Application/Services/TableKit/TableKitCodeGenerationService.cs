@@ -1,6 +1,4 @@
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using YokiFrame.Tooling.Application.Models.TableKit;
 
 namespace YokiFrame.Tooling.Application.Services.TableKit;
@@ -28,7 +26,7 @@ internal sealed partial class TableKitCodeGenerationService
         }
 
         TableKitProjectKind projectKind = DetectProjectKind(options.ProjectRoot);
-        List<string> files = GenerateRuntimeFiles(options, contract);
+        List<string> files = GenerateRuntimeFiles(contract);
         if (projectKind == TableKitProjectKind.Unity)
         {
             GenerateUnityBoundary(options, contract, files);
@@ -41,16 +39,13 @@ internal sealed partial class TableKitCodeGenerationService
     }
 
     /// <summary>生成两端共用的 Runtime C# 文件，并保持用户 External 目录不受影响。</summary>
-    /// <param name="options">包含运行时路径和辅助文件开关的页面选项。</param>
     /// <param name="contract">包含实际 manager 与输出根的生成契约。</param>
     /// <returns>生成文件列表。</returns>
-    private static List<string> GenerateRuntimeFiles(
-        TableKitOptions options,
-        TableKitContract contract)
+    private static List<string> GenerateRuntimeFiles(TableKitContract contract)
     {
         List<string> files = new();
         AddGeneratedFile(files, contract.OutputCodeDirectory, "ITableDataLoader.cs", BuildLoaderSource());
-        AddGeneratedFile(files, contract.OutputCodeDirectory, "TableKit.cs", BuildFacadeSource(options, contract));
+        AddGeneratedFile(files, contract.OutputCodeDirectory, "TableKit.cs", BuildFacadeSource(contract));
         IReadOnlyList<IGrouping<(string Namespace, string TypeName), TableKitExternalTypeMapping>> helperGroups =
             contract.GenerateExternalTypeUtil
                 ? contract.ExternalTypeMappings
@@ -190,27 +185,10 @@ internal sealed partial class TableKitCodeGenerationService
         return content.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').TrimEnd('\n') + "\n";
     }
 
-    /// <summary>转义生成 C# 字符串字面量中的控制字符、反斜杠和引号。</summary>
-    /// <param name="value">原始配置文本。</param>
-    /// <returns>可写入双引号字面量的内容。</returns>
-    private static string Escape(string value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        string serialized = JsonSerializer.Serialize(value, TableKitCodeGenerationJsonContext.Default.String);
-        return serialized[1..^1];
-    }
-
     /// <summary>表示 TableKit 生成器支持的宿主项目类型。</summary>
     private enum TableKitProjectKind
     {
         Unity,
         Godot
     }
-}
-
-/// <summary>为 TableKit 生成器提供 Native AOT 可用的字符串 JSON 元数据。</summary>
-[JsonSourceGenerationOptions]
-[JsonSerializable(typeof(string))]
-internal sealed partial class TableKitCodeGenerationJsonContext : JsonSerializerContext
-{
 }

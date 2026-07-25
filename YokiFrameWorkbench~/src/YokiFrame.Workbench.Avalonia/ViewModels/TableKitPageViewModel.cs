@@ -30,7 +30,6 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     private bool mRuntimePathPatternIsCustom;
     private bool mCustomEditorDataPath;
     private string mEditorDataPath = string.Empty;
-    private bool mUseAsyncLoading;
     private bool mUseRawResourceLoading;
     private bool mGenerateExternalTypeUtil;
     private bool mUseAssemblyDefinition;
@@ -189,8 +188,6 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     }
     /// <summary>获取或设置编辑器读取的配置数据路径。</summary>
     public string EditorDataPath { get => mEditorDataPath; set => SetProperty(ref mEditorDataPath, value); }
-    /// <summary>获取或设置异步加载入口开关。</summary>
-    public bool UseAsyncLoading { get => mUseAsyncLoading; set => SetProperty(ref mUseAsyncLoading, value); }
     /// <summary>获取或设置原始资源读取开关。</summary>
     public bool UseRawResourceLoading
     {

@@ -55,7 +55,6 @@ public sealed class TableKitPersistenceTests
                 RuntimePathPattern = "external://Tables/{0}",
                 CustomEditorDataPath = true,
                 EditorDataPath = "Assets/Generated/Tables/Editor",
-                UseAsyncLoading = true,
                 UseRawResourceLoading = false,
                 GenerateExternalTypeUtil = true,
                 UseAssemblyDefinition = true,
@@ -82,7 +81,6 @@ public sealed class TableKitPersistenceTests
             Assert.Equal("external://Tables/{0}", restored.RuntimePathPattern);
             Assert.True(restored.CustomEditorDataPath);
             Assert.Equal("Assets/Generated/Tables/Editor", restored.EditorDataPath);
-            Assert.True(restored.UseAsyncLoading);
             Assert.False(restored.UseRawResourceLoading);
             Assert.True(restored.GenerateExternalTypeUtil);
             Assert.True(restored.UseAssemblyDefinition);

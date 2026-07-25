@@ -306,10 +306,6 @@
                 <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding GenerateExternalTypeUtil, Mode=TwoWay}" />
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="34">
-                <TextBlock Text="异步加载模式" VerticalAlignment="Center" />
-                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding UseAsyncLoading, Mode=TwoWay}" />
-              </Grid>
-              <Grid Grid.Row="1" Grid.Column="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="34">
                 <TextBlock Text="原始资源加载" VerticalAlignment="Center" />
                 <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding UseRawResourceLoading, Mode=TwoWay}" />
               </Grid>

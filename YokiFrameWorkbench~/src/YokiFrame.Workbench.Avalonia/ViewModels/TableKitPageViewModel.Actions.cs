@@ -21,18 +21,6 @@ public sealed partial class TableKitPageViewModel
         ApplyOperationResult(result, true);
     }
 
-    /// <summary>执行正式 Luban 生成并写入项目代码和宿主程序集边界。</summary>
-    private async Task GenerateAsync()
-    {
-        StatusText = "正在生成";
-        StatusDetailText = "正在写入正式输出和生成契约。";
-        IsConsoleExpanded = true;
-        SaveConfiguration();
-        AppendConsole("INFO", "开始生成配置表。", false);
-        TableKitOperationResult result = await mService.GenerateAsync(CreateOptions());
-        ApplyOperationResult(result, false);
-    }
-
     /// <summary>重新读取当前 luban.conf 的 target，并刷新环境摘要。</summary>
     private void RefreshConfiguration()
     {
@@ -340,7 +328,6 @@ public sealed partial class TableKitPageViewModel
             RuntimePathPattern = mRuntimePathPatternIsCustom ? RuntimePathPattern : string.Empty,
             CustomEditorDataPath = CustomEditorDataPath,
             EditorDataPath = EditorDataPath,
-            UseAsyncLoading = UseAsyncLoading,
             UseRawResourceLoading = UseRawResourceLoading,
             GenerateExternalTypeUtil = GenerateExternalTypeUtil,
             UseAssemblyDefinition = UseAssemblyDefinition,
@@ -370,7 +357,6 @@ public sealed partial class TableKitPageViewModel
         mEditorDataPath = mCustomEditorDataPath
             ? ToProjectRelativePath(options.EditorDataPath)
             : mOutputDataDir;
-        mUseAsyncLoading = options.UseAsyncLoading;
         mUseRawResourceLoading = options.UseRawResourceLoading;
         mGenerateExternalTypeUtil = options.GenerateExternalTypeUtil;
         mUseAssemblyDefinition = options.UseAssemblyDefinition;
@@ -496,7 +482,6 @@ public sealed partial class TableKitPageViewModel
         OnPropertyChanged(nameof(RuntimeLocationPreview));
         OnPropertyChanged(nameof(CustomEditorDataPath));
         OnPropertyChanged(nameof(EditorDataPath));
-        OnPropertyChanged(nameof(UseAsyncLoading));
         OnPropertyChanged(nameof(UseRawResourceLoading));
         OnPropertyChanged(nameof(GenerateExternalTypeUtil));
         OnPropertyChanged(nameof(UseAssemblyDefinition));

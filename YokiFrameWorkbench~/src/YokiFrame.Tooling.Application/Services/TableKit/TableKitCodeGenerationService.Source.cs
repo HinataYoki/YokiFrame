@@ -14,48 +14,67 @@ internal sealed partial class TableKitCodeGenerationService
             .AppendLine("// 由 YokiFrame Workbench TableKit 直接生成，请勿手动修改。")
             .AppendLine("// </auto-generated>")
             .AppendLine()
+            .AppendLine("using System;")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("using Cysharp.Threading.Tasks;")
+            .AppendLine("#else")
             .AppendLine("using System.Threading.Tasks;")
+            .AppendLine("#endif")
             .AppendLine()
-            .AppendLine("namespace YokiFrame.TableKit")
+            .AppendLine("namespace YokiFrame")
             .AppendLine("{");
         AppendLoaderInterfacesSource(source);
         source.AppendLine("}");
         return source.ToString();
     }
 
-    /// <summary>写入按表名路径模板读取表管理器的统一 Loader 接口。</summary>
+    /// <summary>写入按表名路径模板读取强类型表管理器的统一 Loader 接口。</summary>
     /// <param name="source">目标源码构建器。</param>
     private static void AppendLoaderInterfacesSource(StringBuilder source)
     {
-        source.AppendLine("    /// <summary>定义项目侧 TableKit 门面读取 Luban 表管理器的加载契约。</summary>")
+        source.AppendLine("    /// <summary>指定项目 Loader 读取配置表资源时使用的资源能力。</summary>")
+            .AppendLine("    public enum TableDataResourceLoadMode")
+            .AppendLine("    {")
+            .AppendLine("        /// <summary>通过宿主普通资源对象读取表数据。</summary>")
+            .AppendLine("        Asset,")
+            .AppendLine("        /// <summary>通过 ResKit Raw 等原始资源能力读取表数据。</summary>")
+            .AppendLine("        Raw")
+            .AppendLine("    }")
+            .AppendLine()
+            .AppendLine("    /// <summary>定义项目侧 TableKit 门面读取 Luban 表管理器的加载契约。</summary>")
             .AppendLine("    public interface ITableDataLoader")
             .AppendLine("    {")
             .AppendLine("        /// <summary>按资源路径模板同步读取并创建表管理器；模板中的 `{0}` 会替换为 Luban 表名。</summary>")
             .AppendLine("        /// <param name=\"resourcePathPattern\">项目资源路径模板；可寻址资源使用 `{0}`。</param>")
-            .AppendLine("        /// <param name=\"tablesTypeName\">Luban manager 完整类型名。</param>")
+            .AppendLine("        /// <param name=\"resourceLoadMode\">项目 Loader 应使用的资源读取能力。</param>")
+            .AppendLine("        /// <typeparam name=\"TTables\">当前 Luban target 生成的表管理器类型。</typeparam>")
             .AppendLine("        /// <returns>已创建的表管理器实例。</returns>")
-            .AppendLine("        object Load(string resourcePathPattern, string tablesTypeName);")
+            .AppendLine("        TTables Load<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode) where TTables : class;")
             .AppendLine()
             .AppendLine("        /// <summary>按资源路径模板异步读取并创建表管理器。</summary>")
             .AppendLine("        /// <param name=\"resourcePathPattern\">项目资源路径模板；可寻址资源使用 `{0}`。</param>")
-            .AppendLine("        /// <param name=\"tablesTypeName\">Luban manager 完整类型名。</param>")
+            .AppendLine("        /// <param name=\"resourceLoadMode\">项目 Loader 应使用的资源读取能力。</param>")
+            .AppendLine("        /// <typeparam name=\"TTables\">当前 Luban target 生成的表管理器类型。</typeparam>")
             .AppendLine("        /// <returns>异步返回已创建的表管理器实例。</returns>")
-            .AppendLine("        Task<object> LoadAsync(string resourcePathPattern, string tablesTypeName);")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        UniTask<TTables> LoadAsync<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode) where TTables : class;")
+            .AppendLine("#else")
+            .AppendLine("        Task<TTables> LoadAsync<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode) where TTables : class;")
+            .AppendLine("#endif")
             .AppendLine("    }");
     }
 
     /// <summary>生成动态 manager 对应的强类型 TableKit 门面。</summary>
-    /// <param name="options">运行时路径和编辑器路径选项。</param>
     /// <param name="contract">实际 Luban target 契约。</param>
     /// <returns>C# 9 门面源码。</returns>
-    private static string BuildFacadeSource(TableKitOptions options, TableKitContract contract)
+    private static string BuildFacadeSource(TableKitContract contract)
     {
         StringBuilder source = new();
         AppendFacadeHeader(source, contract);
-        AppendFacadeConstants(source, options, contract);
+        AppendFacadeRuntimeSettings(source);
         AppendFacadeState(source, contract.Manager);
         AppendFacadeSynchronousApi(source, contract.Manager);
-        if (contract.UseAsyncLoading) AppendFacadeAsynchronousApi(source, contract.Manager);
+        AppendFacadeAsynchronousApi(source, contract.Manager);
         AppendFacadeCleanup(source);
         source.AppendLine("    }").AppendLine("}");
         return source.ToString();
@@ -71,8 +90,12 @@ internal sealed partial class TableKitCodeGenerationService
             .AppendLine("// </auto-generated>")
             .AppendLine()
             .AppendLine("using System;")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("using Cysharp.Threading.Tasks;")
+            .AppendLine("#else")
             .AppendLine("using System.Threading.Tasks;")
-            .AppendLine("using YokiFrame.TableKit;")
+            .AppendLine("#endif")
+            .AppendLine("using YokiFrame;")
             .AppendLine()
             .AppendLine("namespace " + contract.TopModule)
             .AppendLine("{")
@@ -81,32 +104,23 @@ internal sealed partial class TableKitCodeGenerationService
             .AppendLine("    {");
     }
 
-    /// <summary>写入 target、格式和解析后的资源定位，避免宿主路径规则泄漏到调用方。</summary>
+    /// <summary>写入稳定 Runtime Settings 键；项目运行时选项只从当前宿主 Store 惰性读取。</summary>
     /// <param name="source">目标源码构建器。</param>
-    /// <param name="options">Workbench 页面选项。</param>
-    /// <param name="contract">实际 Luban target 契约。</param>
-    private static void AppendFacadeConstants(
-        StringBuilder source,
-        TableKitOptions options,
-        TableKitContract contract)
+    private static void AppendFacadeRuntimeSettings(StringBuilder source)
     {
-        string editorDataPath = options.CustomEditorDataPath ? options.EditorDataPath : options.OutputDataDir;
-        source.AppendLine("        /// <summary>Luban 实际生成的表管理器完整类型名。</summary>")
-            .AppendLine("        public const string TablesTypeName = \"" + Escape(contract.TablesType) + "\";")
-            .AppendLine("        /// <summary>当前 Luban 代码 target。</summary>")
-            .AppendLine("        public const string CodeTarget = \"" + Escape(contract.CodeTarget) + "\";")
-            .AppendLine("        /// <summary>当前 Luban 数据 target。</summary>")
-            .AppendLine("        public const string DataTarget = \"" + Escape(contract.DataTarget) + "\";")
-            .AppendLine("        /// <summary>生成数据扩展名。</summary>")
-            .AppendLine("        public const string DataExtension = \"" + Escape(contract.DataExtension) + "\";")
-            .AppendLine("        /// <summary>是否直接使用 Luban 传入的表名作为资源地址。</summary>")
-            .AppendLine("        public const bool IsAddressable = " + contract.IsAddressable.ToString().ToLowerInvariant() + ";")
-            .AppendLine("        /// <summary>传给 Loader 的运行时路径模板；可寻址模式为 `{0}`。</summary>")
-            .AppendLine("        public const string RuntimePathPattern = \"" + Escape(contract.RuntimePathPattern) + "\";")
-            .AppendLine("        /// <summary>项目配置的编辑器数据路径。</summary>")
-            .AppendLine("        public const string EditorDataPath = \"" + Escape(editorDataPath) + "\";")
-            .AppendLine("        /// <summary>是否允许项目 loader 使用原始资源读取。</summary>")
-            .AppendLine("        public const bool UseRawResourceLoading = " + contract.UseRawResourceLoading.ToString().ToLowerInvariant() + ";")
+        source.AppendLine("        private const string SETTINGS_KIT = \"TableKit\";")
+            .AppendLine("        private const string RUNTIME_PATH_PATTERN_KEY = \"runtimePathPattern\";")
+            .AppendLine("        private const string USE_RAW_RESOURCE_LOADING_KEY = \"useRawResourceLoading\";")
+            .AppendLine()
+            .AppendLine("        /// <summary>从当前宿主 Runtime Settings 获取传给 Loader 的路径模板。</summary>")
+            .AppendLine("        public static string RuntimePathPattern => KitSettings.GetString(SETTINGS_KIT, RUNTIME_PATH_PATTERN_KEY, string.Empty);")
+            .AppendLine()
+            .AppendLine("        /// <summary>获取 Loader 是否通过原始资源能力读取表数据。</summary>")
+            .AppendLine("        public static bool UseRawResourceLoading => KitSettings.GetBool(SETTINGS_KIT, USE_RAW_RESOURCE_LOADING_KEY, true);")
+            .AppendLine()
+            .AppendLine("        private static TableDataResourceLoadMode ResourceLoadMode => UseRawResourceLoading")
+            .AppendLine("            ? TableDataResourceLoadMode.Raw")
+            .AppendLine("            : TableDataResourceLoadMode.Asset;")
             .AppendLine();
     }
 
@@ -148,7 +162,7 @@ internal sealed partial class TableKitCodeGenerationService
     /// <param name="managerTypeName">Luban manager 类型名。</param>
     private static void AppendFacadeDefaultSynchronousApi(StringBuilder source, string managerTypeName)
     {
-        source.AppendLine("        /// <summary>按 Workbench 生成的资源定位同步初始化表管理器。</summary>")
+        source.AppendLine("        /// <summary>按 Runtime Settings 同步初始化表管理器。</summary>")
             .AppendLine("        public static void Init()")
             .AppendLine("        {")
             .AppendLine("            if (sTables != null) return;")
@@ -201,13 +215,13 @@ internal sealed partial class TableKitCodeGenerationService
             .AppendLine("        {")
             .AppendLine("            if (sLoader == null) throw new InvalidOperationException(\"TableKit 未设置 ITableDataLoader。\");")
             .AppendLine("            if (string.IsNullOrWhiteSpace(resourcePathPattern)) throw new InvalidOperationException(\"TableKit 运行时地址模板为空。\");")
-            .AppendLine("            object tables = sLoader.Load(resourcePathPattern, TablesTypeName);")
-            .AppendLine("            return tables as " + managerTypeName + " ?? throw new InvalidOperationException(\"TableKit loader 返回的类型与 Luban manager 不匹配。\");")
+            .AppendLine("            " + managerTypeName + " tables = sLoader.Load<" + managerTypeName + ">(resourcePathPattern, ResourceLoadMode);")
+            .AppendLine("            return tables ?? throw new InvalidOperationException(\"TableKit loader 返回了空表管理器。\");")
             .AppendLine("        }")
             .AppendLine();
     }
 
-    /// <summary>按页面开关写入 Task 异步初始化和加载入口。</summary>
+    /// <summary>写入稳定存在且按可选依赖宏切换 Task/UniTask 的异步入口。</summary>
     /// <param name="source">目标源码构建器。</param>
     /// <param name="managerTypeName">Luban manager 类型名。</param>
     private static void AppendFacadeAsynchronousApi(StringBuilder source, string managerTypeName)
@@ -222,18 +236,26 @@ internal sealed partial class TableKitCodeGenerationService
     /// <param name="managerTypeName">Luban manager 类型名。</param>
     private static void AppendFacadeDefaultAsynchronousApi(StringBuilder source, string managerTypeName)
     {
-        source.AppendLine("        /// <summary>按 Workbench 生成的资源定位异步初始化表管理器。</summary>")
+        source.AppendLine("        /// <summary>按 Runtime Settings 异步初始化表管理器。</summary>")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        public static async UniTask InitAsync()")
+            .AppendLine("#else")
             .AppendLine("        public static async Task InitAsync()")
+            .AppendLine("#endif")
             .AppendLine("        {")
             .AppendLine("            if (sTables != null) return;")
-            .AppendLine("            sTables = await LoadTablesAsync(RuntimePathPattern).ConfigureAwait(false);")
+            .AppendLine("            sTables = await LoadTablesAsync(RuntimePathPattern);")
             .AppendLine("        }")
             .AppendLine()
             .AppendLine("        /// <summary>按默认资源定位异步初始化并返回表管理器。</summary>")
             .AppendLine("        /// <returns>异步返回已初始化的强类型表管理器。</returns>")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        public static async UniTask<" + managerTypeName + "> LoadAsync()")
+            .AppendLine("#else")
             .AppendLine("        public static async Task<" + managerTypeName + "> LoadAsync()")
+            .AppendLine("#endif")
             .AppendLine("        {")
-            .AppendLine("            await InitAsync().ConfigureAwait(false);")
+            .AppendLine("            await InitAsync();")
             .AppendLine("            return Tables;")
             .AppendLine("        }")
             .AppendLine();
@@ -246,18 +268,26 @@ internal sealed partial class TableKitCodeGenerationService
     {
         source.AppendLine("        /// <summary>按调用方提供的路径模板异步初始化表管理器。</summary>")
             .AppendLine("        /// <param name=\"resourcePathPattern\">交给项目 loader 的运行时路径模板。</param>")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        public static async UniTask InitAsync(string resourcePathPattern)")
+            .AppendLine("#else")
             .AppendLine("        public static async Task InitAsync(string resourcePathPattern)")
+            .AppendLine("#endif")
             .AppendLine("        {")
             .AppendLine("            if (sTables != null) return;")
-            .AppendLine("            sTables = await LoadTablesAsync(resourcePathPattern).ConfigureAwait(false);")
+            .AppendLine("            sTables = await LoadTablesAsync(resourcePathPattern);")
             .AppendLine("        }")
             .AppendLine()
             .AppendLine("        /// <summary>异步初始化并返回强类型表管理器。</summary>")
             .AppendLine("        /// <param name=\"resourcePathPattern\">交给项目 loader 的运行时路径模板。</param>")
             .AppendLine("        /// <returns>异步返回已初始化的强类型表管理器。</returns>")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        public static async UniTask<" + managerTypeName + "> LoadAsync(string resourcePathPattern)")
+            .AppendLine("#else")
             .AppendLine("        public static async Task<" + managerTypeName + "> LoadAsync(string resourcePathPattern)")
+            .AppendLine("#endif")
             .AppendLine("        {")
-            .AppendLine("            await InitAsync(resourcePathPattern).ConfigureAwait(false);")
+            .AppendLine("            await InitAsync(resourcePathPattern);")
             .AppendLine("            return Tables;")
             .AppendLine("        }")
             .AppendLine();
@@ -271,12 +301,16 @@ internal sealed partial class TableKitCodeGenerationService
         source.AppendLine("        /// <summary>异步调用已注入 loader 并校验实际 manager 类型。</summary>")
             .AppendLine("        /// <param name=\"resourcePathPattern\">包含表名占位符的运行时路径模板。</param>")
             .AppendLine("        /// <returns>类型与当前 target 匹配的表管理器。</returns>")
+            .AppendLine("#if YOKIFRAME_UNITASK_SUPPORT")
+            .AppendLine("        private static async UniTask<" + managerTypeName + "> LoadTablesAsync(string resourcePathPattern)")
+            .AppendLine("#else")
             .AppendLine("        private static async Task<" + managerTypeName + "> LoadTablesAsync(string resourcePathPattern)")
+            .AppendLine("#endif")
             .AppendLine("        {")
             .AppendLine("            if (sLoader == null) throw new InvalidOperationException(\"TableKit 未设置 ITableDataLoader。\");")
             .AppendLine("            if (string.IsNullOrWhiteSpace(resourcePathPattern)) throw new InvalidOperationException(\"TableKit 运行时地址模板为空。\");")
-            .AppendLine("            object tables = await sLoader.LoadAsync(resourcePathPattern, TablesTypeName).ConfigureAwait(false);")
-            .AppendLine("            return tables as " + managerTypeName + " ?? throw new InvalidOperationException(\"TableKit loader 返回的类型与 Luban manager 不匹配。\");")
+            .AppendLine("            " + managerTypeName + " tables = await sLoader.LoadAsync<" + managerTypeName + ">(resourcePathPattern, ResourceLoadMode);")
+            .AppendLine("            return tables ?? throw new InvalidOperationException(\"TableKit loader 返回了空表管理器。\");")
             .AppendLine("        }")
             .AppendLine();
     }

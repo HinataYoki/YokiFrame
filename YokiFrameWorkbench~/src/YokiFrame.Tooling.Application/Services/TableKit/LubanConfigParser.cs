@@ -55,8 +55,6 @@ public sealed class LubanConfigParser
             GenerateExternalTypeUtil = options.GenerateExternalTypeUtil,
             UseAssemblyDefinition = options.UseAssemblyDefinition,
             AssemblyName = assemblyName,
-            UseAsyncLoading = options.UseAsyncLoading,
-            UseRawResourceLoading = options.UseRawResourceLoading,
             ExternalTypeMappings = externalTypeMappings
         };
     }
