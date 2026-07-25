@@ -51,7 +51,8 @@
                       Grid.Column="2"
                       Command="{CompiledBinding BrowseLubanExecutableCommand}"
                       Classes="secondary compact-action"
-                      AutomationProperties.Name="选择 Luban 工具目录">
+                      ToolTip.Tip="选择 Luban.dll"
+                      AutomationProperties.Name="选择 Luban.dll">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
             </Grid>

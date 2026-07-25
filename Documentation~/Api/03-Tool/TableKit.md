@@ -18,7 +18,7 @@ Workbench Luban 验证/生成页与跨宿主直接代码生成已实现；Kit In
 
 ## 快速上手
 
-1. 打开 Workbench 的 TableKit 页面，确认 `luban.conf`、Luban 工具路径、代码输出目录和数据输出目录。
+1. 打开 Workbench 的 TableKit 页面，确认 `luban.conf`、实际 Luban.dll 文件、代码输出目录和数据输出目录。Luban.dll 旁的按钮会打开仅选择该 DLL 的原生文件选择器。
 2. 执行验证，检查实际 `topModule.manager`、代码目标、数据目标和数据扩展名。
 3. 执行生成。代码输出字段表示 TableKit 根目录；Luban 生成代码写入 `<TableKitRoot>/Luban`，门面、加载契约、外部 helper 和用户扩展留在父目录。
 4. Unity 生成可选 `<AssemblyName>.asmdef`；Godot .NET 生成 `<AssemblyName>.csproj` 并由主项目通过 `ProjectReference` 接入。

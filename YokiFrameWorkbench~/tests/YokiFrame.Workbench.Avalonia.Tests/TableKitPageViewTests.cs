@@ -102,18 +102,18 @@ public sealed class TableKitPageViewTests
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
     }
-    /// <summary>验证目录按钮从字段原路径打开，并将新选择折叠为项目相对路径。</summary>
+    /// <summary>验证 Luban.dll 文件选择器从字段原目录打开，并将选择折叠为项目相对路径。</summary>
     [Fact]
-    public async Task FolderPickerStartsFromConfiguredPath()
+    public async Task LubanFilePickerStartsFromConfiguredPath()
     {
         string root = CreateConfiguredProject();
         try
         {
-            string selected = Path.Combine(root, "Luban", "Selected");
-            Directory.CreateDirectory(selected);
-            File.WriteAllText(Path.Combine(selected, "Luban.dll"), string.Empty);
-            RecordingFolderPicker picker = new() { SelectedPath = selected };
-            TableKitPageViewModel viewModel = new(root, new TableKitApplicationService(), folderPicker: picker);
+            string selected = Path.Combine(root, "Luban", "Selected", "Luban.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(selected)!);
+            File.WriteAllText(selected, string.Empty);
+            RecordingLubanFilePicker picker = new() { SelectedPath = selected };
+            TableKitPageViewModel viewModel = new(root, new TableKitApplicationService(), lubanFilePicker: picker);
 
             await viewModel.BrowseLubanExecutableCommand.ExecuteAsync();
 
@@ -483,6 +483,30 @@ public sealed class TableKitPageViewTests
         /// <param name="suggestedPath">建议起始目录。</param>
         /// <returns>预设目录。</returns>
         public Task<string?> PickFolderAsync(
+            string title,
+            CancellationToken cancellationToken = default,
+            string? suggestedPath = null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastSuggestedPath = suggestedPath;
+            return Task.FromResult(SelectedPath);
+        }
+    }
+
+    /// <summary>记录 Luban.dll 文件选择器调用参数，并返回预设文件。</summary>
+    private sealed class RecordingLubanFilePicker : ITableKitLubanFilePicker
+    {
+        /// <summary>下一次选择器调用返回的文件。</summary>
+        public string? SelectedPath { get; init; }
+        /// <summary>最近一次选择器收到的建议起始目录。</summary>
+        public string? LastSuggestedPath { get; private set; }
+
+        /// <summary>记录建议目录并返回预设 Luban.dll 文件。</summary>
+        /// <param name="title">选择器标题。</param>
+        /// <param name="cancellationToken">取消令牌。</param>
+        /// <param name="suggestedPath">建议起始目录。</param>
+        /// <returns>预设文件路径。</returns>
+        public Task<string?> PickLubanDllAsync(
             string title,
             CancellationToken cancellationToken = default,
             string? suggestedPath = null)

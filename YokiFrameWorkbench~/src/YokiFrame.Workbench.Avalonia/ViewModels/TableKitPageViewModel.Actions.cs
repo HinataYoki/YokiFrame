@@ -179,14 +179,21 @@ public sealed partial class TableKitPageViewModel
         }
     });
 
-    /// <summary>通过目录选择器定位 Luban.dll 所在目录。</summary>
+    /// <summary>通过文件选择器设置实际 Luban.dll 路径。</summary>
     private async Task BrowseLubanExecutableAsync()
     {
-        await PickFolderAsync("选择 Luban 工具目录", LubanExecutablePath, true, path =>
+        if (mLubanFilePicker == null)
         {
-            string candidate = Path.Combine(path, "Luban.dll");
-            LubanExecutablePath = File.Exists(ResolveInputPath(candidate)) ? ToProjectRelativePath(candidate) : path;
-        });
+            StatusDetailText = "当前窗口没有可用的 Luban.dll 文件选择器。";
+            return;
+        }
+
+        string suggested = TableKitPathUtilities.FindPickerStartDirectory(mProjectRoot, LubanExecutablePath, true);
+        string? selected = await mLubanFilePicker.PickLubanDllAsync("选择 Luban.dll", suggestedPath: suggested);
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            LubanExecutablePath = ToProjectRelativePath(selected);
+        }
     }
 
     /// <summary>选择正式数据输出目录。</summary>

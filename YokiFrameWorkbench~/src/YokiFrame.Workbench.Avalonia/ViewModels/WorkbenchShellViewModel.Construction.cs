@@ -161,6 +161,7 @@ public sealed partial class WorkbenchShellViewModel
         IInstallerFolderPicker? saveKitFolderPicker = null,
         Func<string, Task>? saveKitOpenDirectoryAsync = null,
         TableKitApplicationService? tableKitApplicationService = null,
+        ITableKitLubanFilePicker? tableKitLubanFilePicker = null,
         Func<WorkbenchUIKitEditorAction, WorkbenchUIKitPanelGenerationRequest?, CancellationToken, Task<WorkbenchUIKitEditorResult>>? uikitEditorActionAsync = null,
         UIKitEditorSettingsService? uikitEditorSettingsService = null)
         : this(
@@ -171,7 +172,7 @@ public sealed partial class WorkbenchShellViewModel
             clearPoolKitHistoryAsync, openPoolKitCodeLocationAsync, getResKitResourceDetailAsync, setResKitTrackingAsync, clearResKitHistoryAsync,
             openResKitCodeLocationAsync, setActionKitStackTraceAsync, clearActionKitStackTraceAsync, scanAudioIndexAsync,
             generateAudioIndexAsync, loadAudioIndexSettings, saveAudioIndexSettingsAsync, saveKitSettingsService,
-            saveKitFolderPicker, saveKitOpenDirectoryAsync, tableKitApplicationService, false,
+            saveKitFolderPicker, saveKitOpenDirectoryAsync, tableKitApplicationService, tableKitLubanFilePicker, false,
             uikitEditorActionAsync, uikitEditorSettingsService)
     {
     }
@@ -206,6 +207,7 @@ public sealed partial class WorkbenchShellViewModel
         IInstallerFolderPicker? saveKitFolderPicker,
         Func<string, Task>? saveKitOpenDirectoryAsync,
         TableKitApplicationService? tableKitApplicationService,
+        ITableKitLubanFilePicker? tableKitLubanFilePicker,
         bool _saveKitConstructorMarker = false,
         Func<WorkbenchUIKitEditorAction, WorkbenchUIKitPanelGenerationRequest?, CancellationToken, Task<WorkbenchUIKitEditorResult>>? uikitEditorActionAsync = null,
         UIKitEditorSettingsService? uikitEditorSettingsService = null)
@@ -256,7 +258,8 @@ public sealed partial class WorkbenchShellViewModel
             projectRoot,
             tableKitApplicationService ?? new TableKitApplicationService(),
             copyTextAsync,
-            saveKitFolderPicker);
+            saveKitFolderPicker,
+            tableKitLubanFilePicker);
         LocalizationKitPage = new LocalizationKitPageViewModel(
             projectRoot,
             new YokiFrame.Tooling.Application.Services.LocalizationKit.LocalizationKitApplicationService(),

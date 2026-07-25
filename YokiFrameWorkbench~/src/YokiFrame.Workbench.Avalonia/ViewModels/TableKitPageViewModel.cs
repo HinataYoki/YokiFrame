@@ -15,6 +15,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     private readonly TableKitResourceLocationResolver mResourceLocationResolver = new();
     private readonly Func<string, Task>? mCopyTextAsync;
     private readonly IInstallerFolderPicker? mFolderPicker;
+    private readonly ITableKitLubanFilePicker? mLubanFilePicker;
     private readonly TableKitOptions mDefaultOptions;
     private string mConfigPath = string.Empty;
     private string mLubanExecutablePath = string.Empty;
@@ -54,22 +55,26 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     private string mLoaderSummary = string.Empty;
 
     /// <summary>创建绑定当前工作目录的 TableKit 页面。</summary>
-    public TableKitPageViewModel() : this(Directory.GetCurrentDirectory(), new TableKitApplicationService(), null, null) { }
+    public TableKitPageViewModel() : this(Directory.GetCurrentDirectory(), new TableKitApplicationService(), null, null, null) { }
 
     /// <summary>创建绑定指定项目根的 TableKit 页面。</summary>
     /// <param name="projectRoot">当前宿主项目根。</param>
     /// <param name="service">TableKit Application 用例。</param>
     /// <param name="copyTextAsync">可选的系统剪贴板回调。</param>
+    /// <param name="folderPicker">可选的宿主目录选择器。</param>
+    /// <param name="lubanFilePicker">可选的 Luban.dll 文件选择器。</param>
     public TableKitPageViewModel(
         string projectRoot,
         TableKitApplicationService service,
         Func<string, Task>? copyTextAsync = null,
-        IInstallerFolderPicker? folderPicker = null)
+        IInstallerFolderPicker? folderPicker = null,
+        ITableKitLubanFilePicker? lubanFilePicker = null)
     {
         mProjectRoot = Path.GetFullPath(string.IsNullOrWhiteSpace(projectRoot) ? Directory.GetCurrentDirectory() : projectRoot);
         mService = service ?? throw new ArgumentNullException(nameof(service));
         mCopyTextAsync = copyTextAsync;
         mFolderPicker = folderPicker;
+        mLubanFilePicker = lubanFilePicker;
         mDefaultOptions = CreateDefaultOptions();
         TargetOptions = new ObservableCollection<string>(new[] { "client", "server", "all" });
         CodeTargetOptions = new ObservableCollection<string>(new[] { "cs-bin", "cs-simple-json", "cs-dotnet-json", "cs-newtonsoft-json" });
@@ -343,7 +348,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     public ICommand ClearConsoleCommand { get; }
     /// <summary>选择 Luban 工作目录。</summary>
     public AsyncRelayCommand BrowseLubanWorkDirCommand { get; }
-    /// <summary>选择 Luban 工具所在目录并尝试定位 Luban.dll。</summary>
+    /// <summary>选择实际 Luban.dll 文件。</summary>
     public AsyncRelayCommand BrowseLubanExecutableCommand { get; }
     /// <summary>选择数据输出目录。</summary>
     public AsyncRelayCommand BrowseOutputDataCommand { get; }

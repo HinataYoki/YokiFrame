@@ -45,6 +45,7 @@ public sealed partial class WorkbenchWindow
                     excludeEditor,
                     cancellationToken);
         var folderPicker = new AvaloniaInstallerFolderPicker(() => StorageProvider);
+        var tableKitLubanFilePicker = new AvaloniaTableKitLubanFilePicker(() => StorageProvider);
         var viewModel = new WorkbenchShellViewModel(
             QueueDashboardRefresh,
             ChangeEngine,
@@ -85,6 +86,7 @@ public sealed partial class WorkbenchWindow
             string.IsNullOrWhiteSpace(projectRoot)
                 ? null
                 : new TableKitApplicationService(),
+            tableKitLubanFilePicker,
             ExecuteUIKitEditorActionAsync,
             string.IsNullOrWhiteSpace(projectRoot)
                 ? null
