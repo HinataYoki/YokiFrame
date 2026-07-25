@@ -39,6 +39,7 @@ public sealed class WorkbenchShellChromeLayoutTests
         Assert.Contains("StrokeJoin=\"Round\"", xaml);
         Assert.Contains("Data=\"{StaticResource Icon.Sun}\"", xaml);
         Assert.Contains("Data=\"{StaticResource Icon.Moon}\"", xaml);
+        Assert.Contains("Data=\"{StaticResource Icon.Download}\"", xaml);
         Assert.Contains("Data=\"{StaticResource Icon.Maximize}\"", xaml);
         Assert.Contains("Data=\"{StaticResource Icon.Close}\"", xaml);
     }
@@ -68,7 +69,7 @@ public sealed class WorkbenchShellChromeLayoutTests
         var titleBar = ReadAppTitleBarXaml();
         var shell = ReadWorkbenchShellViewXaml();
 
-        Assert.Contains("ColumnDefinitions=\"224,*,Auto,Auto,Auto,Auto,Auto\"", titleBar);
+        Assert.Contains("ColumnDefinitions=\"224,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto\"", titleBar);
         Assert.Contains("Margin=\"16,8,18,8\"", titleBar);
         Assert.DoesNotContain("x:Name=\"BrandCard\"", titleBar);
         Assert.True(CountOccurrences(titleBar, "VerticalAlignment=\"Center\"") >= 5);

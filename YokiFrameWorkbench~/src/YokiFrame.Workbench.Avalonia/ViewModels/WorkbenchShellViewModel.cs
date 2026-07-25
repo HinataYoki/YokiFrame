@@ -191,21 +191,6 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
         UpdateEngineSelector(state);
         RefreshCommandCatalogForSelectedEngine(state);
         RefreshWorkbenchLayout();
-        EventKitPage.SetProjectRoot(state.ProjectRoot);
-        EventKitPage.ApplyPeriodicState(state.EventKitState);
-        FsmKitPage.ApplyPeriodicState(state.FsmKitState);
-        LogKitPage.ApplyPeriodicState(state.LogKitState);
-        PoolKitPage.ApplyPeriodicState(state.PoolKitState);
-        ResKitPage.ApplyPeriodicState(state.ResKitState);
-        ActionKitPage.ApplyPeriodicState(state.ActionKitState);
-        AudioKitPage.SetProjectRoot(state.ProjectRoot);
-        AudioKitPage.ApplyPeriodicState(state.AudioKitState);
-        SpatialKitPage.ApplyPeriodicState(state.SpatialKitState);
-        UIKitPage.SetEditorEngine(state.SelectedEngineId);
-        UIKitPage.ApplyPeriodicState(state.UIKitState);
-        SaveKitPage.SetEngine(state.SelectedEngineId);
-        SaveKitPage.ApplyPeriodicState(state.SaveKitState);
-        LocalizationKitPage.SetProjectRoot(state.ProjectRoot);
         UpdateSkillProjectRoot(state.ProjectRoot);
         UpdateCurrentPage();
     }

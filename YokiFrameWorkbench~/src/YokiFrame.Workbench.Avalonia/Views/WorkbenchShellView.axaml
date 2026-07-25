@@ -65,25 +65,6 @@
                           Orientation="Horizontal"
                           Spacing="8"
                           VerticalAlignment="Center">
-                <TextBlock Text="{CompiledBinding RuntimeUpdate.StatusText}"
-                           IsVisible="{CompiledBinding RuntimeUpdate.IsStatusVisible}"
-                           Classes="muted"
-                           FontSize="{DynamicResource FontSize.Sm}"
-                           MaxWidth="220"
-                           TextTrimming="CharacterEllipsis"
-                           ToolTip.Tip="{CompiledBinding RuntimeUpdate.StatusText}"
-                           AutomationProperties.LiveSetting="Polite"
-                           VerticalAlignment="Center" />
-                <Button Command="{CompiledBinding RuntimeUpdate.RebuildCommand}"
-                        IsVisible="{CompiledBinding RuntimeUpdate.IsVisible}"
-                        Classes="primary compact-action"
-                        ToolTip.Tip="使用当前源码构建新 Workbench Runtime"
-                        AutomationProperties.Name="重新编译 Workbench 新版">
-                  <StackPanel Orientation="Horizontal" Spacing="5">
-                    <PathIcon Data="{StaticResource Icon.Download}" Width="13" Height="13" />
-                    <TextBlock Text="{CompiledBinding RuntimeUpdate.ButtonText}" />
-                  </StackPanel>
-                </Button>
                 <StackPanel IsVisible="{CompiledBinding IsDocumentationPage}"
                             Orientation="Horizontal"
                             Spacing="6"
@@ -640,57 +621,50 @@
             </ScrollViewer>
           </Grid>
 
-          <Grid IsVisible="{CompiledBinding IsFsmKitPage}">
-            <pages:FsmKitPageView DataContext="{CompiledBinding FsmKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsEventKitPage}">
-            <pages:EventKitPageView DataContext="{CompiledBinding EventKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsLogKitPage}">
-            <pages:LogKitPageView DataContext="{CompiledBinding LogKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsPoolKitPage}">
-            <pages:PoolKitPageView DataContext="{CompiledBinding PoolKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsResKitPage}">
-            <pages:ResKitPageView DataContext="{CompiledBinding ResKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsActionKitPage}">
-            <pages:ActionKitPageView DataContext="{CompiledBinding ActionKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsAudioKitPage}">
-            <pages:AudioKitPageView DataContext="{CompiledBinding AudioKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsSpatialKitPage}">
-            <pages:SpatialKitPageView DataContext="{CompiledBinding SpatialKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsUIKitPage}">
-            <pages:UIKitPageView DataContext="{CompiledBinding UIKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsTableKitPage}">
-            <pages:TableKitPageView DataContext="{CompiledBinding TableKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsLocalizationKitPage}">
-            <pages:LocalizationKitPageView DataContext="{CompiledBinding LocalizationKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsSaveKitPage}">
-            <pages:SaveKitPageView DataContext="{CompiledBinding SaveKitPage}" />
-          </Grid>
-
-          <Grid IsVisible="{CompiledBinding IsDocumentationPage}">
-            <pages:DocumentationPageView DataContext="{CompiledBinding DocumentationPage}" />
-          </Grid>
+          <ContentControl IsVisible="{CompiledBinding IsWorkspacePage}"
+                          Content="{CompiledBinding ActiveWorkspacePage}">
+            <ContentControl.DataTemplates>
+              <DataTemplate DataType="{x:Type vm:EventKitPageViewModel}" x:DataType="vm:EventKitPageViewModel">
+                <pages:EventKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:FsmKitPageViewModel}" x:DataType="vm:FsmKitPageViewModel">
+                <pages:FsmKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:LogKitPageViewModel}" x:DataType="vm:LogKitPageViewModel">
+                <pages:LogKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:PoolKitPageViewModel}" x:DataType="vm:PoolKitPageViewModel">
+                <pages:PoolKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:ResKitPageViewModel}" x:DataType="vm:ResKitPageViewModel">
+                <pages:ResKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:ActionKitPageViewModel}" x:DataType="vm:ActionKitPageViewModel">
+                <pages:ActionKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:AudioKitPageViewModel}" x:DataType="vm:AudioKitPageViewModel">
+                <pages:AudioKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:SpatialKitPageViewModel}" x:DataType="vm:SpatialKitPageViewModel">
+                <pages:SpatialKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:UIKitPageViewModel}" x:DataType="vm:UIKitPageViewModel">
+                <pages:UIKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:TableKitPageViewModel}" x:DataType="vm:TableKitPageViewModel">
+                <pages:TableKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:LocalizationKitPageViewModel}" x:DataType="vm:LocalizationKitPageViewModel">
+                <pages:LocalizationKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:SaveKitPageViewModel}" x:DataType="vm:SaveKitPageViewModel">
+                <pages:SaveKitPageView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type vm:DocumentationPageViewModel}" x:DataType="vm:DocumentationPageViewModel">
+                <pages:DocumentationPageView />
+              </DataTemplate>
+            </ContentControl.DataTemplates>
+          </ContentControl>
 
           </Grid>
         </Grid>

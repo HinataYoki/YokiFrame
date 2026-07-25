@@ -188,6 +188,36 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证 Ctrl+E bootstrap 失败能识别 .NET SDK 与 Native AOT 工具链缺失，并提供对应菜单入口。
+        /// </summary>
+        [Test]
+        public void RuntimeBootstrapFailureIdentifiesMissingBuildEnvironment()
+        {
+            Type launcherType = GetLauncherType();
+            MethodInfo createMessage = launcherType.GetMethod(
+                "CreateRuntimeBootstrapFailureMessage",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            string environmentSource = ReadLauncherPartialSource("YokiFrameWorkbenchLauncher.BootstrapEnvironment.cs");
+
+            Assert.IsNotNull(createMessage);
+            StringAssert.Contains("YokiFrame/Workbench/打开缺失的编译环境", environmentSource);
+            StringAssert.Contains("Application.OpenURL", environmentSource);
+            StringAssert.Contains("DOTNET_10_SDK_DOWNLOAD_URL", environmentSource);
+            StringAssert.Contains("VISUAL_STUDIO_BUILD_TOOLS_DOWNLOAD_URL", environmentSource);
+
+            string dotnetMessage = (string)createMessage.Invoke(
+                null,
+                new object[] { "NETSDK1045: The current .NET SDK does not support targeting .NET 10.0." });
+            string nativeAotMessage = (string)createMessage.Invoke(
+                null,
+                new object[] { "Platform linker not found. Ensure that Visual Studio 2022 is installed." });
+
+            StringAssert.Contains("缺少 .NET 10 SDK", dotnetMessage);
+            StringAssert.Contains("缺少 Visual Studio 2022 C++ Build Tools", nativeAotMessage);
+            StringAssert.Contains("再次按 Ctrl+E", dotnetMessage);
+        }
+
+        /// <summary>
         /// 读取 Ctrl+E Runtime bootstrap 实现，验证后台编译不会丢失 Editor 进度反馈。
         /// </summary>
         /// <returns>Runtime 缓存启动器源码文本。</returns>

@@ -5,7 +5,7 @@ using YokiFrame.Workbench.Avalonia.Services;
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>
-/// 承载 Workbench 后台新版检测、显式重新编译和窗口生命周期取消状态。
+/// 承载 Workbench 后台新版检测、可用新版构建和窗口生命周期取消状态。
 /// </summary>
 public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
 {
@@ -48,7 +48,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
         mRebuildCommand = new AsyncRelayCommand(RebuildAsync, CanRebuild);
     }
 
-    /// <summary>获取显式构建新版 Runtime 的命令。</summary>
+    /// <summary>获取构建可用新版 Runtime 的命令。</summary>
     public ICommand RebuildCommand => mRebuildCommand;
 
     /// <summary>获取是否显示新版构建入口。</summary>
@@ -57,8 +57,11 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
     /// <summary>获取是否显示更新结果文本。</summary>
     public bool IsStatusVisible => !string.IsNullOrWhiteSpace(mStatusText);
 
+    /// <summary>获取当前是否正在显式构建新版 Runtime。</summary>
+    public bool IsBuilding => mIsBuilding;
+
     /// <summary>获取当前构建按钮文本。</summary>
-    public string ButtonText => mIsBuilding ? "正在编译..." : "重新编译新版";
+    public string ButtonText => mIsBuilding ? "正在编译..." : "有新版可编译";
 
     /// <summary>获取新版检测或构建结果。</summary>
     public string StatusText
@@ -132,7 +135,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// 执行用户显式触发的 Runtime 重新编译，成功后提示重新打开 Workbench 生效。
+    /// 执行用户显式触发的可用新版构建，成功后提示重新打开 Workbench 生效。
     /// </summary>
     private async Task RebuildAsync()
     {
@@ -167,7 +170,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>判断当前是否允许用户重新编译新版。</summary>
+    /// <summary>判断当前是否允许用户构建可用新版。</summary>
     private bool CanRebuild()
     {
         return !mDisposed && mIsUpdateAvailable;
@@ -196,6 +199,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
 
         mIsBuilding = value;
         OnPropertyChanged(nameof(IsVisible));
+        OnPropertyChanged(nameof(IsBuilding));
         OnPropertyChanged(nameof(ButtonText));
     }
 }

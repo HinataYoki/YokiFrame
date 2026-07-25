@@ -111,7 +111,7 @@ namespace YokiFrame
                     operation);
                 if (!bootstrapResult.Succeeded)
                 {
-                    Debug.LogError(LOG_PREFIX + "Project Runtime bootstrap failed. " + bootstrapResult.Output);
+                    Debug.LogError(LOG_PREFIX + CreateRuntimeBootstrapFailureMessage(bootstrapResult.Output));
                     return;
                 }
 

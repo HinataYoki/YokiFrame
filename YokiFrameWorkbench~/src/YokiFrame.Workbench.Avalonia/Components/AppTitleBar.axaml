@@ -5,13 +5,52 @@
              xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
              x:Class="YokiFrame.Workbench.Avalonia.Components.AppTitleBar"
              x:DataType="vm:WorkbenchShellViewModel">
-  <Grid ColumnDefinitions="224,*,Auto,Auto,Auto,Auto,Auto"
+  <Grid ColumnDefinitions="224,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
         ColumnSpacing="8"
         Margin="16,8,18,8">
     <Border Grid.Column="1"
             Background="Transparent"
             chrome:WindowDecorationProperties.ElementRole="TitleBar" />
-    <Border Grid.Column="2"
+    <TextBlock Grid.Column="2"
+               Text="{CompiledBinding RuntimeUpdate.StatusText}"
+               IsVisible="{CompiledBinding RuntimeUpdate.IsStatusVisible}"
+               Classes="muted"
+               FontSize="{DynamicResource FontSize.Sm}"
+               MaxWidth="220"
+               TextTrimming="CharacterEllipsis"
+               ToolTip.Tip="{CompiledBinding RuntimeUpdate.StatusText}"
+               AutomationProperties.LiveSetting="Polite"
+               VerticalAlignment="Center"
+               chrome:WindowDecorationProperties.ElementRole="User" />
+    <Grid Grid.Column="3"
+          RowDefinitions="Auto,Auto"
+          VerticalAlignment="Center"
+          chrome:WindowDecorationProperties.ElementRole="User">
+      <Button Command="{CompiledBinding RuntimeUpdate.RebuildCommand}"
+              IsVisible="{CompiledBinding RuntimeUpdate.IsVisible}"
+              Classes="primary compact-action"
+              ToolTip.Tip="检测到新版源码，点击构建新的 Workbench Runtime"
+              AutomationProperties.Name="有新版可编译">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <shapes:Path Data="{StaticResource Icon.Download}"
+                       Width="13"
+                       Height="13"
+                       Fill="Transparent"
+                       Stroke="White"
+                       StrokeThickness="1.75"
+                       StrokeLineCap="Round"
+                       StrokeJoin="Round"
+                       Stretch="Uniform" />
+          <TextBlock Text="{CompiledBinding RuntimeUpdate.ButtonText}" />
+        </StackPanel>
+      </Button>
+      <ProgressBar Grid.Row="1"
+                   Classes="runtime-update-progress"
+                   Margin="0,3,0,0"
+                   IsVisible="{CompiledBinding RuntimeUpdate.IsBuilding}"
+                   IsIndeterminate="True" />
+    </Grid>
+    <Border Grid.Column="4"
             Classes="badge"
             VerticalAlignment="Center"
             chrome:WindowDecorationProperties.ElementRole="User">
@@ -20,7 +59,7 @@
                  FontSize="{DynamicResource FontSize.Sm}"
                  FontWeight="SemiBold" />
     </Border>
-    <Button Grid.Column="3"
+    <Button Grid.Column="5"
             Classes="secondary icon-button chrome-button"
             Click="OnToggleThemeButtonClick"
             ToolTip.Tip="切换主题"
@@ -51,14 +90,14 @@
                      IsVisible="False" />
       </Grid>
     </Button>
-    <ComboBox Grid.Column="4"
+    <ComboBox Grid.Column="6"
               Classes="titlebar-select"
               SelectedItem="{CompiledBinding CultureText}"
               ItemsSource="{CompiledBinding CultureOptions}"
               Width="92"
               VerticalAlignment="Center"
               chrome:WindowDecorationProperties.ElementRole="User" />
-    <Button Grid.Column="5"
+    <Button Grid.Column="7"
             Classes="secondary icon-button chrome-button"
             Click="OnMaximizeWindowButtonClick"
             ToolTip.Tip="最大化"
@@ -74,7 +113,7 @@
                    StrokeJoin="Round"
                    Stretch="Uniform" />
     </Button>
-    <Button Grid.Column="6"
+    <Button Grid.Column="8"
             Classes="secondary icon-button chrome-button close-button"
             Click="OnCloseWindowButtonClick"
             ToolTip.Tip="关闭"

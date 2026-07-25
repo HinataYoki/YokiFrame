@@ -146,7 +146,9 @@ public sealed partial class WorkbenchWindow : Window
         mParentWindowHandle = parentWindowHandle;
         mWindowStateStore = windowStateStore;
         mActivationCoordinator = activationCoordinator;
+        WorkbenchStartupTrace.Mark("window.before-shell-view-model");
         mShellViewModel = CreateShellViewModel(projectRoot, sourcePackageRoot);
+        WorkbenchStartupTrace.Mark("window.after-shell-view-model");
         mShellViewModel.FsmKitPage.SelectedInstanceIdChanged += OnFsmTelemetrySelectionChanged;
         mLifecycleMonitor = string.IsNullOrWhiteSpace(projectRoot)
             ? null
@@ -169,7 +171,9 @@ public sealed partial class WorkbenchWindow : Window
         ExtendClientAreaTitleBarHeightHint = 48;
         BrandIconLoader.ApplyTo(this);
         ApplySavedPage();
+        WorkbenchStartupTrace.Mark("window.before-shell-view");
         Content = new WorkbenchShellView(mShellViewModel);
+        WorkbenchStartupTrace.Mark("window.after-shell-view");
         ApplySavedWindowPlacement();
         mRefreshTimer.Interval = FileRefreshInterval;
         mRefreshTimer.Tick += OnRefreshTimerTick;

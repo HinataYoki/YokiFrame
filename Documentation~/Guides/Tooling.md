@@ -18,7 +18,7 @@ Workbench 适合交互式查看 Kit、文档、项目诊断和受控工具操作
 
 在 Unity 中通过 `YokiFrame/Workbench/Open` 或 `Ctrl+E` 启动；在 Godot 中通过 `Project > Tools > YokiFrame > Open Workbench` 或 `Ctrl+E` 启动。若 Godot 的系统快捷键冲突，使用 `Ctrl+Alt+E`。
 
-Git URL 与源码包不携带任何 Workbench、Installer 或 CLI 二进制。Unity 的 `Ctrl+E` 会先激活同一项目中已有的 Workbench，不为该次激活检查或构建 Runtime。只有没有可激活实例，且项目缓存缺失或 `current.json` 指向的 Runtime 不可用时，才会在项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/` 构建当前平台 Runtime；Windows 固定生成 `win-x64-aot`。Workbench 打开后会在后台计算源码指纹；发现新版时，页头显示“重新编译新版”按钮，只有用户点击后才启动构建。构建成功后写入新的 `current.json` 并清理旧 fingerprint 目录；仍被旧 Workbench 进程占用的目录会保留到后续启动再清理。窗口关闭会取消后台检查或构建，避免任务继续访问已销毁的 UI 或进程。
+Git URL 与源码包不携带任何 Workbench、Installer 或 CLI 二进制。Unity 的 `Ctrl+E` 会先激活同一项目中已有的 Workbench，不为该次激活检查或构建 Runtime。只有没有可激活实例，且项目缓存缺失或 `current.json` 指向的 Runtime 不可用时，才会在项目 `.yokiframe/runtime/com.hinatayoki.yokiframe/<sourceFingerprint>/` 构建当前平台 Runtime；Windows 固定生成 `win-x64-aot`。首次 bootstrap 失败时，Unity Console 会保留原始构建日志；如果识别到缺少 `.NET 10 SDK` 或 Windows Native AOT 所需的 `Visual Studio 2022 C++ Build Tools`，会明确提示缺失项。随后可从 `YokiFrame/Workbench/打开缺失的编译环境` 打开对应官方下载页，安装完成后再次按 `Ctrl+E`。Workbench 打开后会在后台计算源码指纹；发现新版时，顶栏显示“有新版可编译”按钮，只有用户点击后才启动构建。构建成功后写入新的 `current.json` 并清理旧 fingerprint 目录；仍被旧 Workbench 进程占用的目录会保留到后续启动再清理。窗口关闭会取消后台检查或构建，避免任务继续访问已销毁的 UI 或进程。
 
 Godot 用户需要先从源码包显式运行安装入口。它会构建项目 `.yokiframe` Runtime 缓存，并直接打开与当前源码版本匹配的新 Installer；不需要手动查找缓存中的 GUI 或 CLI。Windows 示例：
 

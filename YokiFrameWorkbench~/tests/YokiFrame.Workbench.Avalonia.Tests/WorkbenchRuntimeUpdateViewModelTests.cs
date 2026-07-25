@@ -9,6 +9,20 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class WorkbenchRuntimeUpdateViewModelTests
 {
     /// <summary>
+    /// 验证构建入口明确表示检测到可构建新版，避免误导为无条件重新编译。
+    /// </summary>
+    [Fact]
+    public void ButtonTextDescribesAvailableNewVersion()
+    {
+        using WorkbenchRuntimeUpdateViewModel viewModel = new(
+            Environment.CurrentDirectory,
+            Environment.CurrentDirectory,
+            new PendingUpdateService());
+
+        Assert.Equal("有新版可编译", viewModel.ButtonText);
+    }
+
+    /// <summary>
     /// 验证 Workbench 关闭时取消正在运行的后台检测，且取消结果不再更新 UI 状态。
     /// </summary>
     [Fact]

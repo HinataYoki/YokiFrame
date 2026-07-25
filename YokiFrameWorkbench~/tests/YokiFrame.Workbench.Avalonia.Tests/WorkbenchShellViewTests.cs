@@ -169,23 +169,32 @@ public sealed partial class WorkbenchShellViewTests
     }
 
     /// <summary>
-    /// 验证标题栏右侧按钮顺序为状态、主题切换、语言、最大化、关闭。
+    /// 验证新版 Runtime 构建操作位于连接状态左侧，且不再随页面切换出现在紧凑标题栏。
     /// </summary>
     [Fact]
-    public void AppTitleBarKeepsRequestedToolbarOrder()
+    public void AppTitleBarKeepsRuntimeUpdateActionBeforeConnectionBadge()
     {
-        var xaml = ReadAppTitleBarXaml();
-        var statusIndex = xaml.IndexOf("ConnectionBadgeText", StringComparison.Ordinal);
-        var themeIndex = xaml.IndexOf("OnToggleThemeButtonClick", StringComparison.Ordinal);
-        var languageIndex = xaml.IndexOf("CultureOptions", StringComparison.Ordinal);
-        var maximizeIndex = xaml.IndexOf("OnMaximizeWindowButtonClick", StringComparison.Ordinal);
-        var closeIndex = xaml.IndexOf("OnCloseWindowButtonClick", StringComparison.Ordinal);
+        var titleBarXaml = ReadAppTitleBarXaml();
+        var shellXaml = ReadWorkbenchShellViewXaml();
+        var runtimeStatusIndex = titleBarXaml.IndexOf("RuntimeUpdate.StatusText", StringComparison.Ordinal);
+        var rebuildIndex = titleBarXaml.IndexOf("RuntimeUpdate.RebuildCommand", StringComparison.Ordinal);
+        var connectionIndex = titleBarXaml.IndexOf("ConnectionBadgeText", StringComparison.Ordinal);
+        var themeIndex = titleBarXaml.IndexOf("OnToggleThemeButtonClick", StringComparison.Ordinal);
+        var languageIndex = titleBarXaml.IndexOf("CultureOptions", StringComparison.Ordinal);
+        var maximizeIndex = titleBarXaml.IndexOf("OnMaximizeWindowButtonClick", StringComparison.Ordinal);
+        var closeIndex = titleBarXaml.IndexOf("OnCloseWindowButtonClick", StringComparison.Ordinal);
 
-        Assert.True(statusIndex >= 0);
-        Assert.True(statusIndex < themeIndex);
+        Assert.True(runtimeStatusIndex >= 0);
+        Assert.True(runtimeStatusIndex < rebuildIndex);
+        Assert.True(rebuildIndex < connectionIndex);
+        Assert.True(connectionIndex < themeIndex);
         Assert.True(themeIndex < languageIndex);
         Assert.True(languageIndex < maximizeIndex);
         Assert.True(maximizeIndex < closeIndex);
+        Assert.Contains("Classes=\"runtime-update-progress\"", titleBarXaml);
+        Assert.Contains("RuntimeUpdate.IsBuilding", titleBarXaml);
+        Assert.DoesNotContain("RuntimeUpdate.StatusText", shellXaml);
+        Assert.DoesNotContain("RuntimeUpdate.RebuildCommand", shellXaml);
     }
 
     /// <summary>

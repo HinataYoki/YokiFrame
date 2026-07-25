@@ -1,3 +1,4 @@
+using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Workbench.Avalonia.Pages;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -17,6 +18,7 @@ public sealed partial class WorkbenchShellViewModel
     private string mCurrentPageTitle = sPageCatalog.DefaultModule.PageTitle;
     private string mCurrentPageDescription = sPageCatalog.DefaultModule.Description;
     private string mSelectedPage = DefaultPageName;
+    private object? mActiveWorkspacePage;
     private bool mIsOverviewPage = true;
     private bool mIsDetailPage;
     private bool mIsEventKitPage;
@@ -32,6 +34,26 @@ public sealed partial class WorkbenchShellViewModel
     private bool mIsLocalizationKitPage;
     private bool mIsSaveKitPage;
     private bool mIsDocumentationPage;
+
+    /// <summary>
+    /// 获取当前专用工作台页面的数据上下文；总览和通用详情页返回空，使其不会创建隐藏的 Kit 视觉树。
+    /// </summary>
+    public object? ActiveWorkspacePage
+    {
+        get => mActiveWorkspacePage;
+        private set
+        {
+            if (SetProperty(ref mActiveWorkspacePage, value))
+            {
+                OnPropertyChanged(nameof(IsWorkspacePage));
+            }
+        }
+    }
+
+    /// <summary>
+    /// 获取当前页面是否使用延迟创建的 Kit 工作台视图。
+    /// </summary>
+    public bool IsWorkspacePage => ActiveWorkspacePage != null;
 
     /// <summary>
     /// 获取 Catalog 声明的稳定页面列表。
@@ -249,6 +271,8 @@ public sealed partial class WorkbenchShellViewModel
         IsLocalizationKitPage = module.Presentation == WorkbenchPagePresentation.LocalizationKit;
         IsSaveKitPage = module.Presentation == WorkbenchPagePresentation.SaveKit;
         IsDocumentationPage = module.Presentation == WorkbenchPagePresentation.Documentation;
+        ActiveWorkspacePage = ResolveActiveWorkspacePage(module.Presentation);
+        ApplyActiveWorkspaceState();
         if (IsDocumentationPage)
         {
             _ = DocumentationPage.EnsureLoadedAsync();
@@ -261,6 +285,113 @@ public sealed partial class WorkbenchShellViewModel
 
         EventKitPage.SetPageActive(IsEventKitPage);
         LogKitPage.SetPageActive(IsLogKitPage);
+    }
+
+    /// <summary>
+    /// 根据当前呈现类型返回唯一需要进入视觉树的 Kit 页面状态，避免首屏构造所有隐藏页面。
+    /// </summary>
+    /// <param name="presentation">当前 Catalog 模块的呈现类型。</param>
+    /// <returns>当前专用页的 ViewModel；非专用页返回空。</returns>
+    private object? ResolveActiveWorkspacePage(WorkbenchPagePresentation presentation)
+    {
+        return presentation switch
+        {
+            WorkbenchPagePresentation.EventKit => EventKitPage,
+            WorkbenchPagePresentation.FsmKit => FsmKitPage,
+            WorkbenchPagePresentation.LogKit => LogKitPage,
+            WorkbenchPagePresentation.PoolKit => PoolKitPage,
+            WorkbenchPagePresentation.ResKit => ResKitPage,
+            WorkbenchPagePresentation.ActionKit => ActionKitPage,
+            WorkbenchPagePresentation.AudioKit => AudioKitPage,
+            WorkbenchPagePresentation.SpatialKit => SpatialKitPage,
+            WorkbenchPagePresentation.UIKit => UIKitPage,
+            WorkbenchPagePresentation.TableKit => TableKitPage,
+            WorkbenchPagePresentation.LocalizationKit => LocalizationKitPage,
+            WorkbenchPagePresentation.SaveKit => SaveKitPage,
+            WorkbenchPagePresentation.Documentation => DocumentationPage,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// 仅把最近一次 Dashboard 投影到活动 Kit，后台页在下次切换时再接收同一份最新状态。
+    /// </summary>
+    private void ApplyActiveWorkspaceState()
+    {
+        if (mDashboardState == null)
+        {
+            return;
+        }
+
+        WorkbenchDashboardState state = mDashboardState;
+        if (IsEventKitPage)
+        {
+            EventKitPage.SetProjectRoot(state.ProjectRoot);
+            EventKitPage.ApplyPeriodicState(state.EventKitState);
+            return;
+        }
+
+        if (IsFsmKitPage)
+        {
+            FsmKitPage.ApplyPeriodicState(state.FsmKitState);
+            return;
+        }
+
+        if (IsLogKitPage)
+        {
+            LogKitPage.ApplyPeriodicState(state.LogKitState);
+            return;
+        }
+
+        if (IsPoolKitPage)
+        {
+            PoolKitPage.ApplyPeriodicState(state.PoolKitState);
+            return;
+        }
+
+        if (IsResKitPage)
+        {
+            ResKitPage.ApplyPeriodicState(state.ResKitState);
+            return;
+        }
+
+        if (IsActionKitPage)
+        {
+            ActionKitPage.ApplyPeriodicState(state.ActionKitState);
+            return;
+        }
+
+        if (IsAudioKitPage)
+        {
+            AudioKitPage.SetProjectRoot(state.ProjectRoot);
+            AudioKitPage.ApplyPeriodicState(state.AudioKitState);
+            return;
+        }
+
+        if (IsSpatialKitPage)
+        {
+            SpatialKitPage.ApplyPeriodicState(state.SpatialKitState);
+            return;
+        }
+
+        if (IsUIKitPage)
+        {
+            UIKitPage.SetEditorEngine(state.SelectedEngineId);
+            UIKitPage.ApplyPeriodicState(state.UIKitState);
+            return;
+        }
+
+        if (IsSaveKitPage)
+        {
+            SaveKitPage.SetEngine(state.SelectedEngineId);
+            SaveKitPage.ApplyPeriodicState(state.SaveKitState);
+            return;
+        }
+
+        if (IsLocalizationKitPage)
+        {
+            LocalizationKitPage.SetProjectRoot(state.ProjectRoot);
+        }
     }
 
     /// <summary>

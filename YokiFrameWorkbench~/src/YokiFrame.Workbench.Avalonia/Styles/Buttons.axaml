@@ -90,6 +90,12 @@
     <Setter Property="Padding" Value="8,4" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
+  <Style Selector="ProgressBar.runtime-update-progress">
+    <Setter Property="Height" Value="3" />
+    <Setter Property="MinHeight" Value="3" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
+  </Style>
   <Style Selector="Button:disabled">
     <Setter Property="Opacity" Value="0.65" />
     <Setter Property="Cursor" Value="Arrow" />

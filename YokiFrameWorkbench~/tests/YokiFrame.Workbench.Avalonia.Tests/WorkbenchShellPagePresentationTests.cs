@@ -21,12 +21,16 @@ public sealed class WorkbenchShellPagePresentationTests
         Assert.False(ReadBooleanProperty(viewModel, "IsDetailPage"));
         Assert.False(ReadBooleanProperty(viewModel, "IsFsmKitPage"));
         Assert.False(ReadBooleanProperty(viewModel, "IsDocumentationPage"));
+        Assert.False(ReadBooleanProperty(viewModel, "IsWorkspacePage"));
+        Assert.Null(viewModel.ActiveWorkspacePage);
 
         viewModel.SelectedPage = "FsmKit";
 
         Assert.False(ReadBooleanProperty(viewModel, "IsOverviewPage"));
         Assert.False(ReadBooleanProperty(viewModel, "IsDetailPage"));
         Assert.True(ReadBooleanProperty(viewModel, "IsFsmKitPage"));
+        Assert.True(ReadBooleanProperty(viewModel, "IsWorkspacePage"));
+        Assert.Same(viewModel.FsmKitPage, viewModel.ActiveWorkspacePage);
         Assert.Equal("FsmKit", viewModel.CurrentPageTitle);
         Assert.Equal("观察状态机实例、当前状态、转换历史与运行证据。", viewModel.CurrentPageDescription);
 
@@ -34,12 +38,14 @@ public sealed class WorkbenchShellPagePresentationTests
 
         Assert.True(ReadBooleanProperty(viewModel, "IsResKitPage"));
         Assert.False(ReadBooleanProperty(viewModel, "IsFsmKitPage"));
+        Assert.Same(viewModel.ResKitPage, viewModel.ActiveWorkspacePage);
         Assert.Equal("ResKit 资源工作台", viewModel.CurrentPageTitle);
 
         viewModel.SelectedPage = "Docs";
 
         Assert.True(ReadBooleanProperty(viewModel, "IsDocumentationPage"));
         Assert.False(ReadBooleanProperty(viewModel, "IsFsmKitPage"));
+        Assert.Same(viewModel.DocumentationPage, viewModel.ActiveWorkspacePage);
         Assert.Equal("文档", viewModel.CurrentPageTitle);
         Assert.Equal("浏览随 YokiFrame 包提供的离线文档与 API 参考。", viewModel.CurrentPageDescription);
 
@@ -59,7 +65,7 @@ public sealed class WorkbenchShellPagePresentationTests
     }
 
     /// <summary>
-    /// 验证 Shell XAML 为总览、通用详情和专用页面提供互斥绑定。
+    /// 验证 Shell XAML 为总览、通用详情和延迟创建的专用页面提供互斥绑定。
     /// </summary>
     [Fact]
     public void ShellXamlSeparatesGenericAndSpecializedContent()
@@ -69,13 +75,15 @@ public sealed class WorkbenchShellPagePresentationTests
         Assert.Contains("IsVisible=\"{CompiledBinding IsOverviewPage}\"", xaml);
         Assert.Contains("IsVisible=\"{CompiledBinding IsDetailPage}\"", xaml);
         Assert.DoesNotContain("IsArchitecturePage", xaml);
-        Assert.Contains("IsVisible=\"{CompiledBinding IsFsmKitPage}\"", xaml);
-        Assert.Contains("IsVisible=\"{CompiledBinding IsResKitPage}\"", xaml);
-        Assert.Contains("IsVisible=\"{CompiledBinding IsDocumentationPage}\"", xaml);
+        Assert.Contains("IsVisible=\"{CompiledBinding IsWorkspacePage}\"", xaml);
+        Assert.Contains("Content=\"{CompiledBinding ActiveWorkspacePage}\"", xaml);
+        Assert.Contains("<ContentControl.DataTemplates>", xaml);
         Assert.Contains("pages:FsmKitPageView", xaml);
         Assert.Contains("pages:ResKitPageView", xaml);
         Assert.DoesNotContain("pages:ArchitecturePageView", xaml);
         Assert.Contains("pages:DocumentationPageView", xaml);
+        Assert.DoesNotContain("<Grid IsVisible=\"{CompiledBinding IsFsmKitPage}\"", xaml);
+        Assert.DoesNotContain("<Grid IsVisible=\"{CompiledBinding IsDocumentationPage}\"", xaml);
         Assert.Contains("Text=\"{CompiledBinding CurrentPageTitle}\"", xaml);
         Assert.Contains("Text=\"{CompiledBinding CurrentPageDescription}\"", xaml);
         Assert.Equal(1, CountOccurrences(xaml, "Classes=\"page-header\""));

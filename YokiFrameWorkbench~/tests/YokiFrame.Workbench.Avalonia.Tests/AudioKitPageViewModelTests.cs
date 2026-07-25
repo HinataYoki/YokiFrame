@@ -49,7 +49,8 @@ public sealed class AudioKitPageViewModelTests
         Assert.Contains("扫描预览", xaml, StringComparison.Ordinal);
         Assert.Contains("生成索引", xaml, StringComparison.Ordinal);
         Assert.Contains("LostFocus=\"OnIndexSettingLostFocus\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsAudioKitPage", shell, StringComparison.Ordinal);
+        Assert.Contains("AudioKitPageViewModel", shell, StringComparison.Ordinal);
+        Assert.Contains("ActiveWorkspacePage", shell, StringComparison.Ordinal);
         Assert.DoesNotContain("StopVoiceCommand", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("StopAllCommand", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("StopBusCommand", xaml, StringComparison.Ordinal);
