@@ -24,6 +24,7 @@ namespace YokiFrame.Unity
     {
         private readonly object mLock = new();
         private readonly ResourcePackage mPackage;
+        private readonly bool mEditorSimulateMode;
         private readonly Dictionary<object, Stack<AssetHandle>> mHandles =
             new(ReferenceEqualityComparer.Instance);
         private readonly Dictionary<string, YooSceneHandle> mSceneHandles =
@@ -35,8 +36,20 @@ namespace YokiFrame.Unity
         /// </summary>
         /// <param name="package">已经完成初始化并加载有效 manifest 的 YooAsset 资源包。</param>
         public YooAssetResourceProvider(ResourcePackage package)
+            : this(package, false)
+        {
+        }
+
+        /// <summary>
+        /// 创建绑定到指定资源包的 Provider，并明确告知当前是否使用 EditorSimulateMode。
+        /// EditorSimulateMode 下 YooAsset 通过 AssetDatabase 暴露 TextAsset，而非 RawFileObject。
+        /// </summary>
+        /// <param name="package">已经完成初始化并加载有效 manifest 的 YooAsset 资源包。</param>
+        /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
+        public YooAssetResourceProvider(ResourcePackage package, bool editorSimulateMode)
         {
             mPackage = package ?? throw new ArgumentNullException(nameof(package));
+            mEditorSimulateMode = editorSimulateMode;
             EnsurePackageReady();
 #if UNITY_EDITOR
             ProviderName = "YooAsset:" + package.PackageName;
@@ -109,12 +122,18 @@ namespace YokiFrame.Unity
         /// <summary>同步读取 raw bytes，并在复制数据后立即释放 YooAsset 3 临时 handle。</summary>
         public byte[] LoadRaw(string path)
         {
+            if (mEditorSimulateMode)
+                return UseEditorTextAsset(path, static textAsset => textAsset.bytes);
+
             return UseRawFile(path, static rawFile => rawFile.GetBytes());
         }
 
         /// <summary>同步读取 raw 文本，并在读取后立即释放 YooAsset 3 临时 handle。</summary>
         public string LoadRawText(string path)
         {
+            if (mEditorSimulateMode)
+                return UseEditorTextAsset(path, static textAsset => textAsset.text);
+
             return UseRawFile(path, static rawFile => rawFile.GetText());
         }
 #else
@@ -140,6 +159,9 @@ namespace YokiFrame.Unity
 #endif
         {
 #if YOKIFRAME_YOOASSET_3
+            if (mEditorSimulateMode)
+                return await UseEditorTextAssetAsync(path, static textAsset => textAsset.bytes, token);
+
             return await UseRawFileAsync(path, static rawFile => rawFile.GetBytes(), token);
 #else
             return await UseRawFileAsync(path, static handle => handle.GetRawFileData(), token);
@@ -155,6 +177,9 @@ namespace YokiFrame.Unity
 #endif
         {
 #if YOKIFRAME_YOOASSET_3
+            if (mEditorSimulateMode)
+                return await UseEditorTextAssetAsync(path, static textAsset => textAsset.text, token);
+
             return await UseRawFileAsync(path, static rawFile => rawFile.GetText(), token);
 #else
             return await UseRawFileAsync(path, static handle => handle.GetRawFileText(), token);
@@ -268,6 +293,54 @@ namespace YokiFrame.Unity
         }
 
 #if YOKIFRAME_YOOASSET_3
+        /// <summary>同步读取 EditorSimulateMode 下由 AssetDatabase 提供的 TextAsset。</summary>
+        private TResult UseEditorTextAsset<TResult>(string path, Func<TextAsset, TResult> selector)
+        {
+            EnsureRequestPath(path);
+            AssetHandle handle = mPackage.LoadAssetSync<TextAsset>(path);
+            try
+            {
+                EnsureHandleSucceeded(path, handle, true);
+                TextAsset textAsset = handle.GetAssetObject<TextAsset>();
+                if (textAsset == null)
+                    throw new InvalidOperationException("YooAsset returned no editor raw asset for '" + path + "'.");
+
+                return selector(textAsset);
+            }
+            finally
+            {
+                ReleaseHandle(handle);
+            }
+        }
+
+        /// <summary>异步读取 EditorSimulateMode 下由 AssetDatabase 提供的 TextAsset。</summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        private async UniTask<TResult> UseEditorTextAssetAsync<TResult>(
+#else
+        private async Task<TResult> UseEditorTextAssetAsync<TResult>(
+#endif
+            string path,
+            Func<TextAsset, TResult> selector,
+            CancellationToken token)
+        {
+            EnsureRequestPath(path);
+            AssetHandle handle = mPackage.LoadAssetAsync<TextAsset>(path);
+            try
+            {
+                await WaitForCompletion(handle, token);
+                EnsureHandleSucceeded(path, handle, true);
+                TextAsset textAsset = handle.GetAssetObject<TextAsset>();
+                if (textAsset == null)
+                    throw new InvalidOperationException("YooAsset returned no editor raw asset for '" + path + "'.");
+
+                return selector(textAsset);
+            }
+            finally
+            {
+                ReleaseHandle(handle);
+            }
+        }
+
         /// <summary>同步读取 YooAsset 3 RawFileObject，并保证临时 handle 在所有结果路径释放。</summary>
         private TResult UseRawFile<TResult>(string path, Func<RawFileObject, TResult> selector)
         {

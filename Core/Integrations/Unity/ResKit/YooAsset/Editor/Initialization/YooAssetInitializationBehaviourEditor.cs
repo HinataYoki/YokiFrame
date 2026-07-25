@@ -92,7 +92,9 @@ namespace YokiFrame.Unity
                     return;
                 }
 
-                YooAssetInitializer.InstallProvider(package);
+                YooAssetInitializer.InstallProvider(
+                    package,
+                    behaviour.Options.PlayMode == EPlayMode.EditorSimulateMode);
             }
             catch (Exception exception)
             {

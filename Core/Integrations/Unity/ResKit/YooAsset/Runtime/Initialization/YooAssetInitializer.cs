@@ -101,7 +101,7 @@ namespace YokiFrame.Unity
                 if (DefaultPackage == null)
                     throw new InvalidOperationException("No valid YooAsset package was initialized.");
 
-                InstallProvider(DefaultPackage);
+                InstallProvider(DefaultPackage, options.PlayMode == EPlayMode.EditorSimulateMode);
                 IsInitialized = true;
             }
             finally
@@ -111,10 +111,20 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 将已初始化的 package 直接接入 ResKit，适合项目自行管理 YooAsset 初始化流程。
+        /// 将已初始化的 package 直接接入 ResKit，适合项目自行管理非 EditorSimulate 的 YooAsset 初始化流程。
         /// </summary>
         /// <param name="package">已经完成初始化并加载有效 manifest 的 package。</param>
         public static void InstallProvider(ResourcePackage package)
+        {
+            InstallProvider(package, false);
+        }
+
+        /// <summary>
+        /// 将已初始化的 package 直接接入 ResKit，并传递当前是否为 EditorSimulateMode。
+        /// </summary>
+        /// <param name="package">已经完成初始化并加载有效 manifest 的 package。</param>
+        /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
+        public static void InstallProvider(ResourcePackage package, bool editorSimulateMode)
         {
             if (package == null)
                 throw new ArgumentNullException(nameof(package));
@@ -122,7 +132,7 @@ namespace YokiFrame.Unity
             DefaultPackage = package;
             DefaultPackageName = package.PackageName;
             sPackages[package.PackageName] = package;
-            ResKit.SetProvider(new YooAssetResourceProvider(package));
+            ResKit.SetProvider(new YooAssetResourceProvider(package, editorSimulateMode));
         }
 
         /// <summary>按名称获取已登记 package。</summary>
