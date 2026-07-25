@@ -49,15 +49,15 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.False(File.Exists(Path.Combine(outputRoot, "YokiFrame.TableKit.csproj")));
 
             string facade = File.ReadAllText(facadePath);
-            Assert.Contains("using YokiFrame;", facade, StringComparison.Ordinal);
+            Assert.DoesNotContain("LubanTables", facade, StringComparison.Ordinal);
             Assert.Contains("namespace YokiFrame", facade, StringComparison.Ordinal);
-            Assert.Contains("private static Tables sTables;", facade, StringComparison.Ordinal);
+            Assert.Contains("private static global::Cfg.Tables sTables;", facade, StringComparison.Ordinal);
             Assert.Contains("#if YOKIFRAME_UNITASK_SUPPORT", facade, StringComparison.Ordinal);
             Assert.Contains("using Cysharp.Threading.Tasks;", facade, StringComparison.Ordinal);
             Assert.Contains("public static async UniTask InitAsync", facade, StringComparison.Ordinal);
             Assert.Contains("public static async Task InitAsync", facade, StringComparison.Ordinal);
-            Assert.Contains("public static async UniTask<Tables> LoadAsync", facade, StringComparison.Ordinal);
-            Assert.Contains("public static async Task<Tables> LoadAsync", facade, StringComparison.Ordinal);
+            Assert.Contains("public static async UniTask<global::Cfg.Tables> LoadAsync", facade, StringComparison.Ordinal);
+            Assert.Contains("public static async Task<global::Cfg.Tables> LoadAsync", facade, StringComparison.Ordinal);
             Assert.Contains("public static string RuntimePathPattern => KitSettings.GetString", facade, StringComparison.Ordinal);
             Assert.Contains("public static bool UseRawResourceLoading => KitSettings.GetBool", facade, StringComparison.Ordinal);
             Assert.Contains("? TableDataResourceLoadMode.Raw", facade, StringComparison.Ordinal);
@@ -66,8 +66,8 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.Contains("public static void Init(string resourcePathPattern)", facade, StringComparison.Ordinal);
             Assert.Contains("sTables = LoadTables(RuntimePathPattern);", facade, StringComparison.Ordinal);
             Assert.Contains("sTables = await LoadTablesAsync(RuntimePathPattern);", facade, StringComparison.Ordinal);
-            Assert.Contains("sLoader.Load<Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
-            Assert.Contains("sLoader.LoadAsync<Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
+            Assert.Contains("sLoader.Load<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
+            Assert.Contains("sLoader.LoadAsync<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("UseAsyncLoading", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("ConfigureAwait(false)", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("TablesTypeName", facade, StringComparison.Ordinal);
@@ -99,7 +99,8 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.DoesNotContain("TableDataLocation", loader, StringComparison.Ordinal);
             string externalTypeUtil = File.ReadAllText(mapperPath);
             Assert.Contains("public static class ConfiguredTypeMapper", externalTypeUtil, StringComparison.Ordinal);
-            Assert.Contains("public static UnityEngine.Vector2 CreateVector2(global::YokiFrame.vector2 value)", externalTypeUtil, StringComparison.Ordinal);
+            Assert.Contains("namespace Cfg", externalTypeUtil, StringComparison.Ordinal);
+            Assert.Contains("public static UnityEngine.Vector2 CreateVector2(global::Cfg.vector2 value)", externalTypeUtil, StringComparison.Ordinal);
             Assert.Contains("return new UnityEngine.Vector2(value.X, value.Y);", externalTypeUtil, StringComparison.Ordinal);
             Assert.DoesNotContain("using Godot", externalTypeUtil, StringComparison.Ordinal);
 
@@ -117,9 +118,9 @@ public sealed class TableKitCodeGenerationServiceTests
         }
     }
 
-    /// <summary>显式 topModule 仍决定门面命名空间，但 Loader 契约固定从 YokiFrame 根命名空间导入。</summary>
+    /// <summary>显式 topModule 只决定 Luban manager 类型，TableKit 门面和 Loader 契约仍固定在 YokiFrame。</summary>
     [Fact]
-    public void UnityGenerationKeepsExplicitTopModuleWithYokiFrameLoaderContract()
+    public void UnityGenerationKeepsLubanNamespaceSeparateFromYokiFrameFacade()
     {
         string root = CreateProjectRoot("unity");
         try
@@ -134,10 +135,11 @@ public sealed class TableKitCodeGenerationServiceTests
 
             string facade = File.ReadAllText(Path.Combine(contract.OutputCodeDirectory, "TableKit.cs"));
             string loader = File.ReadAllText(Path.Combine(contract.OutputCodeDirectory, "ITableDataLoader.cs"));
-            Assert.Contains("using YokiFrame;", facade, StringComparison.Ordinal);
-            Assert.Contains("namespace Game.Config", facade, StringComparison.Ordinal);
-            Assert.Contains("private static Tables sTables;", facade, StringComparison.Ordinal);
-            Assert.DoesNotContain("Game.Config.Tables", facade, StringComparison.Ordinal);
+            Assert.DoesNotContain("LubanTables", facade, StringComparison.Ordinal);
+            Assert.Contains("namespace YokiFrame", facade, StringComparison.Ordinal);
+            Assert.Contains("private static global::Game.Config.Tables sTables;", facade, StringComparison.Ordinal);
+            Assert.Contains("public static global::Game.Config.Tables Tables", facade, StringComparison.Ordinal);
+            Assert.DoesNotContain("namespace Game.Config", facade, StringComparison.Ordinal);
             Assert.Contains("namespace YokiFrame", loader, StringComparison.Ordinal);
         }
         finally
@@ -281,7 +283,7 @@ public sealed class TableKitCodeGenerationServiceTests
         };
     }
 
-    /// <summary>创建默认 YokiFrame.Tables 生成契约。</summary>
+    /// <summary>创建默认 Cfg.Tables Luban 生成契约。</summary>
     /// <param name="root">项目根。</param>
     /// <param name="outputCodeDir">项目相对代码根。</param>
     /// <returns>主 target 契约。</returns>
@@ -291,7 +293,7 @@ public sealed class TableKitCodeGenerationServiceTests
         {
             ConfigPath = Path.Combine(root, "Luban", "luban.conf"),
             TargetName = "client",
-            TopModule = "YokiFrame",
+            TopModule = "Cfg",
             Manager = "Tables",
             CodeTarget = "cs-bin",
             DataTarget = "bin",
@@ -312,9 +314,9 @@ public sealed class TableKitCodeGenerationServiceTests
         {
             new TableKitExternalTypeMapping
             {
-                SourceTypeName = "global::YokiFrame.vector2",
+                SourceTypeName = "global::Cfg.vector2",
                 TargetTypeName = "UnityEngine.Vector2",
-                HelperNamespace = "YokiFrame",
+                HelperNamespace = "Cfg",
                 HelperTypeName = "ConfiguredTypeMapper",
                 HelperMethodName = "CreateVector2",
                 MemberNames = new[] { "X", "Y" }

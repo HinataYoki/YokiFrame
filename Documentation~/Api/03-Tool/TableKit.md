@@ -25,7 +25,7 @@ Workbench Luban 验证/生成页与跨宿主直接代码生成已实现；Kit In
 
 ## 核心 API
 
-默认模板生成的门面、Luban 类型和 `ITableDataLoader.cs` 统一使用 `YokiFrame` 命名空间，并编入同一个生成程序集：
+TableKit 自有的门面和 `ITableDataLoader.cs` 固定使用 `YokiFrame` 命名空间；Luban 类型继续完全服从 `luban.conf` 的 `topModule`，TableKit 直接通过 `global::<topModule>.<manager>` 完整类型名引用它们。两类代码编入同一个生成程序集：
 
 | API | 说明 |
 |---|---|
@@ -43,7 +43,7 @@ TableKit.Init();
 
 TableKit.Clear();
 await TableKit.InitAsync();
-Tables tables = TableKit.Tables;
+Cfg.Tables tables = TableKit.Tables;
 ```
 
 `GeneratedTableLoader` 是项目实现。门面把 Runtime Settings 中的 `useRawResourceLoading` 转成 `TableDataResourceLoadMode.Raw` 或 `Asset` 并传给每次 Loader 调用；Loader 必须据此选择 `ResKit.LoadRaw/LoadRawText` 或普通资源对象读取。门面只负责保存强类型 Luban manager、调用统一 Loader 和管理生命周期，不选择 ResKit Provider，也不假设资源一定是 `.bytes` 或 `.json`。
@@ -60,7 +60,7 @@ Workbench 不探测 Addressables、YooAsset 或其它资源管理方案，也不
 
 ### 配置与生成
 
-具体表管理器类型、代码目标和数据格式均来自当前 `luban.conf` 的 `topModule`、`manager`、`codeTarget` 和 `dataTarget`。YokiFrame 的 Luban 默认模板把 `topModule` 设为 `YokiFrame`，因此默认门面为 `YokiFrame.TableKit`、表管理器为 `YokiFrame.Tables`；项目显式配置其它合法 `topModule` 时仍按配置生成。`codeTarget` 与 `dataTarget` 是开放字符串，数据扩展名从 target 推导或读取 `fileExt`。
+具体表管理器类型、代码目标和数据格式均来自当前 `luban.conf` 的 `topModule`、`manager`、`codeTarget` 和 `dataTarget`。默认 Luban 表管理器保持 `Cfg.Tables`，自定义 `topModule` 也不会被 TableKit 改写；只有上层门面固定为 `YokiFrame.TableKit`，并通过 `global::<topModule>.<manager>` 引用实际类型。`codeTarget` 与 `dataTarget` 是开放字符串，数据扩展名从 target 推导或读取 `fileExt`。
 
 Workbench-only 配置保存到当前项目 `ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json`，工具栏“保存”和 Workbench 正常关闭都会持久化完整草稿。配置包含 `IsAddressable` 和 `RuntimePathPattern`；自动推导值不写回，项目重新打开时会按最新输出目录重新计算。
 
