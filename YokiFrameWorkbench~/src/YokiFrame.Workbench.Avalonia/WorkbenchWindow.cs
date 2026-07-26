@@ -226,6 +226,7 @@ public sealed partial class WorkbenchWindow : Window
     {
         WorkbenchStartupTrace.Mark("window.closing");
         mIsClosed = true;
+        mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();
         if (mActivationCoordinator != null)
         {
             mActivationCoordinator.ActivationRequested -= OnActivationRequested;

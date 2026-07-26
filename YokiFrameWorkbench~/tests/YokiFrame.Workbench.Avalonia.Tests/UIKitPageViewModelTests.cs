@@ -220,6 +220,47 @@ public sealed class UIKitPageViewModelTests
         }
     }
 
+    /// <summary>验证仅修改表单后关闭 Workbench 也会提交统一 Editor Settings。</summary>
+    [Fact]
+    public async Task EditorToolsSettingsPersistWhenWorkbenchClosesWithoutAction()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-uikit-editor-close-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            UIKitPageViewModel first = CreateEditorSettingsViewModel(new UIKitEditorSettingsService(root));
+            first.SetEditorEngine("unity-editor");
+            await first.ShowEditorToolsTaskCommand.ExecuteAsync();
+            first.PrefabFolder = "Assets/Game/UI/ClosePrefabs";
+            first.ScriptFolder = "Assets/Game/UI/CloseScripts";
+            first.ScriptNamespace = "Game.CloseUI";
+            first.AssemblyName = "Game.UI";
+            first.CodeTemplateDisplay = "精简";
+
+            first.PersistEditorSettingsOnClose();
+
+            UIKitPageViewModel second = CreateEditorSettingsViewModel(new UIKitEditorSettingsService(root));
+            second.SetEditorEngine("unity-editor");
+            await second.ShowEditorToolsTaskCommand.ExecuteAsync();
+            Assert.Equal("Assets/Game/UI/ClosePrefabs", second.PrefabFolder);
+            Assert.Equal("Assets/Game/UI/CloseScripts", second.ScriptFolder);
+            Assert.Equal("Game.CloseUI", second.ScriptNamespace);
+            Assert.Equal("Game.UI", second.AssemblyName);
+            Assert.Equal("精简", second.CodeTemplateDisplay);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch
+            {
+                // 临时目录清理失败不覆盖测试的业务断言。
+            }
+        }
+    }
+
     /// <summary>验证 Editor Tools 仅保留面板创建与生成代码入口。</summary>
     [Fact]
     public void EditorToolsViewContractContainsOnlyGenerationActions()

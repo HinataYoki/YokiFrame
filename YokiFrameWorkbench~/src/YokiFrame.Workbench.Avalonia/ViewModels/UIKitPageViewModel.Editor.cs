@@ -12,6 +12,8 @@ public sealed partial class UIKitPageViewModel
     private int mSelectedTaskIndex;
     private bool mEditorBusy;
     private bool mEditorDefaultsLoaded;
+    private bool mEditorSettingsDirty;
+    private bool mApplyingGenerationSettings;
     private string mEditorStatusText = string.Empty;
     private string mPanelName = string.Empty;
     private string mPrefabFolder = "Assets/Resources/Art/UIPrefab";
@@ -76,16 +78,48 @@ public sealed partial class UIKitPageViewModel
     public string PanelName { get => mPanelName; set { if (SetProperty(ref mPanelName, value ?? string.Empty)) RaiseEditorCommandStates(); } }
 
     /// <summary>获取或设置 Prefab 输出目录。</summary>
-    public string PrefabFolder { get => mPrefabFolder; set => SetProperty(ref mPrefabFolder, value ?? string.Empty); }
+    public string PrefabFolder
+    {
+        get => mPrefabFolder;
+        set
+        {
+            if (!SetProperty(ref mPrefabFolder, value ?? string.Empty)) return;
+            MarkEditorSettingsDirty();
+        }
+    }
 
     /// <summary>获取或设置代码输出目录。</summary>
-    public string ScriptFolder { get => mScriptFolder; set => SetProperty(ref mScriptFolder, value ?? string.Empty); }
+    public string ScriptFolder
+    {
+        get => mScriptFolder;
+        set
+        {
+            if (!SetProperty(ref mScriptFolder, value ?? string.Empty)) return;
+            MarkEditorSettingsDirty();
+        }
+    }
 
     /// <summary>获取或设置代码命名空间。</summary>
-    public string ScriptNamespace { get => mScriptNamespace; set => SetProperty(ref mScriptNamespace, value ?? string.Empty); }
+    public string ScriptNamespace
+    {
+        get => mScriptNamespace;
+        set
+        {
+            if (!SetProperty(ref mScriptNamespace, value ?? string.Empty)) return;
+            MarkEditorSettingsDirty();
+        }
+    }
 
     /// <summary>获取或设置目标程序集。</summary>
-    public string AssemblyName { get => mAssemblyName; set => SetProperty(ref mAssemblyName, value ?? string.Empty); }
+    public string AssemblyName
+    {
+        get => mAssemblyName;
+        set
+        {
+            if (!SetProperty(ref mAssemblyName, value ?? string.Empty)) return;
+            MarkEditorSettingsDirty();
+        }
+    }
 
     /// <summary>获取或设置提交给 Unity Editor 的代码模板协议值。</summary>
     public string CodeTemplate
@@ -94,6 +128,7 @@ public sealed partial class UIKitPageViewModel
         set
         {
             if (!SetProperty(ref mCodeTemplate, value ?? "Default")) return;
+            MarkEditorSettingsDirty();
             OnPropertyChanged(nameof(CodeTemplateDisplay));
         }
     }
@@ -137,6 +172,7 @@ public sealed partial class UIKitPageViewModel
     {
         string normalized = engineId ?? string.Empty;
         if (string.Equals(mEditorEngineId, normalized, StringComparison.Ordinal)) return;
+        PersistEditorSettingsOnClose();
         mEditorEngineId = normalized;
         mEditorDefaultsLoaded = false;
         ResetEditorContext();
@@ -173,6 +209,28 @@ public sealed partial class UIKitPageViewModel
         }
     }
 
+    /// <summary>
+    /// 在 Workbench 关闭前同步提交用户修改过的 Editor Tools 配置，避免未执行生成操作时丢失表单值。
+    /// </summary>
+    internal void PersistEditorSettingsOnClose()
+    {
+        if (mEditorSettingsService == null || !mEditorSettingsDirty) return;
+        try
+        {
+            mEditorSettingsService.SaveAsync(
+                    CreateGenerationRequest(),
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            mEditorSettingsDirty = false;
+            mEditorDefaultsLoaded = true;
+        }
+        catch (Exception exception)
+        {
+            EditorStatusText = "配置保存失败: " + exception.Message;
+        }
+    }
+
     /// <summary>在创建或生成前通过统一项目配置 Store 保存五个 Editor Tools 生成字段。</summary>
     /// <returns>保存成功或当前项目未提供设置服务时返回 true。</returns>
     private async Task<bool> PersistGenerationSettingsAsync()
@@ -182,6 +240,7 @@ public sealed partial class UIKitPageViewModel
         try
         {
             await mEditorSettingsService.SaveAsync(CreateGenerationRequest(), CancellationToken.None);
+            mEditorSettingsDirty = false;
             mEditorDefaultsLoaded = true;
             return true;
         }
@@ -295,11 +354,28 @@ public sealed partial class UIKitPageViewModel
     /// <summary>把强类型生成配置投影到页面字段，不修改一次性的 Panel 类型名。</summary>
     private void ApplyGenerationSettings(WorkbenchUIKitPanelGenerationRequest settings)
     {
-        PrefabFolder = settings.PrefabFolder;
-        ScriptFolder = settings.ScriptFolder;
-        ScriptNamespace = settings.ScriptNamespace;
-        AssemblyName = settings.AssemblyName;
-        CodeTemplate = settings.CodeTemplate;
+        mApplyingGenerationSettings = true;
+        try
+        {
+            PrefabFolder = settings.PrefabFolder;
+            ScriptFolder = settings.ScriptFolder;
+            ScriptNamespace = settings.ScriptNamespace;
+            AssemblyName = settings.AssemblyName;
+            CodeTemplate = settings.CodeTemplate;
+        }
+        finally
+        {
+            mApplyingGenerationSettings = false;
+        }
+    }
+
+    /// <summary>标记用户修改过的项目级 Editor Tools 字段，供关闭时一次性提交。</summary>
+    private void MarkEditorSettingsDirty()
+    {
+        if (!mApplyingGenerationSettings)
+        {
+            mEditorSettingsDirty = true;
+        }
     }
 
     /// <summary>清空已经离线或切换宿主的 Unity 选择事实。</summary>
