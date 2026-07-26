@@ -11,6 +11,7 @@ internal static class MarkdownDocumentParser
     private static readonly Regex sInlineLinkRegex = new(@"\[([^\]]+)\]\([^\)]+\)", RegexOptions.CultureInvariant);
     private static readonly Regex sInlineMarkerRegex = new(@"[`*_~]", RegexOptions.CultureInvariant);
     private static readonly Regex sClosingHashesRegex = new(@"\s+#+$", RegexOptions.CultureInvariant);
+    private static readonly Regex sOrderedListRegex = new(@"^\d+\. ", RegexOptions.CultureInvariant);
 
     /// <summary>
     /// 把已安全读取的 Markdown 转换为应用层只读模型。
@@ -28,8 +29,9 @@ internal static class MarkdownDocumentParser
         var headings = new List<DocumentationHeading>();
         var codeBlocks = new List<DocumentationCodeBlock>();
         var blocks = new List<DocumentationBlock>();
-        ParseLines(normalizedMarkdown.Split('\n'), headings, codeBlocks);
-        ParseRenderBlocks(normalizedMarkdown.Split('\n'), headings, codeBlocks, blocks);
+        var lines = normalizedMarkdown.Split('\n');
+        ParseLines(lines, headings, codeBlocks);
+        ParseRenderBlocks(lines, headings, codeBlocks, blocks);
         var title = headings.FirstOrDefault(static heading => heading.Level == 1)?.Title
             ?? Path.GetFileNameWithoutExtension(location.FullPath);
         return new DocumentationDocument(
@@ -55,24 +57,26 @@ internal static class MarkdownDocumentParser
         var codeIndex = 0;
         var order = 0;
         var paragraph = new List<string>();
+        var inFence = false;
         for (var index = 0; index < lines.Count; index++)
         {
             var line = lines[index];
             if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
             {
-                FlushParagraph(paragraph, blocks, ref order);
-                if (codeIndex < codeBlocks.Count)
+                if (!inFence)
                 {
-                    blocks.Add(new DocumentationCodeBlockBlock { Order = order++, CodeBlock = codeBlocks[codeIndex++] });
+                    FlushParagraph(paragraph, blocks, ref order);
+                    if (codeIndex < codeBlocks.Count)
+                        blocks.Add(new DocumentationCodeBlockBlock { Order = order++, CodeBlock = codeBlocks[codeIndex++] });
+                    inFence = true;
                 }
-
-                while (index + 1 < lines.Count && !lines[index + 1].TrimStart().StartsWith("```", StringComparison.Ordinal))
+                else
                 {
-                    index++;
+                    inFence = false;
                 }
-
                 continue;
             }
+            if (inFence) continue;
 
             if (TryParseHeading(line, out _, out _))
             {
@@ -158,7 +162,7 @@ internal static class MarkdownDocumentParser
         var trimmed = line.TrimStart();
         return trimmed.StartsWith("- ", StringComparison.Ordinal)
             || trimmed.StartsWith("* ", StringComparison.Ordinal)
-            || Regex.IsMatch(trimmed, @"^\d+\. ");
+            || sOrderedListRegex.IsMatch(trimmed);
     }
 
     /// <summary>判断 Markdown 表格行。</summary>

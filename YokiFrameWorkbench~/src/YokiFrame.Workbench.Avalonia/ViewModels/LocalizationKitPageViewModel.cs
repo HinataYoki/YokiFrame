@@ -402,7 +402,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     /// <summary>按当前语言筛选存在可显示文本的条目。</summary>
     private bool MatchesLanguage(LocalizationEntryRecord entry)
     {
-        return string.Equals(SelectedLanguage, "全部", StringComparison.OrdinalIgnoreCase)
+        return string.Equals(SelectedLanguage, "全部", StringComparison.Ordinal)
             || entry.HasValueFor(SelectedLanguage);
     }
 

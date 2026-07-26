@@ -21,6 +21,8 @@ namespace YokiFrame
         private static long sToolProviderRevision;
         private static YokiFrameKitInteractionRegistry sKitInteractions =
             CreateKitInteractions();
+        // 声明顺序早于 sCommandDispatcher，保证 CreateCommandDispatcher 写入的策略缓存不会被后续字段初始化器覆盖。
+        private static YokiFrameCommandPolicy sHostCommandPolicy;
         private static YokiFrameCommandDispatcher sCommandDispatcher = CreateCommandDispatcher();
         private static readonly Dictionary<string, long> sKitTelemetryVersions = new();
         private static readonly Dictionary<string, long> sKitSnapshotVersions = new();
@@ -191,7 +193,15 @@ namespace YokiFrame
         /// </summary>
         private static void ProcessPendingCommands()
         {
-            if (sIsProcessingCommands || !Directory.Exists(YokiFrameEditorFileBridgePaths.GetCommandsRoot()))
+            if (sIsProcessingCommands)
+            {
+                return;
+            }
+
+            // 固定根路径已缓存，本轮入口统一复核一次重解析点防护，替代每个 getter 各自重走全链。
+            YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
+            var commandsRoot = YokiFrameEditorFileBridgePaths.GetCommandsRoot();
+            if (!Directory.Exists(commandsRoot))
             {
                 return;
             }
@@ -199,8 +209,8 @@ namespace YokiFrame
             sIsProcessingCommands = true;
             try
             {
-                foreach (var commandPath in Directory.GetFiles(
-                             YokiFrameEditorFileBridgePaths.GetCommandsRoot(),
+                foreach (var commandPath in Directory.EnumerateFiles(
+                             commandsRoot,
                              "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
                              SearchOption.TopDirectoryOnly))
                 {
@@ -325,8 +335,30 @@ namespace YokiFrame
                 backpressureActive = false,
                 lastPollLimitReason = string.Empty,
                 bridgeBusyCount = 0,
-                lastError = string.Empty
+                lastError = CreateBridgeLastError()
             };
+        }
+
+        /// <summary>
+        /// 汇总当前会话最近一次 FastChannel 故障原因；无故障时返回空字符串。
+        /// </summary>
+        /// <returns>启动失败原因优先，其次为 listener 记录的最近错误。</returns>
+        private static string CreateBridgeLastError()
+        {
+            if (!string.IsNullOrEmpty(sFastChannelStartError))
+            {
+                return sFastChannelStartError;
+            }
+
+#if UNITY_EDITOR_WIN
+            // sFastChannelHost 仅在 Windows Editor 下声明，宿主为普通 C# 对象故显式判空。
+            var host = sFastChannelHost;
+            if (host != null && !string.IsNullOrEmpty(host.LastError))
+            {
+                return host.LastError;
+            }
+#endif
+            return string.Empty;
         }
 
         /// <summary>

@@ -45,7 +45,7 @@ public sealed partial class WorkbenchDashboardService
     /// <returns>不依赖具体 engine 路径的健康信息。</returns>
     private static WorkbenchBridgeHealth CreatePendingSelectionHealth(EngineSelectionResult engineSelection)
     {
-        var error = engineSelection.Error!;
+        if (engineSelection.Error is not {} error) throw new InvalidOperationException("Pending EngineSelectionResult must carry a non-null error.");
         var state = engineSelection.Status == EngineSelectionStatus.SelectionRequired
             ? WorkbenchBridgeConnectionState.EngineSelectionRequired
             : WorkbenchBridgeConnectionState.EngineUnavailable;

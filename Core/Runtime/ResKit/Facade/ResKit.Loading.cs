@@ -65,7 +65,13 @@ namespace YokiFrame
 
             ResLease lease = InvokeSynchronousProvider<T>(pending, anonymous);
 #if UNITY_EDITOR || (GODOT && TOOLS)
-            if (lease != null) lease.SetSource(source);
+            if (lease != null)
+            {
+                lock (sLock)
+                {
+                    lease.SetSource(source);
+                }
+            }
 #endif
             return lease;
         }

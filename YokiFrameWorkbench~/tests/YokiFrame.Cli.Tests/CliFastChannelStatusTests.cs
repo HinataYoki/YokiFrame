@@ -54,26 +54,8 @@ public sealed class CliFastChannelStatusTests
     /// </summary>
     /// <param name="arguments">传递给 CLI 的参数列表。</param>
     /// <returns>进程退出结果。</returns>
-    private static async Task<CliProcessResult> RunCliAsync(params string[] arguments)
-    {
-        ProcessStartInfo startInfo = new("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        startInfo.ArgumentList.Add(GetCliAssemblyPath());
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start YokiFrame.Cli process.");
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        var standardErrorTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return new CliProcessResult(process.ExitCode, await standardOutputTask, await standardErrorTask);
-    }
+    private static Task<CliProcessResult> RunCliAsync(params string[] arguments)
+        => CliTestHelpers.RunCliAsync(arguments);
 
     /// <summary>
     /// 断言 CLI 成功输出 compact JSON。
@@ -96,32 +78,7 @@ public sealed class CliFastChannelStatusTests
     /// </summary>
     /// <returns>CLI 程序 DLL 路径。</returns>
     private static string GetCliAssemblyPath()
-    {
-        var outputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        var configurationDirectory = outputDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output configuration directory is missing.");
-        var projectDirectory = configurationDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output project directory is missing.");
-        var binDirectory = projectDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output bin directory is missing.");
-        var cliAssemblyPath = Path.Combine(
-            binDirectory.FullName,
-            "YokiFrame.Cli",
-            configurationDirectory.Name,
-            outputDirectory.Name,
-            "YokiFrame.Cli.dll");
-
-        Assert.True(File.Exists(cliAssemblyPath), "CLI assembly was not built: " + cliAssemblyPath);
-        return cliAssemblyPath;
-    }
-
-    /// <summary>
-    /// 表示 CLI 子进程执行结果。
-    /// </summary>
-    /// <param name="ExitCode">进程退出码。</param>
-    /// <param name="StandardOutput">标准输出文本。</param>
-    /// <param name="StandardError">标准错误文本。</param>
-    private sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
+        => CliTestHelpers.GetCliAssemblyPath();
 
     /// <summary>
     /// 为 FastChannel CLI 测试创建最小 engine registry 项目根。

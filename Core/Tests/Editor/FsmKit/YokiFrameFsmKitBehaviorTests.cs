@@ -125,6 +125,60 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证挂起阶段 Start 其他状态会先闭合被挂起状态的生命周期，再启动目标状态。
+        /// </summary>
+        [Test]
+        public void StartingDifferentStateWhileSuspendedClosesSuspendedState()
+        {
+            List<string> calls = new List<string>();
+            FSM<SampleStateId> fsm = new FSM<SampleStateId>();
+            TrackingState idle = new TrackingState("idle", calls);
+            TrackingState run = new TrackingState("run", calls);
+            fsm.Add(SampleStateId.Idle, idle);
+            fsm.Add(SampleStateId.Run, run);
+            fsm.Start();
+            fsm.Suspend();
+            calls.Clear();
+
+            fsm.Start(SampleStateId.Run);
+
+            Assert.AreSame(run, fsm.CurState);
+            Assert.AreEqual(MachineState.Running, fsm.MachineState);
+            Assert.AreEqual(1, idle.EndCount);
+            Assert.AreEqual(1, run.StartCount);
+            CollectionAssert.AreEqual(new[] { "run.condition", "idle.end", "run.start" }, calls);
+        }
+
+        /// <summary>
+        /// 验证 Resume 只恢复挂起的机器并继续转发 tick，不重复触发进入逻辑，也不产生第二条 Start 历史。
+        /// </summary>
+        [Test]
+        public void ResumeRestoresSuspendedMachineWithoutRestartingState()
+        {
+            FSM<SampleStateId> fsm = new FSM<SampleStateId>("Resume");
+            TrackingState idle = new TrackingState("idle");
+            fsm.Add(SampleStateId.Idle, idle);
+
+            fsm.Resume();
+            Assert.AreEqual(MachineState.End, fsm.MachineState);
+
+            fsm.Start();
+            fsm.Suspend();
+            fsm.Resume();
+            fsm.Update();
+
+            Assert.AreEqual(1, idle.StartCount);
+            Assert.AreEqual(1, idle.SuspendCount);
+            Assert.AreEqual(1, idle.ResumeCount);
+            Assert.AreEqual(1, idle.UpdateCount);
+            Assert.AreEqual(MachineState.Running, fsm.MachineState);
+            StringAssert.Contains(
+                "\"count\":1",
+                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"Resume\"}"));
+            GC.KeepAlive(fsm);
+        }
+
+        /// <summary>
         /// 验证带参启动和切换向匹配状态传参，普通状态则回落无参 Start。
         /// </summary>
         [Test]
@@ -281,6 +335,7 @@ namespace YokiFrame
             internal bool AllowEnter { get; set; } = true;
             internal int StartCount { get; private set; }
             internal int SuspendCount { get; private set; }
+            internal int ResumeCount { get; private set; }
             internal int UpdateCount { get; private set; }
             internal int FixedUpdateCount { get; private set; }
             internal int CustomUpdateCount { get; private set; }
@@ -309,6 +364,13 @@ namespace YokiFrame
             {
                 SuspendCount++;
                 mCalls.Add(mName + ".suspend");
+            }
+
+            /// <summary>记录恢复。</summary>
+            public void Resume()
+            {
+                ResumeCount++;
+                mCalls.Add(mName + ".resume");
             }
 
             /// <summary>记录普通更新。</summary>

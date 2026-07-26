@@ -10,6 +10,7 @@ namespace YokiFrame
     public class BindValue<T> : IBindable<T>
     {
         private static Func<T, T, bool> sCompareFunc = EqualityComparer<T>.Default.Equals;
+        private readonly Func<T, T, bool> mCompareFunc;
         private readonly EasyEvent<T> mOnValueChanged = new();
         protected T mValue;
 
@@ -23,6 +24,17 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 创建带初始值和实例级比较函数的绑定对象；构造过程不会发送变化通知。
+        /// </summary>
+        /// <param name="value">初始值。</param>
+        /// <param name="compareFunc">仅作用于当前实例的比较函数；为空时使用 SetCompareFunc 设置的默认比较函数。</param>
+        public BindValue(T value, Func<T, T, bool> compareFunc)
+        {
+            mValue = value;
+            mCompareFunc = compareFunc;
+        }
+
+        /// <summary>
         /// 获取或设置当前值；新旧值不同时按注册顺序通知监听器。
         /// </summary>
         public virtual T Value
@@ -30,7 +42,7 @@ namespace YokiFrame
             get { return mValue; }
             set
             {
-                if (sCompareFunc(mValue, value))
+                if ((mCompareFunc ?? sCompareFunc)(mValue, value))
                 {
                     return;
                 }
@@ -100,7 +112,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 为当前泛型值类型设置变化比较函数，后续所有 BindValue 实例共享该函数。
+        /// 为当前泛型值类型设置默认比较函数，未指定实例级比较函数的 BindValue 实例共享该函数；实例构造时传入的比较函数优先于该默认值。
         /// </summary>
         /// <param name="compareFunc">返回 true 表示两个值等价的比较函数。</param>
         public static void SetCompareFunc(Func<T, T, bool> compareFunc)

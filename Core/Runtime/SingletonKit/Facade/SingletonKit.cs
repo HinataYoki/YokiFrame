@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading;
 
 namespace YokiFrame
 {
@@ -11,41 +12,46 @@ namespace YokiFrame
     {
         private static readonly object sLock = new();
         private static T sInstance;
+        private static T sConstructing;
 
         /// <summary>
-        /// 使用线程安全懒初始化获取单例实例。
+        /// 使用线程安全懒初始化获取单例实例；实例仅在初始化完成后对锁外线程可见。
         /// </summary>
         public static T Instance
         {
             get
             {
-                if (sInstance != null)
+                T fast = Volatile.Read(ref sInstance);
+                if (fast != null)
                 {
-                    return sInstance;
+                    return fast;
                 }
 
                 lock (sLock)
                 {
-                    if (sInstance == null)
+                    if (sInstance != null)
                     {
-                        T instance = CreateInstance();
-                        sInstance = instance;
-                        try
-                        {
-                            InitializeInstance(instance);
-                        }
-                        catch
-                        {
-                            if (ReferenceEquals(sInstance, instance))
-                            {
-                                sInstance = null;
-                            }
-
-                            throw;
-                        }
+                        return sInstance;
                     }
 
-                    return sInstance;
+                    if (sConstructing != null)
+                    {
+                        return sConstructing;
+                    }
+
+                    T instance = CreateInstance();
+                    sConstructing = instance;
+                    try
+                    {
+                        InitializeInstance(instance);
+                        Volatile.Write(ref sInstance, instance);
+                    }
+                    finally
+                    {
+                        sConstructing = null;
+                    }
+
+                    return instance;
                 }
             }
         }
@@ -93,7 +99,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 通过私有或公开无参构造函数创建纯 C# 单例实例；初始化在实例进入缓存后单独执行。
+        /// 通过私有或公开无参构造函数创建纯 C# 单例实例；初始化在实例创建后单独执行。
         /// </summary>
         /// <returns>尚未执行初始化回调的单例实例。</returns>
         private static T CreateInstance()
@@ -123,9 +129,9 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 在实例已经可被自引用访问后执行一次初始化，并登记诊断存活状态。
+        /// 在实例可经构造中引用（同线程重入）被访问后执行一次初始化，并登记诊断存活状态；成功后实例才发布到单例缓存。
         /// </summary>
-        /// <param name="instance">已经写入单例缓存的实例。</param>
+        /// <param name="instance">尚未发布到单例缓存的构造中实例。</param>
         private static void InitializeInstance(T instance)
         {
             instance.OnSingletonInit();

@@ -152,8 +152,17 @@ public sealed partial class TableKitPageViewModel
         OnPropertyChanged(nameof(HasPreviewTables));
         OnPropertyChanged(nameof(PreviewCountText));
         OnPropertyChanged(nameof(PreviewStatusText));
-        OnPropertyChanged(nameof(FilteredPreviewTables));
+        RebuildFilteredPreviewTables();
         OnPropertyChanged(nameof(ConsoleSummaryText));
+    }
+
+    /// <summary>重建过滤后的预览表缓存并通知绑定系统。</summary>
+    private void RebuildFilteredPreviewTables()
+    {
+        mFilteredPreviewTables = string.IsNullOrWhiteSpace(PreviewSearch)
+            ? (IReadOnlyList<TableKitPreviewTableViewModel>)PreviewTables
+            : PreviewTables.Where(table => table.Name.Contains(PreviewSearch, StringComparison.OrdinalIgnoreCase)).ToList();
+        OnPropertyChanged(nameof(FilteredPreviewTables));
     }
 
     /// <summary>通过跨平台目录选择器设置 Luban 工作目录。</summary>

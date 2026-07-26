@@ -120,7 +120,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 移除并释放全部全局共享池，供宿主卸载和测试隔离使用。
+        /// 移除并释放全部全局共享池，供宿主卸载和测试隔离使用；单个池释放失败不影响其余池，异常聚合后统一抛出。
         /// </summary>
         public void Clear()
         {
@@ -132,9 +132,28 @@ namespace YokiFrame
                 mPools.Clear();
             }
 
+            List<Exception> errors = null;
             for (var index = 0; index < pools.Length; index++)
             {
-                pools[index].Dispose();
+                try
+                {
+                    pools[index].Dispose();
+                }
+                catch (Exception exception)
+                {
+                    errors ??= new List<Exception>();
+                    errors.Add(exception);
+                }
+            }
+
+            if (errors != null)
+            {
+                if (errors.Count == 1)
+                {
+                    throw errors[0];
+                }
+
+                throw new AggregateException("One or more shared pools failed to dispose.", errors);
             }
         }
 

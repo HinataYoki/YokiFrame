@@ -138,16 +138,26 @@ namespace YokiFrame
                 ThrowIfDisposed();
                 cachedItems = mCacheStack.ToArray();
                 mCacheStack.Clear();
-                mCachedObjects.Clear();
+                // 仅移除真正出栈的对象，保留在途回收的重复回收防护标记。
+                for (var index = 0; index < cachedItems.Length; index++)
+                {
+                    mCachedObjects.Remove(cachedItems[index]);
+                }
             }
 
-            DisposeItems(cachedItems);
-#if UNITY_EDITOR || (GODOT && TOOLS)
-            if (PoolEditorHook.IsTrackingEnabled)
+            try
             {
-                PoolEditorHook.UpdatePoolCounts(this, CurCount);
+                DisposeItems(cachedItems);
             }
+            finally
+            {
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                if (PoolEditorHook.IsTrackingEnabled)
+                {
+                    PoolEditorHook.UpdatePoolCounts(this, CurCount);
+                }
 #endif
+            }
         }
 
         /// <summary>
@@ -169,10 +179,16 @@ namespace YokiFrame
                 mCachedObjects.Clear();
             }
 
-            DisposeItems(cachedItems);
+            try
+            {
+                DisposeItems(cachedItems);
+            }
+            finally
+            {
 #if UNITY_EDITOR || (GODOT && TOOLS)
-            PoolEditorHook.UnregisterPool(this);
+                PoolEditorHook.UnregisterPool(this);
 #endif
+            }
         }
 
 #if UNITY_EDITOR || (GODOT && TOOLS)

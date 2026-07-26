@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
@@ -45,13 +46,23 @@ namespace YokiFrame
             handler.Operation = null;
         }
 
-        /// <summary>卸载单场景替换时旧的逻辑 Handler，并等待后端确认。</summary>
+        /// <summary>卸载单场景替换时旧的逻辑 Handler，并等待后端确认。先快照再遍历，防止同步卸载回调修改集合导致越界。</summary>
         private static void UnloadReplacedScenes(SceneHandler activeHandler)
         {
-            for (var index = sLoadedScenes.Count - 1; index >= 0; index--)
+            var targets = new List<SceneHandler>(sLoadedScenes.Count);
+            for (var index = 0; index < sLoadedScenes.Count; index++)
             {
                 SceneHandler handler = sLoadedScenes[index];
                 if (!ReferenceEquals(handler, activeHandler))
+                {
+                    targets.Add(handler);
+                }
+            }
+
+            for (var index = 0; index < targets.Count; index++)
+            {
+                SceneHandler handler = targets[index];
+                if (handler.State != SceneState.Unloaded)
                 {
                     UnloadSceneAsync(handler);
                 }

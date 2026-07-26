@@ -18,7 +18,6 @@ namespace YokiFrame.Tests
         {
             ActionKitScheduler.Cleanup();
             ActionStackTraceService.Enabled = false;
-            ActionStackTraceService.Clear();
             mLogger.Clear();
             LogKit.SetLogger(mLogger);
         }
@@ -33,7 +32,6 @@ namespace YokiFrame.Tests
             {
                 ActionKitScheduler.Cleanup();
                 ActionStackTraceService.Enabled = false;
-                ActionStackTraceService.Clear();
                 mLogger.AssertNoErrors();
             }
             finally { LogKit.ClearLogger(); }

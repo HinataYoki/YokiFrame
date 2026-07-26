@@ -12,6 +12,7 @@ public sealed partial class PoolKitPageViewModel
     private readonly Dictionary<string, PoolKitEventListItemViewModel> mEventsByIdentity = new(StringComparer.Ordinal);
     private readonly List<PoolKitEventListItemViewModel> mDesiredEvents = new();
     private readonly List<WorkbenchPoolKitEvent> mAllEvents = new();
+    private readonly List<string> mStaleKeys = new();
     private string mSearchText = string.Empty;
     private PoolKitPoolListItemViewModel? mSelectedPool;
 
@@ -122,10 +123,12 @@ public sealed partial class PoolKitPageViewModel
             mAllPools.Add(row);
         }
 
-        foreach (string identity in mPoolsByIdentity.Keys.Where(identity => !retained.Contains(identity)).ToArray())
+        mStaleKeys.Clear();
+        foreach (string identity in mPoolsByIdentity.Keys)
         {
-            mPoolsByIdentity.Remove(identity);
+            if (!retained.Contains(identity)) mStaleKeys.Add(identity);
         }
+        foreach (string identity in mStaleKeys) mPoolsByIdentity.Remove(identity);
 
         ReconcileVisiblePools();
     }
@@ -217,10 +220,12 @@ public sealed partial class PoolKitPageViewModel
             mDesiredEvents.Add(row);
         }
 
-        foreach (string identity in mEventsByIdentity.Keys.Where(identity => !retained.Contains(identity)).ToArray())
+        mStaleKeys.Clear();
+        foreach (string identity in mEventsByIdentity.Keys)
         {
-            mEventsByIdentity.Remove(identity);
+            if (!retained.Contains(identity)) mStaleKeys.Add(identity);
         }
+        foreach (string identity in mStaleKeys) mEventsByIdentity.Remove(identity);
 
         ReconcileEventCollection();
 

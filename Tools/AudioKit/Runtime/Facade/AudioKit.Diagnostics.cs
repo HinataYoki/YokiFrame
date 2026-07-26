@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || (GODOT && TOOLS)
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace YokiFrame
 {
@@ -10,6 +11,7 @@ namespace YokiFrame
         private static readonly Queue<AudioHistoryEntry> sHistory = new(MAX_HISTORY_COUNT);
         private static long sDiagnosticVersion;
         private static long sHistorySequence;
+        private static long sHistoryDroppedCount;
 
         /// <summary>获取 AudioKit 工具状态的单调版本。</summary>
         public static long DiagnosticVersion
@@ -26,6 +28,24 @@ namespace YokiFrame
             get
             {
                 lock (sLock) return sHistorySequence;
+            }
+        }
+
+        /// <summary>获取当前保留的有界历史条数；不复制历史内容。</summary>
+        internal static int HistoryCount
+        {
+            get
+            {
+                lock (sLock) return sHistory.Count;
+            }
+        }
+
+        /// <summary>获取因有界队列溢出而丢弃的历史条数；ClearHistory 会一并归零。</summary>
+        internal static long HistoryDroppedCount
+        {
+            get
+            {
+                lock (sLock) return sHistoryDroppedCount;
             }
         }
 
@@ -73,6 +93,7 @@ namespace YokiFrame
             lock (sLock)
             {
                 sHistory.Clear();
+                sHistoryDroppedCount = 0;
                 BumpDiagnosticVersionLocked();
             }
         }
@@ -113,19 +134,57 @@ namespace YokiFrame
                 foreach (string bus in sMutedBuses) AddBusName(buses, bus);
             }
 
-            for (var index = 0; index < voices.Count; index++) AddBusName(buses, voices[index].Bus);
+            for (var index = 0; index < voices.Count; index++)
+            {
+                AddReportedBusName(buses, voices[index].Bus);
+            }
+        }
+
+        /// <summary>只接纳后端上报的合法总线名称；非法名称不进入诊断列表，Master 的 ActiveVoiceCount 仍按 voices.Count 统计。</summary>
+        private static void AddReportedBusName(List<string> buses, string bus)
+        {
+            if (string.IsNullOrWhiteSpace(bus)) return;
+            string trimmed = bus.Trim();
+            if (trimmed.Length > MAX_BUS_NAME_LENGTH) return;
+            for (var index = 0; index < trimmed.Length; index++)
+            {
+                if (char.IsControl(trimmed[index])) return;
+            }
+
+            AddBusName(buses, trimmed);
+        }
+
+        /// <summary>在单次加锁内读取总线配置音量、有效音量与静音状态，保证诊断字段互相一致。</summary>
+        private static void ReadBusState(string bus, bool master, out float volume, out float effective, out bool muted)
+        {
+            lock (sLock)
+            {
+                if (master)
+                {
+                    volume = sMasterVolume;
+                    muted = sMasterMuted;
+                }
+                else
+                {
+                    volume = sBusVolumes.TryGetValue(bus, out float stored) ? stored : 1f;
+                    muted = sMutedBuses.Contains(bus);
+                }
+
+                effective = muted ? 0f : volume;
+            }
         }
 
         /// <summary>创建单个逻辑总线诊断状态。</summary>
         private static AudioBusSnapshot CreateBusSnapshot(string bus, List<AudioVoiceSnapshot> voices)
         {
             bool master = string.Equals(bus, AudioBus.Master, StringComparison.OrdinalIgnoreCase);
+            ReadBusState(bus, master, out float volume, out float effective, out bool muted);
             return new AudioBusSnapshot
             {
                 Name = bus,
-                Volume = master ? GetGlobalVolume() : GetStoredBusVolume(bus),
-                EffectiveVolume = master ? GetEffectiveMasterVolume() : GetEffectiveBusVolume(bus),
-                Muted = master ? IsMuted() : IsBusMuted(bus),
+                Volume = volume,
+                EffectiveVolume = effective,
+                Muted = muted,
                 IsMaster = master,
                 IsBuiltIn = IsBuiltInBus(bus),
                 IsRegistered = IsBusRegistered(bus),
@@ -209,14 +268,19 @@ namespace YokiFrame
             });
         }
 
-        /// <summary>为记录补齐序号和 UTC 时间并维持固定容量。</summary>
+        /// <summary>为记录补齐序号和 UTC 时间并维持固定容量；格式化在锁外完成以缩短临界区。</summary>
         private static void EnqueueHistory(AudioHistoryEntry entry)
         {
+            entry.TimestampUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             lock (sLock)
             {
                 entry.Sequence = ++sHistorySequence;
-                entry.TimestampUtc = DateTime.UtcNow.ToString("O");
-                while (sHistory.Count >= MAX_HISTORY_COUNT) sHistory.Dequeue();
+                while (sHistory.Count >= MAX_HISTORY_COUNT)
+                {
+                    sHistory.Dequeue();
+                    sHistoryDroppedCount++;
+                }
+
                 sHistory.Enqueue(entry);
                 BumpDiagnosticVersionLocked();
             }
@@ -226,6 +290,29 @@ namespace YokiFrame
         private static void BumpDiagnosticVersion()
         {
             lock (sLock) BumpDiagnosticVersionLocked();
+        }
+
+        /// <summary>在一次后端引用读取内取回诊断名称与能力，避免两者分属不同实例；异常时回退保守值。</summary>
+        internal static void ReadBackendInfo(out string name, out AudioBackendCapabilities capabilities)
+        {
+            IAudioBackend backend;
+            lock (sLock) backend = sBackend;
+            if (backend == null)
+            {
+                name = "None";
+                capabilities = AudioBackendCapabilities.None;
+                return;
+            }
+
+            name = SafeBackendName(backend);
+            try
+            {
+                capabilities = backend.Capabilities;
+            }
+            catch (Exception)
+            {
+                capabilities = AudioBackendCapabilities.None;
+            }
         }
 
         /// <summary>由宿主后端在自然结束等非门面状态变化后通知 Tools 刷新；Player 不编译此入口。</summary>
@@ -246,6 +333,7 @@ namespace YokiFrame
         {
             sHistory.Clear();
             sHistorySequence = 0;
+            sHistoryDroppedCount = 0;
             BumpDiagnosticVersionLocked();
         }
     }

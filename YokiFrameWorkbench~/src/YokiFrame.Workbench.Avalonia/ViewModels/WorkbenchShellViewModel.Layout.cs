@@ -18,6 +18,7 @@ public sealed partial class WorkbenchShellViewModel
     private static readonly IReadOnlyList<string> sCultureOptions = new[] { "中文", "English" };
     private IReadOnlyList<WorkbenchMetricCard> mEngineCards = Array.Empty<WorkbenchMetricCard>();
     private IReadOnlyList<WorkbenchLogLine> mLogLines = Array.Empty<WorkbenchLogLine>();
+    private readonly List<WorkbenchLogLine> mLogBuffer = new(MAX_LOG_LINES);
     private IReadOnlyList<WorkbenchMetricCard> mSnapshotCards = Array.Empty<WorkbenchMetricCard>();
     private IReadOnlyList<WorkbenchMetricCard> mSummaryCards = Array.Empty<WorkbenchMetricCard>();
     private WorkbenchNavigationItem? mSelectedNavigationItem;
@@ -268,10 +269,9 @@ public sealed partial class WorkbenchShellViewModel
     /// <param name="kind">日志语义类型。</param>
     private void AddLogLine(string message, WorkbenchLogLineKind kind)
     {
-        var nextLines = LogLines.Concat(new[] { new WorkbenchLogLine(DateTime.Now.ToString("HH:mm:ss"), message, kind) })
-            .TakeLast(MAX_LOG_LINES)
-            .ToArray();
-        LogLines = nextLines;
+        if (mLogBuffer.Count >= MAX_LOG_LINES) mLogBuffer.RemoveAt(0);
+        mLogBuffer.Add(new WorkbenchLogLine(DateTime.Now.ToString("HH:mm:ss"), message, kind));
+        LogLines = mLogBuffer.ToArray();
     }
 
     /// <summary>
@@ -279,6 +279,7 @@ public sealed partial class WorkbenchShellViewModel
     /// </summary>
     private void ClearLogLines()
     {
+        mLogBuffer.Clear();
         LogLines = Array.Empty<WorkbenchLogLine>();
     }
 

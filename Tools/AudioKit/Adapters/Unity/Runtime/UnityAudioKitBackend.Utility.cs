@@ -8,24 +8,28 @@ namespace YokiFrame.Unity
 {
     public sealed partial class UnityAudioKitBackend
     {
-        /// <summary>从 PoolKit 取得 AudioSource 租约，池为空时创建新的宿主对象。</summary>
+        /// <summary>从 PoolKit 取得 AudioSource 租约，宿主已销毁时重建后再启用。</summary>
         private PooledAudioSource RentSource()
         {
             EnsureRoot();
             PooledAudioSource lease = mSourcePool.Allocate();
+            if (lease.Source == null) lease.Source = CreateSource();
             lease.Source.gameObject.SetActive(true);
             return lease;
         }
 
-        /// <summary>创建一个挂在 AudioKit 根对象下的可池化 AudioSource 租约。</summary>
-        private PooledAudioSource CreateSourceLease()
+        /// <summary>创建一个挂在 AudioKit 根对象下的 AudioSource 宿主。</summary>
+        private AudioSource CreateSource()
         {
             GameObject voiceObject = new("AudioKitVoice");
             voiceObject.transform.SetParent(mRoot.transform, false);
             AudioSource created = voiceObject.AddComponent<AudioSource>();
             created.playOnAwake = false;
-            return new PooledAudioSource(created);
+            return created;
         }
+
+        /// <summary>创建一个可池化 AudioSource 租约；只由 PoolKit 空缓存工厂调用。</summary>
+        private PooledAudioSource CreateSourceLease() => new(CreateSource());
 
         /// <summary>重置池化 AudioSource，供 PoolKit 回收回调统一执行。</summary>
         private static void ResetSourceLease(PooledAudioSource lease)
@@ -45,18 +49,11 @@ namespace YokiFrame.Unity
             source.gameObject.SetActive(false);
         }
 
-        /// <summary>归还 voice 的 AudioSource 租约；异常池状态下销毁而不遗留宿主对象。</summary>
+        /// <summary>归还 voice 的 AudioSource 租约；容量淘汰与销毁统一由 Core PoolKit 负责。</summary>
         private void ReturnSource(PooledAudioSource lease)
         {
-            if (lease == null)
-            {
-                return;
-            }
-
-            if (!mSourcePool.Recycle(lease))
-            {
-                lease.Dispose();
-            }
+            if (lease == null) return;
+            mSourcePool.Recycle(lease);
         }
 
         /// <summary>移除指定索引 voice 并回收其 AudioSource。</summary>

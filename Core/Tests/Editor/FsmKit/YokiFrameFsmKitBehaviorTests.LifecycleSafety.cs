@@ -13,8 +13,8 @@ namespace YokiFrame
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Disposable");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
 
-            ((IState)fsm).Dispose();
-            Assert.DoesNotThrow(() => ((IState)fsm).Dispose());
+            fsm.Dispose();
+            Assert.DoesNotThrow(() => fsm.Dispose());
 
             Assert.Throws<ObjectDisposedException>(() => fsm.Get(SampleStateId.Idle, out _));
             Assert.Throws<ObjectDisposedException>(() => fsm.Add(SampleStateId.Run, new TrackingState("run")));
@@ -41,6 +41,7 @@ namespace YokiFrame
             StringAssert.Contains(
                 "\"count\":0",
                 new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"FailedStart\"}"));
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>验证 Start 回调不能嵌套发起 Change，避免一次调用提交两条相互覆盖的转换。</summary>

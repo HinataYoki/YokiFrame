@@ -6,7 +6,7 @@ using System.Globalization;
 namespace YokiFrame
 {
     /// <summary>
-    /// 保存单个 FSM 的稳定诊断身份和有界历史，不持有任何宿主对象。
+    /// 保存单个 FSM 的稳定诊断身份和有界历史；仅弱引用状态机实例，不阻止其被回收。
     /// </summary>
     internal sealed class FsmKitDiagnosticRecord
     {
@@ -18,6 +18,7 @@ namespace YokiFrame
             new FsmKitBoundedBuffer<FsmKitStateEventRecord>(MAX_RECORD_COUNT);
         private readonly Dictionary<string, long> mEntryCounts =
             new Dictionary<string, long>(StringComparer.Ordinal);
+        private readonly WeakReference<IFSM> mFsmRef;
 
         /// <summary>
         /// 创建绑定指定状态机实例的诊断记录。
@@ -29,7 +30,7 @@ namespace YokiFrame
         {
             InstanceId = instanceId;
             Name = name;
-            Fsm = fsm;
+            mFsmRef = new WeakReference<IFSM>(fsm);
             Version = 1L;
         }
 
@@ -39,11 +40,18 @@ namespace YokiFrame
         /// <summary>获取当前诊断名称。</summary>
         internal string Name { get; private set; }
 
-        /// <summary>获取绑定的状态机实例。</summary>
-        internal IFSM Fsm { get; }
-
         /// <summary>获取当前实例诊断事实的单调版本。</summary>
         internal long Version { get; private set; }
+
+        /// <summary>
+        /// 尝试解析仍然存活的状态机实例。
+        /// </summary>
+        /// <param name="fsm">解析出的强引用；实例已被回收时为空。</param>
+        /// <returns>实例仍存活时返回 true。</returns>
+        internal bool TryGetFsm(out IFSM fsm)
+        {
+            return mFsmRef.TryGetTarget(out fsm);
+        }
 
         /// <summary>
         /// 更新诊断名称；实例标识和已有历史保持不变。
@@ -103,16 +111,21 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建可脱离注册表锁读取的诊断快照。
+        /// 创建可脱离注册表锁读取的诊断快照；快照持有解析出的临时强引用。
         /// </summary>
-        /// <returns>包含当前状态机引用和两类历史副本的快照。</returns>
+        /// <returns>包含当前状态机引用和两类历史副本的快照；实例已被回收时为空。</returns>
         internal FsmKitDiagnosticSnapshot CreateSnapshot()
         {
+            if (!mFsmRef.TryGetTarget(out IFSM fsm))
+            {
+                return null;
+            }
+
             return new FsmKitDiagnosticSnapshot(
                 InstanceId,
                 Name,
                 Version,
-                Fsm,
+                fsm,
                 mHistory.ToArray(),
                 mStateEvents.ToArray(),
                 new Dictionary<string, long>(mEntryCounts, StringComparer.Ordinal));

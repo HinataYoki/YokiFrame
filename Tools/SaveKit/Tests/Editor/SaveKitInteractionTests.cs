@@ -129,6 +129,22 @@ namespace YokiFrame.Tests
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
         }
 
+        /// <summary>验证 Exists 和 GetMeta 走 ISaveMetadataStorage 契约，不触发完整 Read。</summary>
+        [Test]
+        public void ExistsAndGetMeta_UsesMetadataReaderWithoutReadingPayload()
+        {
+            var storage = new HeaderOnlyStorage(SaveTarget.Slot(3));
+            SaveKit.SetStorage(storage);
+            SaveKit.SetSerializer(new TestSaveSerializer());
+
+            var exists = SaveKit.Exists(SaveTarget.Slot(3));
+            var meta = SaveKit.GetMeta(SaveTarget.Slot(3));
+
+            Assert.IsTrue(exists);
+            Assert.AreEqual(SaveTarget.Slot(3), meta.Target);
+            Assert.IsFalse(storage.ReadWasCalled, "Exists/GetMeta must use TryReadMetadata, not Read.");
+        }
+
         /// <summary>从 Tool catalog 组合后的 Registry 获取 SaveKit Provider，覆盖真实安装路径。</summary>
         private static IYokiFrameKitInteractionProvider GetProvider()
         {

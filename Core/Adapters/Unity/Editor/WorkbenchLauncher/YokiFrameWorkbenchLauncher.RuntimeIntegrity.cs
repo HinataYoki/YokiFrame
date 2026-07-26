@@ -220,6 +220,8 @@ namespace YokiFrame
             }
 
             long calculatedBytes = 0;
+            // 同一目录前缀在多条记录间反复出现，缓存已验证目录使祖先属性只读一次。
+            var verifiedDirectories = new HashSet<string>(RuntimePathComparer());
             for (var index = 0; index < platform.files.Length; index++)
             {
                 var record = platform.files[index];
@@ -227,7 +229,7 @@ namespace YokiFrame
                     || !TryResolveInside(runtimeRoot, record.relativePath, out var fullPath)
                     || !IsInside(platformRoot, fullPath)
                     || !File.Exists(fullPath)
-                    || HasReparsePointInPath(runtimeRoot, fullPath)
+                    || HasReparsePointInPath(runtimeRoot, fullPath, verifiedDirectories)
                     || IsRuntimeStatePath(platformRoot, fullPath)
                     || string.Equals(Path.GetExtension(fullPath), ".pdb", StringComparison.OrdinalIgnoreCase)
                     || !IsSha256(record.sha256))
@@ -263,6 +265,11 @@ namespace YokiFrame
         /// <summary>
         /// 不跟随目录链接遍历平台目录，并确认实际载荷与 manifest 文件集合完全一致。
         /// </summary>
+        /// <remarks>
+        /// 维持『父先于子验证』不变量：platformRoot 由 TryValidatePlatformFiles 入口全链验证，
+        /// 入栈目录在压栈前已验证非重解析点，故对每个子目录与文件只需检查叶节点自身，
+        /// 祖先属性不再重复读取。破坏该不变量会静默削弱防篡改检查面。
+        /// </remarks>
         /// <param name="platformRoot">平台目录。</param>
         /// <param name="manifestFiles">已验证 manifest 文件集合。</param>
         /// <param name="error">验证失败原因。</param>
@@ -281,7 +288,7 @@ namespace YokiFrame
                 var current = pendingDirectories.Pop();
                 foreach (var directory in Directory.GetDirectories(current))
                 {
-                    if (HasReparsePointInPath(platformRoot, directory))
+                    if (IsReparsePoint(directory))
                     {
                         error = "Runtime profile contains a symbolic link or reparse-point directory.";
                         return false;
@@ -295,7 +302,7 @@ namespace YokiFrame
 
                 foreach (var path in Directory.GetFiles(current))
                 {
-                    if (HasReparsePointInPath(platformRoot, path))
+                    if (IsReparsePoint(path))
                     {
                         error = "Runtime profile contains a symbolic link or reparse-point file.";
                         return false;
@@ -364,8 +371,27 @@ namespace YokiFrame
         /// <summary>检查根到目标的每一级是否为 reparse point。</summary>
         private static bool HasReparsePointInPath(string root, string path)
         {
+            return HasReparsePointInPath(root, path, null);
+        }
+
+        /// <summary>
+        /// 检查根到目标的每一级是否为 reparse point，并复用已验证目录前缀短路。
+        /// </summary>
+        /// <param name="root">校验起点目录。</param>
+        /// <param name="path">目标完整路径。</param>
+        /// <param name="verifiedDirectories">同一轮已验证非重解析点的目录缓存；为空时不复用。</param>
+        /// <returns>路径链上存在重解析点时返回 true。</returns>
+        private static bool HasReparsePointInPath(
+            string root,
+            string path,
+            HashSet<string> verifiedDirectories)
+        {
             var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (IsReparsePoint(normalizedRoot)) return true;
+            if (verifiedDirectories == null || !verifiedDirectories.Contains(normalizedRoot))
+            {
+                if (IsReparsePoint(normalizedRoot)) return true;
+                if (verifiedDirectories != null) verifiedDirectories.Add(normalizedRoot);
+            }
 
             var relativePath = Path.GetRelativePath(normalizedRoot, Path.GetFullPath(path));
             var current = normalizedRoot;
@@ -375,7 +401,15 @@ namespace YokiFrame
             for (var index = 0; index < segments.Length; index++)
             {
                 current = Path.Combine(current, segments[index]);
+                bool isLastSegment = index == segments.Length - 1;
+                // 只缓存目录前缀；叶节点是文件，缓存后无法被后续记录复用。
+                if (!isLastSegment && verifiedDirectories != null && verifiedDirectories.Contains(current))
+                {
+                    continue;
+                }
+
                 if (IsReparsePoint(current)) return true;
+                if (!isLastSegment && verifiedDirectories != null) verifiedDirectories.Add(current);
             }
 
             return false;

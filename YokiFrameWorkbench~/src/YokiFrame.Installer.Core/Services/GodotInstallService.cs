@@ -175,7 +175,6 @@ public sealed class GodotInstallService
     {
         var candidates = Directory.EnumerateFiles(projectRoot, "*", SearchOption.TopDirectoryOnly)
             .Where(static path => string.Equals(Path.GetExtension(path), ".csproj", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (candidates.Length != 1)
         {

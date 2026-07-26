@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace YokiFrame.Tests
 {
     /// <summary>记录 ActionKit 测试期间的 Error，并要求每条预期错误都被显式消费。</summary>
-    internal sealed class ActionKitTestLogger : IEngineLogger
+    public sealed class ActionKitTestLogger : IEngineLogger
     {
         private readonly List<string> mErrors = new();
 
@@ -19,11 +19,11 @@ namespace YokiFrame.Tests
         }
 
         /// <summary>清除上一用例记录，保证 fixture 实例复用时仍相互隔离。</summary>
-        internal void Clear() => mErrors.Clear();
+        public void Clear() => mErrors.Clear();
 
         /// <summary>按顺序断言错误前缀，并在断言前取走记录，避免 TearDown 重复报告。</summary>
         /// <param name="expectedPrefixes">本用例允许出现的完整错误前缀序列。</param>
-        internal void AssertErrors(params string[] expectedPrefixes)
+        public void AssertErrors(params string[] expectedPrefixes)
         {
             string[] actual = mErrors.ToArray();
             mErrors.Clear();
@@ -32,10 +32,14 @@ namespace YokiFrame.Tests
                 StringAssert.StartsWith(expectedPrefixes[index], actual[index]);
         }
 
+        /// <summary>断言并消费唯一 Error，适合 Adapter 与 Integration 故障终态用例。</summary>
+        /// <param name="expectedPrefix">预期错误前缀。</param>
+        public void AssertSingleError(string expectedPrefix) => AssertErrors(expectedPrefix);
+
         /// <summary>断言固定数量的同类错误，适合有界历史和 payload 压力用例。</summary>
         /// <param name="count">预期错误数量。</param>
         /// <param name="expectedPrefix">每条错误必须具备的前缀。</param>
-        internal void AssertRepeatedErrors(int count, string expectedPrefix)
+        public void AssertRepeatedErrors(int count, string expectedPrefix)
         {
             string[] actual = mErrors.ToArray();
             mErrors.Clear();
@@ -45,7 +49,7 @@ namespace YokiFrame.Tests
         }
 
         /// <summary>断言用例没有遗留未声明 Error，防止记录型 logger 把新回归静默吞掉。</summary>
-        internal void AssertNoErrors()
+        public void AssertNoErrors()
         {
             string[] actual = mErrors.ToArray();
             mErrors.Clear();

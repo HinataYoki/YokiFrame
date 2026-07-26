@@ -14,7 +14,7 @@ namespace YokiFrame
     {
         private const int MAX_ROOTS = 64;
         private const int MAX_NODES = 256;
-        private const int MAX_DEPTH = 16;
+        internal const int MAX_DEPTH = 16;
         private const int MAX_STACK_ROOTS = 4;
         private const int MAX_STACK_FRAMES = 24;
         private const int MIN_REDUCED_NODES = 16;
@@ -420,7 +420,9 @@ namespace YokiFrame
                 normalized = normalized.Substring(0, length);
             }
 
-            builder.Append('"').Append(JsonHelper.EscapeString(normalized)).Append('"');
+            builder.Append('"');
+            JsonHelper.AppendEscapedString(builder, normalized);
+            builder.Append('"');
         }
 
         /// <summary>返回 JSON 布尔字面量。</summary>

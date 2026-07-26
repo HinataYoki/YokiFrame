@@ -48,6 +48,9 @@ namespace YokiFrame
         /// <summary>处理状态暂停。</summary>
         protected virtual void OnSuspend() { }
 
+        /// <summary>处理状态恢复。</summary>
+        protected virtual void OnResume() { }
+
         /// <summary>释放状态资源。</summary>
         protected virtual void OnDispose() { }
 
@@ -66,6 +69,9 @@ namespace YokiFrame
         /// <summary>把暂停转发给派生状态。</summary>
         void IState.Suspend() => OnSuspend();
 
+        /// <summary>把恢复转发给派生状态。</summary>
+        void IState.Resume() => OnResume();
+
         /// <summary>把普通更新转发给派生状态。</summary>
         void IState.Update() => OnUpdate();
 
@@ -81,10 +87,10 @@ namespace YokiFrame
         /// <summary>把释放转发给派生状态。</summary>
         void IState.Dispose() => OnDispose();
 
-        /// <summary>把消息转发给派生状态。</summary>
+        /// <summary>把消息转发给派生状态；消息统一经 FSM 的 Running 门控投递。</summary>
         /// <typeparam name="TMsg">消息类型。</typeparam>
         /// <param name="message">消息值。</param>
-        public void SendMessage<TMsg>(TMsg message) => OnMessage(message);
+        void IState.SendMessage<TMsg>(TMsg message) => OnMessage(message);
     }
 
     /// <summary>

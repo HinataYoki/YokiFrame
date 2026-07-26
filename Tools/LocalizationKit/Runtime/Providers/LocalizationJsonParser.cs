@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace YokiFrame
 {
     /// <summary>为 Unity Runtime 提供无宿主依赖的有限 JSON 值解析。</summary>
     internal sealed class LocalizationJsonParser
     {
+        private const int MAX_DEPTH = 64;
         private readonly string mJson;
         private int mIndex;
+        private int mDepth;
+        private StringBuilder mBuilder;
 
         /// <summary>创建绑定到单个 JSON 文本的解析器。</summary>
         private LocalizationJsonParser(string json)
@@ -58,60 +62,103 @@ namespace YokiFrame
         /// <summary>解析 JSON 对象并以序数键保存字段。</summary>
         private Dictionary<string, object> ParseObject()
         {
-            var result = new Dictionary<string, object>(StringComparer.Ordinal);
-            Expect('{');
-            SkipWhitespace();
-            if (TryConsume('}')) return result;
-
-            while (true)
+            EnterDepth();
+            try
             {
-                SkipWhitespace();
-                string key = ParseString();
-                SkipWhitespace();
-                Expect(':');
-                object value = ParseValue();
-                if (result.ContainsKey(key))
-                {
-                    throw new FormatException("JSON object contains a duplicate key: " + key);
-                }
-
-                result.Add(key, value);
+                var result = new Dictionary<string, object>(StringComparer.Ordinal);
+                Expect('{');
                 SkipWhitespace();
                 if (TryConsume('}')) return result;
-                Expect(',');
+
+                while (true)
+                {
+                    SkipWhitespace();
+                    string key = ParseString();
+                    SkipWhitespace();
+                    Expect(':');
+                    object value = ParseValue();
+                    if (result.ContainsKey(key))
+                    {
+                        throw new FormatException("JSON object contains a duplicate key: " + key);
+                    }
+
+                    result.Add(key, value);
+                    SkipWhitespace();
+                    if (TryConsume('}')) return result;
+                    Expect(',');
+                }
+            }
+            finally
+            {
+                mDepth--;
             }
         }
 
         /// <summary>解析 JSON 数组并保持元素顺序。</summary>
         private List<object> ParseArray()
         {
-            var result = new List<object>();
-            Expect('[');
-            SkipWhitespace();
-            if (TryConsume(']')) return result;
-
-            while (true)
+            EnterDepth();
+            try
             {
-                result.Add(ParseValue());
+                var result = new List<object>();
+                Expect('[');
                 SkipWhitespace();
                 if (TryConsume(']')) return result;
-                Expect(',');
+
+                while (true)
+                {
+                    result.Add(ParseValue());
+                    SkipWhitespace();
+                    if (TryConsume(']')) return result;
+                    Expect(',');
+                }
+            }
+            finally
+            {
+                mDepth--;
             }
         }
 
+        /// <summary>进入复合值时累计嵌套深度，超限时拒绝解析。</summary>
+        private void EnterDepth()
+        {
+            if (++mDepth > MAX_DEPTH) throw new FormatException("JSON nesting is too deep.");
+        }
+
         /// <summary>解析字符串转义、Unicode 字符并拒绝控制字符。</summary>
+        /// <remarks>无转义时直接 Substring 取原文，仅在遇到反斜杠后启用复用的 StringBuilder。</remarks>
         private string ParseString()
         {
             Expect('"');
-            var chars = new List<char>();
+            int start = mIndex;
+            while (mIndex < mJson.Length)
+            {
+                char current = mJson[mIndex];
+                if (current == '"')
+                {
+                    string plain = mJson.Substring(start, mIndex - start);
+                    mIndex++;
+                    return plain;
+                }
+
+                if (current < 0x20) throw new FormatException("JSON string contains a control character.");
+                if (current == '\\') break;
+                mIndex++;
+            }
+
+            if (mIndex >= mJson.Length) throw new FormatException("Unterminated JSON string.");
+
+            if (mBuilder == null) mBuilder = new StringBuilder(64);
+            else mBuilder.Length = 0;
+            mBuilder.Append(mJson, start, mIndex - start);
             while (mIndex < mJson.Length)
             {
                 char current = mJson[mIndex++];
-                if (current == '"') return new string(chars.ToArray());
+                if (current == '"') return mBuilder.ToString();
                 if (current < 0x20) throw new FormatException("JSON string contains a control character.");
                 if (current != '\\')
                 {
-                    chars.Add(current);
+                    mBuilder.Append(current);
                     continue;
                 }
 
@@ -121,13 +168,13 @@ namespace YokiFrame
                 {
                     case '"':
                     case '\\':
-                    case '/': chars.Add(escape); break;
-                    case 'b': chars.Add('\b'); break;
-                    case 'f': chars.Add('\f'); break;
-                    case 'n': chars.Add('\n'); break;
-                    case 'r': chars.Add('\r'); break;
-                    case 't': chars.Add('\t'); break;
-                    case 'u': chars.Add(ParseUnicodeEscape()); break;
+                    case '/': mBuilder.Append(escape); break;
+                    case 'b': mBuilder.Append('\b'); break;
+                    case 'f': mBuilder.Append('\f'); break;
+                    case 'n': mBuilder.Append('\n'); break;
+                    case 'r': mBuilder.Append('\r'); break;
+                    case 't': mBuilder.Append('\t'); break;
+                    case 'u': mBuilder.Append(ParseUnicodeEscape()); break;
                     default: throw new FormatException("Invalid JSON string escape.");
                 }
             }

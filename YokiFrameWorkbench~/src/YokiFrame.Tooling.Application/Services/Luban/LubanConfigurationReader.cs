@@ -29,14 +29,15 @@ public sealed class LubanConfigurationReader
         }
 
         string configDirectory = Path.GetDirectoryName(fullConfigPath)!;
+        var schemaSources = ReadSchemaSources(config, configDirectory);
         return new LubanConfiguration
         {
             ConfigPath = fullConfigPath,
             ConfigDirectory = configDirectory,
             DataDirectory = ResolveDataDirectory(config, configDirectory),
             TargetNames = ReadTargetNames(config),
-            SchemaSources = ReadSchemaSources(config, configDirectory),
-            DefinitionFiles = ResolveDefinitionFiles(config, configDirectory)
+            SchemaSources = schemaSources,
+            DefinitionFiles = ResolveDefinitionFiles(schemaSources, configDirectory)
         };
     }
 
@@ -120,10 +121,10 @@ public sealed class LubanConfigurationReader
     /// <param name="config">已解析的 luban.conf 根节点。</param>
     /// <param name="configDirectory">luban.conf 所在目录。</param>
     /// <returns>去重、排序后的 XML 定义文件绝对路径。</returns>
-    private static IReadOnlyList<string> ResolveDefinitionFiles(JsonObject config, string configDirectory)
+    private static IReadOnlyList<string> ResolveDefinitionFiles(IReadOnlyList<LubanSchemaSource> schemaSources, string configDirectory)
     {
         HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
-        foreach (LubanSchemaSource source in ReadSchemaSources(config, configDirectory))
+        foreach (LubanSchemaSource source in schemaSources)
         {
             if (File.Exists(source.FullPath)
                 && string.Equals(Path.GetExtension(source.FullPath), ".xml", StringComparison.OrdinalIgnoreCase))

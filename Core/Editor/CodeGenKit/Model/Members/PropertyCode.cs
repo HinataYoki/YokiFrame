@@ -18,7 +18,6 @@ namespace YokiFrame
         private string mGetterExpression;
         private Action<ICodeScope> mGetterBody;
         private Action<ICodeScope> mSetterBody;
-        private bool mHasGetter = true;
         private bool mHasSetter;
         private PropertyBodyKind mBodyKind = PropertyBodyKind.Auto;
 
@@ -79,13 +78,24 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 为属性追加带单个原始参数的特性。
+        /// </summary>
+        /// <param name="attributeName">特性类型名称。</param>
+        /// <param name="argument">特性参数表达式。</param>
+        /// <returns>当前属性 builder。</returns>
+        public PropertyCode WithAttribute(string attributeName, string argument)
+        {
+            mAttributes.Add(new AttributeCode(attributeName).WithArgument(argument));
+            return this;
+        }
+
+        /// <summary>
         /// 将属性重置为只有自动 getter 的只读属性。
         /// </summary>
         /// <returns>当前属性 builder。</returns>
         public PropertyCode AsReadonly()
         {
             ResetBody(PropertyBodyKind.Auto);
-            mHasGetter = true;
             mHasSetter = false;
             return this;
         }
@@ -99,7 +109,6 @@ namespace YokiFrame
         {
             CodeModifierText.GetAccessText(setterAccess);
             ResetBody(PropertyBodyKind.Auto);
-            mHasGetter = true;
             mHasSetter = true;
             mSetterAccess = setterAccess;
             return this;
@@ -114,7 +123,6 @@ namespace YokiFrame
         {
             ResetBody(PropertyBodyKind.Expression);
             mGetterExpression = CSharpText.RequireNonEmptyLine(expression, nameof(expression));
-            mHasGetter = true;
             mHasSetter = false;
             return this;
         }
@@ -126,10 +134,14 @@ namespace YokiFrame
         /// <returns>当前属性 builder。</returns>
         public PropertyCode WithGetter(Action<ICodeScope> getterBody)
         {
+            if (getterBody == null)
+            {
+                throw new ArgumentNullException(nameof(getterBody));
+            }
+
             mBodyKind = PropertyBodyKind.Accessors;
             mGetterExpression = null;
             mGetterBody = getterBody;
-            mHasGetter = true;
             return this;
         }
 
@@ -141,6 +153,11 @@ namespace YokiFrame
         /// <returns>当前属性 builder。</returns>
         public PropertyCode WithSetter(Action<ICodeScope> setterBody, AccessModifier access = AccessModifier.None)
         {
+            if (setterBody == null)
+            {
+                throw new ArgumentNullException(nameof(setterBody));
+            }
+
             if (mBodyKind == PropertyBodyKind.Expression)
             {
                 throw new InvalidOperationException("表达式属性不能直接追加 setter，请先调用 WithGetter 切换为访问器属性。");
@@ -223,24 +240,28 @@ namespace YokiFrame
         /// <returns>包含必要尾随空格的访问器文本。</returns>
         private string BuildAutoAccessors()
         {
-            string getter = mHasGetter ? "get; " : string.Empty;
             string setter = mHasSetter ? CodeModifierText.GetAccessText(mSetterAccess) + "set; " : string.Empty;
-            return getter + setter;
+            return "get; " + setter;
         }
 
         /// <summary>
-        /// 渲染具有独立花括号的 getter/setter 访问器。
+        /// 渲染具有独立花括号的 getter/setter 访问器；每个启用的访问器都必须提供 body。
         /// </summary>
         /// <param name="writer">接收源码的 writer。</param>
         /// <param name="header">完整属性声明头。</param>
         private void GenerateExplicitAccessors(CodeTextWriter writer, string header)
         {
+            if (mGetterBody == null || (mHasSetter && mSetterBody == null))
+            {
+                throw new InvalidOperationException("显式访问器属性的每个访问器都必须提供 body，请改用 AsAutoProperty 或 AsReadonly 声明自动访问器。");
+            }
+
             writer.WriteLine(header);
             writer.WriteLine("{");
             writer.PushIndent();
             try
             {
-                GenerateAccessor(writer, "get", AccessModifier.None, mHasGetter, mGetterBody);
+                GenerateAccessor(writer, "get", AccessModifier.None, true, mGetterBody);
                 GenerateAccessor(writer, "set", mSetterAccess, mHasSetter, mSetterBody);
             }
             finally
@@ -252,13 +273,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 渲染单个自动或带 body 的访问器。
+        /// 渲染单个带 body 的访问器。
         /// </summary>
         /// <param name="writer">接收源码的 writer。</param>
         /// <param name="name">get 或 set。</param>
         /// <param name="access">访问器访问级别。</param>
         /// <param name="enabled">是否生成该访问器。</param>
-        /// <param name="body">可选访问器 body。</param>
+        /// <param name="body">访问器 body 构建回调。</param>
         private static void GenerateAccessor(
             CodeTextWriter writer,
             string name,
@@ -271,14 +292,7 @@ namespace YokiFrame
                 return;
             }
 
-            string firstLine = CodeModifierText.GetAccessText(access) + name;
-            if (body == null)
-            {
-                writer.WriteLine(firstLine + ";");
-                return;
-            }
-
-            CustomCodeScope scope = new CustomCodeScope(firstLine, false);
+            CustomCodeScope scope = new CustomCodeScope(CodeModifierText.GetAccessText(access) + name, false);
             body(scope);
             ((ICodeNode)scope).Generate(writer);
         }

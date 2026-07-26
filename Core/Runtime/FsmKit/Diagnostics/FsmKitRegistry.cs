@@ -105,20 +105,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 记录状态机成功启动；Start 作为兼容的来源节点。
-        /// </summary>
-        /// <param name="fsm">状态机实例。</param>
-        /// <param name="state">初始状态名称。</param>
-        internal static void RecordStarted(IFSM fsm, string state)
-        {
-            lock (sGate)
-            {
-                GetOrCreateRecord(fsm).RecordTransition("Start", state);
-                MarkChanged();
-            }
-        }
-
-        /// <summary>
         /// 记录一次成功状态切换。
         /// </summary>
         /// <param name="fsm">状态机实例。</param>
@@ -193,20 +179,26 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 获取按注册顺序排列的全部独立诊断快照。
+        /// 获取按注册顺序排列的全部独立诊断快照，并剔除状态机已被回收的记录。
         /// </summary>
         /// <returns>调用方可安全枚举的快照数组。</returns>
         internal static FsmKitDiagnosticSnapshot[] GetAllSnapshots()
         {
             lock (sGate)
             {
-                FsmKitDiagnosticSnapshot[] snapshots = new FsmKitDiagnosticSnapshot[sRecords.Count];
+                PruneDeadRecords();
+                List<FsmKitDiagnosticSnapshot> snapshots =
+                    new List<FsmKitDiagnosticSnapshot>(sRecords.Count);
                 for (var index = 0; index < sRecords.Count; index++)
                 {
-                    snapshots[index] = sRecords[index].CreateSnapshot();
+                    FsmKitDiagnosticSnapshot snapshot = sRecords[index].CreateSnapshot();
+                    if (snapshot != null)
+                    {
+                        snapshots.Add(snapshot);
+                    }
                 }
 
-                return snapshots;
+                return snapshots.ToArray();
             }
         }
 
@@ -218,6 +210,7 @@ namespace YokiFrame
         {
             lock (sGate)
             {
+                PruneDeadRecords();
                 string[] instanceIds = new string[sRecords.Count];
                 for (var index = 0; index < sRecords.Count; index++)
                 {
@@ -248,15 +241,16 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 优先按 instanceId 精确查找，否则按名称返回最后注册的兼容目标。
+        /// 优先按 instanceId 精确查找，否则按名称返回最后注册的兼容目标；查找前剔除已回收记录。
         /// </summary>
         /// <param name="instanceId">精确实例标识。</param>
         /// <param name="name">兼容诊断名称。</param>
-        /// <returns>找到的独立快照；没有匹配项时为空。</returns>
+        /// <returns>找到的独立快照；没有匹配项或实例已被回收时为空。</returns>
         internal static FsmKitDiagnosticSnapshot FindSnapshot(string instanceId, string name)
         {
             lock (sGate)
             {
+                PruneDeadRecords();
                 FsmKitDiagnosticRecord record = !string.IsNullOrEmpty(instanceId)
                     ? FindByInstanceId(instanceId)
                     : FindByName(name);
@@ -342,13 +336,32 @@ namespace YokiFrame
         {
             for (var index = 0; index < sRecords.Count; index++)
             {
-                if (ReferenceEquals(sRecords[index].Fsm, fsm))
+                if (sRecords[index].TryGetFsm(out IFSM candidate) && ReferenceEquals(candidate, fsm))
                 {
                     return index;
                 }
             }
 
             return -1;
+        }
+
+        /// <summary>移除状态机已被回收的记录；调用方必须持有注册表锁。</summary>
+        private static void PruneDeadRecords()
+        {
+            bool removed = false;
+            for (var index = sRecords.Count - 1; index >= 0; index--)
+            {
+                if (!sRecords[index].TryGetFsm(out _))
+                {
+                    sRecords.RemoveAt(index);
+                    removed = true;
+                }
+            }
+
+            if (removed)
+            {
+                MarkChanged();
+            }
         }
 
         /// <summary>按实例标识查找记录。</summary>

@@ -47,6 +47,7 @@ internal static class WorkbenchEventKitStateParser
             && countsElement.ValueKind == JsonValueKind.Object
                 ? countsElement
                 : default;
+        var totalHandlers = events.Sum(static item => item.HandlerCount);
         return new WorkbenchEventKitState(
             dataSource,
             ReadInt64(root, "version"),
@@ -55,7 +56,7 @@ internal static class WorkbenchEventKitStateParser
             ReadInt32(counts, "enumEvents"),
             ReadInt32(counts, "stringEvents"),
             ReadInt32(counts, "totalEvents", events.Count),
-            ReadInt32(counts, "totalHandlers", events.Sum(static item => item.HandlerCount)),
+            ReadInt32(counts, "totalHandlers", totalHandlers),
             ReadInt32(counts, "recentActivities", activities.Count),
             events,
             activities);

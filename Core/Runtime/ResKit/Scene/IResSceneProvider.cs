@@ -24,8 +24,8 @@ namespace YokiFrame
         /// <summary>设置当前激活场景。</summary>
         void SetActiveScene(ResSceneHandle scene);
 
-        /// <summary>获取当前激活场景。</summary>
-        ResSceneHandle GetActiveScene();
+        /// <summary>获取当前激活场景；默认实现等价于 <see cref="ActiveScene"/>。</summary>
+        ResSceneHandle GetActiveScene() => ActiveScene;
 
         /// <summary>请求宿主清理未使用资源。</summary>
         void UnloadUnusedAssets(Action onComplete);

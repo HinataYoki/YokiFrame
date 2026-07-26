@@ -104,10 +104,10 @@ internal sealed partial class GodotAddonInstallTransactionService
     /// <param name="expected">投影中的期望摘要。</param>
     private static void VerifyProjectedFile(string targetPath, PackageProjectionFile expected)
     {
-        FileInfo info = new(targetPath);
         using var stream = File.OpenRead(targetPath);
         var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-        if (info.Length != expected.Length || !string.Equals(hash, expected.Sha256, StringComparison.OrdinalIgnoreCase))
+        if (stream.Length != expected.Length
+            || !string.Equals(hash, expected.Sha256, StringComparison.OrdinalIgnoreCase))
         {
             throw new IOException("Godot staged file hash mismatch: " + expected.RelativePath);
         }

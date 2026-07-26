@@ -264,12 +264,6 @@ namespace YokiFrame
             mActiveScene = scene;
         }
 
-        /// <summary>获取 SceneKit 记录的 Godot 激活场景。</summary>
-        public ResSceneHandle GetActiveScene()
-        {
-            return mActiveScene;
-        }
-
         /// <summary>Godot 使用引用计数管理未使用资源，因此直接完成请求。</summary>
         public void UnloadUnusedAssets(Action onComplete)
         {

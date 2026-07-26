@@ -48,12 +48,14 @@ internal static class WorkbenchArchitectureStateParser
             && statsElement.ValueKind == JsonValueKind.Object
                 ? statsElement
                 : default;
+        var aliveCount = architectures.Count(static item => item.IsAlive);
+        var serviceCount = architectures.Sum(static item => item.Services.Count);
         return new WorkbenchArchitectureState(
             dataSource,
             ReadInt64(stats, "diagnosticVersion"),
             ReadInt32(root, "count", architectures.Count),
-            ReadInt32(stats, "aliveCount", architectures.Count(static item => item.IsAlive)),
-            ReadInt32(stats, "serviceCount", architectures.Sum(static item => item.Services.Count)),
+            ReadInt32(stats, "aliveCount", aliveCount),
+            ReadInt32(stats, "serviceCount", serviceCount),
             architectures);
     }
 

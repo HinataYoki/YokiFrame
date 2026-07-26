@@ -74,7 +74,14 @@ namespace YokiFrame
                     }
 
                     var id = Encoding.UTF8.GetString(reader.ReadBytes(idLength));
-                    SaveModuleIdentity.ValidateId(id);
+                    try
+                    {
+                        SaveModuleIdentity.ValidateId(id);
+                    }
+                    catch (ArgumentException exception)
+                    {
+                        throw new InvalidDataException("Save module id is invalid or truncated.", exception);
+                    }
                     var payloadLength = reader.ReadInt32();
                     if (payloadLength < 0 || payloadLength > MAX_MODULE_PAYLOAD_BYTES || stream.Length - stream.Position < payloadLength)
                     {

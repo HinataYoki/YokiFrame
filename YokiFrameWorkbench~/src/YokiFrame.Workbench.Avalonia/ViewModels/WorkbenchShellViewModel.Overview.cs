@@ -89,17 +89,6 @@ public sealed partial class WorkbenchShellViewModel
     }
 
     /// <summary>
-    /// 创建队列摘要文本。
-    /// </summary>
-    /// <param name="state">dashboard 状态。</param>
-    /// <returns>队列摘要。</returns>
-    private static string CreateQueueHeadline(WorkbenchDashboardState? state)
-    {
-        var status = state?.BridgeStatus;
-        return (status?.PendingCount ?? 0) + " pending / " + (status?.ProcessingCount ?? 0) + " processing";
-    }
-
-    /// <summary>
     /// 创建紧凑队列摘要文本。
     /// </summary>
     /// <param name="state">dashboard 状态。</param>
@@ -111,16 +100,6 @@ public sealed partial class WorkbenchShellViewModel
     }
 
     /// <summary>
-    /// 创建命令归档数量说明，放在队列卡片详情中。
-    /// </summary>
-    /// <param name="status">FileBridge 状态。</param>
-    /// <returns>命令归档数量说明。</returns>
-    private static string CreateArchiveDetail(FileBridgeStatus? status)
-    {
-        return "archive " + (status?.ArchiveCount ?? 0);
-    }
-
-    /// <summary>
     /// 创建结果和死信数量摘要，放在顶部队列卡片详情中。
     /// </summary>
     /// <param name="state">dashboard 状态。</param>
@@ -129,31 +108,6 @@ public sealed partial class WorkbenchShellViewModel
     {
         var status = state?.BridgeStatus;
         return "results " + (status?.ResultCount ?? 0) + " / deadletter " + (status?.DeadletterCount ?? 0);
-    }
-
-    /// <summary>
-    /// 创建 snapshot 可用数量摘要。
-    /// </summary>
-    /// <param name="state">dashboard 状态。</param>
-    /// <returns>snapshot 可用数量。</returns>
-    private static string CreateSnapshotAvailabilityHeadline(WorkbenchDashboardState state)
-    {
-        return state.Snapshots.Count(static snapshot => snapshot.Exists) + "/" + state.Snapshots.Count + " available";
-    }
-
-    /// <summary>
-    /// 创建 snapshot 来源摘要，帮助用户判断当前是实时源还是文件快照。
-    /// </summary>
-    /// <param name="state">dashboard 状态。</param>
-    /// <returns>snapshot 来源摘要。</returns>
-    private static string CreateSnapshotSourceDetail(WorkbenchDashboardState state)
-    {
-        if (state.Snapshots.Count == 0)
-        {
-            return "没有注册 snapshot";
-        }
-
-        return string.Join(" / ", state.Snapshots.Select(static snapshot => snapshot.Source).Distinct(StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -303,50 +257,6 @@ public sealed partial class WorkbenchShellViewModel
     }
 
     /// <summary>
-    /// 创建运行模式摘要。
-    /// </summary>
-    /// <param name="health">FileBridge 健康状态。</param>
-    /// <returns>运行模式摘要。</returns>
-    private static string CreateModeHeadline(WorkbenchBridgeHealth health)
-    {
-        return string.IsNullOrWhiteSpace(health.Mode) ? "unknown" : health.Mode;
-    }
-
-    /// <summary>
-    /// 创建运行模式辅助说明。
-    /// </summary>
-    /// <param name="health">FileBridge 健康状态。</param>
-    /// <returns>运行模式辅助说明。</returns>
-    private static string CreateModeDetail(WorkbenchBridgeHealth health)
-    {
-        return string.IsNullOrWhiteSpace(health.SessionId) ? "session unknown" : "session " + health.SessionId;
-    }
-
-    /// <summary>
-    /// 创建 heartbeat 文件路径摘要。
-    /// </summary>
-    /// <param name="status">FileBridge 状态。</param>
-    /// <returns>heartbeat 文件路径。</returns>
-    private static string CreateHeartbeatFileText(FileBridgeStatus? status)
-    {
-        var heartbeat = status?.Heartbeat;
-        if (heartbeat != null && !string.IsNullOrWhiteSpace(heartbeat.Path))
-        {
-            return heartbeat.Path;
-        }
-
-        if (string.IsNullOrWhiteSpace(status?.EngineRoot))
-        {
-            return "status/heartbeat.json";
-        }
-
-        return Path.Combine(
-            status.EngineRoot,
-            YokiFrameFileBridgeLayout.STATUS_DIRECTORY,
-            YokiFrameFileBridgeLayout.HEARTBEAT_FILE_NAME);
-    }
-
-    /// <summary>
     /// 创建命令目录路径摘要。
     /// </summary>
     /// <param name="status">FileBridge 状态。</param>
@@ -369,26 +279,6 @@ public sealed partial class WorkbenchShellViewModel
         }
 
         return "protocol " + status.ProtocolFileCount + " files / " + status.ProtocolBytes + " bytes";
-    }
-
-    /// <summary>
-    /// 创建结果文件数量摘要。
-    /// </summary>
-    /// <param name="status">FileBridge 状态。</param>
-    /// <returns>结果文件数量摘要。</returns>
-    private static string CreateResultHeadline(FileBridgeStatus? status)
-    {
-        return (status?.ResultCount ?? 0).ToString();
-    }
-
-    /// <summary>
-    /// 创建死信结果数量说明。
-    /// </summary>
-    /// <param name="status">FileBridge 状态。</param>
-    /// <returns>死信结果数量说明。</returns>
-    private static string CreateDeadletterDetail(FileBridgeStatus? status)
-    {
-        return "deadletter " + (status?.DeadletterCount ?? 0);
     }
 
     /// <summary>

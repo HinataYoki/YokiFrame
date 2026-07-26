@@ -21,6 +21,7 @@ namespace YokiFrame
                     .AppendLine("// </auto-generated>")
                     .AppendLine()
                     .AppendLine("using System;")
+                    .AppendLine("using System.Collections.Concurrent;")
                     .AppendLine("using System.Collections.Generic;")
                     .AppendLine("using System.IO;")
                     .AppendLine("using System.Reflection;")

@@ -104,7 +104,7 @@ Provider 切换或 `ClearAll` 后，旧异步结果以 stale 失败结束，不�
 | `LoadAsync<T>(string path, CancellationToken token = default)` | 获取共享缓存对象；相同 key 的并发请求 single-flight。 |
 | `LoadAssetAsync<T>(string path, CancellationToken token = default)` | 异步获取独立 handle。返回 `Task` 或 `UniTask` 取决于 `YOKIFRAME_UNITASK_SUPPORT`。 |
 | `Release<T>(ResHandle<T> handle)` | 释放一份 handle lease；null 和重复释放无副作用。 |
-| `Release(object asset)` | 消费该对象的一份已登记 lease；未知对象不会交给当前 Provider。 |
+| `Release(object asset)` | 消费该对象的一份已登记匿名 lease；handle 独占 lease 与未知对象都不受影响。 |
 | `ClearAll()` | 立即撤销所有 lease、缓存条目和在途加载。 |
 
 路径不能为空。Provider 返回 `null` 时不建立空缓存条目。每次 `LoadAsset` 都是独立 lease，只有最后一个引用释放时才调用原 Provider 的 `Release`。
@@ -162,7 +162,7 @@ ResKit 只提供宿主无关的场景能力边界，SceneKit 负责更高层的 
 | API | 说明 |
 |---|---|
 | `SceneBackendName` | 场景后端名称。 |
-| `ActiveScene` / `GetActiveScene()` | 读取当前激活场景。 |
+| `ActiveScene` / `GetActiveScene()` | 读取当前激活场景；`GetActiveScene()` 为默认接口实现，等价于 `ActiveScene`，实现方只需提供属性。 |
 | `LoadSceneAsync(ResSceneLoadRequest, onComplete, onProgress, onSuspended)` | 加载场景并报告结果、进度和挂起通知。 |
 | `UnloadSceneAsync(ResSceneHandle, onComplete)` | 异步卸载场景。 |
 | `SetActiveScene(ResSceneHandle)` | 设置当前激活场景。 |
@@ -200,6 +200,6 @@ yoki command send --engine <engineId> --kit ResKit --action list_resources --pay
 
 ## 限制与相关资料
 
-- `Release(object)` 只消费已登记 lease；未知对象不会转发给当前 Provider
+- `Release(object)` 只消费已登记匿名 lease；handle 独占 lease 与未知对象不会转发给当前 Provider
 - SceneKit 负责编排场景 Handler；ResKit 只提供资源与可选场景 Provider 契约
 - Interaction 不提供远程清缓存、释放资源或切换 Provider，相关读取入口见 [Workbench、CLI 与 Installer](../../Guides/Tooling.md)

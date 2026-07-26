@@ -66,6 +66,55 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证尾节点监听器在派发中注册新监听器时，新监听器不参与本轮派发，下一轮才生效。
+        /// </summary>
+        [Test]
+        public void ListenerRegisteredByTailListenerDuringDispatchIsDeferredToNextRound()
+        {
+            var easyEvent = new EasyEvent();
+            string calls = string.Empty;
+            easyEvent.Register(() =>
+            {
+                calls += "A";
+                if (calls.Length == 1)
+                {
+                    easyEvent.Register(() => calls += "B");
+                }
+            });
+
+            easyEvent.Trigger();
+            Assert.AreEqual("A", calls);
+
+            easyEvent.Trigger();
+            Assert.AreEqual("AAB", calls);
+        }
+
+        /// <summary>
+        /// 验证非尾节点监听器在派发中注册新监听器时，新监听器同样不参与本轮派发。
+        /// </summary>
+        [Test]
+        public void ListenerRegisteredByNonTailListenerDuringDispatchIsDeferredToNextRound()
+        {
+            var easyEvent = new EasyEvent();
+            string calls = string.Empty;
+            easyEvent.Register(() =>
+            {
+                calls += "A";
+                if (calls.Length == 1)
+                {
+                    easyEvent.Register(() => calls += "C");
+                }
+            });
+            easyEvent.Register(() => calls += "B");
+
+            easyEvent.Trigger();
+            Assert.AreEqual("AB", calls);
+
+            easyEvent.Trigger();
+            Assert.AreEqual("ABABC", calls);
+        }
+
+        /// <summary>
         /// 验证泛型 EasyEvent 同样保护复用节点不受过期令牌影响。
         /// </summary>
         [Test]

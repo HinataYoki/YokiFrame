@@ -131,6 +131,29 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>
+        /// 验证默认 logger 工厂内部写日志不会递归创建工厂，首条日志正常安装后端且不栈溢出。
+        /// </summary>
+        [Test]
+        public void DefaultLoggerFactoryLoggingDoesNotRecurse()
+        {
+            var factoryCallCount = 0;
+            var logger = new RecordingLogger();
+            LogKit.RegisterDefaultLoggerFactory(() =>
+            {
+                factoryCallCount++;
+                LogKit.Log("factory-side log");
+                return logger;
+            });
+
+            LogKit.Log("first log");
+
+            Assert.AreEqual(1, factoryCallCount);
+            Assert.IsTrue(LogKit.HasLogger);
+            Assert.AreSame(logger, LogKit.GetLogger());
+            Assert.AreEqual("first log", logger.LastMessage);
+        }
+
         /// <summary>验证禁用和低等级过滤在消息格式化前完成，不会调用无效消息的 ToString。</summary>
         [Test]
         public void DisabledAndFilteredLogsDoNotFormatMessages()

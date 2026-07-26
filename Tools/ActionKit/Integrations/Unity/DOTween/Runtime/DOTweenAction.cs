@@ -26,6 +26,9 @@ namespace YokiFrame
         /// <summary>获取当前实例是否由内部 PoolKit 分配，仅供程序集内验证所有权边界。</summary>
         internal bool IsPoolOwned => mPoolOwned;
 
+        /// <summary>获取当前接管的 Tween 强引用，仅供程序集内验证释放。</summary>
+        internal Tween CurrentTween => mTween;
+
         /// <summary>限制实例只能由静态 Allocate 和 PoolKit 创建。</summary>
         private DOTweenAction() { }
 

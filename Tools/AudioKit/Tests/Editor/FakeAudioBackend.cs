@@ -117,7 +117,7 @@ namespace YokiFrame.Tests
 
 #if UNITY_EDITOR || (GODOT && TOOLS)
         /// <summary>复制测试播放产生的 active voice，供诊断聚合测试读取。</summary>
-        public void GetActiveVoices(List<AudioVoiceSnapshot> result)
+        public virtual void GetActiveVoices(List<AudioVoiceSnapshot> result)
         {
             result.Clear();
             result.AddRange(mVoices);

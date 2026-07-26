@@ -46,12 +46,16 @@ public sealed class LubanProcessService
         StringBuilder aggregateLog = new(log);
         foreach (TableKitExtraOutput extraOutput in options.ExtraOutputTargets)
         {
-            IReadOnlyList<string> extraArguments = BuildExtraArguments(options, contract, extraOutput);
-            if (extraArguments.Count == 4)
+            bool hasDataOutput = !string.IsNullOrWhiteSpace(extraOutput.DataTarget)
+                && !string.IsNullOrWhiteSpace(extraOutput.OutputDataDir);
+            bool hasCodeOutput = !string.IsNullOrWhiteSpace(extraOutput.CodeTarget)
+                && !string.IsNullOrWhiteSpace(extraOutput.OutputCodeDir);
+            if (!hasDataOutput && !hasCodeOutput)
             {
                 continue;
             }
 
+            IReadOnlyList<string> extraArguments = BuildExtraArguments(options, contract, extraOutput);
             (int extraExitCode, string extraLog) = await RunAsync(options, extraArguments, cancellationToken).ConfigureAwait(false);
             aggregateLog.AppendLine(extraLog);
             if (extraExitCode != 0)

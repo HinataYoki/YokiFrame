@@ -11,7 +11,6 @@ namespace YokiFrame.Tests
     /// </summary>
     public sealed class ActionKitAsyncSafetyTests
     {
-        private const int COROUTINE_NESTED_DEPTH_LIMIT = 64;
         private readonly ActionKitTestLogger mLogger = new();
 
         /// <summary>每个测试前清空所有活动与待启动动作。</summary>
@@ -146,7 +145,7 @@ namespace YokiFrame.Tests
         public void CoroutineDepthFailureDisposesRejectedNestedEnumerator()
         {
             NestedDisposableEnumerator[] enumerators =
-                CreateNestedEnumerators(COROUTINE_NESTED_DEPTH_LIMIT + 2);
+                CreateNestedEnumerators(CoroutineAction.MAX_NESTED_DEPTH + 2);
 
             IActionController controller = ActionKit.Coroutine(enumerators[0]).Start();
 
@@ -304,9 +303,15 @@ namespace YokiFrame.Tests
             ActionKitScheduler.Tick(0f, 0f);
             ActionKitScheduler.Cleanup();
 
-            Assert.LessOrEqual(GetSchedulerListCapacity("sPrepared"), 64);
-            Assert.LessOrEqual(GetSchedulerListCapacity("sExecuting"), 128);
-            Assert.LessOrEqual(GetSchedulerListCapacity("sPendingRecycle"), 256);
+            Assert.LessOrEqual(
+                GetSchedulerListCapacity("sPrepared"),
+                ActionKitScheduler.MAX_RETAINED_PREPARED_CAPACITY);
+            Assert.LessOrEqual(
+                GetSchedulerListCapacity("sExecuting"),
+                ActionKitScheduler.MAX_RETAINED_EXECUTING_CAPACITY);
+            Assert.LessOrEqual(
+                GetSchedulerListCapacity("sPendingRecycle"),
+                ActionKitScheduler.MAX_RETAINED_RECYCLE_CAPACITY);
         }
 
         /// <summary>读取指定 Scheduler 私有 List 的 Capacity，验证峰值缩容策略。</summary>

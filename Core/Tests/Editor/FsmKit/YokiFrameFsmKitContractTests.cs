@@ -87,6 +87,7 @@ namespace YokiFrame
                 "Condition",
                 "Start",
                 "Suspend",
+                "Resume",
                 "Update",
                 "FixedUpdate",
                 "CustomUpdate",

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 
 namespace YokiFrame
@@ -36,7 +38,8 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 注册一个服务实例；重复注册同一类型时会释放旧实例。
+        /// 注册一个服务实例；重复注册同一类型时会在容器锁外释放旧实例。
+        /// 架构已释放时抛出 ObjectDisposedException，避免服务被提交进无人清理的容器。
         /// </summary>
         /// <typeparam name="K">服务类型。</typeparam>
         /// <param name="service">服务实例。</param>
@@ -47,10 +50,16 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(service));
             }
 
+            IService oldService;
             lock (mSyncRoot)
             {
+                if (mDisposed)
+                {
+                    throw new ObjectDisposedException(GetType().Name);
+                }
+
                 Type key = typeof(K);
-                ReplaceService(key, service);
+                oldService = ReplaceService(key, service);
                 service.SetArchitecture(this);
                 if (mInitialized && !service.Initialized)
                 {
@@ -61,11 +70,15 @@ namespace YokiFrame
                 RegisterSnapshot();
 #endif
             }
+
+            oldService?.Dispose();
         }
 
         /// <summary>
         /// 获取已注册服务；未注册且 force 为 true 时会创建、注册并初始化服务。
         /// 同一服务类型的并发强制请求共享一次创建，期间完成的显式注册优先。
+        /// 当前线程已持有容器锁时绕过共享创建直接创建注册，避免与工厂线程互相等待造成死锁。
+        /// 架构已释放时强制创建抛出 ObjectDisposedException。
         /// </summary>
         /// <typeparam name="K">服务类型。</typeparam>
         /// <param name="force">是否在缺失时强制创建服务。</param>
@@ -73,6 +86,7 @@ namespace YokiFrame
         public K GetService<K>(bool force = false) where K : class, IService, new()
         {
             Type key = typeof(K);
+            bool lockHeld = Monitor.IsEntered(mSyncRoot);
             Lazy<IService> pendingCreation;
             lock (mSyncRoot)
             {
@@ -85,6 +99,16 @@ namespace YokiFrame
                 if (!force)
                 {
                     return null;
+                }
+
+                if (mDisposed)
+                {
+                    throw new ObjectDisposedException(GetType().Name);
+                }
+
+                if (lockHeld)
+                {
+                    return CreateAndRegisterService<K>(key) as K;
                 }
 
                 if (!mPendingServiceCreations.TryGetValue(key, out pendingCreation))
@@ -188,7 +212,10 @@ namespace YokiFrame
                 if (mInitialized)
                 {
 #if UNITY_EDITOR || (GODOT && TOOLS)
-                    RegisterSnapshot();
+                    if (!ArchitectureRegistry.IsCurrent(typeof(T), RuntimeHelpers.GetHashCode(this), mInitialized))
+                    {
+                        RegisterSnapshot();
+                    }
 #endif
                     return;
                 }
@@ -292,19 +319,21 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 替换指定服务类型的实例，并释放旧实例。
+        /// 替换指定服务类型的实例，并返回被替换的旧实例；旧实例由调用方在容器锁外释放。
         /// </summary>
         /// <param name="key">服务注册类型。</param>
         /// <param name="service">新服务实例。</param>
-        private void ReplaceService(Type key, IService service)
+        /// <returns>被替换的旧服务实例；没有旧实例或与新实例相同时返回 null。</returns>
+        private IService ReplaceService(Type key, IService service)
         {
             IService oldService;
-            if (mServices.TryGetValue(key, out oldService) && !ReferenceEquals(oldService, service))
+            if (!mServices.TryGetValue(key, out oldService) || ReferenceEquals(oldService, service))
             {
-                oldService.Dispose();
+                oldService = null;
             }
 
             mServices[key] = service;
+            return oldService;
         }
 
         /// <summary>
@@ -383,7 +412,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 按异常数量重新抛出架构释放错误，保留单异常调用方的原有类型。
+        /// 按异常数量重新抛出架构释放错误，保留单异常调用方的原有类型与原始堆栈。
         /// </summary>
         /// <param name="errors">释放期间收集的异常。</param>
         private static void ThrowDisposeErrors(List<Exception> errors)
@@ -395,7 +424,7 @@ namespace YokiFrame
 
             if (errors.Count == 1)
             {
-                throw errors[0];
+                ExceptionDispatchInfo.Capture(errors[0]).Throw();
             }
 
             throw new AggregateException("One or more architecture cleanup operations failed.", errors);

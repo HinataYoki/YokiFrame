@@ -30,13 +30,14 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证属性修饰符，并约束 virtual/override/abstract/sealed 的组合语义。
+        /// 验证属性修饰符，并拒绝静态多态与无效的 virtual/override/abstract/sealed 组合。
         /// </summary>
         /// <param name="modifiers">属性修饰符。</param>
         internal static void ValidateProperty(MemberModifier modifiers)
         {
             RequireAllowed(modifiers, PROPERTY_ALLOWED, "属性");
             ValidatePolymorphicModifiers(modifiers, "属性");
+            ValidateStaticPolymorphic(modifiers, "属性");
         }
 
         /// <summary>
@@ -47,11 +48,7 @@ namespace YokiFrame
         {
             RequireAllowed(modifiers, METHOD_ALLOWED, "方法");
             ValidatePolymorphicModifiers(modifiers, "方法");
-            if (Has(modifiers, MemberModifier.Static) && HasAnyPolymorphic(modifiers))
-            {
-                throw new InvalidOperationException("static 方法不能声明 virtual、override 或 abstract。");
-            }
-
+            ValidateStaticPolymorphic(modifiers, "方法");
             if (Has(modifiers, MemberModifier.Abstract) && Has(modifiers, MemberModifier.Async))
             {
                 throw new InvalidOperationException("abstract 方法不能声明 async。");
@@ -91,6 +88,19 @@ namespace YokiFrame
             if (Has(modifiers, MemberModifier.Sealed) && !Has(modifiers, MemberModifier.Override))
             {
                 throw new InvalidOperationException("sealed " + declarationName + "必须同时声明 override。");
+            }
+        }
+
+        /// <summary>
+        /// 约束 static 与多态 flag 互斥，属性与方法共用同一错误文案。
+        /// </summary>
+        /// <param name="modifiers">实际修饰符。</param>
+        /// <param name="declarationName">用于错误消息的声明类别。</param>
+        private static void ValidateStaticPolymorphic(MemberModifier modifiers, string declarationName)
+        {
+            if (Has(modifiers, MemberModifier.Static) && HasAnyPolymorphic(modifiers))
+            {
+                throw new InvalidOperationException("static " + declarationName + "不能声明 virtual、override 或 abstract。");
             }
         }
 

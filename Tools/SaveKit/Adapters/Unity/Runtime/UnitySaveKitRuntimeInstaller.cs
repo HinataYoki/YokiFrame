@@ -9,10 +9,11 @@ namespace YokiFrame.Unity
     /// </summary>
     internal static class UnitySaveKitRuntimeInstaller
     {
-        /// <summary>在 Unity 子系统重建时注册默认后端；实例化延迟到 SaveKit 首次业务调用。</summary>
+        /// <summary>清理上一代静态状态并在 Unity 子系统重建时注册默认后端；实例化延迟到 SaveKit 首次业务调用。</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void RegisterDefaults()
         {
+            SaveKit.Reset();
             SaveKit.RegisterDefaultBackendFactory(
                 CreateStorage,
                 () => new JsonSaveSerializer(new UnityJsonSaveCodec(), 1));

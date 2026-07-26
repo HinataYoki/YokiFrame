@@ -7,7 +7,7 @@ namespace YokiFrame
 {
     public static partial class ResKit
     {
-        /// <summary>填充全部已加载资源的隔离诊断副本；该方法不会把底层资源对象暴露给工具层。</summary>
+        /// <summary>填充全部已加载资源的隔离诊断副本；该方法不会把底层资源对象暴露给工具层，每个资源至多返回一条来源摘要。</summary>
         /// <param name="result">接收结果的列表；为空时不执行操作。</param>
         public static void GetLoadedAssets(List<ResDebugInfo> result)
         {

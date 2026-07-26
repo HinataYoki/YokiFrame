@@ -21,6 +21,7 @@ namespace YokiFrame.Unity
         private static readonly Color sEntityColor = new(1.0f, 0.82f, 0.22f, 0.95f);
         private static SpatialGizmoDiagnosticsFrame sFrame;
         private static double sNextRefreshTime;
+        private static readonly Dictionary<string, string> sIndexLabels = new Dictionary<string, string>();
 
         /// <summary>注册 Scene View 绘制回调与 Gizmo 状态变化监听。</summary>
         static UnitySpatialKitSceneGizmoDrawer()
@@ -124,9 +125,10 @@ namespace YokiFrame.Unity
             sFrame = SpatialKit.CreateGizmoDiagnosticsFrame(MAX_NODES_PER_INDEX, MAX_ENTITIES_PER_INDEX);
             sNextRefreshTime = now + REFRESH_INTERVAL_SECONDS;
             ValidateSelectedIndex();
+            RebuildLabelCache();
         }
 
-        /// <summary>当已选索引结束生命周期时恢复“全部索引”，避免空白筛选。</summary>
+        /// <summary>当已选索引结束生命周期时恢复"全部索引"，避免空白筛选。</summary>
         private static void ValidateSelectedIndex()
         {
             string selectedId = UnitySpatialKitGizmoState.SelectedDiagnosticsId;
@@ -144,6 +146,21 @@ namespace YokiFrame.Unity
             }
 
             UnitySpatialKitGizmoState.SelectIndex(string.Empty);
+        }
+
+        /// <summary>在帧刷新时预构建标签文本缓存，避免 Repaint 路径上的字符串分配。</summary>
+        private static void RebuildLabelCache()
+        {
+            sIndexLabels.Clear();
+            if (sFrame == null) return;
+            for (int i = 0; i < sFrame.Indexes.Count; i++)
+            {
+                SpatialGizmoIndexSnapshot s = sFrame.Indexes[i];
+                string suffix = s.NodesTruncated || s.EntitiesTruncated
+                    ? " · truncated" : string.Empty;
+                sIndexLabels[s.DiagnosticsId] =
+                    s.IndexKind + " · " + s.DiagnosticsId + suffix;
+            }
         }
 
         /// <summary>按当前 diagnosticsId 筛选绘制全部或单个索引。</summary>
@@ -239,8 +256,9 @@ namespace YokiFrame.Unity
 
             Vector3 position = ResolveLabelPosition(snapshot.Nodes[0]);
             position += Vector3.up * (LABEL_OFFSET * (visibleIndex + 1));
-            string suffix = snapshot.NodesTruncated || snapshot.EntitiesTruncated ? " · truncated" : string.Empty;
-            Handles.Label(position, snapshot.IndexKind + " · " + snapshot.DiagnosticsId + suffix);
+            if (!sIndexLabels.TryGetValue(snapshot.DiagnosticsId, out string label))
+                label = snapshot.DiagnosticsId;
+            Handles.Label(position, label);
         }
 
         /// <summary>根据节点深度、叶状态和占用生成稳定颜色。</summary>

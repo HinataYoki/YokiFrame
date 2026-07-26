@@ -30,9 +30,10 @@ public sealed class ProjectModelBundle
     public ProjectValidationProfileDocument ValidationProfile { get; set; } = new();
 
     /// <summary>
-    /// 获取或设置验证文档的简短语义别名；该别名不重复写入 aggregate JSON。
+    /// 获取或设置验证文档的简短语义别名；该别名不重复写入 aggregate JSON。等价于 <see cref="ValidationProfile"/>。
     /// </summary>
     [JsonIgnore]
+    [Obsolete("Use ValidationProfile instead.")]
     public ProjectValidationProfileDocument Validation
     {
         get => ValidationProfile;

@@ -84,11 +84,10 @@ public sealed class RuntimeCacheService
     /// <returns>当前宿主发布计划。</returns>
     private RuntimePublishPlan CreateCurrentPlan(
         string packageRoot,
-        string projectRoot,
+        string fullProjectRoot,
         string configuration,
         string sourceFingerprint)
     {
-        var fullProjectRoot = RequireProjectRoot(projectRoot);
         var runtimeRoot = YokiFrameWorkbenchRuntimeCacheLayout.GetRuntimeRoot(fullProjectRoot, sourceFingerprint);
         return mPlanBuilder.BuildCurrent(packageRoot, runtimeRoot, configuration);
     }

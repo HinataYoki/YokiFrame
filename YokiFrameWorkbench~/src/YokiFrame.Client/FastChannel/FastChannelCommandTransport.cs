@@ -10,7 +10,7 @@ namespace YokiFrame.Client.FastChannel;
 /// <summary>
 /// 在 Client 内部选择本机 FastChannel endpoint、缓存连接并发送 Host 声明的只读命令。
 /// </summary>
-internal sealed partial class FastChannelCommandTransport : IDisposable
+internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncDisposable
 {
     private const int MAX_CONNECT_TIMEOUT_MS = 500;
     private const int MAX_OPERATION_TIMEOUT_MS = 750;
@@ -143,7 +143,11 @@ internal sealed partial class FastChannelCommandTransport : IDisposable
 
         CancelActiveConnectionAttempt();
         List<CachedFastChannelConnection> cachedConnections;
-        mConnectionGate.Wait();
+        if (!mConnectionGate.Wait(TimeSpan.FromSeconds(2)))
+        {
+            return;
+        }
+
         try
         {
             cachedConnections = new List<CachedFastChannelConnection>(mConnections.Values);
@@ -157,7 +161,31 @@ internal sealed partial class FastChannelCommandTransport : IDisposable
         DisposeConnections(cachedConnections);
     }
 
-    /// <summary>逐一关闭已移出缓存的连接，并在全部尝试完成后汇总释放异常。</summary>
+    /// <summary>阻止新连接进入后异步释放全部缓存 stream；并发释放保持幂等。</summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref mDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        CancelActiveConnectionAttempt();
+        await mConnectionGate.WaitAsync().ConfigureAwait(false);
+        List<CachedFastChannelConnection> cachedConnections;
+        try
+        {
+            cachedConnections = new List<CachedFastChannelConnection>(mConnections.Values);
+            mConnections.Clear();
+        }
+        finally
+        {
+            mConnectionGate.Release();
+        }
+
+        await DisposeConnectionsAsync(cachedConnections).ConfigureAwait(false);
+    }
+
+    /// <summary>逐一关闭已移出缓存的连接（同步路径），并在全部尝试完成后汇总释放异常。</summary>
     /// <param name="cachedConnections">当前 Transport 曾拥有的连接快照。</param>
     private static void DisposeConnections(IReadOnlyList<CachedFastChannelConnection> cachedConnections)
     {
@@ -167,6 +195,30 @@ internal sealed partial class FastChannelCommandTransport : IDisposable
             try
             {
                 cachedConnections[index].Connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch (Exception exception)
+            {
+                failures ??= new List<Exception>();
+                failures.Add(exception);
+            }
+        }
+
+        if (failures != null)
+        {
+            throw new AggregateException("FastChannel connections could not be fully disposed.", failures);
+        }
+    }
+
+    /// <summary>逐一异步关闭已移出缓存的连接，并在全部尝试完成后汇总释放异常。</summary>
+    /// <param name="cachedConnections">当前 Transport 曾拥有的连接快照。</param>
+    private static async ValueTask DisposeConnectionsAsync(IReadOnlyList<CachedFastChannelConnection> cachedConnections)
+    {
+        List<Exception>? failures = null;
+        for (var index = 0; index < cachedConnections.Count; index++)
+        {
+            try
+            {
+                await cachedConnections[index].Connection.DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception exception)
             {

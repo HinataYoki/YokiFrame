@@ -63,7 +63,7 @@ namespace YokiFrame
         {
             base.OnInit();
             if (!mRoundStarted) return;
-            CloseRound(true);
+            CloseRound();
             mRoundStarted = false;
         }
 
@@ -92,7 +92,7 @@ namespace YokiFrame
         /// <summary>取消、故障或宿主重置时传播 token，并转移仍活动 source 的异常观察权。</summary>
         public override void OnDeinit()
         {
-            CloseRound(true);
+            CloseRound();
             mTaskFactory = null;
             mCancelableTaskFactory = null;
             mDirectTask = false;
@@ -106,7 +106,7 @@ namespace YokiFrame
         public override string GetDebugInfo()
         {
             if (!mHasTask) return "UniTaskAction";
-            return "UniTaskAction(completed=" + mTask.GetAwaiter().IsCompleted + ")";
+            return "UniTaskAction(completed=" + mCompletionObserved + ")";
         }
 #endif
 
@@ -152,15 +152,13 @@ namespace YokiFrame
         }
 
         /// <summary>闭合当前轮资源；取消回调异常仍会在完成清理后形成 Faulted。</summary>
-        /// <param name="requestCancellation">是否向 token factory 请求取消。</param>
-        private void CloseRound(bool requestCancellation)
+        private void CloseRound()
         {
             Exception firstException = null;
             CancellationTokenSource cancellationSource = mCancellationSource;
             mCancellationSource = null;
             bool needsCancellation = !mHasTask || !mCompletionObserved;
-            if (requestCancellation
-                && needsCancellation
+            if (needsCancellation
                 && cancellationSource != null
                 && !cancellationSource.IsCancellationRequested)
             {

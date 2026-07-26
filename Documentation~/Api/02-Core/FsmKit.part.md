@@ -48,7 +48,7 @@ public static class GameFlowFactory
 
 ```text
 Add -> Start -> Update/FixedUpdate/CustomUpdate
-             -> Suspend
+             -> Suspend -> Resume
              -> Change: old End -> new Start
              -> End
 Clear: End -> Dispose all states -> reset
@@ -60,7 +60,8 @@ Dispose: unregister diagnostics -> Clear
 - `Clear()` 释放全部业务状态；Editor/Tools 观察分支同时清除选择和诊断历史，Player 不编译这部分状态。
 - `Dispose()` 首次调用结束、释放并注销，重复调用保持幂等；之后复用该实例会抛出 `ObjectDisposedException`。
 - 生命周期回调执行期间不能嵌套修改同一 FSM；回调异常会继续抛出，并把机器状态收敛到 `End`。
-- 状态机不拥有引擎生命周期。宿主 owner 必须转发 tick，并在退出时调用 `IState.Dispose()`。
+- `Suspend()` 停止 tick 与消息转发；`Resume()` 只把机器恢复为 `Running`，不重复触发进入逻辑。
+- 状态机不拥有引擎生命周期。宿主 owner 必须转发 tick，并在退出时调用 `Dispose()`。
 
 ## Unity
 
@@ -87,7 +88,7 @@ public sealed class GameFlowDriver : MonoBehaviour
 
     private void OnDestroy()
     {
-        ((IState)mFsm).Dispose();
+        mFsm.Dispose();
     }
 }
 ```
@@ -119,7 +120,7 @@ public partial class GameFlowDriver : Node
 
     public override void _ExitTree()
     {
-        ((IState)mFsm).Dispose();
+        mFsm.Dispose();
     }
 }
 ```

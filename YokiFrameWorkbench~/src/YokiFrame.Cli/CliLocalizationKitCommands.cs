@@ -21,12 +21,12 @@ internal static class CliLocalizationKitCommands
     }
 
     /// <summary>执行 LocalizationKit 用例并输出 compact JSON。</summary>
-    internal static int Dispatch(CliCommandLine commandLine, IYokiFrameClient client)
+    internal static async Task<int> DispatchAsync(CliCommandLine commandLine, IYokiFrameClient client, CancellationToken cancellationToken)
     {
         LocalizationKitApplicationService service = new();
         string projectRoot = client.Paths.ProjectRoot;
         if (commandLine.IsCommand("localization", "template", "generate")) return GenerateLubanTemplate(commandLine, projectRoot, service);
-        if (commandLine.IsCommand("localization", "preview")) return PreviewLuban(commandLine, projectRoot, service);
+        if (commandLine.IsCommand("localization", "preview")) return await PreviewLubanAsync(commandLine, projectRoot, service, cancellationToken).ConfigureAwait(false);
         LocalizationKitOptions options = new() { ProjectRoot = projectRoot, SourcePath = commandLine.GetOption("source", "Assets/Settings/YokiFrame/localization.json") };
         LocalizationOperationResult result = commandLine.IsCommand("localization", "add")
             ? service.Add(CreateAddRequest(commandLine, options))
@@ -35,7 +35,7 @@ internal static class CliLocalizationKitCommands
                 : service.Search(new LocalizationSearchRequest { Options = options, Keyword = commandLine.GetOption("keyword", string.Empty), MissingOnly = commandLine.GetBoolOption("missing-only", false), Limit = commandLine.GetIntOption("limit", 200) });
         if (!result.Succeeded)
         {
-            throw new YokiFrameProtocolException(new YokiFrameError("LocalizationKitFailed", string.Join("; ", result.Diagnostics), "检查 --source、项目根路径和 JSON schema 后重试。", new[] { projectRoot }));
+            throw new YokiFrameProtocolException(new YokiFrameError("LocalizationKitFailed", string.Join("; ", result.Diagnostics), "Check --source, project root, and JSON schema, then retry.", new[] { projectRoot }));
         }
         JsonObject payload = new()
         {
@@ -55,10 +55,10 @@ internal static class CliLocalizationKitCommands
     private static LocalizationAddRequest CreateAddRequest(CliCommandLine commandLine, LocalizationKitOptions options)
     {
         string idText = commandLine.GetOption("text-id", string.Empty);
-        if (!int.TryParse(idText, out int textId)) throw new YokiFrameProtocolException(new YokiFrameError("InvalidOptionValue", "--text-id 必须是整数。", "使用 --text-id 1001。", Array.Empty<string>()));
+        if (!int.TryParse(idText, out int textId)) throw new YokiFrameProtocolException(new YokiFrameError("InvalidOptionValue", "--text-id must be an integer.", "Use --text-id 1001.", Array.Empty<string>()));
         string language = commandLine.GetOption("language", string.Empty);
         string value = commandLine.GetOption("value", string.Empty);
-        if (string.IsNullOrWhiteSpace(language) || string.IsNullOrWhiteSpace(value)) throw new YokiFrameProtocolException(new YokiFrameError("MissingOption", "localization add 需要 --language 和 --value。", "使用 --language English --value \"文本\"。", Array.Empty<string>()));
+        if (string.IsNullOrWhiteSpace(language) || string.IsNullOrWhiteSpace(value)) throw new YokiFrameProtocolException(new YokiFrameError("MissingOption", "localization add requires --language and --value.", "Use --language English --value \"text\".", Array.Empty<string>()));
         return new LocalizationAddRequest { Options = options, TextId = textId, Language = language, Value = value, PluralCategory = commandLine.GetOption("plural", string.Empty), Force = commandLine.GetBoolOption("force", false) };
     }
 
@@ -74,7 +74,7 @@ internal static class CliLocalizationKitCommands
             Force = commandLine.GetBoolOption("force", false)
         };
         LocalizationOperationResult result = service.GenerateLubanTemplate(request);
-        if (!result.Succeeded) throw new YokiFrameProtocolException(new YokiFrameError("LocalizationLubanTemplateFailed", string.Join("; ", result.Diagnostics), "检查 Luban 路径、schemaFiles 和 --force 覆盖选项。", new[] { projectRoot }));
+        if (!result.Succeeded) throw new YokiFrameProtocolException(new YokiFrameError("LocalizationLubanTemplateFailed", string.Join("; ", result.Diagnostics), "Check Luban path, schemaFiles, and --force override option.", new[] { projectRoot }));
         JsonObject payload = new()
         {
             ["command"] = "localization template generate",
@@ -87,16 +87,16 @@ internal static class CliLocalizationKitCommands
     }
 
     /// <summary>通过 Luban 临时 JSON 输出读取当前 LocalizationKit Excel 目录。</summary>
-    private static int PreviewLuban(CliCommandLine commandLine, string projectRoot, LocalizationKitApplicationService service)
+    private static async Task<int> PreviewLubanAsync(CliCommandLine commandLine, string projectRoot, LocalizationKitApplicationService service, CancellationToken cancellationToken)
     {
-        LocalizationOperationResult result = service.PreviewLubanAsync(new LocalizationLubanPreviewRequest
+        LocalizationOperationResult result = await service.PreviewLubanAsync(new LocalizationLubanPreviewRequest
         {
             ProjectRoot = projectRoot,
             Tool = CreateExplicitLubanTool(commandLine, projectRoot)
-        }).GetAwaiter().GetResult();
+        }, cancellationToken).ConfigureAwait(false);
         if (!result.Succeeded)
         {
-            throw new YokiFrameProtocolException(new YokiFrameError("LocalizationLubanPreviewFailed", string.Join("; ", result.Diagnostics), "确认 XML 已注册到 schemaFiles，并检查 Luban 工具和 target。", new[] { projectRoot }));
+            throw new YokiFrameProtocolException(new YokiFrameError("LocalizationLubanPreviewFailed", string.Join("; ", result.Diagnostics), "Confirm the XML is registered in schemaFiles, and check the Luban tool and target.", new[] { projectRoot }));
         }
 
         JsonObject payload = new()
@@ -132,7 +132,7 @@ internal static class CliLocalizationKitCommands
 
         if (string.IsNullOrWhiteSpace(configPath) || string.IsNullOrWhiteSpace(executablePath))
         {
-            throw new YokiFrameProtocolException(new YokiFrameError("MissingOption", "显式 Luban 参数需要同时提供 --luban-config 和 --luban。", "使用 --luban-config Luban/luban.conf --luban Luban/Tools/Luban/Luban.dll。", Array.Empty<string>()));
+            throw new YokiFrameProtocolException(new YokiFrameError("MissingOption", "Explicit Luban options require both --luban-config and --luban.", "Use --luban-config Luban/luban.conf --luban Luban/Tools/Luban/Luban.dll.", Array.Empty<string>()));
         }
 
         return new LubanToolOptions

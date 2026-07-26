@@ -89,19 +89,31 @@ namespace YokiFrame
         /// <param name="activeNames">当前仍活动的安全名称。</param>
         private static void RetainNamedTelemetryVersions(string kit, IReadOnlyList<string> activeNames)
         {
-            if (!sNamedTelemetryVersions.TryGetValue(kit, out var publishedVersions)
-                || publishedVersions.Count == activeNames.Count)
+            // 不能用数量相等冒充集合相等：本轮某个新名称写入失败时数量仍可相等，
+            // 会漏删已被 RetainNamedStates 释放共享内存段的旧名称版本，导致其复现时被版本比对跳过。
+            if (!sNamedTelemetryVersions.TryGetValue(kit, out var publishedVersions))
             {
                 return;
             }
 
-            List<string> staleKeys = new();
+            List<string> staleKeys = null;
             foreach (var name in publishedVersions.Keys)
             {
                 if (!ContainsTelemetryName(activeNames, name))
                 {
+                    // 稳态轮次没有失效键，延迟到首个失效键出现时才分配。
+                    if (staleKeys == null)
+                    {
+                        staleKeys = new List<string>();
+                    }
+
                     staleKeys.Add(name);
                 }
+            }
+
+            if (staleKeys == null)
+            {
+                return;
             }
 
             for (var index = 0; index < staleKeys.Count; index++)

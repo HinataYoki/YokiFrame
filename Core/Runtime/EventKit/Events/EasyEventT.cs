@@ -115,18 +115,26 @@ namespace YokiFrame
 
         /// <summary>
         /// 按链表顺序派发监听器，并捕获单个监听器异常避免中断后续监听器。
+        /// 以进入派发时的尾节点为快照边界，派发中注册的监听器不参与本轮派发（与 C# 多播委托语义一致）。
         /// </summary>
         /// <param name="args">事件负载。</param>
         private void TriggerListeners(T args)
         {
+            PooledLinkedListNode<Action<T>> boundary = mEventList.Last;
             PooledLinkedListNode<Action<T>> node = mEventList.First;
             while (node.IsValid)
             {
                 Action<T> current = node.Value;
                 PooledLinkedListNode<Action<T>> next = node.Next;
+                bool isBoundary = node == boundary;
                 if (current != null)
                 {
                     InvokeListener(current, args);
+                }
+
+                if (isBoundary)
+                {
+                    break;
                 }
 
                 node = next;

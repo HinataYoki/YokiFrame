@@ -49,7 +49,7 @@ namespace YokiFrame.Unity
         /// <summary>把 Unity voice 状态投影为宿主无关诊断 DTO。</summary>
         private AudioVoiceSnapshot CreateSnapshot(VoiceState voice)
         {
-            float elapsed = Mathf.Max(0f, Time.time - voice.StartedAt - voice.TotalPausedTime);
+            float elapsed = voice.Source != null ? Mathf.Max(0f, voice.Source.time) : 0f;
             return new AudioVoiceSnapshot
             {
                 VoiceId = voice.VoiceId,

@@ -76,7 +76,6 @@ namespace YokiFrame.Unity
                 FadeOutDuration = options.FadeOutDuration,
                 FadingIn = options.FadeInDuration > 0f,
                 Loop = options.Loop,
-                StartedAt = Time.time,
                 Is3D = options.Is3D,
                 Position = options.Position,
                 FollowTarget = options.FollowTarget,

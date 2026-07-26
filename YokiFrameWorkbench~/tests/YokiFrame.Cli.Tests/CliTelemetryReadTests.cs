@@ -84,50 +84,15 @@ public sealed class CliTelemetryReadTests
     /// </summary>
     /// <param name="arguments">CLI 参数。</param>
     /// <returns>进程执行结果。</returns>
-    private static async Task<CliProcessResult> RunCliAsync(params string[] arguments)
-    {
-        ProcessStartInfo startInfo = new("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        startInfo.ArgumentList.Add(GetCliAssemblyPath());
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start YokiFrame.Cli process.");
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        var standardErrorTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return new CliProcessResult(process.ExitCode, await standardOutputTask, await standardErrorTask);
-    }
+    private static Task<CliProcessResult> RunCliAsync(params string[] arguments)
+        => CliTestHelpers.RunCliAsync(arguments);
 
     /// <summary>
     /// 根据测试输出目录定位同一 solution 构建出的 CLI 程序。
     /// </summary>
     /// <returns>CLI 程序 DLL 路径。</returns>
     private static string GetCliAssemblyPath()
-    {
-        var outputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        var configurationDirectory = outputDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output configuration directory is missing.");
-        var projectDirectory = configurationDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output project directory is missing.");
-        var binDirectory = projectDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output bin directory is missing.");
-        var cliAssemblyPath = Path.Combine(
-            binDirectory.FullName,
-            "YokiFrame.Cli",
-            configurationDirectory.Name,
-            outputDirectory.Name,
-            "YokiFrame.Cli.dll");
-
-        Assert.True(File.Exists(cliAssemblyPath), "CLI assembly was not built: " + cliAssemblyPath);
-        return cliAssemblyPath;
-    }
+        => CliTestHelpers.GetCliAssemblyPath();
 
     /// <summary>
     /// 创建测试专用项目根，使 CLI 与 Named Map 使用同一项目作用域。
@@ -168,12 +133,4 @@ public sealed class CliTelemetryReadTests
         payload.CopyTo(frame.AsSpan(SharedMemoryTelemetryFrameHeader.HEADER_SIZE));
         return frame;
     }
-
-    /// <summary>
-    /// 表示 CLI 子进程执行结果。
-    /// </summary>
-    /// <param name="ExitCode">进程退出码。</param>
-    /// <param name="StandardOutput">标准输出。</param>
-    /// <param name="StandardError">标准错误。</param>
-    private sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
 }

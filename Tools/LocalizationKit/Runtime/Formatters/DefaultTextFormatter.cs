@@ -8,9 +8,17 @@ namespace YokiFrame
     /// <summary>提供索引参数、命名参数和简单自定义标签处理。</summary>
     public sealed class DefaultTextFormatter : ITextFormatter
     {
-        private const int DEFAULT_BUILDER_CAPACITY = 256;
+        private const int BUILDER_CAPACITY_MARGIN = 16;
         private readonly object mTagHandlersLock = new object();
         private readonly Dictionary<string, Func<string, string>> mTagHandlers = new Dictionary<string, Func<string, string>>();
+        private CultureInfo mCulture = CultureInfo.InvariantCulture;
+
+        /// <summary>获取或设置参数格式化使用的文化，默认 invariant。</summary>
+        public CultureInfo Culture
+        {
+            get => mCulture;
+            set => mCulture = value ?? CultureInfo.InvariantCulture;
+        }
 
         /// <summary>注册或替换一个标签处理器。</summary>
         public void RegisterTagHandler(string tagName, Func<string, string> handler)
@@ -48,7 +56,7 @@ namespace YokiFrame
                 return template;
             }
 
-            return FormatIndexed(template, args);
+            return FormatCore(template, args, null);
         }
 
         /// <inheritdoc />
@@ -59,38 +67,7 @@ namespace YokiFrame
                 return template;
             }
 
-            var builder = new StringBuilder(DEFAULT_BUILDER_CAPACITY);
-            for (int index = 0; index < template.Length; index++)
-            {
-                if (template[index] == '{')
-                {
-                    if (index + 1 < template.Length && template[index + 1] == '{')
-                    {
-                        builder.Append('{');
-                        index++;
-                        continue;
-                    }
-
-                    int closeIndex = FindClosingBrace(template, index);
-                    if (closeIndex >= 0)
-                    {
-                        string placeholder = template.Substring(index + 1, closeIndex - index - 1);
-                        builder.Append(ResolveNamedPlaceholder(placeholder, namedArgs));
-                        index = closeIndex;
-                        continue;
-                    }
-                }
-                else if (template[index] == '}' && index + 1 < template.Length && template[index + 1] == '}')
-                {
-                    builder.Append('}');
-                    index++;
-                    continue;
-                }
-
-                builder.Append(template[index]);
-            }
-
-            return builder.ToString();
+            return FormatCore(template, default, namedArgs);
         }
 
         /// <inheritdoc />
@@ -101,7 +78,7 @@ namespace YokiFrame
                 return text;
             }
 
-            var builder = new StringBuilder(DEFAULT_BUILDER_CAPACITY);
+            var builder = new StringBuilder(text.Length + BUILDER_CAPACITY_MARGIN);
             for (int index = 0; index < text.Length; index++)
             {
                 if (text[index] != '<')
@@ -126,10 +103,11 @@ namespace YokiFrame
             return builder.ToString();
         }
 
-        /// <summary>扫描模板并解析索引占位符，保留未匹配占位符原文。</summary>
-        private static string FormatIndexed(string template, ReadOnlySpan<object> args)
+        /// <summary>扫描模板并按参数来源解析占位符，保留未匹配占位符原文。</summary>
+        private string FormatCore(string template, ReadOnlySpan<object> args,
+            IReadOnlyDictionary<string, object> namedArgs)
         {
-            var builder = new StringBuilder(DEFAULT_BUILDER_CAPACITY);
+            var builder = new StringBuilder(template.Length + BUILDER_CAPACITY_MARGIN);
             for (int index = 0; index < template.Length; index++)
             {
                 if (template[index] == '{')
@@ -145,7 +123,9 @@ namespace YokiFrame
                     if (closeIndex >= 0)
                     {
                         string placeholder = template.Substring(index + 1, closeIndex - index - 1);
-                        builder.Append(ResolveIndexedPlaceholder(placeholder, args));
+                        builder.Append(namedArgs != null
+                            ? ResolveNamedPlaceholder(placeholder, namedArgs)
+                            : ResolveIndexedPlaceholder(placeholder, args));
                         index = closeIndex;
                         continue;
                     }
@@ -182,8 +162,8 @@ namespace YokiFrame
             return -1;
         }
 
-        /// <summary>解析索引占位符并把值转换为当前文化格式。</summary>
-        private static string ResolveIndexedPlaceholder(string placeholder, ReadOnlySpan<object> args)
+        /// <summary>解析索引占位符并把值转换为配置文化格式。</summary>
+        private string ResolveIndexedPlaceholder(string placeholder, ReadOnlySpan<object> args)
         {
             SplitPlaceholder(placeholder, out string name, out string format);
             int index;
@@ -196,7 +176,7 @@ namespace YokiFrame
         }
 
         /// <summary>解析命名占位符，缺少参数时保留占位符。</summary>
-        private static string ResolveNamedPlaceholder(string placeholder, IReadOnlyDictionary<string, object> namedArgs)
+        private string ResolveNamedPlaceholder(string placeholder, IReadOnlyDictionary<string, object> namedArgs)
         {
             SplitPlaceholder(placeholder, out string name, out string format);
             object value;
@@ -211,8 +191,8 @@ namespace YokiFrame
             format = colonIndex >= 0 ? placeholder.Substring(colonIndex + 1) : null;
         }
 
-        /// <summary>把参数值转换为文本，并在存在格式说明时使用当前文化。</summary>
-        private static string FormatValue(object value, string format)
+        /// <summary>把参数值转换为文本，统一使用配置文化。</summary>
+        private string FormatValue(object value, string format)
         {
             if (value == null)
             {
@@ -220,8 +200,8 @@ namespace YokiFrame
             }
 
             IFormattable formattable = value as IFormattable;
-            return formattable != null && !string.IsNullOrEmpty(format)
-                ? formattable.ToString(format, CultureInfo.CurrentCulture)
+            return formattable != null
+                ? formattable.ToString(string.IsNullOrEmpty(format) ? null : format, mCulture)
                 : value.ToString();
         }
 

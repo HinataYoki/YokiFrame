@@ -54,6 +54,11 @@ namespace YokiFrame
         public LinkUnRegister Register(string key, Action onEvent)
         {
             RequireKey(key);
+            if (onEvent == null)
+            {
+                throw new ArgumentNullException(nameof(onEvent));
+            }
+
             EasyEvents stringEvent = GetOrCreateEvents(key);
             LinkUnRegister token = stringEvent.GetOrAddEvent<EasyEvent>().Register(onEvent);
 #if UNITY_EDITOR || (GODOT && TOOLS)
@@ -84,6 +89,11 @@ namespace YokiFrame
         public LinkUnRegister<T> Register<T>(string key, Action<T> onEvent)
         {
             RequireKey(key);
+            if (onEvent == null)
+            {
+                throw new ArgumentNullException(nameof(onEvent));
+            }
+
             EasyEvents stringEvent = GetOrCreateEvents(key);
             LinkUnRegister<T> token = stringEvent.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
 #if UNITY_EDITOR || (GODOT && TOOLS)
@@ -126,6 +136,7 @@ namespace YokiFrame
             if (mEventDic.TryGetValue(key, out stringEvent))
             {
                 stringEvent.Clear();
+                mEventDic.Remove(key);
             }
 
 #if UNITY_EDITOR || (GODOT && TOOLS)

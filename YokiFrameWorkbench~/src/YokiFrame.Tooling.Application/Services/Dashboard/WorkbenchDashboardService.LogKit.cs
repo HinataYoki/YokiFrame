@@ -113,7 +113,7 @@ public sealed partial class WorkbenchDashboardService
             READ_LOG_KIT_FILE_ACTION,
             payloadJson,
             cancellationToken).ConfigureAwait(false);
-        _ = EnsureSameLogKitHost(before, FindEngineRegistry(selectedEngineId), result);
+        ThrowIfNotSameLogKitHost(before, FindEngineRegistry(selectedEngineId), result);
         return WorkbenchLogKitFilePreviewParser.Parse(
             result.Response.ResultJson,
             normalizedKind,
@@ -225,6 +225,13 @@ public sealed partial class WorkbenchDashboardService
             CreateCommandEvidencePaths(result)));
     }
 
+    /// <summary>仅利用抛出副作用校验宿主身份；返回值在调用方不需要时不应赋值。</summary>
+    private static void ThrowIfNotSameLogKitHost(
+        Protocol.FileBridge.EngineRegistryEntry? before,
+        Protocol.FileBridge.EngineRegistryEntry? after,
+        CommandExecutionResult result)
+        => EnsureSameLogKitHost(before, after, result);
+
     /// <summary>验证 Runtime 返回成功 terminal response。</summary>
     private static void EnsureSuccessfulLogKitCommand(CommandExecutionResult result)
     {
@@ -317,10 +324,9 @@ public sealed partial class WorkbenchDashboardService
             errorMessage = "Engine registry could not be read: " + exception.Message;
             return false;
         }
-        var registry = registries.FirstOrDefault(entry => string.Equals(
-            entry.EngineId,
-            requestedEngineId,
-            StringComparison.Ordinal));
+        Protocol.FileBridge.EngineRegistryEntry? registry = string.IsNullOrWhiteSpace(requestedEngineId)
+            ? null
+            : registries.FirstOrDefault(entry => string.Equals(entry.EngineId, requestedEngineId, StringComparison.Ordinal));
         if (string.IsNullOrWhiteSpace(requestedEngineId))
         {
             var candidates = registries

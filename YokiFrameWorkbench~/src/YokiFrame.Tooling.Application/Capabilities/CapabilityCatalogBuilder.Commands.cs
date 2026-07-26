@@ -325,13 +325,13 @@ internal sealed partial class CapabilityCatalogBuilder
         string engineId,
         IReadOnlyList<string> evidencePaths)
     {
-        var observed = commands.Select(command => command.Kit).Distinct(StringComparer.Ordinal).ToArray();
+        var observed = new HashSet<string>(
+            commands.Select(static command => command.Kit),
+            StringComparer.Ordinal);
         var expected = mProjectModelTrusted && mProjectModelApplied
             ? mProjectModelCommandKits
             : mDeclaredCommandKits;
-        if (observed.OrderBy(value => value, StringComparer.Ordinal).SequenceEqual(
-                expected.OrderBy(value => value, StringComparer.Ordinal),
-                StringComparer.Ordinal))
+        if (observed.SetEquals(expected))
         {
             return;
         }

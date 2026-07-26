@@ -111,7 +111,7 @@ public sealed class HeartbeatInfo
             return true;
         }
 
-        return nowUtc.ToUniversalTime() - CreatedAtUtc.ToUniversalTime() > staleThreshold;
+        return nowUtc - CreatedAtUtc > staleThreshold;
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public sealed class HeartbeatInfo
             ["generation"] = Generation,
             ["mode"] = Mode,
             ["sequence"] = Sequence,
-            ["ageSeconds"] = Math.Max(0, (long)(nowUtc.ToUniversalTime() - CreatedAtUtc.ToUniversalTime()).TotalSeconds),
+            ["ageSeconds"] = Math.Max(0, (long)(nowUtc - CreatedAtUtc).TotalSeconds),
             ["staleThresholdSeconds"] = (long)staleThreshold.TotalSeconds,
             ["isStale"] = IsStale(nowUtc, staleThreshold)
         };

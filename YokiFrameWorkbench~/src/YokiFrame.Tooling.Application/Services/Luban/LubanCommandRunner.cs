@@ -74,6 +74,8 @@ public sealed class LubanCommandRunner
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             await StopProcessAsync(process).ConfigureAwait(false);
+            try { await standardOutput.ConfigureAwait(false); } catch { }
+            try { await standardError.ConfigureAwait(false); } catch { }
             throw;
         }
     }

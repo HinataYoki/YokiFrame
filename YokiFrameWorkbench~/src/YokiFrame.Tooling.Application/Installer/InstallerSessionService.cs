@@ -135,7 +135,9 @@ public sealed class InstallerSessionService
         {
             if (mApplyTask is { IsCompleted: false })
             {
-                return mApplyTask;
+                return cancellationToken.CanBeCanceled
+                    ? mApplyTask.WaitAsync(cancellationToken)
+                    : mApplyTask;
             }
 
             EnsurePlanReady();

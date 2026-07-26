@@ -52,7 +52,7 @@ public sealed class YokiFrameError
         JsonArray evidencePaths = new();
         foreach (var path in EvidencePaths)
         {
-            evidencePaths.Add((JsonNode?)JsonValue.Create(path));
+            evidencePaths.Add(JsonValue.Create(path));
         }
 
         return new JsonObject

@@ -26,12 +26,12 @@ namespace YokiFrame
         /// <summary>
         /// 获取可跨宿主稳定识别的错误码。
         /// </summary>
-        public string Code { get; private set; }
+        public string Code { get; }
 
         /// <summary>
         /// 获取建议的恢复动作。
         /// </summary>
-        public string Suggestion { get; private set; }
+        public string Suggestion { get; }
     }
 }
 #endif

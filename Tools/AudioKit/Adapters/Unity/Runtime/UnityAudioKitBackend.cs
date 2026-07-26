@@ -62,9 +62,6 @@ namespace YokiFrame.Unity
             internal bool FadingOut;
             internal bool Paused;
             internal bool Loop;
-            internal float StartedAt;
-            internal float PausedAt;
-            internal float TotalPausedTime;
             internal bool Is3D;
             internal NumericsVector3 Position;
             internal IAudioFollowTarget FollowTarget;

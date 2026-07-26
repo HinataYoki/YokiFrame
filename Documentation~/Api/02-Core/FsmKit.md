@@ -41,7 +41,7 @@ FSM<PlayerState> fsm = new();
 fsm.Add(PlayerState.Idle, new IdleState(fsm, new object()));
 fsm.Start(PlayerState.Idle);
 fsm.Update();
-((IState)fsm).Dispose();
+fsm.Dispose();
 ```
 
 实际项目通常让宿主的 `Update`、`FixedUpdate` 或自定义 tick 调用状态机对应入口；FsmKit 不会自动注册 Core FrameLoop。
@@ -55,6 +55,7 @@ fsm.Update();
 | `IState.Condition()` | 进入前检查，默认返回 `true`。 |
 | `IState.Start()` | 进入状态。 |
 | `IState.Suspend()` | 暂停状态。 |
+| `IState.Resume()` | 恢复被挂起的状态；默认不执行任何操作，不重复触发进入副作用。 |
 | `IState.Update()` / `FixedUpdate()` / `CustomUpdate()` | 三种主动更新入口。 |
 | `IState.End()` | 结束状态。 |
 | `IState.Dispose()` | 释放状态资源；状态机保证每次移除只释放一次。 |
@@ -62,7 +63,7 @@ fsm.Update();
 | `IState<TArgs>.Start(TArgs args)` | 使用进入参数启动状态；无参进入映射为 `default(TArgs)`。 |
 | `MachineState` | `End`、`Suspend`、`Running` 三个生命周期阶段。 |
 
-`AbstractState<TEnum,TBlack>` 提供 `mFSM`、`mBlack` 和 `OnCondition`、`OnEnter`、`OnSuspend`、`OnUpdate`、`OnFixedUpdate`、`OnCustomUpdate`、`OnExit`、`OnDispose`、`OnMessage<TMsg>` 覆写点。需要进入参数时使用 `AbstractState<TEnum,TBlack,TArgs>` 的 `OnEnter(TArgs args)`。
+`AbstractState<TEnum,TBlack>` 提供 `mFSM`、`mBlack` 和 `OnCondition`、`OnEnter`、`OnSuspend`、`OnResume`、`OnUpdate`、`OnFixedUpdate`、`OnCustomUpdate`、`OnExit`、`OnDispose`、`OnMessage<TMsg>` 覆写点。需要进入参数时使用 `AbstractState<TEnum,TBlack,TArgs>` 的 `OnEnter(TArgs args)`。
 
 ### `FSM<TEnum>`
 
@@ -78,10 +79,11 @@ fsm.Update();
 | `Change(TEnum id)` | 运行中切换到目标状态；目标不存在或条件失败时不切换。 |
 | `Change<TArgs>(TEnum id, TArgs args)` | 带参数切换；目标支持 `IState<TArgs>` 时传参，否则按无参进入。 |
 | `Suspend()` / `End()` | 暂停或结束当前状态，保留当前选择。 |
+| `Resume()` | 恢复被挂起的当前状态并回到 `Running`；非 `Suspend` 阶段为 no-op。 |
 | `Update()` / `FixedUpdate()` / `CustomUpdate()` | 仅在 `Running` 时转发给当前状态。 |
 | `SendMessage<TMsg>(TMsg message)` | 仅在 `Running` 时转发消息。 |
 | `Clear()` | 结束、释放并清空全部状态。 |
-| `Dispose()` | 通过 `IState` 生命周期入口释放状态机并注销诊断登记；重复调用幂等，之后复用实例会抛 `ObjectDisposedException`。 |
+| `Dispose()` | 释放状态机并注销诊断登记；重复调用幂等，之后复用实例会抛 `ObjectDisposedException`。 |
 
 ### 带启动参数的 `FSM<TEnum,TArgs>`
 
@@ -114,11 +116,11 @@ spawnFsm.Start(PlayerState.Idle, 3);
 | 阶段 | `FSM` |
 |---|---|
 | `End` | 不转发更新或消息，保留最近选择。 |
-| `Suspend` | 不转发更新或消息，保留当前选择。 |
+| `Suspend` | 不转发更新或消息，保留当前选择；`Resume()` 恢复为 `Running`。 |
 | `Running` | 只转发当前状态。 |
 
 状态对象被 `Add` 后由状态机拥有；移除、`Clear` 或 `Dispose` 时不要再由业务重复释放同一个状态。状态中的外部订阅应在 `OnDispose` 解除。
-`Start`、`End`、`Suspend`、`Dispose` 等生命周期回调尚未结束时，不允许对同一 FSM 发起嵌套状态变更；回调异常会继续抛给调用方，并把机器收敛到 `End`。
+`Start`、`End`、`Suspend`、`Resume`、`Dispose` 等生命周期回调尚未结束时，不允许对同一 FSM 发起嵌套状态变更；回调异常会继续抛给调用方，并把机器收敛到 `End`。
 
 ## 宿主与工具入口
 

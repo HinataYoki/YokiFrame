@@ -76,7 +76,7 @@ InventoryService inventory =
 | `void Register<K>(K service)` | 注册服务；同一类型重复注册会先释放旧服务。`service` 不能为 null。 |
 | `K GetService<K>(bool force = false)` | 查询服务；未注册时返回 null。`force=true` 会使用无参构造函数创建、注册并初始化；同一类型的并发强制请求共享一次创建。 |
 | `IEnumerable<IService> GetAllServices()` | 返回当前服务快照，不暴露内部字典。 |
-| `Dispose()` | 释放架构和全部服务，并允许下一次访问重新创建。 |
+| `Dispose()` | 释放架构和全部服务，并允许下一次访问重新创建。已释放实例上的 `Register` 或 `GetService<T>(true)` 抛出 `ObjectDisposedException`。 |
 | `protected OnInit()` | 子类注册服务的入口，只执行一次。 |
 | `protected OnDispose()` | 子类释放架构级资源的可选入口。 |
 
@@ -97,7 +97,7 @@ InventoryService inventory =
 1. `Interface` 首次访问创建架构。
 2. 架构执行 `OnInit()`，其中调用 `Register`。
 3. 架构初始化所有尚未初始化的服务；服务初始化期间新增的服务也会被处理。
-4. 重复注册同一类型时，旧服务先 `Dispose()`，新服务再注入架构。
+4. 重复注册同一类型时，新服务先注入架构，旧服务在容器锁外 `Dispose()`。
 5. 释放架构时清空服务表并逐个释放服务。
 
 `force=true` 适合明确的延迟创建依赖，不要用它掩盖初始化顺序问题。同一服务类型的并发强制请求共享同一创建结果；创建期间若调用方已显式完成 `Register`，显式实例优先，未采用的候选会被释放。稳定服务优先在 `OnInit()` 显式注册。

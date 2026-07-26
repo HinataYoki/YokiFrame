@@ -182,7 +182,10 @@ public sealed class RuntimePublishService
             throw new FileNotFoundException("CLI apphost was not published.", sourcePath);
         }
 
-        if (string.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        if (string.Equals(sourcePath, targetPath, comparison))
         {
             return;
         }

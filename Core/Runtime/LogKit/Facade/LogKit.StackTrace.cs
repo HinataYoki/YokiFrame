@@ -46,9 +46,20 @@ namespace YokiFrame
         /// <returns>有效日志等级。</returns>
         private static LogLevel NormalizeLevel(LogLevel level)
         {
+            return NormalizeLevel(level, LogLevel.Debug);
+        }
+
+        /// <summary>
+        /// 归一化日志等级，非法枚举值回落到指定等级。
+        /// </summary>
+        /// <param name="level">原始日志等级。</param>
+        /// <param name="fallback">非法枚举值时使用的回落等级。</param>
+        /// <returns>有效日志等级。</returns>
+        internal static LogLevel NormalizeLevel(LogLevel level, LogLevel fallback)
+        {
             return level == LogLevel.Debug || level == LogLevel.Info || level == LogLevel.Warning || level == LogLevel.Error
                 ? level
-                : LogLevel.Debug;
+                : fallback;
         }
 
 #if UNITY_EDITOR || (GODOT && TOOLS)

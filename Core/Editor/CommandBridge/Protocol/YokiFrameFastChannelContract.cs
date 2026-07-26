@@ -32,11 +32,6 @@ namespace YokiFrame
         public const int MAX_PAYLOAD_BYTES = MAX_FRAME_BYTES - HEADER_SIZE;
 
         /// <summary>
-        /// Command 消息内业务 payload JSON 的最大字节数；与可靠 FileBridge 保持一致。
-        /// </summary>
-        public const int MAX_COMMAND_PAYLOAD_BYTES = YokiFrameFileBridgeContract.PAYLOAD_MAX_BYTES;
-
-        /// <summary>
         /// Registry 中只读命令能力键使用的 Kit/action 分隔符。
         /// </summary>
         public const char COMMAND_KEY_SEPARATOR = '/';

@@ -4,6 +4,7 @@
     "references": [
         "YokiFrame",
         "YokiFrame.SaveKit",
+        "YokiFrame.SaveKit.Unity",
         "YokiFrame.Editor",
         "YokiFrame.SaveKit.Editor",
         "UniTask",

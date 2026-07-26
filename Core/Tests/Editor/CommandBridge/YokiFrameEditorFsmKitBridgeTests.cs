@@ -48,6 +48,7 @@ namespace YokiFrame
 
             Assert.AreEqual(1, payload.fsms.Length);
             Assert.AreEqual("UnityPayload", payload.fsms[0].name);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -71,6 +72,7 @@ namespace YokiFrame
 
             Assert.IsTrue(result.IsSuccess, result.ErrorCode + ": " + result.ErrorMessage);
             StringAssert.Contains("UnityCommand", result.ResultJson);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>

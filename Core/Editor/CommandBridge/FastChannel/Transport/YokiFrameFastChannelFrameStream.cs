@@ -31,7 +31,7 @@ namespace YokiFrame
             var header = YokiFrameFastChannelFrameCodec.ReadValidatedHeader(headerBytes);
             var payloadBytes = new byte[header.PayloadLength];
             await ReadExactlyAsync(stream, payloadBytes, cancellationToken).ConfigureAwait(false);
-            return DecodeFrame(headerBytes, payloadBytes);
+            return YokiFrameFastChannelFrameCodec.Decode(in header, payloadBytes);
         }
 
         /// <summary>
@@ -80,20 +80,6 @@ namespace YokiFrame
 
                 offset += readCount;
             }
-        }
-
-        /// <summary>
-        /// 把已分段读取完成的 header 和 payload 组合为单帧，由 Core codec 统一执行最终验证。
-        /// </summary>
-        /// <param name="headerBytes">固定 header 字节。</param>
-        /// <param name="payloadBytes">根据 header 长度读取的 payload 字节。</param>
-        /// <returns>已解码的 FastChannel frame。</returns>
-        private static YokiFrameFastChannelFrame DecodeFrame(byte[] headerBytes, byte[] payloadBytes)
-        {
-            var frameBytes = new byte[headerBytes.Length + payloadBytes.Length];
-            Buffer.BlockCopy(headerBytes, 0, frameBytes, 0, headerBytes.Length);
-            Buffer.BlockCopy(payloadBytes, 0, frameBytes, headerBytes.Length, payloadBytes.Length);
-            return YokiFrameFastChannelFrameCodec.Decode(frameBytes);
         }
     }
 }

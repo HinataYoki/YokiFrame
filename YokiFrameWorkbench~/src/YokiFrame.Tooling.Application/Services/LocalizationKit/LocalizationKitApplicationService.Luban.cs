@@ -254,13 +254,13 @@ public sealed partial class LocalizationKitApplicationService
     {
         ArgumentNullException.ThrowIfNull(tool);
         LubanToolOptions normalizedTool = tool with { ProjectRoot = projectRoot };
-        string configPath = ResolveContainedProjectPath(
+        string configPath = ResolveContainedPath(
             projectRoot,
             LubanPathResolver.ResolveConfigPath(normalizedTool),
             "luban.conf");
         string workDirectory = string.IsNullOrWhiteSpace(tool.LubanWorkDir)
             ? Path.GetDirectoryName(configPath)!
-            : ResolveContainedProjectPath(
+            : ResolveContainedPath(
                 projectRoot,
                 LubanPathResolver.ResolveProjectPath(normalizedTool, tool.LubanWorkDir, "Luban 工作目录"),
                 "Luban 工作目录");
@@ -290,8 +290,8 @@ public sealed partial class LocalizationKitApplicationService
 
         string schemaDirectory = configuration.SchemaSources.FirstOrDefault(static source => source.IsDirectory)?.FullPath
             ?? Path.Combine(configuration.ConfigDirectory, "Defines");
-        string schemaPath = ResolveContainedProjectPath(projectRoot, Path.Combine(schemaDirectory, LUBAN_SCHEMA_FILE_NAME), "LocalizationKit XML schema");
-        string workbookPath = ResolveContainedProjectPath(
+        string schemaPath = ResolveContainedPath(projectRoot, Path.Combine(schemaDirectory, LUBAN_SCHEMA_FILE_NAME), "LocalizationKit XML schema");
+        string workbookPath = ResolveContainedPath(
             projectRoot,
             Path.Combine(configuration.DataDirectory, LUBAN_WORKBOOK_DIRECTORY_NAME, LUBAN_WORKBOOK_FILE_NAME),
             "LocalizationKit Excel 模板");
@@ -358,16 +358,6 @@ public sealed partial class LocalizationKitApplicationService
         }
 
         return languages;
-    }
-
-    /// <summary>解析项目内路径并拒绝 Excel、schema 或临时输出越出当前项目。</summary>
-    /// <param name="projectRoot">当前项目根。</param>
-    /// <param name="path">绝对或项目根相对路径。</param>
-    /// <param name="description">用于错误信息的路径语义。</param>
-    /// <returns>规范化后的绝对路径。</returns>
-    private static string ResolveContainedProjectPath(string projectRoot, string path, string description)
-    {
-        return ResolveContainedPath(projectRoot, path, description);
     }
 
     /// <summary>创建统一失败结果，调用方无需捕获预期环境或 schema 错误。</summary>

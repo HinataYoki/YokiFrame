@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using YokiFrame;
 using YokiFrame.Protocol.Common;
+using YokiFrame.Protocol.Results;
 
 namespace YokiFrame.Protocol.FastChannel;
 
@@ -77,9 +78,11 @@ public sealed class FastChannelEndpoint
     /// <returns>endpoint 启用且能力清单包含该命令时返回 true。</returns>
     public bool SupportsReadOnlyCommand(string kit, string action)
     {
-        return Enabled && ReadOnlyCommands.Contains(
-            YokiFrameFastChannelContract.CreateCommandKey(kit, action),
-            StringComparer.Ordinal);
+        if (!Enabled) return false;
+        var key = YokiFrameFastChannelContract.CreateCommandKey(kit, action);
+        for (var i = 0; i < ReadOnlyCommands.Count; i++)
+            if (string.Equals(ReadOnlyCommands[i], key, StringComparison.Ordinal)) return true;
+        return false;
     }
 
     /// <summary>
@@ -148,7 +151,10 @@ public sealed class FastChannelEndpoint
     public static FastChannelEndpoint FromJson(string json)
     {
         return JsonSerializer.Deserialize(json, YokiFrameProtocolJsonContext.Default.FastChannelEndpoint)
-            ?? Disabled(string.Empty, string.Empty, 0L);
+            ?? throw new YokiFrameProtocolException(new YokiFrameError(
+                "FastChannelEndpointParseNull",
+                "FastChannel endpoint JSON deserialized to null.",
+                "Ensure the engine registry publishes a valid endpoint object."));
     }
 
     /// <summary>
@@ -185,7 +191,7 @@ public sealed class FastChannelEndpoint
             Endpoint = endpoint,
             Enabled = true,
             Fallback = FILEBRIDGE_FALLBACK,
-            ReadOnlyCommands = new List<string>
+            ReadOnlyCommands = new()
             {
                 YokiFrameFastChannelContract.CreateCommandKey("System", "ping"),
                 YokiFrameFastChannelContract.CreateCommandKey("System", "bridge_status")

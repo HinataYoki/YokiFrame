@@ -73,7 +73,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -98,7 +98,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -123,7 +123,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -148,7 +148,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -173,7 +173,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -198,7 +198,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -223,7 +223,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -248,7 +248,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -273,7 +273,7 @@ internal static class WorkbenchDashboardKitProjections
         WorkbenchBridgeHealth bridgeHealth,
         IReadOnlyList<WorkbenchSnapshotState> snapshots)
     {
-        return ProjectWithEmptyTransport(
+        return ProjectWithoutTransport(
             engineId,
             bridgeHealth,
             snapshots,
@@ -324,17 +324,5 @@ internal static class WorkbenchDashboardKitProjections
             snapshot.RawPayloadJson);
     }
 
-    /// <summary>
-    /// 周期读取使用空 Transport 的 DataSource 投影（命令路径另填实际传输）。
-    /// </summary>
-    private static TState? ProjectWithEmptyTransport<TState>(
-        string engineId,
-        WorkbenchBridgeHealth bridgeHealth,
-        IReadOnlyList<WorkbenchSnapshotState> snapshots,
-        string kit,
-        Func<string, string, long, string, DateTimeOffset, string, IReadOnlyList<string>, string, string, TState> parse)
-        where TState : class
-    {
-        return ProjectWithoutTransport(engineId, bridgeHealth, snapshots, kit, parse);
-    }
 }
+

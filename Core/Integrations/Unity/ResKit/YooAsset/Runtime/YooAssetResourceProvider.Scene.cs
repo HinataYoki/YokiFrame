@@ -125,12 +125,6 @@ namespace YokiFrame.Unity
             }
         }
 
-        /// <summary>获取当前由 YooAsset Provider 记录的激活场景。</summary>
-        public ResSceneHandle GetActiveScene()
-        {
-            return mActiveScene;
-        }
-
         /// <summary>请求 Unity 卸载未使用资源。</summary>
         public void UnloadUnusedAssets(Action onComplete)
         {

@@ -124,6 +124,12 @@ namespace YokiFrame
         /// <returns>存在尚未处理的控制故障时返回 true。</returns>
         internal bool TryTakePendingFault(out Exception exception)
         {
+            if (Volatile.Read(ref mPendingFault) == null)
+            {
+                exception = null;
+                return false;
+            }
+
             exception = Interlocked.Exchange(ref mPendingFault, null);
             return exception != null;
         }

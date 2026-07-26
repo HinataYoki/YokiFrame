@@ -224,12 +224,10 @@ internal sealed class FileBridgeTransport
     /// <returns>JSON 文件数量。</returns>
     private static int CountJsonFiles(string directoryPath)
     {
-        return Directory.Exists(directoryPath)
-            ? Directory.EnumerateFiles(
-                directoryPath,
-                "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
-                SearchOption.TopDirectoryOnly).Count()
-            : 0;
+        if (!Directory.Exists(directoryPath)) return 0;
+        var count = 0;
+        foreach (var _ in Directory.EnumerateFiles(directoryPath, "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION, SearchOption.TopDirectoryOnly)) count++;
+        return count;
     }
 
     /// <summary>

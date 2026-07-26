@@ -26,6 +26,7 @@ namespace YokiFrame.Godot
         /// <summary>释放指定路径缓存持有的一次资源租约。</summary>
         public void Unload(string path)
         {
+            if (string.IsNullOrEmpty(path)) return;
             CachedStream cached;
             lock (mStreamLock)
             {

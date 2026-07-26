@@ -17,7 +17,7 @@ namespace YokiFrame
             handle.Release();
         }
 
-        /// <summary>消费引用该对象的一个已登记 lease；未知对象不会转交给当前 Provider。</summary>
+        /// <summary>消费引用该对象的一个已登记匿名 lease；未知对象不会转交给当前 Provider。</summary>
         /// <param name="asset">由 ResKit 返回的资源对象。</param>
         public static void Release(object asset)
         {
@@ -29,8 +29,7 @@ namespace YokiFrame
             ResReleaseWork release = default;
             lock (sLock)
             {
-                ResLease lease = FindObjectLeaseLocked(asset, true)
-                    ?? FindObjectLeaseLocked(asset, false);
+                ResLease lease = FindObjectLeaseLocked(asset, true);
                 if (lease == null || !lease.Entry.TryRelease(lease))
                 {
                     return;

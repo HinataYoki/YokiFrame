@@ -54,7 +54,7 @@ namespace YokiFrame
             ActionKitScheduler.GetExecutingActionControllers(controllers);
             ActionKitTerminalEvent[] events = ActionKitDiagnosticHistory.CreateLatestSnapshot();
             int nodeLimit = MAX_NODES;
-            int stackFrameLimit = MAX_STACK_FRAMES;
+            int stackFrameLimit = ActionStackTraceService.Count > 0 ? MAX_STACK_FRAMES : 0;
             int eventLimit = events.Length;
             while (true)
             {

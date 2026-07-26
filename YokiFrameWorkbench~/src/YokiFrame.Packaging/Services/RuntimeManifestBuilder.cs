@@ -298,16 +298,16 @@ public sealed class RuntimeManifestBuilder
     /// <returns>平台内相对祖先目录名称匹配时返回 true。</returns>
     private static bool ContainsRelativeDirectory(string platformRoot, string path, string directoryName)
     {
-        var relativePath = Path.GetRelativePath(platformRoot, path).Replace('\\', '/');
-        var lastSeparator = relativePath.LastIndexOf('/');
-        if (lastSeparator < 0)
+        var relativePath = Path.GetRelativePath(platformRoot, path);
+        ReadOnlySpan<char> remaining = relativePath.AsSpan();
+        while (true)
         {
-            return false;
+            int sep = remaining.IndexOfAny('/', '\\');
+            if (sep < 0) return false;
+            var segment = remaining[..sep];
+            if (segment.Equals(directoryName.AsSpan(), StringComparison.OrdinalIgnoreCase)) return true;
+            remaining = remaining[(sep + 1)..];
         }
-
-        return relativePath[..lastSeparator]
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Any(segment => string.Equals(segment, directoryName, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -121,6 +121,7 @@ namespace YokiFrame
                 .Append(resolution)
                 .Append(",\"indexes\":[");
             bool first = true;
+            int matchedCount = 0;
             for (int index = 0; index < densities.Count; index++)
             {
                 SpatialDensitySnapshot density = densities[index];
@@ -136,10 +137,10 @@ namespace YokiFrame
                 }
 
                 first = false;
+                matchedCount++;
                 AppendDensity(builder, density, true);
             }
 
-            int matchedCount = first ? 0 : CountMatchingDensities(densities, diagnosticsId);
             builder.Append("],\"count\":").Append(matchedCount).Append('}');
             return builder.ToString();
         }
@@ -148,10 +149,26 @@ namespace YokiFrame
         /// <returns>固定 schema 的 SpatialKit 分析 JSON。</returns>
         internal static string WriteAnalysis()
         {
-            return "{\"schemaVersion\":1,\"version\":"
-                + SpatialKit.GetDiagnosticsVersion()
-                + ",\"stats\":" + WriteStats()
-                + ",\"density\":" + WriteDensity("{}") + "}";
+            SpatialKitDiagnosticsSnapshot snapshot = SpatialKit.CreateDiagnosticsSnapshot();
+            IReadOnlyList<SpatialDensitySnapshot> densities = SpatialKit.CreateDensitySnapshots(32);
+            long version = SpatialKit.GetDiagnosticsVersion();
+            var builder = new StringBuilder(4096);
+            builder.Append("{\"schemaVersion\":1,\"version\":")
+                .Append(version)
+                .Append(",\"stats\":")
+                .Append(WriteStats(snapshot))
+                .Append(",\"density\":{\"schemaVersion\":1,\"version\":")
+                .Append(version)
+                .Append(",\"resolution\":32,\"indexes\":[");
+            bool first = true;
+            for (int i = 0; i < densities.Count; i++)
+            {
+                if (!first) builder.Append(',');
+                first = false;
+                AppendDensity(builder, densities[i], true);
+            }
+            builder.Append("],\"count\":").Append(densities.Count).Append("}}");
+            return builder.ToString();
         }
 
         /// <summary>使用已采样索引生成统计对象，避免同一命令重复清理弱引用。</summary>
@@ -237,7 +254,7 @@ namespace YokiFrame
                 .Append("\",\"indexKind\":\"")
                 .Append(JsonHelper.EscapeString(density.IndexKind))
                 .Append("\",\"plane\":\"")
-                .Append(density.Plane)
+                .Append(density.Plane.ToString())
                 .Append("\",\"resolution\":")
                 .Append(density.Resolution)
                 .Append(",\"minA\":")
@@ -300,31 +317,6 @@ namespace YokiFrame
             }
 
             return null;
-        }
-
-        /// <summary>统计满足 diagnosticsId 过滤条件的密度索引数量。</summary>
-        /// <param name="densities">当前采样的密度列表。</param>
-        /// <param name="diagnosticsId">可选诊断编号。</param>
-        /// <returns>实际写入结果的数量。</returns>
-        private static int CountMatchingDensities(
-            IReadOnlyList<SpatialDensitySnapshot> densities,
-            string diagnosticsId)
-        {
-            if (string.IsNullOrWhiteSpace(diagnosticsId))
-            {
-                return densities.Count;
-            }
-
-            int count = 0;
-            for (int index = 0; index < densities.Count; index++)
-            {
-                if (string.Equals(densities[index].DiagnosticsId, diagnosticsId, StringComparison.Ordinal))
-                {
-                    count++;
-                }
-            }
-
-            return count;
         }
 
         /// <summary>验证 density 请求并限制分辨率，防止生成过大 payload。</summary>

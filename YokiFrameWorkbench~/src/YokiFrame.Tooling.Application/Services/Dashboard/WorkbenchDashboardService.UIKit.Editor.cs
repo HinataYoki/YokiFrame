@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using YokiFrame.Protocol.Common;
 using YokiFrame.Protocol.Validation;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Models.UIKit;
@@ -93,7 +94,7 @@ public sealed partial class WorkbenchDashboardService
         {
             JsonObject selectionPayload = new();
             AddSelectionContext(selectionPayload, request);
-            return selectionPayload.ToJsonString();
+            return selectionPayload.ToJsonString(YokiFrameJson.CompactOptions);
         }
 
         if (request == null) throw new ArgumentNullException(nameof(request));
@@ -108,7 +109,7 @@ public sealed partial class WorkbenchDashboardService
         };
         if (action == WorkbenchUIKitEditorAction.GenerateCodeForSelection)
             AddSelectionContext(payload, request);
-        return payload.ToJsonString();
+        return payload.ToJsonString(YokiFrameJson.CompactOptions);
     }
 
     /// <summary>只在调用方持有有效上下文时追加 revision 与稳定目标 ID。</summary>

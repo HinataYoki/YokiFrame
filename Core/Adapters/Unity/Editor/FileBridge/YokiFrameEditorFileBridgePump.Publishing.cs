@@ -62,6 +62,8 @@ namespace YokiFrame
         /// <summary>创建 FileBridge 所需目录，保证 CLI 可以直接读取状态和队列。</summary>
         private static void EnsureBridgeDirectories()
         {
+            // 心跳与完整状态写入都经过此处，故每轮落盘前复核一次固定根的重解析点防护。
+            YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetCommandsRoot());
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetArchiveRoot());
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetDeadletterRoot());
@@ -294,6 +296,7 @@ namespace YokiFrame
             var snapshot = new YokiFrameEditorSnapshot
             {
                 kit = kit,
+                name = snapshotName,
                 generation = sGeneration,
                 sequence = sSequence,
                 writtenAtUtc = DateTimeOffset.UtcNow.ToString("O"),

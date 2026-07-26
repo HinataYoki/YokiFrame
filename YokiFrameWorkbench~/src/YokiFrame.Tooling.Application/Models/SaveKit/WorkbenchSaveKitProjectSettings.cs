@@ -15,10 +15,10 @@ public sealed record WorkbenchSaveKitProjectSettings(
     string StatusText)
 {
     /// <summary>获取 Slot 文件数量。</summary>
-    public int SlotCount => Files.Count(static file => file.Kind == "Slot");
+    public int SlotCount { get; } = Files.Count(static file => file.Kind == "Slot");
 
     /// <summary>获取 Global 文件数量。</summary>
-    public int GlobalCount => Files.Count(static file => file.Kind == "Global");
+    public int GlobalCount { get; } = Files.Count(static file => file.Kind == "Global");
 
     /// <summary>获取全部文件数量。</summary>
     public int FileCount => Files.Count;

@@ -76,7 +76,6 @@ namespace YokiFrame.Godot
             internal bool FadingOut;
             internal bool Paused;
             internal bool Loop;
-            internal float StartedAt;
             internal bool Is3D;
             internal NumericsVector3 Position;
             internal IAudioFollowTarget FollowTarget;

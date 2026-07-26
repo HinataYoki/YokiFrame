@@ -41,7 +41,7 @@ namespace YokiFrame
         {
             if (!string.Equals(snapshotName, STATE, StringComparison.Ordinal))
                 throw new ArgumentException("Unsupported AudioKit snapshot: " + snapshotName, nameof(snapshotName));
-            return AudioKitSnapshotWriter.WriteWorkbench();
+            return mHandler.CreateWorkbenchSnapshot();
         }
     }
 }

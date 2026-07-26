@@ -11,9 +11,9 @@ namespace YokiFrame
     public sealed class JsonSaveSerializer : ISaveSerializer, IModuleIdAwareSaveSerializer
     {
         private const int VERSION_PREFIX_BYTES = 4;
-        private readonly IJsonSaveCodec codec;
-        private readonly JsonSaveMigrationRegistry migrations;
-        private readonly int currentSchemaVersion;
+        private readonly IJsonSaveCodec mCodec;
+        private readonly JsonSaveMigrationRegistry mMigrations;
+        private readonly int mCurrentSchemaVersion;
 
         /// <summary>创建 JSON SaveKit 序列化器。</summary>
         /// <param name="codec">宿主 JSON 编解码器。</param>
@@ -21,14 +21,14 @@ namespace YokiFrame
         /// <param name="migrationRegistry">可选迁移注册表。</param>
         public JsonSaveSerializer(IJsonSaveCodec codec, int currentSchemaVersion, JsonSaveMigrationRegistry migrationRegistry = null)
         {
-            this.codec = codec ?? throw new ArgumentNullException(nameof(codec));
+            mCodec = codec ?? throw new ArgumentNullException(nameof(codec));
             if (currentSchemaVersion < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(currentSchemaVersion));
             }
 
-            this.currentSchemaVersion = currentSchemaVersion;
-            migrations = migrationRegistry ?? new JsonSaveMigrationRegistry();
+            mCurrentSchemaVersion = currentSchemaVersion;
+            mMigrations = migrationRegistry ?? new JsonSaveMigrationRegistry();
         }
 
         /// <inheritdoc />
@@ -40,19 +40,19 @@ namespace YokiFrame
         /// <summary>获取当前 JSON schema 版本。</summary>
         public int CurrentSchemaVersion
         {
-            get { return currentSchemaVersion; }
+            get { return mCurrentSchemaVersion; }
         }
 
         /// <summary>获取 JSON 迁移器注册表。</summary>
         public JsonSaveMigrationRegistry Migrations
         {
-            get { return migrations; }
+            get { return mMigrations; }
         }
 
         /// <inheritdoc />
         public byte[] Serialize<T>(T data)
         {
-            return Pack(currentSchemaVersion, Encoding.UTF8.GetBytes(codec.Serialize(data) ?? string.Empty));
+            return Pack(mCurrentSchemaVersion, Encoding.UTF8.GetBytes(mCodec.Serialize(data) ?? string.Empty));
         }
 
         /// <inheritdoc />
@@ -66,7 +66,7 @@ namespace YokiFrame
         {
             SaveModuleIdentity.ValidateId(moduleId);
             var json = UnpackAndMigrate(moduleId, bytes);
-            return codec.Deserialize<T>(Encoding.UTF8.GetString(json));
+            return mCodec.Deserialize<T>(Encoding.UTF8.GetString(json));
         }
 
         /// <inheritdoc />
@@ -77,7 +77,7 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(data));
             }
 
-            return Pack(currentSchemaVersion, Encoding.UTF8.GetBytes(codec.Serialize(data) ?? string.Empty));
+            return Pack(mCurrentSchemaVersion, Encoding.UTF8.GetBytes(mCodec.Serialize(data) ?? string.Empty));
         }
 
         /// <inheritdoc />
@@ -107,7 +107,7 @@ namespace YokiFrame
 
             SaveModuleIdentity.ValidateId(moduleId);
             var json = UnpackAndMigrate(moduleId, bytes);
-            codec.DeserializeOverwrite(Encoding.UTF8.GetString(json), target);
+            mCodec.DeserializeOverwrite(Encoding.UTF8.GetString(json), target);
         }
 
         /// <summary>读取版本前缀并执行严格的 JSON 迁移链。</summary>
@@ -119,16 +119,16 @@ namespace YokiFrame
             }
 
             var version = BitConverter.ToInt32(bytes, 0);
-            if (version < 0 || version > currentSchemaVersion)
+            if (version < 0 || version > mCurrentSchemaVersion)
             {
                 throw new InvalidDataException("JSON save payload schema version is invalid.");
             }
 
             var json = new byte[bytes.Length - VERSION_PREFIX_BYTES];
             Buffer.BlockCopy(bytes, VERSION_PREFIX_BYTES, json, 0, json.Length);
-            return version == currentSchemaVersion
+            return version == mCurrentSchemaVersion
                 ? json
-                : migrations.Migrate(moduleId, version, currentSchemaVersion, json);
+                : mMigrations.Migrate(moduleId, version, mCurrentSchemaVersion, json);
         }
 
         /// <summary>把 schema 版本和 JSON 字节封装成模块 payload。</summary>

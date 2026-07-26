@@ -70,6 +70,38 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 基于已校验 header 解码分段读取的 payload，避免 stream transport 为整帧再分配一次缓冲区并重复校验 header。
+        /// </summary>
+        /// <param name="header">已通过 ReadValidatedHeader 校验的 header。</param>
+        /// <param name="payloadBytes">按 header 长度精确读取的 payload 字节。</param>
+        /// <returns>已校验的消息对象。</returns>
+        internal static YokiFrameFastChannelFrame Decode(
+            in YokiFrameFastChannelFrameHeader header,
+            ReadOnlySpan<byte> payloadBytes)
+        {
+            if (payloadBytes.Length < header.PayloadLength)
+            {
+                throw CreateProtocolException(
+                    "FastChannelFrameTruncated",
+                    "FastChannel frame payload is shorter than its declared length.",
+                    "Continue reading the current frame before decoding it.");
+            }
+
+            if (payloadBytes.Length > header.PayloadLength)
+            {
+                throw CreateProtocolException(
+                    "FastChannelFrameTrailingBytes",
+                    "FastChannel decoder received bytes from more than one frame.",
+                    "Split frames using the fixed header payloadLength before decoding.");
+            }
+
+            return new YokiFrameFastChannelFrame(
+                header.MessageKind,
+                header.Flags,
+                DecodePayload(payloadBytes));
+        }
+
+        /// <summary>
         /// 读取并校验固定 header，使 stream transport 能在分配 payload 缓冲区前拒绝异常长度。
         /// </summary>
         /// <param name="headerBytes">至少包含固定 12 字节 header 的缓冲区。</param>

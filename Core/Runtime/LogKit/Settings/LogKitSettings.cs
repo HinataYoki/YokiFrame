@@ -117,7 +117,7 @@ namespace YokiFrame
             {
                 string value = KitSettings.GetString(KIT_NAME, MINIMUM_LEVEL_KEY, DEFAULT_MINIMUM_LEVEL.ToString());
                 LogLevel parsed;
-                return Enum.TryParse(value, true, out parsed) ? NormalizeLevel(parsed) : DEFAULT_MINIMUM_LEVEL;
+                return Enum.TryParse(value, true, out parsed) ? LogKit.NormalizeLevel(parsed, DEFAULT_MINIMUM_LEVEL) : DEFAULT_MINIMUM_LEVEL;
             }
         }
 
@@ -169,19 +169,35 @@ namespace YokiFrame
         {
             SetDefaultBaseSettings();
             SetDefaultStorageSettings();
-            ApplyBaseRuntimeSettings();
             BumpSettingsVersion();
+            ApplyBaseRuntimeSettings();
         }
 #endif
 
         /// <summary>
-        /// 将通用设置中的 LogKit 开关和等级同步到 LogKit 运行状态。
+        /// 将通用设置中的 LogKit 开关和等级同步到 LogKit 运行状态；订阅者异常不会传播到日志调用方。
         /// </summary>
         public static void ApplyBaseRuntimeSettings()
         {
             LogKit.Enabled = Enabled;
             LogKit.MinimumLevel = MinimumLevel;
-            RuntimeSettingsApplied?.Invoke();
+            var handlers = RuntimeSettingsApplied;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (Delegate handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action)handler)();
+                }
+                catch (Exception)
+                {
+                    // 订阅者异常不得传播到日志调用方。
+                }
+            }
         }
 
         /// <summary>
@@ -275,18 +291,6 @@ namespace YokiFrame
             KitSettings.SetString(KIT_NAME, PLAYER_FILE_NAME_KEY, DEFAULT_PLAYER_FILE_NAME);
         }
 #endif
-
-        /// <summary>
-        /// 归一化日志等级。
-        /// </summary>
-        /// <param name="level">原始日志等级。</param>
-        /// <returns>有效日志等级。</returns>
-        private static LogLevel NormalizeLevel(LogLevel level)
-        {
-            return level == LogLevel.Debug || level == LogLevel.Info || level == LogLevel.Warning || level == LogLevel.Error
-                ? level
-                : DEFAULT_MINIMUM_LEVEL;
-        }
 
 #if UNITY_EDITOR || (GODOT && TOOLS)
         /// <summary>

@@ -63,7 +63,7 @@ namespace YokiFrame
             return true;
         }
 
-        /// <summary>一次写入已经完整校验的设置，再同步 Runtime 并只推进一次设置版本。</summary>
+        /// <summary>一次写入已经完整校验的设置，只推进一次设置版本后再同步 Runtime。</summary>
         private static void ApplyValidatedPayload(LogKitSettingsPayload payload)
         {
             KitSettings.SetBool(KIT_NAME, ENABLED_KEY, payload.Enabled);
@@ -80,8 +80,8 @@ namespace YokiFrame
             KitSettings.SetString(KIT_NAME, LOG_DIRECTORY_KEY, payload.LogDirectory);
             KitSettings.SetString(KIT_NAME, EDITOR_FILE_NAME_KEY, payload.EditorFileName);
             KitSettings.SetString(KIT_NAME, PLAYER_FILE_NAME_KEY, payload.PlayerFileName);
-            ApplyBaseRuntimeSettings();
             BumpSettingsVersion();
+            ApplyBaseRuntimeSettings();
         }
 
         /// <summary>判断目录配置是否长度受限且不含当前平台非法路径字符；空值表示宿主默认目录。</summary>
@@ -92,11 +92,13 @@ namespace YokiFrame
                 && value.IndexOfAny(sInvalidPathChars) < 0;
         }
 
-        /// <summary>判断文件名是否为长度受限且不包含目录或非法字符的单段名称。</summary>
+        /// <summary>判断文件名是否为长度受限且不包含目录、相对段或非法字符的单段名称。</summary>
         private static bool IsSafeFileName(string value)
         {
             return !string.IsNullOrWhiteSpace(value)
                 && value.Length <= 255
+                && !string.Equals(value, ".", StringComparison.Ordinal)
+                && !string.Equals(value, "..", StringComparison.Ordinal)
                 && string.Equals(Path.GetFileName(value), value, StringComparison.Ordinal)
                 && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
         }

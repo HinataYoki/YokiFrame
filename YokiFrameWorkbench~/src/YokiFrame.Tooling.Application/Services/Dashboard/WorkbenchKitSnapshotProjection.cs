@@ -20,9 +20,16 @@ internal static class WorkbenchKitSnapshotProjection
         string kit,
         out WorkbenchSnapshotState? snapshot)
     {
-        snapshot = snapshots.FirstOrDefault(
-            item => string.Equals(item.Kit, kit, StringComparison.Ordinal));
-        return snapshot != null;
+        foreach (var item in snapshots)
+        {
+            if (string.Equals(item.Kit, kit, StringComparison.Ordinal))
+            {
+                snapshot = item;
+                return true;
+            }
+        }
+        snapshot = null;
+        return false;
     }
 
     /// <summary>

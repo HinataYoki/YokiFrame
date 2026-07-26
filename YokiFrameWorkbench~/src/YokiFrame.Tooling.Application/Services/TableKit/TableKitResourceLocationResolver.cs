@@ -122,7 +122,10 @@ public sealed class TableKitResourceLocationResolver
     private static string GetContainedRelativePath(string root, string path, string errorMessage)
     {
         string relative = Path.GetRelativePath(Path.GetFullPath(root), Path.GetFullPath(path));
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        if (relative.Equals("..", StringComparison.Ordinal)
+            || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal)
+            || Path.IsPathFullyQualified(relative))
         {
             throw new InvalidDataException(errorMessage);
         }

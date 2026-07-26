@@ -25,11 +25,7 @@ namespace YokiFrame
         public static async Task<T> LoadAsync<T>(string path, CancellationToken token = default) where T : class
 #endif
         {
-#if YOKIFRAME_UNITASK_SUPPORT
             ResLease lease = await LoadLeaseAsync<T>(path, true, token);
-#else
-            ResLease lease = await LoadLeaseAsync<T>(path, true, token);
-#endif
             return lease == null ? null : GetLeaseAsset<T>(lease);
         }
 
@@ -51,11 +47,7 @@ namespace YokiFrame
             string path,
             CancellationToken token = default) where T : class
         {
-#if YOKIFRAME_UNITASK_SUPPORT
             ResLease lease = await LoadLeaseAsync<T>(path, false, token);
-#else
-            ResLease lease = await LoadLeaseAsync<T>(path, false, token);
-#endif
             return lease == null ? null : new ResHandle<T>(lease);
         }
 
@@ -121,18 +113,24 @@ namespace YokiFrame
                 _ = RunSharedProviderLoadAsync<T>(pending);
             }
 
-            ResLease lease = await AwaitPendingLeaseAsync<T>(pending, anonymous, token);
+            ResLease lease = await AwaitPendingLeaseAsync(pending, anonymous, token);
 #if UNITY_EDITOR || (GODOT && TOOLS)
-            if (lease != null) lease.SetSource(source);
+            if (lease != null)
+            {
+                lock (sLock)
+                {
+                    lease.SetSource(source);
+                }
+            }
 #endif
             return lease;
         }
 
         /// <summary>等待共享完成信号后从同一条目创建当前调用方自己的 lease。</summary>
-        private static async Task<ResLease> AwaitPendingLeaseAsync<T>(
+        private static async Task<ResLease> AwaitPendingLeaseAsync(
             ResPendingLoad pending,
             bool anonymous,
-            CancellationToken token) where T : class
+            CancellationToken token)
         {
             try
             {
@@ -205,13 +203,8 @@ namespace YokiFrame
             T asset;
             try
             {
-#if YOKIFRAME_UNITASK_SUPPORT
                 asset = await pending.Provider.LoadAsync<T>(
                     pending.Key.Path, pending.LoadCancellation.Token);
-#else
-                asset = await pending.Provider.LoadAsync<T>(
-                    pending.Key.Path, pending.LoadCancellation.Token);
-#endif
             }
             catch (Exception exception)
             {

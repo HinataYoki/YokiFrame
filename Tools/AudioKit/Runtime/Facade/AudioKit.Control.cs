@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,10 +40,16 @@ namespace YokiFrame
 #endif
         }
 
-        /// <summary>停止当前后端指定逻辑总线的全部 voice。</summary>
+        /// <summary>停止当前后端指定逻辑总线的全部 voice；Master 等价于 StopAll。</summary>
         public static void StopBus(string bus)
         {
-            string normalized = NormalizePlayableBus(bus);
+            string normalized = NormalizeBus(bus, AudioBus.Sfx);
+            if (string.Equals(normalized, AudioBus.Master, StringComparison.OrdinalIgnoreCase))
+            {
+                StopAll();
+                return;
+            }
+
             IAudioBackend backend = GetBackend();
             if (backend == null) return;
             backend.StopBus(normalized);
@@ -74,11 +81,18 @@ namespace YokiFrame
         }
 
         /// <summary>同步预加载音频资源；这是会创建默认后端的真实业务调用。</summary>
-        public static bool Preload(string path) => EnsureBackend().Preload(NormalizePath(path));
+        public static bool Preload(string path)
+        {
+            string normalizedPath = NormalizePath(path);
+            return EnsureBackend().Preload(normalizedPath);
+        }
 
         /// <summary>异步预加载音频资源并响应当前调用取消。</summary>
-        public static Task<bool> PreloadAsync(string path, CancellationToken token = default) =>
-            EnsureBackend().PreloadAsync(NormalizePath(path), token);
+        public static Task<bool> PreloadAsync(string path, CancellationToken token = default)
+        {
+            string normalizedPath = NormalizePath(path);
+            return EnsureBackend().PreloadAsync(normalizedPath, token);
+        }
 
         /// <summary>卸载当前后端指定缓存资源；没有后端时不创建。</summary>
         public static void Unload(string path)

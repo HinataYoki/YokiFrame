@@ -9,7 +9,7 @@ namespace YokiFrame
         IReadOnlyList<LanguageId> GetSupportedLanguages();
         /// <summary>尝试读取普通文本。</summary>
         bool TryGetText(LanguageId languageId, int textId, out string text);
-        /// <summary>尝试读取指定复数分类文本；缺失分类时可回退到 Other。</summary>
+        /// <summary>尝试读取指定复数分类文本；缺失分类时回退 Other，复数来源整体缺失时回退普通文本。</summary>
         bool TryGetPluralText(LanguageId languageId, int textId, PluralCategory category, out string text);
         /// <summary>获取语言显示信息。</summary>
         LanguageInfo GetLanguageInfo(LanguageId languageId);

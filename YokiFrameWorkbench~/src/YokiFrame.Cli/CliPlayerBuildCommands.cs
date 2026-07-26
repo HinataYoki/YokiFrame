@@ -167,8 +167,11 @@ internal static class CliPlayerBuildCommands
     private static string CreateLogPath(string projectRoot, string outputPath)
     {
         var outputName = Path.GetFileNameWithoutExtension(outputPath);
-        var safeName = string.Concat(outputName.Select(static character =>
-            char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '_'));
+        var safeName = string.Create(outputName.Length, outputName, static (span, name) =>
+        {
+            for (var i = 0; i < name.Length; i++)
+                span[i] = char.IsLetterOrDigit(name[i]) || name[i] is '-' or '_' ? name[i] : '_';
+        });
         return Path.Combine(
             projectRoot,
             ".yokiframe",
@@ -191,13 +194,25 @@ internal static class CliPlayerBuildCommands
         var startInfo = CreateStartInfo(options);
         var stopwatch = Stopwatch.StartNew();
         using var process = StartGodotProcess(startInfo, options);
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        var standardOutput = await standardOutputTask.ConfigureAwait(false);
-        var standardError = await standardErrorTask.ConfigureAwait(false);
-        stopwatch.Stop();
-        AppendProcessOutput(options.LogPath, standardOutput, standardError);
+        var standardOutputTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        var standardErrorTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
+            throw;
+        }
+        finally
+        {
+            var standardOutput = await standardOutputTask.ConfigureAwait(false);
+            var standardError = await standardErrorTask.ConfigureAwait(false);
+            stopwatch.Stop();
+            AppendProcessOutput(options.LogPath, standardOutput, standardError);
+        }
+
         ValidateGodotResult(process.ExitCode, options);
         return new GodotPlayerBuildResult(options, new FileInfo(options.OutputPath).Length, stopwatch.ElapsedMilliseconds);
     }
@@ -236,9 +251,9 @@ internal static class CliPlayerBuildCommands
             return Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Godot process did not start.");
         }
-        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
         {
-            File.WriteAllText(options.LogPath, exception.ToString());
+            try { File.WriteAllText(options.LogPath, exception.ToString()); } catch (Exception) { }
             throw new YokiFrameProtocolException(new YokiFrameError(
                 "GodotExecutableNotFound",
                 "Godot executable could not be started: " + exception.Message,

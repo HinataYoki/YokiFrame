@@ -20,8 +20,6 @@ namespace YokiFrame
         {
             UIKitGeneratedOwnerContext context = ResolveContext(owner, ownerKind);
             UIKitBindScanResult scan = UIKitBindScanner.ScanOwner(context.ScanRoot, ownerKind);
-            if (scan.HasErrors)
-                throw CreateScanException(scan);
             Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildOwnerSources(
                 context.Layout,
                 scan,
@@ -261,19 +259,6 @@ namespace YokiFrame
         private static string ReplaceFileName(string assetPath, string fileName)
         {
             return UIKitPanelCodeLayout.CombineAssetPath(GetAssetDirectory(assetPath), fileName);
-        }
-
-        /// <summary>把扫描错误转换为带完整路径的生成异常。</summary>
-        private static InvalidOperationException CreateScanException(UIKitBindScanResult scan)
-        {
-            List<string> errors = new();
-            for (var index = 0; index < scan.Diagnostics.Count; index++)
-            {
-                UIKitBindDiagnostic diagnostic = scan.Diagnostics[index];
-                if (diagnostic.Severity == UIKitBindDiagnosticSeverity.Error)
-                    errors.Add(diagnostic.Path + ": " + diagnostic.Message);
-            }
-            return new InvalidOperationException(string.Join(" | ", errors));
         }
 
         /// <summary>保存一次独立 owner 生成需要的不可变上下文。</summary>

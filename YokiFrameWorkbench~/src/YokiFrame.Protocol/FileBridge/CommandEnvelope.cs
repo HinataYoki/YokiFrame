@@ -107,7 +107,7 @@ public sealed class CommandEnvelope
         string payloadJson,
         int timeoutMs)
     {
-        return new CommandEnvelope
+        var envelope = new CommandEnvelope
         {
             ProtocolVersion = YokiFrameFileBridgeContract.PROTOCOL_VERSION,
             EngineId = SafeIdValidator.EnsureSafeId(engineId, nameof(engineId)),
@@ -119,6 +119,9 @@ public sealed class CommandEnvelope
             TimeoutMs = EnsureTimeout(timeoutMs),
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
+        var commandJson = JsonSerializer.Serialize(envelope, YokiFrameProtocolJsonContext.Default.CommandEnvelope);
+        EnsureCommandJsonSize(commandJson);
+        return envelope;
     }
 
     /// <summary>
@@ -138,9 +141,7 @@ public sealed class CommandEnvelope
     /// <returns>compact JSON 文本。</returns>
     public string ToJson()
     {
-        var json = JsonSerializer.Serialize(this, YokiFrameProtocolJsonContext.Default.CommandEnvelope);
-        EnsureCommandJsonSize(json);
-        return json;
+        return JsonSerializer.Serialize(this, YokiFrameProtocolJsonContext.Default.CommandEnvelope);
     }
 
     /// <summary>

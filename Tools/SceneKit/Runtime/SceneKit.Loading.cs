@@ -19,7 +19,7 @@ namespace YokiFrame
                 return null;
             }
 
-            existing = GetReusableHandler(existing, onComplete);
+            existing = GetReusableHandler(existing, request, onComplete);
             if (existing != null)
             {
                 return existing;
@@ -31,11 +31,15 @@ namespace YokiFrame
             return handler;
         }
 
-        /// <summary>复用仍在有效生命周期中的 Handler；失败或已卸载 Handler 会先移除。</summary>
+        /// <summary>复用仍在有效生命周期中的 Handler；失败或已卸载 Handler 会先移除；挂起预加载 Handler 被正式加载请求移交时恢复操作并升级语义。</summary>
         /// <param name="existing">同一缓存键下已登记的 Handler。</param>
+        /// <param name="request">当前加载请求，用于判断是否需要移交预加载 Handler。</param>
         /// <param name="onComplete">当前请求的完成回调。</param>
         /// <returns>可复用的 Handler；不存在或已终止时返回空。</returns>
-        private static SceneHandler GetReusableHandler(SceneHandler existing, Action<SceneHandler> onComplete)
+        private static SceneHandler GetReusableHandler(
+            SceneHandler existing,
+            SceneLoadRequest request,
+            Action<SceneHandler> onComplete)
         {
             if (existing == null)
             {
@@ -46,6 +50,23 @@ namespace YokiFrame
             {
                 UnregisterHandler(existing);
                 return null;
+            }
+
+            // 正式加载请求遇到仍在加载中的预加载 Handler：移交 Mode/Data、恢复挂起操作，
+            // 避免 Handler 因缺少 ResumeSuspendedLoad 调用而永久停留 Loading。
+            if (!request.IsPreload && existing.IsPreloaded && existing.State == SceneState.Loading)
+            {
+                existing.LoadMode = request.Mode;
+                if (request.Data != null)
+                {
+                    existing.SceneData = request.Data;
+                }
+
+                existing.ActivateWhenLoaded = true;
+                existing.IsPreloaded = false;
+                existing.AddLoadedCallback(onComplete);
+                ResumeSuspendedLoad(existing);
+                return existing;
             }
 
             if (existing.State == SceneState.Loaded)
@@ -66,8 +87,7 @@ namespace YokiFrame
             ISceneBackend backend,
             Action<float> onProgress)
         {
-            var handler = new SceneHandler();
-            handler.Reset(request.SceneName, request.BuildIndex, request.Mode, request.Data, request.IsPreload, backend);
+            var handler = new SceneHandler(request.SceneName, request.BuildIndex, request.Mode, request.Data, request.IsPreload, backend);
             sSceneCache[request.SceneName] = handler;
             sLoadedScenes.Add(handler);
             EventKit.Type.Send(new SceneLoadStartEvent { SceneName = handler.SceneName, Mode = handler.LoadMode });
@@ -124,14 +144,14 @@ namespace YokiFrame
         {
             float previousProgress = handler.Progress;
             handler.UpdateProgress(progress);
-            if (!force && previousProgress == handler.Progress)
-            {
-                return;
-            }
-
             if (handler.Operation != null)
             {
                 handler.IsSuspended = handler.Operation.IsSuspended;
+            }
+
+            if (!force && previousProgress == handler.Progress)
+            {
+                return;
             }
 
             EventKit.Type.Send(new SceneLoadProgressEvent
@@ -142,13 +162,19 @@ namespace YokiFrame
             callback?.Invoke(handler.Progress);
         }
 
-        /// <summary>处理 Provider 的挂起通知并转发预加载回调。</summary>
+        /// <summary>处理 Provider 的挂起通知；已请求卸载或已登记激活意图时直接恢复，跳过预加载回调。</summary>
         private static void OnSceneSuspended(SceneHandler handler, Action<SceneHandler> callback)
         {
             handler.IsSuspended = true;
             if (handler.Operation != null)
             {
                 handler.UpdateProgress(handler.Operation.Progress);
+            }
+
+            if (handler.State == SceneState.Unloading || handler.ActivateWhenLoaded)
+            {
+                ResumeSuspendedLoad(handler);
+                return;
             }
 
             callback?.Invoke(handler);
@@ -206,8 +232,8 @@ namespace YokiFrame
             ReportProgress(handler, COMPLETE_PROGRESS, onProgress, true);
             handler.IsSuspended = false;
             CompleteOperation(handler);
-            onComplete?.Invoke(handler);
-            handler.InvokeLoadCallbacks(handler);
+            onComplete?.Invoke(null);
+            handler.InvokeLoadCallbacks(null);
             UnloadLoadedHandler(handler);
         }
 

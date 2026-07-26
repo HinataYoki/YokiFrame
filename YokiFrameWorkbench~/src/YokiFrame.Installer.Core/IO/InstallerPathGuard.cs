@@ -30,7 +30,18 @@ internal static class InstallerPathGuard
     public static string CombineInside(string root, params string[] segments)
     {
         var fullRoot = Path.GetFullPath(root);
-        var combined = segments.Length == 0 ? fullRoot : Path.Combine(new[] { fullRoot }.Concat(segments).ToArray());
+        string combined;
+        if (segments.Length == 0)
+        {
+            combined = fullRoot;
+        }
+        else
+        {
+            var parts = new string[segments.Length + 1];
+            parts[0] = fullRoot;
+            segments.CopyTo(parts, 1);
+            combined = Path.Combine(parts);
+        }
         var fullPath = Path.GetFullPath(combined);
         if (!IsInside(fullRoot, fullPath))
         {
@@ -49,14 +60,13 @@ internal static class InstallerPathGuard
     /// <returns>位于根目录内时返回 true。</returns>
     private static bool IsInside(string root, string path)
     {
-        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        var normalizedPath = Path.GetFullPath(path);
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(root);
         var comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
-        return normalizedPath.Equals(normalizedRoot, comparison)
-            || normalizedPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison)
-            || normalizedPath.StartsWith(normalizedRoot + Path.AltDirectorySeparatorChar, comparison);
+        return path.Equals(normalizedRoot, comparison)
+            || path.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison)
+            || path.StartsWith(normalizedRoot + Path.AltDirectorySeparatorChar, comparison);
     }
 
     /// <summary>
@@ -110,6 +120,11 @@ internal static class InstallerPathGuard
             return false;
         }
         catch (DirectoryNotFoundException)
+        {
+            attributes = default;
+            return false;
+        }
+        catch (UnauthorizedAccessException)
         {
             attributes = default;
             return false;

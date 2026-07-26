@@ -68,6 +68,11 @@ namespace YokiFrame
         /// <returns>可直接拼接到声明头部的文本。</returns>
         internal static string GetMemberText(MemberModifier modifiers)
         {
+            if (modifiers == MemberModifier.None)
+            {
+                return string.Empty;
+            }
+
             StringBuilder builder = new StringBuilder(48);
             Append(builder, modifiers, MemberModifier.New, "new ");
             Append(builder, modifiers, MemberModifier.Static, "static ");
@@ -77,8 +82,8 @@ namespace YokiFrame
             Append(builder, modifiers, MemberModifier.Abstract, "abstract ");
             Append(builder, modifiers, MemberModifier.Sealed, "sealed ");
             Append(builder, modifiers, MemberModifier.Override, "override ");
-            Append(builder, modifiers, MemberModifier.Partial, "partial ");
             Append(builder, modifiers, MemberModifier.Async, "async ");
+            Append(builder, modifiers, MemberModifier.Partial, "partial ");
             return builder.ToString();
         }
 

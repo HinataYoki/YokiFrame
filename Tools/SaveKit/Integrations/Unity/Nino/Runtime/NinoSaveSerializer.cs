@@ -1,5 +1,6 @@
 #if UNITY_2022_3_OR_NEWER && YOKIFRAME_NINO_SUPPORT
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading;
 using Nino.Core;
@@ -63,7 +64,10 @@ namespace YokiFrame
         /// <inheritdoc />
         public void ValidatePayload(string moduleId, byte[] bytes)
         {
-            ValidateBytes(bytes);
+            if (bytes == null || bytes.Length == 0)
+            {
+                throw new InvalidDataException("Nino save payload is empty or truncated.");
+            }
         }
 
         /// <inheritdoc />
@@ -102,18 +106,40 @@ namespace YokiFrame
                 return;
             }
 
+            try
+            {
 #if UNITY_6000_5_OR_NEWER
-            foreach (Assembly assembly in CurrentAssemblies.GetLoadedAssemblies())
-            {
-                InitializeGeneratedRegistration(assembly);
-            }
+                foreach (Assembly assembly in CurrentAssemblies.GetLoadedAssemblies())
+                {
+                    if (ReferencesNino(assembly)) InitializeGeneratedRegistration(assembly);
+                }
 #else
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for (var i = 0; i < assemblies.Length; i++)
-            {
-                InitializeGeneratedRegistration(assemblies[i]);
-            }
+                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                for (var i = 0; i < assemblies.Length; i++)
+                {
+                    if (ReferencesNino(assemblies[i])) InitializeGeneratedRegistration(assemblies[i]);
+                }
 #endif
+            }
+            catch
+            {
+                // 扫描失败必须放开闩锁，否则 Nino 永久停在半注册状态。
+                Volatile.Write(ref sInitialized, 0);
+                throw;
+            }
+        }
+
+        /// <summary>只有引用 Nino.Core 的程序集才可能包含 NinoGen 生成注册代码。</summary>
+        private static bool ReferencesNino(Assembly assembly)
+        {
+            if (assembly == null || assembly.IsDynamic) return false;
+            AssemblyName[] references = assembly.GetReferencedAssemblies();
+            for (var i = 0; i < references.Length; i++)
+            {
+                if (string.Equals(references[i].Name, "Nino.Core", StringComparison.Ordinal)) return true;
+            }
+
+            return false;
         }
 
         /// <summary>扫描已加载程序集并调用 Nino 生成注册入口。</summary>
@@ -128,6 +154,9 @@ namespace YokiFrame
             {
                 types = exception.Types;
             }
+            catch (FileNotFoundException) { return; }
+            catch (TypeLoadException) { return; }
+            catch (BadImageFormatException) { return; }
 
             if (types == null)
             {
@@ -169,17 +198,22 @@ namespace YokiFrame
                 return;
             }
 
-            var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-            var fields = targetType.GetFields(flags);
-            for (var i = 0; i < fields.Length; i++)
+            const BindingFlags FIELD_FLAGS = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+            for (Type type = targetType; type != null && type != typeof(object); type = type.BaseType)
             {
-                fields[i].SetValue(target, fields[i].GetValue(source));
+                FieldInfo[] fields = type.GetFields(FIELD_FLAGS);
+                for (var i = 0; i < fields.Length; i++)
+                {
+                    fields[i].SetValue(target, fields[i].GetValue(source));
+                }
             }
 
-            var properties = targetType.GetProperties(flags);
+            // 属性部分保持原逻辑（公开属性天然继承，Public|Instance 已覆盖基类）。
+            const BindingFlags PROP_FLAGS = BindingFlags.Public | BindingFlags.Instance;
+            PropertyInfo[] properties = targetType.GetProperties(PROP_FLAGS);
             for (var i = 0; i < properties.Length; i++)
             {
-                var property = properties[i];
+                PropertyInfo property = properties[i];
                 if (property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
                 {
                     property.SetValue(target, property.GetValue(source, null), null);

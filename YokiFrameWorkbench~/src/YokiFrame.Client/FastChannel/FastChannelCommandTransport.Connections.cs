@@ -80,10 +80,18 @@ internal sealed partial class FastChannelCommandTransport
     /// <summary>在等待连接锁前取消同一 engine 已被 registry 新身份替代的握手。</summary>
     private void SupersedeStaleConnectionAttempt(FastChannelEndpoint endpoint)
     {
+        var current = FindCurrentEndpoint(endpoint.EngineId);
         lock (mConnectionAttemptGate)
         {
             ThrowIfDisposed();
-            EnsureEndpointIsCurrent(endpoint);
+            if (current == null || !EndpointsMatch(current, endpoint))
+            {
+                throw CreateProtocolException(
+                    "FastChannelEndpointSuperseded",
+                    "FastChannel endpoint changed before the connection could become current.",
+                    "Retry against the latest registry endpoint or use FileBridge fallback.");
+            }
+
             if (mActiveConnectionAttempt != null
                 && string.Equals(mActiveConnectionAttempt.Endpoint.EngineId, endpoint.EngineId, StringComparison.Ordinal)
                 && !EndpointsMatch(mActiveConnectionAttempt.Endpoint, endpoint))
@@ -98,10 +106,18 @@ internal sealed partial class FastChannelCommandTransport
         FastChannelEndpoint endpoint,
         CancellationToken cancellationToken)
     {
+        var current = FindCurrentEndpoint(endpoint.EngineId);
         lock (mConnectionAttemptGate)
         {
             ThrowIfDisposed();
-            EnsureEndpointIsCurrent(endpoint);
+            if (current == null || !EndpointsMatch(current, endpoint))
+            {
+                throw CreateProtocolException(
+                    "FastChannelEndpointSuperseded",
+                    "FastChannel endpoint changed before the connection could become current.",
+                    "Retry against the latest registry endpoint or use FileBridge fallback.");
+            }
+
             var attempt = new ConnectionAttempt(
                 endpoint,
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));

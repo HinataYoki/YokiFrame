@@ -18,6 +18,11 @@ namespace YokiFrame
         private const string ASSEMBLY_NAME_KEY = "editor.assemblyName";
         private const string CODE_TEMPLATE_KEY = "editor.codeTemplate";
 
+        private static string sCachedPath;
+        private static DateTime sCachedWriteTime;
+        private static SettingsDocument sCachedDocument;
+        private static bool sCachedResult;
+
         /// <summary>读取当前项目配置并覆盖生成请求默认值；文件缺失或无效时保留代码默认值。</summary>
         /// <param name="request">待应用项目默认值的生成请求。</param>
         internal static void ApplyTo(UIKitPanelGenerationRequest request)
@@ -60,13 +65,38 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>读取并校验当前项目的统一 Editor 配置 JSON。</summary>
+        /// <summary>读取并校验当前项目的统一 Editor 配置 JSON；命中内存缓存时跳过磁盘 I/O。</summary>
         /// <param name="document">解析成功时返回配置文档。</param>
         /// <returns>文件存在且格式版本有效时返回 true。</returns>
         private static bool TryRead(out SettingsDocument document)
         {
-            document = default;
             string path = ResolveSettingsPath();
+            DateTime writeTime = File.Exists(path)
+                ? File.GetLastWriteTimeUtc(path)
+                : DateTime.MinValue;
+            if (sCachedPath != null
+                && string.Equals(sCachedPath, path, StringComparison.Ordinal)
+                && writeTime == sCachedWriteTime)
+            {
+                document = sCachedDocument;
+                return sCachedResult;
+            }
+
+            bool result = TryReadCore(path, out document);
+            sCachedPath = path;
+            sCachedWriteTime = writeTime;
+            sCachedDocument = document;
+            sCachedResult = result;
+            return result;
+        }
+
+        /// <summary>执行实际磁盘读取与格式校验，不访问缓存。</summary>
+        /// <param name="path">配置文件绝对路径。</param>
+        /// <param name="document">解析成功时返回配置文档。</param>
+        /// <returns>文件存在且格式版本有效时返回 true。</returns>
+        private static bool TryReadCore(string path, out SettingsDocument document)
+        {
+            document = default;
             if (!File.Exists(path)) return false;
             try
             {

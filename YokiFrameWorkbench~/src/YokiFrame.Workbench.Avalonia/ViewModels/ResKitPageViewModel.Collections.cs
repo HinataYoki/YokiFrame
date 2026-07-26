@@ -12,6 +12,7 @@ public sealed partial class ResKitPageViewModel
     private readonly List<ResKitResourceListItemViewModel> mDesiredResources = new();
     private readonly Dictionary<string, ResKitHistoryListItemViewModel> mHistoryByIdentity = new(StringComparer.Ordinal);
     private readonly List<ResKitHistoryListItemViewModel> mDesiredHistory = new();
+    private readonly List<string> mStaleKeys = new();
     private string mSearchText = string.Empty;
     private ResKitResourceListItemViewModel? mSelectedResource;
     private int mResourceTotal;
@@ -83,10 +84,12 @@ public sealed partial class ResKitPageViewModel
             mAllResources.Add(row);
         }
 
-        foreach (string identity in mResourcesByIdentity.Keys.Where(identity => !retained.Contains(identity)).ToArray())
+        mStaleKeys.Clear();
+        foreach (string identity in mResourcesByIdentity.Keys)
         {
-            mResourcesByIdentity.Remove(identity);
+            if (!retained.Contains(identity)) mStaleKeys.Add(identity);
         }
+        foreach (string identity in mStaleKeys) mResourcesByIdentity.Remove(identity);
 
         ReconcileVisibleResources();
     }
@@ -127,10 +130,12 @@ public sealed partial class ResKitPageViewModel
             mDesiredHistory.Add(row);
         }
 
-        foreach (string identity in mHistoryByIdentity.Keys.Where(identity => !retained.Contains(identity)).ToArray())
+        mStaleKeys.Clear();
+        foreach (string identity in mHistoryByIdentity.Keys)
         {
-            mHistoryByIdentity.Remove(identity);
+            if (!retained.Contains(identity)) mStaleKeys.Add(identity);
         }
+        foreach (string identity in mStaleKeys) mHistoryByIdentity.Remove(identity);
 
         ReconcileCollection(History, mDesiredHistory);
         OnPropertyChanged(nameof(HistoryCountText));
@@ -141,6 +146,7 @@ public sealed partial class ResKitPageViewModel
     private static void ReconcileCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> desired)
         where T : class
     {
+        // O(n²) — acceptable for bounded list sizes; revisit if list sizes grow beyond ~100
         for (var index = 0; index < desired.Count; index++)
         {
             T item = desired[index];

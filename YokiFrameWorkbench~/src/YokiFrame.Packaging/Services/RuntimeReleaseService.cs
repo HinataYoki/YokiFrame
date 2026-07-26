@@ -159,7 +159,7 @@ public sealed class RuntimeReleaseService
     {
         return path.StartsWith(RUNTIME_ROOT_NAME + "/", StringComparison.Ordinal)
             || path.StartsWith(".yokiframe/", StringComparison.Ordinal)
-            || path.StartsWith(WORKBENCH_ROOT_NAME + "/.artifacts", StringComparison.Ordinal)
+            || path.StartsWith(WORKBENCH_ROOT_NAME + "/.artifacts/", StringComparison.Ordinal)
             || path.StartsWith("TauriRuntime~/", StringComparison.Ordinal)
             || path.StartsWith("ToolRuntime~/", StringComparison.Ordinal)
             || HasDirectorySegment(path, "bin")

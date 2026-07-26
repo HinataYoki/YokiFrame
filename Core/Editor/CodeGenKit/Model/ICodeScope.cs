@@ -45,17 +45,7 @@ namespace YokiFrame
         /// <param name="node">待追加的内部节点。</param>
         internal static void Add(ICodeScope scope, ICodeNode node)
         {
-            if (scope == null)
-            {
-                throw new ArgumentNullException(nameof(scope));
-            }
-
-            if (!(scope is ICodeContainer container))
-            {
-                throw new ArgumentException("作用域不是由 CodeGenKit 创建的受支持作用域。", nameof(scope));
-            }
-
-            container.Add(node ?? throw new ArgumentNullException(nameof(node)));
+            RequireContainer(scope).Add(node ?? throw new ArgumentNullException(nameof(node)));
         }
 
         /// <summary>

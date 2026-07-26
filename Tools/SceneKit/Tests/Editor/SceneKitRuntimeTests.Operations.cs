@@ -177,9 +177,6 @@ namespace YokiFrame.Tests
             }
 
             /// <inheritdoc />
-            public SceneHandle GetActiveScene() => ActiveScene;
-
-            /// <inheritdoc />
             public void UnloadUnusedAssets(Action onComplete)
             {
                 onComplete?.Invoke();

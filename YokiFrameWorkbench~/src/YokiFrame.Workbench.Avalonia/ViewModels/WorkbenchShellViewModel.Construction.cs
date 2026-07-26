@@ -208,10 +208,11 @@ public sealed partial class WorkbenchShellViewModel
         Func<string, Task>? saveKitOpenDirectoryAsync,
         TableKitApplicationService? tableKitApplicationService,
         ITableKitLubanFilePicker? tableKitLubanFilePicker,
-        bool _saveKitConstructorMarker = false,
+        bool saveKitConstructorMarker = false,
         Func<WorkbenchUIKitEditorAction, WorkbenchUIKitPanelGenerationRequest?, CancellationToken, Task<WorkbenchUIKitEditorResult>>? uikitEditorActionAsync = null,
         UIKitEditorSettingsService? uikitEditorSettingsService = null)
     {
+        _ = saveKitConstructorMarker;
         mRefreshRequested = refreshRequested;
         mEngineChanged = engineChanged;
         mCommandRequested = commandRequested;

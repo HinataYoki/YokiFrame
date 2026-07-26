@@ -189,6 +189,8 @@ internal sealed partial class CapabilityCatalogBuilder
         AddEvidence(Path.Combine(ProjectRoot, ".yokiframe", "engines", safeEngineId, YokiFrameFileBridgeLayout.ENGINE_REGISTRY_FILE_NAME));
 
         var identityState = ResolveIdentityState(entry, heartbeat);
+        var staleThreshold = TimeSpan.FromSeconds(15);
+        var isStale = heartbeat != null && heartbeat.IsStale(mGeneratedAtUtc, staleThreshold);
         if (heartbeat == null)
         {
             AddIssue("HeartbeatMissing", "Warning", entry.EngineId, "Engine heartbeat is missing.", "Start the engine adapter and refresh the catalog.", new[] { heartbeatPath });
@@ -197,9 +199,9 @@ internal sealed partial class CapabilityCatalogBuilder
         else
         {
             AddEvidence(heartbeat.Path);
-            var heartbeatState = heartbeat.IsStale(mGeneratedAtUtc, TimeSpan.FromSeconds(15)) ? "Stale" : "Available";
+            var heartbeatState = isStale ? "Stale" : "Available";
             mSources.Add(new CapabilityCatalogSource("heartbeat", heartbeat.Path, heartbeatState, entry.EngineId));
-            if (heartbeat.IsStale(mGeneratedAtUtc, TimeSpan.FromSeconds(15)))
+            if (isStale)
             {
                 AddIssue("HeartbeatStale", "Warning", entry.EngineId, "Engine heartbeat is stale.", "Refresh the engine session before trusting runtime capabilities.", new[] { heartbeat.Path });
             }
@@ -218,9 +220,7 @@ internal sealed partial class CapabilityCatalogBuilder
             entry,
             heartbeat,
             identityState,
-            heartbeat != null
-                && !heartbeat.IsStale(mGeneratedAtUtc, TimeSpan.FromSeconds(15))
-                && identityState == "Match");
+            heartbeat != null && !isStale && identityState == "Match");
         mEngines.Add(engine);
         return engine;
     }

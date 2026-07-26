@@ -201,9 +201,6 @@ namespace YokiFrame.Godot
         /// <summary>把有限值限制到零到一。</summary>
         private static float Clamp01(float value) => value < 0f ? 0f : (value > 1f ? 1f : value);
 
-        /// <summary>获取 Godot 单调毫秒时钟的秒值。</summary>
-        private static float GetNow() => Time.GetTicksMsec() / 1000f;
-
         /// <summary>验证当前调用运行在创建后端的 Godot 主线程。</summary>
         private void EnsureGodotThread()
         {

@@ -1,0 +1,20 @@
+{
+    "name": "YokiFrame.ActionKit.Tests.Support",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

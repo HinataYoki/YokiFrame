@@ -29,7 +29,7 @@ namespace YokiFrame
                 fsm.Add(SampleStateId.Run, new TrackingState("run"));
                 fsm.Start();
                 fsm.Change(SampleStateId.Run);
-                ((IState)fsm).Dispose();
+                fsm.Dispose();
             }
             finally
             {
@@ -73,6 +73,8 @@ namespace YokiFrame
             FsmStateEnvelope selected = JsonUtility.FromJson<FsmStateEnvelope>(selectedJson);
             Assert.AreEqual(list.fsms[1].instanceId, selected.instanceId);
             Assert.AreEqual("Run", selected.currentState);
+            GC.KeepAlive(first);
+            GC.KeepAlive(second);
         }
 
         /// <summary>
@@ -99,6 +101,7 @@ namespace YokiFrame
             Assert.IsTrue(state.states[1].isCurrent);
             Assert.AreEqual(0L, state.states[0].entryCount);
             Assert.AreEqual(1L, state.states[1].entryCount);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -122,6 +125,7 @@ namespace YokiFrame
             Assert.AreEqual(200, history.count);
             Assert.AreEqual(200, history.history.Length);
             Assert.AreEqual("Run", history.history[history.history.Length - 1].to);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -144,6 +148,7 @@ namespace YokiFrame
 
             Assert.AreEqual(203L, state.states[0].entryCount);
             Assert.AreEqual(203L, state.states[1].entryCount);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -164,6 +169,7 @@ namespace YokiFrame
             Assert.AreEqual("added", stateEvents.events[0].eventName);
             Assert.AreEqual("removed", stateEvents.events[2].eventName);
             Assert.AreEqual("Run", stateEvents.events[2].state);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -202,7 +208,8 @@ namespace YokiFrame
         [Test]
         public void RuntimeCommandHandlerReturnsTerminalSuccess()
         {
-            new FSM<SampleStateId>("Command").Add(SampleStateId.Idle, new TrackingState("idle"));
+            FSM<SampleStateId> fsm = new FSM<SampleStateId>("Command");
+            fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
             FsmKitCommandHandler handler = new FsmKitCommandHandler();
             YokiFrameCommandRequest request = new YokiFrameCommandRequest(
                 "cli",
@@ -216,6 +223,7 @@ namespace YokiFrame
 
             Assert.IsTrue(result.IsSuccess);
             StringAssert.Contains("\"count\":1", result.ResultJson);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -236,6 +244,7 @@ namespace YokiFrame
             StringAssert.Contains("\"selected\":", json);
             StringAssert.Contains("\"history\":", json);
             StringAssert.Contains("\"stateEvents\":", json);
+            GC.KeepAlive(fsm);
         }
 
         /// <summary>
@@ -282,6 +291,8 @@ namespace YokiFrame
             Assert.Greater(startedInstanceVersion, instanceVersion);
             Assert.Greater(named.GetTelemetryVersion(instanceId), startedInstanceVersion);
             Assert.AreEqual(unchangedVersion, named.GetTelemetryVersion(unchangedInstanceId));
+            GC.KeepAlive(fsm);
+            GC.KeepAlive(unchanged);
         }
 
         /// <summary>订阅本用例需要的六类诊断回调；StateRemoved 在该流程中不参与断言。</summary>

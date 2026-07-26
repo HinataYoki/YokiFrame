@@ -11,40 +11,8 @@ namespace YokiFrame
         /// <param name="id">目标状态标识。</param>
         /// <param name="state">目标状态实例。</param>
         /// <param name="args">进入参数。</param>
-        protected void TryStartState<TArgs>(TEnum id, IState state, TArgs args)
-        {
-            EnsureMutationAllowed();
-            if (state == null || mMachineState == MachineState.Running)
-            {
-                return;
-            }
-
-            BeginLifecycleTransition();
-            try
-            {
-                if (!state.Condition())
-                {
-                    return;
-                }
-
-                mMachineState = MachineState.Running;
-                CurState = state;
-                CurEnum = id;
-                StartState(state, args);
-            }
-            catch
-            {
-                mMachineState = MachineState.End;
-                throw;
-            }
-            finally
-            {
-                EndLifecycleTransition();
-            }
-#if UNITY_EDITOR || (GODOT && TOOLS)
-            PublishFsmStarted(id);
-#endif
-        }
+        protected void TryStartState<TArgs>(TEnum id, IState state, TArgs args) =>
+            TryStartStateCore(id, state, args, true);
 
         /// <summary>按参数契约进入状态，不支持参数时保持无参回落。</summary>
         /// <typeparam name="TArgs">进入参数类型。</typeparam>
@@ -160,7 +128,7 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>进入生命周期变更区间，使 Start、End、Suspend 和 Dispose 回调不可重入。</summary>
+        /// <summary>进入生命周期变更区间，使 Start、End、Suspend、Resume 和 Dispose 回调不可重入。</summary>
         private void BeginLifecycleTransition()
         {
             EnsureMutationAllowed();

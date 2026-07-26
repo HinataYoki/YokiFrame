@@ -250,10 +250,12 @@ namespace YokiFrame
             return false;
         }
 
-        /// <summary>按目标名称排序。</summary>
+        /// <summary>按目标语义字段排序：Slot 用编号升序，Global 用名称序。</summary>
         private static int CompareTargets(SaveTarget left, SaveTarget right)
         {
-            return string.CompareOrdinal(left.Name, right.Name);
+            return left.IsSlot
+                ? left.SlotId.CompareTo(right.SlotId)
+                : string.CompareOrdinal(left.Name, right.Name);
         }
 
         /// <summary>规范化并验证扩展名，避免配置值改变目录结构或文件搜索语义。</summary>

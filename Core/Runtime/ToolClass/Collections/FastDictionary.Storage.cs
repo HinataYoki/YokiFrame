@@ -169,16 +169,17 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 扩大底层数组并使用已缓存哈希重新放置有效键值对。
+        /// 按存活数量重新定容底层数组并使用已缓存哈希重新放置有效键值对；墓碑主导时只清除墓碑不增长容量。
         /// </summary>
         private void Resize()
         {
-            if (mEntries.Length > int.MaxValue / 2)
+            int liveCount = Count;
+            if (liveCount > int.MaxValue / 4)
             {
                 throw new InvalidOperationException("FastDictionary cannot grow beyond the supported array size.");
             }
 
-            Rehash(GetPrime(mEntries.Length * 2));
+            Rehash(GetPrime(GetRequiredSlotCount((liveCount + 1) * 2)));
         }
 
         /// <summary>
@@ -238,7 +239,7 @@ namespace YokiFrame
         /// </summary>
         private void UpdateResizeThreshold()
         {
-            mResizeThreshold = mEntries.Length * LOAD_FACTOR_NUMERATOR / LOAD_FACTOR_DENOMINATOR;
+            mResizeThreshold = (int)((long)mEntries.Length * LOAD_FACTOR_NUMERATOR / LOAD_FACTOR_DENOMINATOR);
         }
 
         /// <summary>

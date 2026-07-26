@@ -42,7 +42,7 @@ namespace YokiFrame
     internal static class PoolEditorHook
     {
         private static readonly object sLock = new();
-        private static readonly Dictionary<object, PoolEditorRegistration> sRegisteredPools = new(PoolObjectReferenceComparer.Instance);
+        private static readonly Dictionary<object, PoolEditorRegistration> sRegisteredPools = new(PoolReferenceEqualityComparer<object>.Instance);
         private static int sTrackingEnabled;
 
         /// <summary>对象池创建后触发，供 Editor/Tools 建立稳定诊断身份。</summary>

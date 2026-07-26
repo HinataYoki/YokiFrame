@@ -8,7 +8,6 @@ namespace YokiFrame.Tests
     /// <summary>覆盖 ActionKit 诊断预算、Provider 契约和少见复用边界。</summary>
     public sealed class ActionKitDiagnosticsTests
     {
-        private const int SNAPSHOT_DEPTH_LIMIT = 16;
         private static readonly string sEscapedDebugText = new('\u0001', 240);
 
         /// <summary>每个测试前清空调度和诊断静态状态，避免执行顺序影响断言。</summary>
@@ -66,9 +65,9 @@ namespace YokiFrame.Tests
         public void WorkbenchSnapshotPreservesDepthTruncationAcrossBranches()
         {
             ISequence deepBranch = CreateNestedSequence(
-                SNAPSHOT_DEPTH_LIMIT,
+                ActionKitSnapshotWriter.MAX_DEPTH,
                 ActionKit.Delay(100f));
-            ISequence boundaryLeafBranch = CreateNestedSequence(SNAPSHOT_DEPTH_LIMIT, null);
+            ISequence boundaryLeafBranch = CreateNestedSequence(ActionKitSnapshotWriter.MAX_DEPTH, null);
             IParallel parallel = ActionKit.Parallel();
             parallel.Append(deepBranch);
             parallel.Append(boundaryLeafBranch);

@@ -8,12 +8,16 @@ namespace YokiFrame
     /// </summary>
     public sealed class MemorySaveStorage : ISaveStorage, ISaveMetadataStorage
     {
-        private readonly Dictionary<SaveTarget, byte[]> documents = new();
+        private readonly object mSyncRoot = new();
+        private readonly Dictionary<SaveTarget, byte[]> mDocuments = new();
 
         /// <inheritdoc />
         public bool Exists(SaveTarget target)
         {
-            return documents.ContainsKey(target);
+            lock (mSyncRoot)
+            {
+                return mDocuments.ContainsKey(target);
+            }
         }
 
         /// <inheritdoc />
@@ -24,59 +28,86 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(bytes));
             }
 
-            documents[target] = CopyBytes(bytes);
+            lock (mSyncRoot)
+            {
+                mDocuments[target] = CopyBytes(bytes);
+            }
         }
 
         /// <inheritdoc />
         public byte[] Read(SaveTarget target)
         {
-            byte[] bytes;
-            return documents.TryGetValue(target, out bytes) ? CopyBytes(bytes) : null;
+            lock (mSyncRoot)
+            {
+                byte[] bytes;
+                return mDocuments.TryGetValue(target, out bytes) ? CopyBytes(bytes) : null;
+            }
         }
 
         /// <inheritdoc />
         public bool TryReadMetadata(SaveTarget target, out SaveMeta meta)
         {
-            if (!documents.TryGetValue(target, out byte[] bytes)
-                || !SaveMeta.TryDeserializeHeader(bytes, out meta, out _, out _)
-                || meta.Target != target)
+            lock (mSyncRoot)
             {
-                meta = default(SaveMeta);
-                return false;
-            }
+                byte[] bytes;
+                if (!mDocuments.TryGetValue(target, out bytes)
+                    || !SaveMeta.TryDeserializeHeader(bytes, out meta, out _, out _)
+                    || meta.Target != target)
+                {
+                    meta = default(SaveMeta);
+                    return false;
+                }
 
-            return true;
+                return true;
+            }
         }
 
         /// <inheritdoc />
         public bool Delete(SaveTarget target)
         {
-            return documents.Remove(target);
+            lock (mSyncRoot)
+            {
+                return mDocuments.Remove(target);
+            }
         }
 
         /// <inheritdoc />
         public IReadOnlyList<SaveTarget> GetTargets(SaveTargetKind kind)
         {
-            var targets = new List<SaveTarget>();
-            foreach (var pair in documents)
+            lock (mSyncRoot)
             {
-                if (pair.Key.Kind == kind)
+                var targets = new List<SaveTarget>();
+                foreach (var pair in mDocuments)
                 {
-                    targets.Add(pair.Key);
+                    if (pair.Key.Kind == kind)
+                    {
+                        targets.Add(pair.Key);
+                    }
                 }
-            }
 
-            targets.Sort(CompareTargets);
-            return targets;
+                targets.Sort(CompareTargets);
+                return targets;
+            }
         }
 
         /// <inheritdoc />
         public void Clear(SaveTargetKind kind)
         {
-            var targets = GetTargets(kind);
-            for (var i = 0; i < targets.Count; i++)
+            lock (mSyncRoot)
             {
-                documents.Remove(targets[i]);
+                var targets = new List<SaveTarget>();
+                foreach (var pair in mDocuments)
+                {
+                    if (pair.Key.Kind == kind)
+                    {
+                        targets.Add(pair.Key);
+                    }
+                }
+
+                for (var i = 0; i < targets.Count; i++)
+                {
+                    mDocuments.Remove(targets[i]);
+                }
             }
         }
 
@@ -88,11 +119,18 @@ namespace YokiFrame
             return copy;
         }
 
-        /// <summary>按目标类型和名称稳定排序。</summary>
+        /// <summary>按目标类型和语义字段稳定排序：Slot 用编号升序，Global 用名称序。</summary>
         private static int CompareTargets(SaveTarget left, SaveTarget right)
         {
             var kind = left.Kind.CompareTo(right.Kind);
-            return kind != 0 ? kind : string.CompareOrdinal(left.Name, right.Name);
+            if (kind != 0)
+            {
+                return kind;
+            }
+
+            return left.IsSlot
+                ? left.SlotId.CompareTo(right.SlotId)
+                : string.CompareOrdinal(left.Name, right.Name);
         }
     }
 }

@@ -11,6 +11,8 @@ namespace YokiFrame.Tooling.Application.ProjectModel;
 /// </summary>
 internal static partial class ProjectModelDocumentFactory
 {
+    private static readonly HashSet<string> sValidCommandKinds =
+        new(StringComparer.Ordinal) { "ReadOnly", "Maintenance", "UserAction", "Dangerous" };
     /// <summary>创建当前项目适用的静态能力文档。</summary>
     private static ProjectCapabilitiesDocument CreateCapabilities(
         ProjectModelSourceSnapshot snapshot,
@@ -125,7 +127,7 @@ internal static partial class ProjectModelDocumentFactory
                 throw CreateDescriptorError("CapabilityDescriptorDuplicateAction", "Capability descriptor contains duplicate action: " + command.Action, path);
             }
 
-            if (!new[] { "ReadOnly", "Maintenance", "UserAction", "Dangerous" }.Contains(command.Kind, StringComparer.Ordinal))
+            if (!sValidCommandKinds.Contains(command.Kind))
             {
                 throw CreateDescriptorError("CapabilityDescriptorInvalid", "Capability descriptor contains unsupported command kind: " + command.Kind, path);
             }

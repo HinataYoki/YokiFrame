@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace YokiFrame
@@ -58,7 +59,7 @@ namespace YokiFrame
             lock (sLock)
             {
                 ArchitectureDebugInfo info = GetOrCreateInfo(architectureType);
-                info.InstanceHash = architecture != null ? architecture.GetHashCode() : 0;
+                info.InstanceHash = architecture != null ? RuntimeHelpers.GetHashCode(architecture) : 0;
                 info.IsAlive = architecture != null;
                 info.Initialized = initialized;
                 UpdateServices(info, services);
@@ -68,6 +69,7 @@ namespace YokiFrame
 
         /// <summary>
         /// 把指定架构记录标记为非存活；记录本身保留给工作台查看释放状态。
+        /// 记录跟随最后一次登记的实例，过期实例的释放不回写记录。
         /// </summary>
         /// <param name="architectureType">架构类型。</param>
         /// <param name="architecture">被释放的架构实例。</param>
@@ -86,10 +88,15 @@ namespace YokiFrame
                     return;
                 }
 
+                if (architecture != null && info.InstanceHash != RuntimeHelpers.GetHashCode(architecture))
+                {
+                    return;
+                }
+
                 info.IsAlive = false;
                 if (architecture != null)
                 {
-                    info.InstanceHash = architecture.GetHashCode();
+                    info.InstanceHash = RuntimeHelpers.GetHashCode(architecture);
                 }
 
                 BumpDiagnosticVersion();
@@ -126,6 +133,32 @@ namespace YokiFrame
             {
                 sInfos.Clear();
                 BumpDiagnosticVersion();
+            }
+        }
+
+        /// <summary>
+        /// 只读探测指定架构的登记状态是否与给定实例状态一致；不修改记录也不递增版本号。
+        /// </summary>
+        /// <param name="architectureType">架构类型。</param>
+        /// <param name="instanceHash">架构实例哈希。</param>
+        /// <param name="initialized">架构是否已完成初始化。</param>
+        /// <returns>记录存在、存活且实例哈希与初始化状态一致时返回 true。</returns>
+        internal static bool IsCurrent(Type architectureType, int instanceHash, bool initialized)
+        {
+            if (architectureType == null)
+            {
+                return false;
+            }
+
+            lock (sLock)
+            {
+                ArchitectureDebugInfo info;
+                if (!sInfos.TryGetValue(architectureType, out info))
+                {
+                    return false;
+                }
+
+                return info.IsAlive && info.InstanceHash == instanceHash && info.Initialized == initialized;
             }
         }
 
@@ -199,7 +232,7 @@ namespace YokiFrame
                 ImplementationTypeName = implementationType.Name,
                 ImplementationFullName = implementationType.FullName ?? implementationType.Name,
                 Initialized = service.Initialized,
-                InstanceHash = service.GetHashCode()
+                InstanceHash = RuntimeHelpers.GetHashCode(service)
             });
         }
 

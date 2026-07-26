@@ -44,7 +44,7 @@ namespace YokiFrame
             {
                 object rootValue = LocalizationJsonParser.Parse(json);
                 Dictionary<string, object> root = RequireObject(rootValue, "root");
-                int formatVersion = ReadOptionalInt(root, "formatVersion", LocalizationSchema.CurrentFormatVersion);
+                int formatVersion = ReadOptionalStrictInt(root, "formatVersion", LocalizationSchema.CurrentFormatVersion);
                 if (formatVersion != LocalizationSchema.CurrentFormatVersion)
                 {
                     throw new FormatException("Unsupported localization formatVersion: " + formatVersion);
@@ -144,16 +144,25 @@ namespace YokiFrame
             if (!IsLanguageLoaded(languageId)) return false;
             Dictionary<int, Dictionary<PluralCategory, string>> texts;
             Dictionary<PluralCategory, string> categories;
-            if (!mPluralTexts.TryGetValue(languageId, out texts) || !texts.TryGetValue(textId, out categories)) return false;
-            return categories.TryGetValue(category, out text) ||
-                   category != PluralCategory.Other && categories.TryGetValue(PluralCategory.Other, out text);
+            if (mPluralTexts.TryGetValue(languageId, out texts) && texts.TryGetValue(textId, out categories)
+                && (categories.TryGetValue(category, out text)
+                    || category != PluralCategory.Other && categories.TryGetValue(PluralCategory.Other, out text)))
+            {
+                return true;
+            }
+
+            return TryGetText(languageId, textId, out text);
         }
 
         /// <inheritdoc />
         public LanguageInfo GetLanguageInfo(LanguageId languageId)
         {
             LanguageInfo info;
-            return mLanguageInfos.TryGetValue(languageId, out info) ? info : LanguageInfo.Empty;
+            if (mLanguageInfos.TryGetValue(languageId, out info)) return info;
+
+            return mSupportedLanguageSet.Contains(languageId)
+                ? new LanguageInfo(languageId, 0, 0, 0)
+                : LanguageInfo.Empty;
         }
 
         /// <inheritdoc />
@@ -301,6 +310,17 @@ namespace YokiFrame
                 throw new FormatException("Invalid integer field: " + key);
             }
 
+            return result;
+        }
+
+        /// <summary>读取可选整数；字段缺失时用默认值，存在但非法时报错。</summary>
+        private static int ReadOptionalStrictInt(Dictionary<string, object> data, string key, int fallback)
+        {
+            object value;
+            if (!data.TryGetValue(key, out value) || value == null) return fallback;
+
+            int result;
+            if (!TryReadInteger(value, out result)) throw new FormatException("Invalid integer field: " + key);
             return result;
         }
 

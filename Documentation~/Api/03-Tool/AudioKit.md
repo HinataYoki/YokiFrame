@@ -57,7 +57,7 @@ AudioKit.SetBackend(new ProjectAudioBackend());
 | `PlayAsync(string path, AudioPlayOptions options, CancellationToken token = default)` | 异步加载并播放，返回 `Task<AudioVoiceHandle>`。 |
 | `Stop(AudioVoiceHandle handle)` | 停止当前 backend generation 的 voice；无效或过期句柄返回 `false`。 |
 | `StopWithFade(AudioVoiceHandle handle, float fadeDuration)` | 按有限非负秒数淡出停止。 |
-| `StopAll()` / `StopBus(string bus)` | 停止全部 voice 或指定 Bus 的 voice；没有后端时无副作用。 |
+| `StopAll()` / `StopBus(string bus)` | 停止全部 voice 或指定 Bus 的 voice；传入 `Master` 等价 `StopAll`；没有后端时无副作用。 |
 | `PauseAll()` / `ResumeAll()` | 暂停或恢复当前后端全部 voice；不会创建默认后端。 |
 
 `AudioVoiceHandle` 是不可变值类型，公开成员为 `BackendGeneration`、`VoiceId`、`IsValid`、`Equals`、`==`、`!=` 和 `GetHashCode`。业务必须保存完整句柄，不能只保存 `VoiceId`。

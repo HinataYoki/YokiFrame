@@ -90,7 +90,14 @@ namespace YokiFrame
             public BindType LegacyType { get; }
 
             /// <inheritdoc />
-            public UIKitBindOutputKind OutputKind => (UIKitBindOutputKind)LegacyType;
+            public UIKitBindOutputKind OutputKind => LegacyType switch
+            {
+                BindType.Member    => UIKitBindOutputKind.Member,
+                BindType.Element   => UIKitBindOutputKind.Element,
+                BindType.Component => UIKitBindOutputKind.Component,
+                BindType.Leaf      => UIKitBindOutputKind.Marker,
+                _                  => throw new InvalidOperationException("不支持的 BindType: " + LegacyType),
+            };
 
             /// <inheritdoc />
             public bool CanContainChildren =>

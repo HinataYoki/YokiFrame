@@ -8,21 +8,21 @@ namespace YokiFrame
     /// </summary>
     public sealed class SaveData
     {
-        private readonly Dictionary<string, byte[]> moduleData = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, object> moduleRefs = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, Func<ISaveSerializer, byte[]>> serializeDelegates = new(StringComparer.Ordinal);
-        private readonly Dictionary<Type, string> moduleIdsByType = new();
-        private ISaveSerializer serializer;
+        private readonly Dictionary<string, byte[]> mModuleData = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, object> mModuleRefs = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Func<ISaveSerializer, byte[]>> mSerializeDelegates = new(StringComparer.Ordinal);
+        private readonly Dictionary<Type, string> mModuleIdsByType = new();
+        private ISaveSerializer mSerializer;
 
         /// <summary>获取当前容器中的模块数量。</summary>
         public int ModuleCount
         {
             get
             {
-                var count = moduleRefs.Count;
-                foreach (var key in moduleData.Keys)
+                var count = mModuleRefs.Count;
+                foreach (var key in mModuleData.Keys)
                 {
-                    if (!moduleRefs.ContainsKey(key))
+                    if (!mModuleRefs.ContainsKey(key))
                     {
                         count++;
                     }
@@ -36,13 +36,13 @@ namespace YokiFrame
         /// <param name="saveSerializer">序列化器；不可为空。</param>
         public void SetSerializer(ISaveSerializer saveSerializer)
         {
-            serializer = saveSerializer ?? throw new ArgumentNullException(nameof(saveSerializer));
+            mSerializer = saveSerializer ?? throw new ArgumentNullException(nameof(saveSerializer));
         }
 
         /// <summary>获取容器当前使用的序列化器。</summary>
         public ISaveSerializer GetSerializer()
         {
-            return serializer;
+            return mSerializer;
         }
 
         /// <summary>注册或替换一个强类型模块。</summary>
@@ -57,7 +57,7 @@ namespace YokiFrame
             }
 
             var id = SaveModuleIdentity.GetId<T>(moduleId);
-            moduleIdsByType[typeof(T)] = id;
+            mModuleIdsByType[typeof(T)] = id;
             RegisterModuleCore(id, data);
         }
 
@@ -68,16 +68,16 @@ namespace YokiFrame
         public bool RemoveModule<T>(string moduleId = null) where T : class
         {
             var id = ResolveModuleId<T>(moduleId);
-            var removed = moduleRefs.Remove(id);
-            serializeDelegates.Remove(id);
-            if (moduleData.Remove(id))
+            var removed = mModuleRefs.Remove(id);
+            mSerializeDelegates.Remove(id);
+            if (mModuleData.Remove(id))
             {
                 removed = true;
             }
 
-            if (moduleIdsByType.TryGetValue(typeof(T), out var registeredId) && registeredId == id)
+            if (mModuleIdsByType.TryGetValue(typeof(T), out var registeredId) && registeredId == id)
             {
-                moduleIdsByType.Remove(typeof(T));
+                mModuleIdsByType.Remove(typeof(T));
             }
 
             return removed;
@@ -91,30 +91,31 @@ namespace YokiFrame
         {
             var id = ResolveModuleId<T>(moduleId);
             object module;
-            if (moduleRefs.TryGetValue(id, out module))
+            if (mModuleRefs.TryGetValue(id, out module))
             {
                 return module as T;
             }
 
             byte[] bytes;
-            if (!moduleData.TryGetValue(id, out bytes))
+            if (!mModuleData.TryGetValue(id, out bytes))
             {
                 return null;
             }
 
-            if (serializer == null)
+            if (mSerializer == null)
             {
                 throw new InvalidOperationException("Save serializer is not set.");
             }
 
-            var restored = serializer is IModuleIdAwareSaveSerializer idAwareSerializer
+            var restored = mSerializer is IModuleIdAwareSaveSerializer idAwareSerializer
                 ? idAwareSerializer.Deserialize<T>(id, bytes)
-                : serializer.Deserialize<T>(bytes);
+                : mSerializer.Deserialize<T>(bytes);
             if (restored != null)
             {
-                moduleRefs[id] = restored;
-                serializeDelegates[id] = saveSerializer => saveSerializer.Serialize(restored);
-                moduleIdsByType[typeof(T)] = id;
+                mModuleRefs[id] = restored;
+                mSerializeDelegates[id] = saveSerializer => saveSerializer.Serialize(restored);
+                mModuleIdsByType[typeof(T)] = id;
+                mModuleData.Remove(id);
             }
 
             return restored;
@@ -127,16 +128,16 @@ namespace YokiFrame
         public bool HasModule<T>(string moduleId = null) where T : class
         {
             var id = ResolveModuleId<T>(moduleId);
-            return moduleRefs.ContainsKey(id) || moduleData.ContainsKey(id);
+            return mModuleRefs.ContainsKey(id) || mModuleData.ContainsKey(id);
         }
 
         /// <summary>清空全部模块。</summary>
         public void Clear()
         {
-            moduleRefs.Clear();
-            moduleData.Clear();
-            serializeDelegates.Clear();
-            moduleIdsByType.Clear();
+            mModuleRefs.Clear();
+            mModuleData.Clear();
+            mSerializeDelegates.Clear();
+            mModuleIdsByType.Clear();
         }
 
         /// <summary>注册 Architecture 使用的运行时类型模块。</summary>
@@ -150,22 +151,22 @@ namespace YokiFrame
             }
 
             var id = SaveModuleIdentity.GetId(type, moduleId);
-            moduleIdsByType[type] = id;
+            mModuleIdsByType[type] = id;
             RegisterModuleCore(id, data);
         }
 
         /// <summary>获取原始模块 ID 快照，供容器序列化和后端迁移使用。</summary>
         internal IReadOnlyList<string> GetModuleIds()
         {
-            var ids = new List<string>(moduleRefs.Count + moduleData.Count);
-            foreach (var pair in moduleRefs)
+            var ids = new List<string>(mModuleRefs.Count + mModuleData.Count);
+            foreach (var pair in mModuleRefs)
             {
                 ids.Add(pair.Key);
             }
 
-            foreach (var pair in moduleData)
+            foreach (var pair in mModuleData)
             {
-                if (!moduleRefs.ContainsKey(pair.Key))
+                if (!mModuleRefs.ContainsKey(pair.Key))
                 {
                     ids.Add(pair.Key);
                 }
@@ -189,14 +190,14 @@ namespace YokiFrame
             {
                 var id = ids[i];
                 Func<ISaveSerializer, byte[]> serialize;
-                if (serializeDelegates.TryGetValue(id, out serialize))
+                if (mSerializeDelegates.TryGetValue(id, out serialize))
                 {
                     records[i] = new SaveModuleRecord(id, serialize(saveSerializer));
                     continue;
                 }
 
                 byte[] bytes;
-                records[i] = new SaveModuleRecord(id, moduleData.TryGetValue(id, out bytes) ? CopyBytes(bytes) : Array.Empty<byte>());
+                records[i] = new SaveModuleRecord(id, mModuleData.TryGetValue(id, out bytes) ? CopyBytes(bytes) : Array.Empty<byte>());
             }
 
             return records;
@@ -211,28 +212,28 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(bytes));
             }
 
-            moduleData[id] = bytes;
-            moduleRefs.Remove(id);
-            serializeDelegates.Remove(id);
+            mModuleData[id] = bytes;
+            mModuleRefs.Remove(id);
+            mSerializeDelegates.Remove(id);
         }
 
         /// <summary>判断原始模块 payload 是否已存在，不复制字节。</summary>
         internal bool ContainsRawModule(string id)
         {
-            return moduleData.ContainsKey(id);
+            return mModuleData.ContainsKey(id);
         }
 
         /// <summary>获取模块原始字节或当前对象序列化结果。</summary>
         internal byte[] GetRawModuleOrSerializedRef(string id, ISaveSerializer saveSerializer)
         {
             byte[] bytes;
-            if (moduleData.TryGetValue(id, out bytes))
+            if (mModuleData.TryGetValue(id, out bytes))
             {
                 return CopyBytes(bytes);
             }
 
             Func<ISaveSerializer, byte[]> serialize;
-            return serializeDelegates.TryGetValue(id, out serialize) ? serialize(saveSerializer) : null;
+            return mSerializeDelegates.TryGetValue(id, out serialize) ? serialize(saveSerializer) : null;
         }
 
         /// <summary>让序列化器验证所有原始模块 payload，避免延迟到 GetModule 才发现迁移错误。</summary>
@@ -244,7 +245,7 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(saveSerializer));
             }
 
-            foreach (var pair in moduleData)
+            foreach (var pair in mModuleData)
             {
                 saveSerializer.ValidatePayload(pair.Key, pair.Value);
             }
@@ -254,9 +255,9 @@ namespace YokiFrame
         private void RegisterModuleCore(string id, object data)
         {
             SaveModuleIdentity.ValidateId(id);
-            moduleRefs[id] = data;
-            serializeDelegates[id] = saveSerializer => saveSerializer.Serialize(data);
-            moduleData.Remove(id);
+            mModuleRefs[id] = data;
+            mSerializeDelegates[id] = saveSerializer => saveSerializer.Serialize(data);
+            mModuleData.Remove(id);
         }
 
         /// <summary>解析模块的显式 ID、当前容器注册 ID 或类型全名。</summary>
@@ -267,7 +268,7 @@ namespace YokiFrame
                 return SaveModuleIdentity.GetId<T>(moduleId);
             }
 
-            return moduleIdsByType.TryGetValue(typeof(T), out var registeredId)
+            return mModuleIdsByType.TryGetValue(typeof(T), out var registeredId)
                 ? registeredId
                 : SaveModuleIdentity.GetId<T>();
         }

@@ -15,7 +15,7 @@ namespace YokiFrame
         private const int TAG_BYTES = 32;
         private const int ITERATIONS = 100000;
         private const byte FORMAT_VERSION = 1;
-        private readonly string password;
+        private readonly string mPassword;
 
         /// <summary>创建基于项目密码的认证加密器。</summary>
         /// <param name="password">项目私有密码。</param>
@@ -26,7 +26,7 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(password));
             }
 
-            this.password = password;
+            mPassword = password;
         }
 
         /// <inheritdoc />
@@ -115,7 +115,7 @@ namespace YokiFrame
         /// <summary>从项目密码和 salt 派生加密/认证密钥。</summary>
         private void DeriveKeys(byte[] salt, out byte[] encryptionKey, out byte[] macKey)
         {
-            using (var derivation = new Rfc2898DeriveBytes(password, salt, ITERATIONS, HashAlgorithmName.SHA256))
+            using (var derivation = new Rfc2898DeriveBytes(mPassword, salt, ITERATIONS, HashAlgorithmName.SHA256))
             {
                 var keys = derivation.GetBytes(KEY_BYTES);
                 encryptionKey = new byte[32];

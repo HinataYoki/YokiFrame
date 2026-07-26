@@ -120,11 +120,12 @@ namespace YokiFrame
             {
                 string assetPath = paths[index];
                 string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(assetPath);
+                bool existed = File.Exists(absolutePath);
                 snapshots.Add(new SourceFileSnapshot(
                     absolutePath,
                     sources[assetPath],
-                    File.Exists(absolutePath),
-                    File.Exists(absolutePath) ? File.ReadAllText(absolutePath) : string.Empty));
+                    existed,
+                    existed ? File.ReadAllText(absolutePath) : string.Empty));
             }
 
             return snapshots;

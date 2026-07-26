@@ -176,6 +176,33 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证嵌套对象与字符串值中的 confirmed 文本不能替代顶层确认，避免共享扫描器回退为全文匹配。
+        /// </summary>
+        [TestCase("{\"filter\":{\"confirmed\":true}}")]
+        [TestCase("{\"note\":\"confirmed\":true}")]
+        [TestCase("{\"items\":[{\"confirmed\":true}]}")]
+        public void EvaluateRejectsDangerousCommandWithNonTopLevelConfirmedPayload(string payloadJson)
+        {
+            YokiFrameCommandPolicyDecision decision = CreateDangerousPolicy().Evaluate(CreateRequest(payloadJson));
+
+            Assert.IsFalse(decision.IsAllowed);
+            Assert.AreEqual("ConfirmationRequired", decision.ErrorCode);
+        }
+
+        /// <summary>
+        /// 验证顶层 confirmed 出现在其它字段之后仍能被正确识别。
+        /// </summary>
+        [Test]
+        public void EvaluateAllowsDangerousCommandWithTrailingConfirmedField()
+        {
+            YokiFrameCommandPolicyDecision decision = CreateDangerousPolicy().Evaluate(
+                CreateRequest("{\"filter\":{\"path\":\"a\"},\"confirmed\":true}"));
+
+            Assert.IsTrue(decision.IsAllowed);
+            Assert.AreEqual(YokiFrameCommandKind.Dangerous, decision.Kind);
+        }
+
+        /// <summary>
         /// 创建只允许一个危险命令的测试策略。
         /// </summary>
         /// <returns>危险命令测试策略。</returns>

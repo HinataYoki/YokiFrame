@@ -339,10 +339,8 @@ namespace YokiFrame
                 Type candidate = types[index];
                 if (!string.Equals(candidate.Assembly.GetName().Name, assemblyName, StringComparison.Ordinal))
                     continue;
-                resolved = string.Equals(candidate.FullName, fullName, StringComparison.Ordinal)
-                    ? candidate
-                    : null;
-                if (resolved != null) return resolved;
+                if (string.Equals(candidate.FullName, fullName, StringComparison.Ordinal))
+                    return candidate;
             }
 
             return null;

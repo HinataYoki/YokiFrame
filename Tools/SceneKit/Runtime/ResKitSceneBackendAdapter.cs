@@ -55,12 +55,6 @@ namespace YokiFrame
         }
 
         /// <inheritdoc />
-        public SceneHandle GetActiveScene()
-        {
-            return ToSceneHandle(mProvider.GetActiveScene());
-        }
-
-        /// <inheritdoc />
         public void UnloadUnusedAssets(Action onComplete)
         {
             mProvider.UnloadUnusedAssets(onComplete);

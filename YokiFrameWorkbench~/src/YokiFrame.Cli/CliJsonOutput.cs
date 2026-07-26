@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text;
 using YokiFrame.Protocol.Results;
 
 namespace YokiFrame.Cli;
@@ -64,14 +63,7 @@ internal static class CliJsonOutput
     /// <param name="payload">已完成结构化组装的 JSON 节点。</param>
     private static void WriteJsonNode(TextWriter output, JsonNode payload)
     {
-        using MemoryStream stream = new();
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false }))
-        {
-            payload.WriteTo(writer, CliJson.CompactOptions);
-            writer.Flush();
-        }
-
-        output.WriteLine(Encoding.UTF8.GetString(stream.ToArray()));
+        output.WriteLine(payload.ToJsonString(CliJson.CompactOptions));
     }
 
     /// <summary>

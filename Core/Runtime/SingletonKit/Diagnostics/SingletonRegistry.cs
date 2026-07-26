@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || (GODOT && TOOLS)
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace YokiFrame
@@ -131,7 +132,7 @@ namespace YokiFrame
                 Backend = string.IsNullOrEmpty(backend) ? "Base" : backend,
                 Source = string.IsNullOrEmpty(source) ? "SingletonKit" : source,
                 CreatedAtUtc = DateTime.UtcNow.ToString("O"),
-                InstanceHash = instance != null ? instance.GetHashCode() : 0,
+                InstanceHash = instance != null ? RuntimeHelpers.GetHashCode(instance) : 0,
                 IsAlive = instance != null
             };
         }

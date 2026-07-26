@@ -129,9 +129,10 @@ public sealed partial class WorkbenchDashboardService
     /// <returns>非空证据路径。</returns>
     private static IReadOnlyList<string> CreateCommandEvidencePaths(CommandExecutionResult result)
     {
-        return new[] { result.CommandPath, result.ResponsePath }
-            .Where(static path => !string.IsNullOrWhiteSpace(path))
-            .ToArray();
+        List<string> paths = new(2);
+        if (!string.IsNullOrWhiteSpace(result.CommandPath)) paths.Add(result.CommandPath);
+        if (!string.IsNullOrWhiteSpace(result.ResponsePath)) paths.Add(result.ResponsePath);
+        return paths;
     }
 
     /// <summary>

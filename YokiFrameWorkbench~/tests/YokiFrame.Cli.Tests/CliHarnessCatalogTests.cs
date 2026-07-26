@@ -138,35 +138,14 @@ public sealed class CliHarnessCatalogTests
     /// <summary>运行 CLI 并等待进程结束。</summary>
     /// <param name="arguments">CLI 参数。</param>
     /// <returns>进程输出。</returns>
-    private static async Task<CliProcessResult> RunCliAsync(params string[] arguments)
-    {
-        using var process = StartCli(arguments);
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return new CliProcessResult(process.ExitCode, await outputTask, await errorTask);
-    }
+    private static Task<CliProcessResult> RunCliAsync(params string[] arguments)
+        => CliTestHelpers.RunCliAsync(arguments);
 
     /// <summary>等待 CLI 写出唯一 pending command。</summary>
     /// <param name="commandsRoot">commands 目录。</param>
     /// <returns>命令文件路径。</returns>
-    private static async Task<string> WaitForCommandAsync(string commandsRoot)
-    {
-        for (var attempt = 0; attempt < 200; attempt++)
-        {
-            var commandPath = Directory.Exists(commandsRoot)
-                ? Directory.EnumerateFiles(commandsRoot, "*.json").SingleOrDefault()
-                : null;
-            if (commandPath != null)
-            {
-                return commandPath;
-            }
-
-            await Task.Delay(25);
-        }
-
-        throw new TimeoutException("等待 harness catalog 命令超时。");
-    }
+    private static Task<string> WaitForCommandAsync(string commandsRoot)
+        => FileBridgeTestHelpers.WaitForSingleCommandAsync(commandsRoot);
 
     /// <summary>断言 CLI 成功 JSON。</summary>
     /// <param name="result">CLI 输出。</param>
@@ -183,18 +162,7 @@ public sealed class CliHarnessCatalogTests
     /// <summary>定位测试构建得到的 CLI 程序。</summary>
     /// <returns>CLI 程序 DLL 路径。</returns>
     private static string GetCliAssemblyPath()
-    {
-        var outputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        var configurationDirectory = outputDirectory.Parent!;
-        var projectDirectory = configurationDirectory.Parent!;
-        var binDirectory = projectDirectory.Parent!;
-        var path = Path.Combine(binDirectory.FullName, "YokiFrame.Cli", configurationDirectory.Name, outputDirectory.Name, "YokiFrame.Cli.dll");
-        Assert.True(File.Exists(path), "CLI assembly was not built: " + path);
-        return path;
-    }
-
-    /// <summary>CLI 子进程输出。</summary>
-    private sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
+        => CliTestHelpers.GetCliAssemblyPath();
 
     /// <summary>创建最小可运行 catalog 项目。</summary>
     private sealed class CatalogProject : IDisposable

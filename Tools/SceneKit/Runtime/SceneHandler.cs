@@ -44,7 +44,7 @@ namespace YokiFrame
         /// <summary>获取该 Handler 使用的后端，Provider 切换后仍保持旧场景所有权。</summary>
         internal ISceneBackend Backend { get; set; }
 
-        /// <summary>注册加载完成回调；已完成时立即回调。</summary>
+        /// <summary>注册加载完成回调；已完成时立即回调；已失败或已卸载时立即以 null 回调，不持有委托引用。</summary>
         /// <param name="callback">加载完成回调。</param>
         public void AddLoadedCallback(Action<SceneHandler> callback)
         {
@@ -56,6 +56,12 @@ namespace YokiFrame
             if (State == SceneState.Loaded)
             {
                 callback(this);
+                return;
+            }
+
+            if (State == SceneState.Failed || State == SceneState.Unloaded)
+            {
+                callback(null);
                 return;
             }
 
@@ -89,7 +95,7 @@ namespace YokiFrame
 
         /// <summary>更新进度，拒绝 NaN 并限制到 0 到 1，避免无效 Provider 值进入事件链。</summary>
         /// <param name="progress">Provider 报告的进度。</param>
-        public void UpdateProgress(float progress)
+        internal void UpdateProgress(float progress)
         {
             if (float.IsNaN(progress))
             {
@@ -102,13 +108,13 @@ namespace YokiFrame
 
         /// <summary>设置场景生命周期状态。</summary>
         /// <param name="state">目标状态。</param>
-        public void SetState(SceneState state)
+        internal void SetState(SceneState state)
         {
             State = state;
         }
 
-        /// <summary>重置 Handler 并进入加载状态。</summary>
-        internal void Reset(
+        /// <summary>创建处于加载状态的场景 Handler；各字段由参数或默认值承担，无需二次 Reset。</summary>
+        internal SceneHandler(
             string sceneName,
             int buildIndex,
             SceneLoadMode mode,
@@ -118,18 +124,11 @@ namespace YokiFrame
         {
             SceneName = sceneName;
             BuildIndex = buildIndex;
-            Scene = default;
             State = SceneState.Loading;
-            Progress = 0f;
-            IsSuspended = false;
-            IsPreloaded = isPreload;
-            ActivateWhenLoaded = false;
             LoadMode = mode;
             SceneData = data;
-            Operation = null;
+            IsPreloaded = isPreload;
             Backend = backend;
-            mLoadCallbacks = null;
-            mUnloadCallbacks = null;
         }
 
         /// <summary>释放操作引用并把 Handler 标记为已卸载。</summary>

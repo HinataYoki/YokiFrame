@@ -17,8 +17,8 @@ namespace YokiFrame
         public const int MAX_EVENT_HISTORY = 200;
 
         private static readonly object sLock = new();
-        private static readonly Dictionary<object, PoolDebugInfo> sPools = new(PoolObjectReferenceComparer.Instance);
-        private static readonly Dictionary<object, object> sObjectToPool = new(PoolObjectReferenceComparer.Instance);
+        private static readonly Dictionary<object, PoolDebugInfo> sPools = new(PoolReferenceEqualityComparer<object>.Instance);
+        private static readonly Dictionary<object, object> sObjectToPool = new(PoolReferenceEqualityComparer<object>.Instance);
         private static readonly Queue<PoolEvent> sEventHistory = new(MAX_EVENT_HISTORY);
         private static readonly List<object> sInactiveObjectBuffer = new();
         private static readonly long sStartTimestamp = Stopwatch.GetTimestamp();

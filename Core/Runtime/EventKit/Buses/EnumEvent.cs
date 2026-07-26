@@ -112,6 +112,11 @@ namespace YokiFrame
         /// <returns>用于注销该监听器的令牌。</returns>
         public LinkUnRegister Register<TEnum>(TEnum key, Action onEvent) where TEnum : Enum
         {
+            if (onEvent == null)
+            {
+                throw new ArgumentNullException(nameof(onEvent));
+            }
+
             EnumEventKey cacheKey = BuildCacheKey(key);
             EasyEvents enumEvent = GetOrCreateEvents(cacheKey);
             LinkUnRegister token = enumEvent.GetOrAddEvent<EasyEvent>().Register(onEvent);
@@ -143,6 +148,11 @@ namespace YokiFrame
         /// <returns>用于注销该监听器的令牌。</returns>
         public LinkUnRegister<TArgs> Register<TEnum, TArgs>(TEnum key, Action<TArgs> onEvent) where TEnum : Enum
         {
+            if (onEvent == null)
+            {
+                throw new ArgumentNullException(nameof(onEvent));
+            }
+
             EnumEventKey cacheKey = BuildCacheKey(key);
             EasyEvents enumEvent = GetOrCreateEvents(cacheKey);
             LinkUnRegister<TArgs> token = enumEvent.GetOrAddEvent<EasyEvent<TArgs>>().Register(onEvent);
@@ -171,6 +181,7 @@ namespace YokiFrame
         /// <param name="key">枚举事件键。</param>
         /// <param name="onEvent">事件触发时调用的监听器。</param>
         /// <returns>用于注销该监听器的令牌。</returns>
+        [Obsolete("params object[] 会产生分配且缺少类型安全，请使用 Register<TEnum, TArgs> / UnRegister<TEnum, TArgs>。")]
         public LinkUnRegister<object[]> Register<TEnum>(TEnum key, Action<object[]> onEvent) where TEnum : Enum
         {
             return Register<TEnum, object[]>(key, onEvent);
@@ -191,6 +202,7 @@ namespace YokiFrame
             }
 
             enumEvent.Clear();
+            mEventDic.Remove(cacheKey);
 
 #if UNITY_EDITOR || (GODOT && TOOLS)
             EasyEventEditorHook.Publish(new EventKitEditorNotification(
@@ -268,6 +280,7 @@ namespace YokiFrame
         /// <typeparam name="TEnum">枚举类型。</typeparam>
         /// <param name="key">枚举事件键。</param>
         /// <param name="onEvent">需要移除的监听器。</param>
+        [Obsolete("params object[] 会产生分配且缺少类型安全，请使用 Register<TEnum, TArgs> / UnRegister<TEnum, TArgs>。")]
         public void UnRegister<TEnum>(TEnum key, Action<object[]> onEvent) where TEnum : Enum
         {
             UnRegister<TEnum, object[]>(key, onEvent);
@@ -435,8 +448,20 @@ namespace YokiFrame
             private static readonly Dictionary<TEnum, ulong> sValues = new();
 
             /// <summary>获取当前枚举类型的底层类型码，避免每次查找反射元数据。</summary>
-            internal static readonly TypeCode UnderlyingTypeCode =
-                Type.GetTypeCode(Enum.GetUnderlyingType(typeof(TEnum)));
+            internal static readonly TypeCode UnderlyingTypeCode;
+
+            /// <summary>
+            /// 校验泛型实参为具体枚举类型后再缓存底层类型码；每个封闭泛型类型仅执行一次。
+            /// </summary>
+            static EnumValueCache()
+            {
+                if (!typeof(TEnum).IsEnum)
+                {
+                    throw new NotSupportedException("EnumEvent 需要具体枚举类型作为泛型实参，不支持 System.Enum。");
+                }
+
+                UnderlyingTypeCode = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(TEnum)));
+            }
 
             /// <summary>读取已缓存转换结果；首次见到的值才执行接口转换并按预算缓存。</summary>
             /// <param name="value">需要转换的枚举值。</param>

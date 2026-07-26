@@ -8,7 +8,7 @@ namespace YokiFrame
     /// <summary>
     /// 提供 Core 协议使用的轻量 JSON 辅助方法，只处理扁平对象和简单嵌套片段。
     /// </summary>
-    public static class JsonHelper
+    public static partial class JsonHelper
     {
         /// <summary>
         /// 从 JSON 对象中提取字符串字段。
@@ -146,45 +146,18 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 查找字段值起始位置。
+        /// 查找顶层字段值起始位置，忽略字符串值与嵌套结构中的同名文本。
         /// </summary>
         /// <param name="json">JSON 文本。</param>
         /// <param name="fieldName">字段名。</param>
         /// <returns>值起始位置；找不到时返回 -1。</returns>
         private static int FindValueStart(string json, string fieldName)
         {
-            if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(fieldName))
-            {
-                return -1;
-            }
-
-            string search = "\"" + fieldName + "\"";
-            int index = json.IndexOf(search, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                return -1;
-            }
-
-            index += search.Length;
-            SkipJsonSeparators(json, ref index);
-            return index < json.Length ? index : -1;
+            return TryFindTopLevelValue(json, fieldName, out int valueStart) ? valueStart : -1;
         }
 
         /// <summary>
-        /// 跳过字段名和值之间的空白和冒号。
-        /// </summary>
-        /// <param name="json">JSON 文本。</param>
-        /// <param name="index">当前位置引用。</param>
-        private static void SkipJsonSeparators(string json, ref int index)
-        {
-            while (index < json.Length && (json[index] == ' ' || json[index] == ':' || json[index] == '\t' || json[index] == '\r' || json[index] == '\n'))
-            {
-                index++;
-            }
-        }
-
-        /// <summary>
-        /// 读取简单 JSON 字符串值，并处理常用转义字符。
+        /// 读取简单 JSON 字符串值，并处理标准转义字符。
         /// </summary>
         /// <param name="json">JSON 文本。</param>
         /// <param name="quoteIndex">起始引号位置。</param>
@@ -194,13 +167,15 @@ namespace YokiFrame
             var builder = new StringBuilder();
             for (var index = quoteIndex + 1; index < json.Length; index++)
             {
-                char current = json[index];
-                if (current == '"')
+                if (json[index] == '"')
                 {
                     return builder.ToString();
                 }
 
-                AppendJsonStringChar(builder, json, ref index, current);
+                if (!AppendJsonStringChar(builder, json, ref index))
+                {
+                    return null;
+                }
             }
 
             return null;
@@ -212,35 +187,69 @@ namespace YokiFrame
         /// <param name="builder">字符串构建器。</param>
         /// <param name="json">JSON 文本。</param>
         /// <param name="index">当前位置引用。</param>
-        /// <param name="current">当前字符。</param>
-        private static void AppendJsonStringChar(StringBuilder builder, string json, ref int index, char current)
+        /// <returns>成功追加一个字符时返回 true。</returns>
+        private static bool AppendJsonStringChar(StringBuilder builder, string json, ref int index)
         {
+            char current = json[index];
             if (current != '\\' || index + 1 >= json.Length)
             {
                 builder.Append(current);
-                return;
+                return true;
             }
 
             index++;
-            AppendEscapedJsonValue(builder, json[index]);
+            return AppendEscapedJsonValue(builder, json, ref index);
         }
 
         /// <summary>
-        /// 追加 JSON 字符串转义后的实际字符。
+        /// 追加 JSON 字符串转义后的实际字符，支持与写入侧对称的全部标准转义。
         /// </summary>
         /// <param name="builder">字符串构建器。</param>
-        /// <param name="escaped">转义标识字符。</param>
-        private static void AppendEscapedJsonValue(StringBuilder builder, char escaped)
+        /// <param name="json">JSON 文本。</param>
+        /// <param name="index">转义标识字符位置引用。</param>
+        /// <returns>转义合法时返回 true。</returns>
+        private static bool AppendEscapedJsonValue(StringBuilder builder, string json, ref int index)
         {
-            switch (escaped)
+            switch (json[index])
             {
-                case '"': builder.Append('"'); break;
-                case '\\': builder.Append('\\'); break;
-                case 'n': builder.Append('\n'); break;
-                case 'r': builder.Append('\r'); break;
-                case 't': builder.Append('\t'); break;
-                default: builder.Append(escaped); break;
+                case '"': builder.Append('"'); return true;
+                case '\\': builder.Append('\\'); return true;
+                case 'b': builder.Append('\b'); return true;
+                case 'f': builder.Append('\f'); return true;
+                case 'n': builder.Append('\n'); return true;
+                case 'r': builder.Append('\r'); return true;
+                case 't': builder.Append('\t'); return true;
+                case 'u': return TryAppendUnicodeEscape(builder, json, ref index);
+                default: builder.Append(json[index]); return true;
             }
+        }
+
+        /// <summary>
+        /// 解码 \uXXXX 转义并追加对应 UTF-16 code unit；代理对按两个 code unit 顺序重组。
+        /// </summary>
+        /// <param name="builder">字符串构建器。</param>
+        /// <param name="json">JSON 文本。</param>
+        /// <param name="index">转义标识 u 的位置引用。</param>
+        /// <returns>四位十六进制完整且合法时返回 true。</returns>
+        private static bool TryAppendUnicodeEscape(StringBuilder builder, string json, ref int index)
+        {
+            if (index + 4 >= json.Length)
+            {
+                return false;
+            }
+
+            if (!int.TryParse(
+                    json.AsSpan(index + 1, 4),
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture,
+                    out int code))
+            {
+                return false;
+            }
+
+            builder.Append((char)code);
+            index += 4;
+            return true;
         }
 
         /// <summary>

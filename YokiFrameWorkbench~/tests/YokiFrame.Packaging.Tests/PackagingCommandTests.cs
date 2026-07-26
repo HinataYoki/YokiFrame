@@ -5,6 +5,7 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 覆盖 Runtime bootstrap 调用的 Packaging 命令路由。
 /// </summary>
+[Collection("PackagingSequential")]
 public sealed class PackagingCommandTests
 {
     /// <summary>

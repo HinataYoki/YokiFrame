@@ -31,6 +31,8 @@ namespace YokiFrame
         private static YokiFrameCommandDispatcher CreateCommandDispatcher()
         {
             var policy = CreateHostCommandPolicy();
+            // 静态初始化与 RefreshToolKitInteractions 重建都经过此处，缓存随 dispatcher 一起失效。
+            sHostCommandPolicy = policy;
             return new YokiFrameCommandDispatcher(
                 policy,
                 new IYokiFrameCommandHandler[]
@@ -49,6 +51,18 @@ namespace YokiFrame
         private static YokiFrameCommandPolicy CreateHostCommandPolicy()
         {
             return YokiFrameCommandPolicy.CreateDefault(CreateHostCommandDescriptors());
+        }
+
+        /// <summary>获取与当前 dispatcher 同源的宿主策略缓存，避免每个命令帧重建完整策略。</summary>
+        /// <returns>与 sCommandDispatcher 同一轮构建的策略；缓存缺失时按需构建。</returns>
+        private static YokiFrameCommandPolicy GetHostCommandPolicy()
+        {
+            if (sHostCommandPolicy == null)
+            {
+                sHostCommandPolicy = CreateHostCommandPolicy();
+            }
+
+            return sHostCommandPolicy;
         }
 
         /// <summary>合并 Unity Harness 与当前 Registry 的真实命令描述。</summary>
@@ -95,34 +109,6 @@ namespace YokiFrame
             private readonly YokiFrameCommandPolicy mPolicy;
             private readonly Action<string> mRevealPath;
             private readonly Func<string, int, bool> mOpenCodeLocation;
-
-            /// <summary>
-            /// 创建可注入路径揭示动作的 System handler，用于隔离打开系统窗口这一宿主副作用。
-            /// </summary>
-            /// <param name="revealPath">打开或揭示路径的宿主动作。</param>
-            public EditorSystemCommandHandler(Action<string> revealPath)
-                : this(
-                    revealPath,
-                    InternalEditorUtility.OpenFileAtLineExternal,
-                    YokiFrameCommandPolicy.CreateDefault(new[]
-                    {
-                        new YokiFrameCommandDescriptor(
-                            SYSTEM_KIT,
-                            OPEN_CODE_LOCATION_ACTION,
-                            YokiFrameCommandKind.UserAction)
-                    }))
-            {
-            }
-
-            /// <summary>
-            /// 创建可注入路径揭示动作和命令策略的 System handler，保证命令目录与实际策略一致。
-            /// </summary>
-            /// <param name="revealPath">打开或揭示路径的宿主动作。</param>
-            /// <param name="policy">当前宿主使用的命令策略。</param>
-            public EditorSystemCommandHandler(Action<string> revealPath, YokiFrameCommandPolicy policy)
-                : this(revealPath, InternalEditorUtility.OpenFileAtLineExternal, policy)
-            {
-            }
 
             /// <summary>创建可注入路径揭示、代码定位动作和命令策略的 System handler。</summary>
             /// <param name="revealPath">打开或揭示路径的宿主动作。</param>

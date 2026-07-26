@@ -14,13 +14,9 @@ internal sealed partial class GodotAddonInstallTransactionService
     /// <returns>所有已提交状态都成功恢复时返回 true。</returns>
     private static bool TryRollback(GodotInstallTransactionContext context)
     {
-        var rollbackSucceeded = RestoreProjectFiles(context);
-        if (rollbackSucceeded)
-        {
-            rollbackSucceeded = RestoreAddon(context);
-        }
-
-        return rollbackSucceeded && TryDeleteDirectory(context.TransactionRoot);
+        bool projectFilesOk = RestoreProjectFiles(context);
+        bool addonOk = RestoreAddon(context);
+        return projectFilesOk && addonOk && TryDeleteDirectory(context.TransactionRoot);
     }
 
     /// <summary>
@@ -36,7 +32,7 @@ internal sealed partial class GodotAddonInstallTransactionService
             {
                 RestoreProjectFile(context.ProjectFiles[index]);
             }
-            catch
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 return false;
             }
@@ -92,7 +88,7 @@ internal sealed partial class GodotAddonInstallTransactionService
 
             return true;
         }
-        catch
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             return false;
         }

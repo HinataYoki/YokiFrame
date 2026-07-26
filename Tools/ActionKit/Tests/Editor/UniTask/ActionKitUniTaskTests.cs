@@ -1,6 +1,5 @@
 #if UNITY_5_3_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
@@ -10,7 +9,7 @@ namespace YokiFrame.Tests
     /// <summary>覆盖 UniTask Integration 独有的完成、取消、故障、Repeat 和分配边界。</summary>
     public sealed class ActionKitUniTaskTests
     {
-        private readonly RecordingLogger mLogger = new();
+        private readonly ActionKitTestLogger mLogger = new();
 
         /// <summary>每个测试前清空静态调度状态并接管预期错误日志。</summary>
         [SetUp]
@@ -176,42 +175,6 @@ namespace YokiFrame.Tests
             source.TrySetResult();
             ActionKitScheduler.Tick(0f, 0f);
             Assert.IsTrue(controller.IsCompleted);
-        }
-
-        /// <summary>记录 Integration 测试日志，并要求故障用例精确消费。</summary>
-        private sealed class RecordingLogger : IEngineLogger
-        {
-            private readonly List<string> mErrors = new();
-
-            /// <summary>只记录 Error，其它等级不属于故障终态契约。</summary>
-            /// <param name="level">日志等级。</param>
-            /// <param name="message">日志正文。</param>
-            /// <param name="context">本测试不使用的宿主上下文。</param>
-            public void Log(LogLevel level, string message, object context = null)
-            {
-                if (level == LogLevel.Error) mErrors.Add(message ?? string.Empty);
-            }
-
-            /// <summary>清除上一测试记录。</summary>
-            internal void Clear() => mErrors.Clear();
-
-            /// <summary>断言并消费唯一 Error。</summary>
-            /// <param name="prefix">预期错误前缀。</param>
-            internal void AssertSingleError(string prefix)
-            {
-                string[] errors = mErrors.ToArray();
-                mErrors.Clear();
-                Assert.AreEqual(1, errors.Length);
-                StringAssert.StartsWith(prefix, errors[0]);
-            }
-
-            /// <summary>拒绝测试结束时仍存在未声明 Error。</summary>
-            internal void AssertNoErrors()
-            {
-                string[] errors = mErrors.ToArray();
-                mErrors.Clear();
-                Assert.AreEqual(0, errors.Length, string.Join("\n", errors));
-            }
         }
     }
 }

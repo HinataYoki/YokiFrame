@@ -113,7 +113,7 @@ namespace YokiFrame
                 }
             }
 
-            if (remaining == null || remaining.Count == 0)
+            if (remaining == null)
             {
                 SessionState.EraseString(SESSION_KEY);
                 return;

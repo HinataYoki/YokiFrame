@@ -136,7 +136,7 @@ namespace YokiFrame.Tests
             Assert.IsTrue(controller.IsCompleted, "取消请求应在 Tick 内进入终态。");
             Assert.IsTrue(controller.IsCancelled, "取消终态必须保持 IsCancelled。");
             Assert.IsTrue(action.Deinited, "取消终态必须执行 Action OnDeinit。");
-            Assert.AreEqual("DOTweenAction(null)", action.GetDebugInfo(), "OnDeinit 必须释放 Tween 强引用。");
+            Assert.IsNull(((DOTweenAction)action).CurrentTween, "OnDeinit 必须释放 Tween 强引用。");
             Assert.IsTrue(killInvoked, "取消释放必须调用 DOTween Kill(false)。");
             Assert.IsFalse(tween.IsActive(), "Kill(false) 后 Tween 不应继续活动。");
             Assert.Less(value, 1f, "取消不应补齐 Tween 终值。");

@@ -129,6 +129,11 @@ namespace YokiFrame
             if (!LogKitSettingsJsonReader.TryReadString(
                     json, ref index, out var key, out errorMessage))
             {
+                if (string.IsNullOrEmpty(errorMessage))
+                {
+                    errorMessage = "LogKit settings property names must be JSON strings.";
+                }
+
                 return false;
             }
 

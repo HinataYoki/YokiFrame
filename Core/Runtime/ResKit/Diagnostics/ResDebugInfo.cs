@@ -39,7 +39,7 @@ namespace YokiFrame
         /// <summary>获取当前资源的活动 lease 总数，可能大于已复制来源数量。</summary>
         public int SourceTotalCount { get; internal set; }
 
-        /// <summary>获取当前资源全部活动 lease 的隔离来源副本。</summary>
+        /// <summary>获取有界复制的 lease 来源隔离副本；数量受捕获来源上限约束（GetLoadedAssets 至多一条，Editor 详情查询至多十六条），活动 lease 总数见 <see cref="SourceTotalCount"/>。</summary>
         public IReadOnlyList<ResLoadSourceInfo> Sources { get; internal set; }
     }
 

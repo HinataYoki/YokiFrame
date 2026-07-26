@@ -251,6 +251,7 @@ ICodeScope AutoProperty(
 | `PropertyCode WithModifiers(MemberModifier modifiers)` | 设置属性修饰符 |
 | `PropertyCode WithComment(string comment)` | 设置 XML summary |
 | `PropertyCode WithAttribute(string attributeName)` | 追加无参数特性 |
+| `PropertyCode WithAttribute(string attributeName, string argument)` | 追加带一个原始参数的特性 |
 | `PropertyCode AsReadonly()` | 重置为只有 getter 的自动属性 |
 | `PropertyCode AsAutoProperty(AccessModifier setterAccess = AccessModifier.None)` | 重置为自动属性，可设置 setter 访问级别 |
 | `PropertyCode WithExpressionBody(string expression)` | 重置为只有 getter 的表达式属性 |

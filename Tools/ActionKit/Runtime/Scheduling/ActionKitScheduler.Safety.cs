@@ -7,9 +7,9 @@ namespace YokiFrame
     /// <summary>承载 Scheduler 的宿主线程和活动 Action ID 安全边界。</summary>
     public static partial class ActionKitScheduler
     {
-        private const int MAX_RETAINED_PREPARED_CAPACITY = 64;
-        private const int MAX_RETAINED_EXECUTING_CAPACITY = 128;
-        private const int MAX_RETAINED_RECYCLE_CAPACITY = 256;
+        internal const int MAX_RETAINED_PREPARED_CAPACITY = 64;
+        internal const int MAX_RETAINED_EXECUTING_CAPACITY = 128;
+        internal const int MAX_RETAINED_RECYCLE_CAPACITY = 256;
         private const int MAX_RETAINED_ACTION_ID_CAPACITY = 1024;
         private static readonly HashSet<ulong> sActiveActionIds = new();
         private static readonly HashSet<ulong> sValidationActionIds = new();
@@ -146,11 +146,9 @@ namespace YokiFrame
             lock (sPrepareSyncRoot)
             {
                 sValidationActionIds.Clear();
-                var validationCount = 0;
                 try
                 {
                     CollectActionIds(controller.Action, 0);
-                    validationCount = sValidationActionIds.Count;
                     foreach (ulong actionId in sValidationActionIds)
                     {
                         if (sActiveActionIds.Contains(actionId))
@@ -164,7 +162,7 @@ namespace YokiFrame
                 }
                 finally
                 {
-                    if (validationCount == 0) validationCount = sValidationActionIds.Count;
+                    int validationCount = sValidationActionIds.Count;
                     sValidationActionIds.Clear();
                     if (validationCount > MAX_RETAINED_ACTION_ID_CAPACITY)
                         sValidationActionIds.TrimExcess();

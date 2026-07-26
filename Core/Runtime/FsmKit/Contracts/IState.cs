@@ -20,6 +20,13 @@ namespace YokiFrame
         /// <summary>暂停状态。</summary>
         void Suspend();
 
+        /// <summary>
+        /// 恢复被挂起的状态；默认不执行任何操作，避免重复触发进入副作用。
+        /// </summary>
+        void Resume()
+        {
+        }
+
         /// <summary>执行普通帧更新。</summary>
         void Update();
 

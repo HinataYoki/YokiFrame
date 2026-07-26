@@ -76,8 +76,8 @@ public sealed class YokiFrameClientRegistryTests
             using ManualResetEventSlim readerStarted = new(false);
             Task<IReadOnlyList<YokiFrame.Protocol.FileBridge.EngineRegistryEntry>> readTask = Task.Run(() =>
             {
-                readerStarted.Set();
                 using YokiFrameClient client = new(projectRoot);
+                readerStarted.Set();
                 return client.ReadEngineEntries();
             });
 

@@ -133,7 +133,6 @@ public sealed class OfflineDocumentationService
         string previousGroup = string.Empty;
         foreach (var parsedEntry in parsedEntries
                      .OrderBy(static entry => DocumentationIndexEntry.GetNavigationGroupOrder(entry.Group))
-                     .ThenBy(static entry => DocumentationIndexEntry.ResolveNavigationSortKey(entry.RelativePath), StringComparer.OrdinalIgnoreCase)
                      .ThenBy(static entry => entry.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
             var entry = new DocumentationIndexEntry(

@@ -5,16 +5,16 @@ namespace YokiFrame
     public sealed class ResUnloadRecord
     {
         /// <summary>获取资源路径。</summary>
-        public string Path;
+        public string Path { get; internal set; }
 
         /// <summary>获取资源的完整 CLR 类型名。</summary>
-        public string TypeName;
+        public string TypeName { get; internal set; }
 
         /// <summary>获取创建并释放该资源的 Provider 名称。</summary>
-        public string ProviderName;
+        public string ProviderName { get; internal set; }
 
         /// <summary>获取 ISO 8601 格式的 UTC 卸载时间。</summary>
-        public string UnloadTimeUtc;
+        public string UnloadTimeUtc { get; internal set; }
     }
 }
 #endif

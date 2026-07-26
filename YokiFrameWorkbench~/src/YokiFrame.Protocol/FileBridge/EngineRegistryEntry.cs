@@ -81,7 +81,7 @@ public sealed class EngineRegistryEntry
     public List<string> Capabilities
     {
         get => mCapabilities;
-        set => mCapabilities = value ?? new List<string>();
+        set => mCapabilities = value ?? new();
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ public sealed class EngineRegistryEntry
     public List<FastChannelEndpoint> FastChannels
     {
         get => mFastChannels;
-        set => mFastChannels = value ?? new List<FastChannelEndpoint>();
+        set => mFastChannels = value ?? new();
     }
 
     /// <summary>

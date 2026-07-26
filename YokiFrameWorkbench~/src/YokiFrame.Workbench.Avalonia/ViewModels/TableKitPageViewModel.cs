@@ -43,6 +43,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     private string mDataExtension = "未解析";
     private string mPreviewDirectory = string.Empty;
     private string mPreviewSearch = string.Empty;
+    private IReadOnlyList<TableKitPreviewTableViewModel> mFilteredPreviewTables = Array.Empty<TableKitPreviewTableViewModel>();
     private TableKitPreviewTableViewModel? mSelectedPreviewTable;
     private TableKitPreviewRecordViewModel? mSelectedPreviewRecord;
     private int mSelectedWorkspaceIndex;
@@ -227,11 +228,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     /// <summary>获取验证预览目录。</summary>
     public string PreviewDirectory { get => mPreviewDirectory; private set => SetProperty(ref mPreviewDirectory, value); }
     /// <summary>获取或设置预览搜索关键字。</summary>
-    public string PreviewSearch { get => mPreviewSearch; set { if (SetProperty(ref mPreviewSearch, value)) OnPropertyChanged(nameof(FilteredPreviewTables)); } }
+    public string PreviewSearch { get => mPreviewSearch; set { if (SetProperty(ref mPreviewSearch, value)) RebuildFilteredPreviewTables(); } }
     /// <summary>获取过滤后的预览表集合。</summary>
-    public IEnumerable<TableKitPreviewTableViewModel> FilteredPreviewTables => string.IsNullOrWhiteSpace(PreviewSearch)
-        ? PreviewTables
-        : PreviewTables.Where(table => table.Name.Contains(PreviewSearch, StringComparison.OrdinalIgnoreCase));
+    public IReadOnlyList<TableKitPreviewTableViewModel> FilteredPreviewTables => mFilteredPreviewTables;
     /// <summary>获取当前选中的预览表。</summary>
     public TableKitPreviewTableViewModel? SelectedPreviewTable
     {

@@ -249,9 +249,14 @@ internal sealed class ProjectModelSourceScanner
     /// <summary>查找唯一顶层 Godot C# 项目文件。</summary>
     private static string FindGodotProjectFile(string projectRoot)
     {
-        return Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly)
+        var file = Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly)
             .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
-            .First();
+            .FirstOrDefault();
+        return file ?? throw CreateError(
+            "ProjectDependenciesInvalid",
+            "No top-level .csproj found in Godot project root.",
+            "Ensure the Godot project contains a .csproj at its root and retry.",
+            new[] { projectRoot });
     }
 
     /// <summary>只在 Core/Runtime 与 Tools 中查找 package-owned capability descriptor。</summary>

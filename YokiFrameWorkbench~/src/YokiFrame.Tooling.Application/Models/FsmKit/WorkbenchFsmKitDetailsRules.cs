@@ -78,13 +78,13 @@ public static class WorkbenchFsmKitDetailsRules
         long queryGeneration)
     {
         ArgumentNullException.ThrowIfNull(state);
-        string stateEngine = WorkbenchFsmKitPresentation.CreateOptionalText(state.EngineId);
-        string stateSession = WorkbenchFsmKitPresentation.CreateOptionalText(state.SessionId);
         return string.Equals(visibleEngineId, queryEngineId, StringComparison.Ordinal)
             && string.Equals(visibleSessionId, querySessionId, StringComparison.Ordinal)
             && visibleGeneration == queryGeneration
-            && string.Equals(stateEngine, queryEngineId, StringComparison.Ordinal)
-            && string.Equals(stateSession, querySessionId, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(state.EngineId)
+            && string.Equals(state.EngineId, queryEngineId, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(state.SessionId)
+            && string.Equals(state.SessionId, querySessionId, StringComparison.Ordinal)
             && state.Generation == queryGeneration;
     }
 

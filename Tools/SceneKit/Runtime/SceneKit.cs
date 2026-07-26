@@ -68,12 +68,15 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>重置 SceneKit 的逻辑状态；不会尝试调用已失效 Provider 的卸载 API。</summary>
+        /// <summary>重置 SceneKit 的逻辑状态；收集待处理卸载回调并在状态清空后统一触发，不会尝试调用已失效 Provider 的卸载 API。</summary>
         public static void Reset()
         {
+            Action pending = null;
             for (var index = 0; index < sLoadedScenes.Count; index++)
             {
-                sLoadedScenes[index].MarkUnloaded();
+                SceneHandler handler = sLoadedScenes[index];
+                pending += handler.TakeUnloadCallbacks();
+                handler.MarkUnloaded();
             }
 
             sSceneCache.Clear();
@@ -82,6 +85,7 @@ namespace YokiFrame
             sDefaultBackend = null;
             sDefaultProvider = null;
             sActiveSceneHandler = null;
+            pending?.Invoke();
         }
 
         /// <summary>获取当前激活场景 Handler。</summary>

@@ -369,9 +369,6 @@ namespace YokiFrame.Tests
                 ActiveScene = scene;
             }
 
-            /// <summary>获取测试激活场景。</summary>
-            public ResSceneHandle GetActiveScene() => ActiveScene;
-
             /// <summary>测试环境立即完成未使用资源卸载。</summary>
             public void UnloadUnusedAssets(Action onComplete)
             {
@@ -420,9 +417,6 @@ namespace YokiFrame.Tests
             {
                 ActiveScene = scene;
             }
-
-            /// <inheritdoc />
-            public SceneHandle GetActiveScene() => ActiveScene;
 
             /// <inheritdoc />
             public void UnloadUnusedAssets(Action onComplete)
@@ -496,9 +490,6 @@ namespace YokiFrame.Tests
             {
                 ActiveScene = scene;
             }
-
-            /// <inheritdoc />
-            public SceneHandle GetActiveScene() => ActiveScene;
 
             /// <inheritdoc />
             public void UnloadUnusedAssets(Action onComplete)

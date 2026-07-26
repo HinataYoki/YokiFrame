@@ -217,9 +217,8 @@ public sealed partial class UIKitPageViewModel
         if (mEditorSettingsService == null || !mEditorSettingsDirty) return;
         try
         {
-            mEditorSettingsService.SaveAsync(
-                    CreateGenerationRequest(),
-                    CancellationToken.None)
+            var request = CreateGenerationRequest();
+            Task.Run(() => mEditorSettingsService.SaveAsync(request, CancellationToken.None))
                 .GetAwaiter()
                 .GetResult();
             mEditorSettingsDirty = false;

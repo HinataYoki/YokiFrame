@@ -57,7 +57,16 @@ namespace YokiFrame
             }
 
             LinkUnRegister<T> token = self.Bind(callback);
-            callback.Invoke(self.Value);
+            try
+            {
+                callback.Invoke(self.Value);
+            }
+            catch
+            {
+                token.UnRegister();
+                throw;
+            }
+
             return token;
         }
     }

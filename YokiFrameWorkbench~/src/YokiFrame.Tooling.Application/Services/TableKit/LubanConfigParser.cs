@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Xml;
 using System.Xml.Linq;
 using YokiFrame.Tooling.Application.Models.Luban;
 using YokiFrame.Tooling.Application.Models.TableKit;
@@ -144,7 +145,10 @@ public sealed class LubanConfigParser
         string definitionPath)
     {
         List<TableKitExternalTypeMapping> mappings = new();
-        XDocument document = XDocument.Load(definitionPath, LoadOptions.PreserveWhitespace);
+        XmlReaderSettings xmlSettings = new() { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
+        using FileStream stream = new(definitionPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using XmlReader reader = XmlReader.Create(stream, xmlSettings);
+        XDocument document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
         foreach (XElement bean in document.Descendants().Where(static element => element.Name.LocalName == "bean"))
         {
             string beanName = ReadXmlIdentifier(bean, "name", "bean");

@@ -120,19 +120,22 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(data));
             }
 
-            var meta = CreateOrUpdateMeta(target, displayName);
-            var payload = SerializeSaveData(data, sSerializer);
-            if (sEncryptor != null)
+            var serializer = sSerializer;
+            var encryptor = sEncryptor;
+            var storage = sStorage;
+            var meta = CreateOrUpdateMeta(target, displayName, serializer, storage);
+            var payload = SerializeSaveData(data, serializer);
+            if (encryptor != null)
             {
-                payload = sEncryptor.Encrypt(payload);
+                payload = encryptor.Encrypt(payload);
             }
 
             var header = meta.SerializeHeader(payload.Length);
             var fileBytes = new byte[header.Length + payload.Length];
             Buffer.BlockCopy(header, 0, fileBytes, 0, header.Length);
             Buffer.BlockCopy(payload, 0, fileBytes, header.Length, payload.Length);
-            sStorage.Write(target, fileBytes);
-            data.SetSerializer(sSerializer);
+            storage.Write(target, fileBytes);
+            data.SetSerializer(serializer);
 #if UNITY_EDITOR || (GODOT && TOOLS)
             MarkInteractionStateChanged();
 #endif
@@ -155,7 +158,10 @@ namespace YokiFrame
         public static SaveLoadResult TryLoad(SaveTarget target)
         {
             ValidateTarget(target);
-            var fileBytes = sStorage.Read(target);
+            var serializer = sSerializer;
+            var encryptor = sEncryptor;
+            var storage = sStorage;
+            var fileBytes = storage.Read(target);
             if (fileBytes == null)
             {
                 return new SaveLoadResult(SaveLoadStatus.Missing, null, default(SaveMeta), "Save target does not exist.");
@@ -171,14 +177,14 @@ namespace YokiFrame
                 return new SaveLoadResult(SaveLoadStatus.Invalid, null, meta, "Save target does not match its container header.");
             }
 
-            if (!string.Equals(meta.SerializerId, sSerializer.SerializerId, StringComparison.Ordinal))
+            if (!string.Equals(meta.SerializerId, serializer.SerializerId, StringComparison.Ordinal))
             {
                 return new SaveLoadResult(SaveLoadStatus.SerializerMismatch, null, meta, "Save serializer does not match the active backend.");
             }
 
             var payload = new byte[payloadLength];
             Buffer.BlockCopy(fileBytes, headerSize, payload, 0, payloadLength);
-            return DeserializePayload(payload, meta);
+            return DeserializePayload(payload, meta, serializer, encryptor);
         }
 
         /// <summary>读取显式目标；失败时返回空数据，详细原因通过 TryLoad 获取。</summary>
@@ -210,7 +216,8 @@ namespace YokiFrame
         /// <returns>容器有效时返回 true。</returns>
         public static bool Exists(SaveTarget target)
         {
-            return TryLoadMetadata(target, out _);
+            ValidateTarget(target);
+            return TryLoadMetadata(target, sStorage, out _);
         }
 
         /// <summary>检查数字槽位是否存在有效容器。</summary>
@@ -250,7 +257,8 @@ namespace YokiFrame
         /// <returns>有效头部元数据；无效时返回默认值。</returns>
         public static SaveMeta GetMeta(SaveTarget target)
         {
-            return TryLoadMetadata(target, out var meta) ? meta : default(SaveMeta);
+            ValidateTarget(target);
+            return TryLoadMetadata(target, sStorage, out var meta) ? meta : default(SaveMeta);
         }
 
         /// <summary>获取数字槽位元数据的便捷入口。</summary>
@@ -275,7 +283,7 @@ namespace YokiFrame
             return GetAllTargets(SaveTargetKind.Global);
         }
 
-        /// <summary>重置为内存后端和原始字节序列化器。</summary>
+        /// <summary>停用自动保存并清除当前 Storage/Serializer/Encryptor。已注册的宿主默认后端工厂保留，下次业务调用按工厂重建；未注册时回退内存 Storage 与 raw 序列化器。</summary>
         public static void Reset()
         {
             DisableAutoSave();
@@ -288,18 +296,18 @@ namespace YokiFrame
         }
 
         /// <summary>构造新存档或更新已有存档的头部元数据。</summary>
-        private static SaveMeta CreateOrUpdateMeta(SaveTarget target, string displayName)
+        private static SaveMeta CreateOrUpdateMeta(SaveTarget target, string displayName, ISaveSerializer serializer, ISaveStorage storage)
         {
-            if (TryLoadMetadata(target, out var existing))
+            if (TryLoadMetadata(target, storage, out var existing))
             {
-                if (!string.Equals(existing.SerializerId, sSerializer.SerializerId, StringComparison.Ordinal))
+                if (!string.Equals(existing.SerializerId, serializer.SerializerId, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException("Save target already uses serializer " + existing.SerializerId + ". Delete it before switching backends.");
                 }
 
                 existing.UpdateSaveTime();
                 existing.ContainerVersion = CONTAINER_VERSION;
-                existing.SerializerId = sSerializer.SerializerId;
+                existing.SerializerId = serializer.SerializerId;
                 if (displayName != null)
                 {
                     existing.DisplayName = displayName;
@@ -308,14 +316,19 @@ namespace YokiFrame
                 return existing;
             }
 
-            return SaveMeta.Create(target, CONTAINER_VERSION, sSerializer.SerializerId, displayName);
+            return SaveMeta.Create(target, CONTAINER_VERSION, serializer.SerializerId, displayName);
         }
 
         /// <summary>读取并验证目标元数据，不解析 payload。</summary>
-        private static bool TryLoadMetadata(SaveTarget target, out SaveMeta meta)
+        private static bool TryLoadMetadata(SaveTarget target, ISaveStorage storage, out SaveMeta meta)
         {
             ValidateTarget(target);
-            var bytes = sStorage.Read(target);
+            if (storage is ISaveMetadataStorage metadataStorage)
+            {
+                return metadataStorage.TryReadMetadata(target, out meta);
+            }
+
+            var bytes = storage.Read(target);
             if (bytes == null || !SaveMeta.TryDeserializeHeader(bytes, out meta, out _, out _))
             {
                 meta = default(SaveMeta);
@@ -329,19 +342,34 @@ namespace YokiFrame
         private static List<SaveMeta> GetAllTargets(SaveTargetKind kind)
         {
             EnsureBackend();
+            var storage = sStorage;
             var result = new List<SaveMeta>();
-            var targets = sStorage.GetTargets(kind);
+            var targets = storage.GetTargets(kind);
             for (var i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
-                if (TryLoadMetadata(target, out var meta))
+                if (TryLoadMetadata(target, storage, out var meta))
                 {
                     result.Add(meta);
                 }
             }
 
-            result.Sort((left, right) => string.CompareOrdinal(left.Target.Name, right.Target.Name));
+            result.Sort(CompareMeta);
             return result;
+        }
+
+        /// <summary>按目标类型和语义字段稳定排序：Slot 用编号升序，Global 用名称序。</summary>
+        private static int CompareMeta(SaveMeta left, SaveMeta right)
+        {
+            var kind = left.Target.Kind.CompareTo(right.Target.Kind);
+            if (kind != 0)
+            {
+                return kind;
+            }
+
+            return left.Target.IsSlot
+                ? left.Target.SlotId.CompareTo(right.Target.SlotId)
+                : string.CompareOrdinal(left.Target.Name, right.Target.Name);
         }
 
         /// <summary>验证目标是否处于当前 SaveKit 配置范围。</summary>
@@ -406,18 +434,18 @@ namespace YokiFrame
         }
 
         /// <summary>解密并解析容器 payload，同时把后端错误映射为稳定状态。</summary>
-        private static SaveLoadResult DeserializePayload(byte[] payload, SaveMeta meta)
+        private static SaveLoadResult DeserializePayload(byte[] payload, SaveMeta meta, ISaveSerializer serializer, ISaveEncryptor encryptor)
         {
             try
             {
-                if (sEncryptor != null)
+                if (encryptor != null)
                 {
-                    payload = sEncryptor.Decrypt(payload);
+                    payload = encryptor.Decrypt(payload);
                 }
 
-                var data = DeserializeSaveData(payload, sSerializer);
-                data.ValidateRawModules(sSerializer);
-                data.SetSerializer(sSerializer);
+                var data = DeserializeSaveData(payload, serializer);
+                data.ValidateRawModules(serializer);
+                data.SetSerializer(serializer);
                 return new SaveLoadResult(SaveLoadStatus.Success, data, meta, null);
             }
             catch (InvalidDataException exception)

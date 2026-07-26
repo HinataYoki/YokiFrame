@@ -271,23 +271,7 @@ internal sealed class CliInstallerFixture : IDisposable
     /// </summary>
     /// <returns>CLI 程序 DLL 路径。</returns>
     private static string GetCliAssemblyPath()
-    {
-        var outputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        var configurationDirectory = outputDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output configuration directory is missing.");
-        var projectDirectory = configurationDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output project directory is missing.");
-        var binDirectory = projectDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test output bin directory is missing.");
-        var cliAssemblyPath = Path.Combine(
-            binDirectory.FullName,
-            "YokiFrame.Cli",
-            configurationDirectory.Name,
-            outputDirectory.Name,
-            "YokiFrame.Cli.dll");
-        Assert.True(File.Exists(cliAssemblyPath), "CLI assembly was not built: " + cliAssemblyPath);
-        return cliAssemblyPath;
-    }
+        => CliTestHelpers.GetCliAssemblyPath();
 }
 
 /// <summary>

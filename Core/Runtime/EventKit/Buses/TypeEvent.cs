@@ -36,6 +36,11 @@ namespace YokiFrame
         /// <returns>用于注销该监听器的令牌。</returns>
         public LinkUnRegister<T> Register<T>(Action<T> onEvent)
         {
+            if (onEvent == null)
+            {
+                throw new ArgumentNullException(nameof(onEvent));
+            }
+
             LinkUnRegister<T> token = mEventDic.GetOrAddEvent<EasyEvent<T>>().Register(onEvent);
 #if UNITY_EDITOR || (GODOT && TOOLS)
             var registerNotification = new EventKitEditorNotification(

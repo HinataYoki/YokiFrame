@@ -71,6 +71,8 @@ namespace YokiFrame
                 {
                     responseTask = Task.FromException<YokiFrameFastChannelFrame>(
                         new InvalidOperationException("FastChannel request queue is full."));
+                    // 调用方通常只依赖返回值而丢弃该任务；读取 Exception 标记已观察，避免终结时的 UnobservedTaskException。
+                    _ = responseTask.Exception;
                     return false;
                 }
 
@@ -96,11 +98,6 @@ namespace YokiFrame
             var processedCount = 0;
             while (TryDequeue(out var pendingRequest))
             {
-                if (pendingRequest == null)
-                {
-                    continue;
-                }
-
                 CompletePendingRequest(pendingRequest, responseFactory);
                 processedCount++;
             }
@@ -204,12 +201,12 @@ namespace YokiFrame
             /// <summary>
             /// 获取需要由主线程处理的 request frame。
             /// </summary>
-            public YokiFrameFastChannelFrame Request { get; private set; }
+            public YokiFrameFastChannelFrame Request { get; }
 
             /// <summary>
             /// 获取 listener 等待的异步 response 源。
             /// </summary>
-            public TaskCompletionSource<YokiFrameFastChannelFrame> ResponseSource { get; private set; }
+            public TaskCompletionSource<YokiFrameFastChannelFrame> ResponseSource { get; }
         }
     }
 }

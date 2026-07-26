@@ -193,12 +193,6 @@ namespace YokiFrame.Unity
             mSceneProvider.SetActiveScene(scene);
         }
 
-        /// <summary>获取 Unity 当前激活场景。</summary>
-        public ResSceneHandle GetActiveScene()
-        {
-            return mSceneProvider.GetActiveScene();
-        }
-
         /// <summary>请求 Unity 卸载未使用资源。</summary>
         public void UnloadUnusedAssets(Action onComplete)
         {

@@ -70,7 +70,7 @@ namespace YokiFrame
             Assert.AreEqual(typeof(PrivateService).FullName, infos[0].FullName);
             Assert.AreEqual("Base", infos[0].Backend);
             Assert.AreEqual("SingletonKit", infos[0].Source);
-            Assert.AreEqual(instance.GetHashCode(), infos[0].InstanceHash);
+            Assert.AreEqual(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(instance), infos[0].InstanceHash);
             Assert.IsFalse(infos[0].IsAlive);
         }
 

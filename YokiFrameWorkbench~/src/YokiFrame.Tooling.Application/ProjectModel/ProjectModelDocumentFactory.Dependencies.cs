@@ -67,21 +67,25 @@ internal static partial class ProjectModelDocumentFactory
             .Select(static value => value.ToLowerInvariant())
             .ToArray();
         return sOptionalIntegrations
-            .Select(integration => new ProjectOptionalIntegration
+            .Select(integration =>
             {
-                Id = integration.Id,
-                Define = integration.Define,
-                State = integration.Tokens.Any(token => values.Any(value => value.Contains(token, StringComparison.Ordinal)))
-                    ? "Detected"
-                    : "Unknown",
-                Version = string.Empty,
-                EvidencePaths = integration.Tokens.Any(token => values.Any(value => value.Contains(token, StringComparison.Ordinal)))
-                    ? snapshot.Dependencies
-                        .Where(dependency => integration.Tokens.Any(token => (dependency.Name + dependency.Reference).Contains(token, StringComparison.OrdinalIgnoreCase)))
-                        .Select(static dependency => dependency.SourcePath)
-                        .Distinct(StringComparer.Ordinal)
-                        .ToList()
-                    : new List<string>()
+                var detected = integration.Tokens.Any(
+                    token => values.Any(value => value.Contains(token, StringComparison.Ordinal)));
+                return new ProjectOptionalIntegration
+                {
+                    Id = integration.Id,
+                    Define = integration.Define,
+                    State = detected ? "Detected" : "Unknown",
+                    Version = string.Empty,
+                    EvidencePaths = detected
+                        ? snapshot.Dependencies
+                            .Where(d => integration.Tokens.Any(t =>
+                                (d.Name + d.Reference).Contains(t, StringComparison.OrdinalIgnoreCase)))
+                            .Select(static d => d.SourcePath)
+                            .Distinct(StringComparer.Ordinal)
+                            .ToList()
+                        : new List<string>()
+                };
             })
             .ToList();
     }

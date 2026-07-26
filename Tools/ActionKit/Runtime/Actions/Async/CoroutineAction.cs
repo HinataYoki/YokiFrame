@@ -10,7 +10,7 @@ namespace YokiFrame
     /// </summary>
     internal sealed class CoroutineAction : ActionBase, IPooledAction
     {
-        private const int MAX_NESTED_DEPTH = 64;
+        internal const int MAX_NESTED_DEPTH = 64;
         private static readonly ObjectPool<CoroutineAction> sPool = PoolKit.Create(
             static () => new CoroutineAction(), null, static action => action.ResetForPool(), ActionPoolSettings.Default);
         private readonly List<IEnumerator> mStack = new(4);

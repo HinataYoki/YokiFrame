@@ -26,7 +26,7 @@ public sealed partial class WorkbenchDashboardService
             ["path"] = path,
             ["typeName"] = typeName
         };
-        CommandExecutionResult result = await ExecuteResKitCommandAsync(
+        var (result, _) = await ExecuteResKitCommandAsync(
             engineId, GET_RESOURCE_DETAIL_ACTION, payload, cancellationToken).ConfigureAwait(false);
         return WorkbenchResKitStateParser.ParseResourceDetail(result.Response.ResultJson);
     }
@@ -58,16 +58,15 @@ public sealed partial class WorkbenchDashboardService
         JsonObject payload,
         CancellationToken cancellationToken)
     {
-        CommandExecutionResult result = await ExecuteResKitCommandAsync(
+        var (result, selectedEngineId) = await ExecuteResKitCommandAsync(
             engineId, action, payload, cancellationToken).ConfigureAwait(false);
-        string selectedEngineId = mEngineSelectionService.Resolve(engineId, DateTimeOffset.UtcNow);
         var registry = FindEngineRegistry(selectedEngineId)
             ?? throw CreateResKitIdentityError(result);
         return WorkbenchResKitStateParser.Parse(CreateResKitCommandSource(selectedEngineId, registry, result));
     }
 
     /// <summary>执行 ResKit command，并拒绝失败响应或执行期间宿主身份变化。</summary>
-    private async Task<CommandExecutionResult> ExecuteResKitCommandAsync(
+    private async Task<(CommandExecutionResult Result, string SelectedEngineId)> ExecuteResKitCommandAsync(
         string engineId,
         string action,
         JsonObject payload,
@@ -86,7 +85,7 @@ public sealed partial class WorkbenchDashboardService
         EnsureSuccessfulResKitCommand(result);
         var after = FindEngineRegistry(selectedEngineId);
         if (!IsSameHost(before, after)) throw CreateResKitIdentityError(result);
-        return result;
+        return (result, selectedEngineId);
     }
 
     /// <summary>创建携带实际传输和宿主身份的 ResKit 命令数据源。</summary>

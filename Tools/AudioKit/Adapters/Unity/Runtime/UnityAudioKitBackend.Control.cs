@@ -62,7 +62,7 @@ namespace YokiFrame.Unity
             }
         }
 
-        /// <summary>暂停全部 active voice 并记录暂停起点，避免更新阶段误回收。</summary>
+        /// <summary>暂停全部 active voice 并标记暂停态，避免更新阶段误回收。</summary>
         public void PauseAll()
         {
             for (var index = 0; index < mVoices.Count; index++)
@@ -71,18 +71,16 @@ namespace YokiFrame.Unity
                 if (voice.Paused || voice.Source == null) continue;
                 voice.Source.Pause();
                 voice.Paused = true;
-                voice.PausedAt = UnityEngine.Time.time;
             }
         }
 
-        /// <summary>恢复全部暂停 voice 并累计暂停时长。</summary>
+        /// <summary>恢复全部暂停 voice。</summary>
         public void ResumeAll()
         {
             for (var index = 0; index < mVoices.Count; index++)
             {
                 VoiceState voice = mVoices[index];
                 if (!voice.Paused || voice.Source == null) continue;
-                voice.TotalPausedTime += UnityEngine.Time.time - voice.PausedAt;
                 voice.Source.UnPause();
                 voice.Paused = false;
             }

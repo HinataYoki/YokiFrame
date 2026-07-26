@@ -219,8 +219,12 @@ public sealed partial class YokiFrameProjectSettingsStore
     private static void ValidateTargets(IReadOnlyList<YokiFrameProjectSettingsTarget> targets)
     {
         ArgumentNullException.ThrowIfNull(targets);
-        if (targets.Count == 0) throw new ArgumentException("At least one settings target is required.", nameof(targets));
-        if (targets.Distinct().Count() != targets.Count) throw new ArgumentException("Settings targets must be unique.", nameof(targets));
+        if (targets.Count == 0)
+            throw new ArgumentException("At least one settings target is required.", nameof(targets));
+        HashSet<YokiFrameProjectSettingsTarget> seen = new(targets.Count);
+        foreach (var target in targets)
+            if (!seen.Add(target))
+                throw new ArgumentException("Settings targets must be unique.", nameof(targets));
     }
 
     /// <summary>校验更新 patch 的目标和并发参数。</summary>

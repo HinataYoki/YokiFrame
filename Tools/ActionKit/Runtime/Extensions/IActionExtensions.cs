@@ -27,9 +27,9 @@ namespace YokiFrame
         /// <returns>当前 Action 正常完成时返回 true。</returns>
         public static bool Update(this IAction self, float dt)
         {
-            ActionKitScheduler.EnsureHostThread();
             if (self == null) throw new ArgumentNullException(nameof(self));
             if (dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt)) throw new ArgumentOutOfRangeException(nameof(dt));
+            ActionKitScheduler.EnsureHostThread();
             ActionOwnership.EnsureCanManuallyUpdate(self);
             if (self is ActionBase actionBase && self.ActionID == 0)
                 actionBase.PrepareExecution(ActionKitScheduler.NextActionId());

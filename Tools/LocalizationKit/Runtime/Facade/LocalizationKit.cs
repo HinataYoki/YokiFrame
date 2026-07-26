@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace YokiFrame
 {
@@ -14,6 +15,7 @@ namespace YokiFrame
         private static readonly Dictionary<TextCacheKey, string> sTextCache = new Dictionary<TextCacheKey, string>();
         private static readonly Dictionary<PluralCacheKey, string> sPluralCache = new Dictionary<PluralCacheKey, string>();
         private static readonly HashSet<ILocalizationBinder> sBinders = new HashSet<ILocalizationBinder>();
+        private static readonly string[] sCategoryNames = { "Zero", "One", "Two", "Few", "Many", "Other" };
 
         /// <summary>语言成功切换后触发。</summary>
         public static event Action<LanguageId> OnLanguageChanged;
@@ -291,7 +293,17 @@ namespace YokiFrame
                 }
             }
 
-            return "[Missing:" + textId + ":" + category + "]";
+            return BuildMissingPluralText(textId, category);
+        }
+
+        /// <summary>构造复数缺失标记，避免枚举装箱与名称查找。</summary>
+        private static string BuildMissingPluralText(int textId, PluralCategory category)
+        {
+            int categoryIndex = (int)category;
+            string categoryName = categoryIndex >= 0 && categoryIndex < sCategoryNames.Length
+                ? sCategoryNames[categoryIndex]
+                : categoryIndex.ToString(CultureInfo.InvariantCulture);
+            return string.Concat("[Missing:", textId.ToString(CultureInfo.InvariantCulture), ":", categoryName, "]");
         }
 
         /// <summary>使用 ArrayPool 为单数量复数格式化提供低分配参数缓冲。</summary>
@@ -325,17 +337,25 @@ namespace YokiFrame
             return false;
         }
 
-        /// <summary>使用快照刷新有效 Binder，允许刷新期间注销自身。</summary>
+        /// <summary>使用快照刷新有效 Binder，允许刷新期间注销自身，并顺带移除失效条目。</summary>
         private static void NotifyBinders()
         {
+            if (sBinders.Count == 0)
+            {
+                return;
+            }
+
             var snapshot = new List<ILocalizationBinder>(sBinders);
             for (int index = 0; index < snapshot.Count; index++)
             {
                 ILocalizationBinder binder = snapshot[index];
-                if (binder != null && binder.IsValid)
+                if (binder == null || !binder.IsValid)
                 {
-                    binder.Refresh();
+                    sBinders.Remove(binder);
+                    continue;
                 }
+
+                binder.Refresh();
             }
         }
 

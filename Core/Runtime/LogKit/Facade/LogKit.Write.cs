@@ -182,7 +182,7 @@ namespace YokiFrame
 
                 EnqueueHistoryLocked(CreateEntry(level, message, context, exception, stackTrace));
                 BumpDiagnosticVersion();
-                return sEffectiveLogger;
+                return sLogger;
             }
         }
 
@@ -311,22 +311,6 @@ namespace YokiFrame
         private static void BumpDiagnosticVersion()
         {
             System.Threading.Interlocked.Increment(ref sDiagnosticVersion);
-        }
-
-        /// <summary>
-        /// 应用当前日志后端适配器。
-        /// </summary>
-        /// <param name="logger">原始日志后端。</param>
-        /// <returns>适配后的日志后端。</returns>
-        private static IEngineLogger AdaptLoggerLocked(IEngineLogger logger)
-        {
-            if (logger == null || sLoggerAdapter == null)
-            {
-                return logger;
-            }
-
-            IEngineLogger adaptedLogger = sLoggerAdapter(logger);
-            return adaptedLogger ?? logger;
         }
 #endif
     }

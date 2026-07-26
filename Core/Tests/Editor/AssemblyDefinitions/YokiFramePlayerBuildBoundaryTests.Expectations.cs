@@ -92,7 +92,7 @@ namespace YokiFrame
             "FSM.Name", "FSM.EnumType", "FSM.CurrentState", "FSM.CurrentStateId",
             "FSM.GetAllStates", "FSM.GetStateOrderIndex", "FSM.mStateOrder", "FSM.mName",
             "FSM.PublishStateAdded", "FSM.PublishStateRemoved", "FSM.PublishFsmStarted", "FSM.PublishStateChanged",
-            "LogKit.DiagnosticVersion", "LogKit.LoggerName", "LogKit.SetLoggerAdapter",
+            "LogKit.DiagnosticVersion", "LogKit.LoggerName",
             "LogKit.GetHistory", "LogKit.ClearHistory", "LogKit.GetStats",
             "LogKitSettings.SettingsVersion", "LogKitSettings.BuildJson",
             "LogKitSettings.ApplyPayload", "LogKitSettings.ResetToDefaults",

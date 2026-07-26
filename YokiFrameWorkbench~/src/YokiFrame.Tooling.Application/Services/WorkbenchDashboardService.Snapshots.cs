@@ -63,7 +63,7 @@ public sealed partial class WorkbenchDashboardService
                 : bridgeHealth.Message;
             return ReadSnapshot(engineId, kit, name, "snapshot", staleReason, bridgeHealth.Generation, null);
         }
-        var generation = bridgeHealth.Generation != 0L ? bridgeHealth.Generation : (long?)null;
+        long generation = bridgeHealth.Generation;
         var telemetry = mClient.ReadTelemetry(
             engineId,
             kit,

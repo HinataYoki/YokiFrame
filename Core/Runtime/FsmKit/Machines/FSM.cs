@@ -24,6 +24,9 @@ namespace YokiFrame
         /// <summary>派生状态机可访问的状态字典。</summary>
         protected readonly Dictionary<TEnum, IState> mStateDic;
 
+        /// <summary>每个封闭枚举类型只反射一次的状态字典初始容量。</summary>
+        private static readonly int sStateCapacity = Enum.GetValues(typeof(TEnum)).Length;
+
         private bool mIsDisposed;
         private bool mIsTransitioning;
 
@@ -36,7 +39,7 @@ namespace YokiFrame
 #if UNITY_EDITOR || (GODOT && TOOLS)
             mName = NormalizeName(name);
 #endif
-            mStateDic = new(Enum.GetValues(typeof(TEnum)).Length);
+            mStateDic = new(sStateCapacity);
 #if UNITY_EDITOR || (GODOT && TOOLS)
             FsmKitRegistry.Register(this, Name);
             FsmEditorHook.RaiseFsmCreated(this);
@@ -136,49 +139,20 @@ namespace YokiFrame
 
         /// <summary>在 Running 阶段切换到满足进入条件的不同状态。</summary>
         /// <param name="id">状态标识。</param>
-        public void Change(TEnum id)
-        {
-            EnsureMutationAllowed();
-            if (mMachineState != MachineState.Running ||
-                !mStateDic.TryGetValue(id, out var state) ||
-                ReferenceEquals(state, CurState))
-            {
-                return;
-            }
-
-            TEnum previousId = CurEnum;
-            BeginLifecycleTransition();
-            try
-            {
-                if (!state.Condition())
-                {
-                    return;
-                }
-
-                CurState.End();
-                CurState = state;
-                CurEnum = id;
-                state.Start();
-            }
-            catch
-            {
-                mMachineState = MachineState.End;
-                throw;
-            }
-            finally
-            {
-                EndLifecycleTransition();
-            }
-#if UNITY_EDITOR || (GODOT && TOOLS)
-            PublishStateChanged(previousId, id);
-#endif
-        }
+        public void Change(TEnum id) => ChangeCore<object>(id, null, false);
 
         /// <summary>在 Running 阶段带参切换，目标不支持参数时回落无参进入。</summary>
         /// <typeparam name="TArgs">进入参数类型。</typeparam>
         /// <param name="id">状态标识。</param>
         /// <param name="args">进入参数。</param>
-        public void Change<TArgs>(TEnum id, TArgs args)
+        public void Change<TArgs>(TEnum id, TArgs args) => ChangeCore(id, args, true);
+
+        /// <summary>执行两种切换共享的守卫、生命周期闭合和诊断发布。</summary>
+        /// <typeparam name="TArgs">进入参数类型。</typeparam>
+        /// <param name="id">状态标识。</param>
+        /// <param name="args">进入参数。</param>
+        /// <param name="hasArgs">是否按参数契约进入目标状态。</param>
+        private void ChangeCore<TArgs>(TEnum id, TArgs args, bool hasArgs)
         {
             EnsureMutationAllowed();
             if (mMachineState != MachineState.Running ||
@@ -200,7 +174,14 @@ namespace YokiFrame
                 CurState.End();
                 CurState = state;
                 CurEnum = id;
-                StartState(state, args);
+                if (hasArgs)
+                {
+                    StartState(state, args);
+                }
+                else
+                {
+                    state.Start();
+                }
             }
             catch
             {
@@ -288,6 +269,35 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>恢复被挂起的当前状态并回到 Running；非 Suspend 阶段保持 no-op，不重复触发进入逻辑。</summary>
+        public void Resume()
+        {
+            EnsureMutationAllowed();
+            if (mMachineState != MachineState.Suspend)
+            {
+                return;
+            }
+
+            BeginLifecycleTransition();
+            try
+            {
+                CurState?.Resume();
+                mMachineState = MachineState.Running;
+            }
+            catch
+            {
+                mMachineState = MachineState.End;
+                throw;
+            }
+            finally
+            {
+                EndLifecycleTransition();
+            }
+#if UNITY_EDITOR || (GODOT && TOOLS)
+            FsmKitRegistry.NotifyStateChanged(this);
+#endif
+        }
+
         /// <summary>从当前选择启动；运行中或进入条件失败时保持 no-op。</summary>
         public void Start()
         {
@@ -356,8 +366,8 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>发布释放事件、注销稳定实例，再闭合并清空全部状态。</summary>
-        void IState.Dispose()
+        /// <summary>发布释放事件、注销稳定实例，再闭合并清空全部状态；重复调用保持幂等。</summary>
+        public void Dispose()
         {
             if (mIsDisposed)
             {
@@ -435,7 +445,15 @@ namespace YokiFrame
         /// <summary>尝试无参启动指定状态，并在成功后发布诊断记录。</summary>
         /// <param name="id">目标状态标识。</param>
         /// <param name="state">目标状态实例。</param>
-        protected void TryStartState(TEnum id, IState state)
+        protected void TryStartState(TEnum id, IState state) => TryStartStateCore<object>(id, state, null, false);
+
+        /// <summary>执行两种启动共享的守卫、挂起闭合、进入和诊断发布。</summary>
+        /// <typeparam name="TArgs">进入参数类型。</typeparam>
+        /// <param name="id">目标状态标识。</param>
+        /// <param name="state">目标状态实例。</param>
+        /// <param name="args">进入参数。</param>
+        /// <param name="hasArgs">是否按参数契约进入目标状态。</param>
+        private void TryStartStateCore<TArgs>(TEnum id, IState state, TArgs args, bool hasArgs)
         {
             EnsureMutationAllowed();
             if (state == null || mMachineState == MachineState.Running)
@@ -451,10 +469,22 @@ namespace YokiFrame
                     return;
                 }
 
+                if (mMachineState == MachineState.Suspend && CurState != null && !ReferenceEquals(CurState, state))
+                {
+                    CurState.End();
+                }
+
                 mMachineState = MachineState.Running;
                 CurState = state;
                 CurEnum = id;
-                state.Start();
+                if (hasArgs)
+                {
+                    StartState(state, args);
+                }
+                else
+                {
+                    state.Start();
+                }
             }
             catch
             {

@@ -163,8 +163,7 @@ public sealed class DocumentationIndexEntry
             return "工具链";
         }
 
-        if (relativePath.Contains("/Api/01-Architecture/", StringComparison.OrdinalIgnoreCase)
-            || relativePath.Contains("Architecture", StringComparison.OrdinalIgnoreCase))
+        if (relativePath.Contains("/Api/01-Architecture/", StringComparison.OrdinalIgnoreCase))
         {
             return "架构";
         }
@@ -199,16 +198,6 @@ public sealed class DocumentationIndexEntry
             "Reference" => 5,
             _ => 6,
         };
-    }
-
-    /// <summary>
-    /// 为同一分组内的文档提供稳定排序键。
-    /// </summary>
-    /// <param name="relativePath">相对 YokiFrame 包根的稳定路径。</param>
-    /// <returns>用于同一文档分组内排序的稳定键。</returns>
-    internal static string ResolveNavigationSortKey(string relativePath)
-    {
-        return relativePath;
     }
 
     /// <summary>获取该条目是否为目录分组的首项。</summary>

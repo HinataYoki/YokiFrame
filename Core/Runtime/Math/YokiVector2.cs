@@ -54,7 +54,7 @@ namespace YokiFrame
             return new YokiVector2(value.X * scale, value.Y * scale);
         }
 
-        /// <summary>判断两个向量的三个分量是否完全相等。</summary>
+        /// <summary>判断两个向量的两个分量是否完全相等。</summary>
         public bool Equals(YokiVector2 other)
         {
             return X == other.X && Y == other.Y;

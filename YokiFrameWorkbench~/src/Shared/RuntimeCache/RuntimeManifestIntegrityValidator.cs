@@ -302,17 +302,17 @@ internal static class RuntimeManifestIntegrityValidator
         }
 
         var cliEntry = RuntimeManifestJson.ReadOptionalString(platform, "cliEntry");
+        string? cliPath = null;
         if (!TryResolveListedEntry(runtimeRoot, guiEntry, files, out var guiPath)
             || requireCli && string.IsNullOrWhiteSpace(cliEntry)
             || !string.IsNullOrWhiteSpace(cliEntry) && layoutVersion != DUAL_ENTRY_LAYOUT_VERSION
             || !string.IsNullOrWhiteSpace(cliEntry)
-                && !TryResolveListedEntry(runtimeRoot, cliEntry, files, out _))
+                && !TryResolveListedEntry(runtimeRoot, cliEntry, files, out cliPath))
         {
             error = "Runtime manifest GUI or CLI entry is invalid.";
             return false;
         }
 
-        _ = TryResolveListedEntry(runtimeRoot, cliEntry, files, out var cliPath);
         profile = new RuntimeManifestProfileValidation(guiPath, cliPath);
         error = string.Empty;
         return true;

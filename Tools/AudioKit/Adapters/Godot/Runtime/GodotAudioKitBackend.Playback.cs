@@ -28,7 +28,12 @@ namespace YokiFrame.Godot
             EnsureUsable();
             AudioStream stream = await ResolveStreamAsync(path, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
-            if (stream == null) return 0;
+            if (stream == null)
+            {
+                LogKit.Warning("[AudioKit] Godot audio resource was not found: " + path);
+                return 0;
+            }
+
             return await InvokeOnGodotThreadAsync(() => PlayResolved(path, stream, options), token).ConfigureAwait(false);
         }
 
@@ -66,7 +71,6 @@ namespace YokiFrame.Godot
                 FadeOutDuration = options.FadeOutDuration,
                 FadingIn = options.FadeInDuration > 0f,
                 Loop = options.Loop,
-                StartedAt = GetNow(),
                 Is3D = options.Is3D,
                 Position = options.Position,
                 FollowTarget = options.FollowTarget,
@@ -76,9 +80,11 @@ namespace YokiFrame.Godot
             };
         }
 
-        /// <summary>创建独立播放流并对常见格式真实应用循环设置。</summary>
+        /// <summary>Loop 设置已匹配时直接共享缓存资源；仅在需要改写循环标记时复制。</summary>
         private static AudioStream CreatePlaybackStream(AudioStream source, bool loop)
         {
+            if (!NeedsLoopOverride(source, loop)) return source;
+
             AudioStream stream = source.Duplicate() as AudioStream ?? source;
             if (stream is AudioStreamOggVorbis ogg) ogg.Loop = loop;
             else if (stream is AudioStreamMP3 mp3) mp3.Loop = loop;
@@ -88,6 +94,21 @@ namespace YokiFrame.Godot
             }
 
             return stream;
+        }
+
+        /// <summary>判断缓存资源当前循环标记是否已满足目标；未识别类型无需复制。</summary>
+        private static bool NeedsLoopOverride(AudioStream source, bool loop)
+        {
+            if (source is AudioStreamOggVorbis ogg) return ogg.Loop != loop;
+            if (source is AudioStreamMP3 mp3) return mp3.Loop != loop;
+            if (source is AudioStreamWav wav)
+            {
+                AudioStreamWav.LoopModeEnum target =
+                    loop ? AudioStreamWav.LoopModeEnum.Forward : AudioStreamWav.LoopModeEnum.Disabled;
+                return wav.LoopMode != target;
+            }
+
+            return false;
         }
 
         /// <summary>配置并启动 2D Player。</summary>

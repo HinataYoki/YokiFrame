@@ -87,6 +87,8 @@ namespace YokiFrame
         {
             StopFastChannelHost();
             YokiFrameEditorTelemetryWriter.Dispose();
+            // Dispose 会释放项目级通知句柄；此处幂等重建，保证本轮 registry capabilities 立即包含 telemetry.notify。
+            YokiFrameEditorTelemetryWriter.RegisterLifecycleHooks();
             sKitTelemetryVersions.Clear();
             sKitSnapshotVersions.Clear();
             sTelemetryFallbackKits.Clear();
@@ -193,7 +195,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 根据收到的 Hello 或 Command frame 在主线程生成终态 response；首版仅执行两个无副作用 System 命令。
+        /// 根据收到的 Hello 或 Command frame 在主线程生成终态 response；只执行策略标记为 ReadOnly 的命令。
         /// </summary>
         /// <param name="request">后台 listener 已完成 framing 校验的请求 frame。</param>
         /// <returns>应写回当前连接的终态 response 或 error frame。</returns>
@@ -248,7 +250,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 解析并执行 FastChannel command；为避免 response 丢失后的 FileBridge 重发语义风险，首版只允许 ping 与 bridge_status。
+        /// 解析并执行 FastChannel command；为避免 response 丢失后的 FileBridge 重发语义风险，仅执行策略标记为 ReadOnly 的命令。
         /// </summary>
         /// <param name="request">已经完成握手后的 Command frame。</param>
         /// <returns>与 FileBridge 相同 schema 的 Response frame，或 Error frame。</returns>
@@ -276,13 +278,14 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 判断命令是否属于首版允许的两个无副作用 System 操作。
+        /// 判断命令是否在当前宿主策略中标记为 ReadOnly。
         /// </summary>
-        /// <param name="envelope">已通过基础协议验证的命令信封。</param>
-        /// <returns>仅 ping 或 bridge_status 时返回 true。</returns>
+        /// <param name="kit">已通过基础协议验证的 Kit 标识。</param>
+        /// <param name="action">已通过基础协议验证的 action 标识。</param>
+        /// <returns>命令为 ReadOnly 时返回 true。</returns>
         private static bool IsFastChannelReadOnlyCommand(string kit, string action)
         {
-            var commands = CreateHostCommandPolicy().AllowedCommands;
+            var commands = GetHostCommandPolicy().AllowedCommands;
             for (var index = 0; index < commands.Count; index++)
             {
                 var command = commands[index];
@@ -350,10 +353,10 @@ namespace YokiFrame
                     sessionId = sSessionId,
                     generation = sGeneration,
                     transport = FAST_CHANNEL_NONE,
-                endpoint = string.Empty,
-                enabled = false,
-                fallback = FAST_CHANNEL_FALLBACK,
-                readOnlyCommands = Array.Empty<string>()
+                    endpoint = string.Empty,
+                    enabled = false,
+                    fallback = FAST_CHANNEL_FALLBACK,
+                    readOnlyCommands = Array.Empty<string>()
                 }
             };
         }
@@ -364,7 +367,7 @@ namespace YokiFrame
         /// <returns>稳定排序前的 Kit/action 能力键数组。</returns>
         private static string[] CreateFastChannelReadOnlyCommands()
         {
-            var commands = CreateHostCommandPolicy().AllowedCommands;
+            var commands = GetHostCommandPolicy().AllowedCommands;
             var readOnlyCommands = new System.Collections.Generic.List<string>();
             for (var index = 0; index < commands.Count; index++)
             {

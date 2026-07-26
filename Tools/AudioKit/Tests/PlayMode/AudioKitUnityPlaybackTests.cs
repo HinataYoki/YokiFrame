@@ -1,4 +1,4 @@
-#if UNITY_2022_3_OR_NEWER
+#if UNITY_EDITOR && UNITY_2022_3_OR_NEWER
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;

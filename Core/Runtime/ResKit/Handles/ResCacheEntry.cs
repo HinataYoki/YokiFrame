@@ -200,7 +200,7 @@ namespace YokiFrame
             ProviderGeneration = providerGeneration;
             CacheEpoch = cacheEpoch;
             IsSynchronous = synchronous;
-            LoadCancellation = new CancellationTokenSource();
+            LoadCancellation = synchronous ? null : new CancellationTokenSource();
         }
 
         internal ResCacheKey Key { get; }
@@ -246,6 +246,11 @@ namespace YokiFrame
         /// <summary>取消底层 Provider 调用，并与完成线程的 Dispose 竞争安全地协调。</summary>
         internal void CancelLoad()
         {
+            if (LoadCancellation == null)
+            {
+                return;
+            }
+
             lock (mCancellationLifetimeLock)
             {
                 if (mCancellationDisposed)
@@ -282,7 +287,7 @@ namespace YokiFrame
 
             if (dispose)
             {
-                LoadCancellation.Dispose();
+                LoadCancellation?.Dispose();
             }
         }
 
@@ -307,7 +312,7 @@ namespace YokiFrame
 
             if (dispose)
             {
-                LoadCancellation.Dispose();
+                LoadCancellation?.Dispose();
             }
         }
     }

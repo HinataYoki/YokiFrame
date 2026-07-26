@@ -133,6 +133,7 @@ public sealed class YokiFramePaths
     /// </summary>
     /// <param name="engineId">安全 engine 标识。</param>
     /// <returns>commands 目录完整路径。</returns>
+    [Obsolete("Use GetCommandsRoot instead.")]
     public string GetEngineCommandsRoot(string engineId)
     {
         return GetCommandsRoot(engineId);
@@ -167,6 +168,7 @@ public sealed class YokiFramePaths
     /// </summary>
     /// <param name="engineId">安全 engine 标识。</param>
     /// <returns>results 目录完整路径。</returns>
+    [Obsolete("Use GetResultsRoot instead.")]
     public string GetEngineResultsRoot(string engineId)
     {
         return GetResultsRoot(engineId);

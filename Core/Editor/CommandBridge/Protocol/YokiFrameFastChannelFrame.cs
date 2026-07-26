@@ -25,17 +25,17 @@ namespace YokiFrame
         /// <summary>
         /// 获取当前消息的固定协议类型。
         /// </summary>
-        public YokiFrameFastChannelMessageKind MessageKind { get; private set; }
+        public YokiFrameFastChannelMessageKind MessageKind { get; }
 
         /// <summary>
         /// 获取当前消息的保留 flags。
         /// </summary>
-        public byte Flags { get; private set; }
+        public byte Flags { get; }
 
         /// <summary>
         /// 获取当前消息的 UTF-8 JSON payload 文本。
         /// </summary>
-        public string PayloadJson { get; private set; }
+        public string PayloadJson { get; }
     }
 }
 #endif

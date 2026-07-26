@@ -240,6 +240,8 @@ namespace YokiFrame
         {
             string value = LogKitSettings.GetString(key, defaultValue);
             if (string.IsNullOrWhiteSpace(value)
+                || string.Equals(value, ".", StringComparison.Ordinal)
+                || string.Equals(value, "..", StringComparison.Ordinal)
                 || !string.Equals(Path.GetFileName(value), value, StringComparison.Ordinal)
                 || value.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {

@@ -134,7 +134,7 @@ namespace YokiFrame
             Assert.IsNotNull(info);
             Assert.AreEqual(typeof(RegistryArchitecture).Name, info.TypeName);
             Assert.AreEqual(typeof(RegistryArchitecture).FullName, info.FullName);
-            Assert.AreEqual(architecture.GetHashCode(), info.InstanceHash);
+            Assert.AreEqual(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(architecture), info.InstanceHash);
             Assert.IsTrue(info.IsAlive);
             Assert.IsTrue(info.Initialized);
             Assert.AreEqual(1, info.ServiceCount);

@@ -42,6 +42,14 @@ namespace YokiFrame.Tests
             Assert.AreEqual(1, createCount);
         }
 
+        /// <summary>非法预加载路径必须在创建默认后端之前被拒绝。</summary>
+        [Test]
+        public void PreloadRejectsInvalidPathBeforeCreatingDefaultBackend()
+        {
+            Assert.Throws<ArgumentException>(() => AudioKit.Preload("  "));
+            Assert.IsFalse(AudioKit.HasBackend);
+        }
+
         /// <summary>提前设置的项目后端必须跳过宿主默认工厂。</summary>
         [Test]
         public void ExplicitBackendSkipsDefaultFactory()

@@ -19,15 +19,17 @@ namespace YokiFrame
         /// <summary>创建后端、Loader、总线和活动 voice 数量的轻量统计。</summary>
         internal static string WriteStats()
         {
-            CaptureState(out List<AudioBusSnapshot> buses, out List<AudioVoiceSnapshot> voices,
-                out List<AudioHistoryEntry> history);
+            var buses = new List<AudioBusSnapshot>(16);
+            var voices = new List<AudioVoiceSnapshot>(32);
+            AudioKit.GetActiveVoices(voices);
+            AudioKit.GetBuses(buses, voices);
             var builder = new StringBuilder(640);
             AppendHeader(builder);
             AppendBackend(builder);
             AppendMaster(builder, buses);
             builder.Append(",\"busCount\":").Append(buses.Count);
             builder.Append(",\"activeVoiceCount\":").Append(voices.Count);
-            builder.Append(",\"historyCount\":").Append(history.Count).Append('}');
+            builder.Append(",\"historyCount\":").Append(AudioKit.HistoryCount).Append('}');
             return builder.ToString();
         }
 
@@ -49,7 +51,7 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>复制一次稳定诊断输入；voices 只抓取一次，交给 GetBuses 复用。</summary>
+        /// <summary>为 Workbench 复制一次稳定诊断输入；voices 只抓取一次，交给 GetBuses 复用。</summary>
         private static void CaptureState(
             out List<AudioBusSnapshot> buses,
             out List<AudioVoiceSnapshot> voices,
@@ -90,12 +92,9 @@ namespace YokiFrame
 
         private static void AppendBackend(StringBuilder builder)
         {
-            IAudioBackend backend = AudioKit.GetBackend();
-            AudioBackendCapabilities capabilities = backend == null
-                ? AudioBackendCapabilities.None
-                : backend.Capabilities;
+            AudioKit.ReadBackendInfo(out string name, out AudioBackendCapabilities capabilities);
             builder.Append(",\"backend\":{\"name\":");
-            AppendString(builder, AudioKit.BackendName, MAX_NAME_LENGTH);
+            AppendString(builder, name, MAX_NAME_LENGTH);
             builder.Append(",\"capabilities\":").Append((int)capabilities);
             builder.Append(",\"capabilityNames\":");
             AppendString(builder, capabilities.ToString(), MAX_NAME_LENGTH);
@@ -245,7 +244,7 @@ namespace YokiFrame
             builder.Append("],\"historyCount\":").Append(count);
             builder.Append(",\"historyTotal\":").Append(AudioKit.HistoryTotalCount);
             builder.Append(",\"historyTruncated\":");
-            AppendBool(builder, AudioKit.HistoryTotalCount > count);
+            AppendBool(builder, history.Count > count || AudioKit.HistoryDroppedCount > 0);
         }
 
         private static void AppendHistoryEntry(StringBuilder builder, AudioHistoryEntry entry)

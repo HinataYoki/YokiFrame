@@ -263,6 +263,9 @@ public static class Program
     /// <returns>存在 `--name` 时返回 true。</returns>
     private static bool HasFlag(string[] args, string name)
     {
-        return args.Any(argument => string.Equals(argument, "--" + name, StringComparison.OrdinalIgnoreCase));
+        var flag = "--" + name;
+        foreach (var argument in args)
+            if (string.Equals(argument, flag, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 }

@@ -162,6 +162,7 @@ namespace YokiFrame
         public int protocolFileCount;
         public long protocolBytes;
         public string oldestProtocolFileUtc = string.Empty;
+        // reserved：Unity 宿主尚未实现命令轮询背压，以下三个字段恒为默认值，消费方不应据此判断故障。
         public bool backpressureActive;
         public string lastPollLimitReason = string.Empty;
         public int bridgeBusyCount;

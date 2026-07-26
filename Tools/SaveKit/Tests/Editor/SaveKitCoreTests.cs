@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using NUnit.Framework;
 using UnityEngine;
-
 namespace YokiFrame.Tests
 {
     /// <summary>覆盖 SaveKit 核心目标、容器、JSON 迁移和加密边界。</summary>
@@ -18,6 +17,16 @@ namespace YokiFrame.Tests
             SaveKit.Reset();
             SaveKit.SetStorage(new MemorySaveStorage());
             SaveKit.SetSerializer(new TestSaveSerializer());
+        }
+
+        /// <summary>用例结束后覆盖默认工厂，避免闭包和捕获变量泄漏到后续 fixture。</summary>
+        [TearDown]
+        public void TearDown()
+        {
+            SaveKit.Reset();
+            SaveKit.RegisterDefaultBackendFactory(
+                static () => new MemorySaveStorage(),
+                static () => new TestSaveSerializer());
         }
 
         /// <summary>验证槽位和 Global 文档互不混淆。</summary>
@@ -309,27 +318,82 @@ namespace YokiFrame.Tests
             }
         }
 
+        /// <summary>验证 GetAllSlots 按槽位编号升序排序而非按名称字典序，Slot(10) 应排在 Slot(2) 之后。</summary>
+        [Test]
+        public void GetAllSlots_SortsBySlotIdNotLexicographic()
+        {
+            var data10 = SaveKit.CreateSaveData();
+            data10.RegisterModule(new TestModule { Value = 10 });
+            SaveKit.Save(SaveTarget.Slot(10), data10);
+            var data2 = SaveKit.CreateSaveData();
+            data2.RegisterModule(new TestModule { Value = 2 });
+            SaveKit.Save(SaveTarget.Slot(2), data2);
+
+            var slots = SaveKit.GetAllSlots();
+
+            Assert.AreEqual(2, slots.Count);
+            Assert.AreEqual(2, slots[0].Target.SlotId);
+            Assert.AreEqual(10, slots[1].Target.SlotId);
+        }
+
+        /// <summary>验证 GetModule 物化后修改字段，再次 Save 时持久化新值而非旧 raw 字节。</summary>
+        [Test]
+        public void GetModule_AfterMaterialization_SerializesLiveObjectNotStaleRawBytes()
+        {
+            var original = SaveKit.CreateSaveData();
+            original.RegisterModule(new TestModule { Value = 1 });
+            SaveKit.Save(0, original);
+
+            var loaded = SaveKit.Load(0);
+            var module = loaded.GetModule<TestModule>();
+            module.Value = 99;
+            SaveKit.Save(0, loaded);
+
+            var reloaded = SaveKit.Load(0);
+            Assert.AreEqual(99, reloaded.GetModule<TestModule>().Value);
+            Assert.IsTrue(loaded.HasModule<TestModule>());
+            Assert.AreEqual(1, loaded.ModuleCount);
+        }
+
+        /// <summary>验证手工拼接超 256 字符 ASCII 模块 ID 的容器被识别为 Invalid 而非 MigrationFailed。</summary>
+        [Test]
+        public void CorruptContainer_OversizedModuleIdReturnsInvalid()
+        {
+            var target = SaveTarget.Slot(0);
+            var storage = (MemorySaveStorage)SaveKit.GetStorage();
+            var serializer = SaveKit.GetSerializer();
+            var id300 = new string('a', 300);
+            var idBytes = Encoding.UTF8.GetBytes(id300);
+            byte[] moduleTable;
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream, Encoding.UTF8))
+            {
+                writer.Write(1);
+                writer.Write(idBytes.Length);
+                writer.Write(idBytes);
+                writer.Write(0);
+                writer.Flush();
+                moduleTable = stream.ToArray();
+            }
+
+            var meta = SaveMeta.Create(target, 1, serializer.SerializerId, null);
+            var header = meta.SerializeHeader(moduleTable.Length);
+            var container = new byte[header.Length + moduleTable.Length];
+            Buffer.BlockCopy(header, 0, container, 0, header.Length);
+            Buffer.BlockCopy(moduleTable, 0, container, header.Length, moduleTable.Length);
+            storage.Write(target, container);
+
+            var result = SaveKit.TryLoad(target);
+
+            Assert.AreEqual(SaveLoadStatus.Invalid, result.Status);
+            Assert.IsNull(result.Data);
+        }
+
         /// <summary>测试模块验证泛型类型全名和显式注册 ID 两种寻址方式。</summary>
         [Serializable]
         private sealed class TestModule
         {
             public int Value;
-        }
-
-        /// <summary>使用 Unity JsonUtility 的测试 JSON 编解码器。</summary>
-        private sealed class UnityJsonSaveCodec : IJsonSaveCodec
-        {
-            /// <inheritdoc />
-            public string Serialize<T>(T data) => JsonUtility.ToJson(data, false);
-
-            /// <inheritdoc />
-            public T Deserialize<T>(string json) => JsonUtility.FromJson<T>(json);
-
-            /// <inheritdoc />
-            public string Serialize(object data) => JsonUtility.ToJson(data, false);
-
-            /// <inheritdoc />
-            public void DeserializeOverwrite(string json, object target) => JsonUtility.FromJsonOverwrite(json, target);
         }
 
         /// <summary>只用于覆盖容器稳定性的最小测试序列化器。</summary>
@@ -399,6 +463,25 @@ namespace YokiFrame.Tests
             {
                 return Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(jsonUtf8) + mSuffix);
             }
+        }
+
+        /// <summary>
+        /// 测试用 JSON 编解码器，镜像 <see cref="YokiFrame.Unity.UnityJsonSaveCodec"/>；
+        /// SDK 测试程序集不引用 Unity Adapter，须在测试内保留此副本。
+        /// </summary>
+        private sealed class UnityJsonSaveCodec : IJsonSaveCodec
+        {
+            /// <inheritdoc />
+            public string Serialize<T>(T data) => JsonUtility.ToJson(data, false);
+
+            /// <inheritdoc />
+            public T Deserialize<T>(string json) => JsonUtility.FromJson<T>(json);
+
+            /// <inheritdoc />
+            public string Serialize(object data) => JsonUtility.ToJson(data, false);
+
+            /// <inheritdoc />
+            public void DeserializeOverwrite(string json, object target) => JsonUtility.FromJsonOverwrite(json, target);
         }
     }
 }

@@ -15,7 +15,8 @@ internal static class PathSecurity
     /// <returns>已归一化的完整路径。</returns>
     public static string CombineInside(string rootPath, params string[] segments)
     {
-        var combinedPath = segments.Aggregate(rootPath, Path.Combine);
+        var combinedPath = rootPath;
+        foreach (var seg in segments) combinedPath = Path.Combine(combinedPath, seg);
         var fullPath = EnsureInside(rootPath, combinedPath);
         EnsureNoReparsePoint(rootPath, fullPath);
         return fullPath;

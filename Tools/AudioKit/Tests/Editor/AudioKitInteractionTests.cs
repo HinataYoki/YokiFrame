@@ -119,6 +119,46 @@ namespace YokiFrame.Tests
             StringAssert.Contains("\"isRegistered\":true", json);
         }
 
+        /// <summary>验证后端上报的非法总线名称不进入诊断列表，且公开读取不抛异常。</summary>
+        [Test]
+        public void ReportedInvalidBusNamesAreExcludedFromDiagnostics()
+        {
+            AudioKit.SetBackend(new InvalidBusReportingBackend());
+            List<AudioBusSnapshot> buses = new();
+
+            Assert.DoesNotThrow(() => AudioKit.GetBuses(buses));
+
+            Assert.IsFalse(buses.Any(static bus => bus.Name == null));
+            Assert.IsFalse(buses.Any(static bus => bus.Name.Length > 128));
+            Assert.AreEqual(2, buses.Single(static bus => bus.IsMaster).ActiveVoiceCount);
+        }
+
+        /// <summary>验证 StopBus 传入 Master 停止全部总线，而不是静默停掉 Sfx。</summary>
+        [Test]
+        public void StopBusWithMasterStopsEveryBus()
+        {
+            AudioKit.PlaySfx("sfx/click");
+            AudioKit.PlayMusic("audio/music");
+
+            AudioKit.StopBus(AudioBus.Master);
+
+            List<AudioVoiceSnapshot> voices = new();
+            AudioKit.GetActiveVoices(voices);
+            Assert.IsEmpty(voices);
+        }
+
+        /// <summary>验证主动清空历史后不再把会话累计数误报为队列裁剪。</summary>
+        [Test]
+        public void ClearHistoryResetsTruncationEvidence()
+        {
+            for (var index = 0; index < 8; index++) AudioKit.Play("audio/click" + index);
+
+            AudioKit.ClearHistory();
+            string json = new AudioKitInteractionProvider().CreateSnapshot("state");
+
+            StringAssert.Contains("\"historyTruncated\":false", json);
+        }
+
         /// <summary>验证大量长路径历史下 payload 仍有裁剪证据且不超过共享内存上限。</summary>
         [Test]
         public void WorkbenchSnapshotStaysWithinSharedMemoryLimit()
@@ -142,6 +182,23 @@ namespace YokiFrame.Tests
             return new YokiFrameCommandRequest(
                 "audiokit-test", "AudioKit", action, payload, 1000,
                 Encoding.UTF8.GetByteCount(payload));
+        }
+
+        /// <summary>回填非法 Bus 名称的第三方后端替身，用于固定诊断入列净化。</summary>
+        private sealed class InvalidBusReportingBackend : FakeAudioBackend
+        {
+            /// <summary>上报一个空 Bus 与一个超长 Bus，模拟未遵守约定的自定义后端。</summary>
+            public override void GetActiveVoices(List<AudioVoiceSnapshot> result)
+            {
+                result.Clear();
+                result.Add(new AudioVoiceSnapshot { VoiceId = 1, Path = "audio/null-bus", Bus = null });
+                result.Add(new AudioVoiceSnapshot
+                {
+                    VoiceId = 2,
+                    Path = "audio/long-bus",
+                    Bus = new string('a', 200)
+                });
+            }
         }
     }
 }

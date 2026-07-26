@@ -144,16 +144,22 @@ namespace YokiFrame
                 return false;
             }
 
-            try
+            Delegate[] callbacks = callback.GetInvocationList();
+            bool delivered = false;
+            for (int index = 0; index < callbacks.Length; index++)
             {
-                callback(notification);
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine(exception);
+                try
+                {
+                    ((Action<EventKitEditorNotification>)callbacks[index]).Invoke(notification);
+                    delivered = true;
+                }
+                catch (Exception exception)
+                {
+                    Debug.WriteLine(exception);
+                }
             }
 
-            return true;
+            return delivered;
         }
     }
 }

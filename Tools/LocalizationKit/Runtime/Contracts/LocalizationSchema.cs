@@ -13,10 +13,12 @@ namespace YokiFrame
         /// <param name="value">JSON 中的语言文本。</param>
         /// <param name="languageId">解析成功后的规范语言标识。</param>
         /// <returns>输入属于公开语言枚举时返回 true。</returns>
+        /// <remarks>先拒绝逗号，避免 Enum.TryParse 把名称列表按位或成另一个合法枚举值。</remarks>
         internal static bool TryParseLanguageId(string value, out LanguageId languageId)
         {
             languageId = default;
             return !string.IsNullOrWhiteSpace(value)
+                && value.IndexOf(',') < 0
                 && Enum.TryParse(value, true, out languageId)
                 && Enum.IsDefined(typeof(LanguageId), languageId);
         }
@@ -49,7 +51,9 @@ namespace YokiFrame
                 return TryParsePluralCategory(numericValue, out category);
             }
 
-            return Enum.TryParse(value, true, out category)
+            category = default;
+            return value.IndexOf(',') < 0
+                && Enum.TryParse(value, true, out category)
                 && Enum.IsDefined(typeof(PluralCategory), category);
         }
 

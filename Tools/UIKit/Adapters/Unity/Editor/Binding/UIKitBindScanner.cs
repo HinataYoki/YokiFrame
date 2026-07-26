@@ -274,15 +274,15 @@ namespace YokiFrame
         /// <summary>构造从 Prefab 根到当前节点的稳定层级路径。</summary>
         private static string BuildPath(Transform target)
         {
-            string path = target.name;
-            Transform current = target.parent;
+            var segments = new Stack<string>();
+            Transform current = target;
             while (current != default)
             {
-                path = current.name + "/" + path;
+                segments.Push(current.name);
                 current = current.parent;
             }
 
-            return path;
+            return string.Join("/", segments);
         }
     }
 }

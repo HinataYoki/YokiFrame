@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace YokiFrame
@@ -101,6 +102,11 @@ namespace YokiFrame
         void ICodeNode.Generate(CodeTextWriter writer)
         {
             CodeModifierValidator.ValidateField(mModifiers);
+            if ((mModifiers & MemberModifier.Const) != 0 && mDefaultValue == null)
+            {
+                throw new InvalidOperationException("const 字段必须通过 WithDefaultValue 提供初始化值。");
+            }
+
             XmlDocumentationWriter.WriteSummary(writer, mComment);
             for (var index = 0; index < mAttributes.Count; index++)
             {

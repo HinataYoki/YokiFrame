@@ -9,15 +9,15 @@ namespace YokiFrame
     public readonly struct SaveTarget : IEquatable<SaveTarget>
     {
         private const int MAX_GLOBAL_KEY_LENGTH = 64;
-        private readonly SaveTargetKind kind;
-        private readonly int slotId;
-        private readonly string globalKey;
+        private readonly SaveTargetKind mKind;
+        private readonly int mSlotId;
+        private readonly string mGlobalKey;
 
         private SaveTarget(SaveTargetKind targetKind, int targetSlotId, string targetGlobalKey)
         {
-            kind = targetKind;
-            slotId = targetSlotId;
-            globalKey = targetGlobalKey;
+            mKind = targetKind;
+            mSlotId = targetSlotId;
+            mGlobalKey = targetGlobalKey;
         }
 
         /// <summary>创建数字槽位目标。</summary>
@@ -45,44 +45,44 @@ namespace YokiFrame
         /// <summary>获取目标类型。</summary>
         public SaveTargetKind Kind
         {
-            get { return kind; }
+            get { return mKind; }
         }
 
         /// <summary>获取槽位编号；Global 目标返回 -1。</summary>
         public int SlotId
         {
-            get { return kind == SaveTargetKind.Slot ? slotId : -1; }
+            get { return mKind == SaveTargetKind.Slot ? mSlotId : -1; }
         }
 
         /// <summary>获取 Global 文档名称；槽位目标返回空值。</summary>
         public string GlobalKey
         {
-            get { return globalKey; }
+            get { return mGlobalKey; }
         }
 
         /// <summary>获取用于元数据和存储定位的稳定名称。</summary>
         public string Name
         {
-            get { return kind == SaveTargetKind.Slot ? slotId.ToString(CultureInfo.InvariantCulture) : globalKey; }
+            get { return mKind == SaveTargetKind.Slot ? mSlotId.ToString(CultureInfo.InvariantCulture) : mGlobalKey; }
         }
 
         /// <summary>判断目标是否为槽位。</summary>
         public bool IsSlot
         {
-            get { return kind == SaveTargetKind.Slot; }
+            get { return mKind == SaveTargetKind.Slot; }
         }
 
         /// <summary>判断目标是否为 Global 文档。</summary>
         public bool IsGlobal
         {
-            get { return kind == SaveTargetKind.Global; }
+            get { return mKind == SaveTargetKind.Global; }
         }
 
         /// <summary>比较两个目标是否指向同一存档文档。</summary>
         public bool Equals(SaveTarget other)
         {
-            return kind == other.kind && slotId == other.slotId &&
-                   string.Equals(globalKey, other.globalKey, StringComparison.Ordinal);
+            return mKind == other.mKind && mSlotId == other.mSlotId &&
+                   string.Equals(mGlobalKey, other.mGlobalKey, StringComparison.Ordinal);
         }
 
         /// <summary>比较对象是否为同一存档目标。</summary>
@@ -96,15 +96,15 @@ namespace YokiFrame
         {
             unchecked
             {
-                var hash = ((int)kind * 397) ^ slotId;
-                return globalKey == null ? hash : (hash * 397) ^ StringComparer.Ordinal.GetHashCode(globalKey);
+                var hash = ((int)mKind * 397) ^ mSlotId;
+                return mGlobalKey == null ? hash : (hash * 397) ^ StringComparer.Ordinal.GetHashCode(mGlobalKey);
             }
         }
 
         /// <summary>获取目标的人类可读表示。</summary>
         public override string ToString()
         {
-            return kind == SaveTargetKind.Slot ? "Slot(" + slotId + ")" : "Global(" + globalKey + ")";
+            return mKind == SaveTargetKind.Slot ? "Slot(" + mSlotId + ")" : "Global(" + mGlobalKey + ")";
         }
 
         /// <summary>比较两个保存目标。</summary>

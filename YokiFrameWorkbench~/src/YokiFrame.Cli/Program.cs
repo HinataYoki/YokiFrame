@@ -88,7 +88,7 @@ internal static class Program
 
         if (CliLocalizationKitCommands.IsLocalizationCommand(commandLine))
         {
-            return CliLocalizationKitCommands.Dispatch(commandLine, client);
+            return await CliLocalizationKitCommands.DispatchAsync(commandLine, client, cancellationToken).ConfigureAwait(false);
         }
 
         if (CliSpatialKitCommands.IsSpatialKitCommand(commandLine))
@@ -381,7 +381,7 @@ internal static class Program
             var heartbeat = client.ReadHeartbeat(engineId);
             return heartbeat != null && heartbeat.Generation != 0L ? heartbeat.Generation : null;
         }
-        catch
+        catch (Exception)
         {
             return null;
         }

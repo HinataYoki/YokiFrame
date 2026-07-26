@@ -115,15 +115,19 @@ public sealed partial class LocalizationKitApplicationService
 
     /// <summary>等待当前源文件的跨进程独占写锁，并把进程异常退出留下的 abandoned Mutex 视为已取得。</summary>
     /// <param name="sourcePath">已规范化的 JSON 源文件路径。</param>
+    /// <param name="cancellationToken">取消令牌；超时时抛出 OperationCanceledException。</param>
     /// <returns>负责释放 Mutex 所有权和句柄的租约。</returns>
-    private static SourceWriteLock AcquireSourceWriteLock(string sourcePath)
+    private static SourceWriteLock AcquireSourceWriteLock(string sourcePath, CancellationToken cancellationToken = default)
     {
         Mutex mutex = new(false, CreateSourceWriteMutexName(sourcePath));
         try
         {
             try
             {
-                mutex.WaitOne();
+                while (!mutex.WaitOne(TimeSpan.FromMilliseconds(250)))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
             }
             catch (AbandonedMutexException)
             {

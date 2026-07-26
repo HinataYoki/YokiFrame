@@ -127,7 +127,7 @@ public sealed partial class LocalizationKitApplicationService
             ?? throw new InvalidDataException("LocalizationKit JSON 根节点必须是对象。");
         JsonArray texts = rootObject["texts"] as JsonArray
             ?? throw new InvalidDataException("LocalizationKit JSON 缺少 texts 数组。");
-        JsonObject entry = texts.OfType<JsonObject>().FirstOrDefault(candidate => ReadNodeInt(candidate["id"]) == request.TextId)
+        JsonObject entry = texts.OfType<JsonObject>().FirstOrDefault(candidate => ReadNodeInt(candidate["id"]) == (int?)request.TextId)
             ?? CreateEntry(texts, request.TextId);
         JsonObject target = pluralCategory.Length == 0
             ? GetOrCreateObject(entry, "values")
@@ -403,21 +403,12 @@ public sealed partial class LocalizationKitApplicationService
     }
 
     /// <summary>读取 JSON 节点整数；调用前已由完整 schema 校验保证条目结构。</summary>
-    private static int ReadNodeInt(JsonNode? value)
+    private static int? ReadNodeInt(JsonNode? value)
     {
-        if (value is not JsonValue jsonValue)
-        {
-            return int.MinValue;
-        }
-
-        if (jsonValue.TryGetValue<int>(out int number))
-        {
-            return number;
-        }
-
+        if (value is not JsonValue jsonValue) return null;
+        if (jsonValue.TryGetValue<int>(out int number)) return number;
         return jsonValue.TryGetValue<JsonElement>(out JsonElement element) && element.TryGetInt32(out number)
-            ? number
-            : int.MinValue;
+            ? number : null;
     }
 
     /// <summary>获取或创建对象属性；已有非对象节点会被拒绝，避免写入时静默丢失结构。</summary>

@@ -31,20 +31,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 追加具名特性参数，名称必须是合法 C# 标识符。
-        /// </summary>
-        /// <param name="name">参数名称。</param>
-        /// <param name="value">参数值表达式。</param>
-        /// <returns>当前特性节点。</returns>
-        internal AttributeCode WithNamedArgument(string name, string value)
-        {
-            string validName = CSharpIdentifierValidator.RequireIdentifier(name, nameof(name));
-            string validValue = CSharpText.RequireNonEmptyLine(value, nameof(value));
-            mArguments.Add(validName + " = " + validValue);
-            return this;
-        }
-
-        /// <summary>
         /// 渲染无参数或带参数的单行特性声明。
         /// </summary>
         /// <param name="writer">接收源码的 writer。</param>

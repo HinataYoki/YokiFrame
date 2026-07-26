@@ -19,10 +19,7 @@ namespace YokiFrame
 #endif
         private static Func<IEngineLogger> sDefaultLoggerFactory;
         private static IEngineLogger sLogger;
-#if UNITY_EDITOR || (GODOT && TOOLS)
-        private static IEngineLogger sEffectiveLogger;
-        private static Func<IEngineLogger, IEngineLogger> sLoggerAdapter;
-#endif
+        private static bool sCreatingDefaultLogger;
         private static bool sEnabled = true;
         private static LogLevel sMinimumLevel = LogLevel.Debug;
 #if UNITY_EDITOR || (GODOT && TOOLS)
@@ -137,7 +134,6 @@ namespace YokiFrame
 
                 sLogger = logger;
 #if UNITY_EDITOR || (GODOT && TOOLS)
-                sEffectiveLogger = AdaptLoggerLocked(logger);
                 BumpDiagnosticVersion();
 #endif
             }
@@ -172,10 +168,7 @@ namespace YokiFrame
             {
                 sLogger = null;
                 sDefaultLoggerFactory = null;
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                sEffectiveLogger = null;
-                sLoggerAdapter = null;
-#endif
+                sCreatingDefaultLogger = false;
                 sEnabled = true;
                 sMinimumLevel = LogLevel.Debug;
 #if UNITY_EDITOR || (GODOT && TOOLS)
@@ -281,47 +274,58 @@ namespace YokiFrame
 
         /// <summary>
         /// 惰性创建当前宿主默认 logger，并在首次安装后应用 LogKit Runtime Settings。
+        /// 工厂在锁外执行；创建窗口内的重入或并发日志会被静默跳过，避免递归与死锁。
         /// </summary>
         private static void EnsureDefaultLogger()
         {
-            IEngineLogger logger;
+            if (System.Threading.Volatile.Read(ref sLogger) != null)
+            {
+                return;
+            }
+
+            Func<IEngineLogger> factory;
             lock (sLock)
             {
-                if (sLogger != null || sDefaultLoggerFactory == null)
+                if (sLogger != null || sDefaultLoggerFactory == null || sCreatingDefaultLogger)
                 {
                     return;
                 }
 
-                logger = sDefaultLoggerFactory();
-                if (logger == null)
-                {
-                    throw new InvalidOperationException("The default LogKit logger factory returned null.");
-                }
-
-                sLogger = logger;
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                sEffectiveLogger = AdaptLoggerLocked(logger);
-                BumpDiagnosticVersion();
-#endif
+                sCreatingDefaultLogger = true;
+                factory = sDefaultLoggerFactory;
             }
 
-            LogKitSettings.ApplyBaseRuntimeSettings();
-        }
-
-#if UNITY_EDITOR || (GODOT && TOOLS)
-        /// <summary>
-        /// 注入 Editor/Tools 日志后端适配器；只用于观察期包装能力。
-        /// </summary>
-        /// <param name="adapter">适配函数；传入 null 时禁用适配。</param>
-        internal static void SetLoggerAdapter(Func<IEngineLogger, IEngineLogger> adapter)
-        {
-            lock (sLock)
+            IEngineLogger logger = null;
+            var installed = false;
+            try
             {
-                sLoggerAdapter = adapter;
-                sEffectiveLogger = AdaptLoggerLocked(sLogger);
-                BumpDiagnosticVersion();
+                logger = factory();
+            }
+            finally
+            {
+                lock (sLock)
+                {
+                    sCreatingDefaultLogger = false;
+                    if (logger != null && sLogger == null)
+                    {
+                        sLogger = logger;
+                        installed = true;
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                        BumpDiagnosticVersion();
+#endif
+                    }
+                }
+            }
+
+            if (logger == null)
+            {
+                throw new InvalidOperationException("The default LogKit logger factory returned null.");
+            }
+
+            if (installed)
+            {
+                LogKitSettings.ApplyBaseRuntimeSettings();
             }
         }
-#endif
     }
 }

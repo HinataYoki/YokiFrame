@@ -87,23 +87,8 @@ public sealed class CliPlayerBuildCommandsTests
     /// <summary>启动真实 CLI 程序并捕获 JSON 输出。</summary>
     /// <param name="arguments">CLI 参数。</param>
     /// <returns>进程结果。</returns>
-    private static async Task<CliProcessResult> RunCliAsync(params string[] arguments)
-    {
-        ProcessStartInfo startInfo = new("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        startInfo.ArgumentList.Add(GetCliAssemblyPath());
-        foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
-
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start YokiFrame.Cli process.");
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        var standardErrorTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return new CliProcessResult(process.ExitCode, await standardOutputTask, await standardErrorTask);
-    }
+    private static Task<CliProcessResult> RunCliAsync(params string[] arguments)
+        => CliTestHelpers.RunCliAsync(arguments);
 
     /// <summary>断言失败输出符合统一 compact JSON 契约。</summary>
     /// <param name="result">CLI 进程结果。</param>
@@ -123,29 +108,7 @@ public sealed class CliPlayerBuildCommandsTests
     /// <summary>定位同一构建配置生成的 CLI 程序集。</summary>
     /// <returns>CLI DLL 路径。</returns>
     private static string GetCliAssemblyPath()
-    {
-        var outputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        var configurationDirectory = outputDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test configuration directory is missing.");
-        var projectDirectory = configurationDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test project directory is missing.");
-        var binDirectory = projectDirectory.Parent
-            ?? throw new DirectoryNotFoundException("CLI test bin directory is missing.");
-        var cliAssemblyPath = Path.Combine(
-            binDirectory.FullName,
-            "YokiFrame.Cli",
-            configurationDirectory.Name,
-            outputDirectory.Name,
-            "YokiFrame.Cli.dll");
-        Assert.True(File.Exists(cliAssemblyPath), "CLI assembly was not built: " + cliAssemblyPath);
-        return cliAssemblyPath;
-    }
-
-    /// <summary>表示 CLI 子进程终态。</summary>
-    /// <param name="ExitCode">退出码。</param>
-    /// <param name="StandardOutput">标准输出。</param>
-    /// <param name="StandardError">标准错误。</param>
-    private sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
+        => CliTestHelpers.GetCliAssemblyPath();
 
     /// <summary>创建并清理最小 Godot Player build 测试工程。</summary>
     private sealed class TestProjectRoot : IDisposable

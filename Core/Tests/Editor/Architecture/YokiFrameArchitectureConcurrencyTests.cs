@@ -114,6 +114,51 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 让服务初始化在持有架构锁期间重入 force 获取目标服务，同时后台线程并发 force 同型服务。
+        /// 门闩让后台候选稳定停在构造阶段放大互等时序，验证持锁线程绕过共享创建后双方均能完成。
+        /// </summary>
+        [Test]
+        public void ReentrantForceDuringRegisterDoesNotDeadlockWithConcurrentForce()
+        {
+            IArchitecture architecture = Architecture<ReentrantForceArchitecture>.Interface;
+            using (var constructorEntered = new ManualResetEventSlim(false))
+            using (var constructorGate = new ManualResetEventSlim(false))
+            {
+                ReentrantTargetService.Reset(constructorEntered, constructorGate);
+                try
+                {
+                    Task<ReentrantTargetService> backgroundTask = Task.Run(
+                        () => architecture.GetService<ReentrantTargetService>(true));
+
+                    Assert.IsTrue(
+                        constructorEntered.Wait(TASK_WAIT_MILLISECONDS),
+                        "后台 force 候选未能在限定时间内进入构造阶段。");
+
+                    var initService = new ReentrantInitService();
+                    Task registerTask = Task.Run(() => architecture.Register(initService));
+
+                    Task[] tasks = { backgroundTask, registerTask };
+                    Assert.IsTrue(
+                        Task.WaitAll(tasks, TASK_WAIT_MILLISECONDS),
+                        "持锁重入 force 与后台并发 force 未能在限定时间内完成。");
+                    Assert.IsNotNull(initService.TargetDuringInit);
+                    Assert.AreSame(initService.TargetDuringInit, backgroundTask.Result);
+                    Assert.AreSame(
+                        initService.TargetDuringInit,
+                        architecture.GetService<ReentrantTargetService>());
+                    Assert.AreEqual(2, ReentrantTargetService.CreatedCount);
+                    Assert.AreEqual(1, ReentrantTargetService.InitCount);
+                    Assert.AreEqual(1, ReentrantTargetService.DisposeCount);
+                }
+                finally
+                {
+                    ReentrantTargetService.ClearGates();
+                    architecture.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
         /// 创建一个等待共同起跑信号后强制获取服务的后台任务。
         /// </summary>
         /// <param name="readyGate">记录后台任务已经就绪的计数门。</param>
@@ -194,6 +239,132 @@ namespace YokiFrame
             internal static void ClearConstructorBarrier()
             {
                 Volatile.Write(ref sConstructorBarrier, default);
+            }
+
+            /// <summary>
+            /// 记录架构对最终服务实例执行的一次初始化。
+            /// </summary>
+            protected override void OnInit()
+            {
+                Interlocked.Increment(ref sInitCount);
+            }
+
+            /// <summary>
+            /// 记录被替换候选或测试架构释放时执行的服务释放。
+            /// </summary>
+            protected override void OnDispose()
+            {
+                Interlocked.Increment(ref sDisposeCount);
+            }
+        }
+
+        /// <summary>
+        /// 提供不主动注册服务的测试架构，用于验证持锁重入 force 与后台并发 force 不互等。
+        /// </summary>
+        public sealed class ReentrantForceArchitecture : Architecture<ReentrantForceArchitecture>
+        {
+            /// <summary>
+            /// 保持空初始化，等待测试在注册阶段触发重入 force 获取。
+            /// </summary>
+            protected override void OnInit()
+            {
+            }
+        }
+
+        /// <summary>
+        /// 初始化期间重入 force 获取目标服务的测试服务，先放行后台候选构造以放大互等时序。
+        /// </summary>
+        public sealed class ReentrantInitService : AbstractService
+        {
+            /// <summary>
+            /// 获取初始化期间重入 force 获取到的目标服务。
+            /// </summary>
+            public ReentrantTargetService TargetDuringInit { get; private set; }
+
+            /// <summary>
+            /// 放行后台候选构造后，在持有架构锁的初始化中重入 force 获取同型目标服务。
+            /// </summary>
+            protected override void OnInit()
+            {
+                ReentrantTargetService.OpenConstructorGate();
+                TargetDuringInit = Architecture.GetService<ReentrantTargetService>(true);
+            }
+        }
+
+        /// <summary>
+        /// 记录构造、初始化和释放次数，并用门闩让后台 force 候选稳定停在构造阶段。
+        /// </summary>
+        public sealed class ReentrantTargetService : AbstractService
+        {
+            private static ManualResetEventSlim sConstructorEntered;
+            private static ManualResetEventSlim sConstructorGate;
+            private static int sCreatedCount;
+            private static int sInitCount;
+            private static int sDisposeCount;
+
+            /// <summary>
+            /// 创建测试服务，先宣告已进入构造阶段，再等待测试放行；放行后的候选立即通过。
+            /// </summary>
+            public ReentrantTargetService()
+            {
+                Interlocked.Increment(ref sCreatedCount);
+                ManualResetEventSlim constructorEntered = Volatile.Read(ref sConstructorEntered);
+                if (constructorEntered != default)
+                {
+                    constructorEntered.Set();
+                }
+
+                ManualResetEventSlim constructorGate = Volatile.Read(ref sConstructorGate);
+                if (constructorGate != default)
+                {
+                    constructorGate.Wait(CONSTRUCTOR_WAIT_MILLISECONDS);
+                }
+            }
+
+            /// <summary>获取当前测试轮次的构造次数。</summary>
+            internal static int CreatedCount => Volatile.Read(ref sCreatedCount);
+
+            /// <summary>获取当前测试轮次的初始化次数。</summary>
+            internal static int InitCount => Volatile.Read(ref sInitCount);
+
+            /// <summary>获取当前测试轮次的释放次数。</summary>
+            internal static int DisposeCount => Volatile.Read(ref sDisposeCount);
+
+            /// <summary>
+            /// 重置测试计数并安装当前测试使用的构造宣告与放行门闩。
+            /// </summary>
+            /// <param name="constructorEntered">候选进入构造阶段时置位的宣告门闩。</param>
+            /// <param name="constructorGate">候选构造等待放行的门闩。</param>
+            internal static void Reset(
+                ManualResetEventSlim constructorEntered,
+                ManualResetEventSlim constructorGate)
+            {
+                Volatile.Write(ref sConstructorEntered, constructorEntered);
+                Volatile.Write(ref sConstructorGate, constructorGate);
+                Interlocked.Exchange(ref sCreatedCount, 0);
+                Interlocked.Exchange(ref sInitCount, 0);
+                Interlocked.Exchange(ref sDisposeCount, 0);
+            }
+
+            /// <summary>
+            /// 放行所有等待构造门闩的候选。
+            /// </summary>
+            internal static void OpenConstructorGate()
+            {
+                ManualResetEventSlim constructorGate = Volatile.Read(ref sConstructorGate);
+                if (constructorGate != default)
+                {
+                    constructorGate.Set();
+                }
+            }
+
+            /// <summary>
+            /// 清除门闩引用，避免测试结束后保留已经释放的同步对象。
+            /// </summary>
+            internal static void ClearGates()
+            {
+                Volatile.Write(ref sConstructorEntered, default);
+                Volatile.Write(ref sConstructorGate, default);
             }
 
             /// <summary>

@@ -6,16 +6,31 @@ namespace YokiFrame
     /// <summary>管理语言复数规则，并为未注册语言提供安全的 Other fallback。</summary>
     public static class PluralRuleFactory
     {
-        private static readonly Dictionary<LanguageId, IPluralRule> sRules = new Dictionary<LanguageId, IPluralRule>
+        private static readonly KeyValuePair<LanguageId, IPluralRule>[] sBuiltinRules =
         {
-            { LanguageId.ChineseSimplified, InvariantPluralRule.ChineseSimplified },
-            { LanguageId.ChineseTraditional, InvariantPluralRule.ChineseTraditional },
-            { LanguageId.English, EnglishPluralRule.Instance },
-            { LanguageId.Japanese, InvariantPluralRule.Japanese },
-            { LanguageId.Korean, InvariantPluralRule.Korean }
+            new KeyValuePair<LanguageId, IPluralRule>(LanguageId.ChineseSimplified, InvariantPluralRule.ChineseSimplified),
+            new KeyValuePair<LanguageId, IPluralRule>(LanguageId.ChineseTraditional, InvariantPluralRule.ChineseTraditional),
+            new KeyValuePair<LanguageId, IPluralRule>(LanguageId.English, EnglishPluralRule.Instance),
+            new KeyValuePair<LanguageId, IPluralRule>(LanguageId.Japanese, InvariantPluralRule.Japanese),
+            new KeyValuePair<LanguageId, IPluralRule>(LanguageId.Korean, InvariantPluralRule.Korean)
         };
 
+        private static readonly Dictionary<LanguageId, IPluralRule> sRules = new Dictionary<LanguageId, IPluralRule>();
+
         private static readonly IPluralRule sDefaultRule = InvariantPluralRule.ChineseSimplified;
+
+        /// <summary>初始化内置复数规则注册表。</summary>
+        static PluralRuleFactory() => ResetRules();
+
+        /// <summary>恢复内置复数规则，清除全部自定义注册。</summary>
+        public static void ResetRules()
+        {
+            sRules.Clear();
+            for (int index = 0; index < sBuiltinRules.Length; index++)
+            {
+                sRules[sBuiltinRules[index].Key] = sBuiltinRules[index].Value;
+            }
+        }
 
         /// <summary>获取指定语言的规则；未注册语言返回默认 invariant 规则。</summary>
         public static IPluralRule GetRule(LanguageId languageId)

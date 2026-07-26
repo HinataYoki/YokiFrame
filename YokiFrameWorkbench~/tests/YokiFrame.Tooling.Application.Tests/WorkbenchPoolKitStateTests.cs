@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json.Nodes;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Services;
@@ -23,19 +22,15 @@ public sealed class WorkbenchPoolKitStateTests
 
         WorkbenchDashboardState dashboard = new WorkbenchDashboardService(projectRoot)
             .LoadDashboard("unity-editor");
-        PropertyInfo? property = typeof(WorkbenchDashboardState).GetProperty("PoolKitState");
 
-        Assert.NotNull(property);
-        object? state = property.GetValue(dashboard);
-        Assert.NotNull(state);
-        Assert.Equal(1, state.GetType().GetProperty("PoolCount")?.GetValue(state));
-        Assert.Equal(2, state.GetType().GetProperty("TotalActive")?.GetValue(state));
-        System.Collections.IEnumerable pools = (System.Collections.IEnumerable)state.GetType().GetProperty("Pools")!.GetValue(state)!;
-        object pool = Assert.Single(pools.Cast<object>());
-        Assert.Equal("pool-42", pool.GetType().GetProperty("PoolId")?.GetValue(pool));
-        object leaks = state.GetType().GetProperty("Leaks")!.GetValue(state)!;
-        Assert.Equal(2, leaks.GetType().GetProperty("Total")?.GetValue(leaks));
-        Assert.Equal(true, leaks.GetType().GetProperty("Truncated")?.GetValue(leaks));
+        Assert.NotNull(dashboard.PoolKitState);
+        var state = dashboard.PoolKitState!;
+        Assert.Equal(1, state.PoolCount);
+        Assert.Equal(2, state.TotalActive);
+        var pool = Assert.Single(state.Pools);
+        Assert.Equal("pool-42", pool.PoolId);
+        Assert.Equal(2, state.Leaks.Total);
+        Assert.True(state.Leaks.Truncated);
         string commandsRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor", "commands");
         Assert.False(Directory.Exists(commandsRoot) && Directory.EnumerateFiles(commandsRoot, "*.json").Any());
     }

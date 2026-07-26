@@ -132,11 +132,5 @@ namespace YokiFrame
                 return sBusVolumes.TryGetValue(bus, out float volume) ? volume : 1f;
             }
         }
-
-        /// <summary>读取不受静音影响的普通总线配置音量。</summary>
-        private static float GetStoredBusVolume(string bus)
-        {
-            lock (sLock) return sBusVolumes.TryGetValue(bus, out float volume) ? volume : 1f;
-        }
     }
 }

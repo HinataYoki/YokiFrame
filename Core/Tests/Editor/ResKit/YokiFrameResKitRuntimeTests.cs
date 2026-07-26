@@ -76,6 +76,22 @@ namespace YokiFrame.Tests
             Assert.AreEqual(1, mProvider.ReleaseCount);
         }
 
+        /// <summary>验证对象式释放不会消费 handle 的独占租约，handle 持有者不被静默失效。</summary>
+        [Test]
+        public void ReleaseObjectDoesNotConsumeHandleExclusiveLease()
+        {
+            var handle = ResKit.LoadAsset<TestAsset>("Configs/Main");
+
+            ResKit.Release(handle.Asset);
+
+            Assert.AreEqual(1, ResKit.TotalRefCount);
+            Assert.AreEqual(0, mProvider.ReleaseCount);
+            Assert.IsNotNull(handle.Asset);
+
+            handle.Dispose();
+            Assert.AreEqual(1, mProvider.ReleaseCount);
+        }
+
         /// <summary>验证相同 key 的并发异步获取共享一次 Provider 加载并产生独立租约。</summary>
         [Test]
         public async Task ConcurrentAsyncLoadsUseSingleFlight()

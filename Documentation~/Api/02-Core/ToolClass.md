@@ -36,7 +36,8 @@ token.UnRegister();
 - `Value` 只在比较结果不相等时触发回调。
 - `Bind` 返回 EventKit 注销令牌；`BindWithCallback` 注册后立即回放当前值。
 - `SetValueWithoutEvent` 只更新值，适合反序列化或批量同步。
-- `SetCompareFunc` 按闭合泛型类型全局替换比较函数，不是单实例设置。
+- `SetCompareFunc` 按闭合泛型类型替换默认比较函数，不是单实例设置。
+- 构造重载 `BindValue(T value, Func<T, T, bool> compareFunc)` 设置仅作用于当前实例的比较函数，优先于 `SetCompareFunc` 的默认值。
 
 ### FastDictionary
 
