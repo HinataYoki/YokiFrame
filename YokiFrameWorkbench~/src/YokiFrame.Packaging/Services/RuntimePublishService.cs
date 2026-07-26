@@ -133,12 +133,12 @@ public sealed class RuntimePublishService
     }
 
     /// <summary>
-    /// 追加 GUI 与 CLI 共用的 Native AOT 发布参数，避免两个入口出现不同的符号和运行时策略。
+    /// 追加 GUI 与 CLI 共用的 Native AOT 发布参数；使用入口开关避免 PublishAot 污染可移植项目引用。
     /// </summary>
     /// <param name="arguments">即将传给 dotnet publish 的参数集合。</param>
     private static void AppendNativeAotArguments(ICollection<string> arguments)
     {
-        arguments.Add("-p:PublishAot=true");
+        arguments.Add("-p:YokiFramePublishAot=true");
         arguments.Add("-p:StripSymbols=true");
     }
 

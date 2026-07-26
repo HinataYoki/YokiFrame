@@ -20,6 +20,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <EnableAvaloniaXamlCompilation>true</EnableAvaloniaXamlCompilation>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Native AOT 只在可执行入口映射，避免全局属性传播到 netstandard 项目引用。 -->
+    <PublishAot Condition="'$(YokiFramePublishAot)' == 'true'">true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>

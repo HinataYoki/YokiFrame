@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace YokiFrame.Packaging.Tests;
 
 /// <summary>
@@ -67,7 +69,8 @@ public sealed class PublishScriptTests
         Assert.Contains("plan.Profile.PublishReadyToRun", source, StringComparison.Ordinal);
         Assert.Contains("plan.Profile.PublishAot", source, StringComparison.Ordinal);
         Assert.Contains("-p:PublishReadyToRun=true", source, StringComparison.Ordinal);
-        Assert.Contains("-p:PublishAot=true", source, StringComparison.Ordinal);
+        Assert.Contains("-p:YokiFramePublishAot=true", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("-p:PublishAot=true", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -109,7 +112,36 @@ public sealed class PublishScriptTests
         Assert.Contains("-RuntimeIdentifier \"win-x64-aot\"", windowsSource, StringComparison.Ordinal);
         Assert.DoesNotContain("-DotnetRuntimeIdentifier", windowsSource, StringComparison.Ordinal);
         Assert.DoesNotContain("PublishAot=true", sharedSource, StringComparison.Ordinal);
-        Assert.Contains("PublishAot=true", ReadPackagingSource("Services", "RuntimePublishService.cs"), StringComparison.Ordinal);
+        var serviceSource = ReadPackagingSource("Services", "RuntimePublishService.cs");
+        Assert.Contains("-p:YokiFramePublishAot=true", serviceSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("-p:PublishAot=true", serviceSource, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 验证 Native AOT 开关只由 GUI 与 CLI 可执行入口映射，依赖项目不会收到 PublishAot。
+    /// </summary>
+    /// <param name="projectName">可执行入口项目名。</param>
+    [Theory]
+    [InlineData("YokiFrame.Workbench.Avalonia")]
+    [InlineData("YokiFrame.Cli")]
+    public void NativeAotSwitchIsMappedByExecutableEntrypoints(string projectName)
+    {
+        XDocument project = ReadSourceProject(projectName);
+        XElement publishAot = Assert.Single(project.Descendants("PublishAot"));
+
+        Assert.Equal("true", publishAot.Value);
+        Assert.Equal("'$(YokiFramePublishAot)' == 'true'", (string?)publishAot.Attribute("Condition"));
+    }
+
+    /// <summary>
+    /// 验证承载 TableKit 生成器的 Application 项目不映射 Native AOT 开关。
+    /// </summary>
+    [Fact]
+    public void PortableToolingProjectDoesNotMapNativeAotSwitch()
+    {
+        XDocument project = ReadSourceProject("YokiFrame.Tooling.Application");
+
+        Assert.Empty(project.Descendants("PublishAot"));
     }
 
     /// <summary>
@@ -238,6 +270,23 @@ public sealed class PublishScriptTests
         var path = Path.Combine(pathSegments);
         Assert.True(File.Exists(path), "Missing Packaging source: " + path);
         return File.ReadAllText(path);
+    }
+
+    /// <summary>
+    /// 读取 Workbench src 下指定项目文件。
+    /// </summary>
+    /// <param name="projectName">目录名及项目名。</param>
+    /// <returns>已解析的项目 XML。</returns>
+    private static XDocument ReadSourceProject(string projectName)
+    {
+        var path = Path.Combine(
+            FindPackageRoot(),
+            "YokiFrameWorkbench~",
+            "src",
+            projectName,
+            projectName + ".csproj");
+        Assert.True(File.Exists(path), "Missing Workbench project: " + path);
+        return XDocument.Load(path);
     }
 
     /// <summary>
