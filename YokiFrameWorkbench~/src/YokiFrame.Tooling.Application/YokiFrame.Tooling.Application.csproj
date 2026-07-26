@@ -4,6 +4,7 @@
     <ProjectReference Include="..\YokiFrame.Client\YokiFrame.Client.csproj" />
     <ProjectReference Include="..\YokiFrame.Installer.Core\YokiFrame.Installer.Core.csproj" />
     <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
+    <ProjectReference Include="..\..\..\Tools\TableKit\Editor\YokiFrame.TableKit.Editor.csproj" />
   </ItemGroup>
 
   <ItemGroup>

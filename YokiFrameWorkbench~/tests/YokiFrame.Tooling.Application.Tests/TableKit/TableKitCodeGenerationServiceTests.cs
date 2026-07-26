@@ -5,9 +5,21 @@ using YokiFrame.Tooling.Application.Services.TableKit;
 
 namespace YokiFrame.Tooling.Application.Tests.TableKit;
 
-/// <summary>验证 Workbench 在 Luban 成功后直接生成跨宿主 TableKit 项目代码。</summary>
+/// <summary>验证 Workbench 编排 TableKit Editor/CodeGenKit 生成跨宿主项目代码。</summary>
 public sealed class TableKitCodeGenerationServiceTests
 {
+    /// <summary>TableKit 专属模板与通用 CodeGenKit 必须分别归属对应 Editor 程序集。</summary>
+    [Fact]
+    public void SourceGenerationUsesTableKitEditorAndCoreCodeGenKitAssemblies()
+    {
+        Assert.Equal(
+            "YokiFrame.TableKit.Editor",
+            typeof(global::YokiFrame.TableKitSourceCodeGenerator).Assembly.GetName().Name);
+        Assert.Contains(
+            typeof(global::YokiFrame.TableKitSourceCodeGenerator).Assembly.GetReferencedAssemblies(),
+            static assembly => string.Equals(assembly.Name, "YokiFrame.Editor", StringComparison.Ordinal));
+    }
+
     /// <summary>Unity 直接生成门面、加载契约和 asmdef，不再产生 manifest 或 Contracts 引用。</summary>
     [Fact]
     public void UnityGenerationWritesCompleteProjectFilesWithoutManifest()
@@ -66,15 +78,24 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.Contains("public static void Init(string resourcePathPattern)", facade, StringComparison.Ordinal);
             Assert.Contains("sTables = LoadTables(RuntimePathPattern);", facade, StringComparison.Ordinal);
             Assert.Contains("sTables = await LoadTablesAsync(RuntimePathPattern);", facade, StringComparison.Ordinal);
-            Assert.Contains("sLoader.Load<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
-            Assert.Contains("sLoader.LoadAsync<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
+            Assert.Contains("new ResKitTableDataLoader(sTableNames)", facade, StringComparison.Ordinal);
+            Assert.Contains("GetLoader().Load<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
+            Assert.Contains("GetLoader().LoadAsync<global::Cfg.Tables>(resourcePathPattern, ResourceLoadMode)", facade, StringComparison.Ordinal);
+            Assert.Contains("\"config\",", facade, StringComparison.Ordinal);
+            Assert.Contains("\"item\",", facade, StringComparison.Ordinal);
+            Assert.DoesNotContain("TableKit 未设置 ITableDataLoader", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("UseAsyncLoading", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("ConfigureAwait(false)", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("TablesTypeName", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("CodeTarget", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("DataTarget", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("DataExtension", facade, StringComparison.Ordinal);
-            Assert.DoesNotContain("EditorDataPath", facade, StringComparison.Ordinal);
+            Assert.Contains("#if UNITY_EDITOR || (GODOT && TOOLS)", facade, StringComparison.Ordinal);
+            Assert.Contains("public static string EditorDataPath", facade, StringComparison.Ordinal);
+            Assert.Contains("public static global::Cfg.Tables TablesEditor", facade, StringComparison.Ordinal);
+            Assert.Contains("public static void SetEditorDataPath(string path)", facade, StringComparison.Ordinal);
+            Assert.Contains("public static void RefreshEditor()", facade, StringComparison.Ordinal);
+            Assert.Contains("UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("TableDataLocation", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("LogicalAddress", facade, StringComparison.Ordinal);
             string loader = File.ReadAllText(loaderPath);
@@ -82,6 +103,12 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.DoesNotContain("namespace YokiFrame.TableKit", loader, StringComparison.Ordinal);
             Assert.Contains("public enum TableDataResourceLoadMode", loader, StringComparison.Ordinal);
             Assert.Contains("public interface ITableDataLoader", loader, StringComparison.Ordinal);
+            Assert.Contains("internal sealed class ResKitTableDataLoader", loader, StringComparison.Ordinal);
+            Assert.Contains("? ResKit.LoadRaw(path)", loader, StringComparison.Ordinal);
+            Assert.Contains("? await ResKit.LoadRawAsync(path)", loader, StringComparison.Ordinal);
+            Assert.Contains("ResKit.Load<UnityEngine.TextAsset>(path)", loader, StringComparison.Ordinal);
+            Assert.Contains("ResKit.LoadAsync<UnityEngine.TextAsset>(path)", loader, StringComparison.Ordinal);
+            Assert.Contains("LoadBinaryTablesAsync<TTables>", loader, StringComparison.Ordinal);
             Assert.Contains(
                 "TTables Load<TTables>(string resourcePathPattern, TableDataResourceLoadMode resourceLoadMode)",
                 loader,
@@ -130,6 +157,7 @@ public sealed class TableKitCodeGenerationServiceTests
             {
                 TopModule = "Game.Config"
             };
+            WriteManagerSource(contract);
 
             new TableKitCodeGenerationService().Generate(options, contract);
 
@@ -139,6 +167,7 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.Contains("namespace YokiFrame", facade, StringComparison.Ordinal);
             Assert.Contains("private static global::Game.Config.Tables sTables;", facade, StringComparison.Ordinal);
             Assert.Contains("public static global::Game.Config.Tables Tables", facade, StringComparison.Ordinal);
+            Assert.Contains("public static global::Game.Config.Tables TablesEditor", facade, StringComparison.Ordinal);
             Assert.DoesNotContain("namespace Game.Config", facade, StringComparison.Ordinal);
             Assert.Contains("namespace YokiFrame", loader, StringComparison.Ordinal);
         }
@@ -188,6 +217,12 @@ public sealed class TableKitCodeGenerationServiceTests
                 "YokiFrameToolsBuild=$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))",
                 Assert.Single(ownerGroup.Descendants("AdditionalProperties")).Value,
                 StringComparison.Ordinal);
+            Assert.Contains(
+                generatedProject.Descendants("DefineConstants"),
+                static constants => constants.Value.Contains("GODOT", StringComparison.Ordinal));
+            Assert.Contains(
+                generatedProject.Descendants("DefineConstants"),
+                static constants => constants.Value.Contains("TOOLS", StringComparison.Ordinal));
         }
         finally
         {
@@ -195,9 +230,9 @@ public sealed class TableKitCodeGenerationServiceTests
         }
     }
 
-    /// <summary>只修改运行时和编辑器配置不会改写稳定生成源码或更新时间戳。</summary>
+    /// <summary>只修改运行时配置不会改写稳定生成源码或更新时间戳。</summary>
     [Fact]
-    public void ConfigurationOnlyChangesDoNotRewriteGeneratedSources()
+    public void RuntimeConfigurationChangesDoNotRewriteGeneratedSources()
     {
         string root = CreateProjectRoot("unity");
         try
@@ -217,7 +252,6 @@ public sealed class TableKitCodeGenerationServiceTests
             TableKitOptions changedOptions = options with
             {
                 OutputDataDir = "Assets/StreamingAssets/Generated/Tables",
-                EditorDataPath = "Assets/EditorOnly/Tables",
                 IsAddressable = true,
                 RuntimePathPattern = "external://tables/{0}",
                 UseRawResourceLoading = false
@@ -237,6 +271,35 @@ public sealed class TableKitCodeGenerationServiceTests
             Assert.Equal(loader, File.ReadAllText(loaderPath));
             Assert.Equal(stableTimestamp, File.GetLastWriteTimeUtc(facadePath));
             Assert.Equal(stableTimestamp, File.GetLastWriteTimeUtc(loaderPath));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>修改 Editor 数据路径时只更新门面的 Editor 默认值，Loader 契约保持稳定。</summary>
+    [Fact]
+    public void EditorDataPathChangeUpdatesEditorFacadeOnly()
+    {
+        string root = CreateProjectRoot("unity");
+        try
+        {
+            TableKitOptions options = CreateOptions(root, "Assets/Scripts/TableKit");
+            TableKitContract contract = CreateContract(root, options.OutputCodeDir);
+            TableKitCodeGenerationService service = new();
+            service.Generate(options, contract);
+            string facadePath = Path.Combine(contract.OutputCodeDirectory, "TableKit.cs");
+            string loaderPath = Path.Combine(contract.OutputCodeDirectory, "ITableDataLoader.cs");
+            string originalFacade = File.ReadAllText(facadePath);
+            string originalLoader = File.ReadAllText(loaderPath);
+
+            service.Generate(options with { EditorDataPath = "Assets/EditorOnly/Tables" }, contract);
+
+            string changedFacade = File.ReadAllText(facadePath);
+            Assert.NotEqual(originalFacade, changedFacade);
+            Assert.Contains("Assets/EditorOnly/Tables/", changedFacade, StringComparison.Ordinal);
+            Assert.Equal(originalLoader, File.ReadAllText(loaderPath));
         }
         finally
         {
@@ -289,7 +352,7 @@ public sealed class TableKitCodeGenerationServiceTests
     /// <returns>主 target 契约。</returns>
     private static TableKitContract CreateContract(string root, string outputCodeDir)
     {
-        return new TableKitContract
+        TableKitContract contract = new()
         {
             ConfigPath = Path.Combine(root, "Luban", "luban.conf"),
             TargetName = "client",
@@ -304,6 +367,29 @@ public sealed class TableKitCodeGenerationServiceTests
             OutputDataDirectory = Path.Combine(root, "Data"),
             AssemblyName = "YokiFrame.TableKit"
         };
+        WriteManagerSource(contract);
+        return contract;
+    }
+
+    /// <summary>写入测试使用的最小 Luban manager 原始生成形状。</summary>
+    /// <param name="contract">决定命名空间、manager 名和输出根的契约。</param>
+    private static void WriteManagerSource(TableKitContract contract)
+    {
+        string lubanRoot = Path.Combine(contract.OutputCodeDirectory, "Luban");
+        Directory.CreateDirectory(lubanRoot);
+        string source = "using Luban;\n"
+            + "namespace " + contract.TopModule + "\n"
+            + "{\n"
+            + "    public partial class " + contract.Manager + "\n"
+            + "    {\n"
+            + "        public " + contract.Manager + "(System.Func<string, ByteBuf> loader)\n"
+            + "        {\n"
+            + "            _ = loader(\"config\");\n"
+            + "            _ = loader(\"item\");\n"
+            + "        }\n"
+            + "    }\n"
+            + "}\n";
+        File.WriteAllText(Path.Combine(lubanRoot, contract.Manager + ".cs"), source);
     }
 
     /// <summary>创建一条模拟 builtin.xml 自定义 constructor 名称的外部类型映射。</summary>

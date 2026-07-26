@@ -1,0 +1,19 @@
+{
+    "name": "YokiFrame.TableKit.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

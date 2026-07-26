@@ -65,7 +65,7 @@ Unity 异步流程推荐安装。启用后，同名异步 API 可以从 `Task<T>
 
 ### Luban
 
-TableKit 必需。Workbench 通过 `dotnet Luban.dll` 执行验证和生成；主 Luban 代码写入用户项目 TableKit 代码根下的 `Luban/` 子目录，Workbench 直接把门面、加载契约和宿主程序集文件写入父目录。
+TableKit 必需。Workbench 页面触发验证和生成，`Tooling.Application` 通过 `dotnet Luban.dll` 执行 Luban 并编排项目文件；主 Luban 代码写入 TableKit 代码根下的 `Luban/` 子目录，包内 `Tools/TableKit/Editor/Generation` 模板通过 CodeGenKit 把门面、默认 ResKit Loader 契约和宿主程序集文件提交到父目录。
 
 ### DOTween
 

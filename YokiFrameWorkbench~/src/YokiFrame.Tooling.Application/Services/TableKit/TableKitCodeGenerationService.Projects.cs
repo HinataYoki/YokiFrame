@@ -102,6 +102,11 @@ internal sealed partial class TableKitCodeGenerationService
                     new XElement("RootNamespace", contract.TopModule),
                     new XElement("ImplicitUsings", "disable"),
                     new XElement("Nullable", "disable"),
+                    new XElement("DefineConstants", "$(DefineConstants);GODOT"),
+                    new XElement(
+                        "DefineConstants",
+                        new XAttribute("Condition", "'$(YokiFrameToolsBuild)' == 'true'"),
+                        "$(DefineConstants);TOOLS"),
                     new XElement("EnableDefaultCompileItems", "false"),
                     new XElement("Deterministic", "true"),
                     new XElement("TreatWarningsAsErrors", "true"),

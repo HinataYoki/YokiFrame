@@ -26,7 +26,7 @@ internal sealed partial class TableKitCodeGenerationService
         }
 
         TableKitProjectKind projectKind = DetectProjectKind(options.ProjectRoot);
-        List<string> files = GenerateRuntimeFiles(contract);
+        List<string> files = GenerateRuntimeFiles(options, contract);
         if (projectKind == TableKitProjectKind.Unity)
         {
             GenerateUnityBoundary(options, contract, files);
@@ -39,13 +39,14 @@ internal sealed partial class TableKitCodeGenerationService
     }
 
     /// <summary>生成两端共用的 Runtime C# 文件，并保持用户 External 目录不受影响。</summary>
+    /// <param name="options">包含 Editor 数据路径的项目选项。</param>
     /// <param name="contract">包含实际 manager 与输出根的生成契约。</param>
     /// <returns>生成文件列表。</returns>
-    private static List<string> GenerateRuntimeFiles(TableKitContract contract)
+    private static List<string> GenerateRuntimeFiles(TableKitOptions options, TableKitContract contract)
     {
         List<string> files = new();
         AddGeneratedFile(files, contract.OutputCodeDirectory, "ITableDataLoader.cs", BuildLoaderSource());
-        AddGeneratedFile(files, contract.OutputCodeDirectory, "TableKit.cs", BuildFacadeSource(contract));
+        AddGeneratedFile(files, contract.OutputCodeDirectory, "TableKit.cs", BuildFacadeSource(options, contract));
         IReadOnlyList<IGrouping<(string Namespace, string TypeName), TableKitExternalTypeMapping>> helperGroups =
             contract.GenerateExternalTypeUtil
                 ? contract.ExternalTypeMappings
@@ -116,7 +117,7 @@ internal sealed partial class TableKitCodeGenerationService
         string content)
     {
         string path = Path.Combine(outputDirectory, fileName);
-        WriteAtomically(path, content);
+        global::YokiFrame.TableKitSourceCodeGenerator.WriteSourceFile(path, content);
         files.Add(path);
     }
 

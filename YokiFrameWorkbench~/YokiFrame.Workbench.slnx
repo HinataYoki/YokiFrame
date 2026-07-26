@@ -7,6 +7,7 @@
     <Project Path="src/YokiFrame.Protocol/YokiFrame.Protocol.csproj" />
     <Project Path="src/YokiFrame.Tooling.Application/YokiFrame.Tooling.Application.csproj" />
     <Project Path="src/YokiFrame.Workbench.Avalonia/YokiFrame.Workbench.Avalonia.csproj" />
+    <Project Path="../Tools/TableKit/Editor/YokiFrame.TableKit.Editor.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/YokiFrame.Client.Tests/YokiFrame.Client.Tests.csproj" />
