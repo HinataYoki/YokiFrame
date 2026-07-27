@@ -244,7 +244,8 @@ public sealed class RuntimeReleaseCommandsTests
             PackageRoot = mRoot;
             RuntimeRoot = Path.Combine(PackageRoot, "WorkbenchRuntime~");
             WriteFile(Path.Combine(PackageRoot, "package.json"), "{\"name\":\"com.hinatayoki.yokiframe\"}");
-            WriteFile(Path.Combine(PackageRoot, "Documentation~", "Guides", "Tooling.md"), "# Tooling");
+            WriteFile(Path.Combine(PackageRoot, "Documentation~", "Api", "00-GettingStarted", "FrameworkOverview.md"), "# 框架概览");
+            WriteFile(Path.Combine(PackageRoot, "Documentation~", "Guides", "AI-Install.md"), "# AI 安装");
             WriteFile(Path.Combine(PackageRoot, "Core", "Runtime", "CoreMarker.cs"), "public sealed class CoreMarker { }");
             WriteBootstrapTemplate("build-current-platform.cmd", "cmd-template");
             WriteBootstrapTemplate("build-current-platform.sh", "sh-template");

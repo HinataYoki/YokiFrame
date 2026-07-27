@@ -1,13 +1,5 @@
 # SpatialKit 空间索引
 
-> 面向读者：需要维护动态实体索引并执行空间查询的 Runtime 开发者
->
-> 主要入口：`SpatialKit`、`ISpatialIndex<T>`、`ISpatialEntity`
->
-> 运行边界：跨宿主 Runtime；Provider 与 Unity Gizmo 位于独立 Editor 边界
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
-
 ## 适用场景
 
 SpatialKit 是纯 C# 空间索引 Tool Kit，用于维护带稳定 Id 和位置的实体，并快速执行半径、包围盒、最近邻和批量空间查询。它提供三种数据结构：无固定边界的 HashGrid、固定二维边界的 Quadtree，以及固定三维边界的 Octree。
@@ -18,21 +10,13 @@ SpatialKit 是纯 C# 空间索引 Tool Kit，用于维护带稳定 Id 和位置�
 - 大量动态实体主要在二维投影平面上移动。
 - 关卡或房间有明确二维/三维边界，需要树结构分区。
 - 业务需要把空间索引写入和跨线程查询分离。
-- Editor/AI 需要读取当前索引数量、分区和边界等只读诊断信息。
+- 需要在编辑器中查看当前索引数量、分区和边界等只读信息。
 
 SpatialKit 不负责实体生命周期、位置同步、线程调度、碰撞检测、物理模拟或路径规划。索引只保存实体引用和内部定位，不会替调用方驱动实体移动。
 
-## 入口与当前状态
+## 使用前提
 
-Runtime API、Tool Interaction、CLI 只读查询、SpatialKit 专用 Avalonia Workbench 页面和 Unity Scene Gizmo 均已实现，源码位于 `Tools/SpatialKit`。Runtime 诊断钩子在 Player 中由编辑器宏剔除，Unity/Godot Editor Provider 与 Unity Gizmo 位于独立 Editor 边界。
-
-| 程序集 | 作用 | 编译边界 |
-|---|---|---|
-| `YokiFrame.SpatialKit` | `SpatialKit` 门面、索引、查询和 Snapshot | Runtime，可进入 Unity Player/Godot Runtime；Workbench 诊断代码不进入 Player |
-| `YokiFrame.SpatialKit.Editor` | Tool Interaction Provider、命令处理和诊断 JSON | Unity Editor 或 Godot `TOOLS` |
-| `YokiFrame.SpatialKit.Unity.Editor` | Unity Editor 自动安装 Provider，并提供 Scene View Gizmo | 仅 Unity Editor |
-
-Runtime 只依赖 `YokiFrame` Core，不引用 `UnityEngine`、`UnityEditor` 或 Godot。实体位置使用 Core 的 `YokiVector3`，矩形和三维边界使用 `YokiRect`、`YokiBounds`，不直接使用宿主向量类型。
+SpatialKit 可用于 Unity 与 Godot .NET Runtime，支持 HashGrid、Quadtree 和 Octree。Workbench/CLI 只读查询索引和密度；Unity Scene Gizmo 是可选的 Editor 辅助视图。
 
 ## 快速上手
 
@@ -271,7 +255,7 @@ Octree 使用完整三维边界和距离，适合体积查询。它同样实现 
 
 ### 树节点只读视图
 
-Quadtree 和 Octree 的 `Root` 只用于查看树结构，不提供公开修改节点的方法。节点构造函数和分裂/合并操作均为内部实现。
+Quadtree 和 Octree 的 `Root` 只用于查看树结构，不提供公开修改节点的方法；通过索引自身的插入、删除和更新 API 修改内容。
 
 ### `Quadtree<T>.QuadtreeNode`
 
@@ -341,94 +325,6 @@ public static SpatialIndexSnapshot<T> CreateSnapshot<T>(
 
 三个内置索引都实现 `ISpatialSnapshotProvider<T>`。`SpatialIndexSnapshotExtensions.CreateSnapshot` 会检查索引是否支持 Snapshot；传入 `null` 抛出 `ArgumentNullException`，不支持时抛出 `NotSupportedException`。
 
-### 诊断契约
-
-### `ISpatialIndexDiagnostics`
-
-三个内置索引都实现该接口，Editor Provider 使用它生成只读状态：
-
-| API | 说明 |
-|---|---|
-| `string DiagnosticsId` | 进程内稳定索引编号 |
-| `string IndexKind` | `HashGrid`、`Quadtree` 或 `Octree` |
-| `string EntityTypeName` | 实体 CLR 类型名 |
-| `int Count` | 当前实体数量 |
-| `string PlaneName` | 投影平面；三维索引为空 |
-| `float CellSize` | HashGrid 网格尺寸，其它为 `0` |
-| `int MaxDepth` | 树最大深度，HashGrid 为 `0` |
-| `int MaxEntitiesPerNode` | 树节点容量，HashGrid 为 `0` |
-| `int PartitionCount` | 分区或节点数量 |
-| `bool HasCellSize` | 是否有网格尺寸 |
-| `bool HasBounds2D` / `bool HasBounds3D` | 是否有对应边界 |
-| `YokiRect Bounds2D` / `YokiBounds Bounds3D` | 对应边界，没有时返回默认值 |
-| `string CreatedAtUtc` | 创建时间的 UTC ISO 文本 |
-
-### `SpatialIndexDiagnosticsSnapshot`
-
-这是 `ISpatialIndexDiagnostics` 的只读值快照，公开属性与接口字段一致：`DiagnosticsId`、`IndexKind`、`EntityTypeName`、`Count`、`PlaneName`、`CellSize`、`MaxDepth`、`MaxEntitiesPerNode`、`PartitionCount`、`HasCellSize`、`HasBounds2D`、`HasBounds3D`、`Bounds2D`、`Bounds3D` 和 `CreatedAtUtc`。构造函数为内部 API，由 SpatialKit 诊断采样创建。
-
-### `SpatialKitDiagnosticsSnapshot`
-
-| API | 说明 |
-|---|---|
-| `int TotalCreatedIndexCount` | 进程启动以来创建的索引总数 |
-| `IReadOnlyList<SpatialIndexDiagnosticsSnapshot> Indexes` | 当前仍存活的索引摘要 |
-| `int ReleasedIndexCount` | 采样时清理的弱引用数量累计值 |
-
-该类型的构造函数为内部 API。诊断注册表持有索引弱引用，不会因为 Tool Interaction 采样阻止索引被回收。
-
-## 宿主与工具入口
-
-### Tool Interaction
-
-Editor Provider 通过 `SpatialKitEditorInstaller.EnsureInstalled()` 幂等注册到统一 Tool Interaction catalog。Unity Editor 由 `[InitializeOnLoadMethod]` 自动安装；Godot Tools 由宿主插件启动入口调用。
-
-当前公开给 Tool Interaction 的只读入口：
-
-| 类型 | 名称 | 说明 |
-|---|---|---|
-| Snapshot | `SpatialKit/state` | 当前索引状态快照 |
-| Command | `SpatialKit/stats` | 聚合索引数量、实体数量和分区统计 |
-| Command | `SpatialKit/list_indexes` | 当前索引详情列表 |
-| Command | `SpatialKit/density` | 按 diagnosticsId/resolution 获取有界二维密度 bin 和热点 |
-| Command | `SpatialKit/analyze` | 聚合 stats 与全部索引密度，供 CLI/AI 诊断 |
-| Command | `SpatialKit/get_workbench_snapshot` | 完整 Workbench 状态 JSON |
-
-所有命令都是只读操作，不会插入、更新、删除实体，也不会执行空间查询。状态 JSON 使用 `schemaVersion: 1`，并包含单调 `version`；索引列表最多输出 128 项，超出时通过 `indexesTruncated: true` 表示裁剪。state 默认携带 8x8 密度 bin；`density` 默认 32x32，分辨率限制为 4-64，详细结果只在显式请求时生成。
-
-常见统计字段包括 `activeIndexCount`、`totalCreatedIndexCount`、`releasedIndexCount`、`entityCount`、`partitionCount`、`hashGridCount`、`quadtreeCount` 和 `octreeCount`。索引详情包括诊断 Id、索引类型、实体类型、数量、平面、网格/树参数、分区数量、创建时间和可选边界。
-
-### Workbench 与 CLI
-
-Workbench SpatialKit 页面以只读方式展示运行中的索引实例、实体/分区汇总、二维密度热力图、热点健康摘要、P95/最大占用和 stale/session/generation。HashGrid、Quadtree 和 Octree 都输出二维聚合；Octree 将全部高度上的实体沿 Y 轴聚合到 XZ 投影，热力图不是八叉树节点结构。列表显示 `XZ投影`，详情显示 `XZ 投影 · Y 轴聚合`。页面消费 `Tooling.Application` 强类型 read model，不直接解析 JSON，也不会发送周期 command。
-
-页面采用 SpatialKit 专属的 Master-Detail 工作区，保留“空间索引列表 + 密度热力图”的识别性：左侧是可调宽度、可独立滚动的运行中索引列表，列表项同时显示索引类型、实体类型、诊断 Id、投影平面和实体数；右侧按索引身份、参数上下文、密度指标和方形热力图组织详情。热力图使用当前详情视口的可用边长保持方形，避免空间坐标被拉伸；无索引、未选择、无密度数据和 stale 分别使用独立空状态或警告表达，不把 stale 数据伪装成实时结果。1280x820 与 1700x1060 验收尺寸均禁止横向滚动，文本字号不随窗口缩放。
-
-CLI/AI 使用以下入口：
-
-```powershell
-yoki spatialkit stats
-yoki spatialkit indexes
-yoki spatialkit density --index hash-grid-1 --resolution 32
-yoki spatialkit analyze
-```
-
-CLI 输出保留 command/response evidence，AI 应先用 `stats` 判断实例规模，再用 `density` 定位热点，用 `analyze` 解释 P95、最大占用和分区倾斜。stale、generation 不一致或 payload 被裁剪时必须按诊断状态报告，不能当作零实体。
-
-### Unity Scene Gizmo
-
-Unity Scene View 的 `SpatialKit` Overlay 在 Unity Editor 启动或脚本重载完成后隐藏，并覆盖 Unity 布局保存的旧可见状态；需要时通过 `YokiFrame/SpatialKit/Open Overlay Menu` 显示并展开。面板提供 `Spatial` Toggle 和索引下拉框：Toggle 默认关闭且只控制线框绘制，下拉框可以显示全部索引，或按 `diagnosticsId` 只显示一个索引。Overlay 可通过标题栏关闭按钮或 Scene View 的 Overlays 菜单再次隐藏；开关和筛选只保存在当前 Unity Editor 会话，不写入 Runtime Settings、Project Settings 或协议文件。
-
-三类索引的绘制语义：
-
-| 索引 | Scene View 绘制 |
-|---|---|
-| HashGrid | 已占用的 XY/XZ 网格边界，以及投影后的实体点 |
-| Quadtree | 根节点和子节点的 XY/XZ 边界，以及投影后的实体点 |
-| Octree | 真实三维节点 AABB，以及实体实际三维位置 |
-
-节点按深度使用不同颜色，直接持有实体的叶节点提高亮度。绘制器按诊断版本和 0.2 秒最小间隔缓存快照；每个索引最多复制 2048 个节点和 4096 个实体，超出时标签追加 `truncated`。Editor-only 快照只复制节点边界、实体 Id 和位置，不持有业务实体引用，不进入 Unity Player 或 Godot 无 `TOOLS` 构建。
-
 ## 生命周期与错误边界
 
 - 内置索引本体没有线程安全保证；由一个明确 owner 负责写入、更新和清理。
@@ -437,8 +333,22 @@ Unity Scene View 的 `SpatialKit` Overlay 在 Unity Editor 启动或脚本重载
 - 查询结果列表由调用方拥有，空间查询不会自动分配结果列表或清空已有内容；高频查询应复用 `List<T>`。
 - `UpdateBatch` 按输入顺序逐个调用 `Update`，不会自动合并重复 Id，也不提供事务回滚。
 - `Clear` 清空实体和分区；树索引恢复为叶根节点，HashGrid 清空所有非空网格。
-- Editor/Tools 诊断注册表通过弱引用在下一次采样时移除回收索引；`UNITY_EDITOR || (GODOT && TOOLS)` 之外不编译诊断字段、注册表和版本标记，Player 热路径不执行诊断调用。
-- Unity Scene Gizmo 只在启用且 Scene View 发生 Repaint 时采样和绘制；关闭时不创建几何快照。
+- 调试视图只读取索引快照，不改变实体或索引内容；关闭调试视图后不会影响 Runtime 查询。
+
+## 在工具中查看
+
+Workbench 和 CLI 可以只读显示索引数量、分区、边界和密度热点；这些视图不会修改实体或索引。需要调试时直接打开 SpatialKit 页面，或使用下面的 CLI 示例查询。
+
+```powershell
+yoki spatialkit stats --engine <engineId> --project <projectRoot>
+yoki spatialkit indexes --engine <engineId> --project <projectRoot>
+yoki spatialkit density --engine <engineId> --index <indexId> --resolution 32 --project <projectRoot>
+yoki spatialkit analyze --engine <engineId> --project <projectRoot>
+```
+
+密度图是二维投影：Quadtree 和 HashGrid 使用 XZ 平面；Octree 会沿 Y 轴聚合后显示 XZ 投影。数据 stale 或被裁剪时，先恢复宿主连接或调整查询范围，不要把缺失数据当成零实体。
+
+Unity Scene View 提供可选 SpatialKit Overlay，用于查看索引边界和分区。Overlay 的显示与筛选只影响当前 Unity Editor 会话，不写入 Runtime Settings。
 
 ## 限制与相关资料
 
@@ -454,18 +364,4 @@ Unity Scene View 的 `SpatialKit` Overlay 在 Unity Editor 启动或脚本重载
 | Octree 热力图看不到高度差异 | 热力图固定沿 Y 轴聚合到 XZ；启用 Unity Scene View `SpatialKit` Gizmo 查看真实三维 AABB 和实体高度 |
 | Scene View 没有空间线框 | 执行 `YokiFrame/SpatialKit/Open Overlay Menu` 打开面板，再开启 `Spatial`，并确认下拉框没有筛选到已结束的索引 |
 
-### 验证
-
-Editor 测试位于 `Tools/SpatialKit/Tests/Editor`，覆盖：
-
-- HashGrid 投影距离语义。
-- Quadtree、Octree 可变实体更新不重复。
-- 相同 `SpatialId` 插入替换旧实体。
-- 非法网格尺寸校验。
-- Snapshot 捕获位置后不受实体后续移动影响。
-- 并行批量查询保持查询槽位对应关系。
-- Gizmo 快照保留二维投影边界和 Octree 三维 AABB，并正确报告节点/实体预算裁剪。
-
-Workbench/Application 测试另外覆盖 state 密度 bin、热点解析、坏 payload stale 处理、页面选择保留、Octree 投影标签和热点健康提示。
-
-新增索引策略或修改空间语义时，应同时验证运行时查询、Snapshot 批量查询、边界裁剪、诊断 JSON、密度 bin、CLI 和 Tool Interaction catalog，并扫描 Player 产物确认不存在诊断注册表。
+需要查看运行态时，在命令中指定目标 `engine`；snapshot 标记为 stale 时先恢复宿主连接或重新生成快照。

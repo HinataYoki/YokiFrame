@@ -1,27 +1,12 @@
-# ActionKit
-
-> 面向读者：需要把等待、回调、异步任务和组合流程绑定到业务生命周期的 Runtime 开发者
->
-> 主要入口：`ActionKit`、`IActionController`
->
-> 运行边界：跨宿主 Runtime；Unity Coroutine 与可选依赖位于独立 Adapter/Integration
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
+# ActionKit 动作编排
 
 ## 适用场景
 
-ActionKit 是纯 C# 行为编排 Tool Kit。需要把等待、回调、条件、插值、异步任务和组合流程绑定到同一宿主生命周期时使用它。Runtime 位于 `Tools/ActionKit/Runtime`，程序集为 `YokiFrame.ActionKit`，只依赖 Core `YokiFrame`，不引用 Unity 或 Godot。
+ActionKit 是纯 C# 行为编排 Tool Kit。需要把等待、回调、条件、插值、异步任务和组合流程绑定到同一宿主生命周期时使用它；业务代码不需要直接引用 Unity 或 Godot 类型。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 当前值 |
-|---|---|
-| Runtime | 已实现，支持 Unity/Godot FrameLoop |
-| Interaction | 已实现，Provider 位于 `Tools/ActionKit/Editor/Interaction` |
-| Workbench | 已实现，展示活动根、递归 Action 树、组合语义、节点详情、终态、调度帧和可选堆栈 |
-| 状态入口 | `ActionKit/state` |
-| Unity Adapter | 原生 Coroutine 位于 `Tools/ActionKit/Adapters/Unity/Runtime`，程序集为 `YokiFrame.ActionKit.Unity` |
-| 可选集成 | UniTask、DOTween 分别位于独立 Unity Integration，由各自依赖宏控制 |
+ActionKit 可用于 Unity 与 Godot .NET Runtime。宿主负责驱动 scheduler；UniTask、DOTween 和 Unity Coroutine 是按需安装的扩展。Workbench 只读展示动作树和终态。
 
 ## 快速上手
 
@@ -40,7 +25,7 @@ controller.Resume();
 controller.Cancel();
 ```
 
-首次使用门面会把 scheduler 注册到 Core `YokiFrameUpdateDispatcher`。Unity PlayerLoop 或 Godot `_Process` 负责投递时间，业务不需要重复调用 `ActionKitScheduler.Tick`。
+首次使用门面会注册当前宿主的调度器。Unity PlayerLoop 或 Godot `_Process` 负责推进时间，业务不需要再创建第二个 scheduler。
 
 ## 核心 API
 
@@ -137,7 +122,6 @@ IEnumerator LoadWithUnityYield()
 | `OnDeinit()` | 正常、取消、故障或宿主重置时清理引用。 |
 | `ActionBase.OnPause()` / `OnResume()` | 暂停和恢复钩子。 |
 | `ActionBase.OnUpdateModeChanged(ActionUpdateModes)` | 时间源变化钩子。 |
-| `GetDebugInfo()` | Editor/Tools 按需诊断摘要。 |
 
 自定义节点最小形式：
 
@@ -172,7 +156,7 @@ public sealed class WaitForFlag : ActionBase
 | `Finish` | 仅正常完成时调用的 controller 回调。 |
 | `Cancel()` | 可从任意线程请求取消；宿主线程会同步清理仍在准备队列的 controller，其它情况由 Scheduler Tick 串行终结。 |
 
-扩展 `Start(onFinish)` 会同步执行一次 dt=0 首推。`IAction.Update(dt)` 是 detached Action 的手动推进入口；它不能和 scheduler 同时持有，适合自定义宿主或测试。扩展 `Finish()` 只标记正常完成。`Pause`、`Resume` 和 `UpdateMode` 修改要求宿主线程。
+扩展 `Start(onFinish)` 会同步执行一次 dt=0 首推。`IAction.Update(dt)` 是脱离调度器时的手动推进入口，不能和 scheduler 同时持有。扩展 `Finish()` 只标记正常完成。`Pause`、`Resume` 和 `UpdateMode` 修改要求宿主线程。
 
 ### 内置节点语义
 
@@ -193,23 +177,101 @@ public sealed class WaitForFlag : ActionBase
 
 ## 生命周期与错误边界
 
-`ActionKitScheduler.Initialize()` 幂等注册 Core FrameLoop。`Tick(scaledDeltaTime, unscaledDeltaTime)`、`ProcessRecycle()` 和 `Cleanup()` 仅供自定义宿主、测试或 Adapter 使用，两个 delta 必须为有限非负数，且 `Tick` 不能重入。动作树最大深度为 1024；活动树内的 Action ID 必须唯一。
+宿主线程负责 Start、Pause、Resume 和时间推进；其它线程只提交 `IActionController.Cancel()`。动作树最大深度为 1024；同一 Action 不能同时属于两个父容器。
 
 正常宿主线程负责 Start、Pause、Resume、时间源切换和 scheduler tick；其它线程只提交 `IActionController.Cancel()`。Action 生命周期钩子抛异常会形成一次 Faulted 终态并停止继续推进，清理仍由 scheduler 完成。
 
 Task、UniTask 和 Unity Coroutine 都属于已经提交给外部调度器的异步工作。ActionKit 暂停会停止动作树消费终态，但不会伪装成能够冻结底层 Task、UniTask 或 Unity yield 计时；恢复后的下一 Tick 会处理已发生的终态。取消只有在 API 明确拥有取消能力时向下传播：UniTask token factory 请求 token 取消，Unity Coroutine 执行 Stop，普通 Task 仍由业务持有取消源。
 
-UniTask 与 DOTween 是独立 Unity Integration，仅在对应宏下提供；Unity Coroutine 是独立 Unity Adapter。它们都不能把第三方或宿主类型带入 Core 或无条件 ActionKit API。
+UniTask、DOTween 和 Unity Coroutine 都是可选扩展；未安装时，纯 C# ActionKit 仍可使用。
 
-## 宿主与工具入口
+## 实践模式
 
-工具构建额外提供 scheduler 的 `FrameCount`、`FinishedCount`、`CancelledCount`、`FaultedCount`、`ExecutingCount`、`DiagnosticVersion`、`GetExecutingActionControllers` 和 `GetExecutingActions`。`ActionStackTraceService` 提供 `Enabled`、`Count`、`Register`、`TryGet`、`Remove`、`Clear`，默认关闭且最多保存 256 条启动堆栈。
+### 复杂组合
 
-Workbench 读取 `ActionKit/state`，主视图固定保留“活动根 + 递归 Action 树”，而不是把复杂组合树压平成普通列表。树内以紫色 Sequence 当前执行导轨、青色 Parallel 分支轨道和橙色 Repeat 循环边界表达组合语义；Repeat 进度明确显示为轮次。缩进只使用前六级空间，后续节点通过 `L7/L8/...` 徽章保留真实深度，避免深层嵌套挤掉节点名称和状态。
+```csharp
+private IActionController mIntro;
 
-页面以实际可用宽度 `1240px` 为断点：紧凑模式使用可调宽的活动根列表和动作树，节点详情进入底部诊断抽屉；宽屏模式增加独立节点 Inspector。抽屉默认折叠，可在 `180-300px` 范围调整，并统一提供节点详情、Start 调用帧和最近终态。布局不使用 Viewbox、LayoutTransform 或字号缩放；正文最小字号保持 `12px`，活动根和长列表均使用虚拟化纵向滚动。
+private void PlayIntro()
+{
+    StopIntro();
 
-CLI 只读 action 为 `stats`、`get_workbench_snapshot`；用户 action 为 `set_stack_trace`、`clear_stack_trace`。周期观察不发送命令，堆栈开关只影响后续启动的根 Action。
+    mIntro = ActionKit.Sequence()
+        .Callback(LockInput)
+        .Parallel(parallel =>
+        {
+            parallel
+                .Sequence(ui => ui.Lerp01(0.35f, SetCurtainAlpha))
+                .Sequence(audio => audio.Delay(0.1f).Callback(PlayWarningSound));
+        })
+        .Condition(IsBossLoaded)
+        .Callback(StartBattle)
+        .Start(_ => mIntro = null);
+}
+
+private void StopIntro()
+{
+    mIntro?.Cancel();
+    mIntro = null;
+    UnlockInput();
+}
+```
+
+`Sequence` 负责顺序，`Parallel` 负责同时推进，`Condition` 负责等待，`Repeat` 适合有限轮次的重复。无限 `Repeat` 必须保存 controller，并在流程结束或对象销毁时取消。
+
+### 自定义 Action
+
+```csharp
+public sealed class WaitForFlag : ActionBase
+{
+    private readonly Func<bool> mReady;
+
+    public WaitForFlag(Func<bool> ready)
+    {
+        mReady = ready ?? throw new ArgumentNullException(nameof(ready));
+    }
+
+    public override void OnExecute(float deltaTime)
+    {
+        if (mReady())
+        {
+            Finish();
+        }
+    }
+}
+```
+
+自定义节点在 `OnExecute` 中决定何时 `Finish()`，在 `OnDeinit` 中释放引用。一个 Action 只能属于一个父容器或活动根；不要重复 Append 已经被拥有的节点。
+
+### 互斥动作
+
+同一个目标属性同时只保留一个 controller。启动新动作前先取消旧动作：
+
+```csharp
+private IActionController mMove;
+
+private void MoveTo(float from, float to)
+{
+    mMove?.Cancel();
+    mMove = ActionKit.Sequence()
+        .Lerp(from, to, 0.7f, SetPosition)
+        .Start(_ => mMove = null);
+}
+```
+
+`Cancel()` 只结束动作树，不会自动调用正常完成回调，也不会替普通 `Task` 取消底层工作。需要到达最终值时，先显式设置最终状态，再取消 controller。
+
+### 异步与宿主线程
+
+- `Start`、`Pause`、`Resume`、时间源切换和 scheduler tick 在同一宿主线程执行。
+- 其它线程只提交 `Cancel()`。
+- 普通 `Task` 的取消权属于业务自己的 `CancellationTokenSource`。
+- 使用 UniTask 时，优先使用接收 `CancellationToken` 的 factory，让动作取消能传递到任务。
+- 纯 C# Coroutine 不解释 Unity `YieldInstruction`；需要 Unity yield 语义时使用 Unity Coroutine 接入。
+
+## 在工具中查看
+
+Workbench 可以只读查看活动根、动作树和终态；页面不会替业务启动、暂停或取消动作。
 
 ## 限制与相关资料
 
@@ -224,4 +286,4 @@ CLI 只读 action 为 `stats`、`get_workbench_snapshot`；用户 action 为 `se
 | 暂停后外部异步仍完成 | 暂停只门控 ActionKit 观察；外部 Task、UniTask 和 Unity yield 继续由各自调度器推进。 |
 | 自定义 Action 重复启动 | 一个 Action 只能属于一个父容器或活动根；新租约在 `OnInit` 重置状态。 |
 
-复杂嵌套、自定义 Action、互斥动作和诊断排查示例见下方“进阶示例”。
+复杂嵌套、自定义 Action 和互斥动作请先阅读本页“实践模式”。

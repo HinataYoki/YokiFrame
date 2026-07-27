@@ -33,8 +33,8 @@ public sealed class UnityInstallServiceTests
         _ = new UnityInstallService().Execute(request);
 
         Assert.True(File.Exists(fixture.GetEmbeddedPath("package.json")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Api/00-GettingStarted/Entrypoints.md")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Guides/Tooling.md")));
+        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Api/00-GettingStarted/FrameworkOverview.md")));
+        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Guides/AI-Install.md")));
         Assert.True(File.Exists(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs")));
         Assert.True(File.Exists(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs.meta")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("WorkbenchRuntime~/win-x64/YokiFrame.Workbench.Avalonia.exe")));
@@ -47,7 +47,7 @@ public sealed class UnityInstallServiceTests
         Assert.False(File.Exists(fixture.GetEmbeddedPath("Tools/InputKit/Runtime/InputKit.cs")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("Documentation~/Architecture_Guardrails.md")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("Documentation~/README.md")));
-        Assert.False(File.Exists(fixture.GetEmbeddedPath("Documentation~/Api/00-GettingStarted/Entrypoints.md.meta")));
+        Assert.False(File.Exists(fixture.GetEmbeddedPath("Documentation~/Api/00-GettingStarted/FrameworkOverview.md.meta")));
 
         var ownerManifest = new PackageOwnerManifestStore().Read(fixture.EmbeddedPackageRoot);
         Assert.Contains(ownerManifest.Files, file => file.RelativePath == "Core/Runtime/Alpha.cs");

@@ -29,8 +29,8 @@ public sealed class GodotPackageProjectionTests
             "Core/Editor/YokiFrame.Editor.csproj",
             "Core/Runtime/YokiFrame.cs",
             "Core/Runtime/YokiFrame.csproj",
-            "Documentation~/Api/00-GettingStarted/Entrypoints.md",
-            "Documentation~/Guides/Tooling.md",
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md",
+            "Documentation~/Guides/AI-Install.md",
             "Tools/ActionKit/Editor/YokiFrame.ActionKit.Editor.csproj",
             "Tools/ActionKit/Runtime/ActionKit.cs",
             "Tools/ActionKit/Runtime/YokiFrame.ActionKit.csproj",
@@ -57,8 +57,8 @@ public sealed class GodotPackageProjectionTests
         Directory.CreateDirectory(Path.Combine(root, "Documentation~"));
         WriteFixtureFiles(root, new[]
         {
-            "Documentation~/Api/00-GettingStarted/Entrypoints.md",
-            "Documentation~/Guides/Tooling.md",
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md",
+            "Documentation~/Guides/AI-Install.md",
             "Core/Runtime/YokiFrame.cs",
             "Core/Runtime/YokiFrame.csproj",
             "Core/Editor/YokiFrame.Editor.csproj",

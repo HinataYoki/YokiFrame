@@ -167,7 +167,7 @@ public sealed class DocumentationWebThemeContractTests
     }
 
     /// <summary>
-    /// 验证用户文档导航把 Kit 主页面收口为纯 Kit 名称，同时保留专题指南的用途后缀。
+    /// 验证用户文档导航把 Kit 主页面收口为纯 Kit 名称；专题指南不属于左侧目录。
     /// </summary>
     [Fact]
     public void DocumentationNavigationUsesCompactUserFacingTitles()
@@ -176,8 +176,10 @@ public sealed class DocumentationWebThemeContractTests
 
         Assert.Contains("title.match(/^([a-z][a-z0-9]*kit)", script);
         Assert.Contains("return kitTitle[1]", script);
-        Assert.Contains("const isGuide = String(document.relativePath || '').includes('/Guides/');", script);
-        Assert.Contains("if (isGuide) return title;", script);
+        Assert.Contains("function isNavigationDocument(document)", script);
+        Assert.Contains("/Api/00-GettingStarted/FrameworkOverview.md", script);
+        Assert.Contains("for (const document of navigationDocuments())", script);
+        Assert.DoesNotContain("isGuide", script);
         Assert.Contains("return '框架概览'", script);
         Assert.DoesNotContain("Architecture_Avalonia_CSharp_Workbench", script);
     }

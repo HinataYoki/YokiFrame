@@ -1,26 +1,12 @@
-# SingletonKit
-
-> 面向读者：需要按明确 owner 管理纯 C# 会话单例的 Runtime 开发者
->
-> 主要入口：`Singleton<T>`、`SingletonKit<T>`
->
-> 运行边界：跨宿主 Runtime；当前不发布统一 Kit Interaction
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
+# SingletonKit 单例
 
 ## 适用场景
 
 SingletonKit 解决“整个宿主会话只需要一个纯 C# 服务实例”的场景，例如配置缓存、无状态协调器和轻量基础服务。它不应该替代有明确 owner 的依赖注入或 `Architecture<T>` 服务注册；需要 Unity `GameObject`、`Transform` 或 Godot `Node` 生命周期时使用对应宿主 Adapter 的单例类型。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 当前值 |
-|---|---|
-| Runtime | 已实现，位于 `Core/Runtime/SingletonKit` |
-| 程序集 | Core Runtime 编入 `YokiFrame`，纯 C# |
-| Interaction | 未完成 |
-| Workbench | 未完成 |
-| 诊断 | Unity Editor/Godot Tools 下有 `SingletonRegistry`，尚未接入统一 Provider |
+SingletonKit 是跨 Unity 与 Godot .NET 的纯 C# Runtime 能力，没有独立 Workbench 页面。需要按依赖关系组织多个服务时，优先考虑 `Architecture<T>`。
 
 ## 快速上手
 
@@ -90,21 +76,19 @@ public sealed class CacheService : ISingleton
 
 宿主单例不是 `SingletonKit<T>` 的别名。Unity/Godot 类型不应泄漏到 Core Runtime 的纯 C# 服务中。
 
-## 宿主与工具入口
-
-`SingletonRegistry` 和 `SingletonDebugInfo` 只在 Unity Editor 或 Godot Tools 编译，提供 `DiagnosticVersion`、`Count`、`Register`、`Unregister`、`GetAll(List<SingletonDebugInfo>)` 和 `Clear()`。记录包含类型名、后端、来源、创建时间、实例哈希和 `IsAlive`；`Dispose()` 会把记录标记为非存活，但不会自动移除历史记录。
-
-当前没有 SingletonKit Interaction Provider、CLI action 或 Workbench 页面。因此不要使用 `SingletonKit/state`、旧页面或通用命令推断当前进程中的单例状态。
-
 ## 生命周期与错误边界
 
 - `Instance` 是懒创建入口；仅读取 `HasInstance` 或 `TryGetInstance` 不会创建实例。
 - `Dispose()` 后旧实例仍可能被业务变量引用，框架不会替换这些外部引用；owner 必须停止继续使用旧对象。
 - 单例只保证每个闭合泛型类型一份实例，不解决跨类型初始化顺序。
-- 需要替换实现、测试隔离或显式依赖关系时，优先使用 Architecture 或普通构造函数注入。
+- 需要替换实现或表达显式依赖关系时，优先使用 Architecture 或普通构造函数注入。
+
+## 在工具中查看
+
+SingletonKit 没有独立 Workbench 页面或 CLI 操作。需要确认项目连接状态时，使用 Workbench 的“框架”页；单例的创建和释放仍由业务 owner 负责。
 
 ## 限制与相关资料
 
 - SingletonKit 不创建或管理 Unity `GameObject`、`Transform`、Godot `Node` 等宿主对象
-- 当前没有 Interaction Provider、CLI action 或 Workbench 页面；不要推断存在 `SingletonKit/state`
+- 没有独立的 Workbench 页面；需要观察单例时请在业务代码中提供自己的诊断入口
 - 复杂服务组合优先使用 [Architecture](../01-Architecture/Architecture.md)

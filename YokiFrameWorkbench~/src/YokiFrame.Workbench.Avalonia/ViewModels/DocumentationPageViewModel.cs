@@ -368,7 +368,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     {
         PackageVersion = catalog.PackageVersion;
         ApplyCatalogFilter();
-        StatusText = "已加载 " + catalog.Documents.Count + " 篇包内文档。";
+        StatusText = "已加载 " + catalog.NavigationDocuments.Count + " 篇用户文档。";
         if (SelectedDocument == null && Documents.Count > 0)
         {
             SelectedDocument = Documents[0];
@@ -388,8 +388,8 @@ public sealed class DocumentationPageViewModel : ViewModelBase
 
         var query = SearchText.Trim();
         Documents = query.Length == 0
-            ? mCatalog.Documents
-            : mCatalog.Documents.Where(entry => Contains(entry.Title, query)
+            ? mCatalog.NavigationDocuments
+            : mCatalog.NavigationDocuments.Where(entry => Contains(entry.Title, query)
                 || Contains(entry.RelativePath, query)
                 || entry.Keywords.Any(keyword => Contains(keyword.Text, query))).ToArray();
         EnsureSelectedDocumentIsVisible();
@@ -407,7 +407,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         }
 
         Dictionary<string, DocumentationIndexEntry> entriesByPath = new(StringComparer.Ordinal);
-        foreach (var entry in mCatalog.Documents)
+        foreach (var entry in mCatalog.NavigationDocuments)
         {
             entriesByPath[entry.RelativePath] = entry;
         }

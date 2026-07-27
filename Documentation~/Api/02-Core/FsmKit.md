@@ -1,26 +1,12 @@
-# FsmKit
-
-> 面向读者：需要以显式状态和生命周期组织业务流程的 Runtime 开发者
->
-> 主要入口：`FSM<TEnum>`、`FSM<TEnum, TArgs>`
->
-> 运行边界：跨宿主 Runtime；诊断和实例历史只在 Editor/Tools 编译
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
+# FsmKit 状态机
 
 ## 适用场景
 
 FsmKit 用于需要明确生命周期和状态切换条件的业务流程，例如角色控制、战斗阶段、UI 流程和后台任务。`FSM<TEnum>` 同时只运行一个状态，保持简单、同步且由调用方主动驱动。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 当前值 |
-|---|---|
-| Runtime | 已实现，位于 `Core/Runtime/FsmKit` |
-| 程序集 | Core Runtime 编入 `YokiFrame`，无宿主引用 |
-| Interaction | 已实现，Provider 位于 `Core/Editor/FsmKit` |
-| Workbench | 已实现，支持实例、状态、转换图和历史 |
-| 状态入口 | `FsmKit/state`，详情使用稳定 `instanceId` |
+FsmKit 可直接用于 Unity 与 Godot .NET Runtime。状态机由业务主动驱动；Unity 在生命周期中调用 `Update`，Godot 在 `_Process` 中调用对应更新入口。Workbench 只读展示实例和已观测历史。
 
 ## 快速上手
 
@@ -69,7 +55,7 @@ fsm.Dispose();
 
 | API | 说明 |
 |---|---|
-| `FSM<TEnum>(string name = null)` | 创建空状态机；签名在所有构建一致，名称只由 Editor/Tools 保存并用于诊断。 |
+| `FSM<TEnum>(string name = null)` | 创建空状态机；可选名称用于日志和排查。 |
 | `CurState` / `CurEnum` | 当前状态实例和当前/最近选择的枚举值。 |
 | `MachineState` | 当前为 `End`、`Suspend` 或 `Running`。 |
 | `Get(TEnum id, out IState state)` | 查询状态，不存在时输出空值。 |
@@ -111,6 +97,70 @@ spawnFsm.Add(PlayerState.Idle, new SpawnState(spawnFsm, new object()));
 spawnFsm.Start(PlayerState.Idle, 3);
 ```
 
+## 实践模式
+
+### 一个可复用的状态机
+
+```csharp
+using YokiFrame;
+
+public enum GameFlowState
+{
+    Menu,
+    Playing
+}
+
+public sealed class GameFlowContext
+{
+}
+
+public sealed class MenuState : AbstractState<GameFlowState, GameFlowContext>
+{
+    public MenuState(FSM<GameFlowState> fsm, GameFlowContext context)
+        : base(fsm, context)
+    {
+    }
+
+    protected override void OnEnter()
+    {
+    }
+}
+
+public static class GameFlowFactory
+{
+    public static FSM<GameFlowState> Create()
+    {
+        GameFlowContext context = new();
+        FSM<GameFlowState> fsm = new("GameFlow");
+        fsm.Add(GameFlowState.Menu, new MenuState(fsm, context));
+        fsm.Start(GameFlowState.Menu);
+        return fsm;
+    }
+}
+```
+
+`Add` 只建立状态和默认选择，不会自动进入 `Running`。使用 `Start` 后，才可以用 `Change` 切换并转发 tick。
+
+### 宿主中驱动 tick
+
+Unity 组件只负责生命周期和调用：
+
+```csharp
+private FSM<GameFlowState> mFsm;
+
+private void Update()
+{
+    mFsm.Update();
+}
+
+private void OnDestroy()
+{
+    mFsm.Dispose();
+}
+```
+
+Godot .NET 对应在 `_Process` 中调用 `Update()`，在 `_ExitTree` 中释放。状态切换规则和黑板数据继续放在普通 C# 类型。
+
 ## 生命周期与错误边界
 
 | 阶段 | `FSM` |
@@ -122,19 +172,9 @@ spawnFsm.Start(PlayerState.Idle, 3);
 状态对象被 `Add` 后由状态机拥有；移除、`Clear` 或 `Dispose` 时不要再由业务重复释放同一个状态。状态中的外部订阅应在 `OnDispose` 解除。
 `Start`、`End`、`Suspend`、`Resume`、`Dispose` 等生命周期回调尚未结束时，不允许对同一 FSM 发起嵌套状态变更；回调异常会继续抛给调用方，并把机器收敛到 `End`。
 
-## 宿主与工具入口
+## 在工具中查看
 
-Editor/Tools 构建中的 `IFSM` 额外提供 `Name`、`EnumType`、`CurrentState`、`CurrentStateId`、`GetAllStates()` 和 `GetStateOrderIndex(int)`。`FsmKitRegistry`、状态事件与历史不进入 Player。
-
-Workbench 通过 `FsmKit/state` 展示实例列表、当前状态、已观测转换图和有限历史。命令按稳定实例 id 读取详情：
-
-```powershell
-yoki command send --engine <engineId> --kit FsmKit --action list_all --project <projectRoot>
-yoki command send --engine <engineId> --kit FsmKit --action get_state --payload '{"instanceId":"<id>"}' --project <projectRoot>
-yoki command send --engine <engineId> --kit FsmKit --action get_history --payload '{"instanceId":"<id>"}' --project <projectRoot>
-```
-
-可用只读 action 还包括 `get_state_events` 和 `get_workbench_snapshot`。每个实例最多保留 200 条转换历史；图只表示已观测关系，不宣称完整静态状态图。Workbench 不提供远程强制切换状态的命令。
+Workbench 可以只读查看当前实例、状态和已观测转换；它不会替业务强制切换状态。
 
 ## 限制与相关资料
 

@@ -189,8 +189,8 @@ internal sealed class UnityInstallFixture : IDisposable
         WriteSourceFiles(new[]
         {
             "package.json",
-            "Documentation~/Api/00-GettingStarted/Entrypoints.md",
-            "Documentation~/Guides/Tooling.md",
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md",
+            "Documentation~/Guides/AI-Install.md",
             "Core/Runtime/Alpha.cs",
             "Core/Runtime/Alpha.cs.meta",
             "Core/Runtime/YokiFrame.Runtime.asmdef",
@@ -205,7 +205,7 @@ internal sealed class UnityInstallFixture : IDisposable
             ".git/config",
             "Documentation~/Architecture_Guardrails.md",
             "Documentation~/README.md",
-            "Documentation~/Api/00-GettingStarted/Entrypoints.md.meta",
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md.meta",
             "Core/Tests/AlphaTests.cs",
             "Core/Tests.meta",
             "Core/Runtime/bin/Release/YokiFrame.dll",

@@ -1,26 +1,18 @@
 # UIKit 面板管理
 
-> 面向读者：需要管理 Unity Panel、Prefab、焦点、动画或 Editor 绑定生成的开发者
->
-> 主要入口：`UIKit`、`UIPanel`
->
-> 运行边界：Unity 专属 Runtime/Editor；不提供 Godot 后端或跨宿主 UI 契约
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
-
 ## 适用场景
 
 UIKit 管理 Unity UI 的 Panel 实例、Prefab 资源租约、生命周期、显式缓存、命名栈、显示层级和模态阻断。它直接使用 `GameObject`、`Canvas`、`RectTransform` 和 Unity UI，因此不是跨引擎 Kit。
 
-- 只支持 Unity 2022.3+，全部 Runtime 位于 `Tools/UIKit/Adapters/Unity/Runtime`。
+- 只支持 Unity 2022.3+。
 - 不提供 Godot Adapter、Godot capability 或 Godot 投影入口。
-- 不存在 `IUIBackend`、`UIKit.SetBackend()` 或默认后端工厂。
-- 不存在 `OpenHot`、`GetHot`、`Weaken` 或热度缓存。
+- Root 由包内模板或项目自己的 Prefab Variant 提供，不需要额外注册后端。
+- 不提供热度缓存；面板实例由 UIKit 的生命周期和缓存策略管理。
 - 每个 `UIPanel` 具体类型当前最多物化一个实例。
 
-## 入口与当前状态
+## 使用前提
 
-Unity 专属 Runtime、基础动画、Dialog、焦点/导航、安全区、Canvas 优化、Runtime 调试、Unity Editor Interaction、Avalonia Runtime 诊断页和 Editor Tools 均已实现；DOTween 与 Unity Input System 通过独立可选 Integration 接入。
+UIKit 只支持 Unity，提供 Panel、层级、模态、动画、Dialog、焦点和绑定代码生成。DOTween 与 Unity Input System 是可选扩展；Godot 没有 UIKit 兼容入口。
 
 ## 快速上手
 
@@ -229,7 +221,7 @@ bool blocked = UIKit.HasModalBlocker();
 
 `FadeAnimation`、`ScaleAnimation`、`SlideAnimation` 与 `CompositeAnimation` 实现统一 `IUIAnimation`，不依赖第三方库。`UIAnimationFactory` 支持配置创建、Fade/Scale/Slide 快捷入口，以及 Parallel/Sequential 组合。`UIPanel` 的显示/隐藏配置使用 `SerializeReference` 保存 `FadeAnimationConfig`、`ScaleAnimationConfig`、`SlideAnimationConfig` 或嵌套 `CompositeAnimationConfig`；Inspector 类型菜单可直接选择和编辑曲线、时长与参数。
 
-通过 Inspector 配置或 `UIPanel.SetShowAnimation` / `SetHideAnimation` 设置后，UIKit 会在 Show/Hide 状态机中进入 `Opening` / `Hiding`，完成回调只在 transition generation 仍有效时提交终态；反向操作、Close 或 Root 销毁会停止旧动画，晚到回调不能覆盖新状态。
+通过 Inspector 配置或 `UIPanel.SetShowAnimation` / `SetHideAnimation` 设置后，UIKit 会在 Show/Hide 流程中播放动画；反向操作、Close 或 Root 销毁会停止未完成的动画。
 
 ```csharp
 panel.SetShowAnimation(new FadeAnimation(0.2f, 0f, 1f));
@@ -238,7 +230,7 @@ panel.SetHideAnimation(UIAnimationFactory.CreateParallel()
     .Add(new ScaleAnimation(0.15f, Vector3.one, new Vector3(0.95f, 0.95f, 1f))));
 ```
 
-安装 DOTween 并启用 `YOKIFRAME_DOTWEEN_SUPPORT` 后，可选程序集 `YokiFrame.UIKit.DOTween` 提供 `DOTweenFadeAnimation`、`DOTweenScaleAnimation`、`DOTweenSlideAnimation`。无 DOTween 时公开 Panel 动画入口保持不变。
+安装 DOTween 并启用 `YOKIFRAME_DOTWEEN_SUPPORT` 后即可使用 DOTween 动画扩展；未安装时公开 Panel 动画入口保持不变。
 
 Dialog 使用 `UIDialogPanel` 派生 Prefab、默认类型注册和串行模态队列：
 
@@ -256,9 +248,9 @@ var prompt = await UIKit.PromptAsync("输入角色名", defaultValue: "Player");
 
 `UIRoot` 初始化时会立即确保 EventSystem 可用：优先复用场景现有实例，其次启用模板内置节点，最后才创建新节点；已有输入模块保持不变，缺少模块时按项目 Active Input Handling 自动补齐。Input System-only 项目由 `YokiFrame.UIKit.InputSystem` 安装 `InputSystemUIInputModule`，Legacy Input Manager 或 Both 使用 `StandaloneInputModule`。`UIKit.EnsureEventSystem()` 可显式取得该实例；`SetFocus`、`ClearFocus`、`SetInputMode`、`RestoreLastFocus`、`CurrentFocus`、`InputMode` 和 `FindFirstSelectable` 直接操作 UIKit 焦点状态。`GamepadNavigator` 接受项目实现的 `IGamepadInput`，提供移动、Submit、Cancel、Tab、Menu、死区和长按重复，不绑定具体输入包。`UIPanel` 可配置 `AutoFocusOnShow` 与默认 Selectable；隐藏时会记住当前子焦点，导航模式重新显示时按“记忆 -> 默认 -> 首个可交互控件”恢复，关闭或销毁后清理记忆。`SelectableGroup`、`UIAutoNavigation`、`UINavigationGrid`、`UIBackHandler`、`UITabGroup`、`UISelectableExtension` 与 `UIFocusHighlight` 提供可组合导航组件。
 
-`SafeAreaAdapter` 响应 `ScreenInfo` 尺寸/方向变化；`UIDynamicElement` 用嵌套 Canvas 隔离频繁 rebuild；`CanvasBatchHint` 集中设置像素对齐、排序覆盖和 Raycaster。安装 Unity Input System 后，独立 `YokiFrame.UIKit.InputSystem` 程序集同时负责 Input System-only 的 EventSystem 模块安装；其中的 `UIKitInputSystemNavigator` 将项目提供的 `InputActionReference` 映射到 Navigate、Submit、Cancel 和 Tab，并按 `GamepadConfig` 处理死区、方向切换、首次重复延迟、持续重复、Pointer/Navigation 自动检测和光标显隐。
+`SafeAreaAdapter`、`UIDynamicElement` 和 `CanvasBatchHint` 可用于安全区、频繁布局和 Canvas 设置。安装 Unity Input System 后，可以使用对应扩展把项目输入动作映射到导航、确认、取消和 Tab；未安装时仍可调用 UIKit 的基础焦点 API。
 
-`UIKit.CaptureRuntimeDiagnostics()` 返回 Player 可用的只读快照，`UIDebugOverlay.Show/Hide/Toggle` 显示面板、栈与焦点摘要；它们不编译 Editor Interaction 或远程 Runtime mutation。
+`UIKit.CaptureRuntimeDiagnostics()` 和 `UIDebugOverlay` 可在运行时显示面板、栈与焦点摘要；它们只读，不会替业务修改 UI 状态。
 
 ### Root Prefab 与项目定制
 
@@ -277,7 +269,7 @@ private void Awake()
 
 创建顺序固定为“场景中已有 Root -> `SetRootPrefab` 显式 Prefab -> 包内默认模板 -> 模板缺失时的最小动态兜底”。Root 与 Panel 实例都会恢复各自 Prefab 资产名，不保留 Unity 自动追加的 `(Clone)`。显式 Prefab 必须包含且只能包含一个 `UIRoot`，Root 创建后再次设置会抛出 `InvalidOperationException`。显式选择在 `UIRoot.Dispose()` 后继续生效，一次应用生命周期只需配置一次。
 
-Canvas、CanvasScaler、GraphicRaycaster 和项目附加组件直接在 Prefab Variant 中配置。`UIRoot` 使用 InspectorKit 专用 Inspector 展示 Root 概览、面板加载和缓存策略，并公开三个序列化字段：`Prefab Path Prefix` 默认 `Art/UIPrefab`，`Use Addressable Location` 默认关闭，`Reusable Cache Capacity` 默认 `8`。它们用于初始化当前默认 loader；运行时设置 `UIKit.GetPanelLoader().UseAddressableLocation` 只覆盖当前 Root 的后续加载，不会回写 Prefab 或 `runtime-settings.json`，Workbench 也不提供 Root Settings 页面。
+Canvas、CanvasScaler、GraphicRaycaster 和项目附加组件直接在 Prefab Variant 中配置。Root 还可以配置 Prefab 路径前缀、是否使用可寻址位置和 Reusable 缓存容量；运行时通过 `UIKit.GetPanelLoader()` 调整的值只影响后续加载。
 
 包内默认模板的 Canvas 是 `Screen Space - Overlay`；项目若需要由相机拍摄，应在首次 UIKit 变更前或首次打开面板前绑定一个**已启用**的场景 Camera：
 
@@ -292,51 +284,43 @@ private void Awake()
 
 `BindRootCamera` / `UIRoot.BindWorldCamera` 会把 Root Canvas 切换为 `Screen Space - Camera` 并设置 `worldCamera`。此模式下必须确认 Canvas 的 `Plane Distance` 小于该 Camera 的 `Far Clip Plane`（保留足够余量）；否则 UI 位于远裁剪面外，Camera 不会渲染它。还应确认该 Camera 的 Culling Mask 包含 `UI` Layer；使用 URP 时，需要按项目的 Camera Stack 配置让该 Camera 参与最终输出。包内 `UICamera` 占位节点默认禁用，项目要使用它时应在 Root Prefab Variant 中显式启用并完成上述绑定。
 
-## 生命周期与错误边界
+## 使用流程
 
-- `UIKit.Root`、面板/栈等查询、加载状态和 Interaction 读取不会创建 Root；`UIKit.GetPanelLoader()`、`SetPanelLoader`、Open、Preload 和绑定 Camera 等启动配置或变更操作可以按需创建
-- Root 创建后不能替换 Prefab；项目定制必须在首次 UIKit 变更前通过 `UIKit.SetRootPrefab` 完成
-- Panel 的加载、single-flight、缓存和关闭由 owner 统一调度；业务不应绕过生命周期直接销毁受管 Panel
-- Editor Provider、Telemetry、Command、生成和 Prefab 回填不进入 Unity Player 或 Godot
+1. 准备 Panel Prefab 和项目自己的 Prefab Variant。
+2. 在首次调用 UIKit 前注册项目 Root Prefab。
+3. 用 `UIKit.OpenPanel<TPanel>()`、`UIKit.ClosePanel<TPanel>()` 管理面板生命周期。
+4. 需要动画或对话框时，使用 Panel 的公开 API；不要从 Workbench 远程控制 Runtime UI。
+5. 需要绑定代码时，在 Unity Inspector 中选择 Panel、Element 或 Component owner，再生成 Designer。
 
-## 宿主与工具入口
-
-### Interaction 与 Workbench 状态
-
-Unity Editor 的 Provider 发布 `UIKit/state`，`schemaVersion=1`，包含三个 ReadOnly action 和四个 Unity Editor UserAction。UIKit 的 Selection、资产路径和 Editor 模式字段统一消费 Core Unity Editor Context Provider；公共 Provider 发布 `UnityEditor/state`，并通过 `UnityEditor/get_context` 提供 `GlobalObjectId`、Asset GUID、Scene、Prefab Stage 与 Editor revision，查询不会创建 UIRoot：
-
-```powershell
-& $YOKI command send --engine unity-editor --kit UIKit --action stats --project <projectRoot>
-& $YOKI command send --engine unity-editor --kit UIKit --action get_workbench_snapshot --project <projectRoot>
-& $YOKI command send --engine unity-editor --kit UIKit --action get_editor_context --project <projectRoot>
+```csharp
+PausePanel panel = await UIKit.OpenPanelAsync<PausePanel>();
+bool confirmed = await UIKit.ConfirmAsync("是否暂停游戏？");
+UIKit.ClosePanel(panel);
 ```
 
-周期观察优先读取 `telemetry read --kit UIKit --name state`，失败后回落 snapshot。Provider 查询空状态不会创建 UIRoot；Unity Player 与 Godot 不编译或发布 UIKit Interaction。
+`OpenPanelAsync` 在未安装 UniTask 时返回 `Task`，启用 `YOKIFRAME_UNITASK_SUPPORT` 后返回 `UniTask`。Panel 类型默认只保留一个实例；关闭、销毁或切换场景前，取消仍在等待的加载和 Dialog。
 
-UIKit Workbench 页面已加入导航并固定为 Unity 专属，包含 Runtime 与 Editor Tools 两个任务。Runtime 通过 `telemetry -> snapshot` 回落提供 Root、Stats、生命周期、Cache、Modal、Panel 和 Stack 强类型数据；页面支持 Panel/Stack 搜索、选择、详情、诊断复制，并保留 stale、error、empty、offline 和 truncated 证据。宽屏使用三栏 Summary + 列表 + Inspector，紧凑窗口切换为指标摘要 + Panels/Stacks 页签 + 下方详情，列表禁用横向滚动并使用虚拟化。Editor Tools 使用独占窗口的面板创建表单，不再展示 Unity 当前选择卡片、手动保存、添加 Bind 或移除 Bind；生成代码会在提交前自动回读最新 Unity 上下文。
+绑定代码的 owner 分工如下：
 
-Editor UserAction 只作用于当前 Unity Editor 选择，不是 Runtime UI 远程控制：`create_panel_prefab` 创建 Panel Prefab 与初始代码，`generate_code_for_selection` 只为 Prefab 根上的 `UIPanel` 生成绑定代码，`add_bind_to_selection` / `remove_bind_from_selection` 批量修改 Bind 组件。变更 payload 包含六个生成字段；调用方可以追加 `expectedContextRevision` 与 `targetGlobalObjectId`，上下文过期或目标不再选中时 Unity 会拒绝写入。操作后 Workbench 回读 `get_editor_context`。
+| owner | 生成位置 | 用途 |
+| --- | --- | --- |
+| `UIPanel` | Panel Prefab 根 | 生成 Panel 用户脚本、Designer 和绑定数据 |
+| `UIElement` | Element 节点 | 生成 Panel 内部可复用元素 |
+| `UIComponent` | Component 节点 | 生成可复用 UI 组件 |
 
-Editor Tools 的 Prefab 目录、脚本目录、命名空间、目标程序集和代码模板是项目级 Editor 配置。首次进入页面时优先读取 `UIKitEditorSettingsService` 的已保存值；项目尚未保存时才采用 Unity Provider 返回的默认值。目标程序集选择器消费 `get_editor_context.assemblyNames`：Unity 只回传项目 Assets 中可承载生成脚本的 Player 程序集，`Assembly-CSharp` 固定排在首位；已保存程序集不再存在时页面回退到该默认项。代码模板选择器消费 `get_editor_context.codeTemplateOptions`：`Default`、`Minimal` 显示为“默认”“精简”，项目模板保留 Registry 名称；已保存模板不再存在时页面明确提示并回退到 Provider 默认项。创建预制体或生成代码前，五个字段会通过 `YokiFrameProjectSettingsStore` 自动写入 Unity `EditorProject` 文档的 `UIKit/editor.*` 键，持锁重读并原子替换，保留其它 Kit 条目和 UIKit 未声明键；一次性的 Panel 类型名不持久化。读取、保存或操作失败会显示在表单操作区上方，不再静默回退。
+一个节点只挂一个 `Bind`。用户 partial 与 Designer 分开保存，重新生成不会覆盖用户 partial。
 
-### Bind、Prefab 与代码生成
+## 生命周期与错误边界
 
-`Bind`、`AbstractBind`、`UIElement`、`UIComponent` 是 Unity Runtime 序列化组件；扫描器、Inspector、固定 BindType 解析、Prefab 创建、代码生成和编译后回填全部位于 `Tools/UIKit/Adapters/Unity/Editor`，不会进入 Player。
+- `UIKit.Root`、面板/栈查询和加载状态读取不会创建 Root；`GetPanelLoader`、Open、Preload 和绑定 Camera 等配置或变更操作可以按需创建
+- Root 创建后不能替换 Prefab；项目定制必须在首次 UIKit 变更前通过 `UIKit.SetRootPrefab` 完成
+- Panel 的加载、single-flight、缓存和关闭由 owner 统一调度；业务不应绕过生命周期直接销毁受管 Panel
+- Workbench 只用于查看摘要；面板、Prefab 和绑定代码仍在 Unity Editor 中运行。
 
-`UIPanel`、`UIElement`、`UIComponent` 与 `Bind` 的自定义 Inspector 统一使用 InspectorKit。三类绑定 owner 共用同一套可折叠绑定树、节点定位、扫描诊断、脚本打开和刷新控件，并分别显示“生成 UIPanel/UIElement/UIComponent 代码”入口；`UIPanel` 额外提供动画与焦点设置，Element/Component 显示具体类型、脚本路径和其它序列化属性。`Bind` 提供类型下拉、Member/Element/Component 快捷转换、只展示已选项的按需组件列表、每个已选组件的独立字段名、生成类型、命名建议、路径、多字段代码预览、层级校验和代码跳转。展开状态通过 InspectorKit 持久化。
+## 在工具中查看
 
-`BindType` 的数值固定为 `Member=0`、`Element=1`、`Component=2`、`Leaf=3`。新建 Member 默认选择 `GetComponents<Component>()` 中最后一个非 `AbstractBind` 组件；只有 Transform 时选择 Transform。InspectorKit 的 Member 列表只显示已选组件，点击“添加组件”后才从未绑定的同节点非 Bind 组件中选择；内置 Member 可在一个 `Bind` 中选择多个组件，扫描器按选择顺序展开为多个字段，并使用“节点 PascalCase 名 + 组件短类型名”生成字段名，同类型重复时追加稳定序号。列表至少保留一个目标，所有 Bind 均按固定 `BindType` 语义解析。Element 建立 Panel 内部类型，Component 建立可复用类型，Leaf 跳过当前子树。空引用、跨节点目标、重复组件和重复 Member 字段名阻断生成，重复 Element/Component 类型只保留一个 owner 字段并给出 warning；Component 下禁止 Element。
-
-`UILevel` 使用 InspectorKit 专有 PropertyDrawer：预定义层级通过下拉选择，自定义排序值保留独立整数编辑，并同时提供 IMGUI 回退。`UIPanelValidator.ValidatePanel`、`ValidatePrefab` 与 `ValidateAllPanelsInScene` 只读检查 Bind、引用、Canvas、动画和焦点配置；UIPanel Inspector 的绑定树会显示这些诊断，不会自动修改 Prefab。
-
-快捷入口包括 `YokiFrame/UIKit/Create Panel Prefab`、三个绑定 owner Inspector、`Edit/UIKit/Add Bind Component`（`Alt+B`）和 `Edit/UIKit/Remove Bind Component`（`Alt+Ctrl+B`）。Panel Inspector 生成 Panel 用户脚本、Designer 和嵌套类型；具体 UIElement/UIComponent Inspector 只更新当前已有 partial 类型的 Designer 与内部嵌套类型，组件只需属于某个 Prefab 并位于标准生成目录，支持位于 Panel Prefab 层级内部，回填时按相对 Prefab 根路径定位 owner。添加 Bind 后在 Inspector 的组件列表中按需添加同节点组件；Designer 与编译后 Prefab 回填会为每个已选目标生成并写入独立引用。未保存项目配置时默认 Prefab 输出 `Assets/Resources/Art/UIPrefab`、脚本输出 `Assets/Scripts/UI`、命名空间 `GameUI`；保存后的 `UIKit/editor.*` 配置同时被 Workbench 和 Unity Inspector 生成入口读取。配置用于新生成代码，不会自动重写已有用户 partial；现有 Panel 的类型名、命名空间或程序集与目标配置不一致时生成入口会拒绝写入，项目必须先显式调整用户脚本或项目配置。每个新建用户 partial 和可再生 Designer 文件固定导入 `UnityEngine`、`UnityEngine.UI`、`YokiFrame`，用户 partial 不覆盖，Designer 按文件集事务生成，任一文件失败会回滚本次文件集。Unity 编译完成后由 SessionState 队列按 Panel/Element/Component owner 类型回填引用。
-
-### 项目代码模板
-
-Editor-only `IUIKitCodeTemplate` 提供 `Name`、`Description` 和 `Transform(part, context, generatedSource)`。`Name` 必须符合 SafeId；具有公开无参构造的实现由 `UIKitCodeTemplateRegistry` 通过 TypeCache 自动发现，也可以由项目显式 `Register` / `Unregister`。模板目录固定以 `Default`、`Minimal` 开头，其余项目模板按 ordinal 排序；两个内置模板不能注销。
-
-模板只接收 Panel/Binding 的用户或 Designer 文件角色、稳定字符串上下文和 CodeGenKit 已生成的完整内存源码。它不能写文件、修改 Prefab 或接管编译后回填；空转换结果会阻断生成。用户 partial 仍只在文件不存在时进入转换，Designer 和其它可再生文件仍由现有文件集事务统一提交和回滚，因此项目模板不会绕过用户脚本保护。
+Workbench 可以只读查看 Unity Runtime UI 摘要，并在 Unity Editor 中提供 Panel Prefab、Bind 和 Panel 代码生成入口。它不会远程打开、关闭或清理 Runtime UI；Element 和 Component 的专属生成入口仍在各自 Inspector。
 
 ## 限制与相关资料
 
-UIKit 的 Runtime 与 Editor API 仅支持 Unity；具体扩展边界见下方“扩展边界”。
+UIKit 的 Runtime 与 Editor API 仅支持 Unity；面板、Root 和代码生成流程见本页“使用流程”。

@@ -9,14 +9,14 @@ namespace YokiFrame.Tooling.Application.Tests.Documentation;
 public sealed class OfflineDocumentationServiceTests
 {
     /// <summary>
-    /// 验证用户目录只收录 Documentation~/Api 与 Documentation~/Guides，不暴露内部架构资料和 Workbench 开发文档。
+    /// 验证用户目录只收录受控公开 Markdown，不暴露内部架构资料和 Workbench 开发文档。
     /// </summary>
     [Fact]
     public void GetIndexReadsOnlyWorkbenchPublicDocumentsAndPackageVersion()
     {
         using var fixture = DocumentationFixture.Create();
         fixture.WritePackageDocument("Api/02-Core/FsmKit.md", "# FsmKit 指南\n");
-        fixture.WritePackageDocument("Guides/Tooling.md", "# 工具链\n");
+        fixture.WritePackageDocument("Guides/AI-Install.md", "# AI 安装\n");
         fixture.WritePackageDocument("Architecture_Internal.md", "# 内部架构\n");
         fixture.WriteWorkbenchDocument("operations/bridge.md", "# Bridge 运维\n");
         fixture.WriteOutsideDocument("private.md", "# 不应收录\n");
@@ -27,20 +27,21 @@ public sealed class OfflineDocumentationServiceTests
         Assert.Equal("2.3.4-preview", index.PackageVersion);
         Assert.Equal(2, index.Documents.Count);
         Assert.Contains(index.Documents, static item => item.RelativePath == "Documentation~/Api/02-Core/FsmKit.md");
-        Assert.Contains(index.Documents, static item => item.RelativePath == "Documentation~/Guides/Tooling.md");
+        Assert.Contains(index.Documents, static item => item.RelativePath == "Documentation~/Guides/AI-Install.md");
         Assert.DoesNotContain(index.Documents, static item => item.RelativePath.Contains("Architecture_Internal", StringComparison.Ordinal));
         Assert.DoesNotContain(index.Documents, static item => item.SourceKind == DocumentationSourceKind.WorkbenchDocumentation);
         Assert.DoesNotContain(index.Documents, static item => item.RelativePath.Contains("private.md", StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// 验证入门只保留框架概览和状态入口，Kit 专题内容拼接到 API 主页面且不产生重复导航项。
+    /// 验证唯一框架概览进入 Workbench 导航，旧 GettingStarted 辅助页和 Guides 仍可读取但不展示；Kit 续篇仍拼接到主页面。
     /// </summary>
     [Fact]
     public void GetIndexKeepsGettingStartedLimitedAndMergesKitContinuations()
     {
         using var fixture = DocumentationFixture.Create();
-        fixture.WritePackageDocument("Api/00-GettingStarted/Entrypoints.md", "# 框架概览\n");
+        fixture.WritePackageDocument("Api/00-GettingStarted/FrameworkOverview.md", "# 框架概览\n");
+        fixture.WritePackageDocument("Api/00-GettingStarted/Entrypoints.md", "# 旧入口\n");
         fixture.WritePackageDocument("Api/00-GettingStarted/Kit_Status.md", "# 状态与入口\n");
         fixture.WritePackageDocument("Api/01-Architecture/Architecture.md", "# Architecture\n");
         fixture.WritePackageDocument("Api/02-Core/FsmKit.md", "# FsmKit\n");
@@ -50,15 +51,30 @@ public sealed class OfflineDocumentationServiceTests
         fixture.WritePackageDocument("Api/03-Tool/UIKit.md", "# UIKit\n");
         fixture.WritePackageDocument("Api/03-Tool/UIKit.part.md", "## 扩展边界\n");
         fixture.WritePackageDocument("Api/04-Reference/ThirdParty.md", "# 第三方库索引\n");
-        fixture.WritePackageDocument("Guides/Tooling.md", "# Workbench、CLI 与 Installer\n");
+        fixture.WritePackageDocument("Guides/AI-Install.md", "# AI 安装\n");
 
         var service = fixture.CreateService();
         var documents = service.GetIndex().Documents;
 
-        var gettingStarted = documents.Where(static item => item.Group == "入门").ToArray();
-        Assert.Equal(new[] { "框架概览", "状态与入口" }, gettingStarted.Select(static item => item.Title));
+        var gettingStarted = documents
+            .Where(static item => item.RelativePath.Contains("/Api/00-GettingStarted/", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(3, gettingStarted.Length);
+        Assert.True(
+            Assert.Single(
+                gettingStarted,
+                static item => item.RelativePath.EndsWith("/FrameworkOverview.md", StringComparison.OrdinalIgnoreCase))
+                .IsNavigationVisible);
+        Assert.All(
+            gettingStarted.Where(static item => item.RelativePath.EndsWith("/Entrypoints.md", StringComparison.OrdinalIgnoreCase)
+                                                || item.RelativePath.EndsWith("/Kit_Status.md", StringComparison.OrdinalIgnoreCase)),
+            static item => Assert.False(item.IsNavigationVisible));
+        Assert.Equal("入门", Assert.Single(gettingStarted, static item => item.IsNavigationVisible).Group);
+        Assert.Equal(
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md",
+            service.GetIndex().NavigationDocuments[0].RelativePath);
         Assert.DoesNotContain(documents, static item => item.RelativePath.EndsWith(".part.md", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal("工具链", Assert.Single(documents, static item => item.RelativePath.EndsWith("/Guides/Tooling.md")).Group);
+        Assert.False(Assert.Single(documents, static item => item.RelativePath.EndsWith("/Guides/AI-Install.md")).IsNavigationVisible);
         Assert.Contains("## 实践与诊断", service.ReadDocument("Documentation~/Api/02-Core/FsmKit.md").Markdown, StringComparison.Ordinal);
         Assert.Contains("## 进阶示例", service.ReadDocument("Documentation~/Api/03-Tool/ActionKit.md").Markdown, StringComparison.Ordinal);
         Assert.Contains("## 扩展边界", service.ReadDocument("Documentation~/Api/03-Tool/UIKit.md").Markdown, StringComparison.Ordinal);
@@ -269,10 +285,10 @@ public sealed class OfflineDocumentationServiceTests
     public void SearchUsesCachedSnapshotUntilRefreshIndex()
     {
         using var fixture = DocumentationFixture.Create();
-        fixture.WritePackageDocument("Api/00-GettingStarted/Cache.md", "# Cache\n\nAlphaToken\n");
+        fixture.WritePackageDocument("Api/02-Core/Cache.md", "# Cache\n\nAlphaToken\n");
         var service = fixture.CreateService();
         service.GetIndex();
-        fixture.WritePackageDocument("Api/00-GettingStarted/Cache.md", "# Cache\n\nBetaToken\n");
+        fixture.WritePackageDocument("Api/02-Core/Cache.md", "# Cache\n\nBetaToken\n");
 
         Assert.Single(service.Search("AlphaToken"));
         Assert.Empty(service.Search("BetaToken"));

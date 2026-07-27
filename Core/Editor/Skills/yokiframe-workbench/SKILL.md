@@ -45,9 +45,10 @@ description: Use when Codex needs to guide or diagnose the YokiFrame Avalonia Wo
 |---|---|
 | 当前 Workbench 页面和可见边界 | [pages.md](references/pages.md) |
 | Installer mode、plan、apply、rollback | [installer.md](references/installer.md) |
+| 源码编译、Runtime bootstrap、AI 安装 | `Documentation~/Guides/AI-Install.md` |
 | Runtime API / Kit 能力 | `yokiframe` |
 | CLI / catalog / terminal evidence | `yokiframe-cli` |
-| 人类工具入口 | `Documentation~/Guides/Tooling.md` |
+| 人类使用入口 | 包根 `README.md`；Workbench 只提供已安装项目的操作界面 |
 
 ## 维护触发条件
 

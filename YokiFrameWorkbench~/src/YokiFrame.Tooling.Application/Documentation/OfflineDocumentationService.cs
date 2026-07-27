@@ -175,7 +175,7 @@ public sealed class OfflineDocumentationService
         DocumentationSnapshot snapshot,
         string query)
     {
-        foreach (var entry in snapshot.Catalog.Documents)
+        foreach (var entry in snapshot.Catalog.NavigationDocuments)
         {
             var document = snapshot.Documents[entry.RelativePath];
             if (!ContainsQuery(entry.Title, query)

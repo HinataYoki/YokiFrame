@@ -46,9 +46,10 @@ description: Use when Codex needs YokiFrame Project Model, capability catalog, e
 | 需要的信息 | 读取位置 |
 |---|---|
 | 命令、参数与 action | [commands.md](references/commands.md) |
+| 源码编译、Runtime bootstrap、Installer 安装 | `Documentation~/Guides/AI-Install.md` |
 | Runtime API 或 Kit 状态 | `yokiframe` |
 | Workbench 页面与 Installer UI | `yokiframe-workbench` |
-| 人类入口总览 | `Documentation~/Api/00-GettingStarted/Entrypoints.md` |
+| 人类入口总览 | 包根 `README.md`；快速上手之后进入对应 Kit 文档 |
 
 ## 维护触发条件
 

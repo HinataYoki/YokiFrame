@@ -1,13 +1,5 @@
 # InspectorKit Unity Inspector
 
-> 面向读者：编写 Unity Inspector、组件元数据或 Editor 工具的开发者
->
-> 主要入口：Inspector 元数据属性、`InspectorKitEditor`、`InspectorKitUi`
->
-> 运行边界：Unity Adapter；绘制和反射仅在 Unity Editor 编译
->
-> 状态来源：当前 `Core/Adapters/Unity/*/Inspector` 源码
-
 ## 适用场景
 
 InspectorKit 用于在 Unity Inspector 中复用一套 UI Toolkit 字段装饰、只读状态、信息提示、分组标题和操作按钮能力。它解决的是“如何把项目组件的 Inspector 做成统一、可组合的编辑器工具界面”，不是运行时 UI，也不是完整序列化框架。
@@ -21,22 +13,9 @@ InspectorKit 用于在 Unity Inspector 中复用一套 UI Toolkit 字段装饰�
 
 InspectorKit 不提供 Odin 独立序列化、多态对象树、表达式引擎、拖拽排序或虚拟化等复杂列表系统、运行时 UI 或通用 Scene/Prefab 自动化；它提供轻量的序列化字符串列表和按需对象选择列表。它不绕过 Unity 的 `SerializedObject`、`SerializedProperty` 和 Undo 系统。
 
-## 入口与当前状态
+## 使用前提
 
-```text
-Core/Adapters/Unity/Runtime/Inspector/
-  YokiFrame.Unity.Inspector.Runtime
-Core/Adapters/Unity/Editor/Inspector/
-  YokiFrame.Unity.Inspector.Editor
-```
-
-| 程序集 | 作用 | 编译边界 |
-|---|---|---|
-| `YokiFrame.Unity.Inspector.Runtime` | `PropertyAttribute` 和按钮元数据声明 | Unity Runtime 可引用；不引用 `UnityEditor` |
-| `YokiFrame.Unity.Inspector.Editor` | UI Toolkit Inspector、反射、Undo、样式和按钮调用 | 仅 Unity Editor |
-| `YokiFrame.Unity.Editor` | Unity Editor 组合程序集，可引用 Inspector Editor 程序集 | 仅 Unity Editor |
-
-Runtime 元数据属性位于 `YokiFrame.Unity.Inspector` 命名空间。Editor API 与属性使用同一命名空间，但实际调用 `InspectorKitEditor`、`InspectorKitUi` 或样式服务的代码必须放在 Editor 程序集或 Editor 文件夹内。
+InspectorKit 只支持 Unity。属性元数据可以被 Runtime 组件引用，绘制、Undo 和按钮调用只能在 Unity Editor 中执行；它不是运行时 UI，也不替代 Unity 的序列化系统。
 
 ## 快速上手
 
@@ -300,26 +279,20 @@ Inspector 专属 class 使用 `yoki-editor-inspector` 命名空间，包括 sect
 - 空标签显示方法名；非空 `InspectorButtonAttribute.Label` 使用自定义文本。
 - InspectorKit 不执行属性校验，不负责字段值写入规则，也不提供多目标之间的业务一致性检查。
 
+## 在工具中查看
+
+InspectorKit 没有独立 Workbench 页面；它的效果直接显示在 Unity Inspector 中。运行时 UI、跨引擎工具和项目业务状态仍由其它 Kit 或宿主编辑器负责。
+
 ## 限制与相关资料
 
 | 问题 | 处理 |
 |---|---|
-| 元数据显示但没有 Inspector 效果 | 确认目标对象使用了继承 `InspectorKitEditor` 的 `CustomEditor`，且 Editor 程序集已编译 |
+| 元数据显示但没有 Inspector 效果 | 确认目标对象使用了继承 `InspectorKitEditor` 的 `CustomEditor`，且编辑器脚本已编译 |
 | 按钮不显示 | 确认方法为实例方法、无参数、非特殊方法，并且带有 `InspectorButtonAttribute` |
 | 可选参数按钮不工作 | 当前实现只接受零参数方法；为按钮提供无参数包装方法 |
 | 只读字段仍可被运行时代码修改 | `InspectorReadOnly` 只限制 Inspector UI 编辑，不是运行时只读约束 |
 | 自定义样式未加载 | 检查 USS 文件名是否精确为约定名称，并在资源重导入后调用 `ClearCache` |
 | 多个组件样式重复添加 | 通过 `YokiFrameEditorStyleService.Apply` 加载；服务会对同一根元素去重 |
-| 想在 Player 使用 `InspectorKitEditor` | Editor 类型不能进入 Player；Player 只能引用 Runtime 元数据属性，并且不获得 Inspector 渲染能力 |
+| 想在游戏运行时使用 Inspector | InspectorKit 只改变 Unity Editor 面板；运行时请使用组件自己的公开属性和方法 |
 
-### 验证与非目标
-
-InspectorKit 的 Runtime 元数据与 Editor Inspector 分属独立程序集，验证时应确认：
-
-- `YokiFrame.Unity.Inspector.Runtime` 不引用 `UnityEditor`。
-- `YokiFrame.Unity.Inspector.Editor` 仅在 Unity Editor 编译，并依赖 Runtime 元数据程序集。
-- UI Toolkit 路径使用 `SerializedObject`/`SerializedProperty`，回退路径使用 Unity 默认 Inspector。
-- Inspector 按钮调用产生 Undo、Dirty 和异常日志行为。
-- 样式资源按精确文件名加载。
-
-当前不提供专用 InspectorKit Runtime 测试、Kit Interaction、Workbench 页面或 CLI action。后续 Core ResKit Unity YooAsset Inspector 和 Tool Kit Unity Editor 适配层可以复用该基础设施，但不应把 InspectorKit 宣称为一个跨引擎 Runtime Kit。
+InspectorKit 只覆盖 Unity Inspector 的元数据、绘制和按钮调用，不提供跨引擎实现。遇到绘制问题时，先确认目标组件使用了继承 `InspectorKitEditor` 的 `CustomEditor`，并检查 Unity Editor 的 Console。

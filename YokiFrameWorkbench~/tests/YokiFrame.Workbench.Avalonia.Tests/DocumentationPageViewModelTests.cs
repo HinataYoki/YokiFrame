@@ -102,6 +102,56 @@ public sealed class DocumentationPageViewModelTests
     }
 
     /// <summary>
+    /// 验证 Guides 可由正文链接选择，但不会进入左侧目录或全文搜索。
+    /// </summary>
+    [Fact]
+    public async Task GuidesRemainReachableButStayOutOfNavigation()
+    {
+        var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-docs-guides-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            WritePackageFile(packageRoot, "package.json", "{\"name\":\"com.hinatayoki.yokiframe\",\"version\":\"2.0.0-test\"}");
+            WritePackageFile(packageRoot, "Documentation~/Api/02-Core/FsmKit.md", "# FsmKit\n");
+            WritePackageFile(
+                packageRoot,
+                "Documentation~/Guides/Deep-Reference.md",
+                "# 深度指南\n\nGuideOnlyToken\n");
+            DocumentationPageViewModel viewModel = new(
+                packageRoot,
+                new OfflineDocumentationService(packageRoot));
+
+            await viewModel.EnsureLoadedAsync();
+
+            Assert.Single(viewModel.Documents);
+            Assert.DoesNotContain(
+                viewModel.Documents,
+                static document => document.RelativePath.Contains("/Guides/", StringComparison.OrdinalIgnoreCase));
+
+            viewModel.SearchText = "GuideOnlyToken";
+            await viewModel.SearchCommand.ExecuteAsync();
+
+            Assert.Empty(viewModel.Documents);
+            Assert.DoesNotContain(
+                viewModel.SearchResults,
+                static result => result.RelativePath.EndsWith("/Guides/Deep-Reference.md", StringComparison.Ordinal));
+
+            viewModel.SelectDocument("Documentation~/Guides/Deep-Reference.md");
+
+            Assert.Equal("深度指南", viewModel.SelectedDocument?.Title);
+            Assert.DoesNotContain(
+                viewModel.Documents,
+                static document => document.RelativePath.Contains("/Guides/", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(packageRoot))
+            {
+                Directory.Delete(packageRoot, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// 向临时包根写入一个文件，并保证其父目录已经存在。
     /// </summary>
     /// <param name="packageRoot">测试用 YokiFrame 包根。</param>

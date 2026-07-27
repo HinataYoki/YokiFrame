@@ -61,11 +61,20 @@
         return document.group || '文档';
     }
 
+    function isNavigationDocument(document) {
+        const relativePath = String(document?.relativePath || '');
+        return !relativePath.includes('/Guides/')
+            && (!relativePath.includes('/Api/00-GettingStarted/')
+                || relativePath.endsWith('/Api/00-GettingStarted/FrameworkOverview.md'));
+    }
+
+    function navigationDocuments() {
+        return (catalog.documents || []).filter(isNavigationDocument);
+    }
+
     function documentNavTitle(document) {
         const fileName = String(document.relativePath || '').split('/').pop()?.replace(/\.md$/i, '') || '';
         const title = document.title || fileName || '文档';
-        const isGuide = String(document.relativePath || '').includes('/Guides/');
-        if (isGuide) return title;
         const kitTitle = title.match(/^([a-z][a-z0-9]*kit)(?:\s|$)/i);
         if (kitTitle) return kitTitle[1];
         if (title === 'YokiFrame 框架概览') return '框架概览';
@@ -192,7 +201,7 @@
 
     function renderShell() {
         const groups = {};
-        for (const document of catalog.documents || []) {
+        for (const document of navigationDocuments()) {
             (groups[documentGroup(document)] ||= []).push(document);
         }
 
@@ -375,8 +384,9 @@
         setCatalog(value) {
             const previousRelativePath = activeDocument?.relativePath;
             catalog = value || { packageVersion: '', documents: [] };
-            activeDocument = catalog.documents?.find(document => document.relativePath === previousRelativePath)
-                || catalog.documents?.[0]
+            const documents = navigationDocuments();
+            activeDocument = documents.find(document => document.relativePath === previousRelativePath)
+                || documents[0]
                 || null;
             renderShell();
             renderArticle();

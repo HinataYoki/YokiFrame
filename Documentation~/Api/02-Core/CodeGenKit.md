@@ -1,31 +1,14 @@
 # CodeGenKit 代码生成
 
-> 面向读者：编写 Unity Editor、Godot Tools 或 .NET 工具的开发者
->
-> 主要入口：`CodeGenKit.GenerateToString`、`CodeGenKit.GenerateToFile`
->
-> 运行边界：Editor/Tools 专属，统一编入 `YokiFrame.Editor`
->
-> 状态来源：当前 `Core/Editor/CodeGenKit` 源码
-
 ## 适用场景
 
 CodeGenKit 是面向 Editor 工具的纯 C# 代码生成 API，适合生成样板类、配置访问器、注册代码、协议 DTO 和其它可重复产生的 C# 源码。它提供结构化声明 builder 和逐行模板 builder 两种入口，并负责稳定渲染与事务式文件提交。
 
 它不是完整 C# 编译器、Roslyn AST 或语义分析器。类型表达式、默认值、方法体、特性参数和 `Custom` 内容由调用方提供，CodeGenKit 只对结构化名称、物理行和一部分声明修饰符做边界校验。生成后仍应使用目标 Unity/Godot Tools 编译器验证产物。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 结论 |
-|---|---|
-| Unity Editor | `YokiFrame.Editor` |
-| Godot Tools / 纯 .NET | `Core/Editor/YokiFrame.Editor.csproj` |
-| Unity Player | 不包含 CodeGenKit |
-| Godot 导出包 | 不包含 CodeGenKit |
-| 外部依赖 | 无，不引入 Roslyn、CodeDOM 或模板引擎 |
-| C# 版本 | 共享 API 保持 C# 9 兼容 |
-
-CodeGenKit 没有单独的 Core Kit asmdef。调用方应把使用代码放在 Editor/Tools 边界内；不要在 Runtime 程序集中直接引用 `CodeGenKit`。
+CodeGenKit 只用于 Unity Editor、Godot Tools 或独立 .NET 工具，不会进入游戏 Player。它不替代 Roslyn，也不会替调用方检查完整的 C# 语义；生成后仍需让目标项目编译验证。
 
 ## 快速上手
 
@@ -380,16 +363,13 @@ ICodeScope Region(this ICodeScope scope, string regionName, Action<ICodeScope> b
 
 ## 生命周期与错误边界
 
-`GenerateToFile` 和 `WriteToFile` 的文件提交过程如下：
+CodeGenKit 只负责生成结构化 C# 文本和提交单个文件，不是 C# 编译器，也不会替你决定输出目录、生成文件是否属于项目或是否可以覆盖用户文件。生成前请由调用方确认目标路径，生成后让目标 Unity/Godot 项目编译一次。
 
-1. 将目标路径规范化为绝对路径，并拒绝空路径或不包含文件名的路径。
-2. 以 UTF-8 无 BOM 编码生成 payload。
-3. 如果目标文件存在，先按长度和字节比较；完全一致时返回 `Unchanged`，不创建目录、不更新时间戳。
-4. 在目标目录创建随机临时文件，写入完整 payload 并执行持久化 flush。
-5. 新文件使用同目录 move；已有文件使用 `File.Replace` 原子更新。
-6. 失败时删除临时文件；构建失败、临时写入失败或提交失败都不会主动截断已有正式文件。
+`GenerateToFile` 与 `WriteToFile` 在内容未变化时返回 `Unchanged`；生成失败不会把已有文件截断。需要批量生成、路径白名单或用户文件保护时，使用项目自己的生成流程统一处理。
 
-CodeGenKit 不负责路径 containment、生成目录白名单、用户修改检测或生成文件清单。调用方的 Editor 工具、Application 或 CLI 必须在调用前校验这些业务约束，避免把生成 API 变成任意路径写入入口。
+## 在工具中查看
+
+CodeGenKit 没有独立 Workbench 页面；它在 Unity Editor、Godot Tools 或独立 .NET 工具的生成流程中使用。生成结果由目标项目的编译器检查。
 
 ## 限制与相关资料
 
@@ -401,16 +381,4 @@ CodeGenKit 不负责路径 containment、生成目录白名单、用户修改检
 | 表达式属性追加 setter 失败 | 先调用 `WithGetter` 切换到显式访问器，再调用 `WithSetter` |
 | 修饰符组合失败 | 按字段、属性、方法的允许集合配置，避免 `const readonly`、`static abstract` 和不带 `override` 的 `sealed` |
 | 文件无变化但调用方期待更新时间 | `Unchanged` 是按 UTF-8 字节比较的结果；内容未变化时不会更新时间戳 |
-| Runtime 程序集无法解析类型 | CodeGenKit 只在 `YokiFrame.Editor`，将调用代码移入 Editor/Tools 程序集 |
-
-### 验证
-
-当前 Editor 测试位于 `Core/Tests/Editor/CodeGenKit/YokiFrameCodeGenKitTests.cs`，覆盖：
-
-- 结构化输出的确定性换行、缩进和区域文化稳定性。
-- XML 文档转义、合法性校验和修饰符组合校验。
-- `SerializeField` 文本快捷入口与 `YokiFrame.Editor` 程序集归属。
-- `Created`、`Updated`、`Unchanged` 三种文件结果。
-- 构建失败时已有文件保持不变以及临时文件清理。
-
-新增生成模板后，至少执行对应 Editor 测试，并在目标 Unity/Godot Tools 编译生成产物；不要仅凭 CodeGenKit 成功返回就认定生成 C# 语义正确。
+| 在游戏运行时代码中无法使用 | CodeGenKit 只用于编辑器和工具；把生成步骤放到 Editor、Tools 或独立 .NET 工具中 |

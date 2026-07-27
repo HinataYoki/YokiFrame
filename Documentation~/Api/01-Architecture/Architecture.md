@@ -1,25 +1,12 @@
-# Architecture
-
-> 面向读者：需要组合项目级服务、模型和系统的 Runtime 开发者
->
-> 主要入口：`Architecture<T>`
->
-> 运行边界：跨宿主 Runtime；诊断仅在 Editor/Tools 编译
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
+# Architecture 项目架构
 
 ## 适用场景
 
 Architecture 是按具体类型建立的服务容器。它负责服务注册、架构注入、一次性初始化、替换释放和服务查询；不负责存档、线程调度或宿主对象生命周期。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 当前值 |
-|---|---|
-| Runtime API | 已实现，位于 `Core/Runtime/Architecture` 并编入 `YokiFrame` |
-| Kit Interaction | 已实现，提供只读架构诊断 |
-| Workbench | 不设独立页面；框架总览与 CLI 保留只读诊断 |
-| 宿主范围 | Unity 与 Godot .NET 共享纯 C# API |
+Architecture 是跨 Unity 与 Godot .NET 的纯 C# Runtime 能力。它没有独立 Workbench 页面；需要查看项目状态时使用 Workbench 的“框架”页。
 
 ## 快速上手
 
@@ -102,9 +89,9 @@ InventoryService inventory =
 
 `force=true` 适合明确的延迟创建依赖，不要用它掩盖初始化顺序问题。同一服务类型的并发强制请求共享同一创建结果；创建期间若调用方已显式完成 `Register`，显式实例优先，未采用的候选会被释放。稳定服务优先在 `OnInit()` 显式注册。
 
-## 宿主与工具入口
+## 在工具中查看
 
-`ArchitectureRegistry`、`ArchitectureDebugInfo` 和 `ArchitectureServiceDebugInfo` 只在 Unity Editor 或 Godot Tools 构建中存在，不能作为 Player API 使用。Registry 提供 `DiagnosticVersion`、`Count`、`GetAll(List<ArchitectureDebugInfo>)` 和 `Clear()`；Application/CLI 诊断链路只读这些快照，不负责注册、替换或释放服务。Workbench 不再提供 Architecture 独立页面。
+Architecture 没有独立 Workbench 页面。需要确认项目连接和运行态状态时，查看 Workbench 的“框架”页；服务的注册、替换和释放仍由 Runtime 代码负责。
 
 ## 限制与相关资料
 

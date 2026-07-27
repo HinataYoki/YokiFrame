@@ -44,8 +44,8 @@ description: Use when Codex needs to select or use a YokiFrame Runtime API, veri
 |---|---|
 | Kit 完成度与主入口 | [kit-index.md](references/kit-index.md) |
 | 人类可读 API、示例和限制 | `Documentation~/Api/` 对应 Kit 主页面 |
-| 所有新版入口 | `Documentation~/Api/00-GettingStarted/Entrypoints.md` |
-| 面向用户的架构概览 | `Documentation~/Api/01-Architecture/Architecture.md` |
+| 人类使用入口 | 包根 `README.md`；快速上手之后进入对应 Kit 文档 |
+| 面向用户的框架概览 | `Documentation~/Api/00-GettingStarted/FrameworkOverview.md` |
 | CLI / Runtime evidence | `yokiframe-cli` |
 | Workbench / Installer | `yokiframe-workbench` |
 

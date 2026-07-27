@@ -76,6 +76,9 @@ public sealed class DocumentationCatalog
     {
         PackageVersion = packageVersion;
         Documents = documents.ToArray();
+        NavigationDocuments = Documents
+            .Where(static document => document.IsNavigationVisible)
+            .ToArray();
         ApiEntries = apiEntries.ToArray();
     }
 
@@ -88,6 +91,12 @@ public sealed class DocumentationCatalog
     /// 获取受控 Markdown 文档目录快照。
     /// </summary>
     public IReadOnlyList<DocumentationIndexEntry> Documents { get; }
+
+    /// <summary>
+    /// 获取 Workbench 左侧目录和搜索导航使用的文档快照。
+    /// Guides 与旧的 GettingStarted 辅助页保留在 <see cref="Documents"/> 中供正文内部链接打开；唯一的框架概览页进入目录。
+    /// </summary>
+    public IReadOnlyList<DocumentationIndexEntry> NavigationDocuments { get; }
 
     /// <summary>
     /// 获取 API 索引来源返回的条目快照。
@@ -139,6 +148,18 @@ public sealed class DocumentationIndexEntry
     /// </summary>
     public IReadOnlyList<DocumentationKeyword> Keywords { get; }
 
+    /// <summary>
+    /// 获取该文档是否应出现在 Workbench 左侧目录和搜索导航中。
+    /// </summary>
+    public bool IsNavigationVisible
+    {
+        get => !RelativePath.Contains("/Guides/", StringComparison.OrdinalIgnoreCase)
+            && (!RelativePath.Contains("/Api/00-GettingStarted/", StringComparison.OrdinalIgnoreCase)
+                || RelativePath.EndsWith(
+                    "/Api/00-GettingStarted/FrameworkOverview.md",
+                    StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>获取 Workbench 文档目录分组。</summary>
     public string Group
     {
@@ -156,11 +177,6 @@ public sealed class DocumentationIndexEntry
         if (relativePath.Contains("/Api/00-GettingStarted/", StringComparison.OrdinalIgnoreCase))
         {
             return "入门";
-        }
-
-        if (relativePath.Contains("/Guides/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "工具链";
         }
 
         if (relativePath.Contains("/Api/01-Architecture/", StringComparison.OrdinalIgnoreCase))
@@ -192,11 +208,10 @@ public sealed class DocumentationIndexEntry
         {
             "入门" => 0,
             "架构" => 1,
-            "工具链" => 2,
-            "Core" => 3,
-            "Tool" => 4,
-            "Reference" => 5,
-            _ => 6,
+            "Core" => 2,
+            "Tool" => 3,
+            "Reference" => 4,
+            _ => 5,
         };
     }
 

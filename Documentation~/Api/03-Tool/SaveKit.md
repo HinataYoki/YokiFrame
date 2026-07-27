@@ -1,13 +1,5 @@
 # SaveKit 存档
 
-> 面向读者：需要持久化玩家进度、Global 设置或可迁移本地数据的 Runtime 开发者
->
-> 主要入口：`SaveKit`、`SaveTarget`、`SaveData`
->
-> 运行边界：跨宿主 Runtime；Workbench 只浏览文件元信息，不读取 payload
->
-> 状态来源：`Documentation~/Api/00-GettingStarted/Kit_Status.md`
-
 ## 适用场景
 
 SaveKit 是跨宿主的纯 C# 存档 Tool Kit，用于运行时持久化玩家进度与槽位、与槽位无关的 Global 设置，以及需要版本迁移、可替换 Serializer/Storage 或认证加密的本地存档。
@@ -16,15 +8,9 @@ SaveKit 负责目标寻址、模块化数据容器、文件容器校验和后端
 
 存档语义必须通过 `SaveTarget` 表达：玩家可选存档用 `Slot`，设置与其它独立文档用 `Global`。不要用负数或特殊槽位编号模拟 Global。
 
-## 入口与当前状态
+## 使用前提
 
-| 项目 | 当前值 |
-|---|---|
-| Runtime | 已实现：Slot/Global、JSON、Task/UniTask 异步 API、自动保存、Architecture 集成；源码 `Tools/SaveKit` |
-| 程序集 | `YokiFrame.SaveKit`（无引擎引用）；Adapter / Nino 见下文 |
-| Interaction | 已实现：`SaveKit/state`、`stats`、`get_workbench_snapshot`，全部只读 |
-| Workbench | 已实现：存档目录/扩展名配置、文件元信息与 Runtime 后端/自动保存/容器头摘要 |
-| 状态入口 | Editor/Tools 内部版本只驱动低频 FileBridge Snapshot 增量写入；SaveKit 不发布 Shared Memory Telemetry，纯观察不创建默认后端 |
+SaveKit 可用于 Unity 与 Godot .NET Runtime，支持 Slot/Global、同步与异步保存以及自动保存。Nino 是可选序列化后端。Workbench 只显示配置和文件元信息，不读取存档 payload。
 
 ## 快速上手
 
@@ -154,9 +140,9 @@ SaveKit.TickAutoSave(deltaSeconds);
 | `SetSerializer` / `GetSerializer` | 模块序列化器；设为 `null` 抛 `ArgumentNullException`。 |
 | `SetEncryptor` / `GetEncryptor` | payload 加密器；`null` 表示关闭加密。 |
 | `SetStorage` / `GetStorage` | 容器存储后端；设为 `null` 抛 `ArgumentNullException`。 |
-| `RegisterDefaultBackendFactory(...)` | 注册宿主惰性默认工厂；首次业务调用才实例化。 |
+| `RegisterDefaultBackendFactory(...)` | 为宿主或项目注册默认存储和序列化器；通常由宿主适配层调用。 |
 | `CreateSaveData()` | 创建并绑定当前 Serializer 的 `SaveData`。 |
-| `Reset()` | 停用自动保存并清除当前后端。不删除外部文件根目录内容；下次业务调用重回默认工厂，无工厂则 raw + memory。 |
+| `Reset()` | 停用自动保存并清除当前后端。不删除外部文件根目录内容；下次业务调用会重新使用宿主默认配置。 |
 
 切换 Serializer 不会迁移已有目标。保存其它 Serializer 写出的目标会抛 `InvalidOperationException`；`TryLoad` 用容器头 `SerializerId` 与当前后端比较。
 
@@ -219,7 +205,7 @@ SaveKit.TickAutoSave(deltaSeconds);
 | `IsAutoSaveEnabled` | 当前是否启用。 |
 | `GetAutoSaveTarget()` | 当前目标；未启用时为默认值。 |
 | `GetAutoSaveIntervalSeconds()` / `GetAutoSaveElapsedSeconds()` | 当前间隔与已累计时间。 |
-| `TickAutoSave(float deltaSeconds)` | 推进计时。`deltaSeconds` 须为非负有限数；触发并成功保存返回 `true`；未触发保存不会触发 Interaction Snapshot 重写。 |
+| `TickAutoSave(float deltaSeconds)` | 推进计时。`deltaSeconds` 须为非负有限数；触发并成功保存返回 `true`。 |
 
 达到间隔后先调用 `onBeforeSave`，再执行同步 `Save`；回调抛异常则不进入保存。一次 tick 跨过多间隔时只保存一次，剩余时间按间隔取模。
 
@@ -259,11 +245,11 @@ if (result.Succeeded)
 | API | 说明 |
 |---|---|
 | `ISaveStorage.Exists` / `Write` / `Read` / `Delete` | 操作完整容器字节，不是裸模块 payload。自定义后端自定并发与原子策略。 |
-| `ISaveMetadataStorage.TryReadMetadata` | 可选的只读头部契约。实现后 Interaction 可读取安全元数据而不读取 payload；内置 Memory/File Storage 已实现。 |
+| `ISaveMetadataStorage.TryReadMetadata` | 可选的只读头部契约；可用于在不读取存档正文时显示列表元信息。 |
 | `GetTargets(SaveTargetKind)` | 枚举指定类型目标快照。 |
 | `Clear(SaveTargetKind)` | 清空指定类型全部目标。 |
 
-**`MemorySaveStorage`**：适合单元测试与临时隔离。读写都会复制 `byte[]`；进程结束或替换后端后数据丢失。
+**`MemorySaveStorage`**：适合临时数据和开发阶段验证。读写都会复制 `byte[]`；进程结束或替换后端后数据丢失。
 
 **`FileSaveStorage`**：
 
@@ -301,57 +287,21 @@ SaveKit.SetStorage(storage);
 
 ## 生命周期与错误边界
 
-1. Unity/Godot 完成 Adapter 默认后端安装后再创建 `SaveData` 与读写；自定义宿主先设 Serializer、Storage 与可选 Encryptor。
+1. 先选择 Serializer、Storage 和可选 Encryptor，再创建 `SaveData` 并读写；使用宿主默认配置时可省略显式设置。
 2. `CreateSaveData()` 绑定创建时的当前 Serializer；同一批 typed 容器未处理完前不要无规划地切换全局 Serializer。
 3. `Save` / `Delete` / 配置 / 自动保存状态是同步操作；`Async` 仅是签名与取消检查，不代表后台线程执行。
 4. `Exists` 只代表可解析头部；列表 UI 用 `GetMeta` / `GetAllSlots` / `GetAllGlobals` 后，对选中目标仍建议 `TryLoad`。
-5. `Reset()` 丢弃当前内存后端引用并恢复 Core 默认，不删除外部 `FileSaveStorage` 根目录文件。
+5. `Reset()` 丢弃当前后端引用并恢复宿主默认配置，不删除外部 `FileSaveStorage` 根目录文件。
 6. 更换根目录、扩展名、Serializer 或 Encryptor 是配置切换，不是数据迁移；迁移由项目显式编排。
-7. File Storage 单次提交具备临时文件原子替换；应用崩溃后的业务级回滚不由 SaveKit 代劳。
+7. File Storage 会先写临时文件再替换目标文件；应用崩溃后的业务级回滚仍由项目自己设计。
 
-## 宿主与工具入口
+## 在工具中查看
 
-SaveKit Provider 位于 `Tools/SaveKit/Editor`，Unity Editor Adapter 仅负责加载时注册。`SaveKit/state` 与两个 command 都只发布当前已存在后端的安全事实；SaveKit 只走 FileBridge Snapshot，不发布 Shared Memory Telemetry。纯观察**不会**调用 `EnsureBackend()`，因而不会创建默认 Storage 或 Serializer。
+Workbench 可以显示存档目录、扩展名、文件元信息和容器摘要；不会读取存档内容，也不提供远程 Save、Load 或 Delete。
 
-- `state`：后端是否已配置、Storage 类型、Serializer/Encryptor 标识、自动保存摘要，以及最多 32 个 Slot 和 32 个 Global 的已验证容器头。
-- `stats`：不含列表的后端、自动保存和容器数量摘要。
-- `get_workbench_snapshot`：返回完整有界 `state`；两项命令均为 `ReadOnly`。
-- 状态只通过 `ISaveMetadataStorage` 读取头部；未知 Storage 仍保留数量但不读取、解析或传输模块 payload，不提供远程 Save、Load、Delete、Clear、后端切换或通用迁移 action。
-- Avalonia 页面继续配置目录/扩展名并扫描物理文件元信息；Runtime 区域通过 Application 强类型 read model 显示当前后端、自动保存和容器头覆盖率。
+Unity 的默认保存目录位于 `Application.persistentDataPath/YokiFrame/Saves`，Godot 位于 `OS.GetUserDataDir()/YokiFrame/Saves`。项目可以通过 Runtime Settings 修改目录和扩展名。
 
-- Unity 配置：`Assets/Settings/Resources/YokiFrame/runtime-settings.json` 的 `SaveKit/storagePath` 与 `SaveKit/fileExtension`
-- Godot 配置：`project.godot` 的 `yokiframe/runtime/save_kit/storage_path` 与 `yokiframe/runtime/save_kit/file_extension`
-
-通用存档迁移工具仍未实现；不要根据只读 Interaction 推断其可以修改文件或后端。内部 Snapshot 版本只在配置、保存、删除和自动保存状态变化时推进，普通计时 Tick 不会重写 FileBridge state；该版本不是 Runtime 公共 API，也不会创建 Telemetry。
-
-### 宿主 Adapter 与可选 Integration
-
-| 程序集/项目 | 内容 | 宿主边界 |
-|---|---|---|
-| `YokiFrame.SaveKit` | 门面、容器、Storage/Serializer/Encryptor 契约、JSON 迁移、AES | 无引擎引用 |
-| `YokiFrame.SaveKit.Unity` | `UnityJsonSaveCodec`、默认后端安装器 | Unity 2022.3+；API 仅在 Adapter |
-| `YokiFrame.SaveKit.Godot` | `GodotJsonSaveCodec`、由 Installer 薄 Bootstrap 显式加载的惰性默认后端安装器 | Godot .NET |
-| `YokiFrame.SaveKit.Nino` | 可选 `NinoSaveSerializer` | `UNITY_2022_3_OR_NEWER && YOKIFRAME_NINO_SUPPORT` |
-
-| 配置 | Core 默认 | Unity/Godot Adapter 安装后 |
-|---|---|---|
-| Serializer | `RawBytesSaveSerializer`（`raw`） | `JsonSaveSerializer`（`json`） |
-| Storage | `MemorySaveStorage` | `FileSaveStorage` |
-| Encryptor | 无 | 无，需项目显式配置 |
-| 文件根 | — | Unity：`Application.persistentDataPath/YokiFrame/Saves`；Godot：`OS.GetUserDataDir()/YokiFrame/Saves` |
-
-Adapter 只注册惰性默认工厂；首次业务调用才创建 JSON + 文件后端。仅引用 Core 且无工厂时回退 raw + memory。
-
-Nino 显式切换示例：
-
-```csharp
-#if UNITY_2022_3_OR_NEWER && YOKIFRAME_NINO_SUPPORT
-SaveKit.SetSerializer(new NinoSaveSerializer());
-#endif
-```
-
-`SerializerId` 为 `nino`。版本与迁移由 Nino 负责；SaveKit 不会自动把 JSON 存档转成 Nino。
-
+Nino 是可选序列化后端。启用后由项目显式选择 serializer；SaveKit 不会自动把旧 JSON 存档转换为 Nino 格式。
 ## 限制与相关资料
 
 - 用 `SaveTarget.Slot` / `Global` 表达语义，禁止魔法槽位号模拟 Global。
@@ -359,15 +309,6 @@ SaveKit.SetSerializer(new NinoSaveSerializer());
 - 切换 Serializer/Encryptor/根目录不会自动迁移文件；必须读出再按新配置写回。
 - 加密不是防作弊；不要在客户端放可逆固定密钥当安全方案。
 - 自动保存只服务单个 Slot，且必须由宿主 `TickAutoSave`。
-- 不提供：云同步、冲突合并、账号、防作弊、Workbench/CLI 读 payload、远程存档修改或通用迁移工具。
+- 不提供云同步、冲突合并、账号、防作弊或通用迁移工具。
 
-Core 测试覆盖目标验证、容器截断/trailing bytes、模块 ID、Memory/File Storage、JSON 迁移、加密认证、自动保存和 Architecture 集成。Unity/Nino 测试需在对应依赖与宏开启时执行。
-
-## 维护
-
-| 项 | 值 |
-|---|---|
-| 源码根 | `Tools/SaveKit`（Runtime / Adapters / Integrations / Tests） |
-| Workbench | `YokiFrameWorkbench~` 中 SaveKit Application 与 Avalonia 页面 |
-| 状态入口 | `SaveKit/state` + `stats` / `get_workbench_snapshot`；只发布安全摘要 |
-| 改 API 时同步 | 本文、`kit-index.md`、`yokiframe` Skill；Workbench 设置字段变更时同步 Workbench Skill |
+需要查看运行态摘要时，直接打开 Workbench 的 SaveKit 页面。
