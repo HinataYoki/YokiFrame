@@ -308,7 +308,7 @@ public sealed partial class WorkbenchShellViewTests
     }
 
     /// <summary>
-    /// 验证 Workbench 关闭时无条件保存 TableKit 草稿，且保存发生在窗口布局状态之前。
+    /// 验证 Workbench 关闭时保存编辑器草稿，且保存发生在窗口布局状态之前。
     /// </summary>
     [Fact]
     public void WorkbenchWindowPersistsTableKitConfigurationBeforeClose()
@@ -323,6 +323,29 @@ public sealed partial class WorkbenchShellViewTests
         Assert.DoesNotContain("if (mWindowStateStore != null) " + persistCall, closingBody);
         Assert.True(
             closingBody.IndexOf(persistCall, StringComparison.Ordinal)
+            < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));
+    }
+
+    /// <summary>验证 Workbench 关闭时提交各编辑器页面的未执行操作草稿。</summary>
+    [Fact]
+    public void WorkbenchWindowPersistsEditorDraftsBeforeClose()
+    {
+        var source = ReadWorkbenchWindowSource();
+        var closingStart = source.IndexOf("private void OnClosing", StringComparison.Ordinal);
+        var closedStart = source.IndexOf("private void OnClosed", StringComparison.Ordinal);
+        var closingBody = source[closingStart..closedStart];
+
+        Assert.Contains("mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();", closingBody);
+        Assert.Contains("mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();", closingBody);
+        Assert.Contains("mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();", closingBody);
+        Assert.True(
+            closingBody.IndexOf("PersistEditorSettingsOnClose", StringComparison.Ordinal)
+            < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));
+        Assert.True(
+            closingBody.IndexOf("PersistLubanWorkspaceSettingsOnClose", StringComparison.Ordinal)
+            < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));
+        Assert.True(
+            closingBody.IndexOf("PersistIndexSettingsOnClose", StringComparison.Ordinal)
             < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));
     }
 

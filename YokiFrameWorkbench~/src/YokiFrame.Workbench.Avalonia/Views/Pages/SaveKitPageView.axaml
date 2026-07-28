@@ -92,7 +92,7 @@
             <StackPanel Spacing="5">
               <TextBlock Text="存档目录" Classes="muted" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                <TextBox Text="{CompiledBinding StoragePath, Mode=TwoWay}"
+                <TextBox Text="{CompiledBinding StoragePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="${persistentDataPath}/YokiFrame/Saves"
                          AutomationProperties.Name="SaveKit 存档目录" />
                 <Button Grid.Column="1"
@@ -107,7 +107,7 @@
 
             <StackPanel Spacing="5">
               <TextBlock Text="文件扩展名" Classes="muted" />
-              <TextBox Text="{CompiledBinding FileExtension, Mode=TwoWay}"
+              <TextBox Text="{CompiledBinding FileExtension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                        PlaceholderText=".yoki"
                        AutomationProperties.Name="SaveKit 文件扩展名" />
             </StackPanel>

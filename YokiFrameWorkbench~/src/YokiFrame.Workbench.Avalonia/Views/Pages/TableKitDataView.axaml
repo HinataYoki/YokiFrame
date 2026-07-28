@@ -170,7 +170,7 @@
                        VerticalAlignment="Center" />
           </Grid>
           <TextBox Grid.Row="1"
-                   Text="{CompiledBinding SelectedPreviewJson}"
+                   Text="{CompiledBinding SelectedPreviewJson, Mode=OneWay}"
                    Classes="tablekit-json-preview"
                    IsReadOnly="True"
                    AcceptsReturn="True"

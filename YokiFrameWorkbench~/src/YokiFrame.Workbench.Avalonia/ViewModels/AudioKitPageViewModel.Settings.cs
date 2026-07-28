@@ -58,6 +58,19 @@ public sealed partial class AudioKitPageViewModel
         return TrySaveIndexSettingsAsync(true);
     }
 
+    /// <summary>
+    /// 在 Workbench 关闭前同步提交当前索引草稿，避免焦点仍停留在输入控件时跳过失焦保存。
+    /// </summary>
+    internal void PersistIndexSettingsOnClose()
+    {
+        if (mSaveIndexSettingsAsync == null)
+        {
+            return;
+        }
+
+        TrySaveIndexSettingsAsync(false).GetAwaiter().GetResult();
+    }
+
     /// <summary>保存当前页面配置并把失败投影到索引状态栏。</summary>
     private async Task<bool> TrySaveIndexSettingsAsync(bool showSuccess)
     {

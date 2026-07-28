@@ -44,7 +44,7 @@
               </Border>
             </Grid>
             <TextBox Grid.Row="1"
-                     Text="{CompiledBinding SearchText}"
+                     Text="{CompiledBinding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      PlaceholderText="搜索名称 / 状态 / instanceId"
                      AutomationProperties.Name="搜索活动状态机"
                      AutomationProperties.AutomationId="workbench.fsm.search" />

@@ -307,13 +307,13 @@
                              Classes="logkit-field-label" />
                   <ComboBox Classes="logkit-editor"
                             ItemsSource="{CompiledBinding SettingsLevelOptions}"
-                            SelectedItem="{CompiledBinding SettingsDraft.MinimumLevel, Mode=TwoWay}" />
+                            SelectedItem="{CompiledBinding SettingsDraft.MinimumLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Spacing="4">
                   <TextBlock Text="队列上限"
                              Classes="logkit-field-label" />
-                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxQueueSize, Mode=TwoWay}"
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxQueueSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
                                  Minimum="1" Maximum="2147483647" Increment="100" FormatString="0" />
                 </StackPanel>
@@ -321,7 +321,7 @@
                             Spacing="4">
                   <TextBlock Text="重复阈值"
                              Classes="logkit-field-label" />
-                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxSameLogCount, Mode=TwoWay}"
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxSameLogCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
                                  Minimum="0" Maximum="2147483647" Increment="1" FormatString="0" />
                 </StackPanel>
@@ -330,7 +330,7 @@
                             Spacing="4">
                   <TextBlock Text="保留天数"
                              Classes="logkit-field-label" />
-                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxRetentionDays, Mode=TwoWay}"
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxRetentionDays, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
                                  Minimum="1" Maximum="3650" Increment="1" FormatString="0" />
                 </StackPanel>
@@ -338,7 +338,7 @@
                             Spacing="4">
                   <TextBlock Text="单文件上限 MB"
                              Classes="logkit-field-label" />
-                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxFileSizeMb, Mode=TwoWay}"
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxFileSizeMb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
                                  Minimum="1" Maximum="2147483647" Increment="10" FormatString="0" />
                 </StackPanel>
@@ -347,7 +347,7 @@
                             Spacing="4">
                   <TextBlock Text="IMGUI 条数"
                              Classes="logkit-field-label" />
-                  <NumericUpDown Value="{CompiledBinding SettingsDraft.ImGuiMaxLogCount, Mode=TwoWay}"
+                  <NumericUpDown Value="{CompiledBinding SettingsDraft.ImGuiMaxLogCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
                                  Minimum="1" Maximum="2147483647" Increment="10" FormatString="0" />
                 </StackPanel>

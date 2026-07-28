@@ -261,6 +261,169 @@ public sealed class UIKitPageViewModelTests
         }
     }
 
+    /// <summary>验证真实 Editor Tools ComboBox 选择程序集后关闭再打开仍恢复选择值。</summary>
+    [Fact]
+    public async Task EditorToolsAssemblySelectionPersistsWhenWorkbenchCloses()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-uikit-assembly-close-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            UIKitPageViewModel first = CreateEditorSettingsViewModel(
+                new UIKitEditorSettingsService(root),
+                defaultAssemblyName: "Assembly-CSharp");
+            first.SetEditorEngine("unity-editor");
+            await first.ShowEditorToolsTaskCommand.ExecuteAsync();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Window window = new()
+                {
+                    Width = 900,
+                    Height = 620,
+                    Content = new UIKitEditorToolsView { DataContext = first },
+                };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    UIKitEditorToolsView tools = Assert.Single(
+                        window.GetVisualDescendants().OfType<UIKitEditorToolsView>());
+                    ComboBox assemblySelector = tools.FindControl<ComboBox>("AssemblySelector")!;
+                    assemblySelector.SelectedItem = "Game.UI";
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal("Game.UI", first.AssemblyName);
+                    first.PersistEditorSettingsOnClose();
+                }
+                finally
+                {
+                    window.Close();
+                }
+            });
+
+            UIKitPageViewModel second = CreateEditorSettingsViewModel(new UIKitEditorSettingsService(root));
+            second.SetEditorEngine("unity-editor");
+            await second.ShowEditorToolsTaskCommand.ExecuteAsync();
+
+            Assert.Equal("Game.UI", second.AssemblyName);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch
+            {
+                // 临时目录清理失败不覆盖测试的业务断言。
+            }
+        }
+    }
+
+    /// <summary>验证 Unity context 暂时漏报程序集时不会覆盖已保存的目标程序集。</summary>
+    [Fact]
+    public async Task EditorToolsKeepsSavedAssemblyWhenContextTemporarilyOmitsIt()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-uikit-assembly-context-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            UIKitEditorSettingsService service = new(root);
+            await service.SaveAsync(new WorkbenchUIKitPanelGenerationRequest
+            {
+                PrefabFolder = "Assets/UI",
+                ScriptFolder = "Assets/Scripts/UI",
+                ScriptNamespace = "Game.UI",
+                AssemblyName = "Game.UI",
+                CodeTemplate = "Minimal",
+            }, CancellationToken.None);
+
+            UIKitPageViewModel viewModel = new(
+                null,
+                (_, _, _) => Task.FromResult(new WorkbenchUIKitEditorResult
+                {
+                    Succeeded = true,
+                    Context = CreateEditorContext(
+                        assemblyName: "Assembly-CSharp",
+                        assemblyNames: new[] { "Assembly-CSharp" }),
+                    Message = "已就绪",
+                }),
+                service);
+            viewModel.SetEditorEngine("unity-editor");
+            await viewModel.ShowEditorToolsTaskCommand.ExecuteAsync();
+
+            Assert.Equal("Game.UI", viewModel.AssemblyName);
+            Assert.Contains("Game.UI", viewModel.AssemblyNames);
+
+            viewModel.PersistEditorSettingsOnClose();
+            Assert.Equal("Game.UI", service.Load()?.AssemblyName);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch
+            {
+                // 临时目录清理失败不覆盖测试的业务断言。
+            }
+        }
+    }
+
+    /// <summary>验证 Unity context 暂时漏报项目代码模板时不会覆盖已保存的模板选择。</summary>
+    [Fact]
+    public async Task EditorToolsKeepsSavedCodeTemplateWhenContextTemporarilyOmitsIt()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-uikit-template-context-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            UIKitEditorSettingsService service = new(root);
+            await service.SaveAsync(new WorkbenchUIKitPanelGenerationRequest
+            {
+                PrefabFolder = "Assets/UI",
+                ScriptFolder = "Assets/Scripts/UI",
+                ScriptNamespace = "Game.UI",
+                AssemblyName = "Game.UI",
+                CodeTemplate = "TeamTemplate",
+            }, CancellationToken.None);
+
+            UIKitPageViewModel viewModel = new(
+                null,
+                (_, _, _) => Task.FromResult(new WorkbenchUIKitEditorResult
+                {
+                    Succeeded = true,
+                    Context = CreateEditorContext(
+                        codeTemplate: "Default",
+                        codeTemplateOptions: new[] { "Default", "Minimal" }),
+                    Message = "已就绪",
+                }),
+                service);
+            viewModel.SetEditorEngine("unity-editor");
+            await viewModel.ShowEditorToolsTaskCommand.ExecuteAsync();
+
+            Assert.Equal("TeamTemplate", viewModel.CodeTemplate);
+            Assert.Equal("TeamTemplate", viewModel.CodeTemplateDisplay);
+            Assert.Contains("TeamTemplate", viewModel.CodeTemplateOptions);
+
+            viewModel.PersistEditorSettingsOnClose();
+            Assert.Equal("TeamTemplate", service.Load()?.CodeTemplate);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch
+            {
+                // 临时目录清理失败不覆盖测试的业务断言。
+            }
+        }
+    }
+
     /// <summary>验证 Editor Tools 仅保留面板创建与生成代码入口。</summary>
     [Fact]
     public void EditorToolsViewContractContainsOnlyGenerationActions()
@@ -272,6 +435,11 @@ public sealed class UIKitPageViewModelTests
         Assert.Contains("创建预制体", xaml, StringComparison.Ordinal);
         Assert.Contains("AssemblySelector", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{CompiledBinding AssemblyNames}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{CompiledBinding CodeTemplateDisplay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{CompiledBinding PrefabFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{CompiledBinding ScriptFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{CompiledBinding ScriptNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Classes=\"kit-panel uikit-editor-panel\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("uikit.editor.add-bind", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("uikit.editor.remove-bind", xaml, StringComparison.Ordinal);
@@ -358,7 +526,11 @@ public sealed class UIKitPageViewModelTests
     }
 
     /// <summary>创建 Editor Tools 回读的最小强类型 context。</summary>
-    private static WorkbenchUIKitEditorContext CreateEditorContext()
+    private static WorkbenchUIKitEditorContext CreateEditorContext(
+        string assemblyName = "Game.UI",
+        IReadOnlyList<string>? assemblyNames = null,
+        string codeTemplate = "Minimal",
+        IReadOnlyList<string>? codeTemplateOptions = null)
     {
         return new WorkbenchUIKitEditorContext
         {
@@ -375,23 +547,25 @@ public sealed class UIKitPageViewModelTests
                 PrefabFolder = "Assets/UI",
                 ScriptFolder = "Assets/Scripts/UI",
                 ScriptNamespace = "Game.UI",
-                AssemblyName = "Game.UI",
-                CodeTemplate = "Minimal",
+                AssemblyName = assemblyName,
+                CodeTemplate = codeTemplate,
             },
-            CodeTemplateOptions = new[] { "Default", "Minimal", "TeamTemplate" },
-            AssemblyNames = new[] { "Assembly-CSharp", "Game.UI" },
+            CodeTemplateOptions = codeTemplateOptions ?? new[] { "Default", "Minimal", "TeamTemplate" },
+            AssemblyNames = assemblyNames ?? new[] { "Assembly-CSharp", "Game.UI" },
         };
     }
 
     /// <summary>创建返回固定 Provider 默认值并注入项目设置服务的 Editor Tools 页面。</summary>
-    private static UIKitPageViewModel CreateEditorSettingsViewModel(UIKitEditorSettingsService service)
+    private static UIKitPageViewModel CreateEditorSettingsViewModel(
+        UIKitEditorSettingsService service,
+        string defaultAssemblyName = "Game.UI")
     {
         return new UIKitPageViewModel(
             null,
             (_, _, _) => Task.FromResult(new WorkbenchUIKitEditorResult
             {
                 Succeeded = true,
-                Context = CreateEditorContext(),
+                Context = CreateEditorContext(defaultAssemblyName),
                 Message = "已就绪",
             }),
             service);
@@ -428,7 +602,16 @@ public sealed class UIKitPageViewModelTests
             Assert.Null(tools.FindControl<Button>("SaveEditorSettingsButton"));
             Assert.Null(tools.FindControl<Button>("AddBindButton"));
             Assert.Null(tools.FindControl<Button>("RemoveBindButton"));
-            Assert.NotNull(tools.FindControl<ComboBox>("AssemblySelector"));
+            ComboBox assemblySelector = tools.FindControl<ComboBox>("AssemblySelector")!;
+            assemblySelector.SelectedItem = "Assembly-CSharp";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Assembly-CSharp", viewModel.AssemblyName);
+            ComboBox templateSelector = tools.GetVisualDescendants()
+                .OfType<ComboBox>()
+                .Single(item => item != assemblySelector);
+            templateSelector.SelectedItem = "默认";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Default", viewModel.CodeTemplate);
             AssertNoHorizontalScrollBar(tools);
             using WriteableBitmap? frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);

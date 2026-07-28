@@ -71,7 +71,7 @@
           <Grid Grid.Row="2" Margin="8,0,4,8">
             <ListBox x:Name="ActionRoots"
                      ItemsSource="{CompiledBinding FilteredRoots}"
-                     SelectedItem="{CompiledBinding SelectedRoot}"
+                     SelectedItem="{CompiledBinding SelectedRoot, Mode=TwoWay}"
                      Classes="actionkit-root-list kit-selection-list"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -177,7 +177,7 @@
 
           <Grid Grid.Row="1" Margin="8,0,4,8">
             <TreeView ItemsSource="{CompiledBinding SelectedFlowNodes}"
-                      SelectedItem="{CompiledBinding SelectedNode}"
+                     SelectedItem="{CompiledBinding SelectedNode, Mode=TwoWay}"
                       ItemContainerTheme="{StaticResource ActionKitTreeViewItemTheme}"
                       Classes="actionkit-tree kit-flow-tree"
                       ScrollViewer.VerticalScrollBarVisibility="Auto"

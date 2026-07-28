@@ -188,6 +188,18 @@ public sealed class LocalizationKitPageViewTests
         Assert.Equal("menu.start", viewModel.Entries[0].Key);
     }
 
+    /// <summary>验证 Luban 工作目录输入在失焦前也会回写 ViewModel，关闭保存不会丢失最后一段输入。</summary>
+    [Fact]
+    public void LubanWorkDirBindingUpdatesBeforeFocusLeavesControl()
+    {
+        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "LocalizationKitPageView.axaml");
+
+        Assert.Contains(
+            "LubanWorkDir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+    }
+
     /// <summary>选择工作目录后应持久化覆盖项，并可通过宿主回调打开已创建的 Excel 作者目录。</summary>
     [Fact]
     public async Task LubanWorkspaceCommandsPersistSelectionAndOpenWorkbookDirectory()
@@ -226,6 +238,20 @@ public sealed class LocalizationKitPageViewTests
         Assert.Equal(
             Path.Combine("Luban", "MiniTemplate"),
             new LocalizationKitSettingsService().Load(project.Root).LubanWorkDir);
+    }
+
+    /// <summary>验证仅编辑 Luban 工作目录后关闭 Workbench 也会持久化草稿。</summary>
+    [Fact]
+    public void LubanWorkspacePersistsWhenWorkbenchClosesWithoutCommand()
+    {
+        using TemporaryLocalizationProject project = TemporaryLocalizationProject.Create();
+        LocalizationKitPageViewModel first = new(project.Root, new LocalizationKitApplicationService());
+        first.LubanWorkDir = "Luban/CloseOnly";
+
+        first.PersistLubanWorkspaceSettingsOnClose();
+
+        var loaded = new LocalizationKitSettingsService().Load(project.Root);
+        Assert.Equal("Luban/CloseOnly", loaded.LubanWorkDir);
     }
 
     /// <summary>断言页面没有可见横向滚动条。</summary>

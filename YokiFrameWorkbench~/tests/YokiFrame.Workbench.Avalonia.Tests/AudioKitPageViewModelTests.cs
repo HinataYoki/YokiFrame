@@ -49,6 +49,30 @@ public sealed class AudioKitPageViewModelTests
         Assert.Contains("扫描预览", xaml, StringComparison.Ordinal);
         Assert.Contains("生成索引", xaml, StringComparison.Ordinal);
         Assert.Contains("LostFocus=\"OnIndexSettingLostFocus\"", xaml, StringComparison.Ordinal);
+        Assert.Contains(
+            "ScanFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IndexOutputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IndexManifestPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IndexNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IndexClassName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IndexStartId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
         Assert.Contains("AudioKitPageViewModel", shell, StringComparison.Ordinal);
         Assert.Contains("ActiveWorkspacePage", shell, StringComparison.Ordinal);
         Assert.DoesNotContain("StopVoiceCommand", xaml, StringComparison.Ordinal);
@@ -227,6 +251,28 @@ public sealed class AudioKitPageViewModelTests
         Assert.Equal("Assets/Art/Audio/Desktop", saved?.ScanFolder);
         Assert.Equal("ProjectAudio", saved?.NamespaceName);
         Assert.Equal("配置已保存", viewModel.IndexStatusText);
+    }
+
+    /// <summary>验证关闭 Workbench 时即使索引输入仍保持焦点也会提交当前草稿。</summary>
+    [Fact]
+    public void IndexSettingsPersistWhenWorkbenchClosesWithFocusedDraft()
+    {
+        AudioIndexSettings? saved = null;
+        AudioKitPageViewModel viewModel = new(
+            null,
+            null,
+            _ => AudioIndexSettings.CreateDefault(),
+            (_, value, _) =>
+            {
+                saved = value;
+                return Task.CompletedTask;
+            });
+        viewModel.SetProjectRoot("ProjectA");
+        viewModel.IndexClassName = "ProjectAudioIds";
+
+        viewModel.PersistIndexSettingsOnClose();
+
+        Assert.Equal("ProjectAudioIds", saved?.ClassName);
     }
 
     /// <summary>验证扫描预览在调用扫描服务前自动持久化当前配置。</summary>

@@ -77,6 +77,12 @@ public sealed partial class LocalizationKitPageViewModel
         }
     }
 
+    /// <summary>Workbench 关闭前提交尚未触发其它操作的 Luban 工作目录草稿。</summary>
+    internal void PersistLubanWorkspaceSettingsOnClose()
+    {
+        TryPersistLubanWorkspaceSettings();
+    }
+
     /// <summary>通过宿主目录选择器选择项目内 Luban 工作目录，并立即保存该显式覆盖项。</summary>
     /// <returns>目录选择和保存完成任务。</returns>
     private async Task BrowseLubanWorkDirAsync()

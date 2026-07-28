@@ -46,7 +46,7 @@
                      VerticalAlignment="Center" />
           <TextBox x:Name="LocalizationLubanWorkDir"
                    Grid.Column="1"
-                   Text="{CompiledBinding LubanWorkDir, Mode=TwoWay}"
+                   Text="{CompiledBinding LubanWorkDir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                    Classes="kit-input"
                    PlaceholderText="留空自动发现，例如 Luban/MiniTemplate"
                    ToolTip.Tip="选择项目内包含 luban.conf 的工作目录；留空时自动发现。"

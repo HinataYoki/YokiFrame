@@ -17,6 +17,14 @@ public sealed partial class UIKitPageViewModel
             }
         }
 
+        // Unity 编译或 Registry 刷新期间可能暂时漏报项目模板；已保存的选择仍必须留在 ComboBox 候选中。
+        string configuredTemplateName = CodeTemplate?.Trim() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(configuredTemplateName)
+            && !ContainsTemplateName(names, configuredTemplateName))
+        {
+            names.Add(configuredTemplateName);
+        }
+
         names.Sort(CompareCodeTemplateNames);
         string[] displayNames = new string[names.Count];
         for (var index = 0; index < names.Count; index++)
@@ -27,7 +35,7 @@ public sealed partial class UIKitPageViewModel
         OnPropertyChanged(nameof(CodeTemplateDisplay));
     }
 
-    /// <summary>保证保存值仍由当前 Unity Registry 提供，否则回退到 Provider 默认项。</summary>
+    /// <summary>保证当前模板选择存在于候选项中；候选仍不可用时回退到 Provider 默认项。</summary>
     /// <returns>发生回退时返回不可用的原模板名，否则返回空字符串。</returns>
     private string EnsureCodeTemplateSelection(string preferredTemplate)
     {

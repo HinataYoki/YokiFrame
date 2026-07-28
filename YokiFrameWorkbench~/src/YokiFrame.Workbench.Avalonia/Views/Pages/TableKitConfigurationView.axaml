@@ -72,19 +72,19 @@
               <StackPanel Spacing="4">
                 <TextBlock Text="Target" Classes="tablekit-label" />
                 <ComboBox ItemsSource="{CompiledBinding TargetOptions}"
-                          SelectedItem="{CompiledBinding TargetName, Mode=TwoWay}"
+                          SelectedItem="{CompiledBinding TargetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="True" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="4">
                 <TextBlock Text="Code target" Classes="tablekit-label" />
                 <ComboBox ItemsSource="{CompiledBinding CodeTargetOptions}"
-                          SelectedItem="{CompiledBinding CodeTarget, Mode=TwoWay}"
+                          SelectedItem="{CompiledBinding CodeTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="True" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="Data target" Classes="tablekit-label" />
                 <ComboBox ItemsSource="{CompiledBinding DataTargetOptions}"
-                          SelectedItem="{CompiledBinding DataTarget, Mode=TwoWay}"
+                          SelectedItem="{CompiledBinding DataTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="True" />
               </StackPanel>
             </Grid>
@@ -155,19 +155,19 @@
                           <StackPanel Spacing="4">
                             <TextBlock Text="Target" Classes="tablekit-label" />
                             <ComboBox ItemsSource="{CompiledBinding TargetOptions}"
-                                      SelectedItem="{CompiledBinding TargetName, Mode=TwoWay}"
+                                      SelectedItem="{CompiledBinding TargetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Spacing="4">
                             <TextBlock Text="Code target" Classes="tablekit-label" />
                             <ComboBox ItemsSource="{CompiledBinding CodeTargetOptions}"
-                                      SelectedItem="{CompiledBinding CodeTarget, Mode=TwoWay}"
+                                      SelectedItem="{CompiledBinding CodeTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Spacing="4">
                             <TextBlock Text="Data target" Classes="tablekit-label" />
                             <ComboBox ItemsSource="{CompiledBinding DataTargetOptions}"
-                                      SelectedItem="{CompiledBinding DataTarget, Mode=TwoWay}"
+                                      SelectedItem="{CompiledBinding DataTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True" />
                           </StackPanel>
                           <Button Grid.Column="3"
@@ -251,7 +251,7 @@
                 <TextBox x:Name="TableKitRuntimePathPattern"
                          Grid.Column="1"
                          Grid.ColumnSpan="2"
-                         Text="{CompiledBinding RuntimePathPattern, Mode=TwoWay}"
+                         Text="{CompiledBinding RuntimePathPattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="Art/Table/{0}" />
               </Grid>
               <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="104,*">
@@ -313,7 +313,7 @@
             <Grid ColumnDefinitions="92,*">
               <TextBlock Text="程序集名称" Classes="muted" VerticalAlignment="Center" />
               <TextBox Grid.Column="1"
-                       Text="{CompiledBinding AssemblyName, Mode=TwoWay}" />
+                       Text="{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
           </StackPanel>
         </Border>

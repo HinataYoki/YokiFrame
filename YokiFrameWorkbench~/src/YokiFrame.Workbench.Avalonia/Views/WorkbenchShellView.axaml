@@ -161,16 +161,16 @@
                             Spacing="8"
                             VerticalAlignment="Center">
                   <TextBox Width="260"
-                           Text="{CompiledBinding EventKitPage.SearchText}"
+                           Text="{CompiledBinding EventKitPage.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            PlaceholderText="搜索事件、参数或源码文件"
                            AutomationProperties.Name="搜索 EventKit 关系"
                            AutomationProperties.AutomationId="workbench.eventkit.search" />
                   <ComboBox Width="108"
                             ItemsSource="{CompiledBinding EventKitPage.ChannelOptions}"
-                            SelectedItem="{CompiledBinding EventKitPage.SelectedChannel}"
+                            SelectedItem="{CompiledBinding EventKitPage.SelectedChannel, Mode=TwoWay}"
                             AutomationProperties.Name="EventKit 通道筛选" />
                   <CheckBox Content="排除 Editor"
-                            IsChecked="{CompiledBinding EventKitPage.ExcludeEditor}"
+                            IsChecked="{CompiledBinding EventKitPage.ExcludeEditor, Mode=TwoWay}"
                             VerticalAlignment="Center"
                             AutomationProperties.Name="扫描时排除 Editor 目录" />
                   <TextBlock Text="{CompiledBinding EventKitPage.ScanStatusText}"
@@ -286,7 +286,7 @@
                              ToolTip.Tip="{CompiledBinding ResKitPage.OperationStatusText}"
                              AutomationProperties.LiveSetting="Polite"
                              VerticalAlignment="Center" />
-                  <ToggleButton IsChecked="{CompiledBinding ResKitPage.TrackingEnabled}"
+                  <ToggleButton IsChecked="{CompiledBinding ResKitPage.TrackingEnabled, Mode=OneWay}"
                                 Command="{CompiledBinding ResKitPage.ToggleTrackingCommand}"
                                 Classes="reskit-toolbar-toggle"
                                 ToolTip.Tip="仅新建 lease 会记录加载来源"

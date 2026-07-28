@@ -80,7 +80,7 @@
                IsVisible="{CompiledBinding HasEvents}"
                Classes="eventkit-relation-list kit-selection-list rich"
                ItemsSource="{CompiledBinding Events}"
-               SelectedItem="{CompiledBinding SelectedEvent}"
+               SelectedItem="{CompiledBinding SelectedEvent, Mode=TwoWay}"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                AutomationProperties.Name="EventKit 发送注册关系"
                AutomationProperties.AutomationId="workbench.eventkit.relations">

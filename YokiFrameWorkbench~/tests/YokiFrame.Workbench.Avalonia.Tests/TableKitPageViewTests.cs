@@ -56,6 +56,26 @@ public sealed class TableKitPageViewTests
         Assert.Equal("Assets/Generated/Table", viewModel.EditorDataPath);
     }
 
+    /// <summary>验证 TableKit 可编辑配置在关闭前不会等待输入控件失焦才回写。</summary>
+    [Fact]
+    public void EditableConfigurationBindingsUpdateImmediately()
+    {
+        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "TableKitConfigurationView.axaml");
+
+        Assert.Contains(
+            "TargetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "RuntimePathPattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
+            xaml,
+            StringComparison.Ordinal);
+    }
+
     /// <summary>验证历史绝对路径以项目相对形式显示，且四个主路径字段禁止键盘输入。</summary>
     [Fact]
     public async Task MainPathsAreRelativeAndReadOnly()

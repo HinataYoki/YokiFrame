@@ -11,7 +11,7 @@
       <StackPanel Margin="14" Spacing="11">
         <StackPanel Spacing="4">
           <TextBlock Text="面板类型名" Classes="kit-label" />
-          <TextBox Text="{CompiledBinding PanelName}"
+          <TextBox Text="{CompiledBinding PanelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                    Classes="kit-input"
                    PlaceholderText="InventoryPanel"
                    AutomationProperties.Name="面板类型名"
@@ -22,14 +22,14 @@
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <StackPanel Spacing="4">
             <TextBlock Text="预制体目录" Classes="kit-label" />
-            <TextBox Text="{CompiledBinding PrefabFolder}"
+            <TextBox Text="{CompiledBinding PrefabFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
                      AutomationProperties.Name="预制体输出目录"
                      AutomationProperties.AutomationId="uikit.editor.prefab-folder" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock Text="脚本目录" Classes="kit-label" />
-            <TextBox Text="{CompiledBinding ScriptFolder}"
+            <TextBox Text="{CompiledBinding ScriptFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
                      AutomationProperties.Name="脚本输出目录"
                      AutomationProperties.AutomationId="uikit.editor.script-folder" />
@@ -39,7 +39,7 @@
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <StackPanel Spacing="4">
             <TextBlock Text="命名空间" Classes="kit-label" />
-            <TextBox Text="{CompiledBinding ScriptNamespace}"
+            <TextBox Text="{CompiledBinding ScriptNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
                      AutomationProperties.Name="代码命名空间"
                      AutomationProperties.AutomationId="uikit.editor.namespace" />
@@ -48,7 +48,7 @@
             <TextBlock Text="目标程序集" Classes="kit-label" />
             <ComboBox x:Name="AssemblySelector"
                       ItemsSource="{CompiledBinding AssemblyNames}"
-                      SelectedItem="{CompiledBinding AssemblyName}"
+                      SelectedItem="{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       Classes="kit-input mono"
                       HorizontalAlignment="Stretch"
                       PlaceholderText="Assembly-CSharp"
@@ -60,7 +60,7 @@
         <StackPanel Spacing="4">
           <TextBlock Text="代码模板" Classes="kit-label" />
           <ComboBox ItemsSource="{CompiledBinding CodeTemplateOptions}"
-                    SelectedItem="{CompiledBinding CodeTemplateDisplay}"
+                    SelectedItem="{CompiledBinding CodeTemplateDisplay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                     Classes="kit-input"
                     HorizontalAlignment="Stretch"
                     AutomationProperties.Name="代码模板"
