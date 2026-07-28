@@ -10,6 +10,20 @@ public sealed partial class UIKitPageViewModel
     /// <summary>获取 Unity Editor 当前可供生成代码选择的程序集名称。</summary>
     public IReadOnlyList<string> AssemblyNames => mAssemblyNames;
 
+    /// <summary>将配置中的程序集补入 ComboBox 候选，确保 TwoWay 绑定不会把恢复值清空。</summary>
+    /// <param name="assemblyName">待加入的程序集名称。</param>
+    private void EnsureAssemblyOption(string assemblyName)
+    {
+        string normalizedAssemblyName = assemblyName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedAssemblyName)
+            || ContainsAssemblyName(mAssemblyNames, normalizedAssemblyName)) return;
+
+        List<string> names = new(mAssemblyNames) { normalizedAssemblyName };
+        names.Sort(CompareAssemblyNames);
+        mAssemblyNames = names.ToArray();
+        OnPropertyChanged(nameof(AssemblyNames));
+    }
+
     /// <summary>
     /// 应用 Unity Editor 扫描到的程序集，并保留当前配置值，避免 context 暂时漏报时覆盖已保存选择。
     /// </summary>

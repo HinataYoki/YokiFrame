@@ -359,6 +359,7 @@ public sealed partial class UIKitPageViewModel
             PrefabFolder = settings.PrefabFolder;
             ScriptFolder = settings.ScriptFolder;
             ScriptNamespace = settings.ScriptNamespace;
+            EnsureAssemblyOption(settings.AssemblyName);
             AssemblyName = settings.AssemblyName;
             CodeTemplate = settings.CodeTemplate;
         }

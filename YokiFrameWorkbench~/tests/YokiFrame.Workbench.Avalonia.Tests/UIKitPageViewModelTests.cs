@@ -321,6 +321,97 @@ public sealed class UIKitPageViewModelTests
         }
     }
 
+    /// <summary>验证已保存的非默认程序集在第二次真实 ComboBox 绑定刷新后仍保持不变。</summary>
+    [Fact]
+    public async Task EditorToolsRestoresAssemblySelectionInSecondRealView()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-uikit-assembly-reopen-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            UIKitPageViewModel first = CreateEditorSettingsViewModel(
+                new UIKitEditorSettingsService(root),
+                defaultAssemblyName: "Assembly-CSharp");
+            first.SetEditorEngine("unity-editor");
+            await first.ShowEditorToolsTaskCommand.ExecuteAsync();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Window window = new()
+                {
+                    Width = 900,
+                    Height = 620,
+                    Content = new UIKitEditorToolsView { DataContext = first },
+                };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    ComboBox assemblySelector = Assert.Single(
+                        window.GetVisualDescendants().OfType<ComboBox>(),
+                        static item => item.Name == "AssemblySelector");
+                    assemblySelector.SelectedItem = "Game.UI";
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal("Game.UI", first.AssemblyName);
+                    first.PersistEditorSettingsOnClose();
+                }
+                finally
+                {
+                    window.Close();
+                }
+            });
+
+            UIKitPageViewModel second = CreateEditorSettingsViewModel(
+                new UIKitEditorSettingsService(root),
+                defaultAssemblyName: "Assembly-CSharp");
+            second.SetEditorEngine("unity-editor");
+            Window secondWindow = null!;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                secondWindow = new Window
+                {
+                    Width = 900,
+                    Height = 620,
+                    Content = new UIKitEditorToolsView { DataContext = second },
+                };
+                secondWindow.Show();
+                Dispatcher.UIThread.RunJobs();
+            });
+            try
+            {
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await second.ShowEditorToolsTaskCommand.ExecuteAsync();
+                });
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal("Game.UI", second.AssemblyName);
+                    ComboBox assemblySelector = Assert.Single(
+                        secondWindow.GetVisualDescendants().OfType<ComboBox>(),
+                        static item => item.Name == "AssemblySelector");
+                    Assert.Equal("Game.UI", assemblySelector.SelectedItem);
+                });
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(secondWindow.Close);
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch
+            {
+                // 临时目录清理失败不覆盖测试的业务断言。
+            }
+        }
+    }
+
     /// <summary>验证 Unity context 暂时漏报程序集时不会覆盖已保存的目标程序集。</summary>
     [Fact]
     public async Task EditorToolsKeepsSavedAssemblyWhenContextTemporarilyOmitsIt()
