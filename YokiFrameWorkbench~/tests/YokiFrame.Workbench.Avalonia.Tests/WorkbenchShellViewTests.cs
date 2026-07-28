@@ -314,7 +314,7 @@ public sealed partial class WorkbenchShellViewTests
     public void WorkbenchWindowPersistsTableKitConfigurationBeforeClose()
     {
         var source = ReadWorkbenchWindowSource();
-        var closingStart = source.IndexOf("private void OnClosing", StringComparison.Ordinal);
+        var closingStart = source.IndexOf("private async void OnClosing", StringComparison.Ordinal);
         var closedStart = source.IndexOf("private void OnClosed", StringComparison.Ordinal);
         var closingBody = source[closingStart..closedStart];
         const string persistCall = "mShellViewModel.TableKitPage.TryPersistConfiguration();";
@@ -331,10 +331,13 @@ public sealed partial class WorkbenchShellViewTests
     public void WorkbenchWindowPersistsEditorDraftsBeforeClose()
     {
         var source = ReadWorkbenchWindowSource();
-        var closingStart = source.IndexOf("private void OnClosing", StringComparison.Ordinal);
+        var closingStart = source.IndexOf("private async void OnClosing", StringComparison.Ordinal);
         var closedStart = source.IndexOf("private void OnClosed", StringComparison.Ordinal);
         var closingBody = source[closingStart..closedStart];
 
+        Assert.Contains("eventArgs.Cancel = true;", closingBody);
+        Assert.Contains("Task.Run", closingBody);
+        Assert.Contains("mClosePersistenceCompleted", closingBody);
         Assert.Contains("mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();", closingBody);
         Assert.Contains("mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();", closingBody);
         Assert.Contains("mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();", closingBody);

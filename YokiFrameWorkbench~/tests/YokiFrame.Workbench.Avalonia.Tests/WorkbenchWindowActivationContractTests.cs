@@ -50,7 +50,7 @@ public sealed class WorkbenchWindowActivationContractTests
     public void ClosingWindowStopsAcceptingActivationRequests()
     {
         var source = ReadWorkbenchFile("WorkbenchWindow.cs");
-        var closingStart = source.IndexOf("private void OnClosing", StringComparison.Ordinal);
+        var closingStart = source.IndexOf("private async void OnClosing", StringComparison.Ordinal);
         var closedStart = source.IndexOf("private void OnClosed", StringComparison.Ordinal);
         var closingBody = source[closingStart..closedStart];
 

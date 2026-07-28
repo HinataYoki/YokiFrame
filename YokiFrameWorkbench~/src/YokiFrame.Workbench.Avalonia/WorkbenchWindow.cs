@@ -71,6 +71,8 @@ public sealed partial class WorkbenchWindow : Window
     private readonly EngineLifecycleMonitor? mLifecycleMonitor;
     private WorkbenchDashboardState? mCurrentState;
     private volatile bool mIsClosed;
+    private bool mClosePersistenceInFlight;
+    private bool mClosePersistenceCompleted;
     private bool mIsDashboardRefreshInFlight;
     private bool mDashboardRefreshPending;
     private string mSelectedEngineId = string.Empty;
@@ -218,23 +220,55 @@ public sealed partial class WorkbenchWindow : Window
     }
 
     /// <summary>
-    /// 窗口关闭前解除宿主 owner 关系，避免 Win32 在销毁 owned window 时把其它任务栏窗口拉到前台。
+    /// 关闭前异步提交页面草稿；先取消当前关闭，避免 UI 线程同步等待项目配置锁。
     /// </summary>
     /// <param name="sender">事件来源。</param>
     /// <param name="eventArgs">关闭事件参数。</param>
-    private void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
+    private async void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
     {
         WorkbenchStartupTrace.Mark("window.closing");
+
+        // Avalonia Closing 事件运行在 UI 线程，配置 Store 的同步包装不能在这里等待。
+        if (!mClosePersistenceCompleted)
+        {
+            eventArgs.Cancel = true;
+            if (mClosePersistenceInFlight)
+            {
+                return;
+            }
+
+            mClosePersistenceInFlight = true;
+            mIsClosed = true;
+            try
+            {
+                await Task.Run(() =>
+                {
+                    mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();
+                    mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();
+                    mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();
+                    mShellViewModel.TableKitPage.TryPersistConfiguration();
+                }).ConfigureAwait(true);
+            }
+            catch (Exception exception)
+            {
+                WorkbenchStartupTrace.Mark("window.close-persistence.failed." + exception.GetType().Name);
+            }
+            finally
+            {
+                mClosePersistenceInFlight = false;
+                mClosePersistenceCompleted = true;
+                Dispatcher.UIThread.Post(Close);
+            }
+
+            return;
+        }
+
         mIsClosed = true;
-        mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();
-        mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();
-        mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();
         if (mActivationCoordinator != null)
         {
             mActivationCoordinator.ActivationRequested -= OnActivationRequested;
         }
 
-        mShellViewModel.TableKitPage.TryPersistConfiguration();
         SaveWindowState();
         if (mParentWindowHandle == IntPtr.Zero)
         {
