@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -13,6 +14,9 @@ namespace YokiFrame
     /// </summary>
     public sealed class YokiFrameUnityLogKitAdapterTests
     {
+        private const int COMPILER_MESSAGE_MODES = 0x800 | 0x1000;
+        private const string LOGKIT_CORE_PATH_FRAGMENT = "LogKit";
+
         /// <summary>
         /// 每个测试前清空 Core LogKit 状态，避免其它测试注入的后端影响 Unity 适配层。
         /// </summary>
@@ -65,6 +69,8 @@ namespace YokiFrame
             Assert.IsTrue(overlaySource.Contains("SynchronizationContext"));
             Assert.IsFalse(overlaySource.Contains("UnityEditor"));
             Assert.IsTrue(loggerSource.Contains("UnityLogKitPlayerOverlay.Record"));
+            Assert.IsTrue(loggerSource.Contains("[HideInCallstack]"));
+            Assert.IsFalse(loggerSource.Contains("GetMethod("));
         }
 
         /// <summary>
@@ -127,6 +133,97 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证 LogKit 日志保留完整原生调用堆栈且不进入编译器日志通道。
+        /// 双击跳转到业务调用点由 Editor 侧的 OnOpenAsset 路由器负责。
+        /// </summary>
+        [UnityTest]
+        public IEnumerator UnityEditorLoggerKeepsNativeCallstackAndBusinessCallsite()
+        {
+            InvokeUnityInstaller("Install");
+
+            string capturedStackTrace = null;
+            Application.LogCallback callback = (message, stackTrace, type) =>
+            {
+                if (type == LogType.Warning && message.StartsWith("unity-callsite", StringComparison.Ordinal))
+                {
+                    capturedStackTrace = stackTrace;
+                }
+            };
+
+            Application.logMessageReceived += callback;
+            try
+            {
+                LogAssert.Expect(LogType.Warning, "unity-callsite");
+                LogKit.Warning("unity-callsite");
+                yield return null;
+            }
+            finally
+            {
+                Application.logMessageReceived -= callback;
+            }
+
+            Assert.IsFalse(string.IsNullOrEmpty(capturedStackTrace), "LogKit 日志必须保留宿主原生调用堆栈。");
+            StringAssert.Contains("LogKit", capturedStackTrace);
+            Assert.IsTrue(
+                TryFindConsoleEntry("unity-callsite", out ConsoleEntrySnapshot entry),
+                "Unity Console 中缺少调用点测试日志条目。");
+            StringAssert.Contains(LOGKIT_CORE_PATH_FRAGMENT, entry.File);
+            Assert.AreEqual(
+                0,
+                entry.Mode & COMPILER_MESSAGE_MODES,
+                "LogKit 日志不得进入编译器消息通道。");
+        }
+
+        /// <summary>
+        /// 验证 OnOpenAsset 路由器能跳过 LogKit 包装帧、定位首个业务调用帧。
+        /// </summary>
+        [Test]
+        public void ConsoleCallsiteRouterSkipsLogKitFramesToBusinessCallsite()
+        {
+            const string WRAPPER_FILE = "Assets/YokiFrame/Core/Runtime/LogKit/Facade/LogKit.Write.cs";
+            const int WRAPPER_LINE = 236;
+            string activeText = string.Join("\n", new[]
+            {
+                "unity-callsite",
+                "UnityEngine.Debug:LogWarning (object,UnityEngine.Object)",
+                "YokiFrame.Unity.UnityEngineLogger:WriteToUnity (YokiFrame.LogLevel,string,UnityEngine.Object)",
+                "YokiFrame.Unity.UnityEngineLogger:Log (YokiFrame.LogLevel,string,object)",
+                "YokiFrame.LogKit:WriteToLogger () (at " + WRAPPER_FILE + ":" + WRAPPER_LINE + ")",
+                "YokiFrame.LogKit:Write () (at " + WRAPPER_FILE + ":137)",
+                "YokiFrame.LogKit:Warning () (at Assets/YokiFrame/Core/Runtime/LogKit/Facade/LogKit.cs:223)",
+                "MyNamespace.MyClass:MyMethod () (at Assets/Scripts/MyClass.cs:42)"
+            });
+
+            bool result = UnityLogKitConsoleCallsiteRouter.TryResolveCallsiteFromText(
+                WRAPPER_FILE, WRAPPER_LINE, activeText, out string filePath, out int lineNumber);
+
+            Assert.IsTrue(result, "路由器应当找到业务调用点。");
+            StringAssert.Contains("Assets/Scripts/MyClass.cs", filePath);
+            Assert.AreEqual(42, lineNumber);
+        }
+
+        /// <summary>
+        /// 验证路由器对非 LogKit 帧不拦截。
+        /// </summary>
+        [Test]
+        public void ConsoleCallsiteRouterIgnoresNonLogKitFrames()
+        {
+            const string OTHER_FILE = "Assets/Scripts/OtherClass.cs";
+            const int OTHER_LINE = 10;
+            string activeText = string.Join("\n", new[]
+            {
+                "some-message",
+                "MyNamespace.MyClass:MyMethod () (at " + OTHER_FILE + ":" + OTHER_LINE + ")",
+                "MyNamespace.Other:OtherMethod () (at Assets/Scripts/Other.cs:20)"
+            });
+
+            bool result = UnityLogKitConsoleCallsiteRouter.TryResolveCallsiteFromText(
+                OTHER_FILE, OTHER_LINE, activeText, out _, out _);
+
+            Assert.IsFalse(result, "非 LogKit 帧不应被路由器拦截。");
+        }
+
+        /// <summary>
         /// 验证 Unity 适配层注入的后端类型来自独立 Unity Runtime 程序集。
         /// </summary>
         [Test]
@@ -141,7 +238,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 通过反射调用 Unity 适配层入口，使测试能在 RED 阶段表达“程序集尚未落地”的失败。
+        /// 通过反射调用 Unity 适配层入口，使测试能在 RED 阶段表达”程序集尚未落地”的失败。
         /// </summary>
         /// <param name="methodName">要调用的静态方法名。</param>
         private static void InvokeUnityInstaller(string methodName)
@@ -171,6 +268,165 @@ namespace YokiFrame
                 fileName);
             Assert.IsTrue(File.Exists(sourcePath), "缺少 Unity LogKit Runtime Adapter 源码: " + sourcePath);
             return File.ReadAllText(sourcePath);
+        }
+
+        /// <summary>
+        /// 从 Unity Console 的原生条目中查找指定消息，读取 Unity 解析后的文件、行号和通道元数据。
+        /// </summary>
+        /// <param name="message">要匹配的日志正文。</param>
+        /// <param name="entry">找到的 Console 条目元数据。</param>
+        /// <returns>找到匹配条目时返回 true。</returns>
+        private static bool TryFindConsoleEntry(string message, out ConsoleEntrySnapshot entry)
+        {
+            entry = default;
+            ConsoleEntryReflection reflection = ResolveConsoleEntryReflection();
+            int count = (int)reflection.GetCount.Invoke(null, Array.Empty<object>());
+            reflection.StartGettingEntries.Invoke(null, Array.Empty<object>());
+            try
+            {
+                for (int index = count - 1; index >= 0; index--)
+                {
+                    if (TryReadConsoleEntry(reflection, index, message, out entry))
+                    {
+                        return true;
+                    }
+                }
+            }
+            finally
+            {
+                reflection.EndGettingEntries.Invoke(null, Array.Empty<object>());
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 解析当前 Unity 版本读取 Console 条目所需的内部类型、方法和字段。
+        /// </summary>
+        /// <returns>已完成成员校验的 Console 反射描述。</returns>
+        private static ConsoleEntryReflection ResolveConsoleEntryReflection()
+        {
+            Assembly unityEditorAssembly = Assembly.GetAssembly(typeof(UnityEditor.Editor));
+            Assert.IsNotNull(unityEditorAssembly, "UnityEditor 程序集不可用。");
+            Type logEntriesType = unityEditorAssembly.GetType("UnityEditor.LogEntries")
+                ?? unityEditorAssembly.GetType("UnityEditorInternal.LogEntries");
+            Type logEntryType = unityEditorAssembly.GetType("UnityEditor.LogEntry")
+                ?? unityEditorAssembly.GetType("UnityEditorInternal.LogEntry");
+            Assert.IsNotNull(logEntriesType, "UnityEditor.LogEntries 类型不可用。");
+            Assert.IsNotNull(logEntryType, "UnityEditor.LogEntry 类型不可用。");
+
+            ConsoleEntryReflection reflection = new ConsoleEntryReflection
+            {
+                LogEntryType = logEntryType,
+                GetCount = FindStaticMethod(logEntriesType, "GetCount", Type.EmptyTypes),
+                GetEntry = FindStaticMethod(logEntriesType, "GetEntryInternal", new[] { typeof(int), logEntryType }),
+                StartGettingEntries = FindStaticMethod(logEntriesType, "StartGettingEntries", Type.EmptyTypes),
+                EndGettingEntries = FindStaticMethod(logEntriesType, "EndGettingEntries", Type.EmptyTypes),
+                Message = FindInstanceField(logEntryType, "message"),
+                File = FindInstanceField(logEntryType, "file"),
+                Line = FindInstanceField(logEntryType, "line"),
+                Mode = FindInstanceField(logEntryType, "mode")
+            };
+            Assert.IsNotNull(reflection.GetCount, "UnityEditor.LogEntries 缺少 GetCount 方法。");
+            Assert.IsNotNull(reflection.GetEntry, "UnityEditor.LogEntries 缺少 GetEntryInternal 方法。");
+            Assert.IsNotNull(reflection.StartGettingEntries, "UnityEditor.LogEntries 缺少 StartGettingEntries 方法。");
+            Assert.IsNotNull(reflection.EndGettingEntries, "UnityEditor.LogEntries 缺少 EndGettingEntries 方法。");
+            Assert.IsNotNull(reflection.Message, "UnityEditor.LogEntry 缺少 message 字段。");
+            Assert.IsNotNull(reflection.File, "UnityEditor.LogEntry 缺少 file 字段。");
+            Assert.IsNotNull(reflection.Line, "UnityEditor.LogEntry 缺少 line 字段。");
+            Assert.IsNotNull(reflection.Mode, "UnityEditor.LogEntry 缺少 mode 字段。");
+            return reflection;
+        }
+
+        /// <summary>
+        /// 按固定绑定标志查找 Console 的静态内部方法。
+        /// </summary>
+        /// <param name="ownerType">声明方法的 Unity 内部类型。</param>
+        /// <param name="methodName">方法名。</param>
+        /// <param name="parameterTypes">参数类型列表。</param>
+        /// <returns>找到的方法；不存在时返回 null。</returns>
+        private static MethodInfo FindStaticMethod(Type ownerType, string methodName, Type[] parameterTypes)
+        {
+            return ownerType.GetMethod(
+                methodName,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                parameterTypes,
+                null);
+        }
+
+        /// <summary>
+        /// 按固定绑定标志查找 Console 条目的实例字段。
+        /// </summary>
+        /// <param name="ownerType">声明字段的 Unity 内部类型。</param>
+        /// <param name="fieldName">字段名。</param>
+        /// <returns>找到的字段；不存在时返回 null。</returns>
+        private static FieldInfo FindInstanceField(Type ownerType, string fieldName)
+        {
+            return ownerType.GetField(
+                fieldName,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        }
+
+        /// <summary>
+        /// 读取并匹配单条 Console 记录，返回 Unity 已解析的文件、行号和通道元数据。
+        /// </summary>
+        /// <param name="reflection">Console 反射描述。</param>
+        /// <param name="index">Console 条目索引。</param>
+        /// <param name="message">要匹配的日志正文前缀。</param>
+        /// <param name="entry">匹配条目的元数据。</param>
+        /// <returns>找到匹配条目时返回 true。</returns>
+        private static bool TryReadConsoleEntry(
+            ConsoleEntryReflection reflection,
+            int index,
+            string message,
+            out ConsoleEntrySnapshot entry)
+        {
+            entry = default;
+            object candidate = Activator.CreateInstance(reflection.LogEntryType, true);
+            bool retrieved = (bool)reflection.GetEntry.Invoke(null, new[] { (object)index, candidate });
+            string candidateMessage = reflection.Message.GetValue(candidate) as string;
+            string normalizedCandidateMessage = candidateMessage == null
+                ? string.Empty
+                : candidateMessage.TrimEnd('\r', '\n');
+            if (!retrieved || !normalizedCandidateMessage.StartsWith(message, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            entry = new ConsoleEntrySnapshot
+            {
+                File = reflection.File.GetValue(candidate) as string ?? string.Empty,
+                Line = (int)reflection.Line.GetValue(candidate),
+                Mode = (int)reflection.Mode.GetValue(candidate)
+            };
+            return true;
+        }
+
+        /// <summary>
+        /// 承载单条 Unity Console 条目中与调用点定位相关的元数据。
+        /// </summary>
+        private struct ConsoleEntrySnapshot
+        {
+            public string File;
+            public int Line;
+            public int Mode;
+        }
+
+        /// <summary>
+        /// 保存 Unity Console 反射读取所需的最小成员集合。
+        /// </summary>
+        private sealed class ConsoleEntryReflection
+        {
+            public Type LogEntryType;
+            public MethodInfo GetCount;
+            public MethodInfo GetEntry;
+            public MethodInfo StartGettingEntries;
+            public MethodInfo EndGettingEntries;
+            public FieldInfo Message;
+            public FieldInfo File;
+            public FieldInfo Line;
+            public FieldInfo Mode;
         }
     }
 }

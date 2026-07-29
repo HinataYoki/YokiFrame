@@ -29,6 +29,8 @@ catch (System.Exception exception)
 
 宿主 Adapter 会注册默认 logger 工厂，首次写日志时惰性安装 logger。业务代码不要直接用 Unity `Debug` 或 Godot `GD` 作为框架日志后端。
 
+在 Unity 中，适配层（`UnityEngineLogger`）的转发方法标记了 `[HideInCallstack]`，使 Unity 原生调用堆栈中这些帧不带文件行号后缀，Console 详情区仍显示完整帧列表。Core 禁止引用引擎无法使用该 attribute，因此 Editor 适配层额外注册了 `[OnOpenAsset(-1)]` 回调：双击 Console 条目时，回调读取当前选中条目的堆栈文本，跳过所有 `YokiFrame.LogKit:` 包装帧后，重定向到首个业务调用帧；2022.3 ～ Unity 6 均兼容（不同版本的回调签名通过条件编译隔离）。Core 不再自行捕获 `System.Diagnostics.StackTrace`，热路径无 GC 开销，普通日志的 `LogKitEntry.StackTrace` 为空，异常日志仍保留异常自身堆栈。
+
 ## 核心 API
 
 ### `LogKit`
@@ -53,7 +55,7 @@ catch (System.Exception exception)
 | 类型 | 公开成员 | 说明 |
 |---|---|---|
 | `IEngineLogger` | `Log(LogLevel level, string message, object context = null)` | 宿主控制台的最小 Runtime 契约。 |
-| `IEngineLoggerWithStackTrace` | `Log(LogLevel, string, object, string)` | 仅工具 logger 可选实现，用于接收过滤后的调用点堆栈。 |
+| `IEngineLoggerWithStackTrace` | `Log(LogLevel, string, object, string)` | 仅工具 logger 可选实现的扩展点，用于接收异常堆栈；内置 Unity/Godot 后端不实现，调用点由宿主原生堆栈呈现。 |
 | `LogKitStats` | `LoggerName`、`HasLogger`、`Enabled`、`MinimumLevel`、`HistoryCount`、`DroppedCount` | 工具统计快照。 |
 | `LogKitEntry` | `Level`、`Message`、`Context`、`ExceptionType`、`ExceptionMessage`、`StackTrace`、`TimestampUtc` | 工具历史条目。 |
 
@@ -82,6 +84,7 @@ Assets/Settings/Resources/YokiFrame/runtime-settings.json
 
 - 未安装 logger 时，已注册 Adapter 工厂的首次写日志会创建宿主后端；未注册工厂时保持空后端，也可以显式 `SetLogger`。
 - 日志过滤应在调用点尽早生效；高频路径不要把复杂字符串拼接放在可能被过滤的参数中。
+- Unity Console 的调用点定位由 `[HideInCallstack]` 交给宿主原生堆栈完成，不产生额外运行时开销；自定义 logger 若要复现该行为，需自行标记转发方法。
 - 开启调试覆盖层后，宿主会创建跨场景日志视图；关闭时不保留额外 UI 或历史缓存。
 - `Reset()` 会清理静态状态，不应在业务模块仍持有 logger 时随意调用。
 
