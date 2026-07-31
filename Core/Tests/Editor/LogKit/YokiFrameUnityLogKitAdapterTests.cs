@@ -203,6 +203,37 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证 Unity 2022.3 首先暴露 UnityEngineLogger 源码行时，路由器仍能跳过完整包装链。
+        /// </summary>
+        [Test]
+        public void ConsoleCallsiteRouterSkipsUnityAdapterFrameToBusinessCallsite()
+        {
+            const string ADAPTER_FILE = "Assets/YokiFrame/Core/Adapters/Unity/Runtime/LogKit/UnityEngineLogger.cs";
+            const int ADAPTER_LINE = 44;
+            string activeText = string.Join("\n", new[]
+            {
+                "unity-callsite",
+                "UnityEngine.Debug:LogWarning (object,UnityEngine.Object)",
+                "YokiFrame.Unity.UnityEngineLogger:WriteToUnity (YokiFrame.LogLevel,string,UnityEngine.Object) (at " + ADAPTER_FILE + ":44)",
+                "YokiFrame.Unity.UnityEngineLogger:Log (YokiFrame.LogLevel,string,object) (at " + ADAPTER_FILE + ":23)",
+                "YokiFrame.LogKit:WriteToLogger () (at Assets/YokiFrame/Core/Runtime/LogKit/Facade/LogKit.Write.cs:234)",
+                "YokiFrame.LogKit:Write () (at Assets/YokiFrame/Core/Runtime/LogKit/Facade/LogKit.Write.cs:137)",
+                "YokiFrame.Samples.LogKitCallsiteTest:WriteCallsiteTestLog () (at Assets/Scripts/LogKitCallsiteTest.cs:34)"
+            });
+
+            bool result = UnityLogKitConsoleCallsiteRouter.TryResolveCallsiteFromText(
+                ADAPTER_FILE,
+                ADAPTER_LINE,
+                activeText,
+                out string filePath,
+                out int lineNumber);
+
+            Assert.IsTrue(result, "Unity 2022.3 的适配层首帧应当被路由器识别为 LogKit 包装层。");
+            StringAssert.Contains("Assets/Scripts/LogKitCallsiteTest.cs", filePath);
+            Assert.AreEqual(34, lineNumber);
+        }
+
+        /// <summary>
         /// 验证路由器对非 LogKit 帧不拦截。
         /// </summary>
         [Test]
