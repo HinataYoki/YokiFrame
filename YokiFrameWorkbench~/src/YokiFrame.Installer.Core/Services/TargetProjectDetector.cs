@@ -18,6 +18,7 @@ public sealed class TargetProjectDetector
     private const int MINIMUM_GODOT_MAJOR = 4;
     private const int MINIMUM_GODOT_MINOR = 7;
     private const int MINIMUM_DOTNET_MAJOR = 8;
+    private const string GODOT_DOTNET_SECTION = "[dotnet]";
 
     private static readonly Regex sUnityVersionRegex = new(
         @"^(?<major>[0-9]+)\.(?<minor>[0-9]+)",
@@ -25,6 +26,10 @@ public sealed class TargetProjectDetector
 
     private static readonly Regex sTargetFrameworkRegex = new(
         @"^net(?<major>[0-9]+)\.(?<minor>[0-9]+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex sGodotFeatureVersionRegex = new(
+        @"config/features\s*=\s*PackedStringArray\(\s*""(?<major>[0-9]+)\.(?<minor>[0-9]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -76,8 +81,10 @@ public sealed class TargetProjectDetector
     /// <returns>符合时返回 true。</returns>
     private static bool IsGodotProject(string projectRoot)
     {
-        return File.Exists(InstallerPathGuard.CombineInside(projectRoot, "project.godot"))
-            && FindGodotCSharpProject(projectRoot) != null;
+        var projectSettingsPath = InstallerPathGuard.CombineInside(projectRoot, "project.godot");
+        return File.Exists(projectSettingsPath)
+            && (FindGodotCSharpProject(projectRoot) != null
+                || HasGodotDotNetEvidence(projectRoot, projectSettingsPath));
     }
 
     /// <summary>
@@ -107,9 +114,12 @@ public sealed class TargetProjectDetector
     /// <returns>目标项目信息。</returns>
     private static InstallerProjectInfo CreateGodotProjectInfo(string projectRoot)
     {
-        var csharpProjectPath = FindGodotCSharpProject(projectRoot)
-            ?? throw new InvalidDataException("Godot .NET project is missing a top-level C# project file.");
-        ValidateGodotProject(csharpProjectPath);
+        var csharpProjectPath = FindGodotCSharpProject(projectRoot);
+        if (csharpProjectPath != null)
+        {
+            ValidateGodotProject(csharpProjectPath);
+        }
+
         List<string> evidencePaths = new()
         {
             InstallerPathGuard.CombineInside(projectRoot, "project.godot")
@@ -120,7 +130,10 @@ public sealed class TargetProjectDetector
             evidencePaths.Add(godotCachePath);
         }
 
-        evidencePaths.Add(csharpProjectPath);
+        if (csharpProjectPath != null)
+        {
+            evidencePaths.Add(csharpProjectPath);
+        }
 
         return new InstallerProjectInfo(
             InstallerProjectKind.Godot,
@@ -139,6 +152,60 @@ public sealed class TargetProjectDetector
         return Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly)
             .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 判断 Godot 项目是否留下 .NET 编辑器或配置证据，兼容 Godot 尚未生成主 csproj 的新项目。
+    /// </summary>
+    /// <param name="projectRoot">目标 Godot 项目根目录。</param>
+    /// <param name="projectSettingsPath">project.godot 绝对路径。</param>
+    /// <returns>发现 .NET 证据时返回 true。</returns>
+    internal static bool HasGodotDotNetEvidence(string projectRoot, string projectSettingsPath)
+    {
+        var monoDirectory = InstallerPathGuard.CombineInside(projectRoot, ".godot", "mono");
+        if (Directory.Exists(monoDirectory))
+        {
+            return true;
+        }
+
+        // Godot project.godot 不是标准 JSON/XML；这里只解析 section header，避免依赖宿主编辑器或脆弱的全文匹配。
+        foreach (var rawLine in File.ReadLines(projectSettingsPath))
+        {
+            var line = rawLine.Trim();
+            if (string.Equals(line, GODOT_DOTNET_SECTION, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 在空项目生成主 csproj 前校验 project.godot 已记录的 Godot 主版本下限。
+    /// </summary>
+    /// <param name="projectSettingsPath">project.godot 绝对路径。</param>
+    internal static void ValidateGodotProjectFeatureVersion(string projectSettingsPath)
+    {
+        foreach (var rawLine in File.ReadLines(projectSettingsPath))
+        {
+            var match = sGodotFeatureVersionRegex.Match(rawLine);
+            if (!match.Success
+                || !int.TryParse(match.Groups["major"].Value, out var major)
+                || !int.TryParse(match.Groups["minor"].Value, out var minor))
+            {
+                continue;
+            }
+
+            if (major < MINIMUM_GODOT_MAJOR
+                || (major == MINIMUM_GODOT_MAJOR && minor < MINIMUM_GODOT_MINOR))
+            {
+                throw new InvalidDataException(
+                    "YokiFrame requires Godot 4.7 or newer; detected " + major + "." + minor + ".");
+            }
+
+            return;
+        }
     }
 
     /// <summary>
@@ -194,6 +261,40 @@ public sealed class TargetProjectDetector
     internal static void ValidateGodotProject(string projectPath)
     {
         var project = LoadGodotProject(projectPath);
+        ValidateGodotProjectDocument(project, projectPath);
+    }
+
+    /// <summary>
+    /// 验证尚未落盘的 Godot 主项目 XML，供空 Godot .NET 项目生成主项目文件前复用同一门控。
+    /// </summary>
+    /// <param name="projectContent">待验证的完整 MSBuild XML。</param>
+    /// <param name="projectPath">计划写入的主项目路径，仅用于错误定位。</param>
+    internal static void ValidateGodotProjectContent(string projectContent, string projectPath)
+    {
+        ArgumentNullException.ThrowIfNull(projectContent);
+        try
+        {
+            var project = XDocument.Parse(projectContent, LoadOptions.PreserveWhitespace);
+            ValidateGodotProjectDocument(project, projectPath);
+        }
+        catch (XmlException exception)
+        {
+            throw new InvalidDataException("Godot C# project XML is invalid: " + projectPath, exception);
+        }
+    }
+
+    /// <summary>
+    /// 验证 Godot 主项目 XML 的 SDK 与桌面目标框架下限。
+    /// </summary>
+    /// <param name="project">已解析的 MSBuild Project 文档。</param>
+    /// <param name="projectPath">主项目路径，仅用于错误定位。</param>
+    private static void ValidateGodotProjectDocument(XDocument project, string projectPath)
+    {
+        if (project.Root == null || project.Root.Name.LocalName != "Project")
+        {
+            throw new InvalidDataException("Godot C# project must use an MSBuild Project root: " + projectPath);
+        }
+
         var sdk = (string?)project.Root?.Attribute("Sdk") ?? string.Empty;
         var sdkVersion = sdk.StartsWith(GODOT_SDK_PREFIX, StringComparison.Ordinal)
             ? sdk[GODOT_SDK_PREFIX.Length..]
@@ -227,11 +328,6 @@ public sealed class TargetProjectDetector
         try
         {
             var project = XDocument.Load(projectPath, LoadOptions.PreserveWhitespace);
-            if (project.Root == null || project.Root.Name.LocalName != "Project")
-            {
-                throw new InvalidDataException("Godot C# project must use an MSBuild Project root: " + projectPath);
-            }
-
             return project;
         }
         catch (XmlException exception)

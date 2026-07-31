@@ -29,6 +29,9 @@ internal sealed class GodotInstallServiceFixture : IDisposable
         [application]
         config/name="Fixture"
 
+        [dotnet]
+        project/assembly_name="FirstDemo"
+
         [editor_plugins]
         enabled=PackedStringArray("res://addons/other/plugin.cfg")
 

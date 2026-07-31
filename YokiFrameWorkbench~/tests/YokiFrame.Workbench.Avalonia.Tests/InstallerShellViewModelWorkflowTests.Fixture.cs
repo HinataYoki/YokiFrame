@@ -181,6 +181,11 @@ public sealed partial class InstallerShellViewModelWorkflowTests
         public Exception? PlanningFailure { get; set; }
 
         /// <summary>
+        /// 获取或设置计划失败剩余次数，用于验证 bootstrap 后会重新规划。
+        /// </summary>
+        public int PlanningFailuresRemaining { get; set; }
+
+        /// <summary>
         /// 获取或设置执行阶段需要抛出的事务失败，用于验证 UI 诊断投影。
         /// </summary>
         public InstallerExecutionException? ExecutionFailure { get; set; }
@@ -197,8 +202,9 @@ public sealed partial class InstallerShellViewModelWorkflowTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             LastOptions = options;
-            if (PlanningFailure != null)
+            if (PlanningFailure != null && PlanningFailuresRemaining > 0)
             {
+                PlanningFailuresRemaining--;
                 throw PlanningFailure;
             }
 
@@ -254,6 +260,26 @@ public sealed partial class InstallerShellViewModelWorkflowTests
     private sealed class FakeGodotRuntimeBootstrapper : IGodotRuntimeBootstrapper
     {
         /// <summary>
+        /// 获取 Runtime bootstrap 调用次数。
+        /// </summary>
+        public int BootstrapCount { get; private set; }
+
+        /// <summary>
+        /// 获取 Runtime bootstrap 已进入执行阶段的通知，用于观察构建中的页面状态。
+        /// </summary>
+        public TaskCompletionSource BootstrapStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>
+        /// 获取或设置可选的 Runtime bootstrap 等待闸门；为空时保持立即完成行为。
+        /// </summary>
+        public TaskCompletionSource? BootstrapGate { get; set; }
+
+        /// <summary>
+        /// 获取或设置 bootstrap 阶段需要抛出的错误，用于验证失败后的恢复入口。
+        /// </summary>
+        public Exception? BootstrapFailure { get; set; }
+
+        /// <summary>
         /// 获取最近一次请求的源码包根。
         /// </summary>
         public string? SourcePackageRoot { get; private set; }
@@ -270,15 +296,58 @@ public sealed partial class InstallerShellViewModelWorkflowTests
         /// <param name="targetProjectRoot">当前选定 Godot 项目根。</param>
         /// <param name="cancellationToken">测试调用传入的取消令牌。</param>
         /// <returns>立即完成任务。</returns>
-        public Task BootstrapAndOpenInstallerAsync(
+        public async Task BootstrapAndOpenInstallerAsync(
             string sourcePackageRoot,
             string targetProjectRoot,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            BootstrapCount++;
+            if (BootstrapFailure != null)
+            {
+                throw BootstrapFailure;
+            }
+
             SourcePackageRoot = sourcePackageRoot;
             TargetProjectRoot = targetProjectRoot;
-            return Task.CompletedTask;
+            await WaitForBootstrapGateAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 记录自动 Runtime bootstrap 请求并立即模拟构建完成。
+        /// </summary>
+        /// <param name="sourcePackageRoot">当前选定源包根。</param>
+        /// <param name="targetProjectRoot">当前选定目标项目根。</param>
+        /// <param name="cancellationToken">测试调用传入的取消令牌。</param>
+        /// <returns>立即完成任务。</returns>
+        public async Task BootstrapAsync(
+            string sourcePackageRoot,
+            string targetProjectRoot,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BootstrapCount++;
+            if (BootstrapFailure != null)
+            {
+                throw BootstrapFailure;
+            }
+
+            SourcePackageRoot = sourcePackageRoot;
+            TargetProjectRoot = targetProjectRoot;
+            await WaitForBootstrapGateAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 发出 bootstrap 已开始通知，并在测试配置闸门时等待其释放。
+        /// </summary>
+        /// <param name="cancellationToken">当前 bootstrap 取消令牌。</param>
+        private async Task WaitForBootstrapGateAsync(CancellationToken cancellationToken)
+        {
+            BootstrapStarted.TrySetResult();
+            if (BootstrapGate != null)
+            {
+                await BootstrapGate.Task.WaitAsync(cancellationToken);
+            }
         }
     }
 

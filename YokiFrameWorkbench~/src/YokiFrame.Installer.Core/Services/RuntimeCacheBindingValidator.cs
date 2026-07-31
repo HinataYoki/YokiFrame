@@ -119,6 +119,6 @@ public sealed class RuntimeCacheBindingValidator
             + detail
             + Environment.NewLine
             + "请运行源码包 YokiFrameWorkbench~/scripts/runtime-bootstrap/install-godot 脚本并传入 --project <GodotProjectRoot>，"
-            + "或在 Installer 中点击“构建 Runtime 并重新打开”。");
+            + "或在 Installer 中点击“构建 Runtime”重试。图形 Installer 会在首次计划阶段自动尝试构建。");
     }
 }

@@ -1,4 +1,6 @@
 using YokiFrame.Tooling.Application.Installer;
+using YokiFrame.Installer.Core.Models;
+using YokiFrame.Installer.Core.Services;
 
 namespace YokiFrame.Tooling.Application.Tests;
 
@@ -202,6 +204,104 @@ public sealed class InstallerCoreWorkflowGatewayTests
     }
 
     /// <summary>
+    /// 验证 Godot 已有 .NET 工作区时，Core 提交完成后会调用主项目构建边界再报告成功。
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsyncBuildsGodotProjectAfterCoreCommit()
+    {
+        using var fixture = InstallerApplicationFixture.Create();
+        Directory.CreateDirectory(Path.Combine(fixture.GodotProjectRoot, ".godot", "mono", "temp"));
+        GodotInstallOptions godotOptions = new(repairProjectSettings: false, enablePlugin: false);
+        var options = InstallerInstallOptions.CreateGodotLocal(
+            fixture.SourcePackageRoot,
+            fixture.GodotProjectRoot,
+            godotOptions,
+            InstallerLegacyPackagePolicy.Reject);
+        RecordingGodotProjectBuildService builder = new();
+        var gateway = new InstallerCoreWorkflowGateway(builder);
+        var plan = await gateway.CreatePlanAsync(options, CancellationToken.None);
+        List<InstallerProgressStage> stages = new();
+
+        _ = await gateway.ExecuteAsync(options, plan, new ProgressRecorder(stages), CancellationToken.None);
+
+        Assert.NotNull(builder.Plan);
+        Assert.Equal(fixture.GodotProjectRoot, builder.Plan!.ProjectRoot);
+        Assert.Equal(
+            new[]
+            {
+                InstallerProgressStage.Applying,
+                InstallerProgressStage.Applying,
+                InstallerProgressStage.Verifying
+            },
+            stages);
+    }
+
+    /// <summary>
+    /// 验证 Godot 在构建竞态中移除插件登记后，安装器会以最新 project.godot 内容恢复自动启用项。
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsyncRestoresGodotPluginRegistrationAfterBuild()
+    {
+        using var fixture = InstallerApplicationFixture.Create();
+        Directory.CreateDirectory(Path.Combine(fixture.GodotProjectRoot, ".godot", "mono", "temp"));
+        GodotInstallOptions godotOptions = new(repairProjectSettings: true, enablePlugin: true);
+        var options = InstallerInstallOptions.CreateGodotLocal(
+            fixture.SourcePackageRoot,
+            fixture.GodotProjectRoot,
+            godotOptions,
+            InstallerLegacyPackagePolicy.Reject);
+        RecordingGodotProjectBuildService builder = new();
+        builder.AfterBuild = plan =>
+        {
+            var settings = File.ReadAllText(plan.ProjectSettingsPath);
+            var disabledSettings = new GodotProjectSettingsPatcher().Patch(settings, enablePlugin: false);
+            File.WriteAllText(plan.ProjectSettingsPath, disabledSettings);
+        };
+        var gateway = new InstallerCoreWorkflowGateway(builder);
+        var plan = await gateway.CreatePlanAsync(options, CancellationToken.None);
+
+        _ = await gateway.ExecuteAsync(
+            options,
+            plan,
+            new ProgressRecorder(new List<InstallerProgressStage>()),
+            CancellationToken.None);
+
+        var finalSettings = File.ReadAllText(Path.Combine(fixture.GodotProjectRoot, "project.godot"));
+        Assert.Contains("res://addons/yokiframe/plugin.cfg", finalSettings, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 验证 Godot 主项目构建失败会阻止 gateway 报告 Verifying 成功，并保留构建诊断。
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsyncPropagatesGodotProjectBuildFailure()
+    {
+        using var fixture = InstallerApplicationFixture.Create();
+        Directory.CreateDirectory(Path.Combine(fixture.GodotProjectRoot, ".godot", "mono", "temp"));
+        GodotInstallOptions godotOptions = new(repairProjectSettings: false, enablePlugin: false);
+        var options = InstallerInstallOptions.CreateGodotLocal(
+            fixture.SourcePackageRoot,
+            fixture.GodotProjectRoot,
+            godotOptions,
+            InstallerLegacyPackagePolicy.Reject);
+        var gateway = new InstallerCoreWorkflowGateway(
+            new ThrowingGodotProjectBuildService("simulated Godot compiler failure"));
+        var plan = await gateway.CreatePlanAsync(options, CancellationToken.None);
+        List<InstallerProgressStage> stages = new();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ExecuteAsync(
+            options,
+            plan,
+            new ProgressRecorder(stages),
+            CancellationToken.None));
+
+        Assert.Contains("simulated Godot compiler failure", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            new[] { InstallerProgressStage.Applying, InstallerProgressStage.Applying },
+            stages);
+    }
+
+    /// <summary>
     /// 同步记录 gateway 上报的进度阶段。
     /// </summary>
     /// <param name="stages">接收阶段的列表。</param>
@@ -214,6 +314,65 @@ public sealed class InstallerCoreWorkflowGatewayTests
         public void Report(InstallerProgressUpdate value)
         {
             stages.Add(value.Stage);
+        }
+    }
+
+    /// <summary>
+    /// 记录 Godot 主项目构建请求，避免 gateway 单元测试启动真实 dotnet 进程。
+    /// </summary>
+    private sealed class RecordingGodotProjectBuildService : IGodotProjectBuildService
+    {
+        /// <summary>获取最近一次构建请求。</summary>
+        public GodotInstallPlan? Plan { get; private set; }
+
+        /// <summary>获取构建成功后用于模拟 Godot 重写 project.godot 的回调。</summary>
+        public Action<GodotInstallPlan>? AfterBuild { get; set; }
+
+        /// <summary>
+        /// 记录构建请求并立即成功返回。
+        /// </summary>
+        /// <param name="plan">待构建的 Godot 安装计划。</param>
+        /// <param name="cancellationToken">调用方取消令牌。</param>
+        /// <returns>立即完成的构建任务。</returns>
+        public Task BuildIfRequiredAsync(
+            GodotInstallPlan plan,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Plan = plan;
+            AfterBuild?.Invoke(plan);
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// 模拟 Godot 主项目编译失败，用于验证安装器不会吞掉构建诊断。
+    /// </summary>
+    private sealed class ThrowingGodotProjectBuildService : IGodotProjectBuildService
+    {
+        private readonly string mMessage;
+
+        /// <summary>
+        /// 创建带固定失败信息的构建器。
+        /// </summary>
+        /// <param name="message">需要返回给调用方的失败信息。</param>
+        public ThrowingGodotProjectBuildService(string message)
+        {
+            mMessage = message;
+        }
+
+        /// <summary>
+        /// 抛出预设的构建失败，保持 Core 已完成事务后的错误边界可见。
+        /// </summary>
+        /// <param name="plan">待构建的 Godot 安装计划。</param>
+        /// <param name="cancellationToken">调用方取消令牌。</param>
+        /// <returns>不会成功返回。</returns>
+        public Task BuildIfRequiredAsync(
+            GodotInstallPlan plan,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new InvalidOperationException(mMessage);
         }
     }
 }

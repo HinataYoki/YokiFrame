@@ -297,23 +297,54 @@ public sealed class GodotInstallServiceTests
     }
 
     /// <summary>
-    /// 验证项目根没有顶层 csproj 时会在任何安装写入前拒绝，而不会选择嵌套项目文件。
+    /// 验证空 Godot .NET 项目没有顶层 csproj 时，计划阶段只生成内存内容，执行阶段再提交主项目文件。
     /// </summary>
     [Fact]
-    public void ExecuteRejectsMissingTopLevelGodotProjectWithoutWriting()
+    public void ExecuteCreatesMissingTopLevelGodotProjectForEmptyDotNetProject()
     {
         using GodotInstallServiceFixture fixture = GodotInstallServiceFixture.Create();
         fixture.RemoveTopLevelProjectFile();
         var before = DirectoryTreeSnapshot.Capture(fixture.Root);
 
-        var exception = Assert.Throws<InvalidDataException>(() => new GodotInstallService().Execute(
+        var service = new GodotInstallService();
+        var plan = service.CreatePlan(CreateRequest(fixture));
+
+        Assert.True(plan.ProjectFileWasGenerated);
+        Assert.Equal(fixture.ProjectFilePath, plan.ProjectFilePath);
+        Assert.Contains("Godot.NET.Sdk/4.7.0", plan.ProjectFileContent, StringComparison.Ordinal);
+        before.AssertMatches(DirectoryTreeSnapshot.Capture(fixture.Root));
+
+        service.Execute(CreateRequest(fixture));
+
+        Assert.True(File.Exists(fixture.ProjectFilePath));
+        AssertOwnedProjectFiles(fixture);
+    }
+
+    /// <summary>
+    /// 验证空项目生成的主 csproj 在提交后失败时会随 add-on 一起回滚，不留下半安装状态。
+    /// </summary>
+    [Fact]
+    public void ExecuteRollsBackGeneratedTopLevelProjectWhenCommitFails()
+    {
+        using GodotInstallServiceFixture fixture = GodotInstallServiceFixture.Create();
+        fixture.RemoveTopLevelProjectFile();
+        CallbackGodotInstallFaultInjector faultInjector = new(checkpoint =>
+        {
+            if (checkpoint == GodotInstallCheckpoint.ProjectFileCommitted)
+            {
+                throw new InvalidOperationException("Injected generated project transaction failure.");
+            }
+        });
+
+        var exception = Assert.Throws<GodotInstallException>(() => new GodotInstallService(faultInjector).Execute(
             fixture.SourcePackageRoot,
             fixture.ProjectRoot,
             GodotInstallServiceFixture.RUNTIME_PROFILE,
             UnmanagedPackagePolicy.Reject));
 
-        Assert.Contains("csproj", exception.Message, StringComparison.OrdinalIgnoreCase);
-        before.AssertMatches(DirectoryTreeSnapshot.Capture(fixture.Root));
+        Assert.True(exception.RollbackSucceeded);
+        Assert.False(File.Exists(fixture.ProjectFilePath));
+        Assert.False(Directory.Exists(fixture.AddonRoot));
     }
 
     /// <summary>

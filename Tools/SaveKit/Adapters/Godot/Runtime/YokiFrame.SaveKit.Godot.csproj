@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../Runtime/YokiFrame.SaveKit.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
       <AdditionalProperties>YokiFrameToolsBuild=$(YokiFrameResolvedToolsBuild)</AdditionalProperties>
     </ProjectReference>
     <ProjectReference Include="../../../../../Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj">

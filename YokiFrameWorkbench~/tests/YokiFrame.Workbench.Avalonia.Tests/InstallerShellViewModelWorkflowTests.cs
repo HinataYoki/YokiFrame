@@ -212,23 +212,68 @@ public sealed partial class InstallerShellViewModelWorkflowTests
     }
 
     /// <summary>
-    /// 验证 Godot Runtime 缓存失配时，Installer 会显示并执行源码 bootstrap 恢复入口，而不是仅保留不可安装错误。
+    /// 验证 Godot Runtime 缓存失配时，Installer 会自动执行源码 bootstrap 并在同一窗口重新生成计划。
     /// </summary>
     [Fact]
-    public async Task GodotRuntimeCacheFailureBootstrapsAndOpensFreshInstaller()
+    public async Task GodotRuntimeCacheFailureBootstrapsAndReplansInSameInstaller()
     {
         using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateGodot();
         fixture.Gateway.PlanningFailure = RuntimeCacheBootstrapRequirement.Create(
             "Godot 安装需要先构建项目 Runtime 缓存。");
+        fixture.Gateway.PlanningFailuresRemaining = 1;
 
         await fixture.ViewModel.InitializeAsync();
 
-        Assert.True(fixture.ViewModel.IsGodotRuntimeBootstrapVisible);
-        await fixture.ViewModel.BootstrapGodotRuntimeCommand.ExecuteAsync();
-
         Assert.Equal(fixture.SourceRoot, fixture.GodotRuntimeBootstrapper.SourcePackageRoot);
         Assert.Equal(fixture.TargetRoot, fixture.GodotRuntimeBootstrapper.TargetProjectRoot);
+        Assert.Equal(1, fixture.GodotRuntimeBootstrapper.BootstrapCount);
         Assert.False(fixture.ViewModel.IsGodotRuntimeBootstrapVisible);
-        Assert.Equal("当前 Runtime 已准备完成，新的安装器已打开", fixture.ViewModel.SessionStatusText);
+        Assert.True(fixture.ViewModel.InstallCommand.CanExecute(null));
+        Assert.Equal("计划已就绪", fixture.ViewModel.SessionStatusText);
+    }
+
+    /// <summary>
+    /// 验证自动构建 Godot Runtime 期间不把前置缓存失败显示成红色安装失败。
+    /// </summary>
+    [Fact]
+    public async Task GodotRuntimeBootstrapHidesTransientFailureDetailsWhileRunning()
+    {
+        using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateGodot();
+        fixture.Gateway.PlanningFailure = RuntimeCacheBootstrapRequirement.Create(
+            "Godot 安装需要先构建项目 Runtime 缓存。");
+        fixture.Gateway.PlanningFailuresRemaining = 1;
+        fixture.GodotRuntimeBootstrapper.BootstrapGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var initialization = fixture.ViewModel.InitializeAsync();
+        await fixture.GodotRuntimeBootstrapper.BootstrapStarted.Task;
+
+        Assert.False(fixture.ViewModel.IsOutcomeDetailsVisible);
+        Assert.Equal("正在为 Godot 自动构建当前平台 Runtime", fixture.ViewModel.SessionStatusText);
+
+        fixture.GodotRuntimeBootstrapper.BootstrapGate.SetResult();
+        await initialization;
+        Assert.Equal("计划已就绪", fixture.ViewModel.SessionStatusText);
+    }
+
+    /// <summary>
+    /// 验证自动 Runtime bootstrap 失败时不伪造计划，并保留手动恢复按钮。
+    /// </summary>
+    [Fact]
+    public async Task GodotRuntimeBootstrapFailureKeepsManualRecoveryVisible()
+    {
+        using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateGodot();
+        fixture.Gateway.PlanningFailure = RuntimeCacheBootstrapRequirement.Create(
+            "Godot 安装需要先构建项目 Runtime 缓存。");
+        fixture.Gateway.PlanningFailuresRemaining = 1;
+        fixture.GodotRuntimeBootstrapper.BootstrapFailure = new InvalidOperationException("simulated bootstrap failure");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.ViewModel.InitializeAsync());
+
+        Assert.True(fixture.ViewModel.IsGodotRuntimeBootstrapVisible);
+        Assert.False(fixture.ViewModel.InstallCommand.CanExecute(null));
+        Assert.True(fixture.ViewModel.IsOutcomeDetailsVisible);
+        Assert.Contains(
+            fixture.ViewModel.LogEntries,
+            entry => entry.Message.Contains("正在从选定 YokiFrame 源码包构建", StringComparison.Ordinal));
     }
 }

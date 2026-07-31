@@ -49,4 +49,28 @@ public sealed class GodotRuntimeBootstrapperTests
             },
             startInfo.ArgumentList.ToArray());
     }
+
+    /// <summary>
+    /// 验证自动安装流程可以只构建 Runtime，不额外启动第二个 Installer。
+    /// </summary>
+    [Fact]
+    public void CreateStartInfoCanBuildWithoutOpeningInstaller()
+    {
+        var sourcePackageRoot = Path.Combine(Path.GetTempPath(), "yokiframe source");
+        var targetProjectRoot = Path.Combine(Path.GetTempPath(), "godot project");
+        var packagingProjectPath = Path.Combine(
+            sourcePackageRoot,
+            "YokiFrameWorkbench~",
+            "src",
+            "YokiFrame.Packaging",
+            "YokiFrame.Packaging.csproj");
+
+        var startInfo = GodotRuntimeBootstrapper.CreateStartInfo(
+            sourcePackageRoot,
+            targetProjectRoot,
+            packagingProjectPath,
+            openInstaller: false);
+
+        Assert.DoesNotContain("--open-installer", startInfo.ArgumentList);
+    }
 }

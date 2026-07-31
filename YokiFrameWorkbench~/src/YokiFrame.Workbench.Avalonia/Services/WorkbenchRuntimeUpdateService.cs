@@ -28,6 +28,7 @@ internal interface IWorkbenchRuntimeUpdateService
 internal sealed class WorkbenchRuntimeUpdateService : IWorkbenchRuntimeUpdateService
 {
     private const string WORKBENCH_DIRECTORY_NAME = "YokiFrameWorkbench~";
+    private const string WORKBENCH_SOURCE_DIRECTORY_NAME = "src";
     private const string PACKAGING_PROJECT_RELATIVE_PATH =
         "src/YokiFrame.Packaging/YokiFrame.Packaging.csproj";
 
@@ -46,6 +47,12 @@ internal sealed class WorkbenchRuntimeUpdateService : IWorkbenchRuntimeUpdateSer
         CancellationToken cancellationToken)
     {
         var fullSourcePackageRoot = RequireDirectory(sourcePackageRoot, "YokiFrame 源码包");
+        if (!HasWorkbenchSource(fullSourcePackageRoot))
+        {
+            // Godot 安装是受控源码投影，按约定排除 Workbench 源码；此时没有可比较的更新输入。
+            return new WorkbenchRuntimeUpdateCheck(runningFingerprint, UpdateAvailable: false);
+        }
+
         if (!string.IsNullOrWhiteSpace(runningFingerprint))
         {
             await Task.Run(
@@ -74,6 +81,7 @@ internal sealed class WorkbenchRuntimeUpdateService : IWorkbenchRuntimeUpdateSer
         CancellationToken cancellationToken)
     {
         var fullSourcePackageRoot = RequireDirectory(sourcePackageRoot, "YokiFrame 源码包");
+        RequireWorkbenchSource(fullSourcePackageRoot);
         var fullProjectRoot = RequireDirectory(projectRoot, "项目目录");
         var packagingProjectPath = Path.Combine(
             fullSourcePackageRoot,
@@ -121,6 +129,32 @@ internal sealed class WorkbenchRuntimeUpdateService : IWorkbenchRuntimeUpdateSer
         catch (Exception exception) when (exception is IOException or JsonException or ArgumentException)
         {
             return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 判断给定包根是否包含可用于重新计算 Workbench 指纹的源码目录。
+    /// </summary>
+    /// <param name="sourcePackageRoot">待检查的 YokiFrame 包根。</param>
+    /// <returns>存在完整 Workbench 源码根时返回 true。</returns>
+    internal static bool HasWorkbenchSource(string sourcePackageRoot)
+    {
+        return Directory.Exists(Path.Combine(
+            sourcePackageRoot,
+            WORKBENCH_DIRECTORY_NAME,
+            WORKBENCH_SOURCE_DIRECTORY_NAME));
+    }
+
+    /// <summary>
+    /// 验证包根包含 Workbench 源码，并为显式重建给出明确诊断。
+    /// </summary>
+    /// <param name="sourcePackageRoot">待检查的 YokiFrame 包根。</param>
+    private static void RequireWorkbenchSource(string sourcePackageRoot)
+    {
+        if (!HasWorkbenchSource(sourcePackageRoot))
+        {
+            throw new InvalidDataException(
+                "当前 YokiFrame 投影包不包含 Workbench 源码；请从完整源码包启动 Installer 后再构建 Runtime。");
         }
     }
 

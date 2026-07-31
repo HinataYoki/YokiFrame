@@ -12,6 +12,12 @@ public sealed class GodotProjectBoundaryTests
     private const string BUILD_PROPS_RELATIVE_PATH = "Directory.Build.props";
     private const string GODOT_PROJECT_RELATIVE_PATH =
         "Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj";
+    private const string GODOT_EDITOR_PROJECT_RELATIVE_PATH =
+        "Core/Adapters/Godot/Editor/YokiFrame.Godot.Editor.csproj";
+    private const string AUDIO_KIT_GODOT_PROJECT_RELATIVE_PATH =
+        "Tools/AudioKit/Adapters/Godot/Runtime/YokiFrame.AudioKit.Godot.csproj";
+    private const string SAVE_KIT_GODOT_PROJECT_RELATIVE_PATH =
+        "Tools/SaveKit/Adapters/Godot/Runtime/YokiFrame.SaveKit.Godot.csproj";
     /// <summary>
     /// 验证未生成项目不携带固定 TableKit Runtime 或 Contracts 程序集。
     /// </summary>
@@ -125,11 +131,69 @@ public sealed class GodotProjectBoundaryTests
         Assert.Equal(
             "YokiFrameToolsBuild=$(YokiFrameResolvedToolsBuild)",
             Assert.Single(reference.Elements("AdditionalProperties")).Value);
+        Assert.Equal(
+            "GodotProjectDir",
+            Assert.Single(reference.Elements("GlobalPropertiesToRemove")).Value);
         var editorReference = Assert.Single(references, element =>
             ((string?)element.Parent?.Attribute("Condition"))?.Contains(
                 "YokiFrameResolvedToolsBuild",
                 StringComparison.Ordinal) == true);
         Assert.Equal("../../../Editor/YokiFrame.Editor.csproj", NormalizePath((string?)editorReference.Attribute("Include")));
+    }
+
+    /// <summary>
+    /// 验证 Godot 宿主路径只停留在 Adapter 项目，不能沿项目引用图污染 Core 与 Tool 项目配置。
+    /// </summary>
+    [Fact]
+    public void GodotAdaptersRemoveHostProjectPropertyFromPortableReferences()
+    {
+        AssertGlobalPropertyRemoval(
+            GODOT_PROJECT_RELATIVE_PATH,
+            "../../../Runtime/YokiFrame.csproj");
+        AssertGlobalPropertyRemoval(
+            GODOT_EDITOR_PROJECT_RELATIVE_PATH,
+            "../../../Runtime/YokiFrame.csproj",
+            "../../../Editor/YokiFrame.Editor.csproj");
+        AssertGlobalPropertyForwarded(
+            GODOT_EDITOR_PROJECT_RELATIVE_PATH,
+            "../Runtime/YokiFrame.Godot.Runtime.csproj");
+        AssertGlobalPropertyRemoval(
+            AUDIO_KIT_GODOT_PROJECT_RELATIVE_PATH,
+            "../../../Runtime/YokiFrame.AudioKit.csproj");
+        AssertGlobalPropertyForwarded(
+            AUDIO_KIT_GODOT_PROJECT_RELATIVE_PATH,
+            "../../../../../Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj");
+        AssertGlobalPropertyRemoval(
+            SAVE_KIT_GODOT_PROJECT_RELATIVE_PATH,
+            "../../../Runtime/YokiFrame.SaveKit.csproj");
+        AssertGlobalPropertyForwarded(
+            SAVE_KIT_GODOT_PROJECT_RELATIVE_PATH,
+            "../../../../../Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj");
+    }
+
+    /// <summary>
+    /// 验证安装投影中的 Runtime Adapter 能从固定 addons 层级回到目标 Godot 项目根。
+    /// </summary>
+    [Fact]
+    public void GodotRuntimeBuildPropsUseTheInstalledProjectRootDepth()
+    {
+        var propsPath = Path.Combine(
+            FindPackageRoot(),
+            "Core",
+            "Adapters",
+            "Godot",
+            "Runtime",
+            "Directory.Build.props");
+        var props = File.ReadAllText(propsPath);
+
+        Assert.Contains(
+            "$(MSBuildThisFileDirectory)../../../../../../../../",
+            props,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "$(MSBuildThisFileDirectory)../../../../../../../../../",
+            props,
+            StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -251,6 +315,39 @@ public sealed class GodotProjectBoundaryTests
             ((string?)element.Parent?.Attribute("Condition"))?.Contains(
                 conditionFragment,
                 StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>
+    /// 检查指定 Adapter 的可移植项目引用移除了 GodotProjectDir。
+    /// </summary>
+    /// <param name="relativePath">Adapter 项目相对路径。</param>
+    /// <param name="portableReferences">需要移除宿主属性的项目引用路径。</param>
+    private static void AssertGlobalPropertyRemoval(string relativePath, params string[] portableReferences)
+    {
+        var project = LoadPackageProject(relativePath);
+        foreach (var include in portableReferences)
+        {
+            var reference = Assert.Single(
+                project.Descendants("ProjectReference"),
+                element => NormalizePath((string?)element.Attribute("Include")) == include);
+            Assert.Equal(
+                "GodotProjectDir",
+                Assert.Single(reference.Elements("GlobalPropertiesToRemove")).Value);
+        }
+    }
+
+    /// <summary>
+    /// 检查指定 Adapter 到另一个 Godot Adapter 的引用没有误删宿主项目属性。
+    /// </summary>
+    /// <param name="relativePath">Adapter 项目相对路径。</param>
+    /// <param name="godotReference">需要继续接收宿主属性的 Godot 项目引用路径。</param>
+    private static void AssertGlobalPropertyForwarded(string relativePath, string godotReference)
+    {
+        var project = LoadPackageProject(relativePath);
+        var reference = Assert.Single(
+            project.Descendants("ProjectReference"),
+            element => NormalizePath((string?)element.Attribute("Include")) == godotReference);
+        Assert.Empty(reference.Elements("GlobalPropertiesToRemove"));
     }
 
     /// <summary>

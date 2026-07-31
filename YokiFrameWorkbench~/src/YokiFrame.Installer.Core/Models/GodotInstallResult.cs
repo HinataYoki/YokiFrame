@@ -9,7 +9,7 @@ public sealed class GodotInstallResult
     /// 创建 Godot 安装结果。
     /// </summary>
     /// <param name="packageResult">受控包投影事务结果。</param>
-    /// <param name="projectFilePath">已 patch 的唯一顶层 Godot C# 项目文件。</param>
+    /// <param name="projectFilePath">已 patch 或由空项目首次生成的 Godot C# 主项目文件。</param>
     /// <param name="projectSettingsPath">已 patch 的 project.godot 路径。</param>
     /// <param name="pluginConfigPath">已提交的 plugin.cfg 路径。</param>
     /// <param name="pluginScriptPath">已提交的薄 C# EditorPlugin bootstrap 路径。</param>
@@ -42,7 +42,7 @@ public sealed class GodotInstallResult
     public PackageInstallTransactionResult PackageResult { get; }
 
     /// <summary>
-    /// 获取已 patch 的唯一顶层 Godot C# 项目文件。
+    /// 获取已 patch 或由空项目首次生成的 Godot C# 主项目文件。
     /// </summary>
     public string ProjectFilePath { get; }
 

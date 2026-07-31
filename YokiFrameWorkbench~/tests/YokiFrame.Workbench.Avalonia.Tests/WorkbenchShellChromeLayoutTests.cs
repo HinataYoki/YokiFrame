@@ -24,6 +24,25 @@ public sealed class WorkbenchShellChromeLayoutTests
     }
 
     /// <summary>
+    /// 验证带图标按钮统一居中内容容器及其图标、文字，避免不同页面各自出现垂直偏移。
+    /// </summary>
+    [Fact]
+    public void IconLabelButtonsUseSharedCenteredContentAlignment()
+    {
+        var buttons = ReadButtonsStyles();
+
+        Assert.Contains("HorizontalContentAlignment\" Value=\"Center\"", buttons);
+        Assert.Contains("VerticalContentAlignment\" Value=\"Center\"", buttons);
+        Assert.Contains("Button > StackPanel, ToggleButton > StackPanel", buttons);
+        Assert.Contains("Button > StackPanel > TextBlock", buttons);
+        Assert.Contains("Button PathIcon", buttons);
+        Assert.Contains("Button shapes|Path", buttons);
+        Assert.Contains("Button > StackPanel shapes|Path", buttons);
+        Assert.Contains("TranslateTransform Y=\"2\"", buttons);
+        Assert.Contains("Stretch\" Value=\"Uniform\"", buttons);
+    }
+
+    /// <summary>
     /// 验证标题栏使用 Stroke Path 渲染图标，避免 PathIcon 对开口几何的填充失真。
     /// </summary>
     [Fact]

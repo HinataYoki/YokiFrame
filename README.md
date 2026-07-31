@@ -29,7 +29,11 @@ Unity Git URL 与本地包只能选一种，不要把 Git URL 包复制到 `Asse
 & "<packageRoot>\YokiFrameWorkbench~\scripts\runtime-bootstrap\install-godot.cmd" --project "<godotProjectRoot>"
 ```
 
-Linux 和 macOS 使用同目录下的 `install-godot.sh` 或 `install-godot.command`，然后在 Installer 中选择 **Godot local**、确认 plan 并执行 apply。
+Linux 和 macOS 使用同目录下的 `install-godot.sh` 或 `install-godot.command`，然后在 Installer 中选择 **Godot local**、确认 plan 并执行 apply。也可以直接打开图形 Installer：首次选择 Godot 项目时，如果项目 Runtime 缓存不存在，Installer 会自动构建缓存并继续生成安装计划。
+
+新建的 Godot .NET 空项目即使还没有顶层 `.csproj` 也可以安装；Installer 会根据 Godot .NET 证据和 `project.godot` 的程序集名在 apply 事务中生成主项目文件。提交后，Installer 会在需要时使用 `-p:GodotTarget=Editor` 自动执行目标项目的 `dotnet restore` 和 `dotnet build`，编译包含 `TOOLS` 的 Editor 程序集，并确认 `.godot/mono/temp/bin/Debug/<assembly>.dll` 已生成；构建完成后还会重新登记 `res://addons/yokiframe/plugin.cfg`，防止 Godot 扫描竞态导致插件被禁用。普通非 .NET Godot 项目不受支持。
+
+Godot 安装完成后如果编辑器当时已经打开，请先关闭并重新打开项目，让 Godot 重新扫描已生成的托管程序集；不要单独复制或修改 `YokiFrameGodotEditorPlugin.cs`。构建失败时直接查看 Installer 返回的 dotnet 编译输出。
 
 仓库 clone 下来的源码包不包含预编译的 Workbench 和 `yoki`。首次从源码包启动 Godot Installer，或让 AI 执行自动安装时，会先构建项目 Runtime；Windows 需要 `.NET 10 SDK` 和 `Visual Studio 2022 C++ Build Tools`。Unity Git URL 本身不需要这些工具。
 

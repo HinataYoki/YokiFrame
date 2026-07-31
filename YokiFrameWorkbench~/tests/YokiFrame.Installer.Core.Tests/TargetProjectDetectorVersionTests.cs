@@ -49,6 +49,79 @@ public sealed class TargetProjectDetectorVersionTests
     }
 
     /// <summary>
+    /// 验证 Godot .NET 新项目尚未生成主 csproj 时，目录仍能先识别为 Godot。
+    /// </summary>
+    [Fact]
+    public void DetectAcceptsGodotDotNetBeforeCsprojGeneration()
+    {
+        var root = CreateGodotDotNetProjectWithoutCsproj();
+
+        var info = new TargetProjectDetector().Detect(root);
+
+        Assert.Equal(InstallerProjectKind.Godot, info.Kind);
+        Assert.Contains(Path.Combine(root, "project.godot"), info.EvidencePaths);
+    }
+
+    /// <summary>
+    /// 验证普通 Godot 项目不会仅凭 project.godot 被误识别为受支持的 .NET 目标。
+    /// </summary>
+    [Fact]
+    public void DetectKeepsNonDotNetGodotProjectUnknown()
+    {
+        var root = CreateTempRoot("godot-non-dotnet");
+        File.WriteAllText(Path.Combine(root, "project.godot"), "config_version=5\n");
+
+        var info = new TargetProjectDetector().Detect(root);
+
+        Assert.Equal(InstallerProjectKind.Unknown, info.Kind);
+    }
+
+    /// <summary>
+    /// 验证 Godot .NET 编辑器缓存存在时，即使配置 section 尚未写入也能识别项目。
+    /// </summary>
+    [Fact]
+    public void DetectAcceptsGodotDotNetMonoCacheEvidence()
+    {
+        var root = CreateTempRoot("godot-mono-cache");
+        File.WriteAllText(Path.Combine(root, "project.godot"), "config_version=5\n");
+        Directory.CreateDirectory(Path.Combine(root, ".godot", "mono"));
+
+        var info = new TargetProjectDetector().Detect(root);
+
+        Assert.Equal(InstallerProjectKind.Godot, info.Kind);
+    }
+
+    /// <summary>
+    /// 验证空项目生成主 csproj 前会拒绝低于当前 Godot 4.7 基线的项目特征版本。
+    /// </summary>
+    [Fact]
+    public void ValidateGodotProjectFeatureVersionRejectsBefore47()
+    {
+        var root = CreateTempRoot("godot-feature-version");
+        var settingsPath = Path.Combine(root, "project.godot");
+        File.WriteAllText(settingsPath, "config/features=PackedStringArray(\"4.6\", \"Forward Plus\")\n");
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => TargetProjectDetector.ValidateGodotProjectFeatureVersion(settingsPath));
+
+        Assert.Contains("4.7", error.Message, StringComparison.Ordinal);
+        Assert.Contains("4.6", error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 验证当前 Godot 4.7 特征版本可进入空项目主 csproj 生成流程。
+    /// </summary>
+    [Fact]
+    public void ValidateGodotProjectFeatureVersionAccepts47()
+    {
+        var root = CreateTempRoot("godot-feature-version");
+        var settingsPath = Path.Combine(root, "project.godot");
+        File.WriteAllText(settingsPath, "config/features=PackedStringArray(\"4.7\", \"Forward Plus\")\n");
+
+        TargetProjectDetector.ValidateGodotProjectFeatureVersion(settingsPath);
+    }
+
+    /// <summary>
     /// 验证当前基线之后的 Godot .NET SDK 与目标框架不会被固定版本门控误拒绝。
     /// </summary>
     /// <param name="sdkVersion">待验证 Godot.NET.Sdk 版本。</param>
@@ -124,6 +197,19 @@ public sealed class TargetProjectDetectorVersionTests
             Path.Combine(root, "Game.csproj"),
             "<Project Sdk=\"Godot.NET.Sdk/" + sdkVersion + "\"><PropertyGroup><TargetFramework>"
             + targetFramework + "</TargetFramework></PropertyGroup></Project>");
+        return root;
+    }
+
+    /// <summary>
+    /// 创建只包含 Godot .NET 配置证据、尚未由编辑器生成 csproj 的新项目。
+    /// </summary>
+    /// <returns>临时 Godot .NET 项目根目录。</returns>
+    private static string CreateGodotDotNetProjectWithoutCsproj()
+    {
+        var root = CreateTempRoot("godot-dotnet-no-csproj");
+        File.WriteAllText(
+            Path.Combine(root, "project.godot"),
+            "config_version=5\n\n[dotnet]\nproject/assembly_name=\"GodotFixture\"\n");
         return root;
     }
 

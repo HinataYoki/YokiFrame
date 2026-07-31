@@ -200,6 +200,12 @@ public sealed partial class InstallerShellViewModel
     /// <param name="state">最新 Installer 会话状态。</param>
     private void ApplyOutcomeDetails(InstallerSessionState state)
     {
+        if (mIsGodotRuntimeBootstrapRunning)
+        {
+            ClearOutcomeDetails();
+            return;
+        }
+
         if (state.Status == InstallerSessionStatus.Conflict)
         {
             OutcomeDetailsTitle = "安装冲突";
@@ -216,6 +222,14 @@ public sealed partial class InstallerShellViewModel
             return;
         }
 
+        ClearOutcomeDetails();
+    }
+
+    /// <summary>
+    /// 清除当前事务的冲突或失败详情，避免把已经解决的前置错误继续显示给用户。
+    /// </summary>
+    private void ClearOutcomeDetails()
+    {
         OutcomeDetailsTitle = string.Empty;
         OutcomeDetailsText = string.Empty;
         IsOutcomeDetailsVisible = false;

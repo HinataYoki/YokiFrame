@@ -16,6 +16,7 @@ public sealed partial class InstallerShellViewModel : ViewModelBase
     private readonly InstallerInputDetectionService mInputDetection;
     private readonly IInstallerFolderPicker mFolderPicker;
     private readonly IGodotRuntimeBootstrapper mGodotRuntimeBootstrapper;
+    private readonly SemaphoreSlim mGodotRuntimeBootstrapGate = new(1, 1);
     private readonly SynchronizationContext? mSynchronizationContext;
     private string mSourcePackageRoot;
     private string mTargetProjectRoot;

@@ -15,7 +15,8 @@ public sealed class GodotInstallPlan
     /// <param name="projectRoot">规范化目标项目根。</param>
     /// <param name="addonRoot">正式受管 Godot add-on 根目录。</param>
     /// <param name="targetPackageRoot">正式受管包根。</param>
-    /// <param name="projectFilePath">唯一顶层 csproj 路径。</param>
+    /// <param name="projectFilePath">主 csproj 路径；空 Godot .NET 项目可由安装事务首次生成。</param>
+    /// <param name="projectFileWasGenerated">本次计划是否需要首次生成主 csproj。</param>
     /// <param name="projectSettingsPath">project.godot 路径。</param>
     /// <param name="pluginConfigPath">plugin.cfg 路径。</param>
     /// <param name="pluginScriptPath">薄 C# EditorPlugin bootstrap 路径。</param>
@@ -38,6 +39,7 @@ public sealed class GodotInstallPlan
         string addonRoot,
         string targetPackageRoot,
         string projectFilePath,
+        bool projectFileWasGenerated,
         string projectSettingsPath,
         string pluginConfigPath,
         string pluginScriptPath,
@@ -60,6 +62,7 @@ public sealed class GodotInstallPlan
         AddonRoot = addonRoot;
         TargetPackageRoot = targetPackageRoot;
         ProjectFilePath = projectFilePath;
+        ProjectFileWasGenerated = projectFileWasGenerated;
         ProjectSettingsPath = projectSettingsPath;
         PluginConfigPath = pluginConfigPath;
         PluginScriptPath = pluginScriptPath;
@@ -96,8 +99,13 @@ public sealed class GodotInstallPlan
     /// <summary>获取正式受管包根。</summary>
     public string TargetPackageRoot { get; }
 
-    /// <summary>获取唯一顶层 csproj 路径。</summary>
+    /// <summary>获取主 csproj 路径。</summary>
     public string ProjectFilePath { get; }
+
+    /// <summary>
+    /// 获取本次计划是否会在目标项目根首次生成主 csproj。
+    /// </summary>
+    public bool ProjectFileWasGenerated { get; }
 
     /// <summary>获取 project.godot 路径。</summary>
     public string ProjectSettingsPath { get; }

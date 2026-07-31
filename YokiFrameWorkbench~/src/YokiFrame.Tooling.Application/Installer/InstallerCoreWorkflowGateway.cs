@@ -12,6 +12,25 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
 
     private readonly UnityInstallService mUnityInstallService = new();
     private readonly GodotInstallService mGodotInstallService = new();
+    private readonly IGodotProjectBuildService mGodotProjectBuildService;
+
+    /// <summary>
+    /// 创建使用默认 Godot 主项目构建器的安装 gateway。
+    /// </summary>
+    public InstallerCoreWorkflowGateway()
+        : this(new GodotProjectBuildService())
+    {
+    }
+
+    /// <summary>
+    /// 创建可替换 Godot 主项目构建边界的安装 gateway，供测试隔离外部 dotnet 进程。
+    /// </summary>
+    /// <param name="godotProjectBuildService">Godot 主项目构建服务。</param>
+    internal InstallerCoreWorkflowGateway(IGodotProjectBuildService godotProjectBuildService)
+    {
+        mGodotProjectBuildService = godotProjectBuildService
+            ?? throw new ArgumentNullException(nameof(godotProjectBuildService));
+    }
 
     /// <summary>
     /// 在后台执行 Core 只读计划，并把 typed plan 映射为 Application 预览。
@@ -59,8 +78,14 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
         progress.Report(new InstallerProgressUpdate(InstallerProgressStage.Applying, 0, 2, "正在执行受控安装事务。"));
         try
         {
-            var result = await ExecuteCoreAsync(plan.ExecutionToken!, cancellationToken).ConfigureAwait(false);
-            progress.Report(new InstallerProgressUpdate(InstallerProgressStage.Verifying, 2, 2, "Core 已完成提交后校验。"));
+            var result = await ExecuteCoreAsync(
+                plan.ExecutionToken!,
+                progress,
+                cancellationToken).ConfigureAwait(false);
+            var verifyingMessage = options.Mode == InstallerInstallMode.GodotLocal
+                ? "Godot add-on 与主项目已完成提交后校验。"
+                : "Core 已完成提交后校验。";
+            progress.Report(new InstallerProgressUpdate(InstallerProgressStage.Verifying, 2, 2, verifyingMessage));
             return result;
         }
         catch (PackageInstallRejectedException exception)
@@ -232,7 +257,12 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
         List<InstallerPlanActionPreview> actions = new()
         {
             CreateAction(InstallerPlanActionKind.InstallPackage, plan.AddonRoot, "完整替换受控 Godot add-on。"),
-            CreateAction(InstallerPlanActionKind.PatchProjectFile, plan.ProjectFilePath, "维护唯一 YokiFrame ProjectReference。")
+            CreateAction(
+                InstallerPlanActionKind.PatchProjectFile,
+                plan.ProjectFilePath,
+                plan.ProjectFileWasGenerated
+                    ? "生成并维护 Godot 主项目及 YokiFrame ProjectReference。"
+                    : "维护现有 Godot 主项目及 YokiFrame ProjectReference。")
         };
         if (plan.RepairProjectSettings)
         {
@@ -250,6 +280,11 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
     private static IReadOnlyList<string> CreateGodotWarnings(GodotInstallPlan plan)
     {
         List<string> warnings = new();
+        if (plan.ProjectFileWasGenerated)
+        {
+            warnings.Add("目标是空的 Godot .NET 项目；安装事务会根据 project.godot 生成主 .csproj，并在失败时删除该新文件。");
+        }
+
         if (!plan.RepairProjectSettings)
         {
             warnings.Add("project.godot repair is disabled; existing project settings will remain unchanged.");
@@ -285,6 +320,7 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
     /// <returns>Application 执行结果。</returns>
     private async Task<InstallerExecutionResult> ExecuteCoreAsync(
         object executionToken,
+        IProgress<InstallerProgressUpdate> progress,
         CancellationToken cancellationToken)
     {
         return executionToken switch
@@ -292,11 +328,47 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
             UnityExecutionToken unity => await Task.Run(
                 () => MapUnityResult(mUnityInstallService.Execute(unity.Request)),
                 cancellationToken).ConfigureAwait(false),
-            GodotExecutionToken godot => await Task.Run(
-                () => MapGodotResult(godot.Plan, mGodotInstallService.Execute(godot.Request)),
+            GodotExecutionToken godot => await ExecuteGodotAsync(
+                godot,
+                progress,
                 cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidOperationException("Installer plan does not contain a supported execution token.")
         };
+    }
+
+    /// <summary>
+    /// 执行 Godot Core 事务，并在提交后确保主项目程序集已经可被 Editor 加载。
+    /// </summary>
+    /// <param name="executionToken">Godot typed 请求和计划。</param>
+    /// <param name="progress">安装进度接收器。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>包含 Godot owner 证据的统一结果。</returns>
+    private async Task<InstallerExecutionResult> ExecuteGodotAsync(
+        GodotExecutionToken executionToken,
+        IProgress<InstallerProgressUpdate> progress,
+        CancellationToken cancellationToken)
+    {
+        var result = await Task.Run(
+            () => MapGodotResult(
+                executionToken.Plan,
+                mGodotInstallService.Execute(executionToken.Request)),
+            cancellationToken).ConfigureAwait(false);
+        if (GodotProjectBuildService.NeedsBuild(executionToken.Plan))
+        {
+            progress.Report(new InstallerProgressUpdate(
+                InstallerProgressStage.Applying,
+                1,
+                2,
+                "正在构建 Godot 主项目程序集。"));
+            await mGodotProjectBuildService.BuildIfRequiredAsync(
+                executionToken.Plan,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        // Godot 在重新扫描托管程序集时可能暂时移除失败插件的 enabled 项；构建成功后以最新文件内容重做 owner patch。
+        mGodotInstallService.EnsurePluginEnabled(executionToken.Plan);
+
+        return result;
     }
 
     /// <summary>

@@ -31,9 +31,12 @@
 
   <ItemGroup Condition="'$(YokiFrameToolsBuild)' == 'True'">
     <ProjectReference Include="../../../Runtime/YokiFrame.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
       <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
     </ProjectReference>
-    <ProjectReference Include="../../../Editor/YokiFrame.Editor.csproj" />
+    <ProjectReference Include="../../../Editor/YokiFrame.Editor.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
+    </ProjectReference>
     <ProjectReference Include="../Runtime/YokiFrame.Godot.Runtime.csproj">
       <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
     </ProjectReference>

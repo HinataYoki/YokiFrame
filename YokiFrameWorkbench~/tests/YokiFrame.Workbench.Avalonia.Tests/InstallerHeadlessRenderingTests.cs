@@ -4,6 +4,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -404,7 +405,11 @@ public sealed class InstallerHeadlessRenderingTests
             var text = Assert.Single(content.GetVisualDescendants().OfType<TextBlock>());
             var iconBounds = GetWindowBounds(window, icon);
             var textBounds = GetWindowBounds(window, text);
-            var centerOffset = Math.Abs(iconBounds.Center.Y - textBounds.Center.Y);
+            // Stroke Path 的矢量笔画相对控件边界存在固定光学偏移；断言布局中心时扣除显式绘制补偿。
+            var opticalOffset = icon.RenderTransform is TranslateTransform transform
+                ? transform.Y
+                : 0;
+            var centerOffset = Math.Abs(iconBounds.Center.Y - opticalOffset - textBounds.Center.Y);
             Assert.True(centerOffset <= 1, $"按钮图标与文字中心线偏移 {centerOffset:0.##} 像素。");
         }
     }

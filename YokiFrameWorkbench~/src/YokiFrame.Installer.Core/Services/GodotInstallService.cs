@@ -1,4 +1,5 @@
 using YokiFrame.Installer.Core.IO;
+using System.Text;
 using YokiFrame.Installer.Core.Models;
 
 namespace YokiFrame.Installer.Core.Services;
@@ -16,6 +17,9 @@ public sealed class GodotInstallService
     private const string RUNTIME_BOOTSTRAP_FILE_NAME = "YokiFrameGodotBootstrap.cs";
     private const string RUNTIME_BOOTSTRAP_RESOURCE_PATH =
         "res://addons/yokiframe/YokiFrameGodotBootstrap.cs";
+    private const string DEFAULT_GODOT_SDK = "Godot.NET.Sdk/4.7.0";
+    private const string DEFAULT_TARGET_FRAMEWORK = "net8.0";
+    private const string DEFAULT_PROJECT_FILE_NAME = "GodotProject";
 
     private readonly GodotPackageProjectionBuilder mProjectionBuilder = new();
     private readonly GodotPluginEntryPointBuilder mPluginBuilder = new();
@@ -90,6 +94,31 @@ public sealed class GodotInstallService
     }
 
     /// <summary>
+    /// 在主项目 Tools 构建结束后重新维护 project.godot owner 项，抵御 Godot 在扫描失败或重载竞态中移除插件登记。
+    /// </summary>
+    /// <param name="plan">已完成 add-on、主项目和初始 project.godot 提交的安装计划。</param>
+    /// <remarks>
+    /// 该方法只在计划允许修复设置且要求启用插件时写入；每次先重读最新文件，再通过结构化 patch 保留 Godot 或用户刚刚写入的非 owner 内容。
+    /// </remarks>
+    public void EnsurePluginEnabled(GodotInstallPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!plan.RepairProjectSettings || !plan.EnablePlugin)
+        {
+            return;
+        }
+
+        var currentSettings = File.ReadAllText(plan.ProjectSettingsPath);
+        var repairedSettings = mProjectSettingsPatcher.Patch(currentSettings, enablePlugin: true);
+        if (string.Equals(currentSettings, repairedSettings, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        WriteProjectSettingsAtomically(plan.ProjectSettingsPath, repairedSettings);
+    }
+
+    /// <summary>
     /// 完成全部只读校验、投影和 patch 计算，确保缺失 Runtime 或不兼容项目会在首次写入前拒绝。
     /// </summary>
     /// <param name="request">typed Godot 安装请求。</param>
@@ -97,9 +126,9 @@ public sealed class GodotInstallService
     private GodotInstallPlan PrepareInstall(GodotInstallRequest request)
     {
         var fullProjectRoot = RequireProjectRoot(request.ProjectRoot);
-        var projectFilePath = FindSingleTopLevelProjectFile(fullProjectRoot);
-        TargetProjectDetector.ValidateGodotProject(projectFilePath);
         var projectSettingsPath = RequireProjectSettings(fullProjectRoot);
+        var projectSettings = File.ReadAllText(projectSettingsPath);
+        var projectFile = ResolveProjectFile(fullProjectRoot, projectSettingsPath);
         var addonRoot = InstallerPathGuard.CombineInside(fullProjectRoot, "addons", ADDON_DIRECTORY);
         var targetPackageRoot = InstallerPathGuard.CombineInside(addonRoot, "package", PACKAGE_DIRECTORY);
         mRuntimeCacheValidator.Validate(fullProjectRoot, request.SourcePackageRoot, request.RuntimeProfile);
@@ -115,7 +144,6 @@ public sealed class GodotInstallService
         var runtimeBootstrapUidPath = InstallerPathGuard.CombineInside(
             addonRoot,
             RUNTIME_BOOTSTRAP_FILE_NAME + ".uid");
-        var projectSettings = File.ReadAllText(projectSettingsPath);
         var pluginScriptUid = mUidSidecarBuilder.Build(
             EDITOR_BOOTSTRAP_FILE_NAME + ".uid",
             EDITOR_BOOTSTRAP_RESOURCE_PATH,
@@ -132,14 +160,15 @@ public sealed class GodotInstallService
             fullProjectRoot,
             addonRoot,
             targetPackageRoot,
-            projectFilePath,
+            projectFile.Path,
+            projectFile.WasGenerated,
             projectSettingsPath,
             pluginConfigPath,
             pluginScriptPath,
             pluginScriptUidPath,
             runtimeBootstrapPath,
             runtimeBootstrapUidPath,
-            mProjectFilePatcher.Patch(File.ReadAllText(projectFilePath)),
+            mProjectFilePatcher.Patch(projectFile.Content),
             request.RepairProjectSettings
                 ? mProjectSettingsPatcher.Patch(projectSettings, request.EnablePlugin)
                 : projectSettings,
@@ -167,22 +196,157 @@ public sealed class GodotInstallService
     }
 
     /// <summary>
-    /// 选择唯一顶层 csproj，忽略嵌套项目并拒绝缺失或歧义。
+    /// 以同目录临时文件、刷新到磁盘和原子替换提交最新 project.godot，避免重写过程中留下半份设置。
+    /// </summary>
+    /// <param name="targetPath">已通过项目路径守卫验证的 project.godot 路径。</param>
+    /// <param name="content">结构化 patch 后的完整项目设置文本。</param>
+    private static void WriteProjectSettingsAtomically(string targetPath, string content)
+    {
+        var temporaryPath = targetPath + ".yokiframe-" + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (FileStream stream = new(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                4096,
+                FileOptions.WriteThrough))
+            using (StreamWriter writer = new(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+            {
+                writer.Write(content);
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
+
+            File.Move(temporaryPath, targetPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 选择唯一顶层 csproj；空 Godot .NET 项目缺失时生成可供 Godot 编辑器继续维护的主项目文件。
     /// </summary>
     /// <param name="projectRoot">已验证的 Godot 项目根。</param>
-    /// <returns>唯一顶层 Godot C# 项目文件。</returns>
-    private static string FindSingleTopLevelProjectFile(string projectRoot)
+    /// <param name="projectSettingsPath">project.godot 绝对路径。</param>
+    /// <returns>主项目路径、内容和是否需要首次生成的解析结果。</returns>
+    private static GodotProjectFileResolution ResolveProjectFile(string projectRoot, string projectSettingsPath)
     {
         var candidates = Directory.EnumerateFiles(projectRoot, "*", SearchOption.TopDirectoryOnly)
             .Where(static path => string.Equals(Path.GetExtension(path), ".csproj", StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        if (candidates.Length != 1)
+        if (candidates.Length > 1)
         {
             throw new InvalidDataException(
-                "Godot project root must contain exactly one top-level csproj, but found " + candidates.Length + ".");
+                "Godot .NET 项目必须且只能包含一个顶层 .csproj；当前发现 "
+                + candidates.Length + " 个。");
         }
 
-        return candidates[0];
+        if (candidates.Length == 1)
+        {
+            var projectPath = candidates[0];
+            var projectContent = File.ReadAllText(projectPath);
+            TargetProjectDetector.ValidateGodotProjectContent(projectContent, projectPath);
+            return new GodotProjectFileResolution(projectPath, projectContent, WasGenerated: false);
+        }
+
+        if (!TargetProjectDetector.HasGodotDotNetEvidence(projectRoot, projectSettingsPath))
+        {
+            throw new InvalidDataException(
+                "Godot 项目未发现主 .csproj，也未发现 Godot .NET 证据；YokiFrame 仅支持 Godot .NET 项目。");
+        }
+
+        TargetProjectDetector.ValidateGodotProjectFeatureVersion(projectSettingsPath);
+        var generatedProjectPath = GetGeneratedProjectPath(projectRoot, projectSettingsPath);
+        var generatedProjectContent = CreateGeneratedProjectContent();
+        TargetProjectDetector.ValidateGodotProjectContent(generatedProjectContent, generatedProjectPath);
+        return new GodotProjectFileResolution(generatedProjectPath, generatedProjectContent, WasGenerated: true);
+    }
+
+    /// <summary>
+    /// 根据 project.godot 的 assembly_name 计算稳定的主项目文件路径，缺失时回退到项目目录名。
+    /// </summary>
+    /// <param name="projectRoot">Godot 项目根目录。</param>
+    /// <param name="projectSettingsPath">project.godot 绝对路径。</param>
+    /// <returns>受路径守卫约束的主 csproj 路径。</returns>
+    private static string GetGeneratedProjectPath(string projectRoot, string projectSettingsPath)
+    {
+        var projectName = ReadGodotAssemblyName(projectSettingsPath);
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            projectName = new DirectoryInfo(projectRoot).Name;
+        }
+
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        var safeName = new string(projectName
+            .Select(character => invalidCharacters.Contains(character) ? '_' : character)
+            .ToArray())
+            .Trim();
+        if (safeName.Length == 0 || safeName is "." or "..")
+        {
+            safeName = DEFAULT_PROJECT_FILE_NAME;
+        }
+
+        return InstallerPathGuard.CombineInside(projectRoot, safeName + ".csproj");
+    }
+
+    /// <summary>
+    /// 读取 project.godot [dotnet] section 中的 assembly_name，用于匹配 Godot 默认项目文件名。
+    /// </summary>
+    /// <param name="projectSettingsPath">project.godot 绝对路径。</param>
+    /// <returns>未转义的 assembly_name；缺失时返回 null。</returns>
+    private static string? ReadGodotAssemblyName(string projectSettingsPath)
+    {
+        var inDotNetSection = false;
+        foreach (var rawLine in File.ReadLines(projectSettingsPath))
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
+            {
+                inDotNetSection = string.Equals(line, "[dotnet]", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (!inDotNetSection)
+            {
+                continue;
+            }
+
+            var equalsIndex = line.IndexOf('=');
+            if (equalsIndex <= 0
+                || !string.Equals(line[..equalsIndex].Trim(), "project/assembly_name", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = line[(equalsIndex + 1)..].Trim();
+            return value.Length >= 2 && value[0] == '"' && value[^1] == '"'
+                ? value[1..^1].Replace("\\\"", "\"", StringComparison.Ordinal).Replace("\\\\", "\\", StringComparison.Ordinal)
+                : value;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 创建与 Godot 4.7 .NET 编辑器生成文件兼容的最小主项目 XML，后续由 owner patch 追加引用。
+    /// </summary>
+    /// <returns>待写入主 csproj 的完整 XML。</returns>
+    private static string CreateGeneratedProjectContent()
+    {
+        return "<Project Sdk=\"" + DEFAULT_GODOT_SDK + "\">\n"
+            + "  <PropertyGroup>\n"
+            + "    <TargetFramework>" + DEFAULT_TARGET_FRAMEWORK + "</TargetFramework>\n"
+            + "    <EnableDynamicLoading>true</EnableDynamicLoading>\n"
+            + "    <DefineConstants>$(DefineConstants);GODOT</DefineConstants>\n"
+            + "  </PropertyGroup>\n"
+            + "</Project>\n";
     }
 
     /// <summary>
@@ -231,4 +395,9 @@ public sealed class GodotInstallService
         {
         }
     }
+
+    /// <summary>
+    /// 保存主项目文件解析结果，区分已有项目与安装事务将首次生成的项目。
+    /// </summary>
+    private sealed record GodotProjectFileResolution(string Path, string Content, bool WasGenerated);
 }

@@ -1,12 +1,37 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shapes="using:Avalonia.Controls.Shapes"
+        xmlns:media="using:Avalonia.Media">
   <Style Selector="Button">
     <Setter Property="MinHeight" Value="32" />
     <Setter Property="Padding" Value="{DynamicResource Padding.Action}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+  </Style>
+  <Style Selector="Button > StackPanel, ToggleButton > StackPanel">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button > StackPanel > TextBlock, ToggleButton > StackPanel > TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button PathIcon, ToggleButton PathIcon">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button > StackPanel shapes|Path, ToggleButton > StackPanel shapes|Path">
+    <Setter Property="RenderTransform">
+      <Setter.Value>
+        <media:TranslateTransform Y="2" />
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style Selector="Button shapes|Path, ToggleButton shapes|Path">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Stretch" Value="Uniform" />
   </Style>
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource Brush.Action.Primary}" />

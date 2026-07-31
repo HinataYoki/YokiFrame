@@ -7,8 +7,10 @@
 | 现象 | 处理 |
 | --- | --- |
 | Unity 无法打开 Workbench | 确认本机安装 .NET 10 SDK；Windows Native AOT 还需要 Visual Studio C++ Build Tools，然后重试 `Ctrl+E`。 |
-| Godot 提示 Runtime 缺失或版本不匹配 | 从当前源码包重新运行对应平台的 `install-godot` 脚本，在 Installer 中重新生成 plan，再 apply。 |
+| Godot 提示 Runtime 缺失或版本不匹配 | 图形 Installer 会先自动构建并重新生成 plan；构建期间右侧显示“正在为 Godot 构建 Runtime”和不确定进度，这是准备阶段，不代表安装事务失败。若构建失败，检查 .NET 10/C++ 工具链后重新点击“构建 Runtime”，或从当前源码包重新运行对应平台的 `install-godot` 脚本。 |
+| Godot 提示无法加载 `YokiFrameGodotEditorPlugin.cs` 并自动禁用插件 | 先关闭正在运行的 Godot，再用当前源码包重新执行 Installer 的 Godot apply；安装器会替换受控 add-on、维护主 `.csproj`，并使用 `-p:GodotTarget=Editor` 自动执行目标项目 `dotnet restore`/`dotnet build`，确保 `TOOLS` 编辑器程序集真的编译，同时兼容 Godot 4.7 的 `.godot/mono/temp/bin/Debug` 输出布局。构建完成后还会重新读取并登记 `res://addons/yokiframe/plugin.cfg`，抵御 Godot 扫描失败时自动移除启用项。若构建失败，按 Installer 返回的编译输出修复项目代码或 SDK 后重试；不要把插件脚本单独复制到项目。 |
 | Godot 项目没有 YokiFrame 菜单 | 确认使用的是 Godot .NET 版本，并且已由 Installer 安装 `addons/yokiframe`；不要手动复制源码目录。 |
+| Installer 选中 Godot 项目后仍提示缺少主项目文件 | 确认项目使用 Godot .NET，并在 `project.godot` 中存在 `[dotnet]` section 或 `.godot/mono`；空项目会在 apply 事务中自动生成主 `.csproj`。若没有这些 .NET 证据，则该项目是普通 Godot 项目，当前不受支持。 |
 | Unity 项目同时配置了 Git URL 和 local package | 只保留一种来源；两种来源不能同时生效。 |
 | `.yokiframe` 文件数量持续增长 | 确认宿主或 Workbench 已启动；自动清理只处理 archive、deadletter、results 和启动日志，并按 TTL/数量上限删除已完成旧文件。pending、processing、snapshot、heartbeat 和当前 Runtime 会保留。 |
 

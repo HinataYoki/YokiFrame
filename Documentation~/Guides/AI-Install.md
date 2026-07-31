@@ -7,7 +7,7 @@
 ## 执行契约
 
 1. 先识别源码包根和目标项目根，确认路径没有指向 `addons/yokiframe`、`.yokiframe` 或构建缓存。
-2. 源码包没有预编译的 Workbench 和 `yoki`。第一次安装必须先执行 Runtime bootstrap，让它编译并发布 Workbench 与 CLI。
+2. 源码包没有预编译的 Workbench 和 `yoki`。图形 Installer 在首次 Godot 计划发现 Runtime 缓存缺失或失配时会自动执行 bootstrap；无交互 CLI 安装仍需先手动 bootstrap。
 3. 先运行 `installer plan`，检查目标路径、动作、warning 和冲突；确认计划可接受后再运行同参数的 `installer apply`。
 4. 不直接复制 `addons/yokiframe`，不手工修改 `.yokiframe`，不在发现用户修改时静默覆盖。
 5. 只有退出码、CLI JSON 状态和目标文件校验都成功，才能向用户报告安装完成。
@@ -50,7 +50,7 @@
 
 ## 编译并生成 Runtime
 
-不要先运行不存在的 `<yoki>`。首次安装的权威入口是 `runtime bootstrap`，它会编译并发布 Workbench GUI、CLI，并把产物写入目标项目的 `.yokiframe/runtime/`。Windows PowerShell 示例：
+不要先运行不存在的 `<yoki>`。无交互安装的权威前置命令是 `runtime bootstrap`，它会编译并发布 Workbench GUI、CLI，并把产物写入目标项目的 `.yokiframe/runtime/`。图形 Installer 会在 Godot 首次计划缺少缓存时自动执行同一命令，并在完成后继续生成计划。Windows PowerShell 示例：
 
 ```powershell
 $packageRoot = (Resolve-Path "<packageRoot>").Path
@@ -123,9 +123,11 @@ if (-not (Test-Path -LiteralPath $yoki)) {
 目标目录必须包含：
 
 - `project.godot`
-- 顶层 C# `.csproj`
+- Godot .NET 证据：顶层 C# `.csproj`、`project.godot` 的 `[dotnet]` section 或 `.godot/mono`
 
 项目必须使用 `Godot.NET.Sdk/4.7+`，目标框架必须是 `net8.0+`。Godot 安装是完整的 `addons/yokiframe` 投影，不是把源码目录复制进去。
+
+刚创建的 Godot .NET 空项目可能还没有顶层 `.csproj`。Installer 会根据检测到的 Godot .NET 证据和 `project.godot` 的程序集名在安装事务中生成主 `.csproj`，计划阶段不会提前写入；普通非 .NET Godot 项目仍不受支持。
 
 ## 执行安装事务
 
@@ -197,7 +199,7 @@ $gitUrl = "https://github.com/HinataYoki/YokiFrame.git"
 最后执行目标文件校验：
 
 - Unity：确认 `Packages/manifest.json` 或 embedded package 已指向 YokiFrame，且包目录存在。
-- Godot：确认 `addons/yokiframe/plugin.cfg`、插件 bootstrap 和 `project.godot` 安装项存在；重新打开项目后确认插件可加载。
+- Godot：确认 `addons/yokiframe/plugin.cfg`、插件 bootstrap、生成的主 `.csproj` 和 `project.godot` 安装项存在；Installer apply 会在需要时使用 `-p:GodotTarget=Editor` 执行目标项目 `dotnet restore`/`dotnet build`，编译包含 `TOOLS` 的 Editor 程序集，并检查 `.godot/mono/temp/bin/Debug/<assembly>.dll`。构建完成后 Installer 会重新读取并登记 `res://addons/yokiframe/plugin.cfg`，避免 Godot 扫描竞态把插件自动禁用。重新打开项目后再确认插件可加载。若 Godot 在安装期间处于打开状态，先关闭并重新打开，避免在托管程序集更新时扫描 C# 插件。
 
 ## 覆盖与安全边界
 

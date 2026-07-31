@@ -107,19 +107,17 @@ public sealed partial class InstallerShellViewModel
             return;
         }
 
-        mIsGodotRuntimeBootstrapRunning = true;
-        OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
-        OnPropertyChanged(nameof(IsProgressIndeterminate));
-        IsProgressVisible = true;
-        ProgressValue = 0;
-        SessionStatusText = "正在为 Godot 构建当前平台 Runtime";
-        AppendLocalLog("正在从选定 YokiFrame 源码包构建 Godot 项目 Runtime。");
-        RaiseCommandStates();
+        await mGodotRuntimeBootstrapGate.WaitAsync();
         try
         {
-            await mGodotRuntimeBootstrapper.BootstrapAndOpenInstallerAsync(
-                SourcePackageRoot,
-                TargetProjectRoot).ConfigureAwait(true);
+            if (!CanBootstrapGodotRuntime())
+            {
+                return;
+            }
+
+            await RunGodotRuntimeBootstrapProcessAsync(
+                openInstaller: true,
+                CancellationToken.None).ConfigureAwait(true);
             mSession.InvalidatePlan();
             SessionStatusText = "当前 Runtime 已准备完成，新的安装器已打开";
             AppendLocalLog("Runtime 已构建完成，已打开与当前源码包匹配的新安装器。");
@@ -130,12 +128,141 @@ public sealed partial class InstallerShellViewModel
         }
         finally
         {
-            mIsGodotRuntimeBootstrapRunning = false;
+            mGodotRuntimeBootstrapGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 在首次 Godot 计划缺少 Runtime 缓存时自动构建，并在同一 Installer 会话中重新规划。
+    /// </summary>
+    /// <param name="options">触发缓存门控的当前安装输入。</param>
+    /// <param name="cancellationToken">输入被替代或窗口关闭时使用的令牌。</param>
+    /// <returns>缓存构建和重新规划完成任务。</returns>
+    private async Task BootstrapGodotRuntimeForPlanAsync(
+        InstallerInstallOptions options,
+        CancellationToken cancellationToken)
+    {
+        await mGodotRuntimeBootstrapGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!RequiresGodotRuntimeBootstrap(mSession.State, options))
+            {
+                return;
+            }
+
+            await RunGodotRuntimeBootstrapProcessAsync(
+                openInstaller: false,
+                cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            PostToUi(() => AppendLocalLog("Runtime 已构建完成，正在重新生成安装计划。"));
+            await mSession.PrepareAsync(options, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            mGodotRuntimeBootstrapGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 执行一次 Runtime bootstrap 子进程，并统一管理构建期间的页面状态。
+    /// </summary>
+    /// <param name="openInstaller">成功后是否启动新的 Installer。</param>
+    /// <param name="cancellationToken">当前构建取消令牌。</param>
+    /// <returns>子进程完成任务。</returns>
+    private async Task RunGodotRuntimeBootstrapProcessAsync(
+        bool openInstaller,
+        CancellationToken cancellationToken)
+    {
+        BeginGodotRuntimeBootstrapPresentation(openInstaller);
+        var succeeded = false;
+        try
+        {
+            if (openInstaller)
+            {
+                await mGodotRuntimeBootstrapper.BootstrapAndOpenInstallerAsync(
+                    SourcePackageRoot,
+                    TargetProjectRoot,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await mGodotRuntimeBootstrapper.BootstrapAsync(
+                    SourcePackageRoot,
+                    TargetProjectRoot,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            succeeded = true;
+        }
+        finally
+        {
+            EndGodotRuntimeBootstrapPresentation(succeeded);
+        }
+    }
+
+    /// <summary>
+    /// 发布 Runtime 构建开始状态；后台计划线程通过 UI 上下文更新 Avalonia 绑定。
+    /// </summary>
+    /// <param name="openInstaller">成功后是否会启动新的 Installer。</param>
+    private void BeginGodotRuntimeBootstrapPresentation(bool openInstaller)
+    {
+        mIsGodotRuntimeBootstrapRunning = true;
+        var message = openInstaller
+            ? "正在为 Godot 构建当前平台 Runtime"
+            : "正在为 Godot 自动构建当前平台 Runtime";
+        PostToUi(() =>
+        {
+            OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
+            OnPropertyChanged(nameof(IsProgressIndeterminate));
+            IsProgressVisible = true;
+            ProgressValue = 0;
+            SessionStatusText = message;
+            ClearOutcomeDetails();
+            AppendLocalLog("正在从选定 YokiFrame 源码包构建 Godot 项目 Runtime。");
+            RaiseCommandStates();
+        });
+    }
+
+    /// <summary>
+    /// 发布 Runtime 构建结束状态；成功时清除旧的前置失败，失败时恢复真实错误详情。
+    /// </summary>
+    /// <param name="succeeded">Runtime 构建是否成功。</param>
+    private void EndGodotRuntimeBootstrapPresentation(bool succeeded)
+    {
+        mIsGodotRuntimeBootstrapRunning = false;
+        PostToUi(() =>
+        {
             OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
             OnPropertyChanged(nameof(IsProgressIndeterminate));
             IsProgressVisible = false;
+            if (succeeded)
+            {
+                ClearOutcomeDetails();
+            }
+            else
+            {
+                ApplyOutcomeDetails(mSession.State);
+            }
+
             RaiseCommandStates();
+        });
+    }
+
+    /// <summary>
+    /// 将非 UI 计划线程的页面更新投递回创建 ViewModel 的上下文。
+    /// </summary>
+    /// <param name="action">需要在 UI 上下文执行的更新。</param>
+    private void PostToUi(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (mSynchronizationContext == null
+            || ReferenceEquals(SynchronizationContext.Current, mSynchronizationContext))
+        {
+            action();
+            return;
         }
+
+        mSynchronizationContext.Post(static state => ((Action)state!).Invoke(), action);
     }
 
     /// <summary>
@@ -148,7 +275,11 @@ public sealed partial class InstallerShellViewModel
         InstallerInstallOptions options,
         CancellationToken cancellationToken)
     {
-        await mSession.PrepareAsync(options, cancellationToken);
+        await mSession.PrepareAsync(options, cancellationToken).ConfigureAwait(false);
+        if (RequiresGodotRuntimeBootstrap(mSession.State, options))
+        {
+            await BootstrapGodotRuntimeForPlanAsync(options, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -335,6 +466,22 @@ public sealed partial class InstallerShellViewModel
             && mTargetKind == InstallerTargetKind.Godot
             && state.Status == InstallerSessionStatus.Failed
             && state.RuntimeBootstrapRequired;
+    }
+
+    /// <summary>
+    /// 判断某次计划失败是否仍属于当前输入且可以自动构建 Godot Runtime。
+    /// </summary>
+    /// <param name="state">当前 Installer 会话状态。</param>
+    /// <param name="options">触发计划的输入快照。</param>
+    /// <returns>当前输入因 Runtime 缓存缺失失败时返回 true。</returns>
+    private static bool RequiresGodotRuntimeBootstrap(
+        InstallerSessionState state,
+        InstallerInstallOptions options)
+    {
+        return options.Mode == InstallerInstallMode.GodotLocal
+            && state.Status == InstallerSessionStatus.Failed
+            && state.RuntimeBootstrapRequired
+            && ReferenceEquals(state.Options, options);
     }
 
     /// <summary>
