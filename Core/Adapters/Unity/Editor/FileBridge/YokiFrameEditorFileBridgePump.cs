@@ -17,6 +17,7 @@ namespace YokiFrame
         // 心跳仅承担低频 FileBridge 存活证明；实时 Kit 状态由 Shared Memory 承载，避免机械盘被高频写入。
         private const double HEARTBEAT_INTERVAL_SECONDS = 5.0d;
         private const double COMMAND_POLL_INTERVAL_SECONDS = 0.2d;
+        private const double STORAGE_CLEANUP_INTERVAL_SECONDS = 300.0d;
         private static readonly string[] sHostStateKits = { "System" };
         private static long sToolProviderRevision;
         private static YokiFrameKitInteractionRegistry sKitInteractions =
@@ -36,6 +37,7 @@ namespace YokiFrame
         private static string sFastChannelStartError = string.Empty;
         private static double sNextHeartbeatTime;
         private static double sNextCommandPollTime;
+        private static double sNextStorageCleanupTime;
         private static long sSequence;
         private static bool sIsProcessingCommands;
 
@@ -54,6 +56,8 @@ namespace YokiFrame
             EditorApplication.update += OnEditorUpdate;
             RegisterFastChannelLifecycleHooks();
             EnsureBridgeDirectories();
+            TryPruneProjectStorage();
+            sNextStorageCleanupTime = EditorApplication.timeSinceStartup + STORAGE_CLEANUP_INTERVAL_SECONDS;
             if (IsFastChannelTransitionPending())
             {
                 PublishDisconnectedState();
@@ -92,6 +96,12 @@ namespace YokiFrame
             }
 
             WriteChangedKitInteractionTelemetrySafely();
+
+            if (now >= sNextStorageCleanupTime)
+            {
+                TryPruneProjectStorage();
+                sNextStorageCleanupTime = now + STORAGE_CLEANUP_INTERVAL_SECONDS;
+            }
 
             if (now >= sNextCommandPollTime)
             {

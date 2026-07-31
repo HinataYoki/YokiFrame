@@ -30,6 +30,7 @@ namespace YokiFrame
         private string mStartedAtUtc = string.Empty;
         private long mGeneration;
         private long mSequence;
+        private DateTime mNextStorageCleanupUtc;
 
         /// <summary>
         /// 创建绑定指定 Godot 项目的 Editor Host，不访问 Runtime Kit 状态。
@@ -80,6 +81,7 @@ namespace YokiFrame
             try
             {
                 mPaths.EnsureDirectories();
+                TryPruneStorage();
                 PublishInitialState();
             }
             catch

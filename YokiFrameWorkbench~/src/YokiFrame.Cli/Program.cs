@@ -37,6 +37,7 @@ internal static class Program
                     CancellationToken.None).ConfigureAwait(false);
             }
 
+            TryPruneProjectStorage(projectRoot);
             using YokiFrameClient client = new(projectRoot);
             return await DispatchAsync(commandLine, client, CancellationToken.None).ConfigureAwait(false);
         }
@@ -435,6 +436,30 @@ internal static class Program
     {
         var requestedEngineId = commandLine.GetOption("engine", string.Empty);
         return new EngineSelectionService(client).Resolve(requestedEngineId, DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>
+    /// 尝试回收项目旧协议证据；清理异常只写入标准错误，不改变 CLI 主命令结果。
+    /// </summary>
+    /// <param name="projectRoot">当前 CLI 目标项目根目录。</param>
+    private static void TryPruneProjectStorage(string projectRoot)
+    {
+        try
+        {
+            var report = YokiFrameFileBridgePruner.Prune(projectRoot);
+            if (report.HasFailures)
+            {
+                Console.Error.WriteLine("YokiFrame storage cleanup deferred because some files were unavailable.");
+            }
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Console.Error.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+        }
     }
 
     /// <summary>

@@ -110,7 +110,7 @@ public sealed class FileBridgeStatus
     /// <summary>
     /// 获取或设置证据目录保留策略。
     /// </summary>
-    public FileBridgeRetentionInfo Retention { get; set; } = FileBridgeRetentionInfo.CreateManual();
+    public FileBridgeRetentionInfo Retention { get; set; } = FileBridgeRetentionInfo.CreateDefault();
 
     /// <summary>
     /// 转换为 CLI 输出使用的 JSON 对象。

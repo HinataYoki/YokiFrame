@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Skia;
 using Avalonia.Win32;
+using YokiFrame;
 using YokiFrame.Workbench.Avalonia.Diagnostics;
 using YokiFrame.Workbench.Avalonia.Services;
 
@@ -32,6 +33,7 @@ internal static class Program
         var appBaseDirectory = AppContext.BaseDirectory;
         var options = ToolStartupOptions.FromArgs(args, currentDirectory, appBaseDirectory);
         WorkbenchStartupTrace.Configure(options);
+        TryPruneProjectStorage(options);
         WorkbenchStartupTrace.Mark("main.enter");
         using var activationCoordinator = CreateActivationCoordinator(options);
         if (activationCoordinator?.ActivationRedirected == true)
@@ -73,6 +75,27 @@ internal static class Program
         return options.Mode == ToolStartupMode.Workbench
             ? WorkbenchActivationCoordinator.Start(options.ProjectRoot)
             : null;
+    }
+
+    /// <summary>
+    /// 在 Workbench 启动阶段回收项目级过期证据；清理失败不能阻断 UI 启动。
+    /// </summary>
+    /// <param name="options">已解析的工具启动选项。</param>
+    private static void TryPruneProjectStorage(ToolStartupOptions options)
+    {
+        if (options.Mode != ToolStartupMode.Workbench)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = YokiFrameFileBridgePruner.Prune(options.ProjectRoot);
+        }
+        catch (Exception exception)
+        {
+            WorkbenchStartupTrace.Mark("storage-cleanup.failed." + exception.GetType().Name);
+        }
     }
 
     /// <summary>

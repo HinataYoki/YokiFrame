@@ -87,10 +87,10 @@ public sealed class FileBridgeStatusTests
     }
 
     /// <summary>
-    /// 验证 bridge status 输出包含证据保留策略，避免调用方误以为 archive / deadletter 会自动清理。
+    /// 验证 bridge status 输出包含当前自动清理保留策略，便于调用方了解证据生命周期。
     /// </summary>
     [Fact]
-    public void ToJsonIncludesManualRetentionPolicy()
+    public void ToJsonIncludesAutomaticRetentionPolicy()
     {
         FileBridgeStatus status = new(
             "unity-editor",
@@ -101,10 +101,10 @@ public sealed class FileBridgeStatusTests
         var json = status.ToJson(DateTimeOffset.UnixEpoch, TimeSpan.FromSeconds(15));
         var retention = Assert.IsType<System.Text.Json.Nodes.JsonObject>(json["retention"]);
 
-        Assert.Equal("manual", retention["archive"]?.GetValue<string>());
-        Assert.Equal("manual", retention["deadletter"]?.GetValue<string>());
-        Assert.Equal("manual", retention["results"]?.GetValue<string>());
-        Assert.Equal("explicit-maintenance", retention["cleanup"]?.GetValue<string>());
+        Assert.Equal("7d-or-200", retention["archive"]?.GetValue<string>());
+        Assert.Equal("30d-or-200", retention["deadletter"]?.GetValue<string>());
+        Assert.Equal("7d-or-200", retention["results"]?.GetValue<string>());
+        Assert.Equal("automatic-on-host-start-and-every-5m", retention["cleanup"]?.GetValue<string>());
     }
 
     /// <summary>

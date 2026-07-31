@@ -16,6 +16,12 @@
              Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
     <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs"
              Link="RuntimeCache\RuntimeCachePruner.cs" />
+    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupOptions.cs"
+             Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
+    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupReport.cs"
+             Link="Storage\YokiFrameFileBridgeCleanupReport.cs" />
+    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgePruner.cs"
+             Link="Storage\YokiFrameFileBridgePruner.cs" />
     <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs"
              Link="RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs" />
     <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs"

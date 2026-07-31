@@ -10,6 +10,7 @@
 | Godot 提示 Runtime 缺失或版本不匹配 | 从当前源码包重新运行对应平台的 `install-godot` 脚本，在 Installer 中重新生成 plan，再 apply。 |
 | Godot 项目没有 YokiFrame 菜单 | 确认使用的是 Godot .NET 版本，并且已由 Installer 安装 `addons/yokiframe`；不要手动复制源码目录。 |
 | Unity 项目同时配置了 Git URL 和 local package | 只保留一种来源；两种来源不能同时生效。 |
+| `.yokiframe` 文件数量持续增长 | 确认宿主或 Workbench 已启动；自动清理只处理 archive、deadletter、results 和启动日志，并按 TTL/数量上限删除已完成旧文件。pending、processing、snapshot、heartbeat 和当前 Runtime 会保留。 |
 
 ## Workbench 页面
 

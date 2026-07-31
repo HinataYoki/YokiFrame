@@ -43,7 +43,20 @@ public sealed class FileBridgeRetentionInfo
     public string Cleanup { get; }
 
     /// <summary>
-    /// 创建当前 FileBridge 默认的手动保留策略。
+    /// 创建当前 FileBridge 自动保留策略。
+    /// </summary>
+    /// <returns>自动保留策略。</returns>
+    public static FileBridgeRetentionInfo CreateDefault()
+    {
+        return new FileBridgeRetentionInfo(
+            "7d-or-200",
+            "30d-or-200",
+            "7d-or-200",
+            "automatic-on-host-start-and-every-5m");
+    }
+
+    /// <summary>
+    /// 创建不启用自动清理的兼容描述；仅供明确选择手动维护的调用方使用。
     /// </summary>
     /// <returns>手动保留策略。</returns>
     public static FileBridgeRetentionInfo CreateManual()

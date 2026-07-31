@@ -31,12 +31,14 @@ public sealed class RuntimeCacheService
         {
             mPointerStore.Write(fullProjectRoot, sourceFingerprint);
             RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
+            TryPruneProjectStorage(fullProjectRoot);
             return new RuntimeCacheBootstrapResult(sourceFingerprint, plan.RuntimeRoot, cachedResult, rebuilt: false);
         }
 
         var publishResult = mPublishService.PublishWithLockHeld(plan);
         mPointerStore.Write(fullProjectRoot, sourceFingerprint);
         RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
+        TryPruneProjectStorage(fullProjectRoot);
         return new RuntimeCacheBootstrapResult(sourceFingerprint, plan.RuntimeRoot, publishResult, rebuilt: true);
     }
 
@@ -71,7 +73,28 @@ public sealed class RuntimeCacheService
         var publishResult = mPublishService.PublishWithLockHeld(plan);
         mPointerStore.Write(fullProjectRoot, sourceFingerprint);
         RuntimeCachePruner.PruneObsolete(fullProjectRoot, sourceFingerprint);
+        TryPruneProjectStorage(fullProjectRoot);
         return new RuntimeCacheBootstrapResult(sourceFingerprint, runtimeRoot, publishResult, rebuilt: true);
+    }
+
+    /// <summary>
+    /// 尝试回收项目旧协议证据；清理权限或路径异常不得掩盖已完成的 Runtime 发布结果。
+    /// </summary>
+    /// <param name="projectRoot">已规范化的目标项目根目录。</param>
+    private static void TryPruneProjectStorage(string projectRoot)
+    {
+        try
+        {
+            _ = YokiFrameFileBridgePruner.Prune(projectRoot);
+        }
+        catch (IOException exception)
+        {
+            System.Diagnostics.Trace.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            System.Diagnostics.Trace.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+        }
     }
 
     /// <summary>

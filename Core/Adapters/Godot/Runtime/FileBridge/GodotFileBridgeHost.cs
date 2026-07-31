@@ -30,6 +30,7 @@ namespace YokiFrame
         private long mGeneration;
         private long mSequence;
         private long mToolProviderRevision;
+        private DateTime mNextStorageCleanupUtc;
 
         /// <summary>
         /// 创建只依赖项目路径、Godot 版本和纯 Core dispatcher 的可测试 Runtime Host。
@@ -92,6 +93,7 @@ namespace YokiFrame
             try
             {
                 mPaths.EnsureDirectories();
+                TryPruneStorage();
                 InitializeTelemetry();
                 StartFastChannel();
                 RefreshState();

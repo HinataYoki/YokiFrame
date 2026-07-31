@@ -17,8 +17,14 @@ namespace YokiFrame
         public int ProcessPendingCommands()
         {
             EnsureRunning();
-            if (mIsProcessingCommands || !Directory.Exists(mPaths.CommandsRoot))
+            if (mIsProcessingCommands)
             {
+                return 0;
+            }
+
+            if (!Directory.Exists(mPaths.CommandsRoot))
+            {
+                TryPruneStorage();
                 return 0;
             }
 
@@ -40,7 +46,31 @@ namespace YokiFrame
             finally
             {
                 mIsProcessingCommands = false;
+                TryPruneStorage();
             }
+        }
+
+        /// <summary>
+        /// 按五分钟节流回收终态 FileBridge 证据；清理失败不影响 Runtime Host 继续服务。
+        /// </summary>
+        private void TryPruneStorage()
+        {
+            var nowUtc = DateTime.UtcNow;
+            if (nowUtc < mNextStorageCleanupUtc)
+            {
+                return;
+            }
+
+            try
+            {
+                YokiFrameFileBridgePruner.Prune(mPaths.ProjectRoot);
+            }
+            catch (Exception)
+            {
+                // 清理是旁路维护，任何权限或并发异常都留待下一轮重试。
+            }
+
+            mNextStorageCleanupUtc = nowUtc.AddMinutes(5.0d);
         }
 
         /// <summary>

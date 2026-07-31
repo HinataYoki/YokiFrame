@@ -35,6 +35,12 @@ Linux 和 macOS 使用同目录下的 `install-godot.sh` 或 `install-godot.comm
 
 需要 AI 自动完成安装时，直接把本 README 地址和“安装 YokiFrame”一起交给 AI；AI 会继续读取 [AI 安装指引](Documentation~/Guides/AI-Install.md)，完成编译、Runtime bootstrap、安装计划和结果校验。
 
+### `.yokiframe` 存储清理
+
+YokiFrame 会在项目 `.yokiframe` 中保存 FileBridge 命令证据、Workbench 启动诊断和 Runtime 缓存指针。宿主启动以及命令处理期间会自动清理已完成的旧文件：`archive` 和 `results` 默认保留 7 天或最近 200 个文件，`deadletter` 默认保留 30 天或最近 200 个文件，Workbench 启动日志默认保留 14 天或最近 20 个文件。清理只触及这些白名单目录，不删除 pending/processing 命令、snapshot、heartbeat、项目模型或当前 Runtime 指纹；被占用的文件会留到下一轮重试。
+
+不要手动删除或修改 `.yokiframe` 下的协议文件。需要保留更长诊断证据时，应在清理前复制对应目录中的文件。
+
 ### 2. 写一个流程
 
 先定义业务架构和服务，再用 EventKit 解耦模块，用 ActionKit 编排等待和回调：

@@ -9,6 +9,21 @@ namespace YokiFrame
     /// <summary>承载 Unity Editor FileBridge 的按需文件发布与 Shared Memory 回落策略。</summary>
     internal static partial class YokiFrameEditorFileBridgePump
     {
+        /// <summary>
+        /// 回收已完成的协议证据；清理失败只记录警告，不影响 Unity Editor 主循环。
+        /// </summary>
+        private static void TryPruneProjectStorage()
+        {
+            try
+            {
+                YokiFrameFileBridgePruner.Prune(YokiFrameEditorFileBridgePaths.GetProjectRoot());
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("YokiFrame storage cleanup failed: " + exception.Message);
+            }
+        }
+
         /// <summary>捕获完整状态写入异常，避免辅助泵打断 Editor update。</summary>
         private static void WriteCompleteBridgeStateSafely()
         {
