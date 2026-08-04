@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -47,10 +46,13 @@ namespace YokiFrame
         /// <summary>缓存 UIPanel 框架字段，避免重建视觉树时重复按名称查找。</summary>
         private void OnEnable()
         {
-            mShowAnimation = serializedObject.FindProperty("mShowAnimationConfig");
-            mHideAnimation = serializedObject.FindProperty("mHideAnimationConfig");
-            mAutoFocus = serializedObject.FindProperty("mAutoFocusOnShow");
-            mDefaultSelectable = serializedObject.FindProperty("mDefaultSelectable");
+            if (TryGetSerializedObject(out SerializedObject currentSerializedObject))
+            {
+                mShowAnimation = currentSerializedObject.FindProperty("mShowAnimationConfig");
+                mHideAnimation = currentSerializedObject.FindProperty("mHideAnimationConfig");
+                mAutoFocus = currentSerializedObject.FindProperty("mAutoFocusOnShow");
+                mDefaultSelectable = currentSerializedObject.FindProperty("mDefaultSelectable");
+            }
             InitializeBindingTree();
         }
 
@@ -203,48 +205,14 @@ namespace YokiFrame
         /// <summary>创建仅包含派生面板业务字段的其它属性卡片。</summary>
         private VisualElement CreateOtherProperties()
         {
-            Type targetType = target == default ? default : target.GetType();
-            VisualElement properties = InspectorKitUi.CreatePropertyFields(
-                serializedObject,
-                targetType,
-                IncludeCustomProperty);
-            if (properties.childCount == 0)
+            VisualElement properties = CreateExternalPropertyFields();
+            if (properties == null)
                 return default;
             return InspectorKitUi.CreateCard(
                 "其他属性",
                 OTHER_PROPERTIES_KEY,
                 InspectorCardInitialState.Collapsed,
                 body => body.Add(properties));
-        }
-
-        /// <summary>排除 UIPanel 框架字段和生成的数据缓存，只保留派生业务字段。</summary>
-        private bool IncludeCustomProperty(SerializedProperty property)
-        {
-            if (property == null || target == default)
-                return false;
-            FieldInfo field = FindField(target.GetType(), property.name);
-            if (field == null || field.DeclaringType == null)
-                return false;
-            if (field.DeclaringType.Assembly == typeof(UIPanel).Assembly
-                && typeof(UIPanel).IsAssignableFrom(field.DeclaringType))
-                return false;
-            return field.Name != "mData" || !typeof(IUIData).IsAssignableFrom(field.FieldType);
-        }
-
-        /// <summary>从当前类型及其基类中查找序列化字段。</summary>
-        private static FieldInfo FindField(Type type, string fieldName)
-        {
-            Type current = type;
-            while (current != null)
-            {
-                FieldInfo field = current.GetField(
-                    fieldName,
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (field != null)
-                    return field;
-                current = current.BaseType;
-            }
-            return default;
         }
 
         /// <summary>确认全部 Inspector 目标仍是有效 Unity 对象。</summary>

@@ -117,7 +117,7 @@ InspectorButtonAttribute(string label)
 string Label { get; }
 ```
 
-只能用于方法，`label == null` 时保存为空字符串。当前 Editor 实现会为非特殊、参数数量为零的方法创建按钮，调用阶段还会跳过静态方法。因此应使用实例、无参数方法；静态零参数方法即使被发现并显示，也不会被执行。可选参数不会被自动填充。
+只能用于方法，`label == null` 时保存为空字符串。当前 Editor 实现会为非静态、非特殊、参数数量为零的方法创建按钮。因此应使用实例、无参数方法；可选参数不会被自动填充。
 
 ### `InspectorInfoBoxType`
 
@@ -226,6 +226,16 @@ VisualElement card = InspectorKitUi.CreateCard(
 
 `CreateActionButtons` 只负责创建按钮，点击后把对应 `MethodInfo` 交给 `invoke`。它不自行执行方法，也不负责 Undo 和 Dirty；这些职责由 `InspectorKitEditor` 的调用回调承担。
 
+### UIPanel 派生字段与第三方绘制工具
+
+`UIPanel` 的自定义 Inspector 会把“其他属性”卡片的派生序列化字段放进局部 `IMGUIContainer`，并通过 `EditorGUILayout.PropertyField` 绘制。这样 Unity 的 `PropertyDrawer` / `PropertyHandler` 管线仍然可用；TriInspector、Odin 等工具的常见字段元数据也会由兼容层映射，不会因为 InspectorKit 的 UI Toolkit 外壳而完全丢失。
+
+该兼容层不引用任何第三方程序集，而是按属性类型名读取常见元数据：`Title`、`InfoBox` / `HelpBox`、`LabelText`、`PropertyTooltip` / `Tooltip`、`ReadOnly` 和 `ListDrawerSettings.AlwaysExpanded`。它还会过滤 UIPanel 框架字段与生成的 `mData`，保留派生面板自己的业务字段和代码生成字段。
+
+兼容层还会在字段之后扫描派生面板的实例方法，并识别 `ButtonAttribute`（TriInspector/Odin）和 `InspectorButtonAttribute`。按钮只接受非静态、非特殊、非泛型且无参数的方法；按钮文本优先读取 `Name`、`Label` 或 `Text`，没有自定义文本时回退到方法名。点击后会对当前 Inspector 选中的全部目标执行 Undo、方法调用和 Dirty 标记。
+
+兼容范围限于可由 `SerializedProperty` 表示的字段和上述无参数方法按钮；`ShowInInspector` 属性、带参数按钮、条件表达式、完整第三方 CustomEditor 或需要第三方对象树的功能不能嵌入该卡片。需要这些能力时，应为具体类型提供专用 CustomEditor，或直接使用对应工具的完整 Inspector。
+
 ### `YokiFrameEditorStyleService`
 
 ```csharp
@@ -275,7 +285,7 @@ Inspector 专属 class 使用 `yoki-editor-inspector` 命名空间，包括 sect
 - UI Toolkit Inspector 只为顶层可见序列化字段创建 `PropertyField`。
 - Unity 的 `m_Script` 字段始终跳过，不显示为普通字段。
 - `InspectorSection` 和 `InspectorInfoBox` 的顺序由字段在 Unity 序列化对象中的迭代顺序决定。
-- 方法按钮扫描公开和非公开实例方法；特殊方法、带参数方法不会创建按钮。
+- 方法按钮扫描公开和非公开实例方法；静态、特殊、泛型、带参数方法不会创建按钮。`ButtonAttribute` 与 `InspectorButtonAttribute` 均按类型名兼容，不要求包根引用第三方程序集。
 - 空标签显示方法名；非空 `InspectorButtonAttribute.Label` 使用自定义文本。
 - InspectorKit 不执行属性校验，不负责字段值写入规则，也不提供多目标之间的业务一致性检查。
 
@@ -288,7 +298,7 @@ InspectorKit 没有独立 Workbench 页面；它的效果直接显示在 Unity I
 | 问题 | 处理 |
 |---|---|
 | 元数据显示但没有 Inspector 效果 | 确认目标对象使用了继承 `InspectorKitEditor` 的 `CustomEditor`，且编辑器脚本已编译 |
-| 按钮不显示 | 确认方法为实例方法、无参数、非特殊方法，并且带有 `InspectorButtonAttribute` |
+| 按钮不显示 | 确认方法为实例方法、无参数、非特殊方法，并且带有 `InspectorButtonAttribute` 或兼容的 `ButtonAttribute` |
 | 可选参数按钮不工作 | 当前实现只接受零参数方法；为按钮提供无参数包装方法 |
 | 只读字段仍可被运行时代码修改 | `InspectorReadOnly` 只限制 Inspector UI 编辑，不是运行时只读约束 |
 | 自定义样式未加载 | 检查 USS 文件名是否精确为约定名称，并在资源重导入后调用 `ClearCache` |
