@@ -60,9 +60,7 @@
    https://github.com/HinataYoki/YokiFrame.git
    ```
 
-3. 等待导入和编译完成。需要固定版本时，在地址后追加 `#<tag-or-commit>`。
-
-> ⚠️ **注意**：Git URL 与本地包只能二选一，不要把 Git URL 包复制到 `Assets/`。
+3. 等待导入和编译完成。
 
 ### 安装：Godot .NET
 
