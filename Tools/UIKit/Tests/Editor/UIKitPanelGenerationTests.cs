@@ -123,6 +123,7 @@ namespace YokiFrame.Tests
             {
                 Assert.That(source, Does.StartWith(
                     "using UnityEngine;\nusing UnityEngine.UI;\nusing YokiFrame;\n\n"));
+                Assert.That(source, Does.Not.Contain("global::YokiFrame."));
             }
         }
 

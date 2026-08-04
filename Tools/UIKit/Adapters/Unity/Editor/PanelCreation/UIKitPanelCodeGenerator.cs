@@ -186,13 +186,13 @@ namespace YokiFrame
         {
             return BuildSource(root => root.Namespace(layout.ScriptNamespace, scope =>
             {
-                scope.Class(layout.PanelName + "Data", "global::YokiFrame.IUIData", false, false, data =>
+                scope.Class(layout.PanelName + "Data", "IUIData", false, false, data =>
                     data.AsSealed().WithAttribute("System.Serializable"));
                 scope.EmptyLine();
-                scope.Class(layout.PanelName, "global::YokiFrame.UIPanel", true, false, panel =>
+                scope.Class(layout.PanelName, "UIPanel", true, false, panel =>
                 {
                     panel.ProtectedOverrideVoid("OnInit", method => method
-                        .WithParameter("global::YokiFrame.IUIData", "data", "null")
+                        .WithParameter("IUIData", "data", "null")
                         .WithBody(body => body.Custom(
                             "mData = data as " + layout.PanelName + "Data ?? new " + layout.PanelName + "Data();")));
                     if (!string.Equals(
@@ -202,7 +202,7 @@ namespace YokiFrame
                     {
                         panel.EmptyLine();
                         panel.ProtectedOverrideVoid("OnOpen", method => method
-                            .WithParameter("global::YokiFrame.IUIData", "data", "null")
+                            .WithParameter("IUIData", "data", "null")
                             .WithBody(body => body.Custom(
                                 "mData = data as " + layout.PanelName + "Data ?? mData;")));
                         panel.EmptyLine();
@@ -299,8 +299,8 @@ namespace YokiFrame
                 ? layout.GetElementNamespace()
                 : layout.ScriptNamespace;
             string parent = node.Strategy.OutputKind == UIKitBindOutputKind.Element
-                ? "global::YokiFrame.UIElement"
-                : "global::YokiFrame.UIComponent";
+                ? "UIElement"
+                : "UIComponent";
             return BuildSource(root => root.Namespace(namespaceName, scope =>
                 scope.Class(node.TypeName, parent, true, false, default)));
         }
