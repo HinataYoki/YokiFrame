@@ -196,7 +196,7 @@ public sealed partial class InstallerShellViewModel
         }
         finally
         {
-            EndGodotRuntimeBootstrapPresentation(succeeded);
+            await EndGodotRuntimeBootstrapPresentationAsync(succeeded).ConfigureAwait(false);
         }
     }
 
@@ -227,10 +227,10 @@ public sealed partial class InstallerShellViewModel
     /// 发布 Runtime 构建结束状态；成功时清除旧的前置失败，失败时恢复真实错误详情。
     /// </summary>
     /// <param name="succeeded">Runtime 构建是否成功。</param>
-    private void EndGodotRuntimeBootstrapPresentation(bool succeeded)
+    private Task EndGodotRuntimeBootstrapPresentationAsync(bool succeeded)
     {
         mIsGodotRuntimeBootstrapRunning = false;
-        PostToUi(() =>
+        return PostToUiAndWaitAsync(() =>
         {
             OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
             OnPropertyChanged(nameof(IsProgressIndeterminate));
@@ -246,6 +246,40 @@ public sealed partial class InstallerShellViewModel
 
             RaiseCommandStates();
         });
+    }
+
+    /// <summary>
+    /// 等待当前线程之前投递到 UI 上下文的状态投影完成，确保工作流任务返回时页面已达到同一终态。
+    /// </summary>
+    /// <param name="action">需要在 UI 上下文执行的状态更新。</param>
+    /// <returns>状态更新执行完成任务。</returns>
+    private Task PostToUiAndWaitAsync(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (mSynchronizationContext == null
+            || ReferenceEquals(SynchronizationContext.Current, mSynchronizationContext))
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        mSynchronizationContext.Post(
+            static state =>
+            {
+                var dispatch = (UiDispatch)state!;
+                try
+                {
+                    dispatch.Action();
+                    dispatch.Completion.TrySetResult();
+                }
+                catch (Exception exception)
+                {
+                    dispatch.Completion.TrySetException(exception);
+                }
+            },
+            new UiDispatch(action, completion));
+        return completion.Task;
     }
 
     /// <summary>
@@ -280,6 +314,30 @@ public sealed partial class InstallerShellViewModel
         {
             await BootstrapGodotRuntimeForPlanAsync(options, cancellationToken).ConfigureAwait(false);
         }
+
+        // 计划任务完成必须与页面看到的最新会话终态一致，不能只等待一个空投递。
+        await PostToUiAndWaitAsync(() => ApplySessionState(mSession.State)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 表示一次必须等待完成的 UI 状态投递，避免后台计划任务在页面终态可见前提前返回。
+    /// </summary>
+    private sealed class UiDispatch
+    {
+        /// <summary>创建 UI 投递。</summary>
+        /// <param name="action">UI 状态更新。</param>
+        /// <param name="completion">完成通知。</param>
+        public UiDispatch(Action action, TaskCompletionSource completion)
+        {
+            Action = action;
+            Completion = completion;
+        }
+
+        /// <summary>获取 UI 状态更新。</summary>
+        public Action Action { get; }
+
+        /// <summary>获取完成通知。</summary>
+        public TaskCompletionSource Completion { get; }
     }
 
     /// <summary>

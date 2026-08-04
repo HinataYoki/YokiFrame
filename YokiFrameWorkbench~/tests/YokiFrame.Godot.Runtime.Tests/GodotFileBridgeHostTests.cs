@@ -43,6 +43,32 @@ public sealed partial class GodotFileBridgeHostTests
     }
 
     /// <summary>
+    /// 验证 Unix Domain Socket 只允许当前用户读写，避免同机其它用户连接本机控制面。
+    /// </summary>
+    [Fact]
+    public void StartRestrictsUnixSocketToCurrentUser()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Assert.True(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS());
+        using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
+        using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
+
+        host.Start();
+
+        var endpoint = fixture.ReadFastChannelEndpoint();
+        Assert.Equal("unixDomainSocket", endpoint["transport"]?.GetValue<string>());
+        var socketPath = endpoint["endpoint"]?.GetValue<string>() ?? string.Empty;
+        Assert.True(File.Exists(socketPath));
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            File.GetUnixFileMode(socketPath));
+    }
+
+    /// <summary>
     /// 验证已发布 endpoint 的后台 listener 会校验当前会话 Hello 并返回匹配的 HelloAck。
     /// </summary>
     [Fact]
@@ -308,7 +334,7 @@ public sealed partial class GodotFileBridgeHostTests
         fixture.AssertPublishedState(sessionId, generation, firstSequence + 1);
     }
 
-    /// <summary>验证周期保活只更新 heartbeat；registry 和无变化 snapshot 不产生重复磁盘写入。</summary>
+    /// <summary>验证周期保活更新 heartbeat 和 Registry，但不会重写无变化 snapshot。</summary>
     [Fact]
     public void RefreshHeartbeatDoesNotRewriteStableRegistryOrSnapshots()
     {
@@ -322,7 +348,7 @@ public sealed partial class GodotFileBridgeHostTests
 
         host.RefreshHeartbeat();
 
-        Assert.Equal(registryBefore, File.ReadAllText(fixture.RegistryPath));
+        Assert.NotEqual(registryBefore, File.ReadAllText(fixture.RegistryPath));
         Assert.Equal(snapshotBefore, File.ReadAllText(snapshotPath));
         Assert.NotEqual(heartbeatBefore, File.ReadAllText(fixture.HeartbeatPath));
     }
@@ -440,6 +466,30 @@ public sealed partial class GodotFileBridgeHostTests
     }
 
     /// <summary>
+    /// 验证跨会话遗留的 processing 命令会进入 Expired deadletter，而不会被 Host 自动重放。
+    /// </summary>
+    [Fact]
+    public void ExpiredProcessingCommandIsDeadletteredWithoutReplay()
+    {
+        using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
+        using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
+        host.Start();
+
+        var processingRoot = Path.Combine(fixture.CommandsRoot, "processing");
+        var processingPath = Path.Combine(processingRoot, "expired-001.json");
+        Directory.CreateDirectory(processingRoot);
+        File.WriteAllText(processingPath, "{}");
+        File.SetLastWriteTimeUtc(processingPath, DateTime.UtcNow.AddMinutes(-2));
+
+        Assert.Equal(0, host.ProcessPendingCommands());
+        Assert.False(File.Exists(processingPath));
+        Assert.Empty(Directory.EnumerateFiles(fixture.ResultsRoot, "expired-001-response.json"));
+        var infoPath = Assert.Single(Directory.EnumerateFiles(fixture.DeadletterRoot, "expired-001-deadletter.json"));
+        var info = GodotFileBridgeHostFixture.ReadObject(infoPath);
+        Assert.Equal("ProcessingExpired", info["errorCode"]?.GetValue<string>());
+    }
+
+    /// <summary>
     /// 验证退出删除活动 registry/heartbeat，重启创建新 session 和单调递增 generation。
     /// </summary>
     [Fact]
@@ -460,6 +510,36 @@ public sealed partial class GodotFileBridgeHostTests
         Assert.NotEqual(firstSession, host.SessionId);
         Assert.True(host.Generation > firstGeneration);
         Assert.Equal(1, host.Sequence);
+    }
+
+    /// <summary>
+    /// 验证同一项目的第二个 Runtime Host 不得覆盖首个 Host 的 registry、heartbeat 或 listener。
+    /// </summary>
+    [Fact]
+    public void SecondHostIsRejectedWithoutOverwritingFirstHostState()
+    {
+        using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
+        using GodotFileBridgeHost firstHost = new(fixture.ProjectRoot, "4.7.0");
+        using GodotFileBridgeHost secondHost = new(fixture.ProjectRoot, "4.7.0");
+        firstHost.Start();
+
+        var firstSessionId = firstHost.SessionId;
+        var firstGeneration = firstHost.Generation;
+        var firstRegistry = GodotFileBridgeHostFixture.ReadObject(fixture.RegistryPath);
+
+        var exception = Assert.Throws<YokiFrameHostAlreadyOwnedException>(() => secondHost.Start());
+
+        Assert.Contains("godot-runtime", exception.Message, StringComparison.Ordinal);
+        Assert.False(secondHost.IsRunning);
+        var registry = GodotFileBridgeHostFixture.ReadObject(fixture.RegistryPath);
+        Assert.Equal(firstSessionId, registry["sessionId"]?.GetValue<string>());
+        Assert.Equal(firstGeneration, registry["generation"]?.GetValue<long>());
+        Assert.Equal(firstRegistry["registeredAtUtc"]?.GetValue<string>(), registry["registeredAtUtc"]?.GetValue<string>());
+
+        firstHost.Stop();
+        secondHost.Start();
+        Assert.NotEqual(firstSessionId, secondHost.SessionId);
+        Assert.True(secondHost.Generation > firstGeneration);
     }
 
     /// <summary>

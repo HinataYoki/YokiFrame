@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Net.Sockets;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -215,6 +216,8 @@ namespace YokiFrame
         /// <summary>
         /// 启动 Unix Domain Socket accept 循环，并仅记录本次成功 bind 后由 Host 拥有的路径。
         /// </summary>
+        [SupportedOSPlatform("linux")]
+        [SupportedOSPlatform("macos")]
         private void StartUnixDomainSocket()
         {
             var socketPath = Path.Combine(
@@ -229,6 +232,7 @@ namespace YokiFrame
             try
             {
                 listener.Bind(new UnixDomainSocketEndPoint(socketPath));
+                SetUnixSocketPermissions(socketPath);
                 listener.Listen(SOCKET_BACKLOG);
                 lock (mGate)
                 {
@@ -249,11 +253,30 @@ namespace YokiFrame
 
                 _ = Task.Run(() => ListenUnixDomainSocketAsync(listener, mStopSource.Token));
             }
-            catch
+            catch (Exception exception)
             {
                 listener.Dispose();
+                RecordFailure("FastChannel Unix socket startup failed: " + exception.Message);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 将 Unix Domain Socket 文件限制为当前用户读写，避免临时目录默认权限向同机其它用户暴露控制面。
+        /// </summary>
+        /// <param name="socketPath">已完成 bind 的 Unix socket 文件路径。</param>
+        [SupportedOSPlatform("linux")]
+        [SupportedOSPlatform("macos")]
+        private static void SetUnixSocketPermissions(string socketPath)
+        {
+            if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+            {
+                throw new PlatformNotSupportedException("Unix socket permissions are only supported on Linux and macOS.");
+            }
+
+            File.SetUnixFileMode(
+                socketPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
 
         /// <summary>

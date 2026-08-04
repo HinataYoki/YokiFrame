@@ -131,6 +131,19 @@ public sealed class SharedMemoryTelemetryFrameReaderTests
     }
 
     /// <summary>
+    /// 验证非法 UTF-8 不会被替换字符掩盖后当作有效 telemetry payload 接受。
+    /// </summary>
+    [Fact]
+    public void InvalidUtf8PayloadIsRejected()
+    {
+        var frame = CreateFrameBytes(new byte[] { 0xC3, 0x28 }, GENERATION, 14L, SharedMemoryTelemetryWriteState.Committed);
+        var result = SharedMemoryTelemetryFrameReader.ReadCommittedFrame(frame, GENERATION);
+
+        Assert.False(result.IsAccepted);
+        Assert.Equal(SharedMemoryTelemetryFrameStatus.InvalidUtf8, result.Status);
+    }
+
+    /// <summary>
     /// 验证同一 engine/Kit 在不同项目中使用不同 Named Map，避免多个 Unity 项目串写实时状态。
     /// </summary>
     [Fact]
@@ -189,6 +202,19 @@ public sealed class SharedMemoryTelemetryFrameReaderTests
     }
 
     /// <summary>
+    /// 验证组合后的 segment 名称超过平台保守上限时会稳定拒绝。
+    /// </summary>
+    [Fact]
+    public void SegmentNameRejectsExcessiveLength()
+    {
+        var longId = new string('x', 128);
+        var exception = Assert.Throws<YokiFrame.Protocol.Results.YokiFrameProtocolException>(() =>
+            SharedMemoryTelemetrySegmentName.Create(longId, longId, longId, longId));
+
+        Assert.Equal("TelemetrySegmentNameTooLong", exception.Error.Code);
+    }
+
+    /// <summary>
     /// 创建测试用 telemetry 帧。
     /// </summary>
     /// <param name="payloadJson">payload JSON 文本。</param>
@@ -204,7 +230,25 @@ public sealed class SharedMemoryTelemetryFrameReaderTests
         SharedMemoryTelemetryWriteState writeState,
         long? writtenAtUtcTicks = null)
     {
-        var payload = Encoding.UTF8.GetBytes(payloadJson);
+        return CreateFrameBytes(Encoding.UTF8.GetBytes(payloadJson), generation, sequence, writeState, writtenAtUtcTicks);
+    }
+
+    /// <summary>
+    /// 使用指定原始 payload 创建 telemetry 测试帧，支持覆盖非法编码。
+    /// </summary>
+    /// <param name="payload">原始 payload 字节。</param>
+    /// <param name="generation">engine generation。</param>
+    /// <param name="sequence">帧序号。</param>
+    /// <param name="writeState">写入状态。</param>
+    /// <param name="writtenAtUtcTicks">写入时间；为空时使用当前 UTC ticks。</param>
+    /// <returns>完整帧字节。</returns>
+    private static byte[] CreateFrameBytes(
+        byte[] payload,
+        long generation,
+        long sequence,
+        SharedMemoryTelemetryWriteState writeState,
+        long? writtenAtUtcTicks = null)
+    {
         var frame = new byte[SharedMemoryTelemetryFrameHeader.HEADER_SIZE + payload.Length];
         var header = new SharedMemoryTelemetryFrameHeader(
             SharedMemoryTelemetryFrameHeader.MAGIC,

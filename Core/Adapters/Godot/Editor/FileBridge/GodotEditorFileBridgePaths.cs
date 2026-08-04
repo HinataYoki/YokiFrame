@@ -31,6 +31,7 @@ namespace YokiFrame
                 YokiFrameFileBridgeLayout.ENGINES_DIRECTORY,
                 GodotEditorFileBridgeHost.ENGINE_ID);
             CommandsRoot = CombineInsideEngine(YokiFrameFileBridgeLayout.COMMANDS_DIRECTORY);
+            ProcessingRoot = Path.Combine(CommandsRoot, YokiFrameFileBridgeLayout.PROCESSING_DIRECTORY);
             ArchiveRoot = Path.Combine(CommandsRoot, YokiFrameFileBridgeLayout.ARCHIVE_DIRECTORY);
             DeadletterRoot = Path.Combine(CommandsRoot, YokiFrameFileBridgeLayout.DEADLETTER_DIRECTORY);
             ResultsRoot = CombineInsideEngine(YokiFrameFileBridgeLayout.RESULTS_DIRECTORY);
@@ -49,6 +50,9 @@ namespace YokiFrame
         /// <summary>获取待处理命令目录。</summary>
         public string CommandsRoot { get; }
 
+        /// <summary>获取跨进程 command claim 目录。</summary>
+        public string ProcessingRoot { get; }
+
         /// <summary>获取成功命令归档目录。</summary>
         public string ArchiveRoot { get; }
 
@@ -64,6 +68,9 @@ namespace YokiFrame
         /// <summary>获取 heartbeat 路径。</summary>
         public string HeartbeatPath { get; }
 
+        /// <summary>获取同一项目和 godot-editor Host 的 admission 锁路径。</summary>
+        public string AdmissionLockPath => Path.Combine(EngineRoot, "host.lock");
+
         /// <summary>
         /// 创建状态发布和命令消费需要的固定协议目录。
         /// </summary>
@@ -71,10 +78,19 @@ namespace YokiFrame
         {
             EnsureProtocolPathsAreSafe();
             Directory.CreateDirectory(CommandsRoot);
+            Directory.CreateDirectory(ProcessingRoot);
             Directory.CreateDirectory(ArchiveRoot);
             Directory.CreateDirectory(DeadletterRoot);
             Directory.CreateDirectory(ResultsRoot);
             Directory.CreateDirectory(Path.GetDirectoryName(HeartbeatPath));
+        }
+
+        /// <summary>
+        /// 在每轮命令处理前复核固定协议路径，防止 Host 启动后目录被替换为重解析点。
+        /// </summary>
+        public void EnsureReady()
+        {
+            EnsureProtocolPathsAreSafe();
         }
 
         /// <summary>
@@ -159,11 +175,13 @@ namespace YokiFrame
         {
             EnsureNoReparsePoint(ProjectRoot, EngineRoot);
             EnsureNoReparsePoint(ProjectRoot, CommandsRoot);
+            EnsureNoReparsePoint(ProjectRoot, ProcessingRoot);
             EnsureNoReparsePoint(ProjectRoot, ArchiveRoot);
             EnsureNoReparsePoint(ProjectRoot, DeadletterRoot);
             EnsureNoReparsePoint(ProjectRoot, ResultsRoot);
             EnsureNoReparsePoint(ProjectRoot, RegistryPath);
             EnsureNoReparsePoint(ProjectRoot, HeartbeatPath);
+            EnsureNoReparsePoint(ProjectRoot, AdmissionLockPath);
         }
 
         /// <summary>拒绝项目根到候选路径的现存组件包含符号链接、Junction 或其它重解析点。</summary>

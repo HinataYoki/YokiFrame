@@ -19,4 +19,16 @@ public sealed class YokiFrameProtocolException : Exception
     /// 获取标准错误信息。
     /// </summary>
     public YokiFrameError Error { get; }
+
+    /// <summary>获取关联请求标识；非请求类错误为空。</summary>
+    public string RequestId => Error.RequestId;
+
+    /// <summary>获取关联宿主标识；非宿主错误为空。</summary>
+    public string EngineId => Error.EngineId;
+
+    /// <summary>获取产生错误的传输标识；未知时为空。</summary>
+    public string Transport => Error.Transport;
+
+    /// <summary>获取可复查证据路径。</summary>
+    public IReadOnlyList<string> EvidencePaths => Error.EvidencePaths;
 }

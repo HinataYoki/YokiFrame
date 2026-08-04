@@ -18,6 +18,8 @@ namespace YokiFrame.Protocol.Common;
     WriteIndented = false)]
 [JsonSerializable(typeof(CommandEnvelope))]
 [JsonSerializable(typeof(CommandResponse))]
+[JsonSerializable(typeof(CommandRequestStatus))]
+[JsonSerializable(typeof(CommandRequestState))]
 [JsonSerializable(typeof(EngineRegistryEntry))]
 [JsonSerializable(typeof(FastChannelEndpoint))]
 [JsonSerializable(typeof(FastChannelSessionIdentity))]

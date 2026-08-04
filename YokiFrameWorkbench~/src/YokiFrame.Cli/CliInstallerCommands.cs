@@ -168,6 +168,11 @@ internal static class CliInstallerCommands
             return CliJsonOutput.WriteSuccess(context);
         }
 
+        if (state.Status == InstallerSessionStatus.Cancelled)
+        {
+            return CliJsonOutput.WriteCancelled(context);
+        }
+
         return CliJsonOutput.WriteError(CreateSessionError(state), context);
     }
 
@@ -297,6 +302,8 @@ internal static class CliInstallerCommands
                 ["targetPath"] = result.TargetPath,
                 ["changed"] = result.Changed,
                 ["replacedExistingPackage"] = result.ReplacedExistingPackage,
+                ["committedNeedsVerification"] = result.CommittedNeedsVerification,
+                ["verificationError"] = result.VerificationError,
                 ["evidencePaths"] = CreateStringArray(result.EvidencePaths)
             };
     }
@@ -309,12 +316,19 @@ internal static class CliInstallerCommands
     private static YokiFrameError CreateSessionError(InstallerSessionState state)
     {
         var isConflict = state.Status == InstallerSessionStatus.Conflict;
+        var needsVerification = state.Status == InstallerSessionStatus.CommittedNeedsVerification;
         return new YokiFrameError(
-            isConflict ? "InstallerConflict" : "InstallerFailed",
+            isConflict
+                ? "InstallerConflict"
+                : needsVerification
+                    ? "InstallerCommittedNeedsVerification"
+                    : "InstallerFailed",
             string.IsNullOrWhiteSpace(state.ErrorMessage) ? "Installer did not reach a successful state." : state.ErrorMessage,
             isConflict
                 ? "Resolve managed conflicts or rerun with --take-over for confirmed legacy content."
-                : "Inspect session logs and evidence paths, then retry after correcting the target project.",
+                : needsVerification
+                    ? "Fix the host build or plugin verification issue, then rerun verification or installer apply."
+                    : "Inspect session logs and evidence paths, then retry after correcting the target project.",
             state.EvidencePaths.ToArray());
     }
 

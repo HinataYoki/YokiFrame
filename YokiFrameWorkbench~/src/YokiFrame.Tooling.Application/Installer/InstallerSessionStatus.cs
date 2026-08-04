@@ -41,6 +41,11 @@ public enum InstallerSessionStatus
     Succeeded,
 
     /// <summary>
+    /// Core 投影已经提交，但宿主构建或 owner post-verify 尚未成功完成。
+    /// </summary>
+    CommittedNeedsVerification,
+
+    /// <summary>
     /// 检测到 legacy 未确认接管或受管文件修改冲突。
     /// </summary>
     Conflict,
@@ -48,5 +53,10 @@ public enum InstallerSessionStatus
     /// <summary>
     /// 检测、规划或安装事务失败。
     /// </summary>
-    Failed
+    Failed,
+
+    /// <summary>
+    /// 调用方取消了当前检测或安装；该状态不表示宿主没有执行任何写入。
+    /// </summary>
+    Cancelled
 }

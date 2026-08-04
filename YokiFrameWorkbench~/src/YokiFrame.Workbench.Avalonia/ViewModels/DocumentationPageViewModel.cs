@@ -25,6 +25,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     private string mStatusText = "尚未加载离线文档。";
     private int mLoadStarted;
     private int mDocumentLoadVersion;
+    private int mDisposed;
 
     /// <summary>
     /// 创建离线文档页面状态；服务为空时保留可诊断的不可用页面。
@@ -95,7 +96,10 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         {
             if (SetProperty(ref mSelectedDocument, value) && value != null)
             {
-                _ = LoadDocumentAsync(value.RelativePath);
+                if (Volatile.Read(ref mDisposed) == 0)
+                {
+                    _ = LoadDocumentAsync(value.RelativePath);
+                }
             }
         }
     }
@@ -195,6 +199,11 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     /// <returns>目录加载完成任务。</returns>
     public async Task EnsureLoadedAsync()
     {
+        if (Volatile.Read(ref mDisposed) != 0)
+        {
+            return;
+        }
+
         if (mCatalog != null || Interlocked.CompareExchange(ref mLoadStarted, 1, 0) != 0)
         {
             return;
@@ -297,7 +306,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     /// <returns>文档读取完成任务。</returns>
     private async Task LoadDocumentAsync(string relativePath)
     {
-        if (mDocumentationService == null)
+        if (mDocumentationService == null || Volatile.Read(ref mDisposed) != 0)
         {
             return;
         }
@@ -306,18 +315,34 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         try
         {
             var document = await Task.Run(() => mDocumentationService.ReadDocument(relativePath));
-            if (loadVersion == Volatile.Read(ref mDocumentLoadVersion))
+            if (Volatile.Read(ref mDisposed) == 0
+                && loadVersion == Volatile.Read(ref mDocumentLoadVersion))
             {
                 ApplyDocument(document);
             }
         }
         catch (Exception exception)
         {
-            if (loadVersion == Volatile.Read(ref mDocumentLoadVersion))
+            if (Volatile.Read(ref mDisposed) == 0
+                && loadVersion == Volatile.Read(ref mDocumentLoadVersion))
             {
                 StatusText = "文档读取失败: " + exception.Message;
             }
         }
+    }
+
+    /// <summary>
+    /// 使关闭窗口前已经启动的文档读取结果失效，阻止后台任务继续修改页面状态。
+    /// </summary>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref mDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref mDocumentLoadVersion);
+        Interlocked.Exchange(ref mLoadStarted, 0);
     }
 
     /// <summary>

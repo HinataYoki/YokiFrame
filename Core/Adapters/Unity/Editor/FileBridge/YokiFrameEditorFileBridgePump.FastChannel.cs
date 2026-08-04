@@ -70,6 +70,7 @@ namespace YokiFrame
         private static void OnBeforeAssemblyReload()
         {
             PublishDisconnectedState();
+            ReleaseAdmissionLease();
         }
 
         /// <summary>
@@ -78,6 +79,17 @@ namespace YokiFrame
         private static void OnEditorQuitting()
         {
             PublishDisconnectedState();
+            ReleaseAdmissionLease();
+        }
+
+        /// <summary>
+        /// 在当前 Host 已发布 disabled 状态并停止 listener 后释放项目级 admission lease。
+        /// </summary>
+        private static void ReleaseAdmissionLease()
+        {
+            var lease = sAdmissionLease;
+            sAdmissionLease = null;
+            lease?.Dispose();
         }
 
         /// <summary>

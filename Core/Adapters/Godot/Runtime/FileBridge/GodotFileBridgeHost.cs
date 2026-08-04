@@ -22,8 +22,9 @@ namespace YokiFrame
         private readonly string mProjectScopeId;
         private string[] mStateKits;
         private readonly GodotFileBridgePaths mPaths;
+        private YokiFrameHostAdmissionLease mAdmissionLease;
         private YokiFrameCommandDispatcher mDispatcher;
-        private bool mIsProcessingCommands;
+        private readonly YokiFrameHostCommandCoordinator mCommandCoordinator;
         private string mLastError = string.Empty;
         private string mSessionId = string.Empty;
         private string mStartedAtUtc = string.Empty;
@@ -50,6 +51,11 @@ namespace YokiFrame
             mPaths = new GodotFileBridgePaths(projectRoot);
             mProjectScopeId = YokiFrameSharedMemoryTelemetryProjectScopeId.Compute(mPaths.ProjectRoot);
             mDispatcher = CreateCommandDispatcher();
+            mCommandCoordinator = new YokiFrameHostCommandCoordinator(
+                new GodotRuntimeHostCommandStore(this),
+                ExecuteCommandForCoordinator,
+                PROCESSING_LEASE,
+                exception => mLastError = exception.Message);
         }
 
         /// <summary>
@@ -73,6 +79,15 @@ namespace YokiFrame
         public long Sequence => mSequence;
 
         /// <summary>
+        /// 记录 Runtime 帧阶段异常，供 bridge_status 暴露最近一次通信故障。
+        /// </summary>
+        /// <param name="exception">当前阶段捕获的异常。</param>
+        internal void RecordRuntimeError(Exception exception)
+        {
+            mLastError = exception == null ? "Unknown Runtime FileBridge error." : exception.Message;
+        }
+
+        /// <summary>
         /// 创建新 session/generation，并立即发布首帧 heartbeat、四个 snapshot 和当前 capability 对应的 registry。
         /// </summary>
         public void Start()
@@ -89,9 +104,23 @@ namespace YokiFrame
             mSequence = 0;
             mLastError = string.Empty;
             mStartedAtUtc = now.ToString("O");
-            IsRunning = true;
             try
             {
+                var admissionResult = YokiFrameHostAdmissionLease.TryAcquire(
+                    mPaths.AdmissionLockPath,
+                    out mAdmissionLease,
+                    out var admissionError);
+                if (admissionResult == YokiFrameHostAdmissionResult.AlreadyOwned)
+                {
+                    throw new YokiFrameHostAlreadyOwnedException(ENGINE_ID);
+                }
+
+                if (admissionResult == YokiFrameHostAdmissionResult.StorageError)
+                {
+                    throw admissionError ?? new IOException("Godot Runtime Host admission failed.");
+                }
+
+                IsRunning = true;
                 mPaths.EnsureDirectories();
                 TryPruneStorage();
                 InitializeTelemetry();
@@ -104,6 +133,8 @@ namespace YokiFrame
                 StopFastChannel();
                 DisposeTelemetry();
                 ReleaseActiveState();
+                mAdmissionLease?.Dispose();
+                mAdmissionLease = null;
                 throw;
             }
         }
@@ -136,10 +167,10 @@ namespace YokiFrame
             mSequence++;
             mPaths.EnsureDirectories();
             WriteHeartbeat();
-            if (RefreshChangedSnapshots())
-            {
-                WriteEngineRegistry();
-            }
+            RefreshChangedSnapshots();
+            // Registry 同时承载 FastChannel listener 健康状态；即使 Snapshot 未变化，也必须
+            // 在每次低频 heartbeat 重新发布 disabled/enabled endpoint，避免陈旧连接声明。
+            WriteEngineRegistry();
         }
 
         /// <summary>
@@ -156,6 +187,8 @@ namespace YokiFrame
             StopFastChannel();
             DisposeTelemetry();
             ReleaseActiveState();
+            mAdmissionLease?.Dispose();
+            mAdmissionLease = null;
         }
 
         /// <summary>
@@ -351,19 +384,56 @@ namespace YokiFrame
         /// </summary>
         private void ReleaseActiveState()
         {
-            DeleteIfExists(mPaths.RegistryPath);
-            DeleteIfExists(mPaths.HeartbeatPath);
+            DeleteIfOwned(mPaths.RegistryPath, IsOwnedRegistry);
+            DeleteIfOwned(mPaths.HeartbeatPath, IsOwnedHeartbeat);
         }
 
         /// <summary>
-        /// 删除存在的活动状态文件，缺失时保持幂等。
+        /// 只删除仍属于当前 session/generation 的活动状态文件，避免停止旧 Host 时误删新 Host 状态。
         /// </summary>
         /// <param name="path">待删除文件路径。</param>
-        private static void DeleteIfExists(string path)
+        /// <param name="isOwned">读取并校验当前文件 owner 的函数。</param>
+        private void DeleteIfOwned(string path, Func<string, bool> isOwned)
         {
-            if (File.Exists(path))
+            if (File.Exists(path) && isOwned(path))
             {
                 File.Delete(path);
+            }
+        }
+
+        /// <summary>判断 Runtime registry 是否仍属于当前 Host。</summary>
+        /// <param name="path">registry 文件路径。</param>
+        /// <returns>当前文件仍属于本 Host 时返回 true。</returns>
+        private bool IsOwnedRegistry(string path)
+        {
+            try
+            {
+                var registry = GodotFileBridgeJson.Deserialize<GodotEngineRegistry>(File.ReadAllText(path));
+                return registry != null
+                    && registry.SessionId == mSessionId
+                    && registry.Generation == mGeneration;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>判断 Runtime heartbeat 是否仍属于当前 Host。</summary>
+        /// <param name="path">heartbeat 文件路径。</param>
+        /// <returns>当前文件仍属于本 Host 时返回 true。</returns>
+        private bool IsOwnedHeartbeat(string path)
+        {
+            try
+            {
+                var heartbeat = GodotFileBridgeJson.Deserialize<GodotHeartbeat>(File.ReadAllText(path));
+                return heartbeat != null
+                    && heartbeat.SessionId == mSessionId
+                    && heartbeat.Generation == mGeneration;
+            }
+            catch
+            {
+                return false;
             }
         }
 

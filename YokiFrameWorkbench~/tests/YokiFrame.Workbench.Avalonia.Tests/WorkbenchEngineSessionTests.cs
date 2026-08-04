@@ -18,7 +18,6 @@ public sealed class WorkbenchEngineSessionTests
             "src",
             "YokiFrame.Workbench.Avalonia",
             "WorkbenchWindow.cs");
-
         Assert.Contains("private string mSelectedEngineId = string.Empty;", source);
         Assert.DoesNotContain("private string mSelectedEngineId = \"unity-editor\";", source);
     }
@@ -34,10 +33,13 @@ public sealed class WorkbenchEngineSessionTests
             "YokiFrame.Workbench.Avalonia",
             "WorkbenchWindow.cs");
 
-        Assert.Contains("mDashboardRefreshPending", source);
-        Assert.Contains("mDashboardRefreshPending = true;", source);
+        Assert.Contains("TelemetryRefreshPolicy", source);
+        Assert.Contains("TelemetryRefreshTrigger.EngineLifecycle", source);
+        Assert.Contains("CompleteDashboardRefresh", source);
         Assert.Contains("string.Equals(engineId, mSelectedEngineId, StringComparison.Ordinal)", source);
-        Assert.Contains("QueuePendingDashboardRefresh", source);
+        Assert.Contains("StartDashboardRefresh", source);
+        Assert.Contains("currentIdentity == null || result.TargetIdentity != currentIdentity", source);
+        Assert.Contains("当前宿主身份尚未收敛，命令未发送", source);
     }
 
     /// <summary>

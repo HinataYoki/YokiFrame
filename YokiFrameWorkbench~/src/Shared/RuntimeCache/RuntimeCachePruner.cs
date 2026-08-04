@@ -33,6 +33,12 @@ public static class RuntimeCachePruner
                 continue;
             }
 
+            if (RuntimeCacheLease.IsInUse(candidate))
+            {
+                failures.Add(candidate);
+                continue;
+            }
+
             try
             {
                 Directory.Delete(candidate, recursive: true);

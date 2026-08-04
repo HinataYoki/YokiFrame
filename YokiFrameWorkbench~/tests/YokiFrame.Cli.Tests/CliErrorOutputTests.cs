@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using YokiFrame;
 using YokiFrame.Protocol.FileBridge;
+using YokiFrame.Protocol.Results;
 
 namespace YokiFrame.Cli.Tests;
 
@@ -11,6 +13,8 @@ namespace YokiFrame.Cli.Tests;
 /// </summary>
 public sealed class CliErrorOutputTests
 {
+    private static readonly object sConsoleErrorGate = new();
+
     /// <summary>
     /// 验证未知命令返回标准 error 对象，而不是普通文本异常。
     /// </summary>
@@ -54,6 +58,150 @@ public sealed class CliErrorOutputTests
     }
 
     /// <summary>
+    /// 验证命令级 schema 会拒绝拼写错误选项，而不是把它静默传给业务模块。
+    /// </summary>
+    [Fact]
+    public async Task UnknownOptionWritesStandardErrorJson()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var result = await RunCliAsync(
+            "engine",
+            "list",
+            "--project",
+            projectRoot.Path,
+            "--proejct",
+            projectRoot.Path);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.StandardOutput.Trim());
+        AssertError(result.StandardError, "UnknownOption");
+    }
+
+    /// <summary>
+    /// 验证重复选项不会覆盖先前值而继续执行，避免脚本输入产生隐含歧义。
+    /// </summary>
+    [Fact]
+    public async Task DuplicateOptionWritesStandardErrorJson()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var result = await RunCliAsync(
+            "engine",
+            "list",
+            "--project",
+            projectRoot.Path,
+            "--project",
+            projectRoot.Path);
+
+        Assert.Equal(1, result.ExitCode);
+        AssertError(result.StandardError, "DuplicateOption");
+    }
+
+    /// <summary>
+    /// 验证 command status 只读查询会把 pending 证据和 requestId 投影到机器输出。
+    /// </summary>
+    [Fact]
+    public async Task CommandStatusWritesPendingEvidenceJson()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var commandRoot = Path.Combine(
+            projectRoot.Path,
+            YokiFrameFileBridgeLayout.YOKIFRAME_DIRECTORY,
+            YokiFrameFileBridgeLayout.ENGINES_DIRECTORY,
+            "unity-editor",
+            YokiFrameFileBridgeLayout.COMMANDS_DIRECTORY);
+        var requestId = "cli-status-pending";
+        var pendingPath = Path.Combine(commandRoot, requestId + ".json");
+        Directory.CreateDirectory(commandRoot);
+        await File.WriteAllTextAsync(pendingPath, "{}");
+
+        var result = await RunCliAsync(
+            "command",
+            "status",
+            "--project",
+            projectRoot.Path,
+            "--engine",
+            "unity-editor",
+            "--request-id",
+            requestId);
+
+        var json = JsonNode.Parse(result.StandardOutput)
+            ?? throw new InvalidOperationException("CLI stdout is not JSON.");
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("Pending", json["state"]?.GetValue<string>());
+        Assert.Equal(requestId, json["requestId"]?.GetValue<string>());
+        Assert.Contains(
+            pendingPath,
+            json["evidencePaths"]!.AsArray().Select(static node => node!.GetValue<string>()));
+    }
+
+    /// <summary>
+    /// 验证非法整数不会静默回落到默认超时值，也不会写入 FileBridge command。
+    /// </summary>
+    [Fact]
+    public async Task InvalidTimeoutWritesStandardErrorJson()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var result = await RunCliAsync(
+            "command",
+            "send",
+            "--project",
+            projectRoot.Path,
+            "--engine",
+            "unity-editor",
+            "--timeout",
+            "abc");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.StandardOutput.Trim());
+        AssertError(result.StandardError, "InvalidOptionValue");
+    }
+
+    /// <summary>
+    /// 验证 FileBridge 等待超时会输出 Unknown，而不是让脚本误以为 Runtime 已明确失败。
+    /// </summary>
+    [Fact]
+    public async Task CommandTimeoutWritesUnknownOutcomeJson()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var result = await RunCliAsync(
+            "command",
+            "send",
+            "--project",
+            projectRoot.Path,
+            "--engine",
+            "unity-editor",
+            "--timeout",
+            "1000");
+
+        var json = JsonNode.Parse(result.StandardError)
+            ?? throw new InvalidOperationException("CLI stderr is not JSON.");
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal("CommandTimeout", json["error"]!["code"]!.GetValue<string>());
+        Assert.Equal("Unknown", json["outcome"]!.GetValue<string>());
+    }
+
+    /// <summary>
+    /// 验证 CLI schema 与 FileBridge CommandPolicy 使用同一 timeout 范围。
+    /// </summary>
+    [Fact]
+    public async Task TimeoutOutsideProtocolRangeIsRejectedBeforeClientCreation()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var result = await RunCliAsync(
+            "command",
+            "send",
+            "--project",
+            projectRoot.Path,
+            "--engine",
+            "unity-editor",
+            "--timeout",
+            "500");
+
+        Assert.Equal(1, result.ExitCode);
+        AssertError(result.StandardError, "OptionOutOfRange");
+    }
+
+    /// <summary>
     /// 验证 Runtime 已返回 status=Error 时，CLI 会输出标准失败 JSON 而不是成功 JSON。
     /// </summary>
     [Fact]
@@ -66,11 +214,88 @@ public sealed class CliErrorOutputTests
     }
 
     /// <summary>
+    /// 验证命令上下文中的 outcome 不能覆盖由错误码推导出的 Unknown 结果。
+    /// </summary>
+    [Fact]
+    public async Task RuntimeTimeoutResponseKeepsDerivedUnknownOutcome()
+    {
+        using var projectRoot = CliTestProjectRoot.Create();
+        var execution = await RunCliWithRuntimeErrorAsync(projectRoot.Path, "CommandTimeout");
+        var json = JsonNode.Parse(execution.Result.StandardError)
+            ?? throw new InvalidOperationException("CLI stderr is not JSON.");
+
+        Assert.Equal(1, execution.Result.ExitCode);
+        Assert.Equal("CommandTimeout", json["error"]!["code"]!.GetValue<string>());
+        Assert.Equal("Unknown", json["outcome"]!.GetValue<string>());
+    }
+
+    /// <summary>
+    /// 验证错误上下文不能覆盖标准 envelope 的保留字段，而普通上下文仍会保留。
+    /// </summary>
+    [Fact]
+    public void ErrorContextCannotOverwriteReservedEnvelopeFields()
+    {
+        YokiFrameError error = new(
+            "CommandTimeout",
+            "The command timed out.",
+            "Inspect the request evidence before retrying.",
+            new[] { "error-evidence.json" },
+            "error-request",
+            "error-engine",
+            "error-transport");
+        JsonObject context = new()
+        {
+            ["ok"] = true,
+            ["error"] = new JsonObject { ["code"] = "ContextError" },
+            ["outcome"] = "Succeeded",
+            ["requestId"] = "context-request",
+            ["engineId"] = "context-engine",
+            ["transport"] = "context-transport",
+            ["evidencePaths"] = new JsonArray("context-evidence.json"),
+            ["warnings"] = new JsonArray("context-warning"),
+            ["custom"] = "preserved"
+        };
+
+        string output;
+        lock (sConsoleErrorGate)
+        {
+            TextWriter originalError = Console.Error;
+            using StringWriter capturedError = new();
+            Console.SetError(capturedError);
+            try
+            {
+                Assert.Equal(1, CliJsonOutput.WriteError(error, context));
+                output = capturedError.ToString();
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+        }
+
+        JsonObject json = JsonNode.Parse(output)?.AsObject()
+            ?? throw new InvalidOperationException("CLI stderr is not JSON.");
+        Assert.False(json["ok"]!.GetValue<bool>());
+        Assert.Equal("CommandTimeout", json["error"]!["code"]!.GetValue<string>());
+        Assert.Equal("Unknown", json["outcome"]!.GetValue<string>());
+        Assert.Equal("error-request", json["requestId"]!.GetValue<string>());
+        Assert.Equal("error-engine", json["engineId"]!.GetValue<string>());
+        Assert.Equal("error-transport", json["transport"]!.GetValue<string>());
+        Assert.Equal("error-evidence.json", json["error"]!["evidencePaths"]![0]!.GetValue<string>());
+        Assert.False(json.ContainsKey("evidencePaths"));
+        Assert.False(json.ContainsKey("warnings"));
+        Assert.Equal("preserved", json["custom"]!.GetValue<string>());
+    }
+
+    /// <summary>
     /// 启动 CLI、接管 pending command 并写入宿主错误 terminal response。
     /// </summary>
     /// <param name="projectRoot">测试项目根目录。</param>
+    /// <param name="errorCode">宿主返回的错误码。</param>
     /// <returns>CLI 输出及其对应的命令证据。</returns>
-    private static async Task<RuntimeErrorExecution> RunCliWithRuntimeErrorAsync(string projectRoot)
+    private static async Task<RuntimeErrorExecution> RunCliWithRuntimeErrorAsync(
+        string projectRoot,
+        string errorCode = "HostRejected")
     {
         using var process = StartCli(
             "command", "send", "--project", projectRoot, "--engine", "unity-editor",
@@ -83,7 +308,7 @@ public sealed class CliErrorOutputTests
             var commandPath = await WaitForPendingCommandAsync(projectRoot, "unity-editor");
             var envelope = CommandEnvelope.FromJson(await File.ReadAllTextAsync(commandPath));
             var responsePath = GetResponsePath(projectRoot, envelope);
-            await WriteRuntimeErrorResponseAsync(responsePath, envelope);
+            await WriteRuntimeErrorResponseAsync(responsePath, envelope, errorCode);
             await process.WaitForExitAsync();
             var result = new CliProcessResult(
                 process.ExitCode,
@@ -106,7 +331,11 @@ public sealed class CliErrorOutputTests
     /// </summary>
     /// <param name="responsePath">response 文件路径。</param>
     /// <param name="envelope">待关联的命令信封。</param>
-    private static async Task WriteRuntimeErrorResponseAsync(string responsePath, CommandEnvelope envelope)
+    /// <param name="errorCode">宿主返回的错误码。</param>
+    private static async Task WriteRuntimeErrorResponseAsync(
+        string responsePath,
+        CommandEnvelope envelope,
+        string errorCode)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(responsePath)!);
         CommandResponse response = new()
@@ -116,7 +345,7 @@ public sealed class CliErrorOutputTests
             EngineId = envelope.EngineId,
             Status = "Error",
             ResultJson = "{}",
-            ErrorCode = "HostRejected",
+            ErrorCode = errorCode,
             ErrorMessage = "The host rejected this command.",
             CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
         };

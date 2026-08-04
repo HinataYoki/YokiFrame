@@ -72,6 +72,7 @@ public sealed class WorkbenchFastChannelCommandTests
         Assert.Equal(0, recorder.FileBridgeCallCount);
         Assert.Equal("System", recorder.LastFastChannelKit);
         Assert.Equal("list_commands", recorder.LastFastChannelAction);
+        Assert.Equal(750, recorder.LastFastChannelTimeoutMs);
     }
 
     /// <summary>
@@ -90,7 +91,7 @@ public sealed class WorkbenchFastChannelCommandTests
             "get_state",
             payloadJson,
             "workbench",
-            1000,
+            2500,
             CancellationToken.None);
 
         Assert.Equal("fast-channel", result.Transport);
@@ -142,6 +143,29 @@ public sealed class WorkbenchFastChannelCommandTests
     }
 
     /// <summary>
+    /// 验证没有 terminal response 的超时会投影为 Unknown，避免调用方自动重放变更命令。
+    /// </summary>
+    [Fact]
+    public async Task SendCommandTimeoutProjectsUnknownOutcome()
+    {
+        var recorder = RecordingYokiFrameClientProxy.Create();
+        recorder.FileBridgeFailure = new YokiFrameProtocolException(new YokiFrameError(
+            "CommandTimeout",
+            "command wait expired",
+            "query the request evidence before retrying"));
+        var service = new WorkbenchDashboardService(recorder.Client);
+
+        var state = await service.SendSystemCommandAsync(
+            "unity-editor",
+            "refresh_snapshots",
+            CancellationToken.None);
+
+        Assert.False(state.Ok);
+        Assert.Equal(CommandOutcomeState.Unknown, state.Outcome);
+        Assert.Equal("Unknown", state.Status);
+    }
+
+    /// <summary>
     /// 验证其它 Kit 即使 action 名称与首版白名单相同，也始终使用可靠 FileBridge。
     /// </summary>
     [Fact]
@@ -190,6 +214,31 @@ public sealed class WorkbenchFastChannelCommandTests
     }
 
     /// <summary>
+    /// 验证响应关联或协议契约错误不会被降级为 FileBridge 成功，避免隐藏宿主与工具版本漂移。
+    /// </summary>
+    [Fact]
+    public async Task SendSystemPingDoesNotFallbackAfterResponseProtocolFailure()
+    {
+        var recorder = RecordingYokiFrameClientProxy.Create();
+        recorder.FastChannelFailure = new YokiFrameProtocolException(new YokiFrameError(
+            "FastChannelResponseMismatch",
+            "test response association failure",
+            "refresh the host protocol"));
+        var service = new WorkbenchDashboardService(recorder.Client);
+
+        var state = await service.SendSystemCommandAsync(
+            "unity-editor",
+            "ping",
+            CancellationToken.None);
+
+        Assert.False(state.Ok);
+        Assert.Equal("Error", state.Status);
+        Assert.Equal(1, recorder.FastChannelCallCount);
+        Assert.Equal(0, recorder.FileBridgeCallCount);
+        Assert.Contains("test response association failure", state.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// 通过 DispatchProxy 记录 Workbench 对当前 Client 边界的真实调用，
     /// 使未来接口成员尚未声明时仍可用方法名表达 FastChannel 契约。
     /// </summary>
@@ -201,6 +250,15 @@ public sealed class WorkbenchFastChannelCommandTests
         private const string FILE_BRIDGE_RESULT_JSON = "{\"transport\":\"file-bridge\"}";
         private readonly YokiFramePaths mPaths = new(
             Path.Combine(Path.GetTempPath(), "yokiframe-fastchannel-command-tests", Guid.NewGuid().ToString("N")));
+        private readonly EngineRegistryEntry mRegistry = new()
+        {
+            ProtocolVersion = 2,
+            EngineId = "unity-editor",
+            Engine = "Unity",
+            SessionId = "test-session",
+            Generation = 1L,
+            Mode = "EditMode"
+        };
         private IYokiFrameClient mClient = null!;
 
         /// <summary>
@@ -228,6 +286,12 @@ public sealed class WorkbenchFastChannelCommandTests
         /// </summary>
         public string LastFastChannelPayloadJson { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// 获取 Application 分配给本次 FastChannel 操作的本地期限；该值不等于线上信封期限。
+        /// </summary>
+        public int LastFastChannelTimeoutMs { get; private set; }
+
+        /// <summary>获取最近一次 FastChannel 能力查询的 Kit/action 键。</summary>
         /// <summary>
         /// 获取可靠 FileBridge 命令调用次数。
         /// </summary>
@@ -270,6 +334,11 @@ public sealed class WorkbenchFastChannelCommandTests
         public Exception? FastChannelFailure { get; set; }
 
         /// <summary>
+        /// 获取或设置下一次 FileBridge 调用需要返回的协议异常。
+        /// </summary>
+        public Exception? FileBridgeFailure { get; set; }
+
+        /// <summary>
         /// 获取或设置 FileBridge terminal response 状态，供 Runtime 失败投影测试使用。
         /// </summary>
         public string FileBridgeResponseStatus { get; set; } = "Success";
@@ -310,6 +379,7 @@ public sealed class WorkbenchFastChannelCommandTests
             return targetMethod.Name switch
             {
                 "get_Paths" => mPaths,
+                nameof(IYokiFrameClient.ReadEngineEntries) => new[] { mRegistry },
                 FAST_CHANNEL_CAPABILITY_METHOD_NAME => CanSendFastChannel(arguments),
                 FAST_CHANNEL_METHOD_NAME => SendFastChannelResponse(arguments),
                 nameof(IYokiFrameClient.SendCommandAsync) => SendFileBridgeResponse(arguments),
@@ -323,7 +393,7 @@ public sealed class WorkbenchFastChannelCommandTests
         /// <returns>快速通道的直接响应任务。</returns>
         private Task<CommandResponse> SendFastChannelResponse(object?[]? arguments)
         {
-            if (arguments == null || arguments.Length < 4)
+            if (arguments == null || arguments.Length < 6)
             {
                 throw new InvalidOperationException("FastChannel 测试调用缺少命令参数。");
             }
@@ -332,6 +402,7 @@ public sealed class WorkbenchFastChannelCommandTests
             LastFastChannelKit = Assert.IsType<string>(arguments[1]);
             LastFastChannelAction = Assert.IsType<string>(arguments[2]);
             LastFastChannelPayloadJson = Assert.IsType<string>(arguments[3]);
+            LastFastChannelTimeoutMs = Assert.IsType<int>(arguments[5]);
             if (FastChannelFailure != null)
             {
                 return Task.FromException<CommandResponse>(FastChannelFailure);
@@ -345,7 +416,7 @@ public sealed class WorkbenchFastChannelCommandTests
         /// </summary>
         /// <param name="arguments">能力查询参数。</param>
         /// <returns>当前测试 Host 是否声明该只读命令。</returns>
-        private static bool CanSendFastChannel(object?[]? arguments)
+        private bool CanSendFastChannel(object?[]? arguments)
         {
             if (arguments == null || arguments.Length < 3)
             {
@@ -383,6 +454,11 @@ public sealed class WorkbenchFastChannelCommandTests
             }
             LastFileBridgeSource = Assert.IsType<string>(arguments[4]);
             LastFileBridgeTimeoutMs = Assert.IsType<int>(arguments[5]);
+            if (FileBridgeFailure != null)
+            {
+                return Task.FromException<CommandSendResult>(FileBridgeFailure);
+            }
+
             CommandEnvelope envelope = new()
             {
                 ProtocolVersion = 2,

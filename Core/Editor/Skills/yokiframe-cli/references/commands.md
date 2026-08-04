@@ -1,6 +1,8 @@
 # `yoki` 命令参考
 
-本文件面向 AI 执行。所有命令输出 compact JSON；失败输出 `ok=false`、稳定错误码、建议、evidence paths 和非零退出码。`--project` 指向 Unity 或 Godot 项目根；缺失 `--engine` 时只自动选择唯一 heartbeat 在线的 engine。
+本文件面向 AI 执行。所有命令输出 compact JSON；失败输出 `ok=false`、稳定错误码、建议、evidence paths 和非零退出码。`--project` 指向 Unity 或 Godot 项目根；缺失 `--engine` 时只自动选择唯一 heartbeat 在线的 engine。Host 按规范化 `projectRoot + engineId` 单实例运行，第二个 Host 的启动诊断为 `HostAlreadyOwned`；`godot-editor` 与 `godot-runtime` 属于不同 engineId，可同时存在。
+
+CLI 会在分派前执行命令级 schema：未知选项、缺失必填项、非法布尔/整数或数值越界直接返回 JSON 错误，不会静默使用默认值。进程收到 Ctrl+C 时返回 `error.code=Cancelled` 和退出码 `130`；清理等非致命问题进入同一 envelope 的 `warnings` 数组，不会向 stderr 写入普通文本。
 
 ## 只读命令面
 
@@ -22,6 +24,10 @@
 | Installer 预览 | `installer plan` | 安装模式对应的 source/target 选项 |
 
 `spatialkit indexes` 是 CLI 名称，实际发送的 Runtime action 为 `SpatialKit/list_indexes`。其它 SpatialKit CLI 名称与 action 相同。
+
+`fastchannel status` 只读取当前 engine 的 registry endpoint，不建立 socket 连接，也不把 endpoint `enabled` 当作已完成握手。输出必须同时核对 `protocolVersion`、`engineId`、`sessionId`、`generation`、`transport`、`endpoint`、`fallback` 和 `readOnlyCommands`；listener 未 ready、权限失败或平台不支持时应显示 disabled，并明确回退 FileBridge。
+
+本机 FastChannel 在 Windows 使用当前用户范围 Named Pipe，在 Linux/macOS 使用 Unix Domain Socket。Godot UDS 在 `Bind` 后固定设置 `0600`；权限设置失败会关闭 listener、记录诊断并发布 disabled endpoint。CLI/Avalonia 不直接持有 pipe/socket，均通过 Application 的 `IFastChannelCommandTransport` 窄端口消费能力和结果。
 
 ## 临时生成命令
 
@@ -69,6 +75,12 @@
 - 只有 `--refresh-commands` 会请求 `System/list_commands`
 - telemetry 未接受时回落 snapshot；不要在周期刷新中发送 command
 - Godot 编辑器是 `godot-editor`；Godot Tools Play Mode 才可能出现 `godot-runtime`。Godot 导出包不发布 YokiFrame FileBridge、Telemetry 或 FastChannel Host
+
+`command send` 对 registry 明确声明的 `ReadOnly` action 先尝试一次 FastChannel；连接、超时、endpoint/session 淘汰、队列忙碌或 Host 生命周期故障最多回退一次 FileBridge。FastChannel response 必须匹配 `protocolVersion`、`requestId`、`engineId` 且 status 为 `Success` 或 `Error`；损坏、错配、版本/status 校验失败或未知 Error frame 必须直接报告为协议错误，不得用 FileBridge 成功掩盖。FastChannel 的即时 response/evidence 是 ephemeral，要求可审计文件证据的请求直接使用 FileBridge。超时输出 `outcome=Unknown`，主动 Ctrl+C 取消不重放 mutation；Host 队列只取消尚未开始主线程处理的请求，已开始处理的请求继续完成。
+
+`--timeout` 表示 Application 的总命令预算。FastChannel 可以在该预算内使用更短的本地连接/响应期限；写入 FastChannel frame 的 `timeoutMs` 仍会被规范化到 Runtime CommandPolicy 的 `1000..30000ms` 范围，不能把本地快速通道预算误认为协议期限。FastChannel 失败后只有在总预算仍足够时才回退 FileBridge。
+
+Runtime 缓存发布或清理必须先遵守项目 Runtime 根锁和事务恢复；Workbench 运行期间持有当前 fingerprint 的 `.runtime.lease`，清理器遇到活动 lease 会保留目录并返回待后续清理项。lease 不替代 `current.json`、manifest、源码指纹和完整性校验，缓存缺失或不一致仍需先 bootstrap。
 
 ## 当前 Runtime action
 

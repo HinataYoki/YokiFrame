@@ -14,13 +14,26 @@ public sealed class YokiFrameError
     /// <param name="message">面向用户的错误说明。</param>
     /// <param name="suggestion">建议的下一步处理方式。</param>
     /// <param name="evidencePaths">可用于复查的文件或目录路径。</param>
-    public YokiFrameError(string code, string message, string suggestion, IEnumerable<string>? evidencePaths = null)
+    /// <param name="requestId">关联请求标识；非请求类错误为空。</param>
+    /// <param name="engineId">关联宿主标识；非宿主错误为空。</param>
+    /// <param name="transport">产生错误的传输；未知时为空。</param>
+    public YokiFrameError(
+        string code,
+        string message,
+        string suggestion,
+        IEnumerable<string>? evidencePaths = null,
+        string? requestId = null,
+        string? engineId = null,
+        string? transport = null)
     {
         Code = string.IsNullOrWhiteSpace(code) ? "Unknown" : code;
         Message = string.IsNullOrWhiteSpace(message) ? "YokiFrame operation failed." : message;
         Suggestion = string.IsNullOrWhiteSpace(suggestion) ? "Inspect evidence paths and retry." : suggestion;
         EvidencePaths = evidencePaths?.Where(static path => !string.IsNullOrWhiteSpace(path)).ToArray()
             ?? Array.Empty<string>();
+        RequestId = requestId ?? string.Empty;
+        EngineId = engineId ?? string.Empty;
+        Transport = transport ?? string.Empty;
     }
 
     /// <summary>
@@ -43,6 +56,15 @@ public sealed class YokiFrameError
     /// </summary>
     public IReadOnlyList<string> EvidencePaths { get; }
 
+    /// <summary>获取关联请求标识。</summary>
+    public string RequestId { get; }
+
+    /// <summary>获取关联宿主标识。</summary>
+    public string EngineId { get; }
+
+    /// <summary>获取产生错误的传输标识。</summary>
+    public string Transport { get; }
+
     /// <summary>
     /// 转换为 compact CLI 输出使用的 JSON 节点。
     /// </summary>
@@ -60,7 +82,10 @@ public sealed class YokiFrameError
             ["code"] = Code,
             ["message"] = Message,
             ["suggestion"] = Suggestion,
-            ["evidencePaths"] = evidencePaths
+            ["evidencePaths"] = evidencePaths,
+            ["requestId"] = string.IsNullOrEmpty(RequestId) ? null : RequestId,
+            ["engineId"] = string.IsNullOrEmpty(EngineId) ? null : EngineId,
+            ["transport"] = string.IsNullOrEmpty(Transport) ? null : Transport
         };
     }
 }

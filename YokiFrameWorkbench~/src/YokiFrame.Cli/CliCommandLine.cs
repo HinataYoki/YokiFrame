@@ -1,4 +1,5 @@
 using YokiFrame.Protocol.Results;
+using YokiFrame.Tooling.Application.CommandLine;
 
 namespace YokiFrame.Cli;
 
@@ -7,28 +8,31 @@ namespace YokiFrame.Cli;
 /// </summary>
 internal sealed class CliCommandLine
 {
-    private readonly Dictionary<string, string> mOptions;
+    private readonly ToolCommandLineOptions mOptions;
 
     /// <summary>
     /// 根据原始参数创建解析结果。
     /// </summary>
-    /// <param name="verbs">命令动词片段。</param>
-    /// <param name="options">命名参数表。</param>
-    private CliCommandLine(IReadOnlyList<string> verbs, Dictionary<string, string> options)
+    /// <param name="options">共享词法解析结果。</param>
+    private CliCommandLine(ToolCommandLineOptions options)
     {
-        Verbs = verbs;
         mOptions = options;
     }
 
     /// <summary>
     /// 获取命令动词片段。
     /// </summary>
-    public IReadOnlyList<string> Verbs { get; }
+    public IReadOnlyList<string> Verbs => mOptions.Verbs;
 
     /// <summary>
     /// 获取本次命令出现过的选项名称，供命令边界执行严格 schema 校验。
     /// </summary>
-    public IReadOnlyCollection<string> OptionNames => mOptions.Keys;
+    public IReadOnlyCollection<string> OptionNames => mOptions.OptionNames;
+
+    /// <summary>
+    /// 获取重复出现的选项名称；重复值不会静默覆盖先前输入。
+    /// </summary>
+    public IReadOnlyCollection<string> DuplicateOptionNames => mOptions.DuplicateOptionNames;
 
     /// <summary>
     /// 判断调用方是否显式提供了指定选项。
@@ -37,7 +41,7 @@ internal sealed class CliCommandLine
     /// <returns>显式提供时返回 true。</returns>
     public bool HasOption(string name)
     {
-        return mOptions.ContainsKey(name);
+        return mOptions.HasOption(name);
     }
 
     /// <summary>
@@ -47,22 +51,7 @@ internal sealed class CliCommandLine
     /// <returns>解析后的命令行对象。</returns>
     public static CliCommandLine Parse(string[] args)
     {
-        List<string> verbs = new();
-        Dictionary<string, string> options = new(StringComparer.OrdinalIgnoreCase);
-        for (var index = 0; index < args.Length; index++)
-        {
-            var argument = args[index];
-            if (argument.StartsWith("--", StringComparison.Ordinal))
-            {
-                index = ParseOption(args, index, options);
-            }
-            else
-            {
-                verbs.Add(argument);
-            }
-        }
-
-        return new CliCommandLine(verbs, options);
+        return new CliCommandLine(ToolCommandLineOptions.Parse(args));
     }
 
     /// <summary>
@@ -73,7 +62,7 @@ internal sealed class CliCommandLine
     /// <returns>参数值或默认值。</returns>
     public string GetOption(string name, string defaultValue)
     {
-        return mOptions.TryGetValue(name, out var value) ? value : defaultValue;
+        return mOptions.GetOption(name, defaultValue);
     }
 
     /// <summary>
@@ -95,10 +84,12 @@ internal sealed class CliCommandLine
     /// <returns>解析后的布尔值。</returns>
     public bool GetBoolOption(string name, bool defaultValue)
     {
-        if (!mOptions.TryGetValue(name, out var text))
+        if (!mOptions.HasOption(name))
         {
             return defaultValue;
         }
+
+        var text = mOptions.GetOption(name, string.Empty);
 
         if (bool.TryParse(text, out var value))
         {
@@ -130,34 +121,6 @@ internal sealed class CliCommandLine
     /// <returns>完全一致时返回 true。</returns>
     public bool IsCommand(params string[] verbs)
     {
-        return Verbs.Count == verbs.Length && !verbs.Where((verb, index) =>
-            !string.Equals(Verbs[index], verb, StringComparison.OrdinalIgnoreCase)).Any();
-    }
-
-    /// <summary>
-    /// 解析单个命名参数。
-    /// </summary>
-    /// <param name="args">原始命令行参数。</param>
-    /// <param name="index">当前参数索引。</param>
-    /// <param name="options">待写入的参数表。</param>
-    /// <returns>解析后新的参数索引。</returns>
-    private static int ParseOption(string[] args, int index, Dictionary<string, string> options)
-    {
-        var argument = args[index][2..];
-        var equalsIndex = argument.IndexOf('=');
-        if (equalsIndex >= 0)
-        {
-            options[argument[..equalsIndex]] = argument[(equalsIndex + 1)..];
-            return index;
-        }
-
-        if (index + 1 < args.Length && !args[index + 1].StartsWith("--", StringComparison.Ordinal))
-        {
-            options[argument] = args[index + 1];
-            return index + 1;
-        }
-
-        options[argument] = "true";
-        return index;
+        return mOptions.IsCommand(verbs);
     }
 }

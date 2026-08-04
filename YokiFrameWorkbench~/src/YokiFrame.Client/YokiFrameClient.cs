@@ -101,6 +101,18 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
     }
 
     /// <summary>
+    /// 按 requestId 查询可靠 FileBridge 请求当前所在状态和证据。
+    /// </summary>
+    /// <param name="engineId">目标 engine。</param>
+    /// <param name="requestId">请求标识。</param>
+    /// <returns>请求状态快照。</returns>
+    public CommandRequestStatus ReadCommandStatus(string engineId, string requestId)
+    {
+        ThrowIfDisposed();
+        return mFileBridgeTransport.ReadCommandStatus(engineId, requestId);
+    }
+
+    /// <summary>
     /// 从宿主发布的命名 Shared Memory segment 读取最新 telemetry 帧。
     /// </summary>
     /// <param name="engineId">目标 engine。</param>
@@ -116,13 +128,14 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
         long? expectedGeneration,
         int maxPayloadBytes)
     {
+        TelemetryReadTarget target;
         lock (mTelemetryTargetsGate)
         {
             ThrowIfDisposedUnderGate();
-            return GetTelemetryReadTarget(engineId, kit, name).Read(
-                expectedGeneration,
-                maxPayloadBytes);
+            target = GetTelemetryReadTarget(engineId, kit, name);
         }
+
+        return target.Read(expectedGeneration, maxPayloadBytes);
     }
 
     /// <summary>
@@ -143,14 +156,14 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
         int maxPayloadBytes,
         long afterSequence)
     {
+        TelemetryReadTarget target;
         lock (mTelemetryTargetsGate)
         {
             ThrowIfDisposedUnderGate();
-            return GetTelemetryReadTarget(engineId, kit, name).ReadIfChanged(
-                expectedGeneration,
-                maxPayloadBytes,
-                afterSequence);
+            target = GetTelemetryReadTarget(engineId, kit, name);
         }
+
+        return target.ReadIfChanged(expectedGeneration, maxPayloadBytes, afterSequence);
     }
 
     /// <summary>
@@ -160,17 +173,14 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
     /// <returns>可等待的通知 listener；宿主尚未发布或平台不支持时为空。</returns>
     public SharedMemoryTelemetryNotificationListener? CreateTelemetryNotificationListener(string engineId)
     {
-        lock (mTelemetryTargetsGate)
-        {
-            ThrowIfDisposedUnderGate();
-            return SharedMemoryTelemetryNotificationListener.TryOpen(
-                Paths.ProjectRoot,
-                engineId,
-                out var listener,
-                out _)
-                ? listener
-                : null;
-        }
+        ThrowIfDisposed();
+        return SharedMemoryTelemetryNotificationListener.TryOpen(
+            Paths.ProjectRoot,
+            engineId,
+            out var listener,
+            out _)
+            ? listener
+            : null;
     }
 
     /// <summary>获取已校验的 segment 名称与 engine 哈希，避免 100ms 空闲路径重复拼接和计算。</summary>
@@ -288,6 +298,14 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
     /// <summary>
     /// 通过 FastChannel 发送当前 endpoint 明确声明的通用只读命令。
     /// </summary>
+    /// <param name="engineId">目标 engine。</param>
+    /// <param name="kit">目标 Kit。</param>
+    /// <param name="action">目标只读 action。</param>
+    /// <param name="payloadJson">查询 payload JSON。</param>
+    /// <param name="source">审计来源。</param>
+    /// <param name="timeoutMs">调用方为本次快速通道操作分配的本地最大等待毫秒数；线上信封会单独遵守协议超时范围。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>FastChannel Host 直接返回的 terminal response。</returns>
     public Task<CommandResponse> SendFastChannelReadOnlyCommandAsync(
         string engineId,
         string kit,
@@ -314,7 +332,7 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
     /// <param name="engineId">目标 engine。</param>
     /// <param name="action">仅允许 ping 或 bridge_status。</param>
     /// <param name="source">审计来源。</param>
-    /// <param name="timeoutMs">命令和快速通道操作的最大等待毫秒数。</param>
+    /// <param name="timeoutMs">调用方为本次快速通道操作分配的本地最大等待毫秒数；线上信封会单独遵守协议超时范围。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>FastChannel Host 直接返回的 terminal response。</returns>
     public Task<CommandResponse> SendFastChannelReadOnlySystemCommandAsync(
@@ -372,6 +390,7 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
     /// <summary>保存单个 Telemetry 目标，并确保 map lease 只在同一 generation 内复用。</summary>
     private sealed class TelemetryReadTarget : IDisposable
     {
+        private readonly object mGate = new();
         private readonly string mSegmentName;
         private readonly ulong mEngineIdHash;
         private SharedMemoryTelemetryNamedMapLease? mLease;
@@ -388,10 +407,28 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
         }
 
         /// <summary>获取目标生命周期内累计成功打开 map/accessor 的次数。</summary>
-        public int OpenCount => mClosedLeaseOpenCount + (mLease?.OpenCount ?? 0);
+        public int OpenCount
+        {
+            get
+            {
+                lock (mGate)
+                {
+                    return mClosedLeaseOpenCount + (mLease?.OpenCount ?? 0);
+                }
+            }
+        }
 
         /// <summary>获取当前 generation 是否持有已打开的 accessor。</summary>
-        public bool HasOpenLease => mLease?.IsOpen == true;
+        public bool HasOpenLease
+        {
+            get
+            {
+                lock (mGate)
+                {
+                    return mLease?.IsOpen == true;
+                }
+            }
+        }
 
         /// <summary>读取当前完整帧，并在 generation 改变前先释放旧映射。</summary>
         /// <param name="expectedGeneration">当前宿主 generation。</param>
@@ -399,7 +436,10 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
         /// <returns>帧读取结果。</returns>
         public SharedMemoryTelemetryFrameReadResult Read(long? expectedGeneration, int maxPayloadBytes)
         {
-            return GetLease(expectedGeneration).Read(maxPayloadBytes);
+            lock (mGate)
+            {
+                return GetLease(expectedGeneration).Read(maxPayloadBytes);
+            }
         }
 
         /// <summary>增量读取新帧，并在 generation 改变前先释放旧映射。</summary>
@@ -412,7 +452,10 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
             int maxPayloadBytes,
             long afterSequence)
         {
-            return GetLease(expectedGeneration).ReadIfChanged(maxPayloadBytes, afterSequence);
+            lock (mGate)
+            {
+                return GetLease(expectedGeneration).ReadIfChanged(maxPayloadBytes, afterSequence);
+            }
         }
 
         /// <summary>复用同代 lease；generation 改变时先完整释放旧 map、accessor 与缓冲区。</summary>
@@ -451,7 +494,10 @@ public sealed partial class YokiFrameClient : IYokiFrameClient, IDisposable
         /// <summary>释放当前目标持有的 map、accessor 与 ArrayPool 缓冲区。</summary>
         public void Dispose()
         {
-            ReleaseLease();
+            lock (mGate)
+            {
+                ReleaseLease();
+            }
         }
     }
 }

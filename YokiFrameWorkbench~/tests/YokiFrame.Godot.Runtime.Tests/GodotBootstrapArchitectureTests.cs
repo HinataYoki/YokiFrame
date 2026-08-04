@@ -44,7 +44,8 @@ public sealed class GodotBootstrapArchitectureTests
             "YokiFrameUpdateDispatcher.Tick(scaledDeltaTime, unscaledDeltaTime);",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("mFileBridgeHost.ProcessPendingFastChannelRequests();", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessFastChannelRequestsSafely(mFileBridgeHost);", source, StringComparison.Ordinal);
+        Assert.Contains("host.ProcessPendingFastChannelRequests();", source, StringComparison.Ordinal);
         var processStart = source.IndexOf("public override void _Process(double delta)", StringComparison.Ordinal);
         var dispatchIndex = source.IndexOf("YokiFrameUpdateDispatcher.Tick", processStart, StringComparison.Ordinal);
         var hostGuardIndex = source.IndexOf("if (mFileBridgeHost == null)", processStart, StringComparison.Ordinal);

@@ -69,12 +69,13 @@ public sealed partial class WorkbenchWindow : Window
     private readonly WindowStateStore? mWindowStateStore;
     private readonly WorkbenchActivationCoordinator? mActivationCoordinator;
     private readonly EngineLifecycleMonitor? mLifecycleMonitor;
+    private readonly WorkbenchSession mSession = new();
+    private readonly TelemetryRefreshPolicy mTelemetryRefreshPolicy = new(FileRefreshInterval);
     private WorkbenchDashboardState? mCurrentState;
     private volatile bool mIsClosed;
     private bool mClosePersistenceInFlight;
     private bool mClosePersistenceCompleted;
-    private bool mIsDashboardRefreshInFlight;
-    private bool mDashboardRefreshPending;
+    private Task? mWindowShutdownTask;
     private string mSelectedEngineId = string.Empty;
 
     /// <summary>
@@ -150,6 +151,7 @@ public sealed partial class WorkbenchWindow : Window
         mActivationCoordinator = activationCoordinator;
         WorkbenchStartupTrace.Mark("window.before-shell-view-model");
         mShellViewModel = CreateShellViewModel(projectRoot, sourcePackageRoot);
+        mShellViewModel.SetTaskTracker(mSession.Track);
         WorkbenchStartupTrace.Mark("window.after-shell-view-model");
         mShellViewModel.FsmKitPage.SelectedInstanceIdChanged += OnFsmTelemetrySelectionChanged;
         mLifecycleMonitor = string.IsNullOrWhiteSpace(projectRoot)
@@ -239,6 +241,7 @@ public sealed partial class WorkbenchWindow : Window
 
             mClosePersistenceInFlight = true;
             mIsClosed = true;
+            mSession.Cancel();
             try
             {
                 await Task.Run(() =>
@@ -264,6 +267,15 @@ public sealed partial class WorkbenchWindow : Window
         }
 
         mIsClosed = true;
+        try
+        {
+            await EnsureWindowShutdownAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            WorkbenchStartupTrace.Mark("window.session-shutdown.failed." + exception.GetType().Name);
+        }
+
         if (mActivationCoordinator != null)
         {
             mActivationCoordinator.ActivationRequested -= OnActivationRequested;
@@ -287,10 +299,61 @@ public sealed partial class WorkbenchWindow : Window
     {
         mIsClosed = true;
         mRefreshTimer.Stop();
-        StopTelemetryNotificationListener();
-        StopFsmTelemetryPolling();
-        mShellViewModel.EventKitPage.Dispose();
         mShellViewModel.FsmKitPage.SelectedInstanceIdChanged -= OnFsmTelemetrySelectionChanged;
+        mActivationCoordinator?.ActivationRequested -= OnActivationRequested;
+        _ = EnsureWindowShutdownAsync();
+    }
+
+    /// <summary>
+    /// 创建并复用唯一窗口关闭任务，确保 Closing 与 Closed 不会重复释放同一组资源。
+    /// </summary>
+    /// <returns>窗口后台资源全部停止后的任务。</returns>
+    private Task EnsureWindowShutdownAsync()
+    {
+        if (mWindowShutdownTask != null)
+        {
+            return mWindowShutdownTask;
+        }
+
+        mTelemetryRefreshPolicy.Reset();
+        Task notificationShutdown = StopTelemetryNotificationListener();
+        Task fsmShutdown = StopFsmTelemetryPolling();
+        mWindowShutdownTask = CompleteWindowShutdownAsync(notificationShutdown, fsmShutdown);
+        return mWindowShutdownTask;
+    }
+
+    /// <summary>
+    /// 兜底等待窗口关闭时仍在运行的任务，再释放通知信号和 Dashboard Client。
+    /// </summary>
+    /// <param name="notificationShutdown">通知 listener 的停止任务。</param>
+    /// <param name="fsmShutdown">Fsm telemetry 的停止任务。</param>
+    private async Task CompleteWindowShutdownAsync(
+        Task notificationShutdown,
+        Task fsmShutdown)
+    {
+        try
+        {
+            await mSession.DisposeAsync().ConfigureAwait(false);
+            await Task.WhenAll(notificationShutdown, fsmShutdown).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            WorkbenchStartupTrace.Mark("window.shutdown.failed." + exception.GetType().Name);
+        }
+        finally
+        {
+            DisposePageViewModels();
+            mTelemetryRefreshSignal.Dispose();
+            mDashboardService.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 在后台刷新、通知和命令任务全部结束后释放页面与生命周期监视器。
+    /// </summary>
+    private void DisposePageViewModels()
+    {
+        mShellViewModel.EventKitPage.Dispose();
         mShellViewModel.FsmKitPage.Dispose();
         mShellViewModel.LogKitPage.Dispose();
         mShellViewModel.PoolKitPage.Dispose();
@@ -298,14 +361,14 @@ public sealed partial class WorkbenchWindow : Window
         mShellViewModel.ActionKitPage.Dispose();
         mShellViewModel.AudioKitPage.Dispose();
         mShellViewModel.SaveKitPage.Dispose();
+        mShellViewModel.DocumentationPage.Dispose();
+        mShellViewModel.LocalizationKitPage.Dispose();
         mShellViewModel.RuntimeUpdate.Dispose();
         if (mLifecycleMonitor != null)
         {
             mLifecycleMonitor.Changed -= OnEngineLifecycleChanged;
             mLifecycleMonitor.Dispose();
         }
-
-        mDashboardService.Dispose();
     }
 
     /// <summary>
@@ -366,7 +429,7 @@ public sealed partial class WorkbenchWindow : Window
     /// <param name="eventArgs">事件参数。</param>
     private void OnRefreshTimerTick(object? sender, EventArgs eventArgs)
     {
-        QueueDashboardRefresh();
+        QueueDashboardRefresh(TelemetryRefreshTrigger.LowFrequencyDashboard);
     }
 
     /// <summary>
@@ -379,7 +442,7 @@ public sealed partial class WorkbenchWindow : Window
             return;
         }
 
-        Dispatcher.UIThread.Post(QueueDashboardRefresh);
+        Dispatcher.UIThread.Post(() => QueueDashboardRefresh(TelemetryRefreshTrigger.EngineLifecycle));
     }
 
     /// <summary>
@@ -387,73 +450,104 @@ public sealed partial class WorkbenchWindow : Window
     /// </summary>
     private void QueueDashboardRefresh()
     {
+        QueueDashboardRefresh(TelemetryRefreshTrigger.ExplicitDashboard);
+    }
+
+    /// <summary>
+    /// 按请求来源提交 Dashboard 刷新，并由策略合并或节流重复请求。
+    /// </summary>
+    /// <param name="trigger">触发本次请求的来源。</param>
+    private void QueueDashboardRefresh(TelemetryRefreshTrigger trigger)
+    {
         if (mIsClosed)
         {
             return;
         }
 
-        if (mIsDashboardRefreshInFlight)
+        TelemetryRefreshAction action = mTelemetryRefreshPolicy.Request(
+            trigger,
+            DateTimeOffset.UtcNow);
+        if (action != TelemetryRefreshAction.StartDashboard)
         {
-            mDashboardRefreshPending = true;
             return;
         }
 
-        mDashboardRefreshPending = false;
-        mIsDashboardRefreshInFlight = true;
-        _ = RefreshDashboardAsync(mSelectedEngineId);
+        StartDashboardRefresh();
+    }
+
+    /// <summary>
+    /// 启动已经由刷新策略批准的 Dashboard 读取任务。
+    /// </summary>
+    private void StartDashboardRefresh()
+    {
+        long refreshVersion = mSession.BeginRefresh();
+        Task refreshTask = RefreshDashboardAsync(mSelectedEngineId, refreshVersion);
+        mSession.Track(refreshTask);
     }
 
     /// <summary>
     /// 在后台读取 dashboard，再回到 UI 线程提交 ViewModel 更新。
     /// </summary>
     /// <param name="engineId">本轮刷新使用的 engine 标识。</param>
+    /// <param name="refreshVersion">本轮刷新捕获的会话代次。</param>
     /// <returns>异步操作。</returns>
-    private async Task RefreshDashboardAsync(string engineId)
+    private async Task RefreshDashboardAsync(string engineId, long refreshVersion)
     {
+        CancellationToken cancellationToken = mSession.LifetimeToken;
         try
         {
-            var state = await Task.Run(() => mDashboardService.LoadDashboard(engineId))
+            var state = await Task.Run(
+                    () => mDashboardService.LoadDashboard(engineId),
+                    cancellationToken)
                 .ConfigureAwait(false);
+            if (!mSession.IsCurrentRefresh(refreshVersion))
+            {
+                return;
+            }
+
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (string.Equals(engineId, mSelectedEngineId, StringComparison.Ordinal))
+                if (mSession.IsCurrentRefresh(refreshVersion)
+                    && string.Equals(engineId, mSelectedEngineId, StringComparison.Ordinal))
                 {
                     ApplyDashboardState(state);
                 }
-            });
+            }, DispatcherPriority.Background, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            WorkbenchStartupTrace.Mark("dashboard.refresh.cancelled");
         }
         catch (Exception exception)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (!mIsClosed)
                 {
                     mShellViewModel.ShowTransientError(exception.Message);
                 }
-            });
+            }, DispatcherPriority.Background, cancellationToken);
         }
         finally
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            if (!cancellationToken.IsCancellationRequested)
             {
-                mIsDashboardRefreshInFlight = false;
-                QueuePendingDashboardRefresh();
-            });
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    TelemetryRefreshAction action = mTelemetryRefreshPolicy.CompleteDashboardRefresh(
+                        DateTimeOffset.UtcNow);
+                    if (action == TelemetryRefreshAction.StartDashboard && !mIsClosed)
+                    {
+                        StartDashboardRefresh();
+                    }
+                }, DispatcherPriority.Background, cancellationToken);
+            }
         }
-    }
-
-    /// <summary>
-    /// 在当前后台读取结束后执行合并的最后一次刷新，确保切换 engine 的请求不会被丢弃。
-    /// </summary>
-    private void QueuePendingDashboardRefresh()
-    {
-        if (!mDashboardRefreshPending || mIsClosed)
-        {
-            return;
-        }
-
-        mDashboardRefreshPending = false;
-        QueueDashboardRefresh();
     }
 
     /// <summary>
@@ -477,19 +571,61 @@ public sealed partial class WorkbenchWindow : Window
     /// <summary>
     /// 发送 System 命令，并在响应返回后刷新 dashboard 状态。
     /// </summary>
+    /// <param name="kit">命令 Kit。</param>
     /// <param name="action">System action 名称。</param>
     /// <returns>异步操作。</returns>
-    private async Task SendCommandAsync(string kit, string action)
+    private Task SendCommandAsync(string kit, string action)
     {
-        mShellViewModel.ShowCommandInFlight(kit, action);
+        Task task = SendCommandCoreAsync(kit, action);
+        mSession.Track(task);
+        return task;
+    }
+
+    /// <summary>
+    /// 执行命令并在会话关闭或宿主代次变化时阻止旧结果提交到页面。
+    /// </summary>
+    /// <param name="kit">命令 Kit。</param>
+    /// <param name="action">命令 action。</param>
+    /// <returns>异步命令操作。</returns>
+    private async Task SendCommandCoreAsync(string kit, string action)
+    {
         var selectedEngineId = mSelectedEngineId;
-        var result = await Task.Run(() => mDashboardService.SendCommandAsync(selectedEngineId, kit, action, CancellationToken.None))
+        var expectedIdentity = mCurrentState?.CurrentHostIdentity;
+        if (expectedIdentity == null || string.IsNullOrWhiteSpace(selectedEngineId))
+        {
+            mShellViewModel.ShowTransientError("当前宿主身份尚未收敛，命令未发送。");
+            QueueDashboardRefresh();
+            return;
+        }
+
+        mShellViewModel.ShowCommandInFlight(kit, action);
+        CancellationToken cancellationToken = mSession.LifetimeToken;
+        var result = await Task.Run(() => mDashboardService.SendCommandAsync(
+                selectedEngineId,
+                kit,
+                action,
+                "{}",
+                cancellationToken,
+                expectedIdentity),
+                cancellationToken)
             .ConfigureAwait(false);
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (mIsClosed || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var currentIdentity = mCurrentState?.CurrentHostIdentity;
+            if (currentIdentity == null || result.TargetIdentity != currentIdentity)
+            {
+                QueueDashboardRefresh();
+                return;
+            }
+
             mShellViewModel.ShowCommandResult(result);
             QueueDashboardRefresh();
-        });
+        }, DispatcherPriority.Background, cancellationToken);
     }
 
     /// <summary>

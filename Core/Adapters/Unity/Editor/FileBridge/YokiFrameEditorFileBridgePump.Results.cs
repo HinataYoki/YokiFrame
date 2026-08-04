@@ -93,6 +93,29 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// deadletter 写入失败时，在 processing 命令旁原子保留失败证据。
+        /// </summary>
+        /// <param name="commandPath">processing 命令路径。</param>
+        /// <param name="errorCode">错误码。</param>
+        /// <param name="errorMessage">错误说明。</param>
+        private static void WriteProcessingFailureEvidence(
+            string commandPath,
+            string errorCode,
+            string errorMessage)
+        {
+            var evidence = new YokiFrameEditorDeadletterInfo
+            {
+                sourcePath = commandPath,
+                errorCode = errorCode,
+                errorMessage = errorMessage,
+                writtenAtUtc = DateTimeOffset.UtcNow.ToString("O")
+            };
+            YokiFrameEditorFileBridgeJson.WriteAtomic(
+                commandPath + ".claim",
+                YokiFrameEditorFileBridgeJson.ToJson(evidence));
+        }
+
+        /// <summary>
         /// 根据文件名生成安全 deadletter 标识。
         /// </summary>
         /// <param name="commandPath">原始命令路径。</param>

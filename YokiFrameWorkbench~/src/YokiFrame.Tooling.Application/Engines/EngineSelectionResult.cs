@@ -19,12 +19,14 @@ public sealed class EngineSelectionResult
         EngineSelectionStatus status,
         string selectedEngineId,
         IReadOnlyList<string> onlineEngineIds,
-        YokiFrameError? error)
+        YokiFrameError? error,
+        IReadOnlyList<EngineSessionDiagnostic>? diagnostics = null)
     {
         Status = status;
         SelectedEngineId = selectedEngineId;
         OnlineEngineIds = onlineEngineIds;
         Error = error;
+        Diagnostics = diagnostics?.ToArray() ?? Array.Empty<EngineSessionDiagnostic>();
     }
 
     /// <summary>
@@ -48,9 +50,35 @@ public sealed class EngineSelectionResult
     public YokiFrameError? Error { get; }
 
     /// <summary>
+    /// 获取本轮自动选择过程中发现的局部诊断；不影响其它 engine 的诊断仍会保留。
+    /// </summary>
+    public IReadOnlyList<EngineSessionDiagnostic> Diagnostics { get; }
+
+    /// <summary>
     /// 获取当前结果是否已选择有效 engine。
     /// </summary>
     public bool IsSelected => Status == EngineSelectionStatus.Selected;
+
+    /// <summary>
+    /// 在不改变选择结果的前提下追加读取诊断，供 Facade 兼容入口保留部分失败证据。
+    /// </summary>
+    /// <param name="diagnostics">需要追加的诊断。</param>
+    /// <returns>带追加诊断的新结果。</returns>
+    internal EngineSelectionResult WithAdditionalDiagnostics(
+        IReadOnlyList<EngineSessionDiagnostic> diagnostics)
+    {
+        if (diagnostics.Count == 0)
+        {
+            return this;
+        }
+
+        return new EngineSelectionResult(
+            Status,
+            SelectedEngineId,
+            OnlineEngineIds,
+            Error,
+            Diagnostics.Concat(diagnostics).ToArray());
+    }
 
     /// <summary>
     /// 创建选择成功结果，不额外触发 registry 或 heartbeat 读取。
@@ -60,14 +88,16 @@ public sealed class EngineSelectionResult
     /// <returns>选择成功结果。</returns>
     internal static EngineSelectionResult CreateSelected(
         string engineId,
-        IReadOnlyList<string>? onlineEngineIds = null)
+        IReadOnlyList<string>? onlineEngineIds = null,
+        IReadOnlyList<EngineSessionDiagnostic>? diagnostics = null)
     {
         var safeEngineId = SafeIdValidator.EnsureSafeId(engineId, nameof(engineId));
         return new EngineSelectionResult(
             EngineSelectionStatus.Selected,
             safeEngineId,
             onlineEngineIds?.ToArray() ?? Array.Empty<string>(),
-            null);
+            null,
+            diagnostics);
     }
 
     /// <summary>
@@ -80,12 +110,14 @@ public sealed class EngineSelectionResult
     internal static EngineSelectionResult CreatePending(
         EngineSelectionStatus status,
         IReadOnlyList<string> onlineEngineIds,
-        YokiFrameError error)
+        YokiFrameError error,
+        IReadOnlyList<EngineSessionDiagnostic>? diagnostics = null)
     {
         return new EngineSelectionResult(
             status,
             string.Empty,
             onlineEngineIds.ToArray(),
-            error);
+            error,
+            diagnostics);
     }
 }

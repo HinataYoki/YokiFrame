@@ -19,6 +19,32 @@ namespace YokiFrame.Tooling.Application.Services;
 /// </summary>
 internal static class WorkbenchDashboardKitProjections
 {
+    /// <summary>
+    /// 按一次快照读取的同一宿主身份构建全部页面投影。
+    /// </summary>
+    /// <param name="engineId">当前选中的 engine。</param>
+    /// <param name="bridgeHealth">本轮统一计算的桥接健康状态。</param>
+    /// <param name="snapshots">本轮读取的 snapshot 列表。</param>
+    /// <returns>供 Dashboard envelope 持有的只读投影目录。</returns>
+    internal static WorkbenchDashboardProjectionCatalog ProjectAll(
+        string engineId,
+        WorkbenchBridgeHealth bridgeHealth,
+        IReadOnlyList<WorkbenchSnapshotState> snapshots)
+    {
+        return new WorkbenchDashboardProjectionCatalog(
+            ProjectFsmKit(engineId, bridgeHealth, snapshots),
+            ProjectArchitecture(engineId, bridgeHealth, snapshots),
+            ProjectEventKit(engineId, bridgeHealth, snapshots),
+            ProjectLogKit(engineId, bridgeHealth, snapshots),
+            ProjectPoolKit(engineId, bridgeHealth, snapshots),
+            ProjectResKit(engineId, bridgeHealth, snapshots),
+            ProjectActionKit(engineId, bridgeHealth, snapshots),
+            ProjectAudioKit(engineId, bridgeHealth, snapshots),
+            ProjectSpatialKit(engineId, bridgeHealth, snapshots),
+            ProjectUIKit(engineId, bridgeHealth, snapshots),
+            ProjectSaveKit(engineId, bridgeHealth, snapshots));
+    }
+
     /// <summary>投影 Architecture 周期状态；无对应 snapshot 时返回 null。</summary>
     internal static WorkbenchArchitectureState? ProjectArchitecture(
         string engineId,
@@ -325,4 +351,3 @@ internal static class WorkbenchDashboardKitProjections
     }
 
 }
-

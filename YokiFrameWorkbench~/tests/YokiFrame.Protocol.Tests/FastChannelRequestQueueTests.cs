@@ -61,4 +61,24 @@ public sealed class FastChannelRequestQueueTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await responseTask);
         Assert.Equal(0, queue.PendingCount);
     }
+
+    /// <summary>
+    /// 验证连接令牌取消后，已经排队但尚未进入主线程的请求不会再执行 response factory。
+    /// </summary>
+    [Fact]
+    public async Task ConnectionCancellationSkipsQueuedRequest()
+    {
+        using var queue = new YokiFrameFastChannelRequestQueue(1);
+        using var cancellationSource = new CancellationTokenSource();
+        var request = new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Command, 0, "{}");
+        Assert.True(queue.TryEnqueue(request, cancellationSource.Token, out var responseTask));
+
+        cancellationSource.Cancel();
+        var processed = queue.ProcessPending(static _ =>
+            throw new InvalidOperationException("已取消请求不应进入主线程处理器。"));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await responseTask);
+        Assert.Equal(0, processed);
+        Assert.Equal(0, queue.PendingCount);
+    }
 }

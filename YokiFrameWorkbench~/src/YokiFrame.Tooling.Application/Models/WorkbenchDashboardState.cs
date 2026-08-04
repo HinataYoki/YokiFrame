@@ -65,7 +65,8 @@ public sealed class WorkbenchDashboardState
         WorkbenchAudioKitState? audioKitState = null,
         WorkbenchSpatialKitState? spatialKitState = null,
         WorkbenchUIKitState? uiKitState = null,
-        WorkbenchSaveKitState? saveKitState = null)
+        WorkbenchSaveKitState? saveKitState = null,
+        EngineSessionSnapshot? engineSession = null)
         : this(
             projectRoot,
             generatedAtUtc,
@@ -87,8 +88,64 @@ public sealed class WorkbenchDashboardState
             audioKitState,
             spatialKitState,
             uiKitState,
-            saveKitState)
+            saveKitState,
+            engineSession)
     {
+    }
+
+    /// <summary>
+    /// 使用稳定 Dashboard envelope 和集中投影目录创建状态。
+    /// </summary>
+    /// <param name="projectRoot">项目根目录。</param>
+    /// <param name="generatedAtUtc">状态生成时间。</param>
+    /// <param name="engines">engine registry 列表。</param>
+    /// <param name="engineSelection">当前 engine 选择结果。</param>
+    /// <param name="bridgeStatus">FileBridge 状态。</param>
+    /// <param name="bridgeHealth">FileBridge 连接健康信息。</param>
+    /// <param name="doctorReport">doctor 只读诊断报告。</param>
+    /// <param name="snapshots">首批页面 snapshot 状态。</param>
+    /// <param name="harnessSummary">harness 摘要。</param>
+    /// <param name="errorMessages">读取过程中的非终止错误。</param>
+    /// <param name="projections">本轮页面投影目录。</param>
+    /// <param name="engineSession">registry/heartbeat 统一会话快照。</param>
+    public WorkbenchDashboardState(
+        string projectRoot,
+        DateTimeOffset generatedAtUtc,
+        IReadOnlyList<EngineRegistryEntry> engines,
+        EngineSelectionResult engineSelection,
+        FileBridgeStatus? bridgeStatus,
+        WorkbenchBridgeHealth bridgeHealth,
+        WorkbenchDoctorReport? doctorReport,
+        IReadOnlyList<WorkbenchSnapshotState> snapshots,
+        string harnessSummary,
+        IReadOnlyList<string> errorMessages,
+        WorkbenchDashboardProjectionCatalog projections,
+        EngineSessionSnapshot? engineSession = null)
+    {
+        ArgumentNullException.ThrowIfNull(projections);
+        ProjectRoot = projectRoot;
+        GeneratedAtUtc = generatedAtUtc;
+        Engines = engines;
+        EngineSelection = engineSelection;
+        BridgeStatus = bridgeStatus;
+        BridgeHealth = bridgeHealth;
+        DoctorReport = doctorReport;
+        Snapshots = snapshots;
+        HarnessSummary = harnessSummary;
+        ErrorMessages = errorMessages;
+        KitProjections = projections;
+        FsmKitState = projections.FsmKitState;
+        ArchitectureState = projections.ArchitectureState;
+        EventKitState = projections.EventKitState;
+        LogKitState = projections.LogKitState;
+        PoolKitState = projections.PoolKitState;
+        ResKitState = projections.ResKitState;
+        ActionKitState = projections.ActionKitState;
+        AudioKitState = projections.AudioKitState;
+        SpatialKitState = projections.SpatialKitState;
+        UIKitState = projections.UIKitState;
+        SaveKitState = projections.SaveKitState;
+        EngineSession = engineSession;
     }
 
     /// <summary>
@@ -136,7 +193,8 @@ public sealed class WorkbenchDashboardState
         WorkbenchAudioKitState? audioKitState = null,
         WorkbenchSpatialKitState? spatialKitState = null,
         WorkbenchUIKitState? uiKitState = null,
-        WorkbenchSaveKitState? saveKitState = null)
+        WorkbenchSaveKitState? saveKitState = null,
+        EngineSessionSnapshot? engineSession = null)
     {
         ProjectRoot = projectRoot;
         GeneratedAtUtc = generatedAtUtc;
@@ -159,6 +217,19 @@ public sealed class WorkbenchDashboardState
         SpatialKitState = spatialKitState;
         UIKitState = uiKitState;
         SaveKitState = saveKitState;
+        KitProjections = new WorkbenchDashboardProjectionCatalog(
+            fsmKitState,
+            architectureState,
+            eventKitState,
+            logKitState,
+            poolKitState,
+            resKitState,
+            actionKitState,
+            audioKitState,
+            spatialKitState,
+            uiKitState,
+            saveKitState);
+        EngineSession = engineSession;
     }
 
     /// <summary>
@@ -185,6 +256,45 @@ public sealed class WorkbenchDashboardState
     /// 获取当前选中的 engine 标识。
     /// </summary>
     public string SelectedEngineId => EngineSelection.SelectedEngineId;
+
+    /// <summary>
+    /// 获取当前可用于命令和 telemetry 门禁的完整宿主身份。
+    /// 非 Online 或 registry/heartbeat 尚未收敛时返回 null。
+    /// </summary>
+    public HostIdentity? CurrentHostIdentity
+    {
+        get
+        {
+            if (EngineSession != null)
+            {
+                return EngineSession.CurrentHostIdentity;
+            }
+
+            if (BridgeHealth.State != WorkbenchBridgeConnectionState.Online
+                || string.IsNullOrWhiteSpace(SelectedEngineId)
+                || string.IsNullOrWhiteSpace(BridgeHealth.SessionId)
+                || BridgeHealth.Generation <= 0L)
+            {
+                return null;
+            }
+
+            return new HostIdentity(
+                SelectedEngineId,
+                BridgeHealth.SessionId,
+                BridgeHealth.Generation,
+                BridgeHealth.Mode);
+        }
+    }
+
+    /// <summary>
+    /// 获取本轮 registry/heartbeat 统一发现快照；旧手工构造状态时可以为空。
+    /// </summary>
+    public EngineSessionSnapshot? EngineSession { get; }
+
+    /// <summary>
+    /// 获取本轮页面投影目录；旧属性仍保留用于兼容已有 ViewModel 和测试。
+    /// </summary>
+    public WorkbenchDashboardProjectionCatalog KitProjections { get; }
 
     /// <summary>
     /// 获取 FileBridge 队列和 heartbeat 状态。

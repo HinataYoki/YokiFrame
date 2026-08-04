@@ -226,6 +226,10 @@ public sealed class InstallerSessionService
         {
             SetConflict(exception);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            SetCancelled();
+        }
         catch (InstallerExecutionException exception)
         {
             EnsureRollbackVisible(exception);
@@ -303,16 +307,22 @@ public sealed class InstallerSessionService
     /// <param name="result">Core 事务结果。</param>
     private void SetSucceeded(InstallerExecutionResult result)
     {
+        var needsVerification = result.CommittedNeedsVerification;
         UpdateState(
             current => current with
             {
-                Status = InstallerSessionStatus.Succeeded,
+                Status = needsVerification
+                    ? InstallerSessionStatus.CommittedNeedsVerification
+                    : InstallerSessionStatus.Succeeded,
                 Result = result,
-                ErrorMessage = string.Empty,
+                EvidencePaths = result.EvidencePaths.ToArray(),
+                ErrorMessage = needsVerification ? result.VerificationError : string.Empty,
                 RuntimeBootstrapRequired = false
             },
-            InstallerLogLevel.Information,
-            "YokiFrame 安装和校验已完成。");
+            needsVerification ? InstallerLogLevel.Warning : InstallerLogLevel.Information,
+            needsVerification
+                ? "YokiFrame 已提交，但宿主 post-verify 尚未完成。"
+                : "YokiFrame 安装和校验已完成。");
     }
 
     /// <summary>
@@ -371,6 +381,23 @@ public sealed class InstallerSessionService
             },
             InstallerLogLevel.Error,
             exception.Message);
+    }
+
+    /// <summary>
+    /// 发布取消终态；取消只表示调用方停止等待，不推断 Runtime/Installer 没有发生写入。
+    /// </summary>
+    private void SetCancelled()
+    {
+        UpdateState(
+            current => current with
+            {
+                Status = InstallerSessionStatus.Cancelled,
+                Result = null,
+                ErrorMessage = "安装操作已取消；如取消发生在提交阶段，请先检查证据和目标目录。",
+                RuntimeBootstrapRequired = false
+            },
+            InstallerLogLevel.Warning,
+            "安装操作已取消；请根据证据确认目标项目状态。 ");
     }
 
     /// <summary>

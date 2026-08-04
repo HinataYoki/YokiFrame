@@ -13,6 +13,7 @@ public sealed partial class WorkbenchDashboardService
     private readonly CommandExecutionService mCommandExecutionService;
     private readonly WorkbenchDoctorService mDoctorService;
     private readonly EngineSelectionService mEngineSelectionService;
+    private readonly EngineSessionCoordinator mEngineSessionCoordinator;
     private readonly YokiFrameProjectSettingsStore mProjectSettingsStore;
     private readonly LogKitRuntimeSettingsService mLogKitRuntimeSettingsService;
     private readonly IDisposable? mOwnedClient;
@@ -39,6 +40,7 @@ public sealed partial class WorkbenchDashboardService
         mCommandExecutionService = new CommandExecutionService(client);
         mDoctorService = new WorkbenchDoctorService(client);
         mEngineSelectionService = new EngineSelectionService(client);
+        mEngineSessionCoordinator = new EngineSessionCoordinator(client);
         mProjectSettingsStore = new YokiFrameProjectSettingsStore(client.Paths.ProjectRoot);
         mLogKitRuntimeSettingsService = new LogKitRuntimeSettingsService(mProjectSettingsStore);
     }

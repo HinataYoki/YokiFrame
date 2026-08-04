@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Results;
 
@@ -82,5 +83,14 @@ public sealed class CommandEnvelopeTests
         var envelope = CommandEnvelope.FromJson(json);
 
         Assert.Equal(0, envelope.ProtocolVersion);
+    }
+
+    /// <summary>
+    /// 验证 JSON 顶层为 null 时不会静默生成空命令信封。
+    /// </summary>
+    [Fact]
+    public void NullCommandEnvelopeIsRejected()
+    {
+        Assert.Throws<JsonException>(() => CommandEnvelope.FromJson("null"));
     }
 }

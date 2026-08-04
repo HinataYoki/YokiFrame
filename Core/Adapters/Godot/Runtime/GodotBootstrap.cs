@@ -61,11 +61,39 @@ namespace YokiFrame
             GodotLogKitRuntimeInstaller.AttachPlayerOverlay(this);
 #if GODOT && TOOLS
             var projectRoot = ProjectSettings.GlobalizePath("res://");
-            mFileBridgeHost = new GodotFileBridgeHost(projectRoot, GetGodotVersion());
-            mFileBridgeHost.Start();
+            StartFileBridgeHostSafely(projectRoot);
 #endif
             SetProcess(true);
         }
+
+#if GODOT && TOOLS
+        /// <summary>
+        /// 启动 Runtime FileBridge Host；admission 冲突或存储故障只降级通信能力，不阻断 Godot Node 生命周期。
+        /// </summary>
+        /// <param name="projectRoot">规范化 Godot 项目根目录。</param>
+        private void StartFileBridgeHostSafely(string projectRoot)
+        {
+            GodotFileBridgeHost host = null;
+            try
+            {
+                host = new GodotFileBridgeHost(projectRoot, GetGodotVersion());
+                host.Start();
+                mFileBridgeHost = host;
+            }
+            catch (YokiFrameHostAlreadyOwnedException exception)
+            {
+                host?.Dispose();
+                mFileBridgeHost = null;
+                LogKit.Warning("[FileBridge] Runtime Host already owned; continuing without tooling bridge: " + exception.Message);
+            }
+            catch (Exception exception)
+            {
+                host?.Dispose();
+                mFileBridgeHost = null;
+                LogKit.Warning("[FileBridge] Runtime Host start failed; continuing without tooling bridge: " + exception.Message);
+            }
+        }
+#endif
 
         /// <summary>
         /// 按固定间隔驱动命令轮询和状态刷新，不在 Node 中实现协议解析或业务 handler。
@@ -84,23 +112,89 @@ namespace YokiFrame
                 return;
             }
 
-            mFileBridgeHost.ProcessPendingFastChannelRequests();
-            mFileBridgeHost.RefreshChangedTelemetry();
+            ProcessFastChannelRequestsSafely(mFileBridgeHost);
+            RefreshChangedTelemetrySafely(mFileBridgeHost);
             mCommandPollElapsed += delta;
             if (mCommandPollElapsed >= COMMAND_POLL_INTERVAL_SECONDS)
             {
                 mCommandPollElapsed = 0d;
-                mFileBridgeHost.ProcessPendingCommands();
+                ProcessPendingCommandsSafely(mFileBridgeHost);
             }
 
             mStateRefreshElapsed += delta;
             if (mStateRefreshElapsed >= HEARTBEAT_INTERVAL_SECONDS)
             {
                 mStateRefreshElapsed = 0d;
-                mFileBridgeHost.RefreshHeartbeat();
+                RefreshHeartbeatSafely(mFileBridgeHost);
             }
 #endif
         }
+
+#if GODOT && TOOLS
+        /// <summary>
+        /// 隔离 FastChannel 单帧异常；通信故障只记录到当前 Host 诊断，不阻断后续阶段。
+        /// </summary>
+        /// <param name="host">当前 Runtime FileBridge Host。</param>
+        private static void ProcessFastChannelRequestsSafely(GodotFileBridgeHost host)
+        {
+            try
+            {
+                host.ProcessPendingFastChannelRequests();
+            }
+            catch (Exception exception)
+            {
+                host.RecordRuntimeError(exception);
+            }
+        }
+
+        /// <summary>
+        /// 隔离 Shared Memory telemetry 刷新异常，保留 FileBridge 命令轮询机会。
+        /// </summary>
+        /// <param name="host">当前 Runtime FileBridge Host。</param>
+        private static void RefreshChangedTelemetrySafely(GodotFileBridgeHost host)
+        {
+            try
+            {
+                host.RefreshChangedTelemetry();
+            }
+            catch (Exception exception)
+            {
+                host.RecordRuntimeError(exception);
+            }
+        }
+
+        /// <summary>
+        /// 隔离 FileBridge 命令批次异常；已 claim 的命令由协调器负责 terminal evidence。
+        /// </summary>
+        /// <param name="host">当前 Runtime FileBridge Host。</param>
+        private static void ProcessPendingCommandsSafely(GodotFileBridgeHost host)
+        {
+            try
+            {
+                host.ProcessPendingCommands();
+            }
+            catch (Exception exception)
+            {
+                host.RecordRuntimeError(exception);
+            }
+        }
+
+        /// <summary>
+        /// 隔离 heartbeat 写入异常，避免状态盘故障中断 Runtime 主循环。
+        /// </summary>
+        /// <param name="host">当前 Runtime FileBridge Host。</param>
+        private static void RefreshHeartbeatSafely(GodotFileBridgeHost host)
+        {
+            try
+            {
+                host.RefreshHeartbeat();
+            }
+            catch (Exception exception)
+            {
+                host.RecordRuntimeError(exception);
+            }
+        }
+#endif
 
         /// <summary>
         /// 退出场景树时释放活动 registry 和 heartbeat，避免残留在线会话。

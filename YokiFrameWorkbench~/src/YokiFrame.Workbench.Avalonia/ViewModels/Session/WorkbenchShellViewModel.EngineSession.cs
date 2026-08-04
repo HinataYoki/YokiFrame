@@ -7,7 +7,11 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 /// </summary>
 public sealed partial class WorkbenchShellViewModel
 {
-    private string mCommandCatalogEngineId = string.Empty;
+    private static readonly TimeSpan CommandCatalogRetryDelay = TimeSpan.FromMilliseconds(500);
+    private const int MAX_COMMAND_CATALOG_RETRIES = 3;
+    private HostIdentity? mCommandCatalogIdentity;
+    private HostIdentity? mCommandCatalogInFlightIdentity;
+    private int mCommandCatalogRetryCount;
 
     /// <summary>
     /// 设置当前 engine，并在用户主动切换时回调窗口刷新 dashboard。
@@ -59,16 +63,69 @@ public sealed partial class WorkbenchShellViewModel
         var engineId = state.SelectedEngineId;
         if (string.IsNullOrWhiteSpace(engineId))
         {
-            mCommandCatalogEngineId = string.Empty;
+            mCommandCatalogIdentity = null;
             return;
         }
 
-        if (string.Equals(mCommandCatalogEngineId, engineId, StringComparison.Ordinal))
+        var currentIdentity = state.CurrentHostIdentity;
+        if (currentIdentity == null)
+        {
+            mCommandCatalogIdentity = null;
+            return;
+        }
+
+        if (mCommandCatalogIdentity == currentIdentity
+            || mCommandCatalogInFlightIdentity == currentIdentity)
         {
             return;
         }
 
-        mCommandCatalogEngineId = engineId;
-        _ = mCommandRequested("System", "list_commands");
+        mCommandCatalogInFlightIdentity = currentIdentity;
+        mCommandCatalogRetryCount = 0;
+        _ = RequestCommandCatalogAsync(currentIdentity);
+    }
+
+    /// <summary>
+    /// 请求当前宿主的命令目录；失败时只对同一 session/generation 做有界退避重试。
+    /// </summary>
+    /// <param name="identity">请求开始时捕获的宿主身份。</param>
+    private async Task RequestCommandCatalogAsync(HostIdentity identity)
+    {
+        try
+        {
+            await mCommandRequested("System", "list_commands").ConfigureAwait(false);
+            if (mCommandCatalogInFlightIdentity == identity)
+            {
+                mCommandCatalogIdentity = identity;
+                mCommandCatalogRetryCount = 0;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Window 关闭或宿主代次切换时不再重试，调用方的生命周期负责取消。
+        }
+        catch
+        {
+            if (mCommandCatalogInFlightIdentity != identity
+                || mCommandCatalogRetryCount >= MAX_COMMAND_CATALOG_RETRIES)
+            {
+                return;
+            }
+
+            mCommandCatalogRetryCount++;
+            await Task.Delay(CommandCatalogRetryDelay).ConfigureAwait(false);
+            if (mCommandCatalogInFlightIdentity == identity)
+            {
+                await RequestCommandCatalogAsync(identity).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (mCommandCatalogInFlightIdentity == identity
+                && mCommandCatalogIdentity != identity)
+            {
+                mCommandCatalogInFlightIdentity = null;
+            }
+        }
     }
 }

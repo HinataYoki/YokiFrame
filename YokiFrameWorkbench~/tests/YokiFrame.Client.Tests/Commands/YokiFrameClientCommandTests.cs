@@ -87,6 +87,119 @@ public sealed class YokiFrameClientCommandTests
     }
 
     /// <summary>
+    /// 验证 request status 能区分 pending、processing、terminal、deadletter 和不存在证据。
+    /// </summary>
+    [Fact]
+    public void ReadCommandStatusReturnsObservableStateAndEvidence()
+    {
+        var projectRoot = CreateProjectRoot();
+        try
+        {
+            var client = new YokiFrameClient(projectRoot);
+            var engineId = "unity-editor";
+            var requestId = "cli-status-request";
+            var pendingPath = client.Paths.GetPendingCommandPath(engineId, requestId);
+            Directory.CreateDirectory(Path.GetDirectoryName(pendingPath)!);
+            File.WriteAllText(pendingPath, "{}");
+
+            var pending = client.ReadCommandStatus(engineId, requestId);
+            Assert.Equal(CommandRequestState.Pending, pending.State);
+            Assert.Contains(pendingPath, pending.EvidencePaths);
+
+            var processingPath = Path.Combine(
+                client.Paths.GetCommandsRoot(engineId),
+                "processing",
+                requestId + ".json");
+            Directory.CreateDirectory(Path.GetDirectoryName(processingPath)!);
+            File.Move(pendingPath, processingPath);
+            var processing = client.ReadCommandStatus(engineId, requestId);
+            Assert.Equal(CommandRequestState.Processing, processing.State);
+
+            var responsePath = client.Paths.GetResponsePath(engineId, requestId);
+            Directory.CreateDirectory(Path.GetDirectoryName(responsePath)!);
+            File.WriteAllText(
+                responsePath,
+                "{\"protocolVersion\":2,\"requestId\":\""
+                + requestId
+                + "\",\"engineId\":\""
+                + engineId
+                + "\",\"status\":\"Success\",\"completedAtUtc\":\"2026-07-01T00:00:00Z\"}");
+            var succeeded = client.ReadCommandStatus(engineId, requestId);
+            Assert.Equal(CommandRequestState.Succeeded, succeeded.State);
+            Assert.True(succeeded.IsTerminal);
+            Assert.NotNull(succeeded.Response);
+
+            File.Delete(responsePath);
+            File.Delete(processingPath);
+            var deadletterInfoPath = Path.Combine(
+                client.Paths.GetCommandsRoot(engineId),
+                "deadletter",
+                requestId + "-deadletter.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(deadletterInfoPath)!);
+            File.WriteAllText(deadletterInfoPath, "{\"errorCode\":\"InvalidPayload\"}");
+            var deadletter = client.ReadCommandStatus(engineId, requestId);
+            Assert.Equal(CommandRequestState.Deadletter, deadletter.State);
+
+            File.WriteAllText(
+                deadletterInfoPath,
+                "{\"errorCode\":\"CommandExecutionUnknown\"}");
+            var unknown = client.ReadCommandStatus(engineId, requestId);
+            Assert.Equal(CommandRequestState.Unknown, unknown.State);
+            Assert.True(unknown.IsTerminal);
+
+            var missing = client.ReadCommandStatus(engineId, "missing-request");
+            Assert.Equal(CommandRequestState.NotFound, missing.State);
+            Assert.False(missing.IsTerminal);
+        }
+        finally
+        {
+            DeleteProjectRoot(projectRoot);
+        }
+    }
+
+    /// <summary>
+    /// 验证 request status 不会把未知状态或污染关联字段的 response 当作失败终态。
+    /// </summary>
+    [Theory]
+    [InlineData("status")]
+    [InlineData("requestId")]
+    [InlineData("engineId")]
+    public void ReadCommandStatusRejectsInvalidTerminalResponse(string invalidField)
+    {
+        var projectRoot = CreateProjectRoot();
+        try
+        {
+            const string engineId = "unity-editor";
+            const string requestId = "cli-status-invalid";
+            using var client = new YokiFrameClient(projectRoot);
+            var responsePath = client.Paths.GetResponsePath(engineId, requestId);
+            Directory.CreateDirectory(Path.GetDirectoryName(responsePath)!);
+            var responseStatus = invalidField == "status" ? "InProgress" : "Success";
+            var responseRequestId = invalidField == "requestId" ? "other-request" : requestId;
+            var responseEngineId = invalidField == "engineId" ? "other-engine" : engineId;
+            File.WriteAllText(
+                responsePath,
+                "{\"protocolVersion\":2,\"requestId\":\""
+                + responseRequestId
+                + "\",\"engineId\":\""
+                + responseEngineId
+                + "\",\"status\":\""
+                + responseStatus
+                + "\"}");
+
+            var exception = Assert.Throws<YokiFrameProtocolException>(
+                () => client.ReadCommandStatus(engineId, requestId));
+
+            Assert.Equal("FileBridgeResponseMismatch", exception.Error.Code);
+            Assert.Contains(responsePath, exception.Error.EvidencePaths);
+        }
+        finally
+        {
+            DeleteProjectRoot(projectRoot);
+        }
+    }
+
+    /// <summary>
     /// 等待原子 move 完成后的 pending command 文件出现，避免读取同目录临时文件。
     /// </summary>
     /// <param name="commandsRoot">pending command 目录。</param>

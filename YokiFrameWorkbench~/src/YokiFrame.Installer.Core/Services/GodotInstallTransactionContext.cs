@@ -15,6 +15,7 @@ internal sealed class GodotInstallTransactionContext
     public GodotInstallTransactionContext(GodotInstallPlan plan)
     {
         TransactionId = Guid.NewGuid().ToString("N");
+        ProjectRoot = plan.ProjectRoot;
         AddonRoot = plan.AddonRoot;
         var installerRoot = InstallerPathGuard.CombineInside(plan.ProjectRoot, ".yokiframe", "installer");
         TransactionRoot = InstallerPathGuard.CombineInside(installerRoot, "godot", TransactionId);
@@ -27,10 +28,18 @@ internal sealed class GodotInstallTransactionContext
             "diagnostics",
             TransactionId + ".json");
         ProjectFiles = CreateProjectFiles(plan, TransactionRoot);
+        AddonOriginallyExists = Directory.Exists(AddonRoot);
+        foreach (var entry in ProjectFiles)
+        {
+            entry.OriginalExists = File.Exists(entry.TargetPath);
+        }
     }
 
     /// <summary>获取本次事务的唯一标识。</summary>
     public string TransactionId { get; }
+
+    /// <summary>获取事务所属的规范化项目根。</summary>
+    public string ProjectRoot { get; }
 
     /// <summary>获取事务根目录。</summary>
     public string TransactionRoot { get; }
@@ -56,6 +65,9 @@ internal sealed class GodotInstallTransactionContext
     /// <summary>获取需要与 add-on 一起回滚的外部项目 owner 文件。</summary>
     public IReadOnlyList<GodotProjectFileTransactionEntry> ProjectFiles { get; }
 
+    /// <summary>获取或设置可在进程外恢复事务的持久 journal。</summary>
+    public InstallerTransactionJournal? Journal { get; private set; }
+
     /// <summary>获取或设置事务开始时 add-on 是否已存在。</summary>
     public bool AddonOriginallyExists { get; set; }
 
@@ -65,8 +77,37 @@ internal sealed class GodotInstallTransactionContext
     /// <summary>获取或设置 staging add-on 是否已成为正式目录。</summary>
     public bool AddonCommitted { get; set; }
 
+    /// <summary>
+    /// 获取或设置目录提交是否已经开始；开始后外部取消只能在事务完成或回滚后生效。
+    /// </summary>
+    public bool CommitStarted { get; set; }
+
     /// <summary>获取或设置最后完成的稳定提交检查点。</summary>
     public GodotInstallCheckpoint? Checkpoint { get; set; }
+
+    /// <summary>
+    /// 创建持久 journal；调用方已完成只读校验并持有项目锁。
+    /// </summary>
+    public void InitializeJournal()
+    {
+        var projectFiles = ProjectFiles
+            .Select(entry => new InstallerProjectFileJournalEntry(
+                entry.TargetPath,
+                entry.BackupPath,
+                entry.OriginalExists,
+                entry.Committed))
+            .ToArray();
+        Journal = InstallerTransactionJournal.Create(
+            ProjectRoot,
+            "godot-addon",
+            TransactionId,
+            AddonRoot,
+            StagingAddonRoot,
+            BackupAddonRoot,
+            AddonOriginallyExists,
+            TransactionRoot,
+            projectFiles);
+    }
 
     /// <summary>
     /// 创建项目外部 owner 文件的 staging 与备份描述；插件入口已经包含在完整 add-on 投影中。

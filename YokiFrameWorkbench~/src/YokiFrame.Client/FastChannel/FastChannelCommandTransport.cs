@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame;
 using YokiFrame.Client.Commands;
 using YokiFrame.Client.Transports.FileBridge;
@@ -14,6 +15,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
 {
     private const int MAX_CONNECT_TIMEOUT_MS = 500;
     private const int MAX_OPERATION_TIMEOUT_MS = 750;
+    private const int DISPOSE_WAIT_MS = 500;
     private readonly FileBridgeTransport mFileBridgeTransport;
     private readonly SemaphoreSlim mConnectionGate = new(1, 1);
     private readonly Dictionary<string, CachedFastChannelConnection> mConnections = new(StringComparer.Ordinal);
@@ -36,7 +38,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     /// <param name="action">目标 action。</param>
     /// <param name="payloadJson">只读查询 payload。</param>
     /// <param name="source">审计来源。</param>
-    /// <param name="timeoutMs">命令和快速通道操作的最大等待毫秒数。</param>
+    /// <param name="timeoutMs">调用方为本次快速通道操作分配的本地最大等待毫秒数；线上信封会单独遵守协议超时范围。</param>
     /// <param name="cancellationToken">外部取消令牌。</param>
     /// <returns>Host 返回且已校验关联字段的 terminal response。</returns>
     public async Task<CommandResponse> SendReadOnlyCommandAsync(
@@ -49,6 +51,18 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
         CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
+        if (timeoutMs <= 0)
+        {
+            throw CreateProtocolException(
+                "InvalidTimeout",
+                "FastChannel operation timeout must be greater than zero milliseconds.",
+                "Pass a positive timeout value; the wire envelope will use the Runtime minimum when needed.");
+        }
+
+        // FastChannel 可以使用比 FileBridge 更短的本地操作期限，但 Host 仍会按
+        // CommandPolicy 解析信封中的 timeoutMs；两者不能共用一个小于协议下限的值。
+        var operationTimeoutMs = timeoutMs;
+        var envelopeTimeoutMs = Math.Max(timeoutMs, CommandEnvelope.COMMAND_TIMEOUT_MIN_MS);
         var envelope = CommandEnvelope.Create(
             engineId,
             source,
@@ -56,7 +70,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
             kit,
             action,
             payloadJson,
-            timeoutMs);
+            envelopeTimeoutMs);
         var endpoint = await ResolveEndpointAsync(envelope.EngineId).ConfigureAwait(false);
         if (!endpoint.SupportsReadOnlyCommand(envelope.Kit, envelope.Action))
         {
@@ -66,7 +80,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
                 "Use reliable FileBridge for this command.");
         }
         FastChannelConnection? connection = null;
-        using var operationSource = CreateOperationCancellationSource(envelope.TimeoutMs, cancellationToken);
+        using var operationSource = CreateOperationCancellationSource(operationTimeoutMs, cancellationToken);
         try
         {
             connection = await GetOrCreateConnectionAsync(endpoint, operationSource.Token).ConfigureAwait(false);
@@ -143,8 +157,9 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
 
         CancelActiveConnectionAttempt();
         List<CachedFastChannelConnection> cachedConnections;
-        if (!mConnectionGate.Wait(TimeSpan.FromSeconds(2)))
+        if (!mConnectionGate.Wait(DISPOSE_WAIT_MS))
         {
+            _ = CompleteDeferredDisposeAsync();
             return;
         }
 
@@ -170,7 +185,11 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
         }
 
         CancelActiveConnectionAttempt();
-        await mConnectionGate.WaitAsync().ConfigureAwait(false);
+        if (!await mConnectionGate.WaitAsync(DISPOSE_WAIT_MS).ConfigureAwait(false))
+        {
+            _ = CompleteDeferredDisposeAsync();
+            return;
+        }
         List<CachedFastChannelConnection> cachedConnections;
         try
         {
@@ -183,6 +202,33 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
         }
 
         await DisposeConnectionsAsync(cachedConnections).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 在连接创建或失效操作释放闸门后继续完成延迟 Dispose，避免调用方被永久阻塞。
+    /// </summary>
+    private async Task CompleteDeferredDisposeAsync()
+    {
+        try
+        {
+            await mConnectionGate.WaitAsync().ConfigureAwait(false);
+            List<CachedFastChannelConnection> cachedConnections;
+            try
+            {
+                cachedConnections = new List<CachedFastChannelConnection>(mConnections.Values);
+                mConnections.Clear();
+            }
+            finally
+            {
+                mConnectionGate.Release();
+            }
+
+            await DisposeConnectionsAsync(cachedConnections).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // 生命周期已经进入 Dispose；后台收口失败不能重新传播到已返回的调用方。
+        }
     }
 
     /// <summary>逐一关闭已移出缓存的连接（同步路径），并在全部尝试完成后汇总释放异常。</summary>
@@ -318,10 +364,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     {
         if (responseFrame.Kind == YokiFrameFastChannelMessageKind.Error)
         {
-            throw CreateProtocolException(
-                "FastChannelHostError",
-                "FastChannel host rejected the read-only command.",
-                "Use FileBridge fallback or refresh the engine registry.");
+            throw CreateHostError(responseFrame.PayloadJson);
         }
 
         if (responseFrame.Kind != YokiFrameFastChannelMessageKind.Response)
@@ -354,17 +397,57 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     }
 
     /// <summary>
+    /// 解析 Host Error frame 的稳定错误码；保留 queue/host 生命周期错误的可回退语义，
+    /// 同时避免把真正的协议损坏统一伪装成“通道不可用”。
+    /// </summary>
+    /// <param name="payloadJson">Host 写入 Error frame 的 JSON payload。</param>
+    /// <returns>带 Host 错误码的标准协议异常。</returns>
+    private static YokiFrameProtocolException CreateHostError(string payloadJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("code", out var codeProperty)
+                && codeProperty.ValueKind == JsonValueKind.String)
+            {
+                var code = codeProperty.GetString();
+                if (!string.IsNullOrWhiteSpace(code))
+                {
+                    var message = document.RootElement.TryGetProperty("message", out var messageProperty)
+                        && messageProperty.ValueKind == JsonValueKind.String
+                        ? messageProperty.GetString()
+                        : "FastChannel host rejected the read-only command.";
+                    return CreateProtocolException(
+                        code,
+                        message ?? "FastChannel host rejected the read-only command.",
+                        "Use FileBridge fallback or refresh the engine registry.");
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // 继续使用稳定的通用错误码，让上层把损坏的 Error frame 当作协议错误暴露。
+        }
+
+        return CreateProtocolException(
+            "FastChannelHostError",
+            "FastChannel host returned a malformed or unclassified Error frame.",
+            "Discard the connection and inspect the host protocol version.");
+    }
+
+    /// <summary>
     /// 创建携带外部取消令牌的短操作期限，避免 FastChannel 异常时占满 Workbench 的常规 command timeout。
     /// </summary>
-    /// <param name="commandTimeoutMs">已通过 CommandEnvelope 校验的命令超时。</param>
+    /// <param name="operationTimeoutMs">调用方为本次 FastChannel 操作分配的本地期限。</param>
     /// <param name="cancellationToken">调用侧取消令牌。</param>
     /// <returns>用于连接、握手和单次请求响应的链接取消源。</returns>
     private static CancellationTokenSource CreateOperationCancellationSource(
-        int commandTimeoutMs,
+        int operationTimeoutMs,
         CancellationToken cancellationToken)
     {
         var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        source.CancelAfter(Math.Min(commandTimeoutMs, MAX_OPERATION_TIMEOUT_MS));
+        source.CancelAfter(Math.Min(operationTimeoutMs, MAX_OPERATION_TIMEOUT_MS));
         return source;
     }
 

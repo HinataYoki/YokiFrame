@@ -7,6 +7,7 @@ using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Client.FileBridge.IO;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Results;
+using YokiFrame.Protocol.Validation;
 
 namespace YokiFrame.Client.Transports.FileBridge;
 
@@ -67,6 +68,7 @@ internal sealed class FileBridgeTransport
             {
                 try
                 {
+                    PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, registryPath);
                     entries.Add(EngineRegistryEntry.FromJson(ReadAllTextWithRetry(registryPath)));
                 }
                 catch (JsonException exception)
@@ -109,6 +111,7 @@ internal sealed class FileBridgeTransport
     public HeartbeatInfo? ReadHeartbeat(string engineId)
     {
         var path = Paths.GetHeartbeatPath(engineId);
+        PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, path);
         if (!File.Exists(path))
         {
             return null;
@@ -128,6 +131,18 @@ internal sealed class FileBridgeTransport
         var engineRoot = Paths.GetEngineRoot(engineId);
         var commandsRoot = Paths.GetCommandsRoot(engineId);
         var resultsRoot = Paths.GetResultsRoot(engineId);
+        PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, engineRoot);
+        PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, commandsRoot);
+        PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, resultsRoot);
+        PathSecurity.EnsureNoReparsePoint(
+            Paths.ProjectRoot,
+            Path.Combine(commandsRoot, YokiFrameFileBridgeLayout.PROCESSING_DIRECTORY));
+        PathSecurity.EnsureNoReparsePoint(
+            Paths.ProjectRoot,
+            Path.Combine(commandsRoot, YokiFrameFileBridgeLayout.ARCHIVE_DIRECTORY));
+        PathSecurity.EnsureNoReparsePoint(
+            Paths.ProjectRoot,
+            Path.Combine(commandsRoot, YokiFrameFileBridgeLayout.DEADLETTER_DIRECTORY));
         var protocolStorage = ReadProtocolStorageDiagnostics(engineRoot);
         return new FileBridgeStatus(engineId, engineRoot, commandsRoot, resultsRoot)
         {
@@ -141,6 +156,259 @@ internal sealed class FileBridgeTransport
             OldestProtocolFileUtc = protocolStorage.OldestFileUtc,
             Heartbeat = ReadHeartbeat(engineId)
         };
+    }
+
+    /// <summary>
+    /// 查询指定请求在 pending、processing、results、archive 或 deadletter 中的可观察状态。
+    /// </summary>
+    /// <param name="engineId">目标 engine。</param>
+    /// <param name="requestId">安全请求标识。</param>
+    /// <returns>请求状态和可复查证据。</returns>
+    public CommandRequestStatus ReadCommandStatus(string engineId, string requestId)
+    {
+        var safeRequestId = SafeIdValidator.EnsureSafeId(requestId, nameof(requestId));
+        var pendingPath = Paths.GetPendingCommandPath(engineId, safeRequestId);
+        var commandsRoot = Paths.GetCommandsRoot(engineId);
+        var processingRoot = PathSecurity.CombineInside(
+            commandsRoot,
+            YokiFrameFileBridgeLayout.PROCESSING_DIRECTORY);
+        var processingPath = PathSecurity.CombineInside(
+            processingRoot,
+            safeRequestId + YokiFrameFileBridgeLayout.JSON_EXTENSION);
+        var responsePath = Paths.GetResponsePath(engineId, safeRequestId);
+        var archiveRoot = PathSecurity.CombineInside(commandsRoot, YokiFrameFileBridgeLayout.ARCHIVE_DIRECTORY);
+        var deadletterRoot = PathSecurity.CombineInside(commandsRoot, YokiFrameFileBridgeLayout.DEADLETTER_DIRECTORY);
+        EnsureReadablePath(pendingPath);
+        EnsureReadablePath(processingPath);
+        EnsureReadablePath(responsePath);
+        EnsureReadablePath(archiveRoot);
+        EnsureReadablePath(deadletterRoot);
+
+        if (File.Exists(responsePath))
+        {
+            CommandResponse response;
+            try
+            {
+                response = CommandResponse.FromJson(ReadAllTextWithRetry(responsePath));
+            }
+            catch (JsonException exception)
+            {
+                throw new YokiFrameProtocolException(new YokiFrameError(
+                    "FileBridgeResponseInvalid",
+                    $"FileBridge response JSON is invalid: {exception.Message}",
+                    "Inspect the response evidence and retry after the engine adapter has refreshed its FileBridge state.",
+                    new[] { responsePath },
+                    safeRequestId,
+                    engineId,
+                    "file-bridge"));
+            }
+
+            CommandResponseValidator.Validate(
+                response,
+                YokiFrameFileBridgeContract.PROTOCOL_VERSION,
+                safeRequestId,
+                engineId,
+                "FileBridgeResponseMismatch",
+                "FileBridge response does not match the requested command.",
+                "Inspect the response evidence and retry after the engine adapter has refreshed its FileBridge state.",
+                new[] { responsePath },
+                safeRequestId,
+                engineId,
+                "file-bridge");
+            var state = string.Equals(response.Status, "Success", StringComparison.OrdinalIgnoreCase)
+                ? CommandRequestState.Succeeded
+                : CommandRequestState.Failed;
+            return CreateRequestStatus(
+                engineId,
+                safeRequestId,
+                state,
+                response,
+                new[] { responsePath },
+                ParseUpdatedAt(response.CompletedAtUtc, responsePath));
+        }
+
+        if (File.Exists(processingPath))
+        {
+            return CreateRequestStatus(
+                engineId,
+                safeRequestId,
+                CommandRequestState.Processing,
+                null,
+                new[] { processingPath },
+                File.GetLastWriteTimeUtc(processingPath));
+        }
+
+        if (File.Exists(pendingPath))
+        {
+            return CreateRequestStatus(
+                engineId,
+                safeRequestId,
+                CommandRequestState.Pending,
+                null,
+                new[] { pendingPath },
+                File.GetLastWriteTimeUtc(pendingPath));
+        }
+
+        var archivePath = FindEvidencePath(archiveRoot, safeRequestId + YokiFrameFileBridgeLayout.JSON_EXTENSION);
+        if (archivePath != null)
+        {
+            return CreateRequestStatus(
+                engineId,
+                safeRequestId,
+                CommandRequestState.Succeeded,
+                null,
+                new[] { archivePath },
+                File.GetLastWriteTimeUtc(archivePath));
+        }
+
+        var deadletterInfoPath = FindEvidencePath(
+            deadletterRoot,
+            safeRequestId + "-deadletter" + YokiFrameFileBridgeLayout.JSON_EXTENSION);
+        var deadletterRequestPath = FindEvidencePath(
+            deadletterRoot,
+            safeRequestId + "-request" + YokiFrameFileBridgeLayout.JSON_EXTENSION);
+        if (deadletterInfoPath != null || deadletterRequestPath != null)
+        {
+            var evidence = new[] { deadletterInfoPath, deadletterRequestPath }
+                .Where(static path => !string.IsNullOrWhiteSpace(path))
+                .Cast<string>()
+                .ToArray();
+            var state = GetDeadletterState(deadletterInfoPath);
+            return CreateRequestStatus(
+                engineId,
+                safeRequestId,
+                state,
+                null,
+                evidence,
+                deadletterInfoPath == null ? null : File.GetLastWriteTimeUtc(deadletterInfoPath));
+        }
+
+        return CreateRequestStatus(
+            engineId,
+            safeRequestId,
+            CommandRequestState.NotFound,
+            null,
+            Array.Empty<string>(),
+            null);
+    }
+
+    /// <summary>
+    /// 创建统一 request status DTO。
+    /// </summary>
+    private static CommandRequestStatus CreateRequestStatus(
+        string engineId,
+        string requestId,
+        CommandRequestState state,
+        CommandResponse? response,
+        IReadOnlyList<string> evidencePaths,
+        DateTimeOffset? updatedAtUtc)
+    {
+        return new CommandRequestStatus
+        {
+            ProtocolVersion = YokiFrameFileBridgeContract.PROTOCOL_VERSION,
+            RequestId = requestId,
+            EngineId = engineId,
+            State = state,
+            Response = response,
+            EvidencePaths = evidencePaths,
+            UpdatedAtUtc = updatedAtUtc
+        };
+    }
+
+    /// <summary>
+    /// 解析响应完成时间；格式异常时回落到文件写入时间，保留状态可观测性。
+    /// </summary>
+    private static DateTimeOffset ParseUpdatedAt(string? text, string fallbackPath)
+    {
+        return DateTimeOffset.TryParse(text, out var parsed)
+            ? parsed.ToUniversalTime()
+            : File.GetLastWriteTimeUtc(fallbackPath);
+    }
+
+    /// <summary>
+    /// 在终态证据目录中查找精确文件名，避免把临时文件当作状态证据。
+    /// </summary>
+    private string? FindEvidencePath(string root, string fileName)
+    {
+        EnsureReadablePath(root);
+        if (!Directory.Exists(root))
+        {
+            return null;
+        }
+
+        var path = Directory.EnumerateFiles(root, fileName, SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (path != null)
+        {
+            EnsureReadablePath(path);
+        }
+
+        return path;
+    }
+
+    /// <summary>
+    /// 在使用 FileBridge 文件前再次检查从项目根到最终路径的所有现存组件。
+    /// </summary>
+    /// <param name="path">待读取或写入的最终路径。</param>
+    private void EnsureReadablePath(string path)
+    {
+        PathSecurity.EnsureNoReparsePoint(Paths.ProjectRoot, path);
+    }
+
+    /// <summary>
+    /// 识别 Host 因 processing lease 过期而保留的终态证据。
+    /// </summary>
+    private static bool IsExpiredDeadletter(string? deadletterInfoPath)
+    {
+        if (string.IsNullOrWhiteSpace(deadletterInfoPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var node = JsonNode.Parse(ReadAllTextWithRetry(deadletterInfoPath));
+            return string.Equals(
+                node?["errorCode"]?.GetValue<string>(),
+                "ProcessingExpired",
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 把 deadletter 诊断映射为可重试语义明确的 request status。
+    /// </summary>
+    /// <param name="deadletterInfoPath">deadletter 诊断文件路径。</param>
+    /// <returns>Expired、Unknown 或普通 Deadletter。</returns>
+    private static CommandRequestState GetDeadletterState(string? deadletterInfoPath)
+    {
+        if (IsExpiredDeadletter(deadletterInfoPath))
+        {
+            return CommandRequestState.Expired;
+        }
+
+        if (string.IsNullOrWhiteSpace(deadletterInfoPath))
+        {
+            return CommandRequestState.Deadletter;
+        }
+
+        try
+        {
+            var node = JsonNode.Parse(ReadAllTextWithRetry(deadletterInfoPath));
+            return string.Equals(
+                node?["errorCode"]?.GetValue<string>(),
+                "CommandExecutionUnknown",
+                StringComparison.OrdinalIgnoreCase)
+                ? CommandRequestState.Unknown
+                : CommandRequestState.Deadletter;
+        }
+        catch (JsonException)
+        {
+            return CommandRequestState.Deadletter;
+        }
     }
 
     /// <summary>
@@ -167,9 +435,32 @@ internal sealed class FileBridgeTransport
         var envelope = CommandEnvelope.Create(engineId, source, requestId, kit, action, payloadJson, timeoutMs);
         var commandPath = Paths.GetPendingCommandPath(engineId, requestId);
         var responsePath = Paths.GetResponsePath(engineId, requestId);
+        EnsureReadablePath(commandPath);
+        EnsureReadablePath(responsePath);
         AtomicJsonFileWriter.WriteAllText(commandPath, envelope.ToJson());
-        var response = await WaitForResponseAsync(responsePath, envelope, commandPath, cancellationToken)
-            .ConfigureAwait(false);
+        CommandResponse response;
+        try
+        {
+            response = await WaitForResponseAsync(
+                    responsePath,
+                    envelope,
+                    commandPath,
+                    Paths.ProjectRoot,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new YokiFrameProtocolException(new YokiFrameError(
+                "Cancelled",
+                $"Command {requestId} was cancelled while waiting for FileBridge.",
+                "Query command status before deciding whether a mutation may be retried.",
+                new[] { commandPath, responsePath },
+                requestId,
+                envelope.EngineId,
+                "file-bridge"));
+        }
+
         return new CommandSendResult(envelope, commandPath, responsePath, response);
     }
 
@@ -192,8 +483,9 @@ internal sealed class FileBridgeTransport
     /// <param name="missingCode">文件缺失时使用的错误码。</param>
     /// <param name="missingMessage">文件缺失时使用的错误说明。</param>
     /// <returns>解析后的 JSON 节点。</returns>
-    private static JsonNode ReadJsonNode(string path, string missingCode, string missingMessage)
+    private JsonNode ReadJsonNode(string path, string missingCode, string missingMessage)
     {
+        EnsureReadablePath(path);
         if (!File.Exists(path))
         {
             throw new YokiFrameProtocolException(new YokiFrameError(
@@ -205,7 +497,8 @@ internal sealed class FileBridgeTransport
 
         try
         {
-            return JsonNode.Parse(ReadAllTextWithRetry(path)) ?? new JsonObject();
+            return JsonNode.Parse(ReadAllTextWithRetry(path))
+                ?? throw new JsonException("JSON document must contain an object or array, not null.");
         }
         catch (JsonException exception)
         {
@@ -283,30 +576,52 @@ internal sealed class FileBridgeTransport
     /// <param name="responsePath">预期响应路径。</param>
     /// <param name="envelope">已写入的命令信封。</param>
     /// <param name="commandPath">命令文件路径。</param>
+    /// <param name="projectRoot">当前 Client 绑定的项目根。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>读取到的响应。</returns>
     private static async Task<CommandResponse> WaitForResponseAsync(
         string responsePath,
         CommandEnvelope envelope,
         string commandPath,
+        string projectRoot,
         CancellationToken cancellationToken)
     {
         var deadline = DateTimeOffset.UtcNow.AddMilliseconds(envelope.TimeoutMs);
         while (DateTimeOffset.UtcNow <= deadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            PathSecurity.EnsureNoReparsePoint(projectRoot, responsePath);
             if (File.Exists(responsePath))
             {
                 var json = await ReadAllTextWithRetryAsync(responsePath, cancellationToken)
                     .ConfigureAwait(false);
-                var response = CommandResponse.FromJson(json);
+                CommandResponse response;
+                try
+                {
+                    response = CommandResponse.FromJson(json);
+                }
+                catch (JsonException exception)
+                {
+                    throw new YokiFrameProtocolException(new YokiFrameError(
+                        "FileBridgeResponseInvalid",
+                        $"FileBridge response JSON is invalid: {exception.Message}",
+                        "Inspect the response evidence and retry after the engine adapter has refreshed its FileBridge state.",
+                        new[] { commandPath, responsePath },
+                        envelope.RequestId,
+                        envelope.EngineId,
+                        "file-bridge"));
+                }
+
                 return CommandResponseValidator.Validate(
-                    response,
-                    envelope,
-                    "FileBridgeResponseMismatch",
-                    "FileBridge response does not match the current command request.",
-                    "Inspect the response evidence and retry after the engine adapter has refreshed its FileBridge state.",
-                    new[] { commandPath, responsePath });
+                        response,
+                        envelope,
+                        "FileBridgeResponseMismatch",
+                        "FileBridge response does not match the current command request.",
+                        "Inspect the response evidence and retry after the engine adapter has refreshed its FileBridge state.",
+                        new[] { commandPath, responsePath },
+                        envelope.RequestId,
+                        envelope.EngineId,
+                        "file-bridge");
             }
 
             await Task.Delay(DefaultPollInterval, cancellationToken).ConfigureAwait(false);
@@ -315,8 +630,11 @@ internal sealed class FileBridgeTransport
         throw new YokiFrameProtocolException(new YokiFrameError(
             "CommandTimeout",
             $"Command {envelope.RequestId} timed out after {envelope.TimeoutMs} ms.",
-            "Check whether the engine adapter is running and inspect commands, processing, results and deadletter evidence.",
-            new[] { commandPath, responsePath }));
+            "Query command status before deciding whether a mutation may be retried.",
+            new[] { commandPath, responsePath },
+            envelope.RequestId,
+            envelope.EngineId,
+            "file-bridge"));
     }
 
     /// <summary>

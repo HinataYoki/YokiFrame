@@ -101,6 +101,18 @@ internal sealed class SharedMemoryTelemetryNamedMapLease : IDisposable
         {
             return ReleaseAndCreateUnavailable("Telemetry segment read failed: " + exception.Message);
         }
+        catch (ArgumentException exception)
+        {
+            return ReleaseAndCreateUnavailable("Telemetry segment name is not accepted by the operating system: " + exception.Message);
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            return ReleaseAndCreateUnavailable("Telemetry shared memory is not supported by the current runtime: " + exception.Message);
+        }
+        catch (NotSupportedException exception)
+        {
+            return ReleaseAndCreateUnavailable("Telemetry shared memory is not supported by the current runtime: " + exception.Message);
+        }
         catch (ObjectDisposedException exception)
         {
             return ReleaseAndCreateUnavailable("Telemetry segment reader was invalidated: " + exception.Message);

@@ -164,6 +164,7 @@ namespace YokiFrame
         public long ProtocolBytes { get; set; }
         public string OldestProtocolFileUtc { get; set; } = string.Empty;
         public bool BackpressureActive { get; set; }
+        public string LastPollLimitReason { get; set; } = string.Empty;
         public string LastError { get; set; } = string.Empty;
         public string FastChannel { get; set; } = "filebridge-fallback";
     }

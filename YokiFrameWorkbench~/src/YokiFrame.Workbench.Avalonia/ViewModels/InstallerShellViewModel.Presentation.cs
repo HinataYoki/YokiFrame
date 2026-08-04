@@ -102,7 +102,8 @@ public sealed partial class InstallerShellViewModel
     /// <param name="state">Application 会话快照。</param>
     private void ApplyProgress(InstallerSessionState state)
     {
-        if (state.Status == InstallerSessionStatus.Succeeded)
+        if (state.Status is InstallerSessionStatus.Succeeded
+            or InstallerSessionStatus.CommittedNeedsVerification)
         {
             ProgressValue = 100;
             IsProgressVisible = true;
@@ -128,7 +129,9 @@ public sealed partial class InstallerShellViewModel
     /// <param name="state">最新 Installer 会话状态。</param>
     private void ApplyCompletionSummary(InstallerSessionState state)
     {
-        if (state.Status != InstallerSessionStatus.Succeeded || state.Plan == null || state.Result == null)
+        if (state.Status is not (InstallerSessionStatus.Succeeded or InstallerSessionStatus.CommittedNeedsVerification)
+            || state.Plan == null
+            || state.Result == null)
         {
             ClearCompletionSummary();
             return;
@@ -142,7 +145,9 @@ public sealed partial class InstallerShellViewModel
         mPresentedResult = state.Result;
         CompletionSummaryText = CreateCompletionSummary(state.Plan, state.Result, state.Options);
         IsCompletionSummaryVisible = true;
-        AppendLocalLog("安装完成: " + state.Plan.Engine + " / " + GetModeText(state.Plan.Mode));
+        AppendLocalLog(state.Status == InstallerSessionStatus.Succeeded
+            ? "安装完成: " + state.Plan.Engine + " / " + GetModeText(state.Plan.Mode)
+            : "安装已提交，等待验证: " + state.Plan.Engine + " / " + GetModeText(state.Plan.Mode));
     }
 
     /// <summary>
@@ -168,6 +173,10 @@ public sealed partial class InstallerShellViewModel
         InstallerInstallOptions? options)
     {
         var changeText = result.Changed ? "已提交变更" : "无需写入变更";
+        if (result.CommittedNeedsVerification)
+        {
+            changeText += "，但宿主 post-verify 尚未完成";
+        }
         if (result.ReplacedExistingPackage)
         {
             changeText += "，已替换既有安装来源";
@@ -218,6 +227,16 @@ public sealed partial class InstallerShellViewModel
         {
             OutcomeDetailsTitle = "安装失败";
             OutcomeDetailsText = CreateFailureDetails(state);
+            IsOutcomeDetailsVisible = true;
+            return;
+        }
+
+        if (state.Status == InstallerSessionStatus.CommittedNeedsVerification)
+        {
+            OutcomeDetailsTitle = "已提交但待验证";
+            OutcomeDetailsText = string.IsNullOrWhiteSpace(state.ErrorMessage)
+                ? "Core 已完成写入，但宿主构建或插件登记尚未完成。请修复构建问题后重新验证。"
+                : state.ErrorMessage;
             IsOutcomeDetailsVisible = true;
             return;
         }
@@ -413,8 +432,10 @@ public sealed partial class InstallerShellViewModel
             InstallerSessionStatus.Verifying => "正在校验",
             InstallerSessionStatus.RollingBack => "正在回滚",
             InstallerSessionStatus.Succeeded => "安装完成",
+            InstallerSessionStatus.CommittedNeedsVerification => "已提交，待验证",
             InstallerSessionStatus.Conflict => "检测到冲突",
             InstallerSessionStatus.Failed => "安装失败",
+            InstallerSessionStatus.Cancelled => "已取消",
             _ => status.ToString()
         };
     }

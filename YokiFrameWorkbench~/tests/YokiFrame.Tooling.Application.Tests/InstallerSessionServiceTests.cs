@@ -41,6 +41,37 @@ public sealed class InstallerSessionServiceTests
     }
 
     /// <summary>
+    /// 验证待验证终态仍保留结果证据，供 CLI error.evidencePaths 投影使用。
+    /// </summary>
+    [Fact]
+    public async Task CommittedNeedsVerificationPublishesResultEvidence()
+    {
+        var evidencePaths = new[]
+        {
+            "C:/projects/Game/addons/yokiframe/plugin.cfg",
+            "C:/projects/Game/.yokiframe/installer/godot/diagnostics/tx.json"
+        };
+        var gateway = new FakeInstallerWorkflowGateway
+        {
+            Result = new InstallerExecutionResult(
+                "C:/projects/Game/addons/yokiframe",
+                changed: true,
+                replacedExistingPackage: true,
+                evidencePaths,
+                committedNeedsVerification: true,
+                verificationError: "Godot project build failed.")
+        };
+        var service = new InstallerSessionService(gateway, new FixedTimeProvider(DateTimeOffset.UtcNow));
+
+        await service.PrepareAsync(CreateUnityLocalOptions());
+        var finalState = await service.ApplyAsync();
+
+        Assert.Equal(InstallerSessionStatus.CommittedNeedsVerification, finalState.Status);
+        Assert.Equal(evidencePaths, finalState.EvidencePaths);
+        Assert.Equal(evidencePaths, finalState.Result!.EvidencePaths);
+    }
+
+    /// <summary>
     /// 验证 Core 在零写入点拒绝冲突时进入 Conflict，并公开稳定冲突路径。
     /// </summary>
     [Fact]
@@ -177,6 +208,27 @@ public sealed class InstallerSessionServiceTests
     }
 
     /// <summary>
+    /// 验证执行期取消进入 Cancelled，而不是被错误归类为 Failed。
+    /// </summary>
+    [Fact]
+    public async Task CancelledApplyPublishesCancelledState()
+    {
+        var gateway = new FakeInstallerWorkflowGateway { HoldExecution = true };
+        var service = new InstallerSessionService(gateway, new FixedTimeProvider(DateTimeOffset.UtcNow));
+        await service.PrepareAsync(CreateUnityLocalOptions());
+        using CancellationTokenSource cancellation = new();
+
+        var applyTask = service.ApplyAsync(cancellation.Token);
+        await gateway.ExecutionStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cancellation.Cancel();
+
+        var finalState = await applyTask;
+
+        Assert.Equal(InstallerSessionStatus.Cancelled, finalState.Status);
+        Assert.Contains(finalState.Logs, entry => entry.Level == InstallerLogLevel.Warning);
+    }
+
+    /// <summary>
     /// 创建可用于状态机测试的 Unity 本地安装选项。
     /// </summary>
     /// <returns>Unity 本地安装选项。</returns>
@@ -204,7 +256,7 @@ public sealed class InstallerSessionServiceTests
         /// <summary>
         /// 获取模拟安装结果。
         /// </summary>
-        public InstallerExecutionResult Result { get; } = new(
+        public InstallerExecutionResult Result { get; init; } = new(
             "C:/projects/Game/Packages/com.hinatayoki.yokiframe",
             changed: true,
             replacedExistingPackage: false);

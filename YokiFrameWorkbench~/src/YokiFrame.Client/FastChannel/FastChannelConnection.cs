@@ -8,8 +8,10 @@ namespace YokiFrame.Client.FastChannel;
 /// </summary>
 public sealed class FastChannelConnection : IAsyncDisposable
 {
+    private const int DISPOSE_WAIT_MS = 500;
     private readonly Stream mStream;
     private readonly SemaphoreSlim mRequestGate = new(1, 1);
+    private readonly CancellationTokenSource mLifetimeCancellation = new();
     private int mDisposed;
 
     /// <summary>
@@ -37,12 +39,15 @@ public sealed class FastChannelConnection : IAsyncDisposable
     public async Task<FastChannelFrame> RequestAsync(FastChannelFrame request, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-        await mRequestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            mLifetimeCancellation.Token);
+        await mRequestGate.WaitAsync(requestCancellation.Token).ConfigureAwait(false);
         try
         {
             ThrowIfDisposed();
-            await FastChannelFrameStream.WriteAsync(mStream, request, cancellationToken).ConfigureAwait(false);
-            return await FastChannelFrameStream.ReadAsync(mStream, cancellationToken).ConfigureAwait(false);
+            await FastChannelFrameStream.WriteAsync(mStream, request, requestCancellation.Token).ConfigureAwait(false);
+            return await FastChannelFrameStream.ReadAsync(mStream, requestCancellation.Token).ConfigureAwait(false);
         }
         finally
         {
@@ -76,15 +81,51 @@ public sealed class FastChannelConnection : IAsyncDisposable
             return;
         }
 
+        mLifetimeCancellation.Cancel();
+        // 先关闭流，主动打断不响应的 ReadAsync；随后再等待请求 finally 释放闸门。
+        await mStream.DisposeAsync().ConfigureAwait(false);
+        var finalizeTask = FinalizeDisposeAsync();
+        if (await Task.WhenAny(finalizeTask, Task.Delay(DISPOSE_WAIT_MS)).ConfigureAwait(false)
+            != finalizeTask)
+        {
+            _ = ObserveDisposeCompletionAsync(finalizeTask);
+            return;
+        }
+
+        await finalizeTask.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 等待当前请求离开闸门后释放同步原语和生命周期取消源。
+    /// </summary>
+    private async Task FinalizeDisposeAsync()
+    {
         await mRequestGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            await mStream.DisposeAsync().ConfigureAwait(false);
+            // 仅用于确认没有请求仍在 finally 中访问闸门。
         }
         finally
         {
             mRequestGate.Release();
             mRequestGate.Dispose();
+            mLifetimeCancellation.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 观察超时后继续运行的释放任务，避免把后台异常变成未观察任务。
+    /// </summary>
+    /// <param name="disposeTask">等待请求结束的释放任务。</param>
+    private static async Task ObserveDisposeCompletionAsync(Task disposeTask)
+    {
+        try
+        {
+            await disposeTask.ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Dispose 已经关闭底层流；后台收口失败不应重新抛到已返回的调用方。
         }
     }
 

@@ -13,15 +13,6 @@ internal static class CliPlayerBuildCommands
     private const string GODOT_ENGINE = "godot";
     private const string DEBUG_CONFIGURATION = "debug";
     private const string RELEASE_CONFIGURATION = "release";
-    private static readonly HashSet<string> sAllowedOptions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "configuration",
-        "engine",
-        "godot",
-        "output",
-        "preset",
-        "project"
-    };
 
     /// <summary>判断命令是否属于 Player 构建入口，供 Program 在创建 FileBridge client 前分流。</summary>
     /// <param name="commandLine">已解析命令行。</param>
@@ -50,26 +41,9 @@ internal static class CliPlayerBuildCommands
                 "Use player build --engine godot.");
         }
 
-        ValidateOptionSchema(commandLine);
         var options = CreateOptions(commandLine, projectRoot);
         var result = await RunGodotExportAsync(options, cancellationToken).ConfigureAwait(false);
         return WriteResult(result);
-    }
-
-    /// <summary>只允许稳定公开参数，避免拼写错误被静默忽略。</summary>
-    /// <param name="commandLine">已解析命令行。</param>
-    private static void ValidateOptionSchema(CliCommandLine commandLine)
-    {
-        foreach (var optionName in commandLine.OptionNames)
-        {
-            if (!sAllowedOptions.Contains(optionName))
-            {
-                throw CreateInputException(
-                    "UnknownPlayerBuildOption",
-                    "Unsupported player build option: --" + optionName + ".",
-                    "Use --project, --engine, --godot, --preset, --output or --configuration.");
-            }
-        }
     }
 
     /// <summary>把 CLI 文本参数转换为经过路径和项目文件校验的 Godot 导出选项。</summary>

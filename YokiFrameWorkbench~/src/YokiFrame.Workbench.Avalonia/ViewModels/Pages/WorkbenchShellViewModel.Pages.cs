@@ -275,12 +275,12 @@ public sealed partial class WorkbenchShellViewModel
         ApplyActiveWorkspaceState();
         if (IsDocumentationPage)
         {
-            _ = DocumentationPage.EnsureLoadedAsync();
+            TrackPageTask(DocumentationPage.EnsureLoadedAsync());
         }
 
         if (IsLocalizationKitPage)
         {
-            _ = LocalizationKitPage.EnsureLoadedAsync();
+            TrackPageTask(LocalizationKitPage.EnsureLoadedAsync());
         }
 
         EventKitPage.SetPageActive(IsEventKitPage);

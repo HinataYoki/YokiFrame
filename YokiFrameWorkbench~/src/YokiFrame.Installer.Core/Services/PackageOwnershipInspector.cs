@@ -62,7 +62,18 @@ public sealed class PackageOwnershipInspector
                 throw new InvalidDataException("Package owner manifest contains a duplicate path: " + file.RelativePath);
             }
 
-            if (!MatchesExpectedFile(packageRoot, file))
+            bool matchesExpected;
+            try
+            {
+                matchesExpected = MatchesExpectedFile(packageRoot, file);
+            }
+            catch (IOException)
+            {
+                conflicts.Add("UnsafeEntry:" + file.RelativePath);
+                matchesExpected = true;
+            }
+
+            if (!matchesExpected)
             {
                 conflicts.Add(file.RelativePath);
             }
@@ -100,7 +111,7 @@ public sealed class PackageOwnershipInspector
     }
 
     /// <summary>
-    /// 扫描 manifest 未声明的普通文件，并跳过重解析点与 manifest 自身。
+    /// 扫描 manifest 未声明的文件；重解析点只作为 UnsafeEntry 报告，不跟随进入其目标。
     /// </summary>
     /// <param name="packageRoot">受管包根目录。</param>
     /// <param name="manifestPath">manifest 自身路径。</param>
@@ -112,13 +123,20 @@ public sealed class PackageOwnershipInspector
         IReadOnlyDictionary<string, PackageOwnerFile> expected,
         ISet<string> conflicts)
     {
-        EnumerationOptions options = new()
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = false,
-            AttributesToSkip = FileAttributes.ReparsePoint
-        };
-        foreach (var path in Directory.EnumerateFiles(packageRoot, "*", options))
+        ScanEntries(packageRoot, packageRoot, manifestPath, expected, conflicts);
+    }
+
+    /// <summary>
+    /// 递归扫描一个普通目录，并在重解析点边界停止深入。
+    /// </summary>
+    private static void ScanEntries(
+        string packageRoot,
+        string directoryPath,
+        string manifestPath,
+        IReadOnlyDictionary<string, PackageOwnerFile> expected,
+        ISet<string> conflicts)
+    {
+        foreach (var path in Directory.EnumerateFileSystemEntries(directoryPath))
         {
             if (Path.GetFullPath(path).Equals(Path.GetFullPath(manifestPath), StringComparison.OrdinalIgnoreCase))
             {
@@ -126,6 +144,19 @@ public sealed class PackageOwnershipInspector
             }
 
             var relativePath = Path.GetRelativePath(packageRoot, path).Replace('\\', '/');
+            var attributes = File.GetAttributes(path);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                conflicts.Add("UnsafeEntry:" + relativePath);
+                continue;
+            }
+
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                ScanEntries(packageRoot, path, manifestPath, expected, conflicts);
+                continue;
+            }
+
             if (!expected.ContainsKey(relativePath)
                 && !IsLegacyWorkbenchWebView2Cache(relativePath)
                 && !IsWorkbenchBuildArtifact(relativePath))

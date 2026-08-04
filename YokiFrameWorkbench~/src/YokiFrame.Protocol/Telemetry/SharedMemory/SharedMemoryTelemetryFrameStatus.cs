@@ -58,5 +58,10 @@ public enum SharedMemoryTelemetryFrameStatus
     /// <summary>
     /// payload CRC32 校验失败，reader 不应使用该帧。
     /// </summary>
-    CrcMismatch
+    CrcMismatch,
+
+    /// <summary>
+    /// payload 不是合法 UTF-8，reader 不应接受替换字符后的伪数据。
+    /// </summary>
+    InvalidUtf8
 }

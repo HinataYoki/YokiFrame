@@ -24,12 +24,57 @@ internal static class CommandResponseValidator
         string errorCode,
         string message,
         string suggestion,
-        IEnumerable<string>? evidencePaths = null)
+        IEnumerable<string>? evidencePaths = null,
+        string? requestId = null,
+        string? engineId = null,
+        string? transport = null)
     {
-        if (response.ProtocolVersion == envelope.ProtocolVersion
-            && string.Equals(response.RequestId, envelope.RequestId, StringComparison.Ordinal)
-            && string.Equals(response.EngineId, envelope.EngineId, StringComparison.Ordinal)
-            && !string.IsNullOrWhiteSpace(response.Status))
+        return Validate(
+            response,
+            envelope.ProtocolVersion,
+            envelope.RequestId,
+            envelope.EngineId,
+            errorCode,
+            message,
+            suggestion,
+            evidencePaths,
+            requestId,
+            engineId,
+            transport);
+    }
+
+    /// <summary>
+    /// 校验没有完整 envelope 的 terminal response，例如依据 results 文件查询请求状态。
+    /// </summary>
+    /// <param name="response">待验证响应。</param>
+    /// <param name="expectedProtocolVersion">期望协议版本。</param>
+    /// <param name="expectedRequestId">期望请求标识。</param>
+    /// <param name="expectedEngineId">期望 engine 标识。</param>
+    /// <param name="errorCode">当前传输层使用的错误码。</param>
+    /// <param name="message">关联失败说明。</param>
+    /// <param name="suggestion">调用方可执行的恢复建议。</param>
+    /// <param name="evidencePaths">可选证据文件路径。</param>
+    /// <param name="requestId">错误对象关联请求标识。</param>
+    /// <param name="engineId">错误对象关联 engine 标识。</param>
+    /// <param name="transport">错误对象关联传输标识。</param>
+    /// <returns>通过关联校验的原响应。</returns>
+    internal static CommandResponse Validate(
+        CommandResponse response,
+        int expectedProtocolVersion,
+        string expectedRequestId,
+        string expectedEngineId,
+        string errorCode,
+        string message,
+        string suggestion,
+        IEnumerable<string>? evidencePaths = null,
+        string? requestId = null,
+        string? engineId = null,
+        string? transport = null)
+    {
+        if (response.ProtocolVersion == expectedProtocolVersion
+            && string.Equals(response.RequestId, expectedRequestId, StringComparison.Ordinal)
+            && string.Equals(response.EngineId, expectedEngineId, StringComparison.Ordinal)
+            && IsTerminalStatus(response.Status))
         {
             return response;
         }
@@ -38,6 +83,20 @@ internal static class CommandResponseValidator
             errorCode,
             message,
             suggestion,
-            evidencePaths));
+            evidencePaths,
+            requestId ?? expectedRequestId,
+            engineId ?? expectedEngineId,
+            transport));
+    }
+
+    /// <summary>
+    /// 判断状态是否属于当前 FileBridge/FastChannel 协议定义的 terminal 集合。
+    /// </summary>
+    /// <param name="status">响应状态文本。</param>
+    /// <returns>Success 或 Error（大小写不敏感）时返回 true。</returns>
+    internal static bool IsTerminalStatus(string? status)
+    {
+        return string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Error", StringComparison.OrdinalIgnoreCase);
     }
 }

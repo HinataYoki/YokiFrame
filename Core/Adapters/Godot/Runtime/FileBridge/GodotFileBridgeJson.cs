@@ -115,7 +115,7 @@ namespace YokiFrame
         /// <param name="payloadJson">待验证 payload JSON。</param>
         public static void ValidatePayloadJson(string payloadJson)
         {
-            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(payloadJson) ? "{}" : payloadJson);
+            JsonHelper.EnsureValidJson(payloadJson);
         }
 
         /// <summary>

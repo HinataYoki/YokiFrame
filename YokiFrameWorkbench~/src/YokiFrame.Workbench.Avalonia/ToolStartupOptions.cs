@@ -1,4 +1,5 @@
 using System.Globalization;
+using YokiFrame.Tooling.Application.CommandLine;
 
 namespace YokiFrame.Workbench.Avalonia;
 
@@ -98,12 +99,13 @@ public sealed class ToolStartupOptions
     /// <returns>启动选项。</returns>
     public static ToolStartupOptions FromArgs(string[] args, string currentDirectory, string appBaseDirectory)
     {
-        var projectRoot = ReadOption(args, "project");
-        var parentWindowHandle = ParseParentWindowHandle(ReadOption(args, ParentWindowHandleOptionName));
+        var commandLine = ToolCommandLineOptions.Parse(args);
+        var projectRoot = ReadOption(commandLine, "project");
+        var parentWindowHandle = ParseParentWindowHandle(ReadOption(commandLine, ParentWindowHandleOptionName));
         if (!string.IsNullOrWhiteSpace(projectRoot))
         {
             var fullProjectRoot = Path.GetFullPath(projectRoot);
-            var workbenchSourceRoot = ReadOption(args, "source");
+            var workbenchSourceRoot = ReadOption(commandLine, "source");
             var workbenchDetectedPackageRoot = DetectPackageRoot(appBaseDirectory, currentDirectory);
             var workbenchResolvedSourceRoot = string.IsNullOrWhiteSpace(workbenchSourceRoot)
                 ? workbenchDetectedPackageRoot ?? Path.Combine(fullProjectRoot, "Assets", "YokiFrame")
@@ -117,8 +119,8 @@ public sealed class ToolStartupOptions
         }
 
         var detectedPackageRoot = DetectPackageRoot(appBaseDirectory, currentDirectory);
-        var targetRoot = ResolveInstallerTargetRoot(args, currentDirectory, detectedPackageRoot);
-        var sourceRoot = ReadOption(args, "source");
+        var targetRoot = ResolveInstallerTargetRoot(commandLine, currentDirectory, detectedPackageRoot);
+        var sourceRoot = ReadOption(commandLine, "source");
         var resolvedSourceRoot = string.IsNullOrWhiteSpace(sourceRoot)
             ? detectedPackageRoot ?? Path.Combine(targetRoot, "Assets", "YokiFrame")
             : Path.GetFullPath(sourceRoot);
@@ -169,9 +171,12 @@ public sealed class ToolStartupOptions
     /// <param name="currentDirectory">当前工作目录。</param>
     /// <param name="detectedPackageRoot">从应用目录识别出的包根。</param>
     /// <returns>目标项目根。</returns>
-    private static string ResolveInstallerTargetRoot(string[] args, string currentDirectory, string? detectedPackageRoot)
+    private static string ResolveInstallerTargetRoot(
+        ToolCommandLineOptions commandLine,
+        string currentDirectory,
+        string? detectedPackageRoot)
     {
-        var targetRoot = ReadOption(args, "target");
+        var targetRoot = ReadOption(commandLine, "target");
         if (!string.IsNullOrWhiteSpace(targetRoot))
         {
             return Path.GetFullPath(targetRoot);
@@ -283,23 +288,9 @@ public sealed class ToolStartupOptions
     /// <param name="args">命令行参数。</param>
     /// <param name="name">选项名。</param>
     /// <returns>选项值；不存在时返回空字符串。</returns>
-    private static string ReadOption(string[] args, string name)
+    private static string ReadOption(ToolCommandLineOptions commandLine, string name)
     {
-        var prefix = "--" + name + "=";
-        for (var index = 0; index < args.Length; index++)
-        {
-            if (args[index].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return args[index][prefix.Length..];
-            }
-
-            if (string.Equals(args[index], "--" + name, StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
-            {
-                return args[index + 1];
-            }
-        }
-
-        return string.Empty;
+        return commandLine.GetOption(name, string.Empty);
     }
 
 }

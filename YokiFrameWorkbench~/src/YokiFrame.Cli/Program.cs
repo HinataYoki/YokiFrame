@@ -20,12 +20,20 @@ internal static class Program
     /// <returns>进程退出码。</returns>
     private static async Task<int> Main(string[] args)
     {
+        using CancellationTokenSource lifetimeCancellation = new();
+        ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            lifetimeCancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
         try
         {
             var commandLine = CliCommandLine.Parse(args);
+            CliCommandSchemaRegistry.Validate(commandLine);
             if (CliInstallerCommands.IsInstallerCommand(commandLine))
             {
-                return await CliInstallerCommands.DispatchAsync(commandLine, CancellationToken.None).ConfigureAwait(false);
+                return await CliInstallerCommands.DispatchAsync(commandLine, lifetimeCancellation.Token).ConfigureAwait(false);
             }
 
             var projectRoot = ResolveProjectRoot(commandLine);
@@ -34,12 +42,22 @@ internal static class Program
                 return await CliPlayerBuildCommands.DispatchAsync(
                     commandLine,
                     projectRoot,
-                    CancellationToken.None).ConfigureAwait(false);
+                    lifetimeCancellation.Token).ConfigureAwait(false);
             }
 
-            TryPruneProjectStorage(projectRoot);
             using YokiFrameClient client = new(projectRoot);
-            return await DispatchAsync(commandLine, client, CancellationToken.None).ConfigureAwait(false);
+            var exitCode = await DispatchAsync(commandLine, client, lifetimeCancellation.Token).ConfigureAwait(false);
+            // 查询命令必须先读取 evidence，再执行维护清理；command status 还要保留证据供连续排查。
+            if (!commandLine.IsCommand("command", "status"))
+            {
+                TryPruneProjectStorage(projectRoot);
+            }
+
+            return exitCode;
+        }
+        catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
+        {
+            return CliJsonOutput.WriteCancelled();
         }
         catch (YokiFrameProtocolException exception)
         {
@@ -52,6 +70,10 @@ internal static class Program
                 exception.Message,
                 "Run the command again with valid arguments or inspect the current project state.",
                 Array.Empty<string>()));
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
         }
     }
 
@@ -122,6 +144,11 @@ internal static class Program
             return await WriteCommandSendAsync(commandLine, client, cancellationToken).ConfigureAwait(false);
         }
 
+        if (commandLine.IsCommand("command", "status"))
+        {
+            return WriteCommandStatus(commandLine, client);
+        }
+
         if (commandLine.IsCommand("telemetry", "read"))
         {
             return WriteTelemetryRead(commandLine, client);
@@ -135,7 +162,7 @@ internal static class Program
         throw new YokiFrameProtocolException(new YokiFrameError(
             "UnknownCommand",
             "Unsupported command.",
-            "Use project status/refresh, player build, spatialkit stats/indexes/density/analyze, audio index scan/generate, localization search/check/add/template generate, doctor, harness status/catalog, engine list, snapshot read, command send, bridge status, telemetry read or fastchannel status.",
+            "Use project status/refresh, player build, spatialkit stats/indexes/density/analyze, audio index scan/generate, localization search/check/add/template generate, doctor, harness status/catalog, engine list, snapshot read, command send/status, bridge status, telemetry read or fastchannel status.",
             Array.Empty<string>()));
     }
 
@@ -312,6 +339,7 @@ internal static class Program
         {
             ["command"] = "command send",
             ["requestId"] = result.Response.RequestId,
+            ["outcome"] = result.Outcome.ToString(),
             ["transport"] = result.Transport,
             ["commandPath"] = result.CommandPath,
             ["responsePath"] = result.ResponsePath,
@@ -319,14 +347,63 @@ internal static class Program
         };
         if (!string.Equals(result.Response.Status, "Success", StringComparison.OrdinalIgnoreCase))
         {
+            var evidencePaths = new[]
+                {
+                    result.Evidence.CommandPath,
+                    result.Evidence.ResponsePath
+                }
+                .Where(static path => !string.IsNullOrWhiteSpace(path))
+                .ToArray();
+            var errorEngineId = string.IsNullOrWhiteSpace(result.Response.EngineId)
+                ? requestedEngineId
+                : result.Response.EngineId;
             return CliJsonOutput.WriteError(new YokiFrameError(
                 result.Response.ErrorCode,
                 result.Response.ErrorMessage,
                 "Inspect the terminal response and evidence paths, correct the command or engine state, then retry.",
-                new[] { result.CommandPath, result.ResponsePath }), payload);
+                evidencePaths,
+                result.RequestId,
+                errorEngineId,
+                result.Transport), payload);
         }
 
         return CliJsonOutput.WriteSuccess(payload);
+    }
+
+    /// <summary>
+    /// 按 requestId 读取可靠 FileBridge 状态，供 timeout 后只读确认而不是自动重放 mutation。
+    /// </summary>
+    /// <param name="commandLine">已解析命令行。</param>
+    /// <param name="client">FileBridge 客户端。</param>
+    /// <returns>进程退出码。</returns>
+    private static int WriteCommandStatus(CliCommandLine commandLine, IYokiFrameClient client)
+    {
+        var engineId = ResolveEngineId(commandLine, client);
+        var requestId = commandLine.GetOption("request-id", string.Empty);
+        var status = client.ReadCommandStatus(engineId, requestId);
+        JsonObject payload = new()
+        {
+            ["command"] = "command status",
+            ["engineId"] = engineId,
+            ["requestId"] = requestId,
+            ["state"] = status.State.ToString(),
+            ["terminal"] = status.IsTerminal,
+            ["updatedAtUtc"] = status.UpdatedAtUtc?.ToString("O"),
+            ["evidencePaths"] = CliJsonOutput.ToJsonNode(status.EvidencePaths),
+            ["response"] = status.Response == null ? null : CliJsonOutput.ToJsonNode(status.Response)
+        };
+        return status.State == YokiFrame.Protocol.FileBridge.CommandRequestState.NotFound
+            ? CliJsonOutput.WriteError(
+                new YokiFrameError(
+                    "CommandStatusNotFound",
+                    $"Request {requestId} was not found in the current FileBridge evidence directories.",
+                    "Verify --engine and --request-id, or inspect the engine retention policy.",
+                    status.EvidencePaths,
+                    requestId,
+                    engineId,
+                    "file-bridge"),
+                payload)
+            : CliJsonOutput.WriteSuccess(payload);
     }
 
     /// <summary>
@@ -449,16 +526,17 @@ internal static class Program
             var report = YokiFrameFileBridgePruner.Prune(projectRoot);
             if (report.HasFailures)
             {
-                Console.Error.WriteLine("YokiFrame storage cleanup deferred because some files were unavailable.");
+                CliJsonOutput.AddWarning(
+                    "YokiFrame storage cleanup deferred because some files were unavailable.");
             }
         }
         catch (IOException exception)
         {
-            Console.Error.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+            CliJsonOutput.AddWarning("YokiFrame storage cleanup skipped: " + exception.Message);
         }
         catch (UnauthorizedAccessException exception)
         {
-            Console.Error.WriteLine("YokiFrame storage cleanup skipped: " + exception.Message);
+            CliJsonOutput.AddWarning("YokiFrame storage cleanup skipped: " + exception.Message);
         }
     }
 

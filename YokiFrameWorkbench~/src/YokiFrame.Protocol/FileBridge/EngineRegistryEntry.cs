@@ -112,7 +112,7 @@ public sealed class EngineRegistryEntry
     public static EngineRegistryEntry FromJson(string json)
     {
         return JsonSerializer.Deserialize(json, YokiFrameProtocolJsonContext.Default.EngineRegistryEntry)
-            ?? new EngineRegistryEntry();
+            ?? throw new JsonException("Engine registry JSON must contain an object, not null.");
     }
 
     /// <summary>

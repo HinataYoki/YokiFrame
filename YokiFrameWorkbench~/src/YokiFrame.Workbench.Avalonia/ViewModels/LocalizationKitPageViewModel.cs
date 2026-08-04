@@ -21,6 +21,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     private bool mIsRefreshing;
     private bool mIsCreatingTemplate;
     private int mLoadVersion;
+    private int mDisposed;
     private LocalizationCatalog? mCatalog;
     private LocalizationEntryRecord? mSelectedEntry;
     private IReadOnlyList<LocalizationLanguageRecord> mCatalogLanguages = Array.Empty<LocalizationLanguageRecord>();
@@ -225,6 +226,11 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     /// <returns>首次加载完成任务。</returns>
     public Task EnsureLoadedAsync()
     {
+        if (Volatile.Read(ref mDisposed) != 0)
+        {
+            return Task.CompletedTask;
+        }
+
         if (mCatalog is not null || mHasAttemptedAutomaticLoad)
         {
             return Task.CompletedTask;
@@ -238,6 +244,11 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     /// <returns>刷新完成任务。</returns>
     public async Task RefreshAsync()
     {
+        if (Volatile.Read(ref mDisposed) != 0)
+        {
+            return;
+        }
+
         mHasAttemptedAutomaticLoad = true;
         if (mIsRefreshing)
         {
@@ -259,7 +270,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         try
         {
             LocalizationOperationResult result = await Task.Run(() => mService.LoadPreferredAsync(projectRoot, sourcePath, lubanWorkDir));
-            if (loadVersion != mLoadVersion)
+            if (Volatile.Read(ref mDisposed) != 0 || loadVersion != mLoadVersion)
             {
                 return;
             }
@@ -274,11 +285,25 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         }
         finally
         {
-            if (loadVersion == mLoadVersion)
+            if (Volatile.Read(ref mDisposed) == 0 && loadVersion == mLoadVersion)
             {
                 mIsRefreshing = false;
             }
         }
+    }
+
+    /// <summary>
+    /// 使关闭窗口前已经启动的本地化目录读取结果失效，阻止后台任务继续修改页面状态。
+    /// </summary>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref mDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref mLoadVersion);
+        mIsRefreshing = false;
     }
 
     /// <summary>一次性清除筛选条件后仅重投影内存目录，避免每个字段分别触发筛选。</summary>

@@ -8,6 +8,8 @@ namespace YokiFrame.Protocol.Telemetry.SharedMemory;
 /// </summary>
 public static class SharedMemoryTelemetryFrameReader
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
     /// <summary>
     /// 默认 payload 上限，避免 Workbench 刷新循环接受异常大帧。
     /// </summary>
@@ -92,11 +94,21 @@ public static class SharedMemoryTelemetryFrameReader
             return Failure(SharedMemoryTelemetryFrameStatus.CrcMismatch, firstHeader, "Payload CRC32 does not match header.");
         }
 
-        return new SharedMemoryTelemetryFrameReadResult(
-            SharedMemoryTelemetryFrameStatus.Accepted,
-            firstHeader,
-            Encoding.UTF8.GetString(payload),
-            "Telemetry frame accepted.");
+        try
+        {
+            return new SharedMemoryTelemetryFrameReadResult(
+                SharedMemoryTelemetryFrameStatus.Accepted,
+                firstHeader,
+                StrictUtf8.GetString(payload),
+                "Telemetry frame accepted.");
+        }
+        catch (DecoderFallbackException)
+        {
+            return Failure(
+                SharedMemoryTelemetryFrameStatus.InvalidUtf8,
+                firstHeader,
+                "Telemetry payload is not valid UTF-8.");
+        }
     }
 
     /// <summary>

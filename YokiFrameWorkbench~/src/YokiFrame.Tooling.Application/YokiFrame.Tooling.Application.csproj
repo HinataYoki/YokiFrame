@@ -19,6 +19,8 @@
              Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
     <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs"
              Link="RuntimeCache\RuntimeCachePruner.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs"
+             Link="RuntimeCache\RuntimeCacheLease.cs" />
     <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupOptions.cs"
              Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
     <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupReport.cs"

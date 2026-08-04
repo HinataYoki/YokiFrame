@@ -21,6 +21,8 @@ public sealed class WorkbenchActivationCoordinator : IDisposable
     private const int ACTIVATION_HANDLER_WAIT_DELAY_MS = 50;
     private const int COORDINATION_ATTEMPT_COUNT = 2;
     private const int COORDINATION_RETRY_DELAY_MS = 50;
+    private static readonly object sOwnershipGate = new();
+    private static readonly HashSet<string> sOwnedMutexNames = new(StringComparer.Ordinal);
 
     private readonly string mPipeName;
     private readonly Mutex? mInstanceMutex;
@@ -129,7 +131,25 @@ public sealed class WorkbenchActivationCoordinator : IDisposable
         mDisposed = true;
         mLifetime.Cancel();
         WaitForListenerCompletion();
-        mInstanceMutex?.Dispose();
+        if (mInstanceMutex != null)
+        {
+            try
+            {
+                mInstanceMutex.ReleaseMutex();
+            }
+            catch (ApplicationException)
+            {
+                Trace.TraceError("Workbench activation mutex was not owned during shutdown.");
+            }
+            finally
+            {
+                mInstanceMutex.Dispose();
+                lock (sOwnershipGate)
+                {
+                    sOwnedMutexNames.Remove(mPipeName + MUTEX_NAME_SUFFIX);
+                }
+            }
+        }
         mLifetime.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -150,22 +170,53 @@ public sealed class WorkbenchActivationCoordinator : IDisposable
     }
 
     /// <summary>
-    /// 创建按项目哈希命名的系统互斥量；已有 owner 或平台拒绝创建时返回空。
+    /// 创建按项目哈希命名的系统互斥量并显式取得 ownership；已有 owner 或平台拒绝创建时返回空。
     /// </summary>
     /// <param name="mutexName">不暴露项目路径的互斥量名称。</param>
     /// <returns>首个实例持有的互斥量句柄；未取得 owner 资格时为空。</returns>
     private static Mutex? TryCreateInstanceMutex(string mutexName)
     {
+        lock (sOwnershipGate)
+        {
+            // Named Mutex 在同一线程上允许递归 WaitOne；进程内 guard 保证测试宿主或嵌入式
+            // Workbench 不会把递归 ownership 误判成第二个 primary 实例。
+            if (sOwnedMutexNames.Contains(mutexName))
+            {
+                return null;
+            }
+        }
+
         try
         {
-            Mutex mutex = new(initiallyOwned: false, mutexName, out var createdNew);
-            if (createdNew)
+            Mutex mutex = new(initiallyOwned: false, mutexName, out _);
+            var acquired = false;
+            try
             {
-                return mutex;
+                acquired = mutex.WaitOne(0);
+            }
+            catch (AbandonedMutexException)
+            {
+                // Abandoned 表示前 owner 已退出；当前进程已经取得该 Mutex 的 ownership。
+                acquired = true;
             }
 
-            mutex.Dispose();
-            return null;
+            if (!acquired)
+            {
+                mutex.Dispose();
+                return null;
+            }
+
+            lock (sOwnershipGate)
+            {
+                if (!sOwnedMutexNames.Add(mutexName))
+                {
+                    mutex.ReleaseMutex();
+                    mutex.Dispose();
+                    return null;
+                }
+            }
+
+            return mutex;
         }
         catch (IOException)
         {

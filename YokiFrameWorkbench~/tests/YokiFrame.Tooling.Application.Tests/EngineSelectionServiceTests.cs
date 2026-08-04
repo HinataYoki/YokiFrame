@@ -259,12 +259,83 @@ public sealed partial class EngineSelectionServiceTests
     }
 
     /// <summary>
+    /// 验证 registry 与 heartbeat 指向不同宿主代次时不会进入自动在线候选。
+    /// </summary>
+    [Fact]
+    public void SelectFiltersRegistryHeartbeatIdentityMismatch()
+    {
+        var client = new StubYokiFrameClient("unity-editor", "godot-editor");
+        client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
+        client.SetHeartbeat("godot-editor", NowUtc.AddSeconds(-2));
+        client.SetRegistryIdentity("unity-editor", "old-session", 1L);
+
+        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+
+        Assert.Equal("Selected", ReadProperty<object>(result, "Status").ToString());
+        Assert.Equal("godot-editor", ReadProperty<string>(result, "SelectedEngineId"));
+        var diagnostics = ReadProperty<IReadOnlyList<EngineSessionDiagnostic>>(result, "Diagnostics");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Code == "HostIdentityMismatch");
+    }
+
+    /// <summary>
+    /// 验证单个 heartbeat 解析失败时仍保留其它健康 engine，并把失败原因作为局部诊断返回。
+    /// </summary>
+    [Fact]
+    public void SelectPreservesHealthyEngineWhenAnotherHeartbeatIsInvalid()
+    {
+        var client = new StubYokiFrameClient("unity-editor", "godot-editor");
+        client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
+        client.SetInvalidHeartbeat("godot-editor");
+
+        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+
+        Assert.Equal("unity-editor", ReadProperty<string>(result, "SelectedEngineId"));
+        var diagnostics = ReadProperty<IReadOnlyList<EngineSessionDiagnostic>>(result, "Diagnostics");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Code == "HeartbeatReadFailed");
+    }
+
+    /// <summary>
+    /// 验证部分 registry 读取失败时协调器仍发布有效条目和坏文件诊断。
+    /// </summary>
+    [Fact]
+    public void SessionCoordinatorPreservesValidEntriesWhenRegistryIsPartial()
+    {
+        var client = new StubYokiFrameClient("unity-editor", "broken");
+        client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
+        client.SetPartialRegistryFailure("broken-engine.json");
+
+        var snapshot = new EngineSessionCoordinator(client).Read(string.Empty, NowUtc);
+
+        Assert.Equal("unity-editor", snapshot.Selection.SelectedEngineId);
+        Assert.Equal("unity-editor", Assert.Single(snapshot.Engines).EngineId);
+        Assert.Contains(snapshot.Diagnostics, static diagnostic => diagnostic.Code == "EngineRegistryPartialRead");
+    }
+
+    /// <summary>
+    /// 验证显式 engine 选择只读取目标 heartbeat，不扫描无关候选。
+    /// </summary>
+    [Fact]
+    public void SessionCoordinatorLimitsHeartbeatReadsForExplicitEngine()
+    {
+        var client = new StubYokiFrameClient("unity-editor", "godot-editor");
+        client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
+        client.SetHeartbeat("godot-editor", NowUtc.AddSeconds(-1));
+
+        var snapshot = new EngineSessionCoordinator(client).Read("unity-editor", NowUtc);
+
+        Assert.Equal("unity-editor", snapshot.Selection.SelectedEngineId);
+        Assert.Equal(1, client.HeartbeatReadCount);
+    }
+
+    /// <summary>
     /// 为应用层测试提供可控的内存 Client，避免依赖真实文件和共享内存。
     /// </summary>
     private sealed class StubYokiFrameClient : IYokiFrameClient
     {
         private readonly EngineRegistryEntry[] mEntries;
         private readonly Dictionary<string, HeartbeatInfo> mHeartbeats = new(StringComparer.Ordinal);
+        private readonly HashSet<string> mInvalidHeartbeats = new(StringComparer.Ordinal);
+        private EngineRegistryReadException? mRegistryReadException;
 
         /// <summary>
         /// 使用指定 engine 标识创建测试 Client。
@@ -313,6 +384,11 @@ public sealed partial class EngineSelectionServiceTests
         public int EngineReadCount { get; private set; }
 
         /// <summary>
+        /// 获取 heartbeat 读取次数，用于验证显式选择不会扫描无关 engine。
+        /// </summary>
+        public int HeartbeatReadCount { get; private set; }
+
+        /// <summary>
         /// 设置指定 engine 的 heartbeat 时间。
         /// </summary>
         /// <param name="engineId">engine 标识。</param>
@@ -327,6 +403,40 @@ public sealed partial class EngineSelectionServiceTests
                 1L,
                 "EditMode",
                 1L);
+        }
+
+        /// <summary>
+        /// 设置指定 engine 的 registry 身份，用于验证代次切换门禁。
+        /// </summary>
+        /// <param name="engineId">目标 engine。</param>
+        /// <param name="sessionId">registry 会话标识。</param>
+        /// <param name="generation">registry 代次。</param>
+        public void SetRegistryIdentity(string engineId, string sessionId, long generation)
+        {
+            var entry = mEntries.Single(entry => string.Equals(entry.EngineId, engineId, StringComparison.Ordinal));
+            entry.SessionId = sessionId;
+            entry.Generation = generation;
+        }
+
+        /// <summary>
+        /// 让指定 heartbeat 读取抛出协议错误，模拟文件正在写入或内容损坏。
+        /// </summary>
+        /// <param name="engineId">目标 engine。</param>
+        public void SetInvalidHeartbeat(string engineId)
+        {
+            mInvalidHeartbeats.Add(engineId);
+        }
+
+        /// <summary>
+        /// 让 registry 读取抛出带有效条目的部分读取异常。
+        /// </summary>
+        /// <param name="invalidPath">坏 registry 文件路径。</param>
+        public void SetPartialRegistryFailure(string invalidPath)
+        {
+            mRegistryReadException = new EngineRegistryReadException(
+                mEntries.Where(static entry => string.Equals(entry.EngineId, "unity-editor", StringComparison.Ordinal)).ToArray(),
+                new[] { invalidPath },
+                "One engine registry is invalid.");
         }
 
         /// <summary>
@@ -357,6 +467,11 @@ public sealed partial class EngineSelectionServiceTests
         public IReadOnlyList<EngineRegistryEntry> ReadEngineEntries()
         {
             EngineReadCount++;
+            if (mRegistryReadException != null)
+            {
+                throw mRegistryReadException;
+            }
+
             return mEntries;
         }
 
@@ -390,6 +505,16 @@ public sealed partial class EngineSelectionServiceTests
         /// <returns>heartbeat；未设置时返回 null。</returns>
         public HeartbeatInfo? ReadHeartbeat(string engineId)
         {
+            HeartbeatReadCount++;
+            if (mInvalidHeartbeats.Contains(engineId))
+            {
+                throw new YokiFrameProtocolException(new YokiFrameError(
+                    "HeartbeatInvalid",
+                    "Heartbeat JSON is invalid.",
+                    "Wait for the host to finish publishing heartbeat.",
+                    new[] { Paths.GetHeartbeatPath(engineId) }));
+            }
+
             return mHeartbeats.GetValueOrDefault(engineId);
         }
 

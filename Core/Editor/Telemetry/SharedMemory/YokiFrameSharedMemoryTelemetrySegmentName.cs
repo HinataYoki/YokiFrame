@@ -8,6 +8,11 @@ namespace YokiFrame
     /// </summary>
     public static class YokiFrameSharedMemoryTelemetrySegmentName
     {
+        /// <summary>
+        /// 跨平台共享内存名称的保守长度上限；宿主与 Workbench 必须使用同一限制。
+        /// </summary>
+        public const int MAX_SEGMENT_NAME_LENGTH = 240;
+
         private const string SEGMENT_PREFIX = "YokiFrame.Telemetry.";
         private const string SEGMENT_SUFFIX = ".v1";
 
@@ -25,7 +30,15 @@ namespace YokiFrame
             EnsureSafeId(engineId, nameof(engineId));
             EnsureSafeId(kit, nameof(kit));
             EnsureSafeId(name, nameof(name));
-            return SEGMENT_PREFIX + projectScopeId + "." + engineId + "." + kit + "." + name + SEGMENT_SUFFIX;
+            var segmentName = SEGMENT_PREFIX + projectScopeId + "." + engineId + "." + kit + "." + name + SEGMENT_SUFFIX;
+            if (segmentName.Length > MAX_SEGMENT_NAME_LENGTH)
+            {
+                throw new ArgumentException(
+                    "Telemetry segment name must not exceed " + MAX_SEGMENT_NAME_LENGTH + " characters.",
+                    nameof(name));
+            }
+
+            return segmentName;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@ using YokiFrame.Client.Telemetry.SharedMemory;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Workbench.Avalonia.Diagnostics;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia;
 
@@ -49,11 +50,13 @@ public sealed partial class WorkbenchWindow
             return;
         }
 
-        CancellationTokenSource cancellation = new();
+        CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            mSession.LifetimeToken);
         mTelemetryNotificationEngineId = state.SelectedEngineId;
         mTelemetryNotificationListener = listener;
         mTelemetryNotificationCancellation = cancellation;
         mTelemetryNotificationTask = ObserveTelemetryNotificationsAsync(listener, cancellation.Token);
+        mSession.Track(mTelemetryNotificationTask);
     }
 
     /// <summary>
@@ -79,8 +82,9 @@ public sealed partial class WorkbenchWindow
 
                 if (result == SharedMemoryTelemetryNotificationWaitResult.Signaled)
                 {
+                    // 高频通知只唤醒 Telemetry stream；Registry、Heartbeat、Doctor 和 Snapshot
+                    // 由 Dashboard 自己的低频 cadence 读取，避免每个 frame 触发完整磁盘扫描。
                     SignalTelemetryRefresh();
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(QueueDashboardRefresh);
                 }
             }
         }
@@ -100,6 +104,22 @@ public sealed partial class WorkbenchWindow
     /// 合并多个快速通知，避免同一 Editor update 产生无界的等待信号。
     /// </summary>
     private void SignalTelemetryRefresh()
+    {
+        TelemetryRefreshAction action = mTelemetryRefreshPolicy.Request(
+            TelemetryRefreshTrigger.TelemetryNotification,
+            DateTimeOffset.UtcNow);
+        if (action != TelemetryRefreshAction.SignalTelemetry)
+        {
+            return;
+        }
+
+        ReleaseTelemetryRefreshSignal();
+    }
+
+    /// <summary>
+    /// 向高频轮询循环投递一个合并信号；策略已在锁内决定该信号确实需要释放。
+    /// </summary>
+    private void ReleaseTelemetryRefreshSignal()
     {
         try
         {
@@ -134,7 +154,7 @@ public sealed partial class WorkbenchWindow
     /// <summary>
     /// 停止项目级通知 reader；下一次 dashboard 会按新身份重新打开。
     /// </summary>
-    private void StopTelemetryNotificationListener()
+    private Task StopTelemetryNotificationListener()
     {
         CancellationTokenSource? cancellation = mTelemetryNotificationCancellation;
         Task? task = mTelemetryNotificationTask;
@@ -146,13 +166,12 @@ public sealed partial class WorkbenchWindow
         cancellation?.Cancel();
         if (cancellation != null && task != null)
         {
-            _ = ObserveTelemetryNotificationShutdownAsync(task, cancellation, listener);
+            return ObserveTelemetryNotificationShutdownAsync(task, cancellation, listener);
         }
-        else
-        {
-            listener?.Dispose();
-            cancellation?.Dispose();
-        }
+
+        listener?.Dispose();
+        cancellation?.Dispose();
+        return Task.CompletedTask;
     }
 
     /// <summary>

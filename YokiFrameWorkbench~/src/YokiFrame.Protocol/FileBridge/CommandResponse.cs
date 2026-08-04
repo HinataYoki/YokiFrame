@@ -65,6 +65,6 @@ public sealed class CommandResponse
     public static CommandResponse FromJson(string json)
     {
         return JsonSerializer.Deserialize(json, YokiFrameProtocolJsonContext.Default.CommandResponse)
-            ?? new CommandResponse();
+            ?? throw new JsonException("Command response JSON must contain an object, not null.");
     }
 }

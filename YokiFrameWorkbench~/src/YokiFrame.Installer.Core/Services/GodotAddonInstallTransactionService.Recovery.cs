@@ -83,7 +83,7 @@ internal sealed partial class GodotAddonInstallTransactionService
             if (context.ExistingAddonBackedUp && Directory.Exists(context.BackupAddonRoot))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(context.AddonRoot)!);
-                MoveDirectoryWithRetry(context.BackupAddonRoot, context.AddonRoot);
+                InstallerDirectoryTransaction.MoveWithRetry(context.BackupAddonRoot, context.AddonRoot);
             }
 
             return true;

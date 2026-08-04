@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace YokiFrame
         private const double HEARTBEAT_INTERVAL_SECONDS = 5.0d;
         private const double COMMAND_POLL_INTERVAL_SECONDS = 0.2d;
         private const double STORAGE_CLEANUP_INTERVAL_SECONDS = 300.0d;
+        private static readonly TimeSpan PROCESSING_LEASE = TimeSpan.FromSeconds(60);
         private static readonly string[] sHostStateKits = { "System" };
         private static long sToolProviderRevision;
         private static YokiFrameKitInteractionRegistry sKitInteractions =
@@ -28,18 +30,20 @@ namespace YokiFrame
         private static readonly Dictionary<string, long> sKitTelemetryVersions = new();
         private static readonly Dictionary<string, long> sKitSnapshotVersions = new();
         private static readonly HashSet<string> sTelemetryFallbackKits = new();
+        private static string sCommandProcessingError = string.Empty;
         private static string sSessionId = Guid.NewGuid().ToString("N");
         private static long sGeneration = DateTimeOffset.UtcNow.Ticks;
         private static string sStartedAtUtc = DateTimeOffset.UtcNow.ToString("O");
 #if UNITY_EDITOR_WIN
         private static YokiFrameEditorNamedPipeFastChannelHost sFastChannelHost;
 #endif
+        private static YokiFrameHostAdmissionLease sAdmissionLease;
         private static string sFastChannelStartError = string.Empty;
         private static double sNextHeartbeatTime;
         private static double sNextCommandPollTime;
         private static double sNextStorageCleanupTime;
         private static long sSequence;
-        private static bool sIsProcessingCommands;
+        private static YokiFrameHostCommandCoordinator sCommandCoordinator;
 
         /// <summary>
         /// 注册 Editor update 回调，并立即写入首帧 FileBridge 文件。
@@ -48,6 +52,32 @@ namespace YokiFrame
         {
             if (!ShouldOwnBridge(AssetDatabase.IsAssetImportWorkerProcess()))
             {
+                return;
+            }
+
+            YokiFrameHostAdmissionResult admissionResult;
+            Exception admissionError;
+            try
+            {
+                admissionResult = YokiFrameHostAdmissionLease.TryAcquire(
+                    YokiFrameEditorFileBridgePaths.GetAdmissionLockPath(),
+                    out sAdmissionLease,
+                    out admissionError);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("YokiFrame unity-editor Host admission path validation failed: " + exception.Message);
+                sAdmissionLease = null;
+                return;
+            }
+
+            if (admissionResult != YokiFrameHostAdmissionResult.Acquired)
+            {
+                var message = admissionResult == YokiFrameHostAdmissionResult.AlreadyOwned
+                    ? "YokiFrame unity-editor Host is already owned by another process."
+                    : "YokiFrame unity-editor Host admission failed: " + admissionError?.Message;
+                Debug.LogWarning(message);
+                sAdmissionLease = null;
                 return;
             }
 
@@ -201,55 +231,199 @@ namespace YokiFrame
         /// <summary>
         /// 消费 commands 目录顶层所有待处理 JSON 命令。
         /// </summary>
-        private static void ProcessPendingCommands()
+        private static int ProcessPendingCommands()
         {
-            if (sIsProcessingCommands)
-            {
-                return;
-            }
-
-            // 固定根路径已缓存，本轮入口统一复核一次重解析点防护，替代每个 getter 各自重走全链。
-            YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
-            var commandsRoot = YokiFrameEditorFileBridgePaths.GetCommandsRoot();
-            if (!Directory.Exists(commandsRoot))
-            {
-                return;
-            }
-
-            sIsProcessingCommands = true;
-            try
-            {
-                foreach (var commandPath in Directory.EnumerateFiles(
-                             commandsRoot,
-                             "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
-                             SearchOption.TopDirectoryOnly))
-                {
-                    ProcessCommandFile(commandPath);
-                }
-            }
-            finally
-            {
-                sIsProcessingCommands = false;
-            }
+            return GetCommandCoordinator().ProcessPendingCommands();
         }
 
         /// <summary>
-        /// 读取并处理单个命令文件，确保成功或失败都会产生终态证据。
+        /// 创建并缓存 Unity Editor 的命令生命周期协调器。
         /// </summary>
-        /// <param name="commandPath">命令文件路径。</param>
-        private static void ProcessCommandFile(string commandPath)
+        /// <returns>共享命令协调器。</returns>
+        private static YokiFrameHostCommandCoordinator GetCommandCoordinator()
         {
-            try
+            if (sCommandCoordinator == null)
             {
-                var envelope = ReadCommandEnvelope(commandPath);
-                var commandFileBytes = new FileInfo(commandPath).Length;
-                var response = ExecuteCommand(envelope, commandFileBytes);
-                WriteResponse(envelope.requestId, response);
+                sCommandCoordinator = new YokiFrameHostCommandCoordinator(
+                    new UnityEditorHostCommandStore(),
+                    ExecuteCommandForCoordinator,
+                    PROCESSING_LEASE,
+                    exception => sCommandProcessingError = exception.Message);
+            }
+
+            return sCommandCoordinator;
+        }
+
+        /// <summary>
+        /// 解析、执行并序列化 Unity Editor 命令，供公共协调器写入 terminal response。
+        /// </summary>
+        /// <param name="commandPath">processing 命令路径。</param>
+        /// <returns>已序列化的命令执行结果。</returns>
+        private static YokiFrameHostCommandExecution ExecuteCommandForCoordinator(string commandPath)
+        {
+            var envelope = ReadCommandEnvelope(commandPath);
+            var response = ExecuteCommand(envelope, new FileInfo(commandPath).Length);
+            return new YokiFrameHostCommandExecution(
+                envelope.requestId,
+                YokiFrameEditorFileBridgeJson.ToJson(response));
+        }
+
+        /// <summary>
+        /// Unity Editor 的 FileBridge 存储适配器，保留 Unity 路径与 JSON 规则。
+        /// </summary>
+        private sealed class UnityEditorHostCommandStore : IYokiFrameHostCommandStore
+        {
+            /// <summary>
+            /// 复核 Unity Editor 的 FileBridge 根路径。
+            /// </summary>
+            public void EnsureReady()
+            {
+                YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
+            }
+
+            /// <summary>
+            /// 获取 commands 根目录是否存在。
+            /// </summary>
+            public bool PendingRootExists => Directory.Exists(YokiFrameEditorFileBridgePaths.GetCommandsRoot());
+
+            /// <summary>
+            /// 读取 Unity 原有枚举顺序的 pending 命令。
+            /// </summary>
+            public IReadOnlyList<string> ReadPendingCommandPaths()
+            {
+                return Directory.GetFiles(
+                    YokiFrameEditorFileBridgePaths.GetCommandsRoot(),
+                    "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
+                    SearchOption.TopDirectoryOnly);
+            }
+
+            /// <summary>
+            /// 读取 processing 目录中的命令。
+            /// </summary>
+            public IReadOnlyList<string> ReadProcessingCommandPaths()
+            {
+                var processingRoot = YokiFrameEditorFileBridgePaths.GetProcessingRoot();
+                return Directory.Exists(processingRoot)
+                    ? Directory.GetFiles(processingRoot, "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION, SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>();
+            }
+
+            /// <summary>
+            /// 原子 claim Unity pending 命令。
+            /// </summary>
+            public YokiFrameFileBridgeClaimResult TryClaim(
+                string pendingPath,
+                out string claimedPath,
+                out Exception storageException)
+            {
+                return YokiFrameFileBridgeClaim.TryClaim(
+                    pendingPath,
+                    YokiFrameEditorFileBridgePaths.GetProcessingRoot(),
+                    out claimedPath,
+                    out storageException);
+            }
+
+            /// <summary>
+            /// 删除 Unity processing marker。
+            /// </summary>
+            public void RemoveExpiredMarkers(DateTime cutoffUtc)
+            {
+                YokiFrameFileBridgeClaim.RemoveExpiredMarkers(
+                    YokiFrameEditorFileBridgePaths.GetProcessingRoot(),
+                    cutoffUtc);
+            }
+
+            /// <summary>
+            /// 获取 Unity processing 文件最后写入时间。
+            /// </summary>
+            public DateTime GetLastWriteTimeUtc(string path)
+            {
+                return File.GetLastWriteTimeUtc(path);
+            }
+
+            /// <summary>
+            /// 成功 claim 后刷新 processing 文件时间，避免老 pending 的原始 mtime 立即触发过期回收。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <param name="claimedAtUtc">本次 claim 时间。</param>
+            public void RefreshProcessingLease(string commandPath, DateTime claimedAtUtc)
+            {
+                File.SetLastWriteTimeUtc(commandPath, claimedAtUtc);
+            }
+
+            /// <summary>
+            /// 判断 Unity processing 命令是否已经存在对应 terminal response。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <returns>response 已存在时返回 true。</returns>
+            public bool HasTerminalResponse(string commandPath)
+            {
+                try
+                {
+                    return File.Exists(YokiFrameEditorFileBridgePaths.GetResponsePath(
+                        Path.GetFileNameWithoutExtension(commandPath)));
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
+            }
+
+            /// <summary>
+            /// 原子写入 Unity terminal response JSON。
+            /// </summary>
+            public void WriteResponse(string requestId, string responseJson)
+            {
+                YokiFrameEditorFileBridgeJson.WriteAtomic(
+                    YokiFrameEditorFileBridgePaths.GetResponsePath(requestId),
+                    responseJson);
+            }
+
+            /// <summary>
+            /// 归档 Unity 已完成命令。
+            /// </summary>
+            public void Archive(string commandPath)
+            {
                 ArchiveCommand(commandPath);
             }
-            catch (Exception exception)
+
+            /// <summary>
+            /// 将 Unity 失败命令写入 deadletter。
+            /// </summary>
+            public void MoveToDeadletter(string commandPath, string errorCode, string errorMessage)
             {
-                MoveToDeadletter(commandPath, "CommandProcessingFailed", exception.Message);
+                YokiFrameEditorFileBridgePump.MoveToDeadletter(commandPath, errorCode, errorMessage);
+            }
+
+            /// <summary>
+            /// deadletter 目录不可写时，在 processing 命令旁原子保留失败证据；该 marker 不会进入命令枚举。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <param name="errorCode">错误码。</param>
+            /// <param name="errorMessage">错误说明。</param>
+            public void WriteProcessingFailureEvidence(
+                string commandPath,
+                string errorCode,
+                string errorMessage)
+            {
+                YokiFrameEditorFileBridgePump.WriteProcessingFailureEvidence(
+                    commandPath,
+                    errorCode,
+                    errorMessage);
+            }
+
+            /// <summary>
+            /// Unity 由外层定时器负责清理，不在每个命令批次重复清理。
+            /// </summary>
+            public void PruneAfterBatch()
+            {
+            }
+
+            /// <summary>
+            /// Unity 缺少 commands 根目录时不改变原有清理策略。
+            /// </summary>
+            public void PruneWhenPendingRootMissing()
+            {
             }
         }
 
@@ -264,6 +438,14 @@ namespace YokiFrame
             var json = File.ReadAllText(commandPath);
             var envelope = YokiFrameEditorFileBridgeJson.FromJson<YokiFrameEditorCommandEnvelope>(json);
             ValidateEnvelope(envelope);
+            if (!string.Equals(
+                    Path.GetFileNameWithoutExtension(commandPath),
+                    envelope.requestId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("Command file name does not match envelope requestId.");
+            }
+
             return envelope;
         }
 
@@ -280,11 +462,32 @@ namespace YokiFrame
                 throw new InvalidDataException("Command envelope protocolVersion or engineId is invalid.");
             }
 
-            if (!YokiFrameEditorFileBridgeJson.IsSafeId(envelope.requestId)
+            if (!YokiFrameEditorFileBridgeJson.IsSafeId(envelope.source)
+                || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.requestId)
                 || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.kit)
                 || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.action))
             {
                 throw new InvalidDataException("Command envelope contains unsafe requestId, kit or action.");
+            }
+
+            if (envelope.timeoutMs < YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MIN_MS
+                || envelope.timeoutMs > YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MAX_MS
+                || !DateTimeOffset.TryParse(
+                    envelope.createdAtUtc,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out _))
+            {
+                throw new InvalidDataException("Command envelope timeoutMs or createdAtUtc is invalid.");
+            }
+
+            try
+            {
+                JsonHelper.EnsureValidJson(envelope.payloadJson);
+            }
+            catch (FormatException exception)
+            {
+                throw new InvalidDataException("Command envelope payloadJson is invalid.", exception);
             }
         }
 
@@ -342,8 +545,10 @@ namespace YokiFrame
                 protocolFileCount = storage.fileCount,
                 protocolBytes = storage.totalBytes,
                 oldestProtocolFileUtc = storage.oldestFileUtc,
-                backpressureActive = false,
-                lastPollLimitReason = string.Empty,
+                backpressureActive = sCommandCoordinator != null && sCommandCoordinator.LastBatchWasLimited,
+                lastPollLimitReason = sCommandCoordinator == null
+                    ? string.Empty
+                    : sCommandCoordinator.LastBatchLimitReason,
                 bridgeBusyCount = 0,
                 lastError = CreateBridgeLastError()
             };
@@ -355,6 +560,11 @@ namespace YokiFrame
         /// <returns>启动失败原因优先，其次为 listener 记录的最近错误。</returns>
         private static string CreateBridgeLastError()
         {
+            if (!string.IsNullOrEmpty(sCommandProcessingError))
+            {
+                return sCommandProcessingError;
+            }
+
             if (!string.IsNullOrEmpty(sFastChannelStartError))
             {
                 return sFastChannelStartError;

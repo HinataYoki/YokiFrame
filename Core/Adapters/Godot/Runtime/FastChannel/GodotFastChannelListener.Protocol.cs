@@ -78,7 +78,7 @@ namespace YokiFrame
                     return;
                 }
 
-                if (!mRequestQueue.TryEnqueue(request, out Task<YokiFrameFastChannelFrame> responseTask))
+                if (!mRequestQueue.TryEnqueue(request, cancellationToken, out Task<YokiFrameFastChannelFrame> responseTask))
                 {
                     await WriteErrorAsync(
                         stream,

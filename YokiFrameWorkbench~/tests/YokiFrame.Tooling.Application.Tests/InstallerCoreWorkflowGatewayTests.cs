@@ -271,7 +271,7 @@ public sealed class InstallerCoreWorkflowGatewayTests
     }
 
     /// <summary>
-    /// 验证 Godot 主项目构建失败会阻止 gateway 报告 Verifying 成功，并保留构建诊断。
+    /// 验证 Godot 主项目构建失败会保留已提交结果，并明确标记 post-verify 待验证状态。
     /// </summary>
     [Fact]
     public async Task ExecuteAsyncPropagatesGodotProjectBuildFailure()
@@ -289,15 +289,21 @@ public sealed class InstallerCoreWorkflowGatewayTests
         var plan = await gateway.CreatePlanAsync(options, CancellationToken.None);
         List<InstallerProgressStage> stages = new();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ExecuteAsync(
+        var result = await gateway.ExecuteAsync(
             options,
             plan,
             new ProgressRecorder(stages),
-            CancellationToken.None));
+            CancellationToken.None);
 
-        Assert.Contains("simulated Godot compiler failure", exception.Message, StringComparison.Ordinal);
+        Assert.True(result.CommittedNeedsVerification);
+        Assert.Contains("simulated Godot compiler failure", result.VerificationError, StringComparison.Ordinal);
         Assert.Equal(
-            new[] { InstallerProgressStage.Applying, InstallerProgressStage.Applying },
+            new[]
+            {
+                InstallerProgressStage.Applying,
+                InstallerProgressStage.Applying,
+                InstallerProgressStage.Verifying
+            },
             stages);
     }
 

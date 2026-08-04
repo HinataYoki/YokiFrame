@@ -22,6 +22,7 @@ public sealed partial class WorkbenchDashboardService
         DateTimeOffset generatedAtUtc,
         IReadOnlyList<EngineRegistryEntry> engines,
         EngineSelectionResult engineSelection,
+        EngineSessionSnapshot engineSession,
         string harnessSummary,
         IReadOnlyList<string> errors)
     {
@@ -35,7 +36,8 @@ public sealed partial class WorkbenchDashboardService
             null,
             Array.Empty<WorkbenchSnapshotState>(),
             harnessSummary,
-            errors);
+            errors,
+            engineSession: engineSession);
     }
 
     /// <summary>

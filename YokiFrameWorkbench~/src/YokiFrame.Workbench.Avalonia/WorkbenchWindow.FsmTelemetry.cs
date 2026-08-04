@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Workbench.Avalonia.Diagnostics;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia;
 
@@ -27,13 +28,15 @@ public sealed partial class WorkbenchWindow
             return;
         }
 
-        CancellationTokenSource cancellation = new();
+        CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            mSession.LifetimeToken);
         mFsmTelemetryPollingCancellation = cancellation;
         mFsmTelemetryPollingTask = PollFsmTelemetryAsync(cancellation.Token);
+        mSession.Track(mFsmTelemetryPollingTask);
     }
 
     /// <summary>窗口关闭时取消后台轮询并清除当前请求，阻止后续访问 UI。</summary>
-    private void StopFsmTelemetryPolling()
+    private Task StopFsmTelemetryPolling()
     {
         ClearEventKitTelemetryIdentity();
         ClearLogKitTelemetryIdentity();
@@ -45,11 +48,11 @@ public sealed partial class WorkbenchWindow
         cancellation?.Cancel();
         if (cancellation != null && pollingTask != null)
         {
-            _ = ObserveFsmTelemetryPollingShutdownAsync(pollingTask, cancellation);
-            return;
+            return ObserveFsmTelemetryPollingShutdownAsync(pollingTask, cancellation);
         }
 
         cancellation?.Dispose();
+        return Task.CompletedTask;
     }
 
     /// <summary>以持久 PeriodicTimer 读取新 header；未变化帧不调度 UI，也不复制 payload。</summary>
@@ -66,6 +69,11 @@ public sealed partial class WorkbenchWindow
                 if (completedTask == signalTask)
                 {
                     await signalTask.ConfigureAwait(false);
+                    if (mTelemetryRefreshPolicy.MarkTelemetrySignalConsumed()
+                        == TelemetryRefreshAction.SignalTelemetry)
+                    {
+                        ReleaseTelemetryRefreshSignal();
+                    }
                     signalTask = mTelemetryRefreshSignal.WaitAsync(cancellationToken);
                 }
 

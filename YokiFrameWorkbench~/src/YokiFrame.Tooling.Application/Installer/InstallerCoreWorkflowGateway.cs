@@ -326,8 +326,8 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
         return executionToken switch
         {
             UnityExecutionToken unity => await Task.Run(
-                () => MapUnityResult(mUnityInstallService.Execute(unity.Request)),
-                cancellationToken).ConfigureAwait(false),
+                () => MapUnityResult(mUnityInstallService.Execute(unity.Request, cancellationToken)),
+                CancellationToken.None).ConfigureAwait(false),
             GodotExecutionToken godot => await ExecuteGodotAsync(
                 godot,
                 progress,
@@ -348,11 +348,12 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
         IProgress<InstallerProgressUpdate> progress,
         CancellationToken cancellationToken)
     {
+        using var projectLock = InstallerProjectLock.Acquire(executionToken.Request.ProjectRoot);
         var result = await Task.Run(
             () => MapGodotResult(
                 executionToken.Plan,
-                mGodotInstallService.Execute(executionToken.Request)),
-            cancellationToken).ConfigureAwait(false);
+                mGodotInstallService.Execute(executionToken.Request, projectLock, cancellationToken)),
+            CancellationToken.None).ConfigureAwait(false);
         if (GodotProjectBuildService.NeedsBuild(executionToken.Plan))
         {
             progress.Report(new InstallerProgressUpdate(
@@ -360,15 +361,48 @@ public sealed partial class InstallerCoreWorkflowGateway : IInstallerWorkflowGat
                 1,
                 2,
                 "正在构建 Godot 主项目程序集。"));
-            await mGodotProjectBuildService.BuildIfRequiredAsync(
-                executionToken.Plan,
-                cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await mGodotProjectBuildService.BuildIfRequiredAsync(
+                    executionToken.Plan,
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                return MarkCommittedNeedsVerification(result, exception);
+            }
         }
 
         // Godot 在重新扫描托管程序集时可能暂时移除失败插件的 enabled 项；构建成功后以最新文件内容重做 owner patch。
-        mGodotInstallService.EnsurePluginEnabled(executionToken.Plan);
+        try
+        {
+            mGodotInstallService.EnsurePluginEnabled(executionToken.Plan, projectLock);
+        }
+        catch (Exception exception)
+        {
+            return MarkCommittedNeedsVerification(result, exception);
+        }
 
         return result;
+    }
+
+    /// <summary>
+    /// 保留 Core 已提交结果，同时明确宿主 post-verify 仍需人工或重试确认。
+    /// </summary>
+    /// <param name="result">已经提交的 Godot 结果。</param>
+    /// <param name="exception">构建或 owner patch 异常。</param>
+    /// <returns>带待验证状态的统一结果。</returns>
+    private static InstallerExecutionResult MarkCommittedNeedsVerification(
+        InstallerExecutionResult result,
+        Exception exception)
+    {
+        return new InstallerExecutionResult(
+            result.TargetPath,
+            result.Changed,
+            result.ReplacedExistingPackage,
+            result.EvidencePaths,
+            committedNeedsVerification: true,
+            verificationError: exception.Message);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using YokiFrame.Protocol.Results;
 using YokiFrame.Tooling.Application.Documentation;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Models.ActionKit;
@@ -28,6 +29,7 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
     private readonly Action<string> mEngineChanged;
     private readonly Func<string, string, Task> mCommandRequested;
     private readonly Func<Uri, Task>? mOpenUriAsync;
+    private Action<Task>? mTrackTask;
     private IReadOnlyList<string> mEngineIds = Array.Empty<string>();
     private WorkbenchDashboardState? mDashboardState;
     private string mCommandTraceText = string.Empty;
@@ -103,6 +105,29 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
     /// 获取 Workbench Runtime 后台新版检测与显式重新编译状态。
     /// </summary>
     public WorkbenchRuntimeUpdateViewModel RuntimeUpdate { get; }
+
+    /// <summary>
+    /// 绑定窗口会话的后台任务登记器，使页面异步加载随窗口关闭取消并等待。
+    /// </summary>
+    /// <param name="trackTask">窗口会话提供的任务登记回调。</param>
+    public void SetTaskTracker(Action<Task> trackTask)
+    {
+        ArgumentNullException.ThrowIfNull(trackTask);
+        mTrackTask = trackTask;
+    }
+
+    /// <summary>
+    /// 将页面异步任务纳入窗口会话；headless 场景未绑定窗口时保留独立运行行为。
+    /// </summary>
+    /// <param name="task">页面初始化任务。</param>
+    internal void TrackPageTask(Task task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        if (mTrackTask != null)
+        {
+            mTrackTask(task);
+        }
+    }
 
     /// <summary>
     /// 获取顶部 engine selector 使用的 engine id 列表。
@@ -221,7 +246,9 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
     /// <param name="state">命令响应状态。</param>
     public void ShowCommandResult(WorkbenchCommandState state)
     {
-        CommandTraceText = state.Ok
+        CommandTraceText = state.Outcome == CommandOutcomeState.Unknown
+            ? state.Kit + "/" + state.Action + " -> Unknown " + state.ErrorMessage
+            : state.Ok
             ? state.Kit + "/" + state.Action + " -> " + state.Status + " " + state.ResultJson
             : state.Kit + "/" + state.Action + " -> " + state.ErrorMessage;
         if (state.Ok && state.Kit == "System" && state.Action == "list_commands")
@@ -235,7 +262,11 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
             return;
         }
 
-        AddLogLine("命令失败 <- " + state.Kit + "/" + state.Action + " " + state.ErrorMessage, WorkbenchLogLineKind.Error);
+        AddLogLine(
+            state.Outcome == CommandOutcomeState.Unknown
+                ? "命令结果不确定 <- " + state.Kit + "/" + state.Action + " " + state.ErrorMessage
+                : "命令失败 <- " + state.Kit + "/" + state.Action + " " + state.ErrorMessage,
+            WorkbenchLogLineKind.Error);
     }
 
     /// <summary>

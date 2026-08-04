@@ -1,4 +1,5 @@
 using YokiFrame;
+using YokiFrame.Protocol.Results;
 using YokiFrame.Protocol.Validation;
 
 namespace YokiFrame.Protocol.Telemetry.SharedMemory;
@@ -8,6 +9,11 @@ namespace YokiFrame.Protocol.Telemetry.SharedMemory;
 /// </summary>
 public static class SharedMemoryTelemetrySegmentName
 {
+    /// <summary>
+    /// 跨平台共享内存名称的保守长度上限；避免 Windows kernel object 和 Unix fallback 超出平台限制。
+    /// </summary>
+    public const int MAX_SEGMENT_NAME_LENGTH = 240;
+
     /// <summary>
     /// 根据项目根、engine、Kit 和 snapshot 名称创建标准 segment 名称。
     /// </summary>
@@ -22,6 +28,28 @@ public static class SharedMemoryTelemetrySegmentName
         var safeKit = SafeIdValidator.EnsureSafeId(kit, nameof(kit));
         var safeName = SafeIdValidator.EnsureSafeId(name, nameof(name));
         var projectScopeId = YokiFrameSharedMemoryTelemetryProjectScopeId.Compute(projectRoot);
-        return YokiFrameSharedMemoryTelemetrySegmentName.Create(projectScopeId, safeEngineId, safeKit, safeName);
+        string segmentName;
+        try
+        {
+            segmentName = YokiFrameSharedMemoryTelemetrySegmentName.Create(projectScopeId, safeEngineId, safeKit, safeName);
+        }
+        catch (ArgumentException exception) when (exception.ParamName == nameof(name))
+        {
+            throw new YokiFrameProtocolException(new YokiFrameError(
+                "TelemetrySegmentNameTooLong",
+                $"Telemetry segment name must not exceed {MAX_SEGMENT_NAME_LENGTH} characters.",
+                "Use shorter engine, Kit and telemetry names.",
+                Array.Empty<string>()));
+        }
+        if (segmentName.Length <= MAX_SEGMENT_NAME_LENGTH)
+        {
+            return segmentName;
+        }
+
+        throw new YokiFrameProtocolException(new YokiFrameError(
+            "TelemetrySegmentNameTooLong",
+            $"Telemetry segment name must not exceed {MAX_SEGMENT_NAME_LENGTH} characters.",
+            "Use shorter engine, Kit and telemetry names.",
+            Array.Empty<string>()));
     }
 }

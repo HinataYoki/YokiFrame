@@ -12,7 +12,7 @@ namespace YokiFrame.Tooling.Application.Services;
 /// </summary>
 public sealed class WorkbenchDoctorService
 {
-    private readonly IYokiFrameClient mClient;
+    private readonly IEngineStateReader mStateReader;
     private readonly EngineSelectionService mEngineSelectionService;
 
     /// <summary>
@@ -34,9 +34,18 @@ public sealed class WorkbenchDoctorService
     /// </summary>
     /// <param name="client">统一 YokiFrame Client。</param>
     public WorkbenchDoctorService(IYokiFrameClient client)
+        : this((IEngineStateReader)client)
     {
-        mClient = client;
-        mEngineSelectionService = new EngineSelectionService(client);
+    }
+
+    /// <summary>
+    /// 使用引擎状态窄端口创建 doctor 服务，避免依赖命令和 telemetry 能力。
+    /// </summary>
+    /// <param name="stateReader">引擎状态读取端口。</param>
+    public WorkbenchDoctorService(IEngineStateReader stateReader)
+    {
+        mStateReader = stateReader;
+        mEngineSelectionService = new EngineSelectionService(stateReader);
     }
 
     /// <summary>
@@ -48,7 +57,7 @@ public sealed class WorkbenchDoctorService
     {
         var nowUtc = DateTimeOffset.UtcNow;
         var selectedEngineId = mEngineSelectionService.Resolve(engineId, nowUtc);
-        var status = mClient.ReadBridgeStatus(selectedEngineId);
+        var status = mStateReader.ReadBridgeStatus(selectedEngineId);
         var registry = FindEngineRegistry(selectedEngineId);
         return AnalyzeStatus(registry, selectedEngineId, status, nowUtc);
     }
@@ -129,7 +138,7 @@ public sealed class WorkbenchDoctorService
     /// <returns>匹配的 registry；不存在时返回 null。</returns>
     private EngineRegistryEntry? FindEngineRegistry(string engineId)
     {
-        return mClient.ReadEngineEntries().FirstOrDefault(
+        return mStateReader.ReadEngineEntries().FirstOrDefault(
             entry => string.Equals(entry.EngineId, engineId, StringComparison.Ordinal));
     }
 
@@ -163,7 +172,7 @@ public sealed class WorkbenchDoctorService
             "HeartbeatMissing",
             "Engine heartbeat was not found.",
             "Start the engine adapter or verify the requested engine id.",
-            new[] { mClient.Paths.GetHeartbeatPath(engineId) });
+            new[] { mStateReader.Paths.GetHeartbeatPath(engineId) });
     }
 
     /// <summary>

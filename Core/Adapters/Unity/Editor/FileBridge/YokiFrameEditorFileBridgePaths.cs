@@ -18,6 +18,7 @@ namespace YokiFrame
         private static string sYokiFrameRoot;
         private static string sEngineRoot;
         private static string sCommandsRoot;
+        private static string sProcessingRoot;
         private static string sArchiveRoot;
         private static string sDeadletterRoot;
         private static string sResultsRoot;
@@ -104,6 +105,21 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 获取跨进程 command claim 目录。
+        /// </summary>
+        /// <returns>processing 目录绝对路径。</returns>
+        public static string GetProcessingRoot()
+        {
+            if (sProcessingRoot == null)
+            {
+                sProcessingRoot = EnsureSafeProjectPath(
+                    Path.Combine(GetCommandsRoot(), YokiFrameFileBridgeLayout.PROCESSING_DIRECTORY));
+            }
+
+            return sProcessingRoot;
+        }
+
+        /// <summary>
         /// 获取命令死信目录。
         /// </summary>
         /// <returns>deadletter 目录绝对路径。</returns>
@@ -163,6 +179,12 @@ namespace YokiFrame
             }
 
             return sHeartbeatPath;
+        }
+
+        /// <summary>获取同一项目和 unity-editor Host 的 admission 锁路径。</summary>
+        public static string GetAdmissionLockPath()
+        {
+            return EnsureSafeProjectPath(Path.Combine(GetEngineRoot(), "host.lock"));
         }
 
         /// <summary>
@@ -237,11 +259,13 @@ namespace YokiFrame
         {
             var engineRoot = GetEngineRoot();
             EnsureNoReparsePoint(GetProjectRoot(), engineRoot);
+            EnsureNoReparsePointBelow(engineRoot, GetProcessingRoot());
             EnsureNoReparsePointBelow(engineRoot, GetArchiveRoot());
             EnsureNoReparsePointBelow(engineRoot, GetDeadletterRoot());
             EnsureNoReparsePointBelow(engineRoot, GetResultsRoot());
             EnsureNoReparsePointBelow(engineRoot, GetSnapshotsRoot());
             EnsureNoReparsePointBelow(engineRoot, GetHeartbeatPath());
+            EnsureNoReparsePointBelow(engineRoot, GetAdmissionLockPath());
         }
 
         /// <summary>获取 snapshot 根目录。</summary>

@@ -11,7 +11,7 @@ namespace YokiFrame.Tooling.Application.Engines;
 /// </summary>
 public sealed class EngineSelectionService
 {
-    private readonly IYokiFrameClient mClient;
+    private readonly IEngineStateReader mStateReader;
 
     /// <summary>
     /// 获取 engine 在线判定使用的 heartbeat stale 阈值。
@@ -22,9 +22,9 @@ public sealed class EngineSelectionService
     /// 使用统一 Client 创建 engine 选择服务。
     /// </summary>
     /// <param name="client">用于读取 registry 和 heartbeat 的 Client。</param>
-    public EngineSelectionService(IYokiFrameClient client)
+    public EngineSelectionService(IEngineStateReader stateReader)
     {
-        mClient = client;
+        mStateReader = stateReader;
     }
 
     /// <summary>
@@ -51,8 +51,35 @@ public sealed class EngineSelectionService
             return EngineSelectionResult.CreateSelected(ResolveExplicitEngineId(requestedEngineId));
         }
 
-        var entries = mClient.ReadEngineEntries();
-        return Select(string.Empty, entries, nowUtc);
+        try
+        {
+            var entries = mStateReader.ReadEngineEntries();
+            return Select(string.Empty, entries, nowUtc);
+        }
+        catch (EngineRegistryReadException exception)
+        {
+            var result = Select(string.Empty, exception.ValidEntries, nowUtc);
+            return result.WithAdditionalDiagnostics(new[]
+            {
+                new EngineSessionDiagnostic(
+                    "EngineRegistryPartialRead",
+                    exception.Message,
+                    null,
+                    exception.InvalidPaths)
+            });
+        }
+        catch (Exception exception)
+        {
+            return Select(string.Empty, Array.Empty<EngineRegistryEntry>(), nowUtc)
+                .WithAdditionalDiagnostics(new[]
+                {
+                    new EngineSessionDiagnostic(
+                        "EngineRegistryReadFailed",
+                        exception.Message,
+                        null,
+                        new[] { mStateReader.Paths.EnginesRoot })
+                });
+        }
     }
 
     /// <summary>
@@ -82,21 +109,42 @@ public sealed class EngineSelectionService
         IReadOnlyList<EngineRegistryEntry> entries,
         DateTimeOffset nowUtc)
     {
+        return Select(requestedEngineId, entries, nowUtc, null);
+    }
+
+    /// <summary>
+    /// 使用已读取的 heartbeat 选择目标 engine，避免 Dashboard 在同一轮重复读取文件。
+    /// </summary>
+    /// <param name="requestedEngineId">调用方显式指定的 engine；为空时自动发现。</param>
+    /// <param name="entries">当前 registry 条目。</param>
+    /// <param name="nowUtc">当前 UTC 时间。</param>
+    /// <param name="heartbeats">按 engine 标识保存的 heartbeat；空值表示缺失。</param>
+    /// <returns>engine 选择结果和局部诊断。</returns>
+    internal EngineSelectionResult Select(
+        string? requestedEngineId,
+        IReadOnlyList<EngineRegistryEntry> entries,
+        DateTimeOffset nowUtc,
+        IReadOnlyDictionary<string, HeartbeatInfo?>? heartbeats)
+    {
         if (!string.IsNullOrWhiteSpace(requestedEngineId))
         {
             return EngineSelectionResult.CreateSelected(ResolveExplicitEngineId(requestedEngineId));
         }
 
-        var onlineEngineIds = FindOnlineEngineIds(entries, nowUtc);
+        var onlineEngineIds = FindOnlineEngineIds(entries, nowUtc, heartbeats, out var diagnostics);
         if (onlineEngineIds.Count == 1)
         {
-            return EngineSelectionResult.CreateSelected(onlineEngineIds[0], onlineEngineIds);
+            return EngineSelectionResult.CreateSelected(onlineEngineIds[0], onlineEngineIds, diagnostics);
         }
 
         var status = onlineEngineIds.Count == 0
             ? EngineSelectionStatus.Unavailable
             : EngineSelectionStatus.SelectionRequired;
-        return EngineSelectionResult.CreatePending(status, onlineEngineIds, CreateSelectionError(onlineEngineIds));
+        return EngineSelectionResult.CreatePending(
+            status,
+            onlineEngineIds,
+            CreateSelectionError(onlineEngineIds),
+            diagnostics);
     }
 
     /// <summary>
@@ -117,25 +165,91 @@ public sealed class EngineSelectionService
     /// <returns>按 engine 标识排序的在线列表。</returns>
     private IReadOnlyList<string> FindOnlineEngineIds(
         IReadOnlyList<EngineRegistryEntry> entries,
-        DateTimeOffset nowUtc)
+        DateTimeOffset nowUtc,
+        IReadOnlyDictionary<string, HeartbeatInfo?>? heartbeats,
+        out IReadOnlyList<EngineSessionDiagnostic> diagnostics)
     {
         HashSet<string> visitedEngineIds = new(StringComparer.Ordinal);
         List<string> onlineEngineIds = new();
+        List<EngineSessionDiagnostic> localDiagnostics = new();
         foreach (var entry in entries)
         {
-            if (!visitedEngineIds.Add(entry.EngineId))
+            if (string.IsNullOrWhiteSpace(entry.EngineId) || !visitedEngineIds.Add(entry.EngineId))
             {
                 continue;
             }
 
-            var heartbeat = mClient.ReadHeartbeat(entry.EngineId);
-            if (heartbeat != null && !heartbeat.IsStale(nowUtc, HeartbeatStaleThreshold))
+            HeartbeatInfo? heartbeat;
+            if (heartbeats != null)
             {
-                onlineEngineIds.Add(entry.EngineId);
+                if (!heartbeats.TryGetValue(entry.EngineId, out heartbeat))
+                {
+                    localDiagnostics.Add(new EngineSessionDiagnostic(
+                        "HeartbeatMissing",
+                        "Engine heartbeat was not found.",
+                        entry.EngineId,
+                        new[] { mStateReader.Paths.GetHeartbeatPath(entry.EngineId) }));
+                    continue;
+                }
+
+                // Coordinator 已经为 null heartbeat 记录了精确的缺失或解析诊断，避免在选择阶段重复包装。
+                if (heartbeat == null)
+                {
+                    continue;
+                }
             }
+            else
+            {
+                try
+                {
+                    heartbeat = mStateReader.ReadHeartbeat(entry.EngineId);
+                }
+                catch (Exception exception)
+                {
+                    localDiagnostics.Add(new EngineSessionDiagnostic(
+                        "HeartbeatReadFailed",
+                        exception.Message,
+                        entry.EngineId,
+                        new[] { mStateReader.Paths.GetHeartbeatPath(entry.EngineId) }));
+                    continue;
+                }
+            }
+
+            if (heartbeat == null)
+            {
+                localDiagnostics.Add(new EngineSessionDiagnostic(
+                    "HeartbeatMissing",
+                    "Engine heartbeat was not found.",
+                    entry.EngineId,
+                    new[] { mStateReader.Paths.GetHeartbeatPath(entry.EngineId) }));
+                continue;
+            }
+
+            if (EngineHostIdentity.HasMismatch(entry, heartbeat))
+            {
+                localDiagnostics.Add(new EngineSessionDiagnostic(
+                    "HostIdentityMismatch",
+                    "Engine registry and heartbeat refer to different host identities.",
+                    entry.EngineId,
+                    new[] { heartbeat.Path, mStateReader.Paths.GetEngineRoot(entry.EngineId) }));
+                continue;
+            }
+
+            if (heartbeat.IsStale(nowUtc, HeartbeatStaleThreshold))
+            {
+                localDiagnostics.Add(new EngineSessionDiagnostic(
+                    "HeartbeatStale",
+                    "Engine heartbeat is stale.",
+                    entry.EngineId,
+                    new[] { heartbeat.Path }));
+                continue;
+            }
+
+            onlineEngineIds.Add(entry.EngineId);
         }
 
         onlineEngineIds.Sort(StringComparer.Ordinal);
+        diagnostics = localDiagnostics;
         return onlineEngineIds;
     }
 
@@ -167,7 +281,7 @@ public sealed class EngineSelectionService
                 "EngineUnavailable",
                 "No online engine is available.",
                 "Start an engine adapter or pass --engine to inspect a known engine explicitly.",
-                new[] { mClient.Paths.EnginesRoot });
+                new[] { mStateReader.Paths.EnginesRoot });
         }
 
         var engineList = string.Join(", ", onlineEngineIds);
@@ -175,6 +289,6 @@ public sealed class EngineSelectionService
             "EngineSelectionRequired",
             "Multiple engines are online: " + engineList + ".",
             "Pass --engine with one of the online engine ids.",
-            new[] { mClient.Paths.EnginesRoot });
+            new[] { mStateReader.Paths.EnginesRoot });
     }
 }

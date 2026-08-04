@@ -60,13 +60,21 @@ public sealed class UnityInstallService
     /// </summary>
     /// <param name="request">Unity 安装请求。</param>
     /// <returns>成功执行的计划、包事务和 manifest 变化结果。</returns>
-    public UnityInstallResult Execute(UnityInstallRequest request)
+    public UnityInstallResult Execute(
+        UnityInstallRequest request,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        _ = CreatePlan(request);
+        using var projectLock = InstallerProjectLock.Acquire(request.ProjectRoot);
+        InstallerPackageTransactionRecovery.Recover(request.ProjectRoot);
+        cancellationToken.ThrowIfCancellationRequested();
         var plan = CreatePlan(request);
         return plan.Request.Mode switch
         {
-            UnityInstallMode.Embedded => ExecuteEmbedded(plan),
-            UnityInstallMode.GitUrl => ExecuteGit(plan),
+            UnityInstallMode.Embedded => ExecuteEmbedded(plan, projectLock, cancellationToken),
+            UnityInstallMode.GitUrl => ExecuteGit(plan, projectLock, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(request), plan.Request.Mode, "Unsupported Unity install mode.")
         };
     }
@@ -166,7 +174,10 @@ public sealed class UnityInstallService
     /// </summary>
     /// <param name="plan">已验证 embedded 计划。</param>
     /// <returns>embedded 安装结果。</returns>
-    private UnityInstallResult ExecuteEmbedded(UnityInstallPlan plan)
+    private UnityInstallResult ExecuteEmbedded(
+        UnityInstallPlan plan,
+        InstallerProjectLockLease projectLock,
+        CancellationToken cancellationToken)
     {
         var projection = plan.Projection
             ?? throw new InvalidOperationException("Embedded Unity install plan is missing its package projection.");
@@ -185,6 +196,8 @@ public sealed class UnityInstallService
                 plan.Target.PackageRoot,
                 plan.Request.UnmanagedPackagePolicy,
                 replaceModifiedPackage: true,
+                projectLock: projectLock,
+                cancellationToken: cancellationToken,
                 postCommitAction: () =>
                 {
                     postCommitActionStarted = true;
@@ -225,8 +238,12 @@ public sealed class UnityInstallService
     /// </summary>
     /// <param name="plan">已验证 Git URL 计划。</param>
     /// <returns>Git URL 安装结果。</returns>
-    private UnityInstallResult ExecuteGit(UnityInstallPlan plan)
+    private UnityInstallResult ExecuteGit(
+        UnityInstallPlan plan,
+        InstallerProjectLockLease projectLock,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var manifest = mManifestStore.Read(plan.Target.ProjectRoot);
         var backup = MoveExistingPackageToBackup(plan);
         var manifestChanged = false;

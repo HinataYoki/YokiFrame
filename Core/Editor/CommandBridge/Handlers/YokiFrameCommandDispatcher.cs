@@ -29,9 +29,27 @@ namespace YokiFrame
         /// <returns>命令终态结果。</returns>
         public YokiFrameCommandResult Dispatch(YokiFrameCommandRequest request)
         {
+            return Dispatch(request, DateTimeOffset.UtcNow);
+        }
+
+        /// <summary>
+        /// 评估策略并执行命令；显式传入当前时间以便宿主和测试稳定验证 deadline。
+        /// </summary>
+        /// <param name="request">命令请求。</param>
+        /// <param name="nowUtc">用于判断命令是否过期的 UTC 时间。</param>
+        /// <returns>命令终态结果。</returns>
+        public YokiFrameCommandResult Dispatch(YokiFrameCommandRequest request, DateTimeOffset nowUtc)
+        {
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
+            }
+
+            if (request.IsExpired(nowUtc))
+            {
+                return YokiFrameCommandResult.Error(
+                    "CommandExpired",
+                    "The command deadline has elapsed; the handler was not invoked.");
             }
 
             var decision = mPolicy.Evaluate(request.ToPolicyRequest());

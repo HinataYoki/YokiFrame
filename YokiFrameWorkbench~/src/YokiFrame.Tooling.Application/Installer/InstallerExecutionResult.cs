@@ -12,16 +12,22 @@ public sealed class InstallerExecutionResult
     /// <param name="changed">执行是否改变目标项目。</param>
     /// <param name="replacedExistingPackage">是否替换或移除了既有包来源。</param>
     /// <param name="evidencePaths">成功证据路径。</param>
+    /// <param name="committedNeedsVerification">提交已完成但宿主 post-verify 尚未成功时为 true。</param>
+    /// <param name="verificationError">post-verify 失败说明。</param>
     public InstallerExecutionResult(
         string targetPath,
         bool changed,
         bool replacedExistingPackage,
-        IReadOnlyList<string>? evidencePaths = null)
+        IReadOnlyList<string>? evidencePaths = null,
+        bool committedNeedsVerification = false,
+        string verificationError = "")
     {
         TargetPath = targetPath;
         Changed = changed;
         ReplacedExistingPackage = replacedExistingPackage;
         EvidencePaths = evidencePaths?.ToArray() ?? Array.Empty<string>();
+        CommittedNeedsVerification = committedNeedsVerification;
+        VerificationError = verificationError ?? string.Empty;
     }
 
     /// <summary>
@@ -43,4 +49,10 @@ public sealed class InstallerExecutionResult
     /// 获取成功证据路径快照。
     /// </summary>
     public IReadOnlyList<string> EvidencePaths { get; }
+
+    /// <summary>获取提交后仍需宿主验证的标记。</summary>
+    public bool CommittedNeedsVerification { get; }
+
+    /// <summary>获取提交后验证失败说明。</summary>
+    public string VerificationError { get; }
 }

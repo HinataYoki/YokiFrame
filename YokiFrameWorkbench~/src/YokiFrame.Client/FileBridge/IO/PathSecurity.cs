@@ -102,12 +102,21 @@ internal static class PathSecurity
     /// <param name="candidatePath">完整候选路径，用于错误证据。</param>
     private static void EnsurePathComponentIsNotReparsePoint(string path, string candidatePath)
     {
-        if (!File.Exists(path) && !Directory.Exists(path))
+        FileAttributes attributes;
+        try
+        {
+            attributes = File.GetAttributes(path);
+        }
+        catch (FileNotFoundException)
+        {
+            return;
+        }
+        catch (DirectoryNotFoundException)
         {
             return;
         }
 
-        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0)
+        if ((attributes & FileAttributes.ReparsePoint) == 0)
         {
             return;
         }

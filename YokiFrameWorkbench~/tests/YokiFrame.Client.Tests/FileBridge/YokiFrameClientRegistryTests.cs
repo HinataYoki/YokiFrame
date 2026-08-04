@@ -1,5 +1,6 @@
 using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Protocol.FileBridge;
+using YokiFrame.Protocol.Results;
 
 namespace YokiFrame.Client.Tests.FileBridge;
 
@@ -121,6 +122,50 @@ public sealed class YokiFrameClientRegistryTests
     }
 
     /// <summary>
+    /// 验证 registry 最终文件本身是链接时不会把项目外内容当作 engine 状态读取。
+    /// </summary>
+    [Fact]
+    public void EngineRegistryFileRejectsReparsePoint()
+    {
+        var testRoot = Path.Combine(Path.GetTempPath(), "yokiframe-engine-tests", Guid.NewGuid().ToString("N"));
+        var projectRoot = Path.Combine(testRoot, "project");
+        var engineRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor");
+        var outsideRoot = Path.Combine(testRoot, "outside");
+        var registryPath = Path.Combine(engineRoot, "engine.json");
+        var outsideRegistryPath = Path.Combine(outsideRoot, "engine.json");
+        Directory.CreateDirectory(engineRoot);
+        Directory.CreateDirectory(outsideRoot);
+        File.WriteAllText(
+            outsideRegistryPath,
+            "{\"protocolVersion\":2,\"engineId\":\"unity-editor\",\"engine\":\"Unity\"}");
+
+        try
+        {
+            if (!TryCreateFileLink(registryPath, outsideRegistryPath))
+            {
+                return;
+            }
+
+            var exception = Assert.Throws<YokiFrameProtocolException>(
+                () => new YokiFrameClient(projectRoot).ReadEngineEntries());
+
+            Assert.Equal("PathReparsePointRejected", exception.Error.Code);
+        }
+        finally
+        {
+            if (File.Exists(registryPath))
+            {
+                File.Delete(registryPath);
+            }
+
+            if (Directory.Exists(testRoot))
+            {
+                Directory.Delete(testRoot, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// 为 registry 读取测试创建唯一项目根目录。
     /// </summary>
     /// <returns>测试项目根路径。</returns>
@@ -138,6 +183,25 @@ public sealed class YokiFrameClientRegistryTests
         if (Directory.Exists(projectRoot))
         {
             Directory.Delete(projectRoot, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// 尝试创建文件符号链接；当前测试宿主不支持时跳过链接专项断言。
+    /// </summary>
+    private static bool TryCreateFileLink(string linkPath, string targetPath)
+    {
+        try
+        {
+            File.CreateSymbolicLink(linkPath, targetPath);
+            return true;
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException
+                                          or PlatformNotSupportedException
+                                          or NotSupportedException
+                                          or IOException)
+        {
+            return false;
         }
     }
 }

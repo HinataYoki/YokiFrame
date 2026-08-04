@@ -211,7 +211,7 @@ namespace YokiFrame
                     return;
                 }
 
-                if (!mRequestQueue.TryEnqueue(request, out var responseTask))
+                if (!mRequestQueue.TryEnqueue(request, cancellationToken, out var responseTask))
                 {
                     await WriteErrorAsync(server, "FastChannelBusy", "FastChannel main-thread request queue is full or stopping.", cancellationToken)
                         .ConfigureAwait(false);

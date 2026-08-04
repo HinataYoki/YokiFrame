@@ -69,7 +69,7 @@ public sealed partial class CapabilityCatalogServiceTests
             ENGINE_ID,
             true,
             YokiFrameCommandSourceContract.CODEX,
-            1000,
+            2500,
             CancellationToken.None);
 
         Assert.Equal("Drifted", result.State);
@@ -105,7 +105,7 @@ public sealed partial class CapabilityCatalogServiceTests
             ENGINE_ID,
             true,
             "tests",
-            1000,
+            2500,
             CancellationToken.None);
 
         Assert.Equal("Partial", result.State);

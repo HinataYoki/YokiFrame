@@ -3,7 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using YokiFrame.Workbench.Avalonia.Diagnostics;
-using YokiFrame.Tooling.Application.Services;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia;
 
@@ -50,12 +50,9 @@ public sealed partial class WorkbenchApp : Application
                         Directory.GetCurrentDirectory(),
                         AppContext.BaseDirectory);
                 desktop.ShutdownMode = global::Avalonia.Controls.ShutdownMode.OnMainWindowClose;
-                desktop.MainWindow = options.Mode == ToolStartupMode.Workbench
-                    ? new WorkbenchWindow(
-                        new WorkbenchDashboardService(options.ProjectRoot),
-                        options,
-                        Program.ActivationCoordinator)
-                    : new InstallerWindow(options);
+                desktop.MainWindow = new WorkbenchCompositionRoot().CreateMainWindow(
+                    options,
+                    Program.ActivationCoordinator);
             }
 
             base.OnFrameworkInitializationCompleted();

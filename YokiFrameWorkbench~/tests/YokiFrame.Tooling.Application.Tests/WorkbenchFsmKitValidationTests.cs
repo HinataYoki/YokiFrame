@@ -119,7 +119,9 @@ public sealed partial class WorkbenchFsmKitStateTests
         Assert.Equal(string.Empty, state.SessionId);
         Assert.Equal(0, state.Generation);
         Assert.Contains("changed", state.StaleReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(2, client.RegistryReadCount);
+        // QueryFsmDetails 读取命令前后身份各一次；CommandExecutionService 的 FastChannel cooldown
+        // 还会通过 IEngineStateReader 读取一次当前代次，即使本次 FsmKit 命令最终走 FileBridge。
+        Assert.Equal(3, client.RegistryReadCount);
     }
 
     /// <summary>

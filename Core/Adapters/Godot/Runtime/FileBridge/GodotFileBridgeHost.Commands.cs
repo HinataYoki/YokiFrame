@@ -1,6 +1,7 @@
 #if GODOT && TOOLS
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace YokiFrame
@@ -10,6 +11,8 @@ namespace YokiFrame
     /// </summary>
     public sealed partial class GodotFileBridgeHost
     {
+        private static readonly TimeSpan PROCESSING_LEASE = TimeSpan.FromSeconds(60);
+
         /// <summary>
         /// 消费 commands 顶层全部 JSON，确保每个文件进入 response/archive 或 deadletter 终态。
         /// </summary>
@@ -17,36 +20,186 @@ namespace YokiFrame
         public int ProcessPendingCommands()
         {
             EnsureRunning();
-            if (mIsProcessingCommands)
+            return mCommandCoordinator.ProcessPendingCommands();
+        }
+
+        /// <summary>
+        /// 解析、执行并序列化 Godot Runtime 命令，供公共协调器写入 terminal response。
+        /// </summary>
+        /// <param name="commandPath">processing 命令路径。</param>
+        /// <returns>已序列化的命令执行结果。</returns>
+        private YokiFrameHostCommandExecution ExecuteCommandForCoordinator(string commandPath)
+        {
+            var envelope = ReadCommandEnvelope(commandPath);
+            var response = ExecuteCommand(envelope, new FileInfo(commandPath).Length);
+            return new YokiFrameHostCommandExecution(
+                envelope.RequestId,
+                GodotFileBridgeJson.Serialize(response));
+        }
+
+        /// <summary>
+        /// Godot Runtime 的 FileBridge 存储适配器，保留排序、路径和清理语义。
+        /// </summary>
+        private sealed class GodotRuntimeHostCommandStore : IYokiFrameHostCommandStore
+        {
+            private readonly GodotFileBridgeHost mHost;
+
+            /// <summary>
+            /// 创建绑定 Runtime Host 的存储适配器。
+            /// </summary>
+            /// <param name="host">Godot Runtime Host。</param>
+            public GodotRuntimeHostCommandStore(GodotFileBridgeHost host)
             {
-                return 0;
+                mHost = host;
             }
 
-            if (!Directory.Exists(mPaths.CommandsRoot))
+            /// <summary>
+            /// Runtime Host 已在 Start 中准备目录；此处保持统一入口幂等。
+            /// </summary>
+            public void EnsureReady()
             {
-                TryPruneStorage();
-                return 0;
+                mHost.mPaths.EnsureReady();
             }
 
-            mIsProcessingCommands = true;
-            try
+            /// <summary>
+            /// 获取 commands 根目录是否存在。
+            /// </summary>
+            public bool PendingRootExists => Directory.Exists(mHost.mPaths.CommandsRoot);
+
+            /// <summary>
+            /// 读取并稳定排序 Runtime pending 命令。
+            /// </summary>
+            public IReadOnlyList<string> ReadPendingCommandPaths()
             {
                 var commandPaths = Directory.GetFiles(
-                    mPaths.CommandsRoot,
+                    mHost.mPaths.CommandsRoot,
                     "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
                     SearchOption.TopDirectoryOnly);
                 Array.Sort(commandPaths, StringComparer.OrdinalIgnoreCase);
-                for (var index = 0; index < commandPaths.Length; index++)
-                {
-                    ProcessCommandFile(commandPaths[index]);
-                }
-
-                return commandPaths.Length;
+                return commandPaths;
             }
-            finally
+
+            /// <summary>
+            /// 读取 Runtime processing 命令。
+            /// </summary>
+            public IReadOnlyList<string> ReadProcessingCommandPaths()
             {
-                mIsProcessingCommands = false;
-                TryPruneStorage();
+                return Directory.Exists(mHost.mPaths.ProcessingRoot)
+                    ? Directory.GetFiles(mHost.mPaths.ProcessingRoot, "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION, SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>();
+            }
+
+            /// <summary>
+            /// 原子 claim Runtime pending 命令。
+            /// </summary>
+            public YokiFrameFileBridgeClaimResult TryClaim(
+                string pendingPath,
+                out string claimedPath,
+                out Exception storageException)
+            {
+                return YokiFrameFileBridgeClaim.TryClaim(
+                    pendingPath,
+                    mHost.mPaths.ProcessingRoot,
+                    out claimedPath,
+                    out storageException);
+            }
+
+            /// <summary>
+            /// 删除 Runtime processing marker。
+            /// </summary>
+            public void RemoveExpiredMarkers(DateTime cutoffUtc)
+            {
+                YokiFrameFileBridgeClaim.RemoveExpiredMarkers(mHost.mPaths.ProcessingRoot, cutoffUtc);
+            }
+
+            /// <summary>
+            /// 获取 Runtime processing 文件最后写入时间。
+            /// </summary>
+            public DateTime GetLastWriteTimeUtc(string path)
+            {
+                return File.GetLastWriteTimeUtc(path);
+            }
+
+            /// <summary>
+            /// 成功 claim 后刷新 processing 文件时间，避免老 pending 的原始 mtime 立即触发过期回收。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <param name="claimedAtUtc">本次 claim 时间。</param>
+            public void RefreshProcessingLease(string commandPath, DateTime claimedAtUtc)
+            {
+                File.SetLastWriteTimeUtc(commandPath, claimedAtUtc);
+            }
+
+            /// <summary>
+            /// 判断 Runtime processing 命令是否已经存在对应 terminal response。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <returns>response 已存在时返回 true。</returns>
+            public bool HasTerminalResponse(string commandPath)
+            {
+                try
+                {
+                    return File.Exists(mHost.mPaths.GetResponsePath(
+                        Path.GetFileNameWithoutExtension(commandPath)));
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
+            }
+
+            /// <summary>
+            /// 写入 Runtime terminal response。
+            /// </summary>
+            public void WriteResponse(string requestId, string responseJson)
+            {
+                GodotFileBridgeJson.WriteAtomic(mHost.mPaths.GetResponsePath(requestId), responseJson);
+            }
+
+            /// <summary>
+            /// 归档 Runtime 已完成命令。
+            /// </summary>
+            public void Archive(string commandPath)
+            {
+                mHost.ArchiveCommand(commandPath);
+            }
+
+            /// <summary>
+            /// 将 Runtime 失败命令写入 deadletter。
+            /// </summary>
+            public void MoveToDeadletter(string commandPath, string errorCode, string errorMessage)
+            {
+                mHost.MoveToDeadletter(commandPath, errorCode, errorMessage);
+            }
+
+            /// <summary>
+            /// deadletter 目录不可写时，在 processing 命令旁原子保留失败证据；该 marker 不会进入命令枚举。
+            /// </summary>
+            /// <param name="commandPath">processing 命令路径。</param>
+            /// <param name="errorCode">错误码。</param>
+            /// <param name="errorMessage">错误说明。</param>
+            public void WriteProcessingFailureEvidence(
+                string commandPath,
+                string errorCode,
+                string errorMessage)
+            {
+                mHost.WriteProcessingFailureEvidence(commandPath, errorCode, errorMessage);
+            }
+
+            /// <summary>
+            /// 保留 Runtime 原有批次结束清理策略。
+            /// </summary>
+            public void PruneAfterBatch()
+            {
+                mHost.TryPruneStorage();
+            }
+
+            /// <summary>
+            /// commands 根目录缺失时保留 Runtime 原有清理策略。
+            /// </summary>
+            public void PruneWhenPendingRootMissing()
+            {
+                mHost.TryPruneStorage();
             }
         }
 
@@ -65,9 +218,10 @@ namespace YokiFrame
             {
                 YokiFrameFileBridgePruner.Prune(mPaths.ProjectRoot);
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                // 清理是旁路维护，任何权限或并发异常都留待下一轮重试。
+                // 清理失败不阻断 Host；记录到 bridge_status，供工具侧区分维护失败与正常空闲。
+                mLastError = "Godot Runtime FileBridge storage cleanup failed: " + exception.Message;
             }
 
             mNextStorageCleanupUtc = nowUtc.AddMinutes(5.0d);
@@ -146,26 +300,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 处理单个命令文件；异常会转换为 deadletter，不阻塞后续命令。
-        /// </summary>
-        /// <param name="commandPath">命令文件完整路径。</param>
-        private void ProcessCommandFile(string commandPath)
-        {
-            try
-            {
-                var envelope = ReadCommandEnvelope(commandPath);
-                var response = ExecuteCommand(envelope, new FileInfo(commandPath).Length);
-                WriteResponse(envelope.RequestId, response);
-                ArchiveCommand(commandPath);
-            }
-            catch (Exception exception)
-            {
-                mLastError = exception.Message;
-                MoveToDeadletter(commandPath, "CommandProcessingFailed", exception.Message);
-            }
-        }
-
-        /// <summary>
         /// 读取命令文件，执行文件大小、JSON、协议、engine、safe ID 和 payload 语法校验。
         /// </summary>
         /// <param name="commandPath">命令文件完整路径。</param>
@@ -180,6 +314,14 @@ namespace YokiFrame
 
             var envelope = GodotFileBridgeJson.Deserialize<GodotCommandEnvelope>(File.ReadAllText(commandPath));
             ValidateEnvelope(envelope);
+            if (!string.Equals(
+                    Path.GetFileNameWithoutExtension(commandPath),
+                    envelope.RequestId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("Command file name does not match envelope requestId.");
+            }
+
             return envelope;
         }
 
@@ -195,11 +337,23 @@ namespace YokiFrame
                 throw new InvalidDataException("Command envelope protocolVersion or engineId is invalid.");
             }
 
-            if (!YokiFrameSafeIdContract.IsSafeId(envelope.RequestId)
+            if (!YokiFrameSafeIdContract.IsSafeId(envelope.Source)
+                || !YokiFrameSafeIdContract.IsSafeId(envelope.RequestId)
                 || !YokiFrameSafeIdContract.IsSafeId(envelope.Kit)
                 || !YokiFrameSafeIdContract.IsSafeId(envelope.Action))
             {
                 throw new InvalidDataException("Command envelope contains unsafe requestId, kit or action.");
+            }
+
+            if (envelope.TimeoutMs < YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MIN_MS
+                || envelope.TimeoutMs > YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MAX_MS
+                || !DateTimeOffset.TryParse(
+                    envelope.CreatedAtUtc,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out _))
+            {
+                throw new InvalidDataException("Command envelope timeoutMs or createdAtUtc is invalid.");
             }
 
             GodotFileBridgeJson.ValidatePayloadJson(envelope.PayloadJson);
@@ -219,11 +373,32 @@ namespace YokiFrame
                 envelope.Action,
                 envelope.PayloadJson,
                 envelope.TimeoutMs,
-                commandFileBytes);
+                commandFileBytes,
+                envelope.RequestId,
+                ParseCreatedAtUtc(envelope.CreatedAtUtc));
             var result = mDispatcher.Dispatch(request);
             return result.IsSuccess
                 ? CreateSuccessResponse(envelope.RequestId, result.ResultJson)
                 : CreateErrorResponse(envelope.RequestId, result.ErrorCode, result.ErrorMessage);
+        }
+
+        /// <summary>
+        /// 把已通过信封校验的创建时间转换为 UTC，供 dispatcher 计算执行 deadline。
+        /// </summary>
+        /// <param name="createdAtUtc">信封创建时间文本。</param>
+        /// <returns>UTC 创建时间。</returns>
+        private static DateTimeOffset ParseCreatedAtUtc(string createdAtUtc)
+        {
+            if (!DateTimeOffset.TryParse(
+                    createdAtUtc,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var value))
+            {
+                throw new InvalidDataException("Command envelope createdAtUtc is invalid.");
+            }
+
+            return value.ToUniversalTime();
         }
 
         /// <summary>
@@ -259,7 +434,8 @@ namespace YokiFrame
                 ProtocolFileCount = storage.FileCount,
                 ProtocolBytes = storage.TotalBytes,
                 OldestProtocolFileUtc = storage.OldestFileUtc,
-                BackpressureActive = false,
+                BackpressureActive = mCommandCoordinator.LastBatchWasLimited,
+                LastPollLimitReason = mCommandCoordinator.LastBatchLimitReason,
                 LastError = mLastError,
                 FastChannel = "filebridge-fallback"
             });
@@ -305,18 +481,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 原子写入指定请求的 terminal response。
-        /// </summary>
-        /// <param name="requestId">请求标识。</param>
-        /// <param name="response">响应 DTO。</param>
-        private void WriteResponse(string requestId, GodotCommandResponse response)
-        {
-            GodotFileBridgeJson.WriteAtomic(
-                mPaths.GetResponsePath(requestId),
-                GodotFileBridgeJson.Serialize(response));
-        }
-
-        /// <summary>
         /// 将成功处理的命令移动到 archive，冲突时追加 UTC 毫秒后缀。
         /// </summary>
         /// <param name="commandPath">原始命令路径。</param>
@@ -351,6 +515,29 @@ namespace YokiFrame
                 mPaths.GetDeadletterInfoPath(deadletterId),
                 GodotFileBridgeJson.Serialize(info));
             MoveDeadletterRequest(commandPath, deadletterId);
+        }
+
+        /// <summary>
+        /// deadletter 写入失败时，在 processing 命令旁原子保留失败证据。
+        /// </summary>
+        /// <param name="commandPath">processing 命令路径。</param>
+        /// <param name="errorCode">错误码。</param>
+        /// <param name="errorMessage">错误说明。</param>
+        private void WriteProcessingFailureEvidence(
+            string commandPath,
+            string errorCode,
+            string errorMessage)
+        {
+            GodotDeadletterInfo evidence = new GodotDeadletterInfo
+            {
+                SourcePath = commandPath,
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
+                WrittenAtUtc = DateTimeOffset.UtcNow.ToString("O")
+            };
+            GodotFileBridgeJson.WriteAtomic(
+                commandPath + ".claim",
+                GodotFileBridgeJson.Serialize(evidence));
         }
 
         /// <summary>

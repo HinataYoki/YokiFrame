@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEditor;
 using UnityEditorInternal;
@@ -98,7 +99,28 @@ namespace YokiFrame
                 envelope.action,
                 envelope.payloadJson,
                 envelope.timeoutMs,
-                commandFileBytes);
+                commandFileBytes,
+                envelope.requestId,
+                ParseCreatedAtUtc(envelope.createdAtUtc));
+        }
+
+        /// <summary>
+        /// 把已通过信封校验的创建时间转换为 UTC，供 dispatcher 计算执行 deadline。
+        /// </summary>
+        /// <param name="createdAtUtc">信封创建时间文本。</param>
+        /// <returns>UTC 创建时间。</returns>
+        private static DateTimeOffset ParseCreatedAtUtc(string createdAtUtc)
+        {
+            if (!DateTimeOffset.TryParse(
+                    createdAtUtc,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var value))
+            {
+                throw new InvalidDataException("Command envelope createdAtUtc is invalid.");
+            }
+
+            return value.ToUniversalTime();
         }
 
         /// <summary>

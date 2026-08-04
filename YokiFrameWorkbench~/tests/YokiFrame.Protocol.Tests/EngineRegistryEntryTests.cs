@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.FastChannel;
 
@@ -32,6 +33,15 @@ public sealed class EngineRegistryEntryTests
         Assert.False(roundtrip.ExtensionData.ContainsKey("mode"));
         Assert.False(roundtrip.ExtensionData.ContainsKey("fastChannels"));
         Assert.True(roundtrip.ExtensionData.ContainsKey("extraField"));
+    }
+
+    /// <summary>
+    /// 验证 JSON 顶层为 null 时不会静默生成空 registry。
+    /// </summary>
+    [Fact]
+    public void NullEngineRegistryIsRejected()
+    {
+        Assert.Throws<JsonException>(() => EngineRegistryEntry.FromJson("null"));
     }
 
 }

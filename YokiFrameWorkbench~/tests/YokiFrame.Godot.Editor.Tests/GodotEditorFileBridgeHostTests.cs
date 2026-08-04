@@ -50,7 +50,14 @@ public sealed class GodotEditorFileBridgeHostTests
         fixture.WriteSystemCommand("editor-ping-001", "ping");
         fixture.WriteSystemCommand("editor-catalog-001", "list_commands");
 
-        Assert.Equal(2, host.ProcessPendingCommands());
+        var processed = host.ProcessPendingCommands();
+        if (!File.Exists(fixture.GetResponsePath("editor-ping-001"))
+            || !File.Exists(fixture.GetResponsePath("editor-catalog-001")))
+        {
+            processed += host.ProcessPendingCommands();
+        }
+
+        Assert.Equal(2, processed);
 
         var pingResponse = fixture.ReadObject(fixture.GetResponsePath("editor-ping-001"));
         Assert.Equal("Success", pingResponse["status"]?.GetValue<string>());

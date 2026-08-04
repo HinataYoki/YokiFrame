@@ -65,13 +65,16 @@ namespace YokiFrame
             WriteKitInteractionSnapshots();
         }
 
-        /// <summary>推进保活序号，并只为发生变化的版本化 Provider 写入 Snapshot。</summary>
+        /// <summary>推进保活序号，并同步刷新低频 Registry，使 FastChannel listener 失败立即发布 disabled endpoint。</summary>
         private static void WriteHeartbeatState()
         {
             sSequence++;
             EnsureBridgeDirectories();
             WriteHeartbeat();
             WriteChangedSnapshots();
+            // Registry 仍是 FastChannel 健康状态的权威发布点；每个低频 heartbeat 重新发布一次，
+            // 避免后台 listener 失败后磁盘继续声明旧 enabled endpoint。
+            WriteEngineRegistry();
         }
 
         /// <summary>创建 FileBridge 所需目录，保证 CLI 可以直接读取状态和队列。</summary>
@@ -80,6 +83,7 @@ namespace YokiFrame
             // 心跳与完整状态写入都经过此处，故每轮落盘前复核一次固定根的重解析点防护。
             YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetCommandsRoot());
+            Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetProcessingRoot());
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetArchiveRoot());
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetDeadletterRoot());
             Directory.CreateDirectory(YokiFrameEditorFileBridgePaths.GetResultsRoot());

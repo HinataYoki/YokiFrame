@@ -313,7 +313,9 @@ internal static class RuntimeManifestIntegrityValidator
             return false;
         }
 
-        profile = new RuntimeManifestProfileValidation(guiPath, cliPath);
+        profile = new RuntimeManifestProfileValidation(
+            guiPath,
+            cliPath ?? string.Empty);
         error = string.Empty;
         return true;
     }

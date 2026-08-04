@@ -54,9 +54,30 @@ namespace YokiFrame
             YokiFrameFastChannelFrame request,
             out Task<YokiFrameFastChannelFrame> responseTask)
         {
+            return TryEnqueue(request, CancellationToken.None, out responseTask);
+        }
+
+        /// <summary>
+        /// 尝试将 listener 请求入队，并绑定当前连接或 Host 的取消令牌；连接终止后尚未开始处理的请求不会再执行。
+        /// </summary>
+        /// <param name="request">已完成 framing 校验的请求 frame。</param>
+        /// <param name="cancellationToken">当前连接或 Host 生命周期取消令牌。</param>
+        /// <param name="responseTask">主线程处理后完成的 response 任务；取消或拒绝时返回已终止任务。</param>
+        /// <returns>队列仍运行、未满且请求尚未取消时返回 true。</returns>
+        public bool TryEnqueue(
+            YokiFrameFastChannelFrame request,
+            CancellationToken cancellationToken,
+            out Task<YokiFrameFastChannelFrame> responseTask)
+        {
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                responseTask = Task.FromCanceled<YokiFrameFastChannelFrame>(cancellationToken);
+                return false;
             }
 
             lock (mGate)
@@ -78,6 +99,7 @@ namespace YokiFrame
 
                 PendingRequest pendingRequest = new PendingRequest(request);
                 mPendingRequests.Enqueue(pendingRequest);
+                pendingRequest.RegisterCancellation(cancellationToken);
                 responseTask = pendingRequest.ResponseSource.Task;
                 return true;
             }
@@ -98,8 +120,10 @@ namespace YokiFrame
             var processedCount = 0;
             while (TryDequeue(out var pendingRequest))
             {
-                CompletePendingRequest(pendingRequest, responseFactory);
-                processedCount++;
+                if (CompletePendingRequest(pendingRequest, responseFactory))
+                {
+                    processedCount++;
+                }
             }
 
             return processedCount;
@@ -125,7 +149,8 @@ namespace YokiFrame
 
             for (var index = 0; index < pendingRequests.Length; index++)
             {
-                pendingRequests[index].ResponseSource.TrySetCanceled();
+                pendingRequests[index].Cancel();
+                pendingRequests[index].Dispose();
             }
         }
 
@@ -162,10 +187,16 @@ namespace YokiFrame
         /// </summary>
         /// <param name="pendingRequest">已经从队列取出的请求。</param>
         /// <param name="responseFactory">宿主提供的主线程 response 生成器。</param>
-        private static void CompletePendingRequest(
+        private static bool CompletePendingRequest(
             PendingRequest pendingRequest,
             Func<YokiFrameFastChannelFrame, YokiFrameFastChannelFrame> responseFactory)
         {
+            if (!pendingRequest.TryBeginProcessing())
+            {
+                pendingRequest.Dispose();
+                return false;
+            }
+
             try
             {
                 var response = responseFactory(pendingRequest.Request);
@@ -180,6 +211,9 @@ namespace YokiFrame
             {
                 pendingRequest.ResponseSource.TrySetException(exception);
             }
+
+            pendingRequest.Dispose();
+            return true;
         }
 
         /// <summary>
@@ -187,6 +221,9 @@ namespace YokiFrame
         /// </summary>
         private sealed class PendingRequest
         {
+            private int mState;
+            private CancellationTokenRegistration mCancellationRegistration;
+
             /// <summary>
             /// 创建单个待处理请求及其异步 response 源。
             /// </summary>
@@ -207,6 +244,48 @@ namespace YokiFrame
             /// 获取 listener 等待的异步 response 源。
             /// </summary>
             public TaskCompletionSource<YokiFrameFastChannelFrame> ResponseSource { get; }
+
+            /// <summary>
+            /// 绑定连接取消令牌；回调只取消尚未开始处理的请求，避免主线程执行已经失去消费者的工作。
+            /// </summary>
+            /// <param name="cancellationToken">连接或 Host 生命周期令牌。</param>
+            public void RegisterCancellation(CancellationToken cancellationToken)
+            {
+                if (cancellationToken.CanBeCanceled)
+                {
+                    mCancellationRegistration = cancellationToken.Register(
+                        static state => ((PendingRequest)state!).Cancel(),
+                        this);
+                }
+            }
+
+            /// <summary>
+            /// 尝试将请求从等待状态推进到主线程处理状态。
+            /// </summary>
+            /// <returns>当前请求仍未被取消且可以处理时返回 true。</returns>
+            public bool TryBeginProcessing()
+            {
+                return Interlocked.CompareExchange(ref mState, 1, 0) == 0;
+            }
+
+            /// <summary>
+            /// 取消尚未开始处理的请求并完成 listener 等待任务。
+            /// </summary>
+            public void Cancel()
+            {
+                if (Interlocked.CompareExchange(ref mState, 2, 0) == 0)
+                {
+                    ResponseSource.TrySetCanceled();
+                }
+            }
+
+            /// <summary>
+            /// 释放与连接令牌关联的注册，避免长生命周期 Host 保留已完成请求。
+            /// </summary>
+            public void Dispose()
+            {
+                mCancellationRegistration.Dispose();
+            }
         }
     }
 }

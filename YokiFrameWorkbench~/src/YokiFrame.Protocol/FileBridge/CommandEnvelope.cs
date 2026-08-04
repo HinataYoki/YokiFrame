@@ -132,7 +132,7 @@ public sealed class CommandEnvelope
     public static CommandEnvelope FromJson(string json)
     {
         return JsonSerializer.Deserialize(json, YokiFrameProtocolJsonContext.Default.CommandEnvelope)
-            ?? new CommandEnvelope();
+            ?? throw new JsonException("Command envelope JSON must contain an object, not null.");
     }
 
     /// <summary>

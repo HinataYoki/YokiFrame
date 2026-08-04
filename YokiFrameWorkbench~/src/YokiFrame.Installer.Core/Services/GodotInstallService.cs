@@ -90,7 +90,42 @@ public sealed class GodotInstallService
     /// <returns>成功提交的稳定安装结果。</returns>
     public GodotInstallResult Execute(GodotInstallRequest request)
     {
-        return mTransactionService.Execute(CreatePlan(request));
+        return Execute(request, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// 在提交前响应取消，并在 add-on 目录切换后完成事务或回滚。
+    /// </summary>
+    /// <param name="request">typed Godot 安装请求。</param>
+    /// <param name="cancellationToken">调用方取消令牌。</param>
+    /// <returns>成功提交的稳定安装结果。</returns>
+    public GodotInstallResult Execute(
+        GodotInstallRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        _ = CreatePlan(request);
+        using var projectLock = InstallerProjectLock.Acquire(request.ProjectRoot);
+        return Execute(request, projectLock, cancellationToken);
+    }
+
+    /// <summary>
+    /// 在调用方已经持有项目锁时执行 Godot 投影事务，供提交后构建继续复用同一锁。
+    /// </summary>
+    /// <param name="request">typed Godot 安装请求。</param>
+    /// <param name="projectLock">当前目标项目锁。</param>
+    /// <returns>成功提交的稳定安装结果。</returns>
+    public GodotInstallResult Execute(
+        GodotInstallRequest request,
+        InstallerProjectLockLease projectLock,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateProjectLock(request.ProjectRoot, projectLock);
+        InstallerGodotTransactionRecovery.Recover(request.ProjectRoot);
+        cancellationToken.ThrowIfCancellationRequested();
+        return mTransactionService.Execute(CreatePlan(request), projectLock, cancellationToken);
     }
 
     /// <summary>
@@ -103,6 +138,21 @@ public sealed class GodotInstallService
     public void EnsurePluginEnabled(GodotInstallPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        using var projectLock = InstallerProjectLock.Acquire(plan.ProjectRoot);
+        EnsurePluginEnabled(plan, projectLock);
+    }
+
+    /// <summary>
+    /// 在调用方已经持有项目锁时维护 project.godot owner 项。
+    /// </summary>
+    /// <param name="plan">已完成 add-on 提交的安装计划。</param>
+    /// <param name="projectLock">当前目标项目锁。</param>
+    public void EnsurePluginEnabled(
+        GodotInstallPlan plan,
+        InstallerProjectLockLease projectLock)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ValidateProjectLock(plan.ProjectRoot, projectLock);
         if (!plan.RepairProjectSettings || !plan.EnablePlugin)
         {
             return;
@@ -116,6 +166,26 @@ public sealed class GodotInstallService
         }
 
         WriteProjectSettingsAtomically(plan.ProjectSettingsPath, repairedSettings);
+    }
+
+    /// <summary>
+    /// 确认调用方传入的锁与 Godot 计划属于同一项目。
+    /// </summary>
+    /// <param name="projectRoot">计划项目根。</param>
+    /// <param name="projectLock">调用方持有的锁租约。</param>
+    private static void ValidateProjectLock(
+        string projectRoot,
+        InstallerProjectLockLease projectLock)
+    {
+        ArgumentNullException.ThrowIfNull(projectLock);
+        var fullProjectRoot = InstallerPathGuard.RequireFullPath(projectRoot, nameof(projectRoot));
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        if (!string.Equals(fullProjectRoot, projectLock.ProjectRoot, comparison))
+        {
+            throw new InvalidOperationException("Installer project lock belongs to a different project.");
+        }
     }
 
     /// <summary>

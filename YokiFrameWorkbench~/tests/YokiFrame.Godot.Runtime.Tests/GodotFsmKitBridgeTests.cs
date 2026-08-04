@@ -79,6 +79,21 @@ public sealed class GodotFsmKitBridgeTests : IDisposable
     }
 
     /// <summary>
+    /// 验证宿主侧 segment 名称与 Client 侧共享同一总长度上限，避免创建后无法被读取。
+    /// </summary>
+    [Fact]
+    public void TelemetrySegmentNameRejectsOverlongCombinedIdentity()
+    {
+        var longId = new string('a', 128);
+
+        Assert.Throws<ArgumentException>(() => YokiFrameSharedMemoryTelemetrySegmentName.Create(
+            longId,
+            longId,
+            longId,
+            longId));
+    }
+
+    /// <summary>
     /// 验证单实例变化只推进自身命名帧，并且 Host 重启会为新 generation 重发全部实例首帧。
     /// </summary>
     [Fact]

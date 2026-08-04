@@ -101,7 +101,7 @@ public sealed partial class CapabilityCatalogServiceTests
             string.Empty,
             true,
             "tests",
-            1000,
+            2500,
             CancellationToken.None);
 
         Assert.Equal("Partial", result.State);
@@ -126,7 +126,7 @@ public sealed partial class CapabilityCatalogServiceTests
             ENGINE_ID,
             true,
             "tests",
-            1000,
+            2500,
             CancellationToken.None);
 
         var engine = Assert.Single(result.Catalog.Engines);
@@ -170,7 +170,7 @@ public sealed partial class CapabilityCatalogServiceTests
             ENGINE_ID,
             true,
             "tests",
-            1000,
+            2500,
             CancellationToken.None);
 
         Assert.Equal("Drifted", result.State);

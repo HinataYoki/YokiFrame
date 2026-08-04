@@ -17,6 +17,7 @@ public sealed class YokiFrameClientFastChannelTests
     private const string ENGINE_ID = "unity-editor";
     private const string SOURCE = "client-tests";
     private const int COMMAND_TIMEOUT_MS = 1000;
+    private const int FAST_CHANNEL_OPERATION_TIMEOUT_MS = 750;
     private const string FAST_CHANNEL_METHOD_NAME = "SendFastChannelReadOnlySystemCommandAsync";
 
     /// <summary>
@@ -191,6 +192,75 @@ public sealed class YokiFrameClientFastChannelTests
     }
 
     /// <summary>
+    /// 验证 FastChannel 的本地短期限不会把非法的 timeoutMs 写入协议；Host 收到的信封仍使用协议最小值。
+    /// </summary>
+    [Fact]
+    public async Task ReadOnlySystemCommandKeepsWireTimeoutAtProtocolMinimumForShortOperation()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var projectRoot = CreateProjectRoot();
+        Task? serverTask = null;
+        try
+        {
+            var endpoint = FastChannelEndpoint.CreateNamedPipe(ENGINE_ID, "session-short-timeout", 4, CreatePipeName());
+            await WriteEngineRegistryAsync(projectRoot, endpoint);
+            using YokiFrameClient client = new(projectRoot);
+            var server = new NamedPipeReadOnlySystemHost(endpoint, new[] { "ping" }, false, cancellationSource.Token);
+            serverTask = server.ServeAsync();
+
+            var response = await client.SendFastChannelReadOnlySystemCommandAsync(
+                ENGINE_ID,
+                "ping",
+                SOURCE,
+                FAST_CHANNEL_OPERATION_TIMEOUT_MS,
+                cancellationSource.Token);
+
+            await serverTask;
+            AssertSuccessfulResponse(response, "ping");
+            Assert.Equal(CommandEnvelope.COMMAND_TIMEOUT_MIN_MS, server.LastEnvelopeTimeoutMs);
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+            await DrainServerAfterCancellationAsync(serverTask);
+            DeleteProjectRoot(projectRoot);
+        }
+    }
+
+    /// <summary>
+    /// 验证负数或零本地期限会立即拒绝，避免 .NET 将负数 CancelAfter 解释为无限等待。
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task ReadOnlySystemCommandRejectsNonPositiveOperationTimeout(int timeoutMs)
+    {
+        var projectRoot = CreateProjectRoot();
+        try
+        {
+            using YokiFrameClient client = new(projectRoot);
+            var exception = await Assert.ThrowsAsync<YokiFrameProtocolException>(() =>
+                client.SendFastChannelReadOnlySystemCommandAsync(
+                    ENGINE_ID,
+                    "ping",
+                    SOURCE,
+                    timeoutMs,
+                    CancellationToken.None));
+
+            Assert.Equal("InvalidTimeout", exception.Error.Code);
+        }
+        finally
+        {
+            DeleteProjectRoot(projectRoot);
+        }
+    }
+
+    /// <summary>
     /// 反射定位未来公开在统一 Client 边界上的 FastChannel 只读命令 API，并固定其参数和返回类型契约。
     /// </summary>
     /// <returns>与目标公开方法完全匹配的反射信息。</returns>
@@ -204,10 +274,10 @@ public sealed class YokiFrameClientFastChannelTests
             typeof(int),
             typeof(CancellationToken)
         };
-        var method = typeof(IYokiFrameClient).GetMethod(FAST_CHANNEL_METHOD_NAME, parameterTypes);
+        var method = typeof(IFastChannelCommandTransport).GetMethod(FAST_CHANNEL_METHOD_NAME, parameterTypes);
         Assert.True(
             method != null,
-            "IYokiFrameClient 必须公开 Task<CommandResponse> SendFastChannelReadOnlySystemCommandAsync(string engineId, string action, string source, int timeoutMs, CancellationToken cancellationToken)。");
+            "IFastChannelCommandTransport 必须公开 Task<CommandResponse> SendFastChannelReadOnlySystemCommandAsync(string engineId, string action, string source, int timeoutMs, CancellationToken cancellationToken)。");
         Assert.Equal(typeof(Task<CommandResponse>), method!.ReturnType);
         return method;
     }
@@ -351,6 +421,7 @@ public sealed class YokiFrameClientFastChannelTests
         private readonly CancellationToken mCancellationToken;
         private readonly bool mSendMalformedResponse;
         private int mHelloCount;
+        private int mLastEnvelopeTimeoutMs;
 
         /// <summary>
         /// 使用指定 endpoint、命令顺序和连接关闭期望创建测试 Host。
@@ -378,6 +449,11 @@ public sealed class YokiFrameClientFastChannelTests
         /// 获取当前 Host 已成功校验的 Hello 数量，用于判断 Client 是否复用连接。
         /// </summary>
         public int HelloCount => Volatile.Read(ref mHelloCount);
+
+        /// <summary>
+        /// 获取 Host 最近收到的协议 timeoutMs，用于区分本地操作期限与线上信封期限。
+        /// </summary>
+        public int LastEnvelopeTimeoutMs => Volatile.Read(ref mLastEnvelopeTimeoutMs);
 
         /// <summary>
         /// 启动单连接服务端任务；测试调用侧负责等待完成并观察协议断言。
@@ -434,6 +510,7 @@ public sealed class YokiFrameClientFastChannelTests
             Assert.Equal(expectedAction, envelope.Action);
             Assert.Equal("{}", envelope.PayloadJson);
             Assert.NotEmpty(envelope.RequestId);
+            Interlocked.Exchange(ref mLastEnvelopeTimeoutMs, envelope.TimeoutMs);
 
             var responsePayload = mSendMalformedResponse
                 ? "{"
