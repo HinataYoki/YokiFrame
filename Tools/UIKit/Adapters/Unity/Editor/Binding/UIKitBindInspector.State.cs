@@ -258,13 +258,21 @@ namespace YokiFrame
                 AssetDatabase.OpenAsset(asset);
         }
 
-        /// <summary>根据当前 BindType 和默认布局计算生成文件路径。</summary>
+        /// <summary>根据当前 BindType 和默认布局安全计算生成文件路径，非 C# 标识符的层级根只禁用跳转入口。</summary>
         private string GetGeneratedCodePath()
         {
             AbstractBind bind = target as AbstractBind;
             string panelName = GetPanelName(bind);
             if (string.IsNullOrEmpty(panelName))
                 return string.Empty;
+            try
+            {
+                CodeGenKit.RequireIdentifier(panelName, nameof(panelName));
+            }
+            catch (ArgumentException)
+            {
+                return string.Empty;
+            }
             UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault(panelName);
             UIKitPanelCodeLayout layout = new(request);
             switch (CurrentBindType())

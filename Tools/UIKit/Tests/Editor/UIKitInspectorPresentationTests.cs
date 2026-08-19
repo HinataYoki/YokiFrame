@@ -138,6 +138,32 @@ namespace YokiFrame.Tests
             }
         }
 
+        /// <summary>验证非 C# 标识符的场景根不会中断 Bind Inspector 渲染，只禁用代码跳转入口。</summary>
+        [Test]
+        public void BindInspectorAllowsNonIdentifierRootName()
+        {
+            GameObject root = new("Canvas (Environment)", typeof(RectTransform));
+            GameObject boundObject = new("ItemsSlot", typeof(RectTransform), typeof(UnityButton), typeof(Bind));
+            boundObject.transform.SetParent(root.transform, false);
+            Bind bind = boundObject.GetComponent<Bind>();
+            bind.Name = "ItemsSlot";
+            bind.Target = boundObject.GetComponent<UnityButton>();
+            UnityInspectorEditor editor = UnityInspectorEditor.CreateEditor(bind);
+            try
+            {
+                VisualElement visualRoot = editor.CreateInspectorGUI();
+                Assert.IsNotNull(visualRoot);
+                Assert.IsTrue(visualRoot.ClassListContains("yoki-editor-inspector"));
+                AssertVisualText(visualRoot, "绑定类型");
+                AssertButton(visualRoot, "代码未生成");
+            }
+            finally
+            {
+                Object.DestroyImmediate(editor);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         /// <summary>验证空 Member 配置打开 Inspector 后默认选择最后一个非 Bind 组件。</summary>
         [Test]
         public void BindInspectorDefaultsToLastNonBindComponent()
