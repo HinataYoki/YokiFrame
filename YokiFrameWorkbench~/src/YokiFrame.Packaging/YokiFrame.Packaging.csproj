@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,26 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs"
-             Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs"
-             Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs"
-             Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs"
-             Link="RuntimeCache\RuntimeCachePruner.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs"
-             Link="RuntimeCache\RuntimeCacheLease.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupOptions.cs"
-             Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupReport.cs"
-             Link="Storage\YokiFrameFileBridgeCleanupReport.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgePruner.cs"
-             Link="Storage\YokiFrameFileBridgePruner.cs" />
-    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs"
-             Link="RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs" />
-    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs"
-             Link="RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs" />
+    <ProjectReference Include="..\YokiFrame.Workbench.RuntimeCache\YokiFrame.Workbench.RuntimeCache.csproj" />
   </ItemGroup>
 
 </Project>

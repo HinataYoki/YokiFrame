@@ -6,7 +6,7 @@ namespace YokiFrame.RuntimeCache;
 /// <summary>
 /// 校验 Runtime manifest 文件摘要、逐文件哈希与平台目录物理文件集合。
 /// </summary>
-internal static class RuntimeManifestFileSetValidator
+public static class RuntimeManifestFileSetValidator
 {
     /// <summary>
     /// 验证平台文件计数、总大小、逐文件内容和额外载荷。
@@ -18,7 +18,7 @@ internal static class RuntimeManifestFileSetValidator
     /// <param name="files">验证后的文件完整路径集合。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>清单与物理载荷完全一致时返回 true。</returns>
-    internal static bool TryValidate(
+    public static bool TryValidate(
         JsonElement platform,
         string runtimeRoot,
         string platformRoot,

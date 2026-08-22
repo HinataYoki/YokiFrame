@@ -4,10 +4,17 @@
     <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\IO\YokiFrameAtomicFileWriter.cs" Link="EditorContracts\CommandBridge\YokiFrameAtomicFileWriter.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\IO\YokiFrameFilePathPolicy.cs" Link="EditorContracts\CommandBridge\YokiFrameFilePathPolicy.cs" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- 与 Protocol 相同的工具链宏，启用源码链接的共享 CommandBridge IO 实现。 -->
+    <DefineConstants>$(DefineConstants);YOKIFRAME_TOOLING</DefineConstants>
   </PropertyGroup>
 
 </Project>

@@ -134,7 +134,9 @@ namespace YokiFrame.Tests
             UIRoot.Dispose();
             deferredLoader.Complete();
             yield return new WaitUntil(() => pending.IsCompleted);
-            Assert.IsTrue(pending.IsCanceled, "Root teardown 必须立即让无调用方令牌的等待者进入取消终态。");
+            // UniTask 公开边界不保留 TPL Canceled 状态位；取消以 OperationCanceledException 故障形式暴露。
+            Assert.IsTrue(pending.IsFaulted, "Root teardown 必须立即让无调用方令牌的等待者以取消异常结束。");
+            Assert.IsInstanceOf<OperationCanceledException>(pending.Exception?.GetBaseException(), "迟到结果必须以取消异常呈现给调用方。");
 
             UIKit.SetPanelLoader(mLoader);
             UIRoot secondRoot = UIKit.Root;

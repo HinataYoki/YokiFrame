@@ -7,12 +7,9 @@ namespace YokiFrame
     /// <summary>承载 Godot Host 的版本化与命名 Kit Telemetry 发布。</summary>
     public sealed partial class GodotFileBridgeHost
     {
-        private readonly Dictionary<string, long> mKitTelemetryVersions =
-            new Dictionary<string, long>(StringComparer.Ordinal);
-        private readonly Dictionary<string, long> mKitSnapshotVersions =
-            new Dictionary<string, long>(StringComparer.Ordinal);
-        private readonly Dictionary<string, Dictionary<string, long>> mNamedTelemetryVersions =
-            new Dictionary<string, Dictionary<string, long>>(StringComparer.Ordinal);
+        // 三宿主共享的 Kit 状态版本簿；失败回落策略仍由本宿主循环保留。
+        private readonly YokiFrameKitStateVersionTracker mStateVersions =
+            new YokiFrameKitStateVersionTracker();
 
         /// <summary>
         /// 每帧只检查轻量版本号；领域状态变化时立即发布 Shared Memory，不写任何 FileBridge 文件。
@@ -29,7 +26,7 @@ namespace YokiFrame
             for (var index = 0; index < providers.Count; index++)
             {
                 var versioned = providers[index] as IYokiFrameVersionedKitInteractionProvider;
-                if (versioned == null || !HasTelemetryVersionChanged(versioned))
+                if (versioned == null || !mStateVersions.HasTelemetryVersionChanged(versioned))
                 {
                     continue;
                 }
@@ -39,7 +36,7 @@ namespace YokiFrame
                     mSequence++;
                     PublishTelemetryState(versioned.Kit, versioned.CreateSnapshot("state"));
                     PublishNamedTelemetry(versioned);
-                    mKitTelemetryVersions[versioned.Kit] = versioned.StateVersion;
+                    mStateVersions.RememberTelemetryVersion(versioned);
                 }
                 catch (Exception exception)
                 {
@@ -62,9 +59,8 @@ namespace YokiFrame
 
             IReadOnlyList<string> names = namedProvider.TelemetryNames;
             var versionedProvider = namedProvider as IYokiFrameVersionedNamedTelemetryProvider;
-            Dictionary<string, long> publishedVersions = versionedProvider == null
-                ? null
-                : GetOrCreateNamedTelemetryVersions(provider.Kit);
+            Dictionary<string, long> publishedVersions =
+                mStateVersions.GetOrCreateNamedVersions(provider.Kit, versionedProvider);
             for (var index = 0; index < names.Count; index++)
             {
                 PublishNamedTelemetryFrameSafely(
@@ -75,7 +71,7 @@ namespace YokiFrame
             }
 
             writer.RetainNamedStates(provider.Kit, names);
-            RetainNamedTelemetryVersions(provider.Kit, names);
+            mStateVersions.RetainNamedVersions(provider.Kit, names);
         }
 
         /// <summary>隔离单个命名 payload 创建失败，避免一个已注销实例阻断其它 latest frame。</summary>
@@ -100,100 +96,12 @@ namespace YokiFrame
                 }
 
                 PublishTelemetryState(provider.Kit, name, provider.CreateTelemetry(name));
-                if (versionedProvider != null)
-                {
-                    publishedVersions[name] = version;
-                }
+                mStateVersions.RememberNamedVersion(publishedVersions, name, version);
             }
             catch (Exception exception)
             {
                 mLastError = "Named telemetry payload failed for "
                     + provider.Kit + "/" + name + ": " + exception.Message;
-            }
-        }
-
-        /// <summary>释放已经不活动实例的版本记录，保持缓存与 writer 当前命名映射一致。</summary>
-        /// <param name="kit">命名 Telemetry 所属 Kit。</param>
-        /// <param name="activeNames">当前仍活动的安全名称。</param>
-        private void RetainNamedTelemetryVersions(string kit, IReadOnlyList<string> activeNames)
-        {
-            if (!mNamedTelemetryVersions.TryGetValue(kit, out var publishedVersions)
-                || publishedVersions.Count == activeNames.Count)
-            {
-                return;
-            }
-
-            List<string> staleKeys = new List<string>();
-            foreach (var name in publishedVersions.Keys)
-            {
-                if (!ContainsTelemetryName(activeNames, name))
-                {
-                    staleKeys.Add(name);
-                }
-            }
-
-            for (var index = 0; index < staleKeys.Count; index++)
-            {
-                publishedVersions.Remove(staleKeys[index]);
-            }
-        }
-
-        /// <summary>判断 Provider 当前名称集合是否仍包含指定实例。</summary>
-        /// <param name="activeNames">当前活动名称集合。</param>
-        /// <param name="name">待匹配实例名称。</param>
-        /// <returns>仍活动时返回 true。</returns>
-        private static bool ContainsTelemetryName(IReadOnlyList<string> activeNames, string name)
-        {
-            for (var index = 0; index < activeNames.Count; index++)
-            {
-                if (string.Equals(activeNames[index], name, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>获取指定 Kit 的实例版本表，并在首次发布时创建。</summary>
-        /// <param name="kit">Kit 标识。</param>
-        /// <returns>仅以 Provider 安全名称为键的实例版本表。</returns>
-        private Dictionary<string, long> GetOrCreateNamedTelemetryVersions(string kit)
-        {
-            if (!mNamedTelemetryVersions.TryGetValue(kit, out var versions))
-            {
-                versions = new Dictionary<string, long>(StringComparer.Ordinal);
-                mNamedTelemetryVersions.Add(kit, versions);
-            }
-
-            return versions;
-        }
-
-        /// <summary>清空实例版本缓存，使新 session/generation 强制重新发布全部命名帧。</summary>
-        private void ClearNamedTelemetryVersions()
-        {
-            mNamedTelemetryVersions.Clear();
-        }
-
-        /// <summary>记录一次完整 state 发布后的 Provider 版本。</summary>
-        /// <param name="provider">刚完成发布的 Provider。</param>
-        private void RememberTelemetryVersion(IYokiFrameKitInteractionProvider provider)
-        {
-            var versioned = provider as IYokiFrameVersionedKitInteractionProvider;
-            if (versioned != null)
-            {
-                mKitTelemetryVersions[provider.Kit] = versioned.StateVersion;
-            }
-        }
-
-        /// <summary>记录完整 FileBridge snapshot 对应的版本，避免增量发布重复落盘。</summary>
-        /// <param name="provider">刚完成完整状态发布的 Provider。</param>
-        private void RememberSnapshotVersion(IYokiFrameKitInteractionProvider provider)
-        {
-            var versioned = provider as IYokiFrameSnapshotVersionedKitInteractionProvider;
-            if (versioned != null)
-            {
-                mKitSnapshotVersions[provider.Kit] = versioned.StateVersion;
             }
         }
 
@@ -206,7 +114,7 @@ namespace YokiFrame
             for (var index = 0; index < providers.Count; index++)
             {
                 var versioned = providers[index] as IYokiFrameSnapshotVersionedKitInteractionProvider;
-                if (!ShouldWriteSnapshot(versioned))
+                if (!mStateVersions.ShouldWriteSnapshot(versioned, mTelemetryAvailable))
                 {
                     continue;
                 }
@@ -216,35 +124,34 @@ namespace YokiFrame
                     "state",
                     versioned.CreateSnapshot("state"),
                     versioned is IYokiFrameVersionedKitInteractionProvider);
-                mKitSnapshotVersions[versioned.Kit] = versioned.StateVersion;
+                mStateVersions.RememberSnapshotVersion(versioned);
                 wroteSnapshot = true;
             }
 
             return wroteSnapshot;
         }
 
-        /// <summary>判断 Provider 是否需要文件快照，并让 Telemetry Provider 保持原有回落策略。</summary>
-        /// <param name="provider">待检查的 Snapshot 版本化 Provider。</param>
-        /// <returns>需要写入当前 FileBridge state 时返回 true。</returns>
-        private bool ShouldWriteSnapshot(IYokiFrameSnapshotVersionedKitInteractionProvider provider)
+        /// <summary>记录一次完整 state 发布后的 telemetry 与 snapshot 版本。</summary>
+        /// <param name="provider">刚完成发布的 Provider。</param>
+        internal void RememberPublishedStateVersions(IYokiFrameKitInteractionProvider provider)
         {
-            if (provider == null
-                || (mKitSnapshotVersions.TryGetValue(provider.Kit, out var publishedVersion)
-                    && publishedVersion == provider.StateVersion))
+            var versionedForTelemetry = provider as IYokiFrameVersionedKitInteractionProvider;
+            if (versionedForTelemetry != null)
             {
-                return false;
+                mStateVersions.RememberTelemetryVersion(versionedForTelemetry);
             }
 
-            return !(provider is IYokiFrameVersionedKitInteractionProvider) || !mTelemetryAvailable;
+            var versionedForSnapshot = provider as IYokiFrameSnapshotVersionedKitInteractionProvider;
+            if (versionedForSnapshot != null)
+            {
+                mStateVersions.RememberSnapshotVersion(versionedForSnapshot);
+            }
         }
 
-        /// <summary>判断版本化 Provider 是否自上次发布后发生变化。</summary>
-        /// <param name="provider">待检查 Provider。</param>
-        /// <returns>首次发布或版本不同返回 true。</returns>
-        private bool HasTelemetryVersionChanged(IYokiFrameVersionedKitInteractionProvider provider)
+        /// <summary>清空命名版本缓存；宿主释放遥测 writer 时调用，保留 state 版本避免重复全量发布。</summary>
+        private void ClearNamedTelemetryVersions()
         {
-            return !mKitTelemetryVersions.TryGetValue(provider.Kit, out var publishedVersion)
-                || publishedVersion != provider.StateVersion;
+            mStateVersions.ClearNamedVersions();
         }
     }
 }

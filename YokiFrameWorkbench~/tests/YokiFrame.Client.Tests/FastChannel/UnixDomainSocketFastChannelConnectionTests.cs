@@ -30,10 +30,10 @@ public sealed class UnixDomainSocketFastChannelConnectionTests
             TimeSpan.FromSeconds(2),
             cancellationSource.Token);
         var response = await connection.RequestAsync(
-            new FastChannelFrame(YokiFrameFastChannelMessageKind.Command, 0, "{\"requestId\":\"request-a\"}"),
+            new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Command, 0, "{\"requestId\":\"request-a\"}"),
             cancellationSource.Token);
 
-        Assert.Equal(YokiFrameFastChannelMessageKind.Response, response.Kind);
+        Assert.Equal(YokiFrameFastChannelMessageKind.Response, response.MessageKind);
         Assert.Equal("{\"requestId\":\"request-a\",\"message\":\"pong\"}", response.PayloadJson);
         await serverTask;
     }
@@ -82,10 +82,10 @@ public sealed class UnixDomainSocketFastChannelConnectionTests
                 FastChannelHandshake.CreateHelloAck(endpoint),
                 cancellationToken);
             var request = await FastChannelFrameStream.ReadAsync(stream, cancellationToken);
-            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.Kind);
+            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.MessageKind);
             await FastChannelFrameStream.WriteAsync(
                 stream,
-                new FastChannelFrame(
+                new YokiFrameFastChannelFrame(
                     YokiFrameFastChannelMessageKind.Response,
                     0,
                     "{\"requestId\":\"request-a\",\"message\":\"pong\"}"),

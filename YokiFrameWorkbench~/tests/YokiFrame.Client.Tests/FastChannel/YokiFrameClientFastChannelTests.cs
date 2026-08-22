@@ -502,7 +502,7 @@ public sealed class YokiFrameClientFastChannelTests
         private async Task ProcessExpectedCommandAsync(NamedPipeServerStream server, string expectedAction)
         {
             var request = await FastChannelFrameStream.ReadAsync(server, mCancellationToken);
-            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.Kind);
+            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.MessageKind);
             var envelope = CommandEnvelope.FromJson(request.PayloadJson);
             Assert.Equal(ENGINE_ID, envelope.EngineId);
             Assert.Equal(SOURCE, envelope.Source);
@@ -525,7 +525,7 @@ public sealed class YokiFrameClientFastChannelTests
                 });
             await FastChannelFrameStream.WriteAsync(
                 server,
-                new FastChannelFrame(YokiFrameFastChannelMessageKind.Response, 0, responsePayload),
+                new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Response, 0, responsePayload),
                 mCancellationToken);
         }
 
@@ -540,7 +540,7 @@ public sealed class YokiFrameClientFastChannelTests
             {
                 var unexpectedRequest = await FastChannelFrameStream.ReadAsync(server, mCancellationToken);
                 throw new InvalidDataException(
-                    "engine registry 已变更时 Client 仍在旧 FastChannel 上发送 " + unexpectedRequest.Kind + " frame。");
+                    "engine registry 已变更时 Client 仍在旧 FastChannel 上发送 " + unexpectedRequest.MessageKind + " frame。");
             }
             catch (EndOfStreamException)
             {

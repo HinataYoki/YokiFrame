@@ -27,6 +27,22 @@ internal static class EngineHostIdentity
     }
 
     /// <summary>
+    /// 判断命令前后两次 registry 是否严格属于同一宿主会话；用于证明一次命令期间宿主未发生 session/generation 轮换。
+    /// </summary>
+    /// <param name="before">命令前的 registry。</param>
+    /// <param name="after">命令后的 registry。</param>
+    /// <returns>两项身份字段均有效且完全一致时返回 true。</returns>
+    public static bool IsSameSession(EngineRegistryEntry? before, EngineRegistryEntry? after)
+    {
+        return before != null
+            && after != null
+            && before.Generation > 0L
+            && before.Generation == after.Generation
+            && !string.IsNullOrWhiteSpace(before.SessionId)
+            && string.Equals(before.SessionId, after.SessionId, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// 从 registry 与 heartbeat 组合可用于命令和 telemetry 门禁的宿主身份。
     /// </summary>
     /// <param name="registry">本轮读取到的 registry。</param>

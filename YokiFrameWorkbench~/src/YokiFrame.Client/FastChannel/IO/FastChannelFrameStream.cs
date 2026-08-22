@@ -1,26 +1,22 @@
 using YokiFrame;
-using YokiFrame.Protocol.FastChannel;
 using YokiFrame.Protocol.Results;
 
 namespace YokiFrame.Client.FastChannel.IO;
 
 /// <summary>
-/// 为 .NET Client 暴露 Core Runtime Stream framing facade，并转换为统一的工具协议异常。
+/// Client 侧唯一的 FastChannel framing 边界：直接使用共享 Core 帧类型读写 Stream，
+/// 并把 Core framing 异常统一转换为工具协议异常，供 Application/CLI 的回退与错误白名单识别。
 /// </summary>
-public static class FastChannelFrameStream
+internal static class FastChannelFrameStream
 {
-    /// <summary>
-    /// 读取一个完整 Core frame 并映射为 Client 使用的工具侧消息。
-    /// </summary>
+    /// <summary>读取一个完整 Core 帧并保留共享帧类型。</summary>
     /// <param name="stream">已建立连接的可读 Stream。</param>
     /// <param name="cancellationToken">读取取消令牌。</param>
-    /// <returns>已完成 framing 和 UTF-8 校验的消息。</returns>
-    public static async Task<FastChannelFrame> ReadAsync(Stream stream, CancellationToken cancellationToken)
+    public static async Task<YokiFrameFastChannelFrame> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         try
         {
-            var frame = await YokiFrameFastChannelFrameStream.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-            return new FastChannelFrame(frame.MessageKind, frame.Flags, frame.PayloadJson);
+            return await YokiFrameFastChannelFrameStream.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
         }
         catch (YokiFrameFastChannelProtocolException exception)
         {
@@ -28,26 +24,15 @@ public static class FastChannelFrameStream
         }
     }
 
-    /// <summary>
-    /// 将工具侧消息映射为 Core frame 后写入当前 Stream。
-    /// </summary>
+    /// <summary>将一个完整 Core 帧编码、写入并刷新到当前 Stream。</summary>
     /// <param name="stream">已建立连接的可写 Stream。</param>
-    /// <param name="frame">待写入的协议消息。</param>
+    /// <param name="frame">待写入的共享协议消息。</param>
     /// <param name="cancellationToken">写入取消令牌。</param>
-    /// <returns>写入完成后的异步任务。</returns>
-    public static async Task WriteAsync(Stream stream, FastChannelFrame frame, CancellationToken cancellationToken)
+    public static async Task WriteAsync(Stream stream, YokiFrameFastChannelFrame frame, CancellationToken cancellationToken)
     {
-        if (frame == null)
-        {
-            throw new ArgumentNullException(nameof(frame));
-        }
-
         try
         {
-            await YokiFrameFastChannelFrameStream.WriteAsync(
-                stream,
-                new YokiFrameFastChannelFrame(frame.Kind, frame.Flags, frame.PayloadJson),
-                cancellationToken).ConfigureAwait(false);
+            await YokiFrameFastChannelFrameStream.WriteAsync(stream, frame, cancellationToken).ConfigureAwait(false);
         }
         catch (YokiFrameFastChannelProtocolException exception)
         {
@@ -55,11 +40,7 @@ public static class FastChannelFrameStream
         }
     }
 
-    /// <summary>
-    /// 将 Core framing 异常映射为 Client、Application 和 CLI 统一使用的标准错误。
-    /// </summary>
-    /// <param name="exception">Core stream 返回的跨宿主协议异常。</param>
-    /// <returns>工具侧标准协议异常。</returns>
+    /// <summary>将 Core framing 异常映射为 Client、Application 和 CLI 统一使用的标准错误。</summary>
     private static YokiFrameProtocolException ConvertException(YokiFrameFastChannelProtocolException exception)
     {
         return new YokiFrameProtocolException(new YokiFrameError(

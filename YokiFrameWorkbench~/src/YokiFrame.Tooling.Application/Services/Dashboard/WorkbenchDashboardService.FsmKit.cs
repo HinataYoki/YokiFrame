@@ -363,7 +363,7 @@ public sealed partial class WorkbenchDashboardService
     }
 
     /// <summary>
-    /// 判断命令前后 registry 是否仍指向同一可证明的宿主会话。
+    /// 判断命令前后 registry 是否仍指向同一可证明的宿主会话；区分“身份缺失不可证明”与“会话已轮换”两种 stale 原因。
     /// </summary>
     private static string CreateCommandIdentityStaleReason(
         EngineRegistryEntry? registryBeforeCommand,
@@ -379,8 +379,7 @@ public sealed partial class WorkbenchDashboardService
             return "FsmKit command host identity could not be confirmed before and after completion.";
         }
 
-        return string.Equals(registryBeforeCommand.SessionId, registryAfterCommand.SessionId, StringComparison.Ordinal)
-            && registryBeforeCommand.Generation == registryAfterCommand.Generation
+        return Engines.EngineHostIdentity.IsSameSession(registryBeforeCommand, registryAfterCommand)
             ? string.Empty
             : "FsmKit command host session or generation changed while waiting for the response.";
     }

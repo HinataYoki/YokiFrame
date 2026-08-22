@@ -1,3 +1,4 @@
+using YokiFrame;
 using YokiFrame.Protocol.FastChannel;
 using YokiFrame.Protocol.Results;
 
@@ -20,9 +21,9 @@ public sealed class FastChannelHandshakeTests
             42,
             "YokiFrame.FastChannel.unity-editor");
 
-        var hello = FastChannelHandshake.ReadHello(FastChannelFrameCodec.Decode(FastChannelFrameCodec.Encode(
+        var hello = FastChannelHandshake.ReadHello(YokiFrameFastChannelFrameCodec.Decode(YokiFrameFastChannelFrameCodec.Encode(
             FastChannelHandshake.CreateHello(endpoint))));
-        var acknowledgement = FastChannelHandshake.ReadHelloAck(FastChannelFrameCodec.Decode(FastChannelFrameCodec.Encode(
+        var acknowledgement = FastChannelHandshake.ReadHelloAck(YokiFrameFastChannelFrameCodec.Decode(YokiFrameFastChannelFrameCodec.Encode(
             FastChannelHandshake.CreateHelloAck(endpoint))));
 
         Assert.Equal(endpoint.EngineId, hello.EngineId);

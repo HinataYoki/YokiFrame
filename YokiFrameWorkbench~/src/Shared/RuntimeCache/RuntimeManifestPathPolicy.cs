@@ -3,12 +3,12 @@ namespace YokiFrame.RuntimeCache;
 /// <summary>
 /// 统一 Runtime manifest 的跨平台路径 containment、载荷过滤与符号链接策略。
 /// </summary>
-internal static class RuntimeManifestPathPolicy
+public static class RuntimeManifestPathPolicy
 {
     private const string RUNTIME_STATE_DIRECTORY_NAME = ".yokiframe";
 
     /// <summary>获取与当前宿主文件系统一致的路径集合比较器。</summary>
-    internal static StringComparer PathComparer { get; } = OperatingSystem.IsWindows()
+    public static StringComparer PathComparer { get; } = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
 
@@ -19,7 +19,7 @@ internal static class RuntimeManifestPathPolicy
     /// <param name="relativePath">相对目录路径。</param>
     /// <param name="fullPath">可信目录完整路径。</param>
     /// <returns>目录存在、位于根内且目录链无 reparse point 时返回 true。</returns>
-    internal static bool TryResolveDirectoryInside(string root, string relativePath, out string fullPath)
+    public static bool TryResolveDirectoryInside(string root, string relativePath, out string fullPath)
     {
         return TryResolveInside(root, relativePath, out fullPath)
             && Directory.Exists(fullPath)
@@ -33,7 +33,7 @@ internal static class RuntimeManifestPathPolicy
     /// <param name="relativePath">相对文件路径。</param>
     /// <param name="fullPath">可信文件完整路径。</param>
     /// <returns>文件存在、位于根内且路径链无 reparse point 时返回 true。</returns>
-    internal static bool TryResolveFileInside(string root, string relativePath, out string fullPath)
+    public static bool TryResolveFileInside(string root, string relativePath, out string fullPath)
     {
         return TryResolveInside(root, relativePath, out fullPath)
             && File.Exists(fullPath)
@@ -46,7 +46,7 @@ internal static class RuntimeManifestPathPolicy
     /// <param name="platformRoot">平台根目录。</param>
     /// <param name="path">候选文件路径。</param>
     /// <returns>非调试符号且不位于平台内运行态目录时返回 true。</returns>
-    internal static bool IsRuntimePayloadFile(string platformRoot, string path)
+    public static bool IsRuntimePayloadFile(string platformRoot, string path)
     {
         return !string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase)
             && !ContainsRelativeDirectory(platformRoot, path, RUNTIME_STATE_DIRECTORY_NAME);
@@ -57,7 +57,7 @@ internal static class RuntimeManifestPathPolicy
     /// </summary>
     /// <param name="path">候选目录。</param>
     /// <returns>目录名为 `.yokiframe` 时返回 true。</returns>
-    internal static bool IsRuntimeStateDirectory(string path)
+    public static bool IsRuntimeStateDirectory(string path)
     {
         return string.Equals(
             Path.GetFileName(Path.TrimEndingDirectorySeparator(path)),
@@ -71,7 +71,7 @@ internal static class RuntimeManifestPathPolicy
     /// <param name="root">根目录。</param>
     /// <param name="path">候选完整路径。</param>
     /// <returns>候选位于根目录内时返回 true。</returns>
-    internal static bool IsInside(string root, string path)
+    public static bool IsInside(string root, string path)
     {
         var prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
         return Path.GetFullPath(path).StartsWith(prefix, GetPathComparison());
@@ -82,7 +82,7 @@ internal static class RuntimeManifestPathPolicy
     /// </summary>
     /// <param name="path">文件或目录完整路径。</param>
     /// <returns>文件系统属性包含 ReparsePoint 时返回 true。</returns>
-    internal static bool IsReparsePoint(string path)
+    public static bool IsReparsePoint(string path)
     {
         return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }

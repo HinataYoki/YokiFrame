@@ -1,15 +1,19 @@
 #if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
 using System;
+using System.Collections.Generic;
 
 namespace YokiFrame
 {
     /// <summary>
     /// 为单个 Kit 提供 action allowlist 和执行入口的基础 handler。
+    /// handler 自身声明的 <see cref="Descriptors"/> 是该 Kit 命令面的单一事实源，
+    /// 宿主策略必须由它聚合生成，禁止在策略侧再维护第二份命令清单。
     /// </summary>
     public abstract class YokiFrameKitCommandHandler : IYokiFrameCommandHandler
     {
         private readonly string mKit;
         private readonly string[] mActions;
+        private readonly YokiFrameCommandDescriptor[] mDescriptors;
 
         /// <summary>
         /// 创建 Kit handler；调用方传入该 handler 支持的 action 集合。
@@ -17,9 +21,37 @@ namespace YokiFrame
         /// <param name="kit">Kit 标识。</param>
         /// <param name="actions">该 Kit 下允许当前 handler 处理的 action。</param>
         protected YokiFrameKitCommandHandler(string kit, string[] actions)
+            : this(kit, CreateReadOnlyDescriptors(kit, actions))
         {
+        }
+
+        /// <summary>
+        /// 创建 Kit handler；调用方传入该 handler 支持的完整命令描述（含每个 action 的 Kind）。
+        /// </summary>
+        /// <param name="kit">Kit 标识。</param>
+        /// <param name="descriptors">该 Kit 下允许当前 handler 处理的命令描述。</param>
+        protected YokiFrameKitCommandHandler(string kit, YokiFrameCommandDescriptor[] descriptors)
+        {
+            if (descriptors == null)
+            {
+                throw new ArgumentNullException(nameof(descriptors));
+            }
+
             mKit = kit ?? throw new ArgumentNullException(nameof(kit));
-            mActions = actions ?? throw new ArgumentNullException(nameof(actions));
+            mDescriptors = descriptors;
+            mActions = new string[descriptors.Length];
+            for (var index = 0; index < descriptors.Length; index++)
+            {
+                mActions[index] = descriptors[index].Action;
+            }
+        }
+
+        /// <summary>
+        /// 获取当前 handler 声明的命令描述；宿主策略由此聚合，保证 allowlist 与可执行命令一致。
+        /// </summary>
+        public IReadOnlyList<YokiFrameCommandDescriptor> Descriptors
+        {
+            get { return mDescriptors; }
         }
 
         /// <summary>
@@ -75,6 +107,28 @@ namespace YokiFrame
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 把纯 action 列表转换为默认 ReadOnly 的命令描述，供旧构造路径保持统一描述来源。
+        /// </summary>
+        /// <param name="kit">Kit 标识。</param>
+        /// <param name="actions">action 集合。</param>
+        /// <returns>与 action 列表一一对应的 ReadOnly 描述。</returns>
+        private static YokiFrameCommandDescriptor[] CreateReadOnlyDescriptors(string kit, string[] actions)
+        {
+            if (actions == null)
+            {
+                throw new ArgumentNullException(nameof(actions));
+            }
+
+            var descriptors = new YokiFrameCommandDescriptor[actions.Length];
+            for (var index = 0; index < actions.Length; index++)
+            {
+                descriptors[index] = new YokiFrameCommandDescriptor(kit, actions[index], YokiFrameCommandKind.ReadOnly);
+            }
+
+            return descriptors;
         }
     }
 }

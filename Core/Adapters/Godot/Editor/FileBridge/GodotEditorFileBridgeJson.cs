@@ -42,29 +42,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 使用同目录临时文件、落盘 flush 和原子重命名提交 JSON。
+        /// 使用共享原子写提交 JSON；临时文件、flush 与替换语义由 YokiFrameAtomicFileWriter 单源维护。
         /// </summary>
         /// <param name="targetPath">正式目标路径。</param>
         /// <param name="json">完整 JSON。</param>
         public static void WriteAtomic(string targetPath, string json)
         {
-            var directoryPath = Path.GetDirectoryName(targetPath);
-            if (string.IsNullOrEmpty(directoryPath))
-            {
-                throw new DirectoryNotFoundException("Godot Editor FileBridge target path has no directory.");
-            }
-
-            Directory.CreateDirectory(directoryPath);
-            var temporaryPath = targetPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            try
-            {
-                WriteTemporaryFile(temporaryPath, json);
-                File.Move(temporaryPath, targetPath, true);
-            }
-            finally
-            {
-                DeleteIfExists(temporaryPath);
-            }
+            YokiFrameAtomicFileWriter.WriteAllText(targetPath, json);
         }
 
         /// <summary>
@@ -147,37 +131,6 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>
-        /// 以无 BOM UTF-8 与 WriteThrough 写入临时文件并强制落盘。
-        /// </summary>
-        /// <param name="temporaryPath">临时路径。</param>
-        /// <param name="json">完整 JSON。</param>
-        private static void WriteTemporaryFile(string temporaryPath, string json)
-        {
-            using FileStream stream = new FileStream(
-                temporaryPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                4096,
-                FileOptions.WriteThrough);
-            using StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(false));
-            writer.Write(json);
-            writer.Flush();
-            stream.Flush(true);
-        }
-
-        /// <summary>
-        /// 删除存在的临时文件，缺失时保持幂等。
-        /// </summary>
-        /// <param name="path">待删除路径。</param>
-        private static void DeleteIfExists(string path)
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
     }
 }
 #endif

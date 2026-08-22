@@ -4,6 +4,7 @@
     <Project Path="src/YokiFrame.Client/YokiFrame.Client.csproj" />
     <Project Path="src/YokiFrame.Installer.Core/YokiFrame.Installer.Core.csproj" />
     <Project Path="src/YokiFrame.Packaging/YokiFrame.Packaging.csproj" />
+    <Project Path="src/YokiFrame.Workbench.RuntimeCache/YokiFrame.Workbench.RuntimeCache.csproj" />
     <Project Path="src/YokiFrame.Protocol/YokiFrame.Protocol.csproj" />
     <Project Path="src/YokiFrame.Tooling.Application/YokiFrame.Tooling.Application.csproj" />
     <Project Path="src/YokiFrame.Workbench.Avalonia/YokiFrame.Workbench.Avalonia.csproj" />

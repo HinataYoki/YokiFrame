@@ -70,10 +70,13 @@ namespace YokiFrame
 
         /// <summary>
         /// 以取消结果完成共享任务，用于 Root teardown 或全部等待者离开。
+        /// 取消异常必须携带已取消的共享令牌：无令牌的 TaskCanceledException 在
+        /// 多层 async 传播后会被运行时降级为 Faulted，导致公开等待者丢失取消终态。
         /// </summary>
         internal void SetCanceled()
         {
-            Complete(mCompletion.TrySetCanceled);
+            if (!mDisposed && !mSharedCancellation.IsCancellationRequested) mSharedCancellation.Cancel();
+            Complete(() => mCompletion.TrySetCanceled(mSharedCancellation.Token));
         }
 
         /// <summary>
@@ -102,7 +105,7 @@ namespace YokiFrame
         {
             try
             {
-                return await AwaitWithCancellationAsync(mCompletion.Task, token);
+                return await AwaitWithCancellationAsync(mCompletion.Task, token, mSharedCancellation.Token);
             }
             finally
             {
@@ -160,10 +163,27 @@ namespace YokiFrame
 
         /// <summary>
         /// 以独立取消令牌等待任务，避免取消共享底层 Task。
+        /// 共享任务因 Root teardown 进入取消终态时，重新抛出携带已取消共享令牌的
+        /// OperationCanceledException：无令牌的 TaskCanceledException 会在多层 async
+        /// 传播中被运行时降级为 Faulted，导致公开等待者丢失取消语义。
         /// </summary>
-        private static async Task<T> AwaitWithCancellationAsync<T>(Task<T> task, CancellationToken token)
+        private static async Task<T> AwaitWithCancellationAsync<T>(
+            Task<T> task,
+            CancellationToken token,
+            CancellationToken sharedToken)
         {
-            if (!token.CanBeCanceled) return await task;
+            if (!token.CanBeCanceled)
+            {
+                try
+                {
+                    return await task;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw new OperationCanceledException(sharedToken);
+                }
+            }
+
             token.ThrowIfCancellationRequested();
             var canceled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             using (token.Register(static state => ((TaskCompletionSource<bool>)state).TrySetResult(true), canceled))

@@ -185,7 +185,7 @@ namespace YokiFrame
             for (var index = 0; index < providers.Count; index++)
             {
                 var versioned = providers[index] as IYokiFrameVersionedKitInteractionProvider;
-                if (versioned == null || !HasVersionChanged(versioned))
+                if (versioned == null || !sStateVersions.HasTelemetryVersionChanged(versioned))
                 {
                     continue;
                 }
@@ -205,23 +205,16 @@ namespace YokiFrame
         {
             if (WriteStateTelemetrySafely(provider.Kit, payloadJson))
             {
-                sTelemetryFallbackKits.Remove(provider.Kit);
+                sStateVersions.MarkTelemetrySucceeded(provider.Kit);
             }
-            else if (sTelemetryFallbackKits.Add(provider.Kit))
+            else if (sStateVersions.MarkTelemetryFailed(provider.Kit))
             {
                 WriteSnapshotFile(provider.Kit, "state", payloadJson);
-                sKitSnapshotVersions[provider.Kit] = provider.StateVersion;
+                sStateVersions.RememberSnapshotVersion(provider);
             }
 
             WriteNamedTelemetry(provider);
-            sKitTelemetryVersions[provider.Kit] = provider.StateVersion;
-        }
-
-        /// <summary>判断版本化 Kit 是否需要发布新一帧 Telemetry。</summary>
-        private static bool HasVersionChanged(IYokiFrameVersionedKitInteractionProvider provider)
-        {
-            return !sKitTelemetryVersions.TryGetValue(provider.Kit, out var publishedVersion)
-                   || publishedVersion != provider.StateVersion;
+            sStateVersions.RememberTelemetryVersion(provider);
         }
 
         /// <summary>记录完整 Snapshot 已同步到 Telemetry 的领域版本。</summary>
@@ -232,7 +225,7 @@ namespace YokiFrame
             var versioned = provider as IYokiFrameVersionedKitInteractionProvider;
             if (versioned != null && snapshotName == "state")
             {
-                sKitTelemetryVersions[provider.Kit] = versioned.StateVersion;
+                sStateVersions.RememberTelemetryVersion(versioned);
             }
         }
 
@@ -244,7 +237,7 @@ namespace YokiFrame
             var versioned = provider as IYokiFrameSnapshotVersionedKitInteractionProvider;
             if (versioned != null && snapshotName == "state")
             {
-                sKitSnapshotVersions[provider.Kit] = versioned.StateVersion;
+                sStateVersions.RememberSnapshotVersion(versioned);
             }
         }
 
@@ -261,23 +254,16 @@ namespace YokiFrame
                 }
 
                 WriteSnapshotFile(versioned.Kit, "state", versioned.CreateSnapshot("state"));
-                sKitSnapshotVersions[versioned.Kit] = versioned.StateVersion;
+                sStateVersions.RememberSnapshotVersion(versioned);
             }
         }
 
-        /// <summary>判断 Provider 是否需要写入新的文件帧，并让 Telemetry Provider 保持原有回落策略。</summary>
+        /// <summary>判断 Provider 是否需要写入新的文件帧；判定规则由共享版本簿承载。</summary>
         private static bool ShouldWriteSnapshot(IYokiFrameSnapshotVersionedKitInteractionProvider provider)
         {
-            if (provider == null
-                || (sKitSnapshotVersions.TryGetValue(provider.Kit, out var publishedVersion)
-                    && publishedVersion == provider.StateVersion))
-            {
-                return false;
-            }
-
-            return !(provider is IYokiFrameVersionedKitInteractionProvider)
-                   || Application.platform != RuntimePlatform.WindowsEditor
-                   || sTelemetryFallbackKits.Contains(provider.Kit);
+            return sStateVersions.ShouldWriteSnapshot(
+                provider,
+                Application.platform == RuntimePlatform.WindowsEditor);
         }
 
         /// <summary>把 Kit payload 包装为 Snapshot 信封，并仅为版本化 Provider 同步 state telemetry。</summary>
@@ -301,11 +287,11 @@ namespace YokiFrame
 
             if (WriteStateTelemetrySafely(kit, payloadJson))
             {
-                sTelemetryFallbackKits.Remove(kit);
+                sStateVersions.MarkTelemetrySucceeded(kit);
             }
             else
             {
-                sTelemetryFallbackKits.Add(kit);
+                sStateVersions.MarkTelemetryFailed(kit);
             }
         }
 

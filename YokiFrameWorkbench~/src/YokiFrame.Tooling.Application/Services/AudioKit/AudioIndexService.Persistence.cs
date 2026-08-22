@@ -135,22 +135,10 @@ public sealed partial class AudioIndexService
         }
     }
 
-    /// <summary>在目标目录写临时文件并以同卷替换，失败时清理临时文件。</summary>
+    /// <summary>经共享原子写原语提交；持久化刷新与同卷替换由 YokiFrameAtomicFileWriter 单源承载。</summary>
     private static void WriteAtomically(string targetPath, string content)
     {
-        string? directory = Path.GetDirectoryName(targetPath);
-        if (string.IsNullOrEmpty(directory)) throw new InvalidDataException("AudioKit output has no parent directory.");
-        Directory.CreateDirectory(directory);
-        string temporaryPath = Path.Combine(directory, "." + Path.GetFileName(targetPath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
-        try
-        {
-            File.WriteAllText(temporaryPath, content);
-            File.Move(temporaryPath, targetPath, true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
-        }
+        YokiFrame.YokiFrameAtomicFileWriter.WriteAllText(targetPath, content);
     }
 
     /// <summary>解析项目内路径并拒绝越界结果。</summary>

@@ -6,6 +6,7 @@ namespace YokiFrame.Protocol.Telemetry.SharedMemory;
 
 /// <summary>
 /// 生成 Shared Memory telemetry v1 的标准 segment 名称。
+/// 长度上限的权威校验在 <see cref="YokiFrameSharedMemoryTelemetrySegmentName"/>；此处只负责把超限翻译为协议错误。
 /// </summary>
 public static class SharedMemoryTelemetrySegmentName
 {
@@ -28,10 +29,10 @@ public static class SharedMemoryTelemetrySegmentName
         var safeKit = SafeIdValidator.EnsureSafeId(kit, nameof(kit));
         var safeName = SafeIdValidator.EnsureSafeId(name, nameof(name));
         var projectScopeId = YokiFrameSharedMemoryTelemetryProjectScopeId.Compute(projectRoot);
-        string segmentName;
         try
         {
-            segmentName = YokiFrameSharedMemoryTelemetrySegmentName.Create(projectScopeId, safeEngineId, safeKit, safeName);
+            // 权威长度校验由 Core 契约完成；超限时按 name 参数抛出，可在此翻译为稳定协议错误。
+            return YokiFrameSharedMemoryTelemetrySegmentName.Create(projectScopeId, safeEngineId, safeKit, safeName);
         }
         catch (ArgumentException exception) when (exception.ParamName == nameof(name))
         {
@@ -41,15 +42,5 @@ public static class SharedMemoryTelemetrySegmentName
                 "Use shorter engine, Kit and telemetry names.",
                 Array.Empty<string>()));
         }
-        if (segmentName.Length <= MAX_SEGMENT_NAME_LENGTH)
-        {
-            return segmentName;
-        }
-
-        throw new YokiFrameProtocolException(new YokiFrameError(
-            "TelemetrySegmentNameTooLong",
-            $"Telemetry segment name must not exceed {MAX_SEGMENT_NAME_LENGTH} characters.",
-            "Use shorter engine, Kit and telemetry names.",
-            Array.Empty<string>()));
     }
 }

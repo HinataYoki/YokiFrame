@@ -152,30 +152,14 @@ internal sealed partial class TableKitCodeGenerationService
         if (File.Exists(path)) File.Delete(path);
     }
 
-    /// <summary>以 UTF-8、同目录临时文件和原子替换提交完整生成文本。</summary>
+    /// <summary>把生成文本统一为 LF 和末尾单换行后经统一原子写原语提交；内容未变化时跳过写入。</summary>
     /// <param name="path">目标文件绝对路径。</param>
     /// <param name="content">完整文件内容。</param>
     private static void WriteAtomically(string path, string content)
     {
         string normalized = NormalizeGeneratedText(content);
         if (File.Exists(path) && string.Equals(File.ReadAllText(path), normalized, StringComparison.Ordinal)) return;
-        string temporaryPath = path + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            using (FileStream stream = new(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            using (StreamWriter writer = new(stream, new UTF8Encoding(false)))
-            {
-                writer.Write(normalized);
-                writer.Flush();
-                stream.Flush(true);
-            }
-            if (File.Exists(path)) File.Replace(temporaryPath, path, null);
-            else File.Move(temporaryPath, path);
-        }
-        finally
-        {
-            DeleteFileIfExists(temporaryPath);
-        }
+        YokiFrame.YokiFrameAtomicFileWriter.WriteAllText(path, normalized);
     }
 
     /// <summary>把生成文本统一为 LF 和末尾单换行。</summary>

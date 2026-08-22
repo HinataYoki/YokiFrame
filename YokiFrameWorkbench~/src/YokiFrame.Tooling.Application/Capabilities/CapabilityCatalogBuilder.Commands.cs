@@ -107,7 +107,7 @@ internal sealed partial class CapabilityCatalogBuilder
             && string.Equals(engine.IdentityState, "Match", StringComparison.Ordinal)
             && after != null
             && afterHeartbeat != null
-            && !afterHeartbeat.IsStale(mGeneratedAtUtc, TimeSpan.FromSeconds(15))
+            && !afterHeartbeat.IsStale(mGeneratedAtUtc, Engines.EngineSelectionService.HeartbeatStaleThreshold)
             && ResolveIdentityState(after, afterHeartbeat) == "Match";
     }
 
@@ -147,7 +147,7 @@ internal sealed partial class CapabilityCatalogBuilder
             return;
         }
 
-        if (heartbeat.IsStale(mGeneratedAtUtc, TimeSpan.FromSeconds(15)))
+        if (heartbeat.IsStale(mGeneratedAtUtc, Engines.EngineSelectionService.HeartbeatStaleThreshold))
         {
             AddIssue(
                 "CommandCatalogHeartbeatStale",
@@ -241,13 +241,12 @@ internal sealed partial class CapabilityCatalogBuilder
             throw CreateCatalogException("CommandCatalogIdentityInvalid", "System/list_commands omitted a valid sessionId or generation.", "Refresh the engine registry and retry.", evidencePaths);
         }
 
+        if (after == null || !Engines.EngineHostIdentity.IsSameSession(before, after))
+        {
+            return false;
+        }
+
         return string.Equals(responseEngineId, engineId, StringComparison.Ordinal)
-            && after != null
-            && !string.IsNullOrWhiteSpace(after.SessionId)
-            && after.Generation > 0L
-            && string.Equals(before.SessionId, after.SessionId, StringComparison.Ordinal)
-            && before.Generation > 0L
-            && before.Generation == after.Generation
             && string.Equals(responseSessionId, after.SessionId, StringComparison.Ordinal)
             && responseGeneration == after.Generation;
     }

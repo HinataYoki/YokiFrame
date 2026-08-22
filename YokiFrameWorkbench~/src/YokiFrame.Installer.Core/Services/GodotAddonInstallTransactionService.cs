@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using YokiFrame.Installer.Core.IO;
 using YokiFrame.Installer.Core.Models;
@@ -55,7 +54,7 @@ internal sealed partial class GodotAddonInstallTransactionService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        ValidateProjectLock(plan.ProjectRoot, projectLock);
+        InstallerDirectorySwapTransaction.ValidateProjectLock(plan.ProjectRoot, projectLock);
         cancellationToken.ThrowIfCancellationRequested();
         GodotInstallTransactionContext context = new(plan);
         context.InitializeJournal();
@@ -82,7 +81,9 @@ internal sealed partial class GodotAddonInstallTransactionService
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && !context.CommitStarted)
         {
             var rollbackSucceeded = TryRollback(context);
-            rollbackSucceeded = CompleteFailureJournal(context, rollbackSucceeded);
+            rollbackSucceeded = InstallerDirectorySwapTransaction.CompleteFailureJournal(
+                context.Journal,
+                rollbackSucceeded);
             if (rollbackSucceeded)
             {
                 throw;
@@ -99,7 +100,9 @@ internal sealed partial class GodotAddonInstallTransactionService
         catch (Exception exception)
         {
             var rollbackSucceeded = TryRollback(context);
-            rollbackSucceeded = CompleteFailureJournal(context, rollbackSucceeded);
+            rollbackSucceeded = InstallerDirectorySwapTransaction.CompleteFailureJournal(
+                context.Journal,
+                rollbackSucceeded);
             var evidencePath = WriteFailureEvidence(context, rollbackSucceeded, exception);
             throw new GodotInstallException(
                 "Godot installation failed at " + GetCheckpointName(context) + ".",
@@ -110,27 +113,7 @@ internal sealed partial class GodotAddonInstallTransactionService
     }
 
     /// <summary>
-    /// 确认事务锁与计划项目一致，避免跨项目复用锁租约。
-    /// </summary>
-    /// <param name="projectRoot">计划项目根。</param>
-    /// <param name="projectLock">调用方持有的锁租约。</param>
-    private static void ValidateProjectLock(
-        string projectRoot,
-        InstallerProjectLockLease projectLock)
-    {
-        ArgumentNullException.ThrowIfNull(projectLock);
-        var fullProjectRoot = InstallerPathGuard.RequireFullPath(projectRoot, nameof(projectRoot));
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-        if (!string.Equals(fullProjectRoot, projectLock.ProjectRoot, comparison))
-        {
-            throw new InvalidOperationException("Installer project lock belongs to a different project.");
-        }
-    }
-
-    /// <summary>
-    /// 将完整 add-on 投影复制到隔离 staging，逐文件校验后写入 add-on 级 owner manifest。
+    /// 将完整 add-on 投影复制到隔离 staging 并复验；原子操作由共享目录交换事务承载。
     /// </summary>
     /// <param name="context">当前目录替换事务上下文。</param>
     /// <param name="projection">以 add-on 根为起点的最终投影。</param>
@@ -139,42 +122,14 @@ internal sealed partial class GodotAddonInstallTransactionService
         PackageProjection projection,
         CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(context.StagingAddonRoot);
-        foreach (var file in projection.Files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var targetPath = InstallerPathGuard.CombineInside(
-                context.StagingAddonRoot,
-                file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-            File.Copy(file.SourcePath, targetPath, overwrite: false);
-            VerifyProjectedFile(targetPath, file);
-        }
-
-        mManifestStore.Write(context.StagingAddonRoot, mManifestStore.Create(projection));
-        var inspection = mStagingOwnershipInspector.Inspect(context.StagingAddonRoot);
-        if (inspection.State != PackageOwnershipState.Clean)
-        {
-            throw new IOException("Godot add-on staging verification failed: " + string.Join(", ", inspection.ConflictPaths));
-        }
-
+        InstallerDirectorySwapTransaction.StageFiles(
+            context.StagingAddonRoot,
+            projection,
+            mManifestStore,
+            mStagingOwnershipInspector,
+            "Godot add-on transaction",
+            cancellationToken);
         AdvanceCheckpoint(context, GodotInstallCheckpoint.AddonStagingVerified);
-    }
-
-    /// <summary>
-    /// 校验刚复制到 staging 的文件仍与投影中的长度和 SHA-256 一致。
-    /// </summary>
-    /// <param name="targetPath">staging 中的完整文件路径。</param>
-    /// <param name="expected">投影中的期望摘要。</param>
-    private static void VerifyProjectedFile(string targetPath, PackageProjectionFile expected)
-    {
-        using var stream = File.OpenRead(targetPath);
-        var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-        if (stream.Length != expected.Length
-            || !string.Equals(hash, expected.Sha256, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new IOException("Godot staged file hash mismatch: " + expected.RelativePath);
-        }
     }
 
     /// <summary>
@@ -217,10 +172,6 @@ internal sealed partial class GodotAddonInstallTransactionService
         }
     }
 
-    /// <summary>
-    /// 将旧 `addons/yokiframe` 整目录移入同卷备份区；不读取或比较其内部内容。
-    /// </summary>
-    /// <param name="context">当前目录替换事务上下文。</param>
     private void BackupExistingAddon(
         GodotInstallTransactionContext context,
         CancellationToken cancellationToken)
@@ -232,24 +183,21 @@ internal sealed partial class GodotAddonInstallTransactionService
             return;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(context.BackupAddonRoot)!);
-        InstallerDirectoryTransaction.MoveWithRetry(context.AddonRoot, context.BackupAddonRoot);
+        InstallerDirectorySwapTransaction.BackupExistingDirectory(context.AddonRoot, context.BackupAddonRoot);
         context.ExistingAddonBackedUp = true;
         AdvanceCheckpoint(context, GodotInstallCheckpoint.ExistingAddonBackedUp);
     }
 
-    /// <summary>
-    /// 将已经校验的 staging add-on 整目录移动到正式位置，避免旧新文件产生混合状态。
-    /// </summary>
-    /// <param name="context">当前目录替换事务上下文。</param>
+    /// <summary>将已经校验的 staging add-on 整目录移动到正式位置，避免旧新文件产生混合状态。</summary>
     private void CommitAddon(
         GodotInstallTransactionContext context,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         context.CommitStarted = true;
-        Directory.CreateDirectory(Path.GetDirectoryName(context.AddonRoot)!);
-        InstallerDirectoryTransaction.MoveWithRetry(context.StagingAddonRoot, context.AddonRoot);
+        InstallerDirectorySwapTransaction.CommitStagedDirectory(
+            context.StagingAddonRoot,
+            context.AddonRoot);
         context.AddonCommitted = true;
         AdvanceCheckpoint(context, GodotInstallCheckpoint.AddonCommitted);
     }
@@ -277,11 +225,10 @@ internal sealed partial class GodotAddonInstallTransactionService
     /// <param name="context">当前目录替换事务上下文。</param>
     private void VerifyCommittedState(GodotInstallTransactionContext context)
     {
-        var inspection = mStagingOwnershipInspector.Inspect(context.AddonRoot);
-        if (inspection.State != PackageOwnershipState.Clean)
-        {
-            throw new IOException("Godot committed add-on verification failed: " + string.Join(", ", inspection.ConflictPaths));
-        }
+        InstallerDirectorySwapTransaction.EnsureOwnershipClean(
+            context.AddonRoot,
+            mStagingOwnershipInspector,
+            "Godot committed add-on verification failed");
 
         foreach (var entry in context.ProjectFiles)
         {
@@ -303,40 +250,6 @@ internal sealed partial class GodotAddonInstallTransactionService
         {
             context.Journal?.Complete();
         }
-    }
-
-    /// <summary>
-    /// 在失败回滚后删除已恢复 journal；回滚或 journal 写入失败时保留 RecoveryRequired 证据。
-    /// </summary>
-    /// <param name="context">当前事务上下文。</param>
-    /// <param name="rollbackSucceeded">目录和项目文件回滚结果。</param>
-    /// <returns>journal 处理后仍然有效的回滚结果。</returns>
-    private static bool CompleteFailureJournal(
-        GodotInstallTransactionContext context,
-        bool rollbackSucceeded)
-    {
-        if (context.Journal == null)
-        {
-            return rollbackSucceeded;
-        }
-
-        try
-        {
-            if (rollbackSucceeded)
-            {
-                context.Journal.Complete();
-            }
-            else
-            {
-                context.Journal.MarkRecoveryRequired();
-            }
-        }
-        catch
-        {
-            rollbackSucceeded = false;
-        }
-
-        return rollbackSucceeded;
     }
 
     /// <summary>

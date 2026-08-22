@@ -2,7 +2,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using UnityEngine;
 
 namespace YokiFrame
@@ -34,21 +33,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 使用临时文件和原子替换写入 JSON，避免工具侧读取半写文件。
+        /// 使用共享原子写提交 JSON；临时文件、flush 与替换语义由 YokiFrameAtomicFileWriter 单源维护。
         /// </summary>
         /// <param name="targetPath">最终目标路径。</param>
         /// <param name="json">待写入 JSON 文本。</param>
         public static void WriteAtomic(string targetPath, string json)
         {
-            var directoryPath = Path.GetDirectoryName(targetPath);
-            if (string.IsNullOrEmpty(directoryPath))
-            {
-                throw new DirectoryNotFoundException("FileBridge target path has no directory.");
-            }
-
-            Directory.CreateDirectory(directoryPath);
-            var tempPath = Path.Combine(directoryPath, Path.GetFileName(targetPath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
-            WriteTempThenMove(tempPath, targetPath, json);
+            YokiFrameAtomicFileWriter.WriteAllText(targetPath, json);
         }
 
         /// <summary>
@@ -116,135 +107,6 @@ namespace YokiFrame
                 info.oldestFileUtc = lastWriteUtc;
             }
         }
-
-        /// <summary>
-        /// 将临时文件 flush 到磁盘后移动为正式文件。
-        /// </summary>
-        /// <param name="tempPath">临时文件路径。</param>
-        /// <param name="targetPath">正式文件路径。</param>
-        /// <param name="json">待写入 JSON。</param>
-        private static void WriteTempThenMove(string tempPath, string targetPath, string json)
-        {
-            try
-            {
-                using (var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
-                {
-                    writer.Write(json);
-                    writer.Flush();
-                    stream.Flush(true);
-                }
-
-                ReplaceFile(tempPath, targetPath);
-            }
-            finally
-            {
-                DeleteTempFile(tempPath);
-            }
-        }
-
-        /// <summary>
-        /// 优先使用平台原子替换；不支持时通过同目录备份完成可恢复替换，失败时保留旧文件。
-        /// </summary>
-        /// <param name="tempPath">已完成写入的临时文件。</param>
-        /// <param name="targetPath">正式目标文件。</param>
-        private static void ReplaceFile(string tempPath, string targetPath)
-        {
-            if (!File.Exists(targetPath))
-            {
-                File.Move(tempPath, targetPath);
-                return;
-            }
-
-            try
-            {
-                File.Replace(tempPath, targetPath, null);
-            }
-            catch (IOException)
-            {
-                ReplaceWithRecoverableMove(tempPath, targetPath);
-            }
-            catch (NotSupportedException)
-            {
-                ReplaceWithRecoverableMove(tempPath, targetPath);
-            }
-        }
-
-        /// <summary>
-        /// 在宿主文件系统不支持 File.Replace 时先保留旧文件，再提交新文件；提交失败会恢复旧文件。
-        /// </summary>
-        /// <param name="tempPath">已完成写入的临时文件。</param>
-        /// <param name="targetPath">正式目标文件。</param>
-        private static void ReplaceWithRecoverableMove(string tempPath, string targetPath)
-        {
-            var backupPath = targetPath + "." + Guid.NewGuid().ToString("N") + ".bak";
-            File.Move(targetPath, backupPath);
-            try
-            {
-                File.Move(tempPath, targetPath);
-            }
-            catch (Exception moveException)
-            {
-                RestoreBackup(targetPath, backupPath, moveException);
-                throw;
-            }
-
-            DeleteBackupFile(backupPath);
-        }
-
-        /// <summary>
-        /// 新文件提交失败时恢复同目录备份；恢复也失败时同时保留两段异常证据和备份路径。
-        /// </summary>
-        /// <param name="targetPath">正式目标文件。</param>
-        /// <param name="backupPath">旧文件备份。</param>
-        /// <param name="moveException">新文件提交异常。</param>
-        private static void RestoreBackup(string targetPath, string backupPath, Exception moveException)
-        {
-            try
-            {
-                if (File.Exists(targetPath))
-                {
-                    File.Delete(targetPath);
-                }
-
-                File.Move(backupPath, targetPath);
-            }
-            catch (Exception restoreException)
-            {
-                throw new IOException(
-                    "FileBridge replacement and rollback both failed; backup remains at: " + backupPath,
-                    new AggregateException(moveException, restoreException));
-            }
-        }
-
-        /// <summary>
-        /// 删除已成功提交后的旧文件备份；失败时保留备份并记录诊断，不把已提交的新文件误报为失败。
-        /// </summary>
-        /// <param name="backupPath">待删除的旧文件备份。</param>
-        private static void DeleteBackupFile(string backupPath)
-        {
-            try
-            {
-                DeleteTempFile(backupPath);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning("YokiFrame FileBridge backup cleanup failed: " + exception.Message);
-            }
-        }
-
-        /// <summary>
-        /// 删除未成功替换的临时文件，避免后续扫描误判。
-        /// </summary>
-        /// <param name="tempPath">临时文件路径。</param>
-        private static void DeleteTempFile(string tempPath)
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
-
     }
 }
 

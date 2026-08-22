@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.TableKit;
+using YokiFrame.Tooling.Application.Services.Luban;
 
 namespace YokiFrame.Tooling.Application.Services.TableKit;
 
@@ -12,6 +13,14 @@ public sealed class TableKitApplicationService
     /// <summary>创建 TableKit Workbench 用例；Runtime 门面使用统一的表名路径模板 Loader。</summary>
     public TableKitApplicationService()
     {
+    }
+
+    /// <summary>读取 luban.conf 声明的去重 target 名称；wire 解析保持在应用层，VM 只消费强类型结果。</summary>
+    /// <param name="configPath">luban.conf 绝对路径。</param>
+    /// <returns>按配置顺序排列的稳定 target 名称。</returns>
+    public IReadOnlyList<string> ReadLubanTargetNames(string configPath)
+    {
+        return new LubanConfigurationReader().Read(configPath).TargetNames;
     }
 
     /// <summary>只解析当前 Luban 配置，不启动外部进程。</summary>

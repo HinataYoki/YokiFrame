@@ -258,14 +258,14 @@ namespace YokiFrame
         public static void EnsureBridgeRootsAreSafe()
         {
             var engineRoot = GetEngineRoot();
-            EnsureNoReparsePoint(GetProjectRoot(), engineRoot);
-            EnsureNoReparsePointBelow(engineRoot, GetProcessingRoot());
-            EnsureNoReparsePointBelow(engineRoot, GetArchiveRoot());
-            EnsureNoReparsePointBelow(engineRoot, GetDeadletterRoot());
-            EnsureNoReparsePointBelow(engineRoot, GetResultsRoot());
-            EnsureNoReparsePointBelow(engineRoot, GetSnapshotsRoot());
-            EnsureNoReparsePointBelow(engineRoot, GetHeartbeatPath());
-            EnsureNoReparsePointBelow(engineRoot, GetAdmissionLockPath());
+            YokiFrameFilePathPolicy.EnsureNoReparsePoint(GetProjectRoot(), engineRoot);
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetProcessingRoot());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetArchiveRoot());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetDeadletterRoot());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetResultsRoot());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetSnapshotsRoot());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetHeartbeatPath());
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(engineRoot, GetAdmissionLockPath());
         }
 
         /// <summary>获取 snapshot 根目录。</summary>
@@ -299,7 +299,7 @@ namespace YokiFrame
         private static string EnsureSafeProjectPath(string path)
         {
             var fullPath = EnsureInsideProject(path);
-            EnsureNoReparsePoint(GetProjectRoot(), fullPath);
+            YokiFrameFilePathPolicy.EnsureNoReparsePoint(GetProjectRoot(), fullPath);
             return fullPath;
         }
 
@@ -312,7 +312,7 @@ namespace YokiFrame
         private static string EnsureSafePathBelowVerifiedRoot(string verifiedRoot, string path)
         {
             var fullPath = EnsureInsideProject(path);
-            EnsureNoReparsePointBelow(verifiedRoot, fullPath);
+            YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(verifiedRoot, fullPath);
             return fullPath;
         }
 
@@ -333,36 +333,6 @@ namespace YokiFrame
             return fullPath;
         }
 
-        /// <summary>拒绝项目根到候选路径的现存组件包含符号链接、Junction 或其它重解析点。</summary>
-        private static void EnsureNoReparsePoint(string root, string path)
-        {
-            EnsurePathComponentIsNotReparsePoint(root);
-            EnsureNoReparsePointBelow(root, path);
-        }
-
-        /// <summary>只校验已验证根之下的现存组件不是重解析点。</summary>
-        private static void EnsureNoReparsePointBelow(string verifiedRoot, string path)
-        {
-            var current = verifiedRoot;
-            var relativePath = Path.GetRelativePath(verifiedRoot, path);
-            foreach (var segment in relativePath.Split(
-                         new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                         System.StringSplitOptions.RemoveEmptyEntries))
-            {
-                current = Path.Combine(current, segment);
-                EnsurePathComponentIsNotReparsePoint(current);
-            }
-        }
-
-        /// <summary>校验单个现存文件系统组件不是重解析点。</summary>
-        private static void EnsurePathComponentIsNotReparsePoint(string path)
-        {
-            if ((File.Exists(path) || Directory.Exists(path))
-                && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            {
-                throw new IOException("FileBridge path contains a symbolic link or junction: " + path);
-            }
-        }
     }
 }
 

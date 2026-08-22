@@ -115,7 +115,7 @@ namespace YokiFrame
                 + ",\"engineId\":\"unity-editor\",\"source\":\"codex\",\"createdAtUtc\":\""
                 + DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture)
                 + "\",\"requestId\":\"" + requestId
-                + "\",\"kit\":\"System\",\"action\":\"ping\",\"payloadJson\":\"{}\",\"timeoutMs\":1000}";
+                + "\",\"kit\":\"System\",\"action\":\"ping\",\"payloadJson\":\"{}\",\"timeoutMs\":10000}";
             return new[]
             {
                 new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Hello, 0, helloJson),

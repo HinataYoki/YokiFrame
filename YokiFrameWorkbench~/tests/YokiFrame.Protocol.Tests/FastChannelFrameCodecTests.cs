@@ -9,7 +9,7 @@ namespace YokiFrame.Protocol.Tests;
 /// <summary>
 /// 覆盖 FastChannel v1 固定帧格式、字节序和输入边界。
 /// </summary>
-public sealed class FastChannelFrameCodecTests
+public sealed class YokiFrameFastChannelFrameCodecTests
 {
     /// <summary>
     /// 验证编码器写入固定 12 字节大端 header，并可无损还原 UTF-8 payload。
@@ -19,11 +19,11 @@ public sealed class FastChannelFrameCodecTests
     {
         const byte flags = 0xA5;
         const string payloadJson = "{\"engineId\":\"unity-editor\"}";
-        var frame = new FastChannelFrame(YokiFrameFastChannelMessageKind.Hello, flags, payloadJson);
+        var frame = new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Hello, flags, payloadJson);
 
-        var bytes = FastChannelFrameCodec.Encode(frame);
+        var bytes = YokiFrameFastChannelFrameCodec.Encode(frame);
         var payloadLength = Encoding.UTF8.GetByteCount(payloadJson);
-        var decoded = FastChannelFrameCodec.Decode(bytes);
+        var decoded = YokiFrameFastChannelFrameCodec.Decode(bytes);
 
         Assert.Equal(YokiFrameFastChannelContract.HEADER_SIZE + payloadLength, bytes.Length);
         Assert.Equal((byte)'Y', bytes[0]);
@@ -35,7 +35,7 @@ public sealed class FastChannelFrameCodecTests
         Assert.Equal((byte)YokiFrameFastChannelMessageKind.Hello, bytes[6]);
         Assert.Equal(flags, bytes[7]);
         Assert.Equal(payloadLength, BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(8, 4)));
-        Assert.Equal(YokiFrameFastChannelMessageKind.Hello, decoded.Kind);
+        Assert.Equal(YokiFrameFastChannelMessageKind.Hello, decoded.MessageKind);
         Assert.Equal(flags, decoded.Flags);
         Assert.Equal(payloadJson, decoded.PayloadJson);
     }
@@ -47,9 +47,9 @@ public sealed class FastChannelFrameCodecTests
     public void DecodeRejectsTruncatedPayload()
     {
         var bytes = CreateHeader(YokiFrameFastChannelMessageKind.Hello, 0, 2);
-        var exception = Assert.Throws<YokiFrameProtocolException>(() => FastChannelFrameCodec.Decode(bytes));
+        var exception = Assert.Throws<YokiFrameFastChannelProtocolException>(() => YokiFrameFastChannelFrameCodec.Decode(bytes));
 
-        Assert.Equal("FastChannelFrameTruncated", exception.Error.Code);
+        Assert.Equal("FastChannelFrameTruncated", exception.Code);
     }
 
     /// <summary>
@@ -59,9 +59,9 @@ public sealed class FastChannelFrameCodecTests
     public void DecodeRejectsUnknownMessageKind()
     {
         var bytes = CreateHeader((YokiFrameFastChannelMessageKind)99, 0, 0);
-        var exception = Assert.Throws<YokiFrameProtocolException>(() => FastChannelFrameCodec.Decode(bytes));
+        var exception = Assert.Throws<YokiFrameFastChannelProtocolException>(() => YokiFrameFastChannelFrameCodec.Decode(bytes));
 
-        Assert.Equal("FastChannelUnknownMessageKind", exception.Error.Code);
+        Assert.Equal("FastChannelUnknownMessageKind", exception.Code);
     }
 
     /// <summary>
@@ -74,9 +74,9 @@ public sealed class FastChannelFrameCodecTests
             YokiFrameFastChannelMessageKind.Command,
             0,
             YokiFrameFastChannelContract.MAX_PAYLOAD_BYTES + 1);
-        var exception = Assert.Throws<YokiFrameProtocolException>(() => FastChannelFrameCodec.Decode(bytes));
+        var exception = Assert.Throws<YokiFrameFastChannelProtocolException>(() => YokiFrameFastChannelFrameCodec.Decode(bytes));
 
-        Assert.Equal("FastChannelPayloadTooLarge", exception.Error.Code);
+        Assert.Equal("FastChannelPayloadTooLarge", exception.Code);
     }
 
     /// <summary>
@@ -89,9 +89,9 @@ public sealed class FastChannelFrameCodecTests
         CreateHeader(YokiFrameFastChannelMessageKind.Hello, 0, 1).CopyTo(bytes, 0);
         bytes[^1] = 0xFF;
 
-        var exception = Assert.Throws<YokiFrameProtocolException>(() => FastChannelFrameCodec.Decode(bytes));
+        var exception = Assert.Throws<YokiFrameFastChannelProtocolException>(() => YokiFrameFastChannelFrameCodec.Decode(bytes));
 
-        Assert.Equal("FastChannelInvalidUtf8", exception.Error.Code);
+        Assert.Equal("FastChannelInvalidUtf8", exception.Code);
     }
 
     /// <summary>

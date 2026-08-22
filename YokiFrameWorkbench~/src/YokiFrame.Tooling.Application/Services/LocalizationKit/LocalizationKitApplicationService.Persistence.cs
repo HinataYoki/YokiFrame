@@ -143,28 +143,12 @@ public sealed partial class LocalizationKitApplicationService
         }
     }
 
-    /// <summary>使用同目录临时文件、持久化刷新和原子替换提交 JSON，避免中断破坏旧文件。</summary>
+    /// <summary>使用共享原子写原语提交 JSON；持久化、flush 与替换保证由 YokiFrameAtomicFileWriter 单源承载。</summary>
     /// <param name="path">已通过路径守卫校验的目标文件。</param>
     /// <param name="content">已经通过完整 schema 复核的 JSON 文本。</param>
     private static void WriteAtomically(string path, string content)
     {
-        string temporaryPath = path + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            using (FileStream stream = new(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            using (StreamWriter writer = new(stream, new UTF8Encoding(false)))
-            {
-                writer.Write(content);
-                writer.Flush();
-                stream.Flush(true);
-            }
-
-            if (File.Exists(path)) File.Replace(temporaryPath, path, null); else File.Move(temporaryPath, path);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
-        }
+        YokiFrame.YokiFrameAtomicFileWriter.WriteAllText(path, content);
     }
 
     /// <summary>持有单个源文件的命名 Mutex，并确保释放动作幂等。</summary>

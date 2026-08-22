@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Media;
 using YokiFrame.Tooling.Application.Models.SpatialKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -349,7 +348,7 @@ public sealed class SpatialDensityCellViewModel
         Y = y;
         Count = count;
         TooltipText = tooltipText;
-        Brush = CreateBrush(count, maxCount);
+        HeatHex = CreateHeatHex(count, maxCount);
     }
 
     /// <summary>获取 bin 横坐标。</summary>
@@ -364,21 +363,29 @@ public sealed class SpatialDensityCellViewModel
     /// <summary>获取单元格悬停文本。</summary>
     public string TooltipText { get; }
 
-    /// <summary>获取单元格背景色。</summary>
-    public IBrush Brush { get; }
+    /// <summary>获取单元格背景色的 #RRGGBB 文本；Brush 转换由 View 层转换器负责，ViewModel 不持有 UI 类型。</summary>
+    public string HeatHex { get; }
 
-    /// <summary>按占用比例生成稳定的冷暖两段调色板。</summary>
-    private static IBrush CreateBrush(int count, int maxCount)
+    /// <summary>按占用比例生成稳定的冷暖两段调色板，输出 #RRGGBB 文本。</summary>
+    private static string CreateHeatHex(int count, int maxCount)
     {
+        byte red;
+        byte green;
+        byte blue;
         if (count <= 0)
         {
-            return new SolidColorBrush(Color.FromRgb(31, 43, 55));
+            red = 31;
+            green = 43;
+            blue = 55;
+        }
+        else
+        {
+            double ratio = Math.Max(0d, Math.Min(1d, count / (double)Math.Max(1, maxCount)));
+            red = (byte)(45 + (int)(ratio * 190d));
+            green = (byte)(96 + (int)((1d - ratio) * 58d));
+            blue = (byte)(132 - (int)(ratio * 78d));
         }
 
-        double ratio = Math.Max(0d, Math.Min(1d, count / (double)Math.Max(1, maxCount)));
-        byte red = (byte)(45 + (int)(ratio * 190d));
-        byte green = (byte)(96 + (int)((1d - ratio) * 58d));
-        byte blue = (byte)(132 - (int)(ratio * 78d));
-        return new SolidColorBrush(Color.FromRgb(red, green, blue));
+        return FormattableString.Invariant($"#{red:X2}{green:X2}{blue:X2}");
     }
 }

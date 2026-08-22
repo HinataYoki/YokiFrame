@@ -2,12 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:YokiFrame.Workbench.Avalonia.ViewModels"
              xmlns:model="using:YokiFrame.Tooling.Application.Models.SpatialKit"
+             xmlns:conv="using:YokiFrame.Workbench.Avalonia.Converters"
              x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.SpatialKitPageView"
              x:DataType="vm:SpatialKitPageViewModel"
              Classes="spatialkit-page"
              SizeChanged="OnPageSizeChanged"
              ToolTip.ShowDelay="300"
              AutomationProperties.AutomationId="workbench.spatialkit.page">
+  <UserControl.Resources>
+    <conv:HeatHexToBrushConverter x:Key="HeatHexToBrush" />
+  </UserControl.Resources>
   <Grid RowDefinitions="Auto,10,*">
     <Border x:Name="SpatialStatusStrip" Classes="spatialkit-status-strip">
       <Grid ColumnDefinitions="*,Auto,1,Auto,1,Auto" ColumnSpacing="12">
@@ -270,7 +274,7 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:SpatialDensityCellViewModel">
                         <Border Classes="spatialkit-heatmap-cell"
-                                Background="{CompiledBinding Brush}"
+                                Background="{CompiledBinding HeatHex, Converter={StaticResource HeatHexToBrush}}"
                                 ToolTip.Tip="{CompiledBinding TooltipText}"
                                 AutomationProperties.Name="{CompiledBinding TooltipText}" />
                       </DataTemplate>

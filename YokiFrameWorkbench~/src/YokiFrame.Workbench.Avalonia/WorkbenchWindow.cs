@@ -154,6 +154,10 @@ public sealed partial class WorkbenchWindow : Window
         mShellViewModel.SetTaskTracker(mSession.Track);
         WorkbenchStartupTrace.Mark("window.after-shell-view-model");
         mShellViewModel.FsmKitPage.SelectedInstanceIdChanged += OnFsmTelemetrySelectionChanged;
+        // 遥测通道只捕获窗口引用，实际状态在轮询时才读取，可安全在构造期创建。
+        mEventKitTelemetryChannel = new EventKitTelemetryChannel(this);
+        mLogKitTelemetryChannel = new LogKitTelemetryChannel(this);
+        mFsmTelemetryChannel = new FsmKitTelemetryChannel(this);
         mLifecycleMonitor = string.IsNullOrWhiteSpace(projectRoot)
             ? null
             : dashboardService.CreateLifecycleMonitor();
@@ -244,11 +248,11 @@ public sealed partial class WorkbenchWindow : Window
             mSession.Cancel();
             try
             {
-                await Task.Run(() =>
+                await Task.Run(async () =>
                 {
-                    mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();
+                    await mShellViewModel.UIKitPage.PersistEditorSettingsOnCloseAsync();
                     mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();
-                    mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();
+                    await mShellViewModel.AudioKitPage.PersistIndexSettingsOnCloseAsync();
                     mShellViewModel.TableKitPage.TryPersistConfiguration();
                 }).ConfigureAwait(true);
             }

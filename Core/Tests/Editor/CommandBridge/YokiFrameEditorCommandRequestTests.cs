@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Reflection;
 using NUnit.Framework;
 
@@ -58,7 +59,9 @@ namespace YokiFrame
                 kit = "System",
                 action = "ping",
                 payloadJson = "{}",
-                timeoutMs = YokiFrameCommandPolicy.COMMAND_TIMEOUT_MIN_MS
+                timeoutMs = YokiFrameCommandPolicy.COMMAND_TIMEOUT_MIN_MS,
+                requestId = "test-request",
+                createdAtUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
             };
         }
     }

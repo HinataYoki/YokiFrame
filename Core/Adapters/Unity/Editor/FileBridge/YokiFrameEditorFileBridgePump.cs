@@ -27,9 +27,8 @@ namespace YokiFrame
         // 声明顺序早于 sCommandDispatcher，保证 CreateCommandDispatcher 写入的策略缓存不会被后续字段初始化器覆盖。
         private static YokiFrameCommandPolicy sHostCommandPolicy;
         private static YokiFrameCommandDispatcher sCommandDispatcher = CreateCommandDispatcher();
-        private static readonly Dictionary<string, long> sKitTelemetryVersions = new();
-        private static readonly Dictionary<string, long> sKitSnapshotVersions = new();
-        private static readonly HashSet<string> sTelemetryFallbackKits = new();
+        // 三宿主共享的 Kit 状态版本簿；按 Kit 回落语义由 tracker 承载。
+        private static readonly YokiFrameKitStateVersionTracker sStateVersions = new YokiFrameKitStateVersionTracker();
         private static string sCommandProcessingError = string.Empty;
         private static string sSessionId = Guid.NewGuid().ToString("N");
         private static long sGeneration = DateTimeOffset.UtcNow.Ticks;
@@ -155,9 +154,7 @@ namespace YokiFrame
                 CreateKitInteractions(out long capturedRevision);
             sKitInteractions = interactions;
             sCommandDispatcher = CreateCommandDispatcher();
-            sKitTelemetryVersions.Clear();
-            sKitSnapshotVersions.Clear();
-            sTelemetryFallbackKits.Clear();
+            sStateVersions.Clear();
             ClearNamedTelemetryVersions();
             sToolProviderRevision = capturedRevision;
             WriteCompleteBridgeStateSafely();
@@ -244,8 +241,16 @@ namespace YokiFrame
         {
             if (sCommandCoordinator == null)
             {
+                // 共享命令存储承载三宿主一致的枚举、认领、终态与 deadletter 移动逻辑；
+                // Unity 宿主保持文件系统枚举顺序，清理由外层 300 秒定时器负责。
                 sCommandCoordinator = new YokiFrameHostCommandCoordinator(
-                    new UnityEditorHostCommandStore(),
+                    new YokiFrameFileBridgeHostStore(
+                        new YokiFrameEditorFileBridgeEnginePaths(),
+                        (path, json) => YokiFrameEditorFileBridgeJson.WriteAtomic(path, json),
+                        SerializeDeadletterInfo,
+                        () => { },
+                        () => { },
+                        false),
                     ExecuteCommandForCoordinator,
                     PROCESSING_LEASE,
                     exception => sCommandProcessingError = exception.Message);
@@ -268,164 +273,6 @@ namespace YokiFrame
                 YokiFrameEditorFileBridgeJson.ToJson(response));
         }
 
-        /// <summary>
-        /// Unity Editor 的 FileBridge 存储适配器，保留 Unity 路径与 JSON 规则。
-        /// </summary>
-        private sealed class UnityEditorHostCommandStore : IYokiFrameHostCommandStore
-        {
-            /// <summary>
-            /// 复核 Unity Editor 的 FileBridge 根路径。
-            /// </summary>
-            public void EnsureReady()
-            {
-                YokiFrameEditorFileBridgePaths.EnsureBridgeRootsAreSafe();
-            }
-
-            /// <summary>
-            /// 获取 commands 根目录是否存在。
-            /// </summary>
-            public bool PendingRootExists => Directory.Exists(YokiFrameEditorFileBridgePaths.GetCommandsRoot());
-
-            /// <summary>
-            /// 读取 Unity 原有枚举顺序的 pending 命令。
-            /// </summary>
-            public IReadOnlyList<string> ReadPendingCommandPaths()
-            {
-                return Directory.GetFiles(
-                    YokiFrameEditorFileBridgePaths.GetCommandsRoot(),
-                    "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
-                    SearchOption.TopDirectoryOnly);
-            }
-
-            /// <summary>
-            /// 读取 processing 目录中的命令。
-            /// </summary>
-            public IReadOnlyList<string> ReadProcessingCommandPaths()
-            {
-                var processingRoot = YokiFrameEditorFileBridgePaths.GetProcessingRoot();
-                return Directory.Exists(processingRoot)
-                    ? Directory.GetFiles(processingRoot, "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION, SearchOption.TopDirectoryOnly)
-                    : Array.Empty<string>();
-            }
-
-            /// <summary>
-            /// 原子 claim Unity pending 命令。
-            /// </summary>
-            public YokiFrameFileBridgeClaimResult TryClaim(
-                string pendingPath,
-                out string claimedPath,
-                out Exception storageException)
-            {
-                return YokiFrameFileBridgeClaim.TryClaim(
-                    pendingPath,
-                    YokiFrameEditorFileBridgePaths.GetProcessingRoot(),
-                    out claimedPath,
-                    out storageException);
-            }
-
-            /// <summary>
-            /// 删除 Unity processing marker。
-            /// </summary>
-            public void RemoveExpiredMarkers(DateTime cutoffUtc)
-            {
-                YokiFrameFileBridgeClaim.RemoveExpiredMarkers(
-                    YokiFrameEditorFileBridgePaths.GetProcessingRoot(),
-                    cutoffUtc);
-            }
-
-            /// <summary>
-            /// 获取 Unity processing 文件最后写入时间。
-            /// </summary>
-            public DateTime GetLastWriteTimeUtc(string path)
-            {
-                return File.GetLastWriteTimeUtc(path);
-            }
-
-            /// <summary>
-            /// 成功 claim 后刷新 processing 文件时间，避免老 pending 的原始 mtime 立即触发过期回收。
-            /// </summary>
-            /// <param name="commandPath">processing 命令路径。</param>
-            /// <param name="claimedAtUtc">本次 claim 时间。</param>
-            public void RefreshProcessingLease(string commandPath, DateTime claimedAtUtc)
-            {
-                File.SetLastWriteTimeUtc(commandPath, claimedAtUtc);
-            }
-
-            /// <summary>
-            /// 判断 Unity processing 命令是否已经存在对应 terminal response。
-            /// </summary>
-            /// <param name="commandPath">processing 命令路径。</param>
-            /// <returns>response 已存在时返回 true。</returns>
-            public bool HasTerminalResponse(string commandPath)
-            {
-                try
-                {
-                    return File.Exists(YokiFrameEditorFileBridgePaths.GetResponsePath(
-                        Path.GetFileNameWithoutExtension(commandPath)));
-                }
-                catch (ArgumentException)
-                {
-                    return false;
-                }
-            }
-
-            /// <summary>
-            /// 原子写入 Unity terminal response JSON。
-            /// </summary>
-            public void WriteResponse(string requestId, string responseJson)
-            {
-                YokiFrameEditorFileBridgeJson.WriteAtomic(
-                    YokiFrameEditorFileBridgePaths.GetResponsePath(requestId),
-                    responseJson);
-            }
-
-            /// <summary>
-            /// 归档 Unity 已完成命令。
-            /// </summary>
-            public void Archive(string commandPath)
-            {
-                ArchiveCommand(commandPath);
-            }
-
-            /// <summary>
-            /// 将 Unity 失败命令写入 deadletter。
-            /// </summary>
-            public void MoveToDeadletter(string commandPath, string errorCode, string errorMessage)
-            {
-                YokiFrameEditorFileBridgePump.MoveToDeadletter(commandPath, errorCode, errorMessage);
-            }
-
-            /// <summary>
-            /// deadletter 目录不可写时，在 processing 命令旁原子保留失败证据；该 marker 不会进入命令枚举。
-            /// </summary>
-            /// <param name="commandPath">processing 命令路径。</param>
-            /// <param name="errorCode">错误码。</param>
-            /// <param name="errorMessage">错误说明。</param>
-            public void WriteProcessingFailureEvidence(
-                string commandPath,
-                string errorCode,
-                string errorMessage)
-            {
-                YokiFrameEditorFileBridgePump.WriteProcessingFailureEvidence(
-                    commandPath,
-                    errorCode,
-                    errorMessage);
-            }
-
-            /// <summary>
-            /// Unity 由外层定时器负责清理，不在每个命令批次重复清理。
-            /// </summary>
-            public void PruneAfterBatch()
-            {
-            }
-
-            /// <summary>
-            /// Unity 缺少 commands 根目录时不改变原有清理策略。
-            /// </summary>
-            public void PruneWhenPendingRootMissing()
-            {
-            }
-        }
 
         /// <summary>
         /// 读取并校验命令信封，拒绝路径不安全或非当前 engine 的命令。
@@ -455,39 +302,22 @@ namespace YokiFrame
         /// <param name="envelope">待校验命令信封。</param>
         private static void ValidateEnvelope(YokiFrameEditorCommandEnvelope envelope)
         {
-            if (envelope == null
-                || envelope.protocolVersion != YokiFrameFileBridgeContract.PROTOCOL_VERSION
-                || envelope.engineId != YokiFrameEditorFileBridgePaths.ENGINE_ID)
-            {
-                throw new InvalidDataException("Command envelope protocolVersion or engineId is invalid.");
-            }
-
-            if (!YokiFrameEditorFileBridgeJson.IsSafeId(envelope.source)
-                || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.requestId)
-                || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.kit)
-                || !YokiFrameEditorFileBridgeJson.IsSafeId(envelope.action))
-            {
-                throw new InvalidDataException("Command envelope contains unsafe requestId, kit or action.");
-            }
-
-            if (envelope.timeoutMs < YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MIN_MS
-                || envelope.timeoutMs > YokiFrameFileBridgeContract.COMMAND_TIMEOUT_MAX_MS
-                || !DateTimeOffset.TryParse(
+            var error = envelope == null
+                ? "Command envelope is missing."
+                : YokiFrameCommandEnvelopeValidator.Validate(
+                    envelope.protocolVersion,
+                    envelope.engineId,
+                    YokiFrameEditorFileBridgePaths.ENGINE_ID,
+                    envelope.source,
+                    envelope.requestId,
+                    envelope.kit,
+                    envelope.action,
+                    envelope.timeoutMs,
                     envelope.createdAtUtc,
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind,
-                    out _))
+                    envelope.payloadJson);
+            if (error != null)
             {
-                throw new InvalidDataException("Command envelope timeoutMs or createdAtUtc is invalid.");
-            }
-
-            try
-            {
-                JsonHelper.EnsureValidJson(envelope.payloadJson);
-            }
-            catch (FormatException exception)
-            {
-                throw new InvalidDataException("Command envelope payloadJson is invalid.", exception);
+                throw new InvalidDataException(error);
             }
         }
 

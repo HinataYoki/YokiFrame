@@ -88,6 +88,18 @@ public sealed class YokiFramePaths
     }
 
     /// <summary>
+    /// 获取指定 engine 的 engine.json 注册文件路径。
+    /// </summary>
+    /// <param name="engineId">安全 engine 标识。</param>
+    /// <returns>engine.json 完整路径。</returns>
+    public string GetEngineRegistryPath(string engineId)
+    {
+        return PathSecurity.CombineInside(
+            GetEngineRoot(engineId),
+            YokiFrameFileBridgeLayout.ENGINE_REGISTRY_FILE_NAME);
+    }
+
+    /// <summary>
     /// 获取指定 engine 的 heartbeat 文件路径。
     /// </summary>
     /// <param name="engineId">安全 engine 标识。</param>
@@ -129,17 +141,6 @@ public sealed class YokiFramePaths
     }
 
     /// <summary>
-    /// 获取指定 engine 的命令队列目录；这是带 engine 语义别名，保持旧 Client 调用方可读性。
-    /// </summary>
-    /// <param name="engineId">安全 engine 标识。</param>
-    /// <returns>commands 目录完整路径。</returns>
-    [Obsolete("Use GetCommandsRoot instead.")]
-    public string GetEngineCommandsRoot(string engineId)
-    {
-        return GetCommandsRoot(engineId);
-    }
-
-    /// <summary>
     /// 获取待处理命令文件路径。
     /// </summary>
     /// <param name="engineId">安全 engine 标识。</param>
@@ -161,17 +162,6 @@ public sealed class YokiFramePaths
     public string GetResultsRoot(string engineId)
     {
         return PathSecurity.CombineInside(GetEngineRoot(engineId), YokiFrameFileBridgeLayout.RESULTS_DIRECTORY);
-    }
-
-    /// <summary>
-    /// 获取指定 engine 的结果目录；这是带 engine 语义别名，保持旧 Client 调用方可读性。
-    /// </summary>
-    /// <param name="engineId">安全 engine 标识。</param>
-    /// <returns>results 目录完整路径。</returns>
-    [Obsolete("Use GetResultsRoot instead.")]
-    public string GetEngineResultsRoot(string engineId)
-    {
-        return GetResultsRoot(engineId);
     }
 
     /// <summary>

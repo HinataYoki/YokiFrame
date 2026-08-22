@@ -1,3 +1,5 @@
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+// 与 YokiFrameFileBridgePruner 同域：仅在 Editor/Tools 宿主与 .NET 工具链编译。
 using System;
 using System.Collections.Generic;
 
@@ -51,3 +53,4 @@ namespace YokiFrame
         }
     }
 }
+#endif

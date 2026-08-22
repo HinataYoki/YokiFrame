@@ -167,6 +167,8 @@ internal sealed partial class FastChannelCommandTransport
     /// <summary>只释放仍指向失败连接的缓存项，避免旧失败路径关闭新 endpoint。</summary>
     private async Task InvalidateConnectionAsync(string engineId, FastChannelConnection? expectedConnection)
     {
+        // 连接失效意味着 endpoint 身份已被证伪；同步清空 registry 缓存，下一轮读取回到磁盘事实。
+        ClearRegistryCache();
         await mConnectionGate.WaitAsync().ConfigureAwait(false);
         try
         {

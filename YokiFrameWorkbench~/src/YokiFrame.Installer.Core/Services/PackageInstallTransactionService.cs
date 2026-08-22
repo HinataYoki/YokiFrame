@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using YokiFrame.Installer.Core.IO;
 using YokiFrame.Installer.Core.Models;
 
@@ -126,7 +125,7 @@ public sealed partial class PackageInstallTransactionService
         CancellationToken cancellationToken = default)
     {
         var context = CreateContext(projection, projectRoot, targetPackageRoot);
-        ValidateProjectLock(projectRoot, projectLock);
+        InstallerDirectorySwapTransaction.ValidateProjectLock(projectRoot, projectLock);
         return Execute(
             context,
             policy,
@@ -153,7 +152,7 @@ public sealed partial class PackageInstallTransactionService
         Action? postCommitAction,
         CancellationToken cancellationToken)
     {
-        ValidateProjectLock(context.ProjectRoot, projectLock);
+        InstallerDirectorySwapTransaction.ValidateProjectLock(context.ProjectRoot, projectLock);
         var ownership = mOwnershipInspector.Inspect(context.TargetPackageRoot);
         RejectUnsafeOwnership(ownership, policy, replaceModifiedPackage);
         context.ReplacedExistingPackage = Directory.Exists(context.TargetPackageRoot);
@@ -175,7 +174,9 @@ public sealed partial class PackageInstallTransactionService
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && !context.CommitStarted)
         {
             var rollbackSucceeded = TryRollback(context);
-            rollbackSucceeded = CompleteFailureJournal(context, rollbackSucceeded);
+            rollbackSucceeded = InstallerDirectorySwapTransaction.CompleteFailureJournal(
+                context.Journal,
+                rollbackSucceeded);
             if (rollbackSucceeded)
             {
                 throw;
@@ -192,7 +193,9 @@ public sealed partial class PackageInstallTransactionService
         catch (Exception exception) when (exception is not PackageInstallRejectedException)
         {
             var rollbackSucceeded = TryRollback(context);
-            rollbackSucceeded = CompleteFailureJournal(context, rollbackSucceeded);
+            rollbackSucceeded = InstallerDirectorySwapTransaction.CompleteFailureJournal(
+                context.Journal,
+                rollbackSucceeded);
             var evidencePath = WriteFailureEvidence(context, rollbackSucceeded, exception);
             throw new PackageInstallTransactionException(
                 "YokiFrame package transaction failed at " + context.Checkpoint + ".",
@@ -202,55 +205,6 @@ public sealed partial class PackageInstallTransactionService
         }
     }
 
-    /// <summary>
-    /// 在失败回滚后删除已恢复 journal，回滚失败时保留 RecoveryRequired 证据。
-    /// </summary>
-    /// <param name="context">失败事务上下文。</param>
-    /// <param name="rollbackSucceeded">目录回滚结果。</param>
-    /// <returns>journal 处理后仍然有效的回滚结果。</returns>
-    private static bool CompleteFailureJournal(TransactionContext context, bool rollbackSucceeded)
-    {
-        if (context.Journal == null)
-        {
-            return rollbackSucceeded;
-        }
-
-        try
-        {
-            if (rollbackSucceeded)
-            {
-                context.Journal.Complete();
-            }
-            else
-            {
-                context.Journal.MarkRecoveryRequired();
-            }
-        }
-        catch
-        {
-            rollbackSucceeded = false;
-        }
-
-        return rollbackSucceeded;
-    }
-
-    /// <summary>
-    /// 确认调用方传入的锁属于当前事务项目，避免跨项目误用 lease。
-    /// </summary>
-    /// <param name="projectRoot">当前事务项目根。</param>
-    /// <param name="projectLock">调用方持有的项目锁。</param>
-    private static void ValidateProjectLock(string projectRoot, InstallerProjectLockLease projectLock)
-    {
-        ArgumentNullException.ThrowIfNull(projectLock);
-        var fullProjectRoot = InstallerPathGuard.RequireFullPath(projectRoot, nameof(projectRoot));
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-        if (!string.Equals(fullProjectRoot, projectLock.ProjectRoot, comparison))
-        {
-            throw new InvalidOperationException("Installer project lock belongs to a different project.");
-        }
-    }
 
     /// <summary>
     /// 规范化并验证项目、目标包与每个投影路径，确保写入范围不会逃逸。
@@ -327,49 +281,25 @@ public sealed partial class PackageInstallTransactionService
     }
 
     /// <summary>
-    /// 将全部投影文件和 owner manifest 写入隔离 staging，并用 manifest 立即复验。
+    /// 将全部投影文件和 owner manifest 写入隔离 staging，并立即复验；原子操作由共享目录交换事务承载。
     /// </summary>
     /// <param name="context">事务上下文。</param>
     private void StageProjection(TransactionContext context, CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(context.StagingPackageRoot);
-        foreach (var file in context.Projection.Files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var targetPath = InstallerPathGuard.CombineInside(
-                context.StagingPackageRoot,
-                file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-            File.Copy(file.SourcePath, targetPath, overwrite: false);
-            VerifyProjectedFile(targetPath, file);
-        }
-
-        mManifestStore.Write(context.StagingPackageRoot, mManifestStore.Create(context.Projection));
-        var stagingInspection = mOwnershipInspector.Inspect(context.StagingPackageRoot);
-        if (stagingInspection.State != PackageOwnershipState.Clean)
-        {
-            throw new IOException("Staging verification failed: " + string.Join(", ", stagingInspection.ConflictPaths));
-        }
-
+        InstallerDirectorySwapTransaction.StageFiles(
+            context.StagingPackageRoot,
+            context.Projection,
+            mManifestStore,
+            mOwnershipInspector,
+            "YokiFrame package transaction",
+            cancellationToken);
         AdvanceCheckpoint(context, PackageInstallTransactionCheckpoint.StagingVerified);
     }
 
     /// <summary>
-    /// 校验 staging 文件长度和 SHA-256，捕获复制期间的源文件变化或磁盘写入损坏。
+    /// 将已有正式包目录移动到同项目事务备份区，保证提交前存在完整恢复源。
     /// </summary>
-    /// <param name="targetPath">staging 文件路径。</param>
-    /// <param name="expected">投影中的期望摘要。</param>
-    private static void VerifyProjectedFile(string targetPath, PackageProjectionFile expected)
-    {
-        FileInfo info = new(targetPath);
-        using var stream = File.OpenRead(targetPath);
-        var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-        if (info.Length != expected.Length || !string.Equals(hash, expected.Sha256, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new IOException("Staged file hash mismatch: " + expected.RelativePath);
-        }
-    }
-
+    /// <param name="context">事务上下文。</param>
     /// <summary>
     /// 将已有正式包目录移动到同项目事务备份区，保证提交前存在完整恢复源。
     /// </summary>
@@ -379,13 +309,13 @@ public sealed partial class PackageInstallTransactionService
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!Directory.Exists(context.TargetPackageRoot))
+        if (!InstallerDirectorySwapTransaction.BackupExistingDirectory(
+                context.TargetPackageRoot,
+                context.BackupPackageRoot))
         {
             return;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(context.BackupPackageRoot)!);
-        InstallerDirectoryTransaction.MoveWithRetry(context.TargetPackageRoot, context.BackupPackageRoot);
         context.ExistingPackageBackedUp = true;
         AdvanceCheckpoint(context, PackageInstallTransactionCheckpoint.ExistingPackageBackedUp);
     }
@@ -400,8 +330,9 @@ public sealed partial class PackageInstallTransactionService
     {
         cancellationToken.ThrowIfCancellationRequested();
         context.CommitStarted = true;
-        Directory.CreateDirectory(Path.GetDirectoryName(context.TargetPackageRoot)!);
-        InstallerDirectoryTransaction.MoveWithRetry(context.StagingPackageRoot, context.TargetPackageRoot);
+        InstallerDirectorySwapTransaction.CommitStagedDirectory(
+            context.StagingPackageRoot,
+            context.TargetPackageRoot);
         context.TargetCommitted = true;
         AdvanceCheckpoint(context, PackageInstallTransactionCheckpoint.TargetCommitted);
     }
@@ -412,11 +343,10 @@ public sealed partial class PackageInstallTransactionService
     /// <param name="context">事务上下文。</param>
     private void VerifyCommittedPackage(TransactionContext context)
     {
-        var inspection = mOwnershipInspector.Inspect(context.TargetPackageRoot);
-        if (inspection.State != PackageOwnershipState.Clean)
-        {
-            throw new IOException("Committed package verification failed: " + string.Join(", ", inspection.ConflictPaths));
-        }
+        InstallerDirectorySwapTransaction.EnsureOwnershipClean(
+            context.TargetPackageRoot,
+            mOwnershipInspector,
+            "Committed package verification failed");
     }
 
     /// <summary>

@@ -1,3 +1,6 @@
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+// 本清理器只被 Editor/Tools 宿主与 .NET 工具链调用；宏门控保证它不进入 Unity Player 或无 TOOLS 的 Godot 构建。
+
 #nullable enable
 
 using System;
@@ -8,18 +11,11 @@ namespace YokiFrame
 {
     /// <summary>
     /// 按固定白名单清理项目 `.yokiframe` 中已经完成的协议证据和启动诊断。
+    /// 目录与文件名常量统一引用 <see cref="YokiFrameFileBridgeLayout"/>，避免第二处布局定义。
     /// </summary>
     public static class YokiFrameFileBridgePruner
     {
         private const string CLEANUP_LOCK_FILE_NAME = "cleanup.lock";
-        private const string YOKIFRAME_DIRECTORY_NAME = ".yokiframe";
-        private const string ENGINES_DIRECTORY_NAME = "engines";
-        private const string COMMANDS_DIRECTORY_NAME = "commands";
-        private const string ARCHIVE_DIRECTORY_NAME = "archive";
-        private const string DEADLETTER_DIRECTORY_NAME = "deadletter";
-        private const string RESULTS_DIRECTORY_NAME = "results";
-        private const string JSON_EXTENSION = ".json";
-        private const string RESPONSE_FILE_SUFFIX = "-response.json";
         private const string WORKBENCH_DIRECTORY_NAME = "workbench";
         private const string STARTUP_TRACE_PREFIX = "startup-";
         private const string STARTUP_TRACE_SUFFIX = ".jsonl";
@@ -43,7 +39,7 @@ namespace YokiFrame
 
             options = options ?? new YokiFrameFileBridgeCleanupOptions();
             var fullProjectRoot = Path.GetFullPath(projectRoot);
-            var yokiframeRoot = Path.Combine(fullProjectRoot, YOKIFRAME_DIRECTORY_NAME);
+            var yokiframeRoot = Path.Combine(fullProjectRoot, YokiFrameFileBridgeLayout.YOKIFRAME_DIRECTORY);
             var report = new YokiFrameFileBridgeCleanupReport();
             if (!Directory.Exists(yokiframeRoot))
             {
@@ -76,7 +72,7 @@ namespace YokiFrame
             YokiFrameFileBridgeCleanupOptions options,
             YokiFrameFileBridgeCleanupReport report)
         {
-            var enginesRoot = Path.Combine(yokiframeRoot, ENGINES_DIRECTORY_NAME);
+            var enginesRoot = Path.Combine(yokiframeRoot, YokiFrameFileBridgeLayout.ENGINES_DIRECTORY);
             if (!IsSafeDirectory(enginesRoot))
             {
                 return;
@@ -89,23 +85,23 @@ namespace YokiFrame
                     continue;
                 }
 
-                var commandsRoot = Path.Combine(engineRoot, COMMANDS_DIRECTORY_NAME);
+                var commandsRoot = Path.Combine(engineRoot, YokiFrameFileBridgeLayout.COMMANDS_DIRECTORY);
                 CleanupDirectory(
-                    Path.Combine(commandsRoot, ARCHIVE_DIRECTORY_NAME),
+                    Path.Combine(commandsRoot, YokiFrameFileBridgeLayout.ARCHIVE_DIRECTORY),
                     options.ArchiveRetention,
                     options.ArchiveMaxFiles,
                     IsJsonFile,
                     nowUtc,
                     report);
                 CleanupDirectory(
-                    Path.Combine(commandsRoot, DEADLETTER_DIRECTORY_NAME),
+                    Path.Combine(commandsRoot, YokiFrameFileBridgeLayout.DEADLETTER_DIRECTORY),
                     options.DeadletterRetention,
                     options.DeadletterMaxFiles,
                     IsJsonFile,
                     nowUtc,
                     report);
                 CleanupDirectory(
-                    Path.Combine(engineRoot, RESULTS_DIRECTORY_NAME),
+                    Path.Combine(engineRoot, YokiFrameFileBridgeLayout.RESULTS_DIRECTORY),
                     options.ResultsRetention,
                     options.ResultsMaxFiles,
                     IsResponseFile,
@@ -271,14 +267,14 @@ namespace YokiFrame
         /// <summary>判断候选是普通 JSON 文件。</summary>
         private static bool IsJsonFile(string path)
         {
-            return string.Equals(Path.GetExtension(path), JSON_EXTENSION, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(Path.GetExtension(path), YokiFrameFileBridgeLayout.JSON_EXTENSION, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>判断候选是 FileBridge terminal response 文件。</summary>
         private static bool IsResponseFile(string path)
         {
             return Path.GetFileName(path).EndsWith(
-                RESPONSE_FILE_SUFFIX,
+                YokiFrameFileBridgeLayout.RESPONSE_FILE_SUFFIX,
                 StringComparison.OrdinalIgnoreCase);
         }
 
@@ -324,5 +320,4 @@ namespace YokiFrame
         }
     }
 }
-
-#nullable restore
+#endif

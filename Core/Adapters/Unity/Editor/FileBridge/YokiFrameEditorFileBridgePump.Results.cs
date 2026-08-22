@@ -1,12 +1,11 @@
 #if UNITY_EDITOR
 
 using System;
-using System.IO;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// 承载 FileBridge pump 的响应落盘、归档和 deadletter 处理逻辑。
+    /// 承载 FileBridge pump 的响应构造与 deadletter 序列化；落盘、归档与 deadletter 移动已由共享命令存储承载。
     /// </summary>
     internal static partial class YokiFrameEditorFileBridgePump
     {
@@ -47,104 +46,21 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 将响应写入 results 目录。
+        /// 序列化与既有 wire 格式一致的 deadletter 诊断 JSON，供共享命令存储写入证据。
         /// </summary>
-        /// <param name="requestId">请求标识。</param>
-        /// <param name="response">命令响应。</param>
-        private static void WriteResponse(string requestId, YokiFrameEditorCommandResponse response)
-        {
-            YokiFrameEditorFileBridgeJson.WriteAtomic(YokiFrameEditorFileBridgePaths.GetResponsePath(requestId), YokiFrameEditorFileBridgeJson.ToJson(response));
-        }
-
-        /// <summary>
-        /// 将已完成命令移动到 archive，保留 commands 顶层只放待处理命令。
-        /// </summary>
-        /// <param name="commandPath">原始命令路径。</param>
-        private static void ArchiveCommand(string commandPath)
-        {
-            var archivePath = YokiFrameEditorFileBridgePaths.GetArchivePath(commandPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(archivePath));
-            if (File.Exists(archivePath))
-            {
-                archivePath = archivePath + "." + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            }
-
-            File.Move(commandPath, archivePath);
-        }
-
-        /// <summary>
-        /// 将无法解析或不安全的命令移动到 deadletter，并写入诊断信息。
-        /// </summary>
-        /// <param name="commandPath">原始命令路径。</param>
+        /// <param name="sourcePath">原始命令路径。</param>
         /// <param name="errorCode">错误码。</param>
         /// <param name="errorMessage">错误说明。</param>
-        private static void MoveToDeadletter(string commandPath, string errorCode, string errorMessage)
+        /// <returns>deadletter 诊断 JSON 文本。</returns>
+        private static string SerializeDeadletterInfo(string sourcePath, string errorCode, string errorMessage)
         {
-            var deadletterId = CreateDeadletterId(commandPath);
-            var info = new YokiFrameEditorDeadletterInfo
+            return YokiFrameEditorFileBridgeJson.ToJson(new YokiFrameEditorDeadletterInfo
             {
-                sourcePath = commandPath,
+                sourcePath = sourcePath,
                 errorCode = errorCode,
                 errorMessage = errorMessage,
                 writtenAtUtc = DateTimeOffset.UtcNow.ToString("O")
-            };
-            YokiFrameEditorFileBridgeJson.WriteAtomic(YokiFrameEditorFileBridgePaths.GetDeadletterInfoPath(deadletterId), YokiFrameEditorFileBridgeJson.ToJson(info));
-            MoveRequestToDeadletter(commandPath, deadletterId);
-        }
-
-        /// <summary>
-        /// deadletter 写入失败时，在 processing 命令旁原子保留失败证据。
-        /// </summary>
-        /// <param name="commandPath">processing 命令路径。</param>
-        /// <param name="errorCode">错误码。</param>
-        /// <param name="errorMessage">错误说明。</param>
-        private static void WriteProcessingFailureEvidence(
-            string commandPath,
-            string errorCode,
-            string errorMessage)
-        {
-            var evidence = new YokiFrameEditorDeadletterInfo
-            {
-                sourcePath = commandPath,
-                errorCode = errorCode,
-                errorMessage = errorMessage,
-                writtenAtUtc = DateTimeOffset.UtcNow.ToString("O")
-            };
-            YokiFrameEditorFileBridgeJson.WriteAtomic(
-                commandPath + ".claim",
-                YokiFrameEditorFileBridgeJson.ToJson(evidence));
-        }
-
-        /// <summary>
-        /// 根据文件名生成安全 deadletter 标识。
-        /// </summary>
-        /// <param name="commandPath">原始命令路径。</param>
-        /// <returns>安全 deadletter 标识。</returns>
-        private static string CreateDeadletterId(string commandPath)
-        {
-            var fileName = Path.GetFileNameWithoutExtension(commandPath);
-            if (YokiFrameEditorFileBridgeJson.IsSafeId(fileName))
-            {
-                return fileName;
-            }
-
-            return "invalid-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        }
-
-        /// <summary>
-        /// 移动 deadletter 原始请求文件，若目标冲突则追加时间后缀。
-        /// </summary>
-        /// <param name="commandPath">原始命令路径。</param>
-        /// <param name="deadletterId">安全 deadletter 标识。</param>
-        private static void MoveRequestToDeadletter(string commandPath, string deadletterId)
-        {
-            var requestPath = YokiFrameEditorFileBridgePaths.GetDeadletterRequestPath(deadletterId);
-            if (File.Exists(requestPath))
-            {
-                requestPath = requestPath + "." + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            }
-
-            File.Move(commandPath, requestPath);
+            });
         }
     }
 }

@@ -237,7 +237,7 @@ public sealed class UIKitPageViewModelTests
             first.AssemblyName = "Game.UI";
             first.CodeTemplateDisplay = "精简";
 
-            first.PersistEditorSettingsOnClose();
+            await first.PersistEditorSettingsOnCloseAsync();
 
             UIKitPageViewModel second = CreateEditorSettingsViewModel(new UIKitEditorSettingsService(root));
             second.SetEditorEngine("unity-editor");
@@ -276,7 +276,7 @@ public sealed class UIKitPageViewModelTests
             first.SetEditorEngine("unity-editor");
             await first.ShowEditorToolsTaskCommand.ExecuteAsync();
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
                 Window window = new()
                 {
@@ -294,7 +294,7 @@ public sealed class UIKitPageViewModelTests
                     assemblySelector.SelectedItem = "Game.UI";
                     Dispatcher.UIThread.RunJobs();
                     Assert.Equal("Game.UI", first.AssemblyName);
-                    first.PersistEditorSettingsOnClose();
+                    await first.PersistEditorSettingsOnCloseAsync();
                 }
                 finally
                 {
@@ -336,7 +336,7 @@ public sealed class UIKitPageViewModelTests
             first.SetEditorEngine("unity-editor");
             await first.ShowEditorToolsTaskCommand.ExecuteAsync();
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
                 Window window = new()
                 {
@@ -354,7 +354,7 @@ public sealed class UIKitPageViewModelTests
                     assemblySelector.SelectedItem = "Game.UI";
                     Dispatcher.UIThread.RunJobs();
                     Assert.Equal("Game.UI", first.AssemblyName);
-                    first.PersistEditorSettingsOnClose();
+                    await first.PersistEditorSettingsOnCloseAsync();
                 }
                 finally
                 {
@@ -367,7 +367,7 @@ public sealed class UIKitPageViewModelTests
                 defaultAssemblyName: "Assembly-CSharp");
             second.SetEditorEngine("unity-editor");
             Window secondWindow = null!;
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
                 secondWindow = new Window
                 {
@@ -384,7 +384,7 @@ public sealed class UIKitPageViewModelTests
                 {
                     await second.ShowEditorToolsTaskCommand.ExecuteAsync();
                 });
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     Dispatcher.UIThread.RunJobs();
                     Assert.Equal("Game.UI", second.AssemblyName);
@@ -447,7 +447,7 @@ public sealed class UIKitPageViewModelTests
             Assert.Equal("Game.UI", viewModel.AssemblyName);
             Assert.Contains("Game.UI", viewModel.AssemblyNames);
 
-            viewModel.PersistEditorSettingsOnClose();
+            await viewModel.PersistEditorSettingsOnCloseAsync();
             Assert.Equal("Game.UI", service.Load()?.AssemblyName);
         }
         finally
@@ -499,7 +499,7 @@ public sealed class UIKitPageViewModelTests
             Assert.Equal("TeamTemplate", viewModel.CodeTemplateDisplay);
             Assert.Contains("TeamTemplate", viewModel.CodeTemplateOptions);
 
-            viewModel.PersistEditorSettingsOnClose();
+            await viewModel.PersistEditorSettingsOnCloseAsync();
             Assert.Equal("TeamTemplate", service.Load()?.CodeTemplate);
         }
         finally

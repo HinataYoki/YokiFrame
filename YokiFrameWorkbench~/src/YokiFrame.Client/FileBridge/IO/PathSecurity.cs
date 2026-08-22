@@ -4,6 +4,8 @@ namespace YokiFrame.Client.FileBridge.IO;
 
 /// <summary>
 /// 提供路径归一化和根目录 containment 检查，防止 FileBridge 访问越界。
+/// 扫描机制单源复用共享的 <see cref="YokiFrameFilePathPolicy"/>；本类型只负责把
+/// 共享 IOException 转换为带稳定错误码（PathTraversalRejected / PathReparsePointRejected）的协议异常。
 /// </summary>
 internal static class PathSecurity
 {
@@ -16,7 +18,11 @@ internal static class PathSecurity
     public static string CombineInside(string rootPath, params string[] segments)
     {
         var combinedPath = rootPath;
-        foreach (var seg in segments) combinedPath = Path.Combine(combinedPath, seg);
+        foreach (var segment in segments)
+        {
+            combinedPath = Path.Combine(combinedPath, segment);
+        }
+
         var fullPath = EnsureInside(rootPath, combinedPath);
         EnsureNoReparsePoint(rootPath, fullPath);
         return fullPath;
@@ -29,17 +35,13 @@ internal static class PathSecurity
     /// <param name="candidatePath">已位于根内的候选路径。</param>
     public static void EnsureNoReparsePoint(string rootPath, string candidatePath)
     {
-        var fullRoot = Path.GetFullPath(rootPath);
-        var fullCandidate = EnsureInside(fullRoot, candidatePath);
-        var current = fullRoot;
-        EnsurePathComponentIsNotReparsePoint(current, fullCandidate);
-        var relativePath = Path.GetRelativePath(fullRoot, fullCandidate);
-        foreach (var segment in relativePath.Split(
-                     new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                     StringSplitOptions.RemoveEmptyEntries))
+        try
         {
-            current = Path.Combine(current, segment);
-            EnsurePathComponentIsNotReparsePoint(current, fullCandidate);
+            YokiFrameFilePathPolicy.EnsureNoReparsePoint(rootPath, candidatePath);
+        }
+        catch (IOException exception)
+        {
+            throw CreateReparsePointRejected(exception);
         }
     }
 
@@ -51,80 +53,27 @@ internal static class PathSecurity
     /// <returns>已归一化的候选路径。</returns>
     public static string EnsureInside(string rootPath, string candidatePath)
     {
-        var fullRoot = EnsureTrailingSeparator(Path.GetFullPath(rootPath));
-        var fullCandidate = Path.GetFullPath(candidatePath);
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-
-        if (fullCandidate.StartsWith(fullRoot, comparison)
-            || string.Equals(RemoveTrailingSeparator(fullCandidate), RemoveTrailingSeparator(fullRoot), comparison))
-        {
-            return fullCandidate;
-        }
-
-        throw new YokiFrameProtocolException(new YokiFrameError(
-            "PathTraversalRejected",
-            $"Path is outside allowed root: {fullCandidate}",
-            "Use a project-local FileBridge path and avoid '..' or absolute child arguments.",
-            new[] { fullRoot, fullCandidate }));
-    }
-
-    /// <summary>
-    /// 给目录路径补齐结尾分隔符，避免 sibling prefix 绕过 containment 检查。
-    /// </summary>
-    /// <param name="path">待处理路径。</param>
-    /// <returns>结尾带目录分隔符的路径。</returns>
-    private static string EnsureTrailingSeparator(string path)
-    {
-        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
-        {
-            return path;
-        }
-
-        return path + Path.DirectorySeparatorChar;
-    }
-
-    /// <summary>
-    /// 移除路径结尾分隔符，用于根目录自身的等值判断。
-    /// </summary>
-    /// <param name="path">待处理路径。</param>
-    /// <returns>去掉结尾分隔符后的路径。</returns>
-    private static string RemoveTrailingSeparator(string path)
-    {
-        return path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    }
-
-    /// <summary>
-    /// 校验单个现存路径组件不是重解析点，并映射为稳定协议错误。
-    /// </summary>
-    /// <param name="path">待检查路径组件。</param>
-    /// <param name="candidatePath">完整候选路径，用于错误证据。</param>
-    private static void EnsurePathComponentIsNotReparsePoint(string path, string candidatePath)
-    {
-        FileAttributes attributes;
         try
         {
-            attributes = File.GetAttributes(path);
+            return YokiFrameFilePathPolicy.EnsureInside(rootPath, candidatePath);
         }
-        catch (FileNotFoundException)
+        catch (IOException exception)
         {
-            return;
+            throw new YokiFrameProtocolException(new YokiFrameError(
+                "PathTraversalRejected",
+                exception.Message,
+                "Use a project-local FileBridge path and avoid '..' or absolute child arguments.",
+                new[] { rootPath, candidatePath }));
         }
-        catch (DirectoryNotFoundException)
-        {
-            return;
-        }
+    }
 
-        if ((attributes & FileAttributes.ReparsePoint) == 0)
-        {
-            return;
-        }
-
-        throw new YokiFrameProtocolException(new YokiFrameError(
+    /// <summary>把共享扫描抛出的 IOException 统一映射为 PathReparsePointRejected 协议异常。</summary>
+    private static YokiFrameProtocolException CreateReparsePointRejected(IOException exception)
+    {
+        return new YokiFrameProtocolException(new YokiFrameError(
             "PathReparsePointRejected",
-            $"FileBridge path contains a symbolic link or junction: {path}",
+            exception.Message,
             "Replace linked FileBridge directories with ordinary project-local directories.",
-            new[] { path, candidatePath }));
+            Array.Empty<string>()));
     }
 }

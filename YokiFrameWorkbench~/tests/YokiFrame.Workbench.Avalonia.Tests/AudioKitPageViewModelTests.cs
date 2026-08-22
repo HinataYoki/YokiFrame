@@ -255,7 +255,7 @@ public sealed class AudioKitPageViewModelTests
 
     /// <summary>验证关闭 Workbench 时即使索引输入仍保持焦点也会提交当前草稿。</summary>
     [Fact]
-    public void IndexSettingsPersistWhenWorkbenchClosesWithFocusedDraft()
+    public async Task IndexSettingsPersistWhenWorkbenchClosesWithFocusedDraft()
     {
         AudioIndexSettings? saved = null;
         AudioKitPageViewModel viewModel = new(
@@ -270,7 +270,7 @@ public sealed class AudioKitPageViewModelTests
         viewModel.SetProjectRoot("ProjectA");
         viewModel.IndexClassName = "ProjectAudioIds";
 
-        viewModel.PersistIndexSettingsOnClose();
+        await viewModel.PersistIndexSettingsOnCloseAsync();
 
         Assert.Equal("ProjectAudioIds", saved?.ClassName);
     }

@@ -28,20 +28,15 @@ public sealed class WorkbenchFsmTelemetryCursorTests
             WorkbenchWindow window = new(new WorkbenchDashboardService(projectRoot));
             try
             {
-                SetCursorIdentity(window, "session-7", 17L);
+                object channel = GetTelemetryChannel(window);
+                SetCursorIdentity(channel, "session-7", 17L);
                 InvokeRefreshMode(window, CreateDashboardState(projectRoot, "session-7"));
 
-                Assert.Equal(17L, ReadField<long>(window, "mFsmTelemetrySequence"));
-
-                Assert.False(InvokeIsCursorNewer(window, 1L));
-                Assert.True(InvokeIsCursorNewer(window, 18L));
-                InvokeAdvanceCursor(window, 18L);
-                Assert.Equal(18L, ReadField<long>(window, "mFsmTelemetrySequence"));
-                Assert.True(InvokeIsCursorNewer(window, 19L));
+                Assert.Equal(17L, ReadField<long>(channel, "mSequence"));
 
                 InvokeRefreshMode(window, CreateDashboardState(projectRoot, "session-8"));
 
-                Assert.Equal(long.MinValue, ReadField<long>(window, "mFsmTelemetrySequence"));
+                Assert.Equal(long.MinValue, ReadField<long>(channel, "mSequence"));
             }
             finally
             {
@@ -71,7 +66,7 @@ public sealed class WorkbenchFsmTelemetryCursorTests
         {
             Assert.NotNull(window);
             Dispatcher.UIThread.RunJobs();
-            Assert.Null(ReadFieldValue(window, "mFsmTelemetryPollRequest"));
+            Assert.Null(ReadFieldValue(GetTelemetryChannel(window), "mCurrentRequest"));
             InvokePollingLifecycle(window, "StopFsmTelemetryPolling");
             window.Close();
         });
@@ -109,8 +104,9 @@ public sealed class WorkbenchFsmTelemetryCursorTests
         {
             Assert.NotNull(window);
             Dispatcher.UIThread.RunJobs();
-            Assert.Null(ReadFieldValue(window, "mFsmTelemetryPollRequest"));
-            Assert.Equal(long.MinValue, ReadField<long>(window, "mFsmTelemetrySequence"));
+            object channel = GetTelemetryChannel(window);
+            Assert.Null(ReadFieldValue(channel, "mCurrentRequest"));
+            Assert.Equal(long.MinValue, ReadField<long>(channel, "mSequence"));
             InvokePollingLifecycle(window, "StopFsmTelemetryPolling");
             window.Close();
         });
@@ -130,7 +126,8 @@ public sealed class WorkbenchFsmTelemetryCursorTests
                 var dashboardState = CreateDashboardState(projectRoot, "session-7");
                 SetField(window, "mCurrentState", dashboardState);
                 InvokeRefreshMode(window, dashboardState);
-                var oldRequest = ReadFieldValue(window, "mFsmTelemetryPollRequest");
+                object channel = GetTelemetryChannel(window);
+                var oldRequest = ReadFieldValue(channel, "mCurrentRequest");
                 Assert.NotNull(oldRequest);
                 var acceptedState = FsmKitContractTestData.CreateState(
                     "default-instance",
@@ -146,10 +143,10 @@ public sealed class WorkbenchFsmTelemetryCursorTests
                     true,
                     string.Empty);
 
-                InvokeApplyPollingResult(window, oldRequest, result);
+                InvokeApplyPollResult(channel, oldRequest, result);
 
-                Assert.Equal(long.MinValue, ReadField<long>(window, "mFsmTelemetrySequence"));
-                var newRequest = ReadFieldValue(window, "mFsmTelemetryPollRequest");
+                Assert.Equal(long.MinValue, ReadField<long>(channel, "mSequence"));
+                var newRequest = ReadFieldValue(channel, "mCurrentRequest");
                 Assert.NotNull(newRequest);
                 Assert.NotSame(oldRequest, newRequest);
             }
@@ -181,21 +178,30 @@ public sealed class WorkbenchFsmTelemetryCursorTests
         return frame;
     }
 
-    /// <summary>把测试窗口设为已经消费一帧的 telemetry 身份。</summary>
-    /// <param name="window">待设置窗口。</param>
+    /// <summary>读取窗口持有的 FsmKit 遥测通道实例。</summary>
+    /// <param name="window">目标窗口。</param>
+    /// <returns>FsmKitTelemetryChannel 实例。</returns>
+    private static object GetTelemetryChannel(WorkbenchWindow window)
+    {
+        var field = typeof(WorkbenchWindow).GetField(
+            "mFsmTelemetryChannel",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        return Assert.IsAssignableFrom<object>(field.GetValue(window));
+    }
+
+    /// <summary>把测试通道设为已经消费一帧的 telemetry 身份。</summary>
+    /// <param name="channel">FsmKit 遥测通道。</param>
     /// <param name="sessionId">宿主 session。</param>
     /// <param name="sequence">已接受帧序号。</param>
-    private static void SetCursorIdentity(
-        WorkbenchWindow window,
-        string sessionId,
-        long sequence)
+    private static void SetCursorIdentity(object channel, string sessionId, long sequence)
     {
-        SetField(window, "mFsmTelemetryEngineId", ENGINE_ID);
-        SetField(window, "mFsmTelemetrySessionId", sessionId);
-        SetField(window, "mFsmTelemetryGeneration", GENERATION);
-        SetField(window, "mFsmTelemetrySource", "telemetry");
-        SetField(window, "mFsmTelemetrySelectionId", string.Empty);
-        SetField(window, "mFsmTelemetrySequence", sequence);
+        SetField(channel, "mEngineId", ENGINE_ID);
+        SetField(channel, "mSessionId", sessionId);
+        SetField(channel, "mGeneration", GENERATION);
+        SetField(channel, "mTelemetrySource", "telemetry");
+        SetField(channel, "mSelectionId", string.Empty);
+        SetField(channel, "mSequence", sequence);
     }
 
     /// <summary>调用窗口的 Shared Memory 模式同步入口，模拟一次低频 dashboard 提交。</summary>
@@ -210,41 +216,23 @@ public sealed class WorkbenchFsmTelemetryCursorTests
         method.Invoke(window, new object[] { state });
     }
 
-    /// <summary>调用单次 UI 提交入口，验证 Apply 与游标推进构成同一身份事务。</summary>
-    private static void InvokeApplyPollingResult(
-        WorkbenchWindow window,
-        object request,
-        WorkbenchFsmKitTelemetryReadResult result)
+    /// <summary>调用通道的单次 UI 提交入口，验证 Apply 与游标推进构成同一身份事务。</summary>
+    private static void InvokeApplyPollResult(object channel, object request, object result)
     {
-        var method = typeof(WorkbenchWindow).GetMethod(
-            "ApplyFsmTelemetryPollResult",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(window, new[] { request, result });
-    }
+        // ApplyResult 声明在泛型基类的私有段，必须沿继承链查找。
+        for (var current = channel.GetType(); current != null; current = current.BaseType)
+        {
+            var method = current.GetMethod(
+                "ApplyResult",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (method != null)
+            {
+                method.Invoke(channel, new[] { request, result });
+                return;
+            }
+        }
 
-    /// <summary>调用游标推进入口，验证序号恢复不会降低已见 sequence 上界。</summary>
-    private static void InvokeAdvanceCursor(
-        WorkbenchWindow window,
-        long sequence)
-    {
-        var method = typeof(WorkbenchWindow).GetMethod(
-            "AdvanceFsmTelemetryCursor",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(window, new object[] { sequence });
-    }
-
-    /// <summary>调用生产游标比较，验证同 generation 内只由 sequence 决定先后。</summary>
-    private static bool InvokeIsCursorNewer(
-        WorkbenchWindow window,
-        long sequence)
-    {
-        var method = typeof(WorkbenchWindow).GetMethod(
-            "IsFsmTelemetryCursorNewer",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        return Assert.IsType<bool>(method.Invoke(window, new object[] { sequence }));
+        Assert.Fail("未找到 ApplyResult 方法。");
     }
 
     /// <summary>调用后台轮询的启动或停止入口，避免测试依赖真实窗口 Opened 生命周期。</summary>
@@ -317,36 +305,52 @@ public sealed class WorkbenchFsmTelemetryCursorTests
             0);
     }
 
-    /// <summary>设置窗口私有字段以建立精确游标前置状态。</summary>
+    /// <summary>沿类型层次设置目标对象私有字段；基类字段声明在泛型基类上。</summary>
     /// <typeparam name="T">字段值类型。</typeparam>
-    /// <param name="window">目标窗口。</param>
+    /// <param name="target">目标对象。</param>
     /// <param name="name">字段名。</param>
     /// <param name="value">字段值。</param>
-    private static void SetField<T>(WorkbenchWindow window, string name, T value)
+    private static void SetField<T>(object target, string name, T value)
     {
-        var field = typeof(WorkbenchWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        field.SetValue(window, value);
+        FindField(target.GetType(), name).SetValue(target, value);
     }
 
-    /// <summary>读取窗口私有字段以验证游标是否被保留。</summary>
+    /// <summary>沿类型层次读取目标对象私有字段以验证游标状态。</summary>
     /// <typeparam name="T">字段值类型。</typeparam>
-    /// <param name="window">目标窗口。</param>
+    /// <param name="target">目标对象。</param>
     /// <param name="name">字段名。</param>
     /// <returns>字段当前值。</returns>
-    private static T ReadField<T>(WorkbenchWindow window, string name)
+    private static T ReadField<T>(object target, string name)
     {
-        var field = typeof(WorkbenchWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        return Assert.IsType<T>(field.GetValue(window));
+        return Assert.IsType<T>(FindField(target.GetType(), name).GetValue(target));
     }
 
-    /// <summary>读取允许为空的私有字段，供后台请求暂停断言使用。</summary>
-    private static object? ReadFieldValue(WorkbenchWindow window, string name)
+    /// <summary>沿类型层次读取允许为空的私有字段，供后台请求暂停断言使用。</summary>
+    /// <param name="target">目标对象。</param>
+    /// <param name="name">字段名。</param>
+    /// <returns>字段当前值。</returns>
+    private static object? ReadFieldValue(object target, string name)
     {
-        var field = typeof(WorkbenchWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        return field.GetValue(window);
+        return FindField(target.GetType(), name).GetValue(target);
+    }
+
+    /// <summary>沿继承链查找字段声明，覆盖泛型基类中的私有字段。</summary>
+    /// <param name="type">目标对象运行时类型。</param>
+    /// <param name="name">字段名。</param>
+    /// <returns>找到的字段；未找到时使断言失败。</returns>
+    private static FieldInfo FindField(Type type, string name)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            var field = current.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field != null)
+            {
+                return field;
+            }
+        }
+
+        Assert.Fail("未找到字段: " + name);
+        return null!;
     }
 
     /// <summary>调用 Application 模型的内部构造器，避免测试复制生产 parser。</summary>

@@ -138,7 +138,8 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Client Hello 的消息类型、JSON 和 engine/session/generation 三项身份。
+        /// 验证 Client Hello 的消息类型、身份 SafeId 和 engine/session/generation 三项会话一致性。
+        /// 校验逻辑统一委托给跨宿主共享的 <see cref="YokiFrameFastChannelHostHandshake"/>。
         /// </summary>
         /// <param name="hello">已完成 Core framing 校验的首帧。</param>
         /// <param name="error">失败时返回给 Client 的稳定错误。</param>
@@ -147,51 +148,23 @@ namespace YokiFrame
             YokiFrameFastChannelFrame hello,
             out GodotFastChannelError error)
         {
-            if (hello.MessageKind != YokiFrameFastChannelMessageKind.Hello)
+            if (!YokiFrameFastChannelHostHandshake.TryValidateHello(
+                    hello,
+                    mEngineId,
+                    mSessionId,
+                    mGeneration,
+                    out var errorCode,
+                    out var errorMessage))
             {
                 error = CreateError(
-                    "FastChannelHandshakeKindMismatch",
-                    "FastChannel connection must begin with a Hello frame.",
-                    "Close the connection and restart the FastChannel handshake.");
+                    errorCode,
+                    errorMessage,
+                    "Refresh engine registry and reconnect using the current endpoint.");
                 return false;
             }
 
-            try
-            {
-                var identity = GodotFileBridgeJson.Deserialize<GodotFastChannelSessionIdentity>(hello.PayloadJson);
-                if (!YokiFrameSafeIdContract.IsSafeId(identity.EngineId)
-                    || !YokiFrameSafeIdContract.IsSafeId(identity.SessionId)
-                    || identity.Generation <= 0L)
-                {
-                    error = CreateError(
-                        "FastChannelHandshakeInvalidIdentity",
-                        "FastChannel Hello contains an invalid engine, session, or generation.",
-                        "Refresh engine registry and reconnect using the current endpoint.");
-                    return false;
-                }
-
-                if (!string.Equals(identity.EngineId, mEngineId, StringComparison.Ordinal)
-                    || !string.Equals(identity.SessionId, mSessionId, StringComparison.Ordinal)
-                    || identity.Generation != mGeneration)
-                {
-                    error = CreateError(
-                        "FastChannelHandshakeMismatch",
-                        "FastChannel Hello does not match the active Godot Runtime session.",
-                        "Discard the stale endpoint, refresh engine registry, and reconnect or use FileBridge fallback.");
-                    return false;
-                }
-
-                error = null;
-                return true;
-            }
-            catch (Exception exception)
-            {
-                error = CreateError(
-                    "FastChannelHandshakeInvalidJson",
-                    "FastChannel Hello payload is not a valid identity JSON: " + exception.Message,
-                    "Reconnect using the endpoint currently published by engine registry.");
-                return false;
-            }
+            error = null;
+            return true;
         }
 
         /// <summary>

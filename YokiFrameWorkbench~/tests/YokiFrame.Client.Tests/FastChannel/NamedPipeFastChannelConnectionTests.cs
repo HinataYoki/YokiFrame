@@ -30,10 +30,10 @@ public sealed class NamedPipeFastChannelConnectionTests
             TimeSpan.FromSeconds(2),
             cancellationSource.Token);
         var response = await connection.RequestAsync(
-            new FastChannelFrame(YokiFrameFastChannelMessageKind.Command, 0, "{\"requestId\":\"request-a\"}"),
+            new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Command, 0, "{\"requestId\":\"request-a\"}"),
             cancellationSource.Token);
 
-        Assert.Equal(YokiFrameFastChannelMessageKind.Response, response.Kind);
+        Assert.Equal(YokiFrameFastChannelMessageKind.Response, response.MessageKind);
         Assert.Equal("{\"requestId\":\"request-a\",\"message\":\"pong\"}", response.PayloadJson);
         await serverTask;
     }
@@ -68,12 +68,12 @@ public sealed class NamedPipeFastChannelConnectionTests
     [Fact]
     public async Task FrameStreamReaderAssemblesPartialReads()
     {
-        var expected = new FastChannelFrame(YokiFrameFastChannelMessageKind.Hello, 3, "{\"engineId\":\"unity-editor\"}");
-        await using var stream = new PartialReadStream(FastChannelFrameCodec.Encode(expected), 3);
+        var expected = new YokiFrameFastChannelFrame(YokiFrameFastChannelMessageKind.Hello, 3, "{\"engineId\":\"unity-editor\"}");
+        await using var stream = new PartialReadStream(YokiFrameFastChannelFrameCodec.Encode(expected), 3);
 
         var actual = await FastChannelFrameStream.ReadAsync(stream, CancellationToken.None);
 
-        Assert.Equal(expected.Kind, actual.Kind);
+        Assert.Equal(expected.MessageKind, actual.MessageKind);
         Assert.Equal(expected.Flags, actual.Flags);
         Assert.Equal(expected.PayloadJson, actual.PayloadJson);
     }
@@ -113,10 +113,10 @@ public sealed class NamedPipeFastChannelConnectionTests
         }
 
         var request = await FastChannelFrameStream.ReadAsync(server, cancellationToken);
-        Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.Kind);
+        Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.MessageKind);
         await FastChannelFrameStream.WriteAsync(
             server,
-            new FastChannelFrame(
+            new YokiFrameFastChannelFrame(
                 YokiFrameFastChannelMessageKind.Response,
                 0,
                 "{\"requestId\":\"request-a\",\"message\":\"pong\"}"),

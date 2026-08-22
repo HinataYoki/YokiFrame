@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\YokiFrame.Client\YokiFrame.Client.csproj" />
+    <ProjectReference Include="..\YokiFrame.Workbench.RuntimeCache\YokiFrame.Workbench.RuntimeCache.csproj" />
     <ProjectReference Include="..\YokiFrame.Installer.Core\YokiFrame.Installer.Core.csproj" />
     <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
     <ProjectReference Include="..\..\..\Tools\TableKit\Editor\YokiFrame.TableKit.Editor.csproj" />
@@ -11,22 +12,9 @@
     <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\LanguageId.cs" Link="RuntimeContracts\LocalizationKit\LanguageId.cs" />
     <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\PluralCategory.cs" Link="RuntimeContracts\LocalizationKit\PluralCategory.cs" />
     <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\LocalizationSchema.cs" Link="RuntimeContracts\LocalizationKit\LocalizationSchema.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs"
-             Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs"
-             Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs"
-             Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs"
-             Link="RuntimeCache\RuntimeCachePruner.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs"
-             Link="RuntimeCache\RuntimeCacheLease.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupOptions.cs"
-             Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgeCleanupReport.cs"
-             Link="Storage\YokiFrameFileBridgeCleanupReport.cs" />
-    <Compile Include="..\..\..\Core\Runtime\Storage\YokiFrameFileBridgePruner.cs"
-             Link="Storage\YokiFrameFileBridgePruner.cs" />
+    <!-- 原子写单源：复用 CommandBridge 的共享实现，禁止应用层再保留私有原子写原语。 -->
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\IO\YokiFrameAtomicFileWriter.cs" Link="EditorContracts\CommandBridge\YokiFrameAtomicFileWriter.cs" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +25,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);YOKIFRAME_TOOLING</DefineConstants>
   </PropertyGroup>
 
 </Project>

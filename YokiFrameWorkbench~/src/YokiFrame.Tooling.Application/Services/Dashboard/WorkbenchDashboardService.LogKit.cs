@@ -384,17 +384,12 @@ public sealed partial class WorkbenchDashboardService
         }
     }
 
-    /// <summary>判断两条 registry 是否属于同一宿主会话。</summary>
+    /// <summary>判断两条 registry 是否属于同一宿主会话；统一委托 <see cref="Engines.EngineHostIdentity"/>。</summary>
     private static bool IsSameHost(
         Protocol.FileBridge.EngineRegistryEntry? before,
         Protocol.FileBridge.EngineRegistryEntry? after)
     {
-        return before != null
-            && after != null
-            && before.Generation > 0L
-            && before.Generation == after.Generation
-            && !string.IsNullOrWhiteSpace(before.SessionId)
-            && string.Equals(before.SessionId, after.SessionId, StringComparison.Ordinal);
+        return Engines.EngineHostIdentity.IsSameSession(before, after);
     }
 
     /// <summary>比较规范化项目路径。</summary>

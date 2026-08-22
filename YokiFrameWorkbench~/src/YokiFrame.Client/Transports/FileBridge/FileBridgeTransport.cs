@@ -437,7 +437,7 @@ internal sealed class FileBridgeTransport
         var responsePath = Paths.GetResponsePath(engineId, requestId);
         EnsureReadablePath(commandPath);
         EnsureReadablePath(responsePath);
-        AtomicJsonFileWriter.WriteAllText(commandPath, envelope.ToJson());
+        YokiFrame.YokiFrameAtomicFileWriter.WriteAllText(commandPath, envelope.ToJson());
         CommandResponse response;
         try
         {

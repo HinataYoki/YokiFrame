@@ -36,7 +36,7 @@ public sealed class FastChannelConnection : IAsyncDisposable
     /// <param name="request">待发送的协议 frame。</param>
     /// <param name="cancellationToken">调用侧取消令牌。</param>
     /// <returns>Host 返回的下一条完整 response 或 error frame。</returns>
-    public async Task<FastChannelFrame> RequestAsync(FastChannelFrame request, CancellationToken cancellationToken)
+    public async Task<YokiFrameFastChannelFrame> RequestAsync(YokiFrameFastChannelFrame request, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(

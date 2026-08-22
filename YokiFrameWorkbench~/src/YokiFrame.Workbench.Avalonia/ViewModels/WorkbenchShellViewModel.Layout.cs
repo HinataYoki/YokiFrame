@@ -171,10 +171,11 @@ public sealed partial class WorkbenchShellViewModel
 
     /// <summary>
     /// 初始化框架总览需要的静态投影数据。
+    /// 快捷命令目录不再预置硬编码默认值：目录由宿主 System/list_commands 在会话建立后填充，
+    /// 离线时保持空目录，避免在 UI 层维护第二份命令清单。
     /// </summary>
     private void InitializeWorkbenchLayout()
     {
-        ReplaceCommandCatalog(CreateFallbackCommandCatalog());
         NavigationGroups = CreatePageNavigationGroups();
         SelectedNavigationItem = FindNavigationItem(DefaultPageName);
         RefreshNavigationSelection();

@@ -66,6 +66,8 @@ public sealed class UnityInstallService
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        // 锁前先执行一次只读计划：无效输入在获取项目锁与恢复扫描之前即被拒绝，
+        // 保证拒绝路径零写入；代价是源码树哈希执行两遍，属有意取舍（见清单 #12 改判）。
         _ = CreatePlan(request);
         using var projectLock = InstallerProjectLock.Acquire(request.ProjectRoot);
         InstallerPackageTransactionRecovery.Recover(request.ProjectRoot);

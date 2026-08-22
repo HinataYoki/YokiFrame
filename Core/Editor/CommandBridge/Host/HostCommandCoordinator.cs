@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || (GODOT && TOOLS)
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
 
 using System;
 using System.Collections.Generic;

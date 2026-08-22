@@ -364,7 +364,7 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
         private async Task WriteResponseForExpectedActionAsync(NamedPipeServerStream server, string expectedAction)
         {
             var frame = await FastChannelFrameStream.ReadAsync(server, mCancellationToken);
-            Assert.Equal(YokiFrameFastChannelMessageKind.Command, frame.Kind);
+            Assert.Equal(YokiFrameFastChannelMessageKind.Command, frame.MessageKind);
             var envelope = CommandEnvelope.FromJson(frame.PayloadJson);
             Assert.Equal(expectedAction, envelope.Action);
             var response = new CommandResponse
@@ -378,7 +378,7 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
             };
             await FastChannelFrameStream.WriteAsync(
                 server,
-                new FastChannelFrame(
+                new YokiFrameFastChannelFrame(
                     YokiFrameFastChannelMessageKind.Response,
                     0,
                     JsonSerializer.Serialize(response)),
@@ -476,7 +476,7 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
         private async Task WriteResponseForExpectedActionAsync(NamedPipeServerStream server, string expectedAction)
         {
             var frame = await FastChannelFrameStream.ReadAsync(server, mCancellationToken);
-            Assert.Equal(YokiFrameFastChannelMessageKind.Command, frame.Kind);
+            Assert.Equal(YokiFrameFastChannelMessageKind.Command, frame.MessageKind);
             var envelope = CommandEnvelope.FromJson(frame.PayloadJson);
             Assert.Equal(expectedAction, envelope.Action);
             var response = new CommandResponse
@@ -490,7 +490,7 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
             };
             await FastChannelFrameStream.WriteAsync(
                 server,
-                new FastChannelFrame(
+                new YokiFrameFastChannelFrame(
                     YokiFrameFastChannelMessageKind.Response,
                     0,
                     JsonSerializer.Serialize(response)),

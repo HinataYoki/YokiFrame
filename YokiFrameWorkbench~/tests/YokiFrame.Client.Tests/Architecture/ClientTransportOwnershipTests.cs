@@ -65,7 +65,8 @@ public sealed class ClientTransportOwnershipTests
         var typeNames = new[]
         {
             "YokiFrame.Client.Transports.FileBridge.FileBridgeTransport",
-            "YokiFrame.Client.FileBridge.IO.AtomicJsonFileWriter",
+            // 原子写已单源为源码链接的共享实现；守卫意图不变：具体 IO 实现必须保持 Client 程序集内部可见。
+            "YokiFrame.YokiFrameAtomicFileWriter",
             "YokiFrame.Client.FileBridge.IO.PathSecurity",
             "YokiFrame.Client.Telemetry.SharedMemory.SharedMemoryTelemetryNamedMapReader"
         };

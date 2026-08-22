@@ -5,7 +5,7 @@ namespace YokiFrame.RuntimeCache;
 /// <summary>
 /// 验证项目 Runtime 缓存 manifest 的版本、目标平台与入口，供 Packaging 与 Installer 共用。
 /// </summary>
-internal static class RuntimeManifestIntegrityValidator
+public static class RuntimeManifestIntegrityValidator
 {
     private const int MANIFEST_VERSION = 1;
     private const int LEGACY_LAYOUT_VERSION = 1;
@@ -22,7 +22,7 @@ internal static class RuntimeManifestIntegrityValidator
     /// <param name="profile">验证成功后返回可信入口。</param>
     /// <param name="error">验证失败原因。</param>
     /// <returns>manifest 与磁盘载荷完全一致时返回 true。</returns>
-    internal static bool TryValidateProfile(
+    public static bool TryValidateProfile(
         string manifestPath,
         string runtimeRoot,
         string runtimeProfile,
@@ -50,7 +50,7 @@ internal static class RuntimeManifestIntegrityValidator
     /// <param name="profile">解析成功后返回可启动入口。</param>
     /// <param name="error">解析失败原因。</param>
     /// <returns>结构与磁盘文件集一致时返回 true。</returns>
-    internal static bool TryResolveLaunchProfile(
+    public static bool TryResolveLaunchProfile(
         string manifestPath,
         string runtimeRoot,
         string runtimeProfile,
@@ -358,7 +358,7 @@ internal static class RuntimeManifestIntegrityValidator
 /// <summary>
 /// 提供 manifest JSON 基础字段的严格类型读取，避免各验证阶段重复弱类型分支。
 /// </summary>
-internal static class RuntimeManifestJson
+public static class RuntimeManifestJson
 {
     /// <summary>
     /// 读取必需字符串属性。
@@ -367,7 +367,7 @@ internal static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性存在且为非空字符串时返回 true。</returns>
-    internal static bool TryReadString(JsonElement element, string propertyName, out string value)
+    public static bool TryReadString(JsonElement element, string propertyName, out string value)
     {
         value = ReadOptionalString(element, propertyName);
         return !string.IsNullOrWhiteSpace(value);
@@ -379,7 +379,7 @@ internal static class RuntimeManifestJson
     /// <param name="element">JSON 对象。</param>
     /// <param name="propertyName">属性名。</param>
     /// <returns>字符串值或空文本。</returns>
-    internal static string ReadOptionalString(JsonElement element, string propertyName)
+    public static string ReadOptionalString(JsonElement element, string propertyName)
     {
         return element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty(propertyName, out var value)
@@ -395,7 +395,7 @@ internal static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性为有效整数时返回 true。</returns>
-    internal static bool TryReadInt32(JsonElement element, string propertyName, out int value)
+    public static bool TryReadInt32(JsonElement element, string propertyName, out int value)
     {
         value = 0;
         return element.ValueKind == JsonValueKind.Object
@@ -410,7 +410,7 @@ internal static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性为有效整数时返回 true。</returns>
-    internal static bool TryReadInt64(JsonElement element, string propertyName, out long value)
+    public static bool TryReadInt64(JsonElement element, string propertyName, out long value)
     {
         value = 0L;
         return element.ValueKind == JsonValueKind.Object
@@ -424,8 +424,8 @@ internal static class RuntimeManifestJson
 /// </summary>
 /// <param name="GuiPath">可信 GUI 入口完整路径。</param>
 /// <param name="CliPath">可信 CLI 入口完整路径；未发布时为空。</param>
-internal sealed record RuntimeManifestProfileValidation(string GuiPath, string CliPath)
+public sealed record RuntimeManifestProfileValidation(string GuiPath, string CliPath)
 {
     /// <summary>获取验证失败时使用的空结果。</summary>
-    internal static RuntimeManifestProfileValidation Empty { get; } = new(string.Empty, string.Empty);
+    public static RuntimeManifestProfileValidation Empty { get; } = new(string.Empty, string.Empty);
 }

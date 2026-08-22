@@ -21,25 +21,24 @@ public sealed partial class TableKitPageViewModel
         ApplyOperationResult(result, true);
     }
 
-    /// <summary>重新读取当前 luban.conf 的 target，并刷新环境摘要。</summary>
+    /// <summary>重新读取当前 luban.conf 的 target，并刷新环境摘要；wire 解析由 Application 服务承载。</summary>
     private void RefreshConfiguration()
     {
         RefreshEnvironment();
-        if (!File.Exists(ResolveInputPath(ConfigPath))) return;
         try
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(ResolveInputPath(ConfigPath)));
-            if (document.RootElement.TryGetProperty("targets", out JsonElement targets) && targets.ValueKind == JsonValueKind.Array)
+            foreach (var name in mService.ReadLubanTargetNames(ResolveInputPath(ConfigPath)))
             {
-                foreach (JsonElement target in targets.EnumerateArray())
-                {
-                    if (!target.TryGetProperty("name", out JsonElement name)) continue;
-                    AddOption(TargetOptions, name.GetString());
-                }
+                AddOption(TargetOptions, name);
             }
+
             AppendConsole("INFO", "已刷新 Luban target 列表。", false);
         }
-        catch (JsonException exception)
+        catch (FileNotFoundException)
+        {
+            // 首次接入项目尚无 luban.conf 属正常状态，保持静默。
+        }
+        catch (Exception exception)
         {
             AppendConsole("WARNING", "luban.conf 解析失败: " + exception.Message, false);
         }

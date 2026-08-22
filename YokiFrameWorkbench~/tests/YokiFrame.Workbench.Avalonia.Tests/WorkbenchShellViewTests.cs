@@ -338,9 +338,9 @@ public sealed partial class WorkbenchShellViewTests
         Assert.Contains("eventArgs.Cancel = true;", closingBody);
         Assert.Contains("Task.Run", closingBody);
         Assert.Contains("mClosePersistenceCompleted", closingBody);
-        Assert.Contains("mShellViewModel.UIKitPage.PersistEditorSettingsOnClose();", closingBody);
+        Assert.Contains("await mShellViewModel.UIKitPage.PersistEditorSettingsOnCloseAsync();", closingBody);
         Assert.Contains("mShellViewModel.LocalizationKitPage.PersistLubanWorkspaceSettingsOnClose();", closingBody);
-        Assert.Contains("mShellViewModel.AudioKitPage.PersistIndexSettingsOnClose();", closingBody);
+        Assert.Contains("await mShellViewModel.AudioKitPage.PersistIndexSettingsOnCloseAsync();", closingBody);
         Assert.True(
             closingBody.IndexOf("PersistEditorSettingsOnClose", StringComparison.Ordinal)
             < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));

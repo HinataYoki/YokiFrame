@@ -28,7 +28,10 @@ namespace YokiFrame.Tests
             yield return new WaitUntil(() => pending.IsCompleted);
             yield return null;
 
-            Assert.IsTrue(pending.IsCanceled);
+            // UniTask 公开边界不保留 TPL Canceled 状态位；取消以 OperationCanceledException 故障形式暴露。
+            Assert.IsTrue(pending.IsFaulted, "teardown 后等待者必须以取消异常结束。");
+            Assert.IsInstanceOf<OperationCanceledException>(pending.Exception?.GetBaseException(), "迟到结果必须以取消异常呈现给调用方。");
+            Assert.IsFalse(UIKit.HasRoot);
             Assert.IsFalse(UIKit.HasRoot);
         }
 
@@ -47,7 +50,10 @@ namespace YokiFrame.Tests
             yield return new WaitUntil(() => pending.IsCompleted);
             yield return null;
 
-            Assert.IsTrue(pending.IsCanceled);
+            // UniTask 公开边界不保留 TPL Canceled 状态位；取消以 OperationCanceledException 故障形式暴露。
+            Assert.IsTrue(pending.IsFaulted, "teardown 后等待者必须以取消异常结束。");
+            Assert.IsInstanceOf<OperationCanceledException>(pending.Exception?.GetBaseException(), "迟到结果必须以取消异常呈现给调用方。");
+            Assert.IsFalse(UIKit.HasRoot);
             Assert.IsFalse(UIKit.HasRoot);
         }
     }

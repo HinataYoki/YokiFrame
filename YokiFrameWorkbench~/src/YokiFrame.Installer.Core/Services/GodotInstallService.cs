@@ -105,6 +105,7 @@ public sealed class GodotInstallService
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        // 锁前只读计划保证无效输入在恢复扫描前拒绝（拒绝路径零写入）；见清单 #12 改判。
         _ = CreatePlan(request);
         using var projectLock = InstallerProjectLock.Acquire(request.ProjectRoot);
         return Execute(request, projectLock, cancellationToken);
@@ -122,7 +123,7 @@ public sealed class GodotInstallService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ValidateProjectLock(request.ProjectRoot, projectLock);
+        InstallerDirectorySwapTransaction.ValidateProjectLock(request.ProjectRoot, projectLock);
         InstallerGodotTransactionRecovery.Recover(request.ProjectRoot);
         cancellationToken.ThrowIfCancellationRequested();
         return mTransactionService.Execute(CreatePlan(request), projectLock, cancellationToken);
@@ -152,7 +153,7 @@ public sealed class GodotInstallService
         InstallerProjectLockLease projectLock)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        ValidateProjectLock(plan.ProjectRoot, projectLock);
+        InstallerDirectorySwapTransaction.ValidateProjectLock(plan.ProjectRoot, projectLock);
         if (!plan.RepairProjectSettings || !plan.EnablePlugin)
         {
             return;
@@ -168,25 +169,6 @@ public sealed class GodotInstallService
         WriteProjectSettingsAtomically(plan.ProjectSettingsPath, repairedSettings);
     }
 
-    /// <summary>
-    /// 确认调用方传入的锁与 Godot 计划属于同一项目。
-    /// </summary>
-    /// <param name="projectRoot">计划项目根。</param>
-    /// <param name="projectLock">调用方持有的锁租约。</param>
-    private static void ValidateProjectLock(
-        string projectRoot,
-        InstallerProjectLockLease projectLock)
-    {
-        ArgumentNullException.ThrowIfNull(projectLock);
-        var fullProjectRoot = InstallerPathGuard.RequireFullPath(projectRoot, nameof(projectRoot));
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-        if (!string.Equals(fullProjectRoot, projectLock.ProjectRoot, comparison))
-        {
-            throw new InvalidOperationException("Installer project lock belongs to a different project.");
-        }
-    }
 
     /// <summary>
     /// 完成全部只读校验、投影和 patch 计算，确保缺失 Runtime 或不兼容项目会在首次写入前拒绝。

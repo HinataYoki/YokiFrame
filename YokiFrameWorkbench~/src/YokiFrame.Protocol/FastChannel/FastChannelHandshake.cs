@@ -40,7 +40,7 @@ public static class FastChannelHandshake
     /// </summary>
     /// <param name="endpoint">Client 本轮读取到的启用 endpoint。</param>
     /// <returns>携带 endpoint 身份的 Hello frame。</returns>
-    public static FastChannelFrame CreateHello(FastChannelEndpoint endpoint)
+    public static YokiFrameFastChannelFrame CreateHello(FastChannelEndpoint endpoint)
     {
         return CreateFrame(YokiFrameFastChannelMessageKind.Hello, endpoint);
     }
@@ -50,7 +50,7 @@ public static class FastChannelHandshake
     /// </summary>
     /// <param name="endpoint">Host 当前启用的 endpoint。</param>
     /// <returns>携带 endpoint 身份的 HelloAck frame。</returns>
-    public static FastChannelFrame CreateHelloAck(FastChannelEndpoint endpoint)
+    public static YokiFrameFastChannelFrame CreateHelloAck(FastChannelEndpoint endpoint)
     {
         return CreateFrame(YokiFrameFastChannelMessageKind.HelloAck, endpoint);
     }
@@ -60,7 +60,7 @@ public static class FastChannelHandshake
     /// </summary>
     /// <param name="frame">已通过 framing 校验的 Hello frame。</param>
     /// <returns>已校验的 Client endpoint 身份。</returns>
-    public static FastChannelSessionIdentity ReadHello(FastChannelFrame frame)
+    public static FastChannelSessionIdentity ReadHello(YokiFrameFastChannelFrame frame)
     {
         return ReadFrameIdentity(frame, YokiFrameFastChannelMessageKind.Hello);
     }
@@ -70,7 +70,7 @@ public static class FastChannelHandshake
     /// </summary>
     /// <param name="frame">已通过 framing 校验的 HelloAck frame。</param>
     /// <returns>已校验的 Host endpoint 身份。</returns>
-    public static FastChannelSessionIdentity ReadHelloAck(FastChannelFrame frame)
+    public static FastChannelSessionIdentity ReadHelloAck(YokiFrameFastChannelFrame frame)
     {
         return ReadFrameIdentity(frame, YokiFrameFastChannelMessageKind.HelloAck);
     }
@@ -81,7 +81,7 @@ public static class FastChannelHandshake
     /// <param name="acknowledgement">Host 返回的 HelloAck frame。</param>
     /// <param name="expectedEndpoint">Client 建连前读取到的 endpoint。</param>
     public static void EnsureHelloAckMatchesEndpoint(
-        FastChannelFrame acknowledgement,
+        YokiFrameFastChannelFrame acknowledgement,
         FastChannelEndpoint expectedEndpoint)
     {
         var identity = ReadHelloAck(acknowledgement);
@@ -93,7 +93,7 @@ public static class FastChannelHandshake
     /// </summary>
     /// <param name="hello">Client 发起的 Hello frame。</param>
     /// <param name="expectedEndpoint">Host 当前启用的 endpoint。</param>
-    public static void EnsureHelloMatchesEndpoint(FastChannelFrame hello, FastChannelEndpoint expectedEndpoint)
+    public static void EnsureHelloMatchesEndpoint(YokiFrameFastChannelFrame hello, FastChannelEndpoint expectedEndpoint)
     {
         var identity = ReadHello(hello);
         EnsureIdentityMatchesEndpoint(identity, expectedEndpoint);
@@ -105,13 +105,13 @@ public static class FastChannelHandshake
     /// <param name="messageKind">Hello 或 HelloAck 消息类型。</param>
     /// <param name="endpoint">当前 endpoint 描述。</param>
     /// <returns>包含 compact JSON payload 的握手 frame。</returns>
-    private static FastChannelFrame CreateFrame(
+    private static YokiFrameFastChannelFrame CreateFrame(
         YokiFrameFastChannelMessageKind messageKind,
         FastChannelEndpoint endpoint)
     {
         var identity = CreateIdentity(endpoint);
         var payloadJson = JsonSerializer.Serialize(identity, YokiFrameProtocolJsonContext.Default.FastChannelSessionIdentity);
-        return new FastChannelFrame(messageKind, 0, payloadJson);
+        return new YokiFrameFastChannelFrame(messageKind, 0, payloadJson);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public static class FastChannelHandshake
     /// <param name="expectedKind">当前调用允许的握手消息类型。</param>
     /// <returns>已校验的 endpoint 身份。</returns>
     private static FastChannelSessionIdentity ReadFrameIdentity(
-        FastChannelFrame frame,
+        YokiFrameFastChannelFrame frame,
         YokiFrameFastChannelMessageKind expectedKind)
     {
         if (frame == null)
@@ -129,7 +129,7 @@ public static class FastChannelHandshake
             throw new ArgumentNullException(nameof(frame));
         }
 
-        if (frame.Kind != expectedKind)
+        if (frame.MessageKind != expectedKind)
         {
             throw CreateProtocolException(
                 "FastChannelHandshakeKindMismatch",

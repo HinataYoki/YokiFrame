@@ -9,8 +9,6 @@ namespace YokiFrame
     /// <summary>承载 Unity Editor 对通用命名 Kit Telemetry Provider 的发布适配。</summary>
     internal static partial class YokiFrameEditorFileBridgePump
     {
-        private static readonly Dictionary<string, Dictionary<string, long>> sNamedTelemetryVersions = new();
-
         /// <summary>
         /// 发布 Provider 当前声明的全部命名 latest frame，并释放已经不活动的映射。
         /// </summary>
@@ -25,9 +23,8 @@ namespace YokiFrame
 
             IReadOnlyList<string> names = namedProvider.TelemetryNames;
             var versionedProvider = namedProvider as IYokiFrameVersionedNamedTelemetryProvider;
-            Dictionary<string, long> publishedVersions = versionedProvider == null
-                ? null
-                : GetOrCreateNamedTelemetryVersions(provider.Kit);
+            Dictionary<string, long> publishedVersions =
+                sStateVersions.GetOrCreateNamedVersions(provider.Kit, versionedProvider);
             for (var index = 0; index < names.Count; index++)
             {
                 WriteNamedTelemetryFrameSafely(
@@ -38,7 +35,7 @@ namespace YokiFrame
             }
 
             YokiFrameEditorTelemetryWriter.RetainNamedStates(provider.Kit, names);
-            RetainNamedTelemetryVersions(provider.Kit, names);
+            sStateVersions.RetainNamedVersions(provider.Kit, names);
         }
 
         /// <summary>
@@ -71,10 +68,7 @@ namespace YokiFrame
                     payloadJson,
                     sGeneration,
                     sSequence);
-                if (versionedProvider != null)
-                {
-                    publishedVersions[name] = version;
-                }
+                sStateVersions.RememberNamedVersion(publishedVersions, name, version);
             }
             catch (Exception exception)
             {
@@ -84,79 +78,10 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>释放已经不活动实例的版本记录，保持缓存与 writer 当前命名映射一致。</summary>
-        /// <param name="kit">命名 Telemetry 所属 Kit。</param>
-        /// <param name="activeNames">当前仍活动的安全名称。</param>
-        private static void RetainNamedTelemetryVersions(string kit, IReadOnlyList<string> activeNames)
-        {
-            // 不能用数量相等冒充集合相等：本轮某个新名称写入失败时数量仍可相等，
-            // 会漏删已被 RetainNamedStates 释放共享内存段的旧名称版本，导致其复现时被版本比对跳过。
-            if (!sNamedTelemetryVersions.TryGetValue(kit, out var publishedVersions))
-            {
-                return;
-            }
-
-            List<string> staleKeys = null;
-            foreach (var name in publishedVersions.Keys)
-            {
-                if (!ContainsTelemetryName(activeNames, name))
-                {
-                    // 稳态轮次没有失效键，延迟到首个失效键出现时才分配。
-                    if (staleKeys == null)
-                    {
-                        staleKeys = new List<string>();
-                    }
-
-                    staleKeys.Add(name);
-                }
-            }
-
-            if (staleKeys == null)
-            {
-                return;
-            }
-
-            for (var index = 0; index < staleKeys.Count; index++)
-            {
-                publishedVersions.Remove(staleKeys[index]);
-            }
-        }
-
-        /// <summary>判断 Provider 当前名称集合是否仍包含指定实例。</summary>
-        /// <param name="activeNames">当前活动名称集合。</param>
-        /// <param name="name">待匹配实例名称。</param>
-        /// <returns>仍活动时返回 true。</returns>
-        private static bool ContainsTelemetryName(IReadOnlyList<string> activeNames, string name)
-        {
-            for (var index = 0; index < activeNames.Count; index++)
-            {
-                if (string.Equals(activeNames[index], name, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>获取指定 Kit 的实例版本表，并在首次发布时创建。</summary>
-        /// <param name="kit">Kit 标识。</param>
-        /// <returns>仅以 Provider 安全名称为键的实例版本表。</returns>
-        private static Dictionary<string, long> GetOrCreateNamedTelemetryVersions(string kit)
-        {
-            if (!sNamedTelemetryVersions.TryGetValue(kit, out var versions))
-            {
-                versions = new Dictionary<string, long>(StringComparer.Ordinal);
-                sNamedTelemetryVersions.Add(kit, versions);
-            }
-
-            return versions;
-        }
-
         /// <summary>清空实例版本缓存，使新 session/generation 强制重新发布全部命名帧。</summary>
         private static void ClearNamedTelemetryVersions()
         {
-            sNamedTelemetryVersions.Clear();
+            sStateVersions.ClearNamedVersions();
         }
     }
 }

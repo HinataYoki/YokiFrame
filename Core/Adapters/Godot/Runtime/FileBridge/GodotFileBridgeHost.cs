@@ -51,8 +51,16 @@ namespace YokiFrame
             mPaths = new GodotFileBridgePaths(projectRoot);
             mProjectScopeId = YokiFrameSharedMemoryTelemetryProjectScopeId.Compute(mPaths.ProjectRoot);
             mDispatcher = CreateCommandDispatcher();
+            // 共享命令存储承载三宿主一致的枚举、认领、终态与 deadletter 移动逻辑；
+            // Runtime 宿主保持 OrdinalIgnoreCase 稳定排序与五分钟节流清理语义。
             mCommandCoordinator = new YokiFrameHostCommandCoordinator(
-                new GodotRuntimeHostCommandStore(this),
+                new YokiFrameFileBridgeHostStore(
+                    mPaths,
+                    (path, json) => GodotFileBridgeJson.WriteAtomic(path, json),
+                    SerializeDeadletterInfo,
+                    () => TryPruneStorage(),
+                    () => TryPruneStorage(),
+                    true),
                 ExecuteCommandForCoordinator,
                 PROCESSING_LEASE,
                 exception => mLastError = exception.Message);
@@ -276,8 +284,7 @@ namespace YokiFrame
                 }
 
                 PublishNamedTelemetry(provider);
-                RememberTelemetryVersion(provider);
-                RememberSnapshotVersion(provider);
+                RememberPublishedStateVersions(provider);
             }
         }
 
@@ -368,9 +375,7 @@ namespace YokiFrame
             mKitInteractions = interactions;
             mStateKits = CreateStateKitNames(mKitInteractions);
             mDispatcher = CreateCommandDispatcher();
-            mKitTelemetryVersions.Clear();
-            mKitSnapshotVersions.Clear();
-            ClearNamedTelemetryVersions();
+            mStateVersions.Clear();
             mToolProviderRevision = capturedRevision;
             if (IsRunning)
             {

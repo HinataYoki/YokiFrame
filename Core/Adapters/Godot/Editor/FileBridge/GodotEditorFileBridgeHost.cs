@@ -48,8 +48,16 @@ namespace YokiFrame
             mEngineVersion = engineVersion;
             mPaths = new GodotEditorFileBridgePaths(projectRoot);
             mDispatcher = CreateCommandDispatcher();
+            // 共享命令存储承载三宿主一致的枚举、认领、终态与 deadletter 移动逻辑；
+            // Editor 宿主保持 OrdinalIgnoreCase 稳定排序与五分钟节流清理语义。
             mCommandCoordinator = new YokiFrameHostCommandCoordinator(
-                new GodotEditorHostCommandStore(this),
+                new YokiFrameFileBridgeHostStore(
+                    mPaths,
+                    (path, json) => GodotEditorFileBridgeJson.WriteAtomic(path, json),
+                    SerializeDeadletterInfo,
+                    () => TryPruneStorage(),
+                    () => TryPruneStorage(),
+                    true),
                 ExecuteCommandForCoordinator,
                 PROCESSING_LEASE,
                 exception => mLastError = exception.Message);

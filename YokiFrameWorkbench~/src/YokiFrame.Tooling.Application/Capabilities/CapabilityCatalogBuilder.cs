@@ -189,7 +189,7 @@ internal sealed partial class CapabilityCatalogBuilder
         AddEvidence(Path.Combine(ProjectRoot, ".yokiframe", "engines", safeEngineId, YokiFrameFileBridgeLayout.ENGINE_REGISTRY_FILE_NAME));
 
         var identityState = ResolveIdentityState(entry, heartbeat);
-        var staleThreshold = TimeSpan.FromSeconds(15);
+        var staleThreshold = Engines.EngineSelectionService.HeartbeatStaleThreshold;
         var isStale = heartbeat != null && heartbeat.IsStale(mGeneratedAtUtc, staleThreshold);
         if (heartbeat == null)
         {

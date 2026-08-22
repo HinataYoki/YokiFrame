@@ -8,6 +8,14 @@ namespace YokiFrame
     /// </summary>
     internal sealed class GodotSystemCommandHandler : YokiFrameKitCommandHandler
     {
+        /// <summary>Godot Runtime System 命令面的唯一声明；宿主策略由此聚合，禁止另建清单。</summary>
+        public static readonly YokiFrameCommandDescriptor[] CommandDescriptors =
+        {
+            new("System", "ping", YokiFrameCommandKind.ReadOnly),
+            new("System", "bridge_status", YokiFrameCommandKind.ReadOnly),
+            new("System", "list_commands", YokiFrameCommandKind.ReadOnly)
+        };
+
         private readonly Func<string> mCreateBridgeStatusJson;
         private readonly Func<string> mCreateCommandCatalogJson;
         private readonly Func<string> mCreatePingJson;
@@ -22,7 +30,7 @@ namespace YokiFrame
             Func<string> createPingJson,
             Func<string> createBridgeStatusJson,
             Func<string> createCommandCatalogJson)
-            : base("System", new[] { "ping", "bridge_status", "list_commands" })
+            : base("System", CommandDescriptors)
         {
             mCreatePingJson = createPingJson ?? throw new ArgumentNullException(nameof(createPingJson));
             mCreateBridgeStatusJson = createBridgeStatusJson

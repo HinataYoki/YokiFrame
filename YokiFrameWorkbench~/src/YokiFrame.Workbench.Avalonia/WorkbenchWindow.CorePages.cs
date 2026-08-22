@@ -47,50 +47,46 @@ public sealed partial class WorkbenchWindow
         var folderPicker = new AvaloniaInstallerFolderPicker(() => StorageProvider);
         var tableKitLubanFilePicker = new AvaloniaTableKitLubanFilePicker(() => StorageProvider);
         var viewModel = new WorkbenchShellViewModel(
-            QueueDashboardRefresh,
-            ChangeEngine,
-            SendCommandAsync,
-            QueryFsmDetailsAsync,
-            sourcePackageRoot,
-            projectRoot,
-            documentationService,
-            CopyTextAsync,
-            documentationInitializationError,
-            packageMetadata,
-            OpenUriAsync,
-            eventKitCodeScanAsync,
-            OpenEventKitCodeLocationAsync,
-            mDashboardService.LoadLogKitProjectSettings,
-            mDashboardService.SaveLogKitSettingsAsync,
-            mDashboardService.ClearLogKitHistoryAsync,
-            mDashboardService.ReadLogKitFileAsync,
-            mDashboardService.SetPoolKitTrackingAsync,
-            mDashboardService.CheckPoolKitLeaksAsync,
-            mDashboardService.ClearPoolKitHistoryAsync,
-            OpenPoolKitCodeLocationAsync,
-            mDashboardService.GetResKitResourceDetailAsync,
-            mDashboardService.SetResKitTrackingAsync,
-            mDashboardService.ClearResKitHistoryAsync,
-            OpenResKitCodeLocationAsync,
-            mDashboardService.SetActionKitStackTraceAsync,
-            mDashboardService.ClearActionKitStackTraceAsync,
-            ScanAudioIndexAsync,
-            GenerateAudioIndexAsync,
-            LoadAudioIndexSettings,
-            SaveAudioIndexSettingsAsync,
-            string.IsNullOrWhiteSpace(projectRoot)
-                ? null
-                : new SaveKitWorkbenchSettingsService(mDashboardService.ProjectSettingsStore),
-            folderPicker,
-            OpenExistingDirectoryAsync,
-            string.IsNullOrWhiteSpace(projectRoot)
-                ? null
-                : new TableKitApplicationService(),
-            tableKitLubanFilePicker,
-            ExecuteUIKitEditorActionAsync,
-            string.IsNullOrWhiteSpace(projectRoot)
-                ? null
-                : new UIKitEditorSettingsService(mDashboardService.ProjectSettingsStore));
+            new WorkbenchShellCallbacks(QueueDashboardRefresh, ChangeEngine, SendCommandAsync, OpenUriAsync, CopyTextAsync),
+            new WorkbenchShellMeta(sourcePackageRoot, projectRoot, packageMetadata, documentationService, documentationInitializationError),
+            new WorkbenchFsmEventDependencies(QueryFsmDetailsAsync, eventKitCodeScanAsync, OpenEventKitCodeLocationAsync),
+            new WorkbenchLogKitDependencies(
+                mDashboardService.LoadLogKitProjectSettings,
+                mDashboardService.SaveLogKitSettingsAsync,
+                mDashboardService.ClearLogKitHistoryAsync,
+                mDashboardService.ReadLogKitFileAsync),
+            new WorkbenchPoolKitDependencies(
+                mDashboardService.SetPoolKitTrackingAsync,
+                mDashboardService.CheckPoolKitLeaksAsync,
+                mDashboardService.ClearPoolKitHistoryAsync,
+                OpenPoolKitCodeLocationAsync),
+            new WorkbenchResKitDependencies(
+                mDashboardService.GetResKitResourceDetailAsync,
+                mDashboardService.SetResKitTrackingAsync,
+                mDashboardService.ClearResKitHistoryAsync,
+                OpenResKitCodeLocationAsync),
+            new WorkbenchActionKitDependencies(
+                mDashboardService.SetActionKitStackTraceAsync,
+                mDashboardService.ClearActionKitStackTraceAsync),
+            new WorkbenchAudioKitDependencies(
+                ScanAudioIndexAsync,
+                GenerateAudioIndexAsync,
+                LoadAudioIndexSettings,
+                SaveAudioIndexSettingsAsync),
+            new WorkbenchToolPageDependencies(
+                string.IsNullOrWhiteSpace(projectRoot)
+                    ? null
+                    : new SaveKitWorkbenchSettingsService(mDashboardService.ProjectSettingsStore),
+                folderPicker,
+                OpenExistingDirectoryAsync,
+                string.IsNullOrWhiteSpace(projectRoot)
+                    ? null
+                    : new TableKitApplicationService(),
+                tableKitLubanFilePicker,
+                ExecuteUIKitEditorActionAsync,
+                string.IsNullOrWhiteSpace(projectRoot)
+                    ? null
+                    : new UIKitEditorSettingsService(mDashboardService.ProjectSettingsStore)));
         viewModel.LogKitPage.SetOpenDirectoryHandler(OpenExistingDirectoryAsync);
         if (!string.IsNullOrWhiteSpace(packageMetadataInitializationError))
         {

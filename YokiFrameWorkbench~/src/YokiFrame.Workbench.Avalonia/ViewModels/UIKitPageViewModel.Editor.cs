@@ -172,7 +172,8 @@ public sealed partial class UIKitPageViewModel
     {
         string normalized = engineId ?? string.Empty;
         if (string.Equals(mEditorEngineId, normalized, StringComparison.Ordinal)) return;
-        PersistEditorSettingsOnClose();
+        // 切换引擎前后台提交脏配置；方法内部已捕获异常并回显状态，不会逃逸。
+        _ = PersistEditorSettingsOnCloseAsync();
         mEditorEngineId = normalized;
         mEditorDefaultsLoaded = false;
         ResetEditorContext();
@@ -210,17 +211,15 @@ public sealed partial class UIKitPageViewModel
     }
 
     /// <summary>
-    /// 在 Workbench 关闭前同步提交用户修改过的 Editor Tools 配置，避免未执行生成操作时丢失表单值。
+    /// 在 Workbench 关闭或切换 engine 前提交用户修改过的 Editor Tools 配置，避免未执行生成操作时丢失表单值。
+    /// 直接 await 服务异步保存，不再在线程池上同步阻塞等待。
     /// </summary>
-    internal void PersistEditorSettingsOnClose()
+    internal async Task PersistEditorSettingsOnCloseAsync()
     {
         if (mEditorSettingsService == null || !mEditorSettingsDirty) return;
         try
         {
-            var request = CreateGenerationRequest();
-            Task.Run(() => mEditorSettingsService.SaveAsync(request, CancellationToken.None))
-                .GetAwaiter()
-                .GetResult();
+            await mEditorSettingsService.SaveAsync(CreateGenerationRequest(), CancellationToken.None);
             mEditorSettingsDirty = false;
             mEditorDefaultsLoaded = true;
         }

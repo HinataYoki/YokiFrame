@@ -101,9 +101,7 @@ namespace YokiFrame
             YokiFrameEditorTelemetryWriter.Dispose();
             // Dispose 会释放项目级通知句柄；此处幂等重建，保证本轮 registry capabilities 立即包含 telemetry.notify。
             YokiFrameEditorTelemetryWriter.RegisterLifecycleHooks();
-            sKitTelemetryVersions.Clear();
-            sKitSnapshotVersions.Clear();
-            sTelemetryFallbackKits.Clear();
+            sStateVersions.Clear();
             ClearNamedTelemetryVersions();
             sSessionId = Guid.NewGuid().ToString("N");
             sGeneration = CreateNextGeneration(DateTimeOffset.UtcNow.Ticks);
@@ -119,9 +117,7 @@ namespace YokiFrame
         {
             StopFastChannelHost();
             YokiFrameEditorTelemetryWriter.Dispose();
-            sKitTelemetryVersions.Clear();
-            sKitSnapshotVersions.Clear();
-            sTelemetryFallbackKits.Clear();
+            sStateVersions.Clear();
             ClearNamedTelemetryVersions();
             try
             {
@@ -227,38 +223,34 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 校验 Client Hello 的 engine/session/generation，并在完全匹配时返回当前 Host HelloAck。
+        /// 校验 Client Hello 的身份 SafeId 与 engine/session/generation，并在完全匹配时返回当前 Host HelloAck。
         /// </summary>
         /// <param name="request">Hello frame。</param>
         /// <returns>匹配时的 HelloAck，失败时的 Error frame。</returns>
         private static YokiFrameFastChannelFrame ProcessFastChannelHello(YokiFrameFastChannelFrame request)
         {
-            try
+            // 共享宿主握手校验器统一执行 SafeId 与会话一致性检查，避免各宿主校验强度漂移。
+            if (!YokiFrameFastChannelHostHandshake.TryValidateHello(
+                    request,
+                    YokiFrameEditorFileBridgePaths.ENGINE_ID,
+                    sSessionId,
+                    sGeneration,
+                    out var errorCode,
+                    out var errorMessage))
             {
-                var identity = YokiFrameEditorFileBridgeJson.FromJson<YokiFrameEditorFastChannelIdentity>(request.PayloadJson);
-                if (identity == null
-                    || identity.engineId != YokiFrameEditorFileBridgePaths.ENGINE_ID
-                    || identity.sessionId != sSessionId
-                    || identity.generation != sGeneration)
-                {
-                    return CreateFastChannelError("FastChannelHandshakeMismatch", "FastChannel Hello does not match the active Unity Editor session.");
-                }
+                return CreateFastChannelError(errorCode, errorMessage);
+            }
 
-                var acknowledgement = new YokiFrameEditorFastChannelIdentity
-                {
-                    engineId = YokiFrameEditorFileBridgePaths.ENGINE_ID,
-                    sessionId = sSessionId,
-                    generation = sGeneration
-                };
-                return new YokiFrameFastChannelFrame(
-                    YokiFrameFastChannelMessageKind.HelloAck,
-                    0,
-                    YokiFrameEditorFileBridgeJson.ToJson(acknowledgement));
-            }
-            catch (Exception)
+            var acknowledgement = new YokiFrameEditorFastChannelIdentity
             {
-                return CreateFastChannelError("FastChannelHandshakeInvalidJson", "FastChannel Hello payload is invalid.");
-            }
+                engineId = YokiFrameEditorFileBridgePaths.ENGINE_ID,
+                sessionId = sSessionId,
+                generation = sGeneration
+            };
+            return new YokiFrameFastChannelFrame(
+                YokiFrameFastChannelMessageKind.HelloAck,
+                0,
+                YokiFrameEditorFileBridgeJson.ToJson(acknowledgement));
         }
 
         /// <summary>

@@ -53,9 +53,8 @@ namespace YokiFrame
             }
 
             string absolutePath = GetAbsolutePath();
-            string directoryPath = Path.GetDirectoryName(absolutePath);
-            Directory.CreateDirectory(directoryPath);
-            WriteAtomically(absolutePath, json);
+            // 统一经 CommandBridge 的共享原子写提交；禁止在宿主 Adapter 内再保留私有临时文件替换实现。
+            YokiFrameAtomicFileWriter.WriteAllText(absolutePath, json);
             AssetDatabase.ImportAsset(ASSET_PATH, ImportAssetOptions.ForceUpdate);
         }
 
@@ -87,49 +86,6 @@ namespace YokiFrame
             }
 
             return absolutePath;
-        }
-
-        /// <summary>
-        /// 通过同目录临时文件、落盘 flush 和原子替换提交 JSON；失败时保留原正式文件。
-        /// </summary>
-        /// <param name="targetPath">正式配置绝对路径。</param>
-        /// <param name="json">待写入 JSON。</param>
-        private static void WriteAtomically(string targetPath, string json)
-        {
-            string temporaryPath = targetPath + ".tmp-" + Guid.NewGuid().ToString("N");
-            try
-            {
-                WriteTemporaryFile(temporaryPath, json);
-                if (File.Exists(targetPath))
-                {
-                    File.Replace(temporaryPath, targetPath, null);
-                }
-                else
-                {
-                    File.Move(temporaryPath, targetPath);
-                }
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 使用无 BOM UTF-8 写入临时文件，并强制刷新到磁盘后再参与原子替换。
-        /// </summary>
-        /// <param name="path">临时文件路径。</param>
-        /// <param name="json">待写入 JSON。</param>
-        private static void WriteTemporaryFile(string path, string json)
-        {
-            using FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-            using StreamWriter writer = new(stream, new UTF8Encoding(false));
-            writer.Write(json);
-            writer.Flush();
-            stream.Flush(true);
         }
     }
 }

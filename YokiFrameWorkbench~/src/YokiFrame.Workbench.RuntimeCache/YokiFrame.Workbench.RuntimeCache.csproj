@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Workbench 工具链共享的 Runtime 缓存契约与校验原语。
+    源文件保持单一物理位置：Shared/RuntimeCache 由工具链独占；
+    Core/Editor/CommandBridge/Storage（协议证据清理）与 Core/Editor/Tooling/RuntimeCache 同时被
+    Packaging 与 Installer.Core 使用——统一经本程序集链接编译，消除此前多工程重复编译导致的类型身份分裂。
+    Pruner 三文件已随 Player 剔除整改迁入 Core/Editor，需 YOKIFRAME_TOOLING 宏激活其编译。
+  -->
+  <ItemGroup>
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs" Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs" Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs" Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs" Link="RuntimeCache\RuntimeCachePruner.cs" />
+    <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs" Link="RuntimeCache\RuntimeCacheLease.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgeCleanupOptions.cs" Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgeCleanupReport.cs" Link="Storage\YokiFrameFileBridgeCleanupReport.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgePruner.cs" Link="Storage\YokiFrameFileBridgePruner.cs" />
+    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs" Link="RuntimeCacheLayout\YokiFrameWorkbenchRuntimeCacheLayout.cs" />
+    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs" Link="RuntimeCacheLayout\YokiFrameWorkbenchSourceFingerprint.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- FileBridge 布局常量保持单一物理事实源：由 YokiFrame.Protocol 链接编译，本程序集经引用消费。 -->
+    <ProjectReference Include="..\YokiFrame.Protocol\YokiFrame.Protocol.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);YOKIFRAME_TOOLING</DefineConstants>
+  </PropertyGroup>
+
+</Project>

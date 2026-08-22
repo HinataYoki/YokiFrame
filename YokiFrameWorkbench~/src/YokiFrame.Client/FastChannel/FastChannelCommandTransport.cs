@@ -16,9 +16,13 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     private const int MAX_CONNECT_TIMEOUT_MS = 500;
     private const int MAX_OPERATION_TIMEOUT_MS = 750;
     private const int DISPOSE_WAIT_MS = 500;
+    // registry 缓存以 engine.json 的最后写入时间作为变化信号：每次只读发送仅一次元数据 stat，
+    // 文件未变化时复用上轮解析结果，避免全目录枚举；宿主身份最终仍由握手与 EndpointsMatch 把关。
     private readonly FileBridgeTransport mFileBridgeTransport;
     private readonly SemaphoreSlim mConnectionGate = new(1, 1);
     private readonly Dictionary<string, CachedFastChannelConnection> mConnections = new(StringComparer.Ordinal);
+    private readonly object mRegistryCacheGate = new();
+    private readonly Dictionary<string, CachedRegistryEntry> mRegistryCache = new(StringComparer.Ordinal);
     private int mDisposed;
 
     /// <summary>
@@ -84,7 +88,7 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
         try
         {
             connection = await GetOrCreateConnectionAsync(endpoint, operationSource.Token).ConfigureAwait(false);
-            var request = new FastChannelFrame(
+            var request = new YokiFrameFastChannelFrame(
                 YokiFrameFastChannelMessageKind.Command,
                 0,
                 envelope.ToJson());
@@ -313,14 +317,93 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     /// <returns>可连接 endpoint；没有兼容 endpoint 时返回 null。</returns>
     private FastChannelEndpoint? FindCurrentEndpoint(string engineId)
     {
-        var registry = mFileBridgeTransport.ReadEngineEntries().FirstOrDefault(
-            entry => string.Equals(entry.EngineId, engineId, StringComparison.Ordinal));
+        var registry = ReadRegistryEntryWithCache(engineId);
         if (registry == null)
         {
             return null;
         }
 
         return registry.FastChannels.FirstOrDefault(endpoint => IsCurrentLocalEndpoint(registry, endpoint));
+    }
+
+    /// <summary>
+    /// 读取指定 engine 的 registry 条目，并以 engine.json 的最后写入时间为变化信号复用上轮解析结果；
+    /// 文件被原子替换后 mtime 必然变化，因此不会把已轮换的宿主身份缓存给调用方。
+    /// </summary>
+    /// <param name="engineId">目标 engine。</param>
+    /// <returns>当前 registry 条目；engine 尚未注册时为空。</returns>
+    private EngineRegistryEntry? ReadRegistryEntryWithCache(string engineId)
+    {
+        var registryPath = mFileBridgeTransport.Paths.GetEngineRegistryPath(engineId);
+        DateTime registryMtimeUtc;
+        try
+        {
+            registryMtimeUtc = File.GetLastWriteTimeUtc(registryPath);
+        }
+        catch (IOException)
+        {
+            ClearRegistryCache();
+            return FindEntryById(ReadFreshEntries(), engineId);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ClearRegistryCache();
+            return FindEntryById(ReadFreshEntries(), engineId);
+        }
+
+        lock (mRegistryCacheGate)
+        {
+            ThrowIfDisposed();
+            if (mRegistryCache.TryGetValue(engineId, out var cached)
+                && cached.RegistryMtimeUtc == registryMtimeUtc)
+            {
+                return cached.Entry;
+            }
+        }
+
+        var entry = FindEntryById(ReadFreshEntries(), engineId);
+        lock (mRegistryCacheGate)
+        {
+            ThrowIfDisposed();
+            mRegistryCache[engineId] = new CachedRegistryEntry(entry, registryMtimeUtc);
+        }
+
+        return entry;
+    }
+
+    /// <summary>读取当前全量 registry；解析失败按既有语义抛出，不回退到可能陈旧的缓存。</summary>
+    /// <returns>当前可用的 registry 条目列表。</returns>
+    private IReadOnlyList<EngineRegistryEntry> ReadFreshEntries()
+    {
+        return mFileBridgeTransport.ReadEngineEntries();
+    }
+
+    /// <summary>按 engine 标识在 registry 列表中查找条目。</summary>
+    /// <param name="entries">本轮读取到的条目。</param>
+    /// <param name="engineId">目标 engine。</param>
+    /// <returns>匹配条目；不存在时为空。</returns>
+    private static EngineRegistryEntry? FindEntryById(
+        IReadOnlyList<EngineRegistryEntry> entries,
+        string engineId)
+    {
+        for (var index = 0; index < entries.Count; index++)
+        {
+            if (string.Equals(entries[index].EngineId, engineId, StringComparison.Ordinal))
+            {
+                return entries[index];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>清空 registry 缓存；调用方在连接失效或生命周期结束时触发，下一轮读取强制回到磁盘事实。</summary>
+    private void ClearRegistryCache()
+    {
+        lock (mRegistryCacheGate)
+        {
+            mRegistryCache.Clear();
+        }
     }
 
     /// <summary>
@@ -360,14 +443,14 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     /// <param name="responseFrame">连接返回的下一条 frame。</param>
     /// <param name="envelope">本次发送的 command 信封。</param>
     /// <returns>已验证的 FileBridge 风格 terminal response。</returns>
-    private static CommandResponse ReadCommandResponse(FastChannelFrame responseFrame, CommandEnvelope envelope)
+    private static CommandResponse ReadCommandResponse(YokiFrameFastChannelFrame responseFrame, CommandEnvelope envelope)
     {
-        if (responseFrame.Kind == YokiFrameFastChannelMessageKind.Error)
+        if (responseFrame.MessageKind == YokiFrameFastChannelMessageKind.Error)
         {
             throw CreateHostError(responseFrame.PayloadJson);
         }
 
-        if (responseFrame.Kind != YokiFrameFastChannelMessageKind.Response)
+        if (responseFrame.MessageKind != YokiFrameFastChannelMessageKind.Response)
         {
             throw CreateProtocolException(
                 "FastChannelResponseKindMismatch",
@@ -469,4 +552,9 @@ internal sealed partial class FastChannelCommandTransport : IDisposable, IAsyncD
     /// <param name="Endpoint">连接创建时验证过的 endpoint。</param>
     /// <param name="Connection">已经完成 Hello/HelloAck 的 transport 连接。</param>
     private sealed record CachedFastChannelConnection(FastChannelEndpoint Endpoint, FastChannelConnection Connection);
+
+    /// <summary>保存单 engine 的 registry 解析结果与触发解析的 engine.json 最后写入时间。</summary>
+    /// <param name="Entry">解析出的 registry 条目；engine 未注册时为空。</param>
+    /// <param name="RegistryMtimeUtc">触发本轮解析的 engine.json 最后写入 UTC 时间。</param>
+    private sealed record CachedRegistryEntry(EngineRegistryEntry? Entry, DateTime RegistryMtimeUtc);
 }

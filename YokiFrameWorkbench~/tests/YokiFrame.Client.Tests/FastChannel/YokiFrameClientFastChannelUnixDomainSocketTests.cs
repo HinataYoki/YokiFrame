@@ -235,7 +235,7 @@ public sealed class YokiFrameClientFastChannelUnixDomainSocketTests
         private async Task WriteResponseForExpectedActionAsync(NetworkStream stream, string expectedAction)
         {
             var request = await FastChannelFrameStream.ReadAsync(stream, mCancellationToken);
-            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.Kind);
+            Assert.Equal(YokiFrameFastChannelMessageKind.Command, request.MessageKind);
             var envelope = CommandEnvelope.FromJson(request.PayloadJson);
             Assert.Equal(expectedAction, envelope.Action);
             var response = new CommandResponse
@@ -249,7 +249,7 @@ public sealed class YokiFrameClientFastChannelUnixDomainSocketTests
             };
             await FastChannelFrameStream.WriteAsync(
                 stream,
-                new FastChannelFrame(
+                new YokiFrameFastChannelFrame(
                     YokiFrameFastChannelMessageKind.Response,
                     0,
                     JsonSerializer.Serialize(response)),

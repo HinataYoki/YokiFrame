@@ -47,11 +47,11 @@ namespace YokiFrame
                 });
         }
 
-        /// <summary>创建包含默认 System、Harness 与 Kit 命令的当前 Unity 宿主策略。</summary>
+        /// <summary>创建包含 System、Harness 与 Kit 命令的当前 Unity 宿主策略；命令面由各 handler 声明聚合。</summary>
         /// <returns>Dispatcher、FastChannel 和命令目录共享的完整策略。</returns>
         private static YokiFrameCommandPolicy CreateHostCommandPolicy()
         {
-            return YokiFrameCommandPolicy.CreateDefault(CreateHostCommandDescriptors());
+            return YokiFrameCommandPolicy.CreateWithDefaultSources(CreateHostCommandDescriptors());
         }
 
         /// <summary>获取与当前 dispatcher 同源的宿主策略缓存，避免每个命令帧重建完整策略。</summary>
@@ -66,20 +66,18 @@ namespace YokiFrame
             return sHostCommandPolicy;
         }
 
-        /// <summary>合并 Unity Harness 与当前 Registry 的真实命令描述。</summary>
+        /// <summary>合并 System、Unity Harness 与当前 Registry 的真实命令描述。</summary>
         /// <returns>可交给 CommandPolicy 的独立数组。</returns>
         private static YokiFrameCommandDescriptor[] CreateHostCommandDescriptors()
         {
+            var systemCommands = EditorSystemCommandHandler.SystemCommandDescriptors;
             var harnessCommands = CreateHarnessCommandDescriptors();
             var kitCommands = sKitInteractions.GetCommandDescriptors();
             YokiFrameCommandDescriptor[] commands = new YokiFrameCommandDescriptor[
-                harnessCommands.Length + kitCommands.Length + 1];
-            Array.Copy(harnessCommands, commands, harnessCommands.Length);
-            Array.Copy(kitCommands, 0, commands, harnessCommands.Length, kitCommands.Length);
-            commands[commands.Length - 1] = new YokiFrameCommandDescriptor(
-                SYSTEM_KIT,
-                OPEN_CODE_LOCATION_ACTION,
-                YokiFrameCommandKind.UserAction);
+                systemCommands.Length + harnessCommands.Length + kitCommands.Length];
+            Array.Copy(systemCommands, commands, systemCommands.Length);
+            Array.Copy(harnessCommands, 0, commands, systemCommands.Length, harnessCommands.Length);
+            Array.Copy(kitCommands, 0, commands, systemCommands.Length + harnessCommands.Length, kitCommands.Length);
             return commands;
         }
 
@@ -128,6 +126,19 @@ namespace YokiFrame
         /// </summary>
         private sealed class EditorSystemCommandHandler : YokiFrameKitCommandHandler
         {
+            /// <summary>Unity Editor System 命令面的唯一声明；宿主策略由此聚合，禁止另建清单。</summary>
+            public static readonly YokiFrameCommandDescriptor[] SystemCommandDescriptors =
+            {
+                new(SYSTEM_KIT, PING_ACTION, YokiFrameCommandKind.ReadOnly),
+                new(SYSTEM_KIT, BRIDGE_STATUS_ACTION, YokiFrameCommandKind.ReadOnly),
+                new(SYSTEM_KIT, LIST_COMMANDS_ACTION, YokiFrameCommandKind.ReadOnly),
+                new(SYSTEM_KIT, REFRESH_SNAPSHOTS_ACTION, YokiFrameCommandKind.Maintenance),
+                new(SYSTEM_KIT, GET_ENVIRONMENT_ACTION, YokiFrameCommandKind.ReadOnly),
+                new(SYSTEM_KIT, OPEN_PROJECT_FOLDER_ACTION, YokiFrameCommandKind.UserAction),
+                new(SYSTEM_KIT, OPEN_LOG_ACTION, YokiFrameCommandKind.UserAction),
+                new(SYSTEM_KIT, OPEN_CODE_LOCATION_ACTION, YokiFrameCommandKind.UserAction)
+            };
+
             private readonly YokiFrameCommandPolicy mPolicy;
             private readonly Action<string> mRevealPath;
             private readonly Func<string, int, bool> mOpenCodeLocation;
@@ -140,19 +151,7 @@ namespace YokiFrame
                 Action<string> revealPath,
                 Func<string, int, bool> openCodeLocation,
                 YokiFrameCommandPolicy policy)
-                : base(
-                    SYSTEM_KIT,
-                    new[]
-                    {
-                        PING_ACTION,
-                        BRIDGE_STATUS_ACTION,
-                        LIST_COMMANDS_ACTION,
-                        REFRESH_SNAPSHOTS_ACTION,
-                        GET_ENVIRONMENT_ACTION,
-                        OPEN_PROJECT_FOLDER_ACTION,
-                        OPEN_LOG_ACTION,
-                        OPEN_CODE_LOCATION_ACTION
-                    })
+                : base(SYSTEM_KIT, SystemCommandDescriptors)
             {
                 mRevealPath = revealPath ?? throw new ArgumentNullException(nameof(revealPath));
                 mOpenCodeLocation = openCodeLocation ?? throw new ArgumentNullException(nameof(openCodeLocation));
