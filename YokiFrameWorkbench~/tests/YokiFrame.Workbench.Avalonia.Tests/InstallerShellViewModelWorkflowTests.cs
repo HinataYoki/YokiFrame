@@ -13,6 +13,41 @@ public sealed partial class InstallerShellViewModelWorkflowTests
     private const string DefaultGitUrl = "https://github.com/HinataYoki/YokiFrame.git";
 
     /// <summary>
+    /// 验证 Installer 的状态占位和计划等待文案随语言切换重投影，释放后不再响应静态语言事件。
+    /// </summary>
+    [Fact]
+    public async Task InstallerViewModel_LocalizesPresentationAndDetachesOnDispose()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var service = WorkbenchI18nService.Instance;
+            service.SetCulture("zh-CN");
+            using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateUnity();
+            var notificationCount = 0;
+            fixture.ViewModel.PropertyChanged += (_, _) => notificationCount++;
+            try
+            {
+                service.SetCulture("en-US");
+
+                Assert.Equal("Installer ready", fixture.ViewModel.SessionStatusText);
+                Assert.Equal("Waiting for an install plan", fixture.ViewModel.PlanActionsText);
+
+                notificationCount = 0;
+                fixture.ViewModel.Dispose();
+                service.SetCulture("zh-CN");
+
+                Assert.Equal(0, notificationCount);
+            }
+            finally
+            {
+                fixture.ViewModel.Dispose();
+                service.SetCulture("zh-CN");
+            }
+        });
+    }
+
+    /// <summary>
     /// 验证目标路径指向 Godot 4.7 .NET 时自动显示 Godot 选项并生成计划。
     /// </summary>
     [Fact]

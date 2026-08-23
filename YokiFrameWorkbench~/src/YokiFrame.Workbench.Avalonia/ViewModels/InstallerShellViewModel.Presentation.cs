@@ -1,10 +1,65 @@
 using System.Globalization;
 using YokiFrame.Tooling.Application.Installer;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 public sealed partial class InstallerShellViewModel
 {
+    /// <summary>
+    /// 响应语言切换并重新投影当前 Installer 会话的动态展示文本；路径、错误原文和协议值保持不变。
+    /// </summary>
+    private void OnCultureChanged()
+    {
+        if (mIsDisposed)
+        {
+            return;
+        }
+
+        var state = mSession.State;
+        EngineStatusText = GetEngineText(mTargetKind);
+        OnPropertyChanged(nameof(CurrentPlatformText));
+        OnPropertyChanged(nameof(SelectedInstallModeText));
+        if (state.Plan == null && mTargetKind == InstallerTargetKind.Unknown)
+        {
+            TargetStatusText = string.IsNullOrWhiteSpace(TargetProjectRoot)
+                ? GetLocalizedText("String.Installer.TargetWaiting", "等待选择目录")
+                : GetLocalizedText("String.Installer.TargetInvalid", "路径无效或不是支持的项目");
+        }
+        SessionStatusText = mIsGodotRuntimeBootstrapRunning
+            ? GetBootstrapStatusText(mIsGodotRuntimeBootstrapOpeningInstaller)
+            : GetSessionStatusText(state.Status);
+        ApplyPlanSummary(state.Plan);
+        ApplyCompletionSummary(state);
+        ApplyOutcomeDetails(state);
+    }
+
+    /// <summary>
+    /// 从当前语言表读取 Installer 展示文本，并在资源尚未加载时使用中文兜底。
+    /// </summary>
+    /// <param name="key">资源键。</param>
+    /// <param name="fallback">中文兜底文本。</param>
+    /// <returns>当前语言文本。</returns>
+    private static string GetLocalizedText(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
+    }
+
+    /// <summary>
+    /// 格式化当前语言的 Installer 文案；动态参数只包含数量、路径或已确认的业务值。
+    /// </summary>
+    /// <param name="key">带复合格式占位符的资源键。</param>
+    /// <param name="fallback">中文格式兜底文本。</param>
+    /// <param name="arguments">格式化参数。</param>
+    /// <returns>格式化后的当前语言文本。</returns>
+    private static string FormatLocalizedText(string key, string fallback, params object[] arguments)
+    {
+        return string.Format(
+            CultureInfo.CurrentCulture,
+            GetLocalizedText(key, fallback),
+            arguments);
+    }
+
     /// <summary>
     /// 接收 Application 会话快照，并在需要时切回创建 ViewModel 的 UI 上下文。
     /// </summary>
@@ -14,6 +69,11 @@ public sealed partial class InstallerShellViewModel
         object? sender,
         InstallerSessionStateChangedEventArgs eventArgs)
     {
+        if (mIsDisposed)
+        {
+            return;
+        }
+
         if (mSynchronizationContext != null
             && !ReferenceEquals(SynchronizationContext.Current, mSynchronizationContext))
         {
@@ -39,7 +99,7 @@ public sealed partial class InstallerShellViewModel
         if (state.Plan != null)
         {
             mTargetKind = state.Plan.Engine;
-            EngineStatusText = state.Plan.Engine.ToString();
+            EngineStatusText = GetEngineText(state.Plan.Engine);
             TargetStatusText = state.Plan.PackageTarget;
         }
 
@@ -63,14 +123,18 @@ public sealed partial class InstallerShellViewModel
     {
         if (plan == null)
         {
-            PlanActionsText = "等待生成安装计划";
+            PlanActionsText = GetLocalizedText(
+                "String.Installer.Plan.Waiting",
+                "等待生成安装计划");
             PlanWarningsText = string.Empty;
             IsPlanWarningVisible = false;
             return;
         }
 
         PlanActionsText = plan.Actions.Count == 0
-            ? "当前配置无需写入变更"
+            ? GetLocalizedText(
+                "String.Installer.Plan.NoChanges",
+                "当前配置无需写入变更")
             : string.Join(Environment.NewLine, plan.Actions.Select(CreatePlanActionText));
         PlanWarningsText = string.Join(Environment.NewLine, plan.Warnings);
         IsPlanWarningVisible = plan.Warnings.Count > 0;
@@ -85,15 +149,27 @@ public sealed partial class InstallerShellViewModel
     {
         var text = action.Kind switch
         {
-            InstallerPlanActionKind.InstallPackage => "完整安装或替换本地包",
-            InstallerPlanActionKind.RemovePackage => "移除现有 embedded 包",
-            InstallerPlanActionKind.SetEmbeddedDependency => "登记 Unity 本地包依赖",
-            InstallerPlanActionKind.SetGitDependency => "更新 Unity Git 依赖",
-            InstallerPlanActionKind.PatchProjectFile => "更新 Godot C# 项目引用",
-            InstallerPlanActionKind.PatchProjectSettings => "更新 Godot 项目设置",
+            InstallerPlanActionKind.InstallPackage => GetLocalizedText(
+                "String.Installer.Plan.InstallPackage",
+                "完整安装或替换本地包"),
+            InstallerPlanActionKind.RemovePackage => GetLocalizedText(
+                "String.Installer.Plan.RemovePackage",
+                "移除现有 embedded 包"),
+            InstallerPlanActionKind.SetEmbeddedDependency => GetLocalizedText(
+                "String.Installer.Plan.SetEmbeddedDependency",
+                "登记 Unity 本地包依赖"),
+            InstallerPlanActionKind.SetGitDependency => GetLocalizedText(
+                "String.Installer.Plan.SetGitDependency",
+                "更新 Unity Git 依赖"),
+            InstallerPlanActionKind.PatchProjectFile => GetLocalizedText(
+                "String.Installer.Plan.PatchProjectFile",
+                "更新 Godot C# 项目引用"),
+            InstallerPlanActionKind.PatchProjectSettings => GetLocalizedText(
+                "String.Installer.Plan.PatchProjectSettings",
+                "更新 Godot 项目设置"),
             _ => throw new ArgumentOutOfRangeException(nameof(action), action.Kind, "Unsupported installer plan action.")
         };
-        return "- " + text;
+        return GetLocalizedText("String.Installer.Plan.ItemPrefix", "- ") + text;
     }
 
     /// <summary>
@@ -139,6 +215,7 @@ public sealed partial class InstallerShellViewModel
 
         if (ReferenceEquals(mPresentedResult, state.Result))
         {
+            CompletionSummaryText = CreateCompletionSummary(state.Plan, state.Result, state.Options);
             return;
         }
 
@@ -146,8 +223,16 @@ public sealed partial class InstallerShellViewModel
         CompletionSummaryText = CreateCompletionSummary(state.Plan, state.Result, state.Options);
         IsCompletionSummaryVisible = true;
         AppendLocalLog(state.Status == InstallerSessionStatus.Succeeded
-            ? "安装完成: " + state.Plan.Engine + " / " + GetModeText(state.Plan.Mode)
-            : "安装已提交，等待验证: " + state.Plan.Engine + " / " + GetModeText(state.Plan.Mode));
+            ? FormatLocalizedText(
+                "String.Installer.Log.Completed",
+                "安装完成: {0} / {1}",
+                GetEngineText(state.Plan.Engine),
+                GetModeText(state.Plan.Mode))
+            : FormatLocalizedText(
+                "String.Installer.Log.CommittedNeedsVerification",
+                "安装已提交，等待验证: {0} / {1}",
+                GetEngineText(state.Plan.Engine),
+                GetModeText(state.Plan.Mode)));
     }
 
     /// <summary>
@@ -172,32 +257,42 @@ public sealed partial class InstallerShellViewModel
         InstallerExecutionResult result,
         InstallerInstallOptions? options)
     {
-        var changeText = result.Changed ? "已提交变更" : "无需写入变更";
+        var changeText = result.Changed
+            ? GetLocalizedText("String.Installer.Summary.Changed", "已提交变更")
+            : GetLocalizedText("String.Installer.Summary.NoChanges", "无需写入变更");
         if (result.CommittedNeedsVerification)
         {
-            changeText += "，但宿主 post-verify 尚未完成";
+            changeText += GetLocalizedText(
+                "String.Installer.Summary.NeedsVerificationSuffix",
+                "，但宿主 post-verify 尚未完成");
         }
         if (result.ReplacedExistingPackage)
         {
-            changeText += "，已替换既有安装来源";
+            changeText += GetLocalizedText(
+                "String.Installer.Summary.ReplacedSuffix",
+                "，已替换既有安装来源");
         }
 
         List<string> lines = new()
         {
-            "引擎: " + plan.Engine,
-            "模式: " + GetModeText(plan.Mode),
-            "平台: " + GetCurrentPlatformText(),
-            "目标: " + result.TargetPath,
-            "结果: " + changeText,
-            "计划动作: " + plan.Actions.Count + " 项",
-            "校验证据: " + result.EvidencePaths.Count + " 项"
+            FormatLocalizedText("String.Installer.Summary.Engine", "引擎: {0}", GetEngineText(plan.Engine)),
+            FormatLocalizedText("String.Installer.Summary.Mode", "模式: {0}", GetModeText(plan.Mode)),
+            FormatLocalizedText("String.Installer.Summary.Platform", "平台: {0}", GetCurrentPlatformText()),
+            FormatLocalizedText("String.Installer.Summary.Target", "目标: {0}", result.TargetPath),
+            FormatLocalizedText("String.Installer.Summary.Result", "结果: {0}", changeText),
+            FormatLocalizedText("String.Installer.Summary.ActionCount", "计划动作: {0} 项", plan.Actions.Count),
+            FormatLocalizedText("String.Installer.Summary.EvidenceCount", "校验证据: {0} 项", result.EvidencePaths.Count)
         };
         if (plan.Engine == InstallerTargetKind.Godot)
         {
             var pluginEnabled = options?.GodotOptions?.EnablePlugin == true;
             lines.Add(pluginEnabled
-                ? "Godot: 请刷新文件系统并确认插件已启用；之后可从 Project > Tools > YokiFrame > Open Workbench 或按 Ctrl+E 打开工作台，系统热键冲突时按 Ctrl+Alt+E。"
-                : "Godot: 请刷新文件系统；当前计划未自动启用 YokiFrame 插件。");
+                ? GetLocalizedText(
+                    "String.Installer.Summary.GodotPluginEnabled",
+                    "Godot: 请刷新文件系统并确认插件已启用；之后可从 Project > Tools > YokiFrame > Open Workbench 或按 Ctrl+E 打开工作台，系统热键冲突时按 Ctrl+Alt+E。")
+                : GetLocalizedText(
+                    "String.Installer.Summary.GodotPluginDisabled",
+                    "Godot: 请刷新文件系统；当前计划未自动启用 YokiFrame 插件。"));
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -217,7 +312,7 @@ public sealed partial class InstallerShellViewModel
 
         if (state.Status == InstallerSessionStatus.Conflict)
         {
-            OutcomeDetailsTitle = "安装冲突";
+            OutcomeDetailsTitle = GetLocalizedText("String.Installer.Outcome.ConflictTitle", "安装冲突");
             OutcomeDetailsText = CreateConflictDetails(state);
             IsOutcomeDetailsVisible = true;
             return;
@@ -225,7 +320,7 @@ public sealed partial class InstallerShellViewModel
 
         if (state.Status == InstallerSessionStatus.Failed)
         {
-            OutcomeDetailsTitle = "安装失败";
+            OutcomeDetailsTitle = GetLocalizedText("String.Installer.Outcome.FailedTitle", "安装失败");
             OutcomeDetailsText = CreateFailureDetails(state);
             IsOutcomeDetailsVisible = true;
             return;
@@ -233,9 +328,13 @@ public sealed partial class InstallerShellViewModel
 
         if (state.Status == InstallerSessionStatus.CommittedNeedsVerification)
         {
-            OutcomeDetailsTitle = "已提交但待验证";
+            OutcomeDetailsTitle = GetLocalizedText(
+                "String.Installer.Outcome.CommittedNeedsVerificationTitle",
+                "已提交但待验证");
             OutcomeDetailsText = string.IsNullOrWhiteSpace(state.ErrorMessage)
-                ? "Core 已完成写入，但宿主构建或插件登记尚未完成。请修复构建问题后重新验证。"
+                ? GetLocalizedText(
+                    "String.Installer.Outcome.CommittedNeedsVerificationText",
+                    "Core 已完成写入，但宿主构建或插件登记尚未完成。请修复构建问题后重新验证。")
                 : state.ErrorMessage;
             IsOutcomeDetailsVisible = true;
             return;
@@ -264,7 +363,7 @@ public sealed partial class InstallerShellViewModel
         List<string> lines = new() { state.ErrorMessage };
         if (state.ConflictPaths.Count > 0)
         {
-            lines.Add("冲突路径:");
+            lines.Add(GetLocalizedText("String.Installer.Outcome.ConflictPaths", "冲突路径:"));
             lines.AddRange(state.ConflictPaths.Select(static path => "- " + path));
         }
 
@@ -282,13 +381,13 @@ public sealed partial class InstallerShellViewModel
         if (state.RollbackSucceeded.HasValue)
         {
             lines.Add(state.RollbackSucceeded.Value
-                ? "回滚成功，已恢复安装前状态。"
-                : "回滚未完整完成，需要人工检查目标项目。");
+                ? GetLocalizedText("String.Installer.Outcome.RollbackSucceeded", "回滚成功，已恢复安装前状态。")
+                : GetLocalizedText("String.Installer.Outcome.RollbackIncomplete", "回滚未完整完成，需要人工检查目标项目。"));
         }
 
         if (state.EvidencePaths.Count > 0)
         {
-            lines.Add("诊断证据:");
+            lines.Add(GetLocalizedText("String.Installer.Outcome.EvidencePaths", "诊断证据:"));
             lines.AddRange(state.EvidencePaths.Select(static path => "- " + path));
         }
 
@@ -307,8 +406,15 @@ public sealed partial class InstallerShellViewModel
         }
 
         mPresentedPlan = plan;
-        AppendLocalLog("计划: " + plan.Engine + " / " + GetModeText(plan.Mode));
-        AppendLocalLog("安装目标: " + plan.PackageTarget);
+        AppendLocalLog(FormatLocalizedText(
+            "String.Installer.Log.Plan",
+            "计划: {0} / {1}",
+            GetEngineText(plan.Engine),
+            GetModeText(plan.Mode)));
+        AppendLocalLog(FormatLocalizedText(
+            "String.Installer.Log.Target",
+            "安装目标: {0}",
+            plan.PackageTarget));
         foreach (var action in plan.Actions)
         {
             AppendLocalLog(action.Kind + ": " + action.TargetPath);
@@ -316,7 +422,7 @@ public sealed partial class InstallerShellViewModel
 
         foreach (var warning in plan.Warnings)
         {
-            AppendLocalLog("警告: " + warning);
+            AppendLocalLog(FormatLocalizedText("String.Installer.Log.Warning", "警告: {0}", warning));
         }
     }
 
@@ -366,8 +472,8 @@ public sealed partial class InstallerShellViewModel
     /// <param name="message">错误消息。</param>
     internal void ShowLocalError(string message)
     {
-        SessionStatusText = "操作失败";
-        AppendLocalLog("错误: " + message);
+        SessionStatusText = GetLocalizedText("String.Installer.Session.OperationFailed", "操作失败");
+        AppendLocalLog(FormatLocalizedText("String.Installer.Log.Error", "错误: {0}", message));
         RaiseCommandStates();
     }
 
@@ -405,15 +511,48 @@ public sealed partial class InstallerShellViewModel
     {
         if (OperatingSystem.IsWindows())
         {
-            return "Windows";
+            return GetLocalizedText("String.Installer.Platform.Windows", "Windows");
         }
 
         if (OperatingSystem.IsLinux())
         {
-            return "Linux";
+            return GetLocalizedText("String.Installer.Platform.Linux", "Linux");
         }
 
-        return OperatingSystem.IsMacOS() ? "macOS" : "当前系统";
+        return OperatingSystem.IsMacOS()
+            ? GetLocalizedText("String.Installer.Platform.MacOS", "macOS")
+            : GetLocalizedText("String.Installer.Platform.CurrentSystem", "当前系统");
+    }
+
+    /// <summary>
+    /// 把目标引擎枚举转换为当前语言的显示标签；未知值仍保留协议枚举文本用于诊断。
+    /// </summary>
+    /// <param name="targetKind">Application 目标引擎枚举。</param>
+    /// <returns>用户可读引擎标签。</returns>
+    private static string GetEngineText(InstallerTargetKind targetKind)
+    {
+        return targetKind switch
+        {
+            InstallerTargetKind.Unity => GetLocalizedText("String.Installer.Engine.Unity", "Unity"),
+            InstallerTargetKind.Godot => GetLocalizedText("String.Installer.Engine.Godot", "Godot"),
+            _ => GetLocalizedText("String.Installer.EngineNotDetected", "未检测")
+        };
+    }
+
+    /// <summary>
+    /// 返回 Godot Runtime 构建阶段的当前语言状态提示。
+    /// </summary>
+    /// <param name="openInstaller">成功后是否会打开新的 Installer。</param>
+    /// <returns>构建阶段状态文本。</returns>
+    private static string GetBootstrapStatusText(bool openInstaller)
+    {
+        return openInstaller
+            ? GetLocalizedText(
+                "String.Installer.Session.BuildingRuntime",
+                "正在为 Godot 构建当前平台 Runtime")
+            : GetLocalizedText(
+                "String.Installer.Session.AutoBuildingRuntime",
+                "正在为 Godot 自动构建当前平台 Runtime");
     }
 
     /// <summary>
@@ -425,17 +564,19 @@ public sealed partial class InstallerShellViewModel
     {
         return status switch
         {
-            InstallerSessionStatus.Idle => "安装器已就绪",
-            InstallerSessionStatus.Detecting => "正在检测",
-            InstallerSessionStatus.PlanReady => "计划已就绪",
-            InstallerSessionStatus.Applying => "正在安装",
-            InstallerSessionStatus.Verifying => "正在校验",
-            InstallerSessionStatus.RollingBack => "正在回滚",
-            InstallerSessionStatus.Succeeded => "安装完成",
-            InstallerSessionStatus.CommittedNeedsVerification => "已提交，待验证",
-            InstallerSessionStatus.Conflict => "检测到冲突",
-            InstallerSessionStatus.Failed => "安装失败",
-            InstallerSessionStatus.Cancelled => "已取消",
+            InstallerSessionStatus.Idle => GetLocalizedText("String.Installer.Session.Ready", "安装器已就绪"),
+            InstallerSessionStatus.Detecting => GetLocalizedText("String.Installer.Session.Detecting", "正在检测"),
+            InstallerSessionStatus.PlanReady => GetLocalizedText("String.Installer.Session.PlanReady", "计划已就绪"),
+            InstallerSessionStatus.Applying => GetLocalizedText("String.Installer.Session.Applying", "正在安装"),
+            InstallerSessionStatus.Verifying => GetLocalizedText("String.Installer.Session.Verifying", "正在校验"),
+            InstallerSessionStatus.RollingBack => GetLocalizedText("String.Installer.Session.RollingBack", "正在回滚"),
+            InstallerSessionStatus.Succeeded => GetLocalizedText("String.Installer.Session.Succeeded", "安装完成"),
+            InstallerSessionStatus.CommittedNeedsVerification => GetLocalizedText(
+                "String.Installer.Session.CommittedNeedsVerification",
+                "已提交，待验证"),
+            InstallerSessionStatus.Conflict => GetLocalizedText("String.Installer.Session.Conflict", "检测到冲突"),
+            InstallerSessionStatus.Failed => GetLocalizedText("String.Installer.Session.Failed", "安装失败"),
+            InstallerSessionStatus.Cancelled => GetLocalizedText("String.Installer.Session.Cancelled", "已取消"),
             _ => status.ToString()
         };
     }
@@ -449,9 +590,9 @@ public sealed partial class InstallerShellViewModel
     {
         return mode switch
         {
-            InstallerInstallMode.UnityLocal => "Unity 本地包",
-            InstallerInstallMode.UnityGit => "Unity Git 包",
-            InstallerInstallMode.GodotLocal => "Godot 本地包",
+            InstallerInstallMode.UnityLocal => GetLocalizedText("String.Installer.Mode.UnityLocal", "Unity 本地包"),
+            InstallerInstallMode.UnityGit => GetLocalizedText("String.Installer.Mode.UnityGit", "Unity Git 包"),
+            InstallerInstallMode.GodotLocal => GetLocalizedText("String.Installer.Mode.GodotLocal", "Godot 本地包"),
             _ => mode.ToString()
         };
     }
@@ -465,8 +606,8 @@ public sealed partial class InstallerShellViewModel
     {
         return entry.Level switch
         {
-            InstallerLogLevel.Warning => "警告: " + entry.Message,
-            InstallerLogLevel.Error => "错误: " + entry.Message,
+            InstallerLogLevel.Warning => FormatLocalizedText("String.Installer.Log.Warning", "警告: {0}", entry.Message),
+            InstallerLogLevel.Error => FormatLocalizedText("String.Installer.Log.Error", "错误: {0}", entry.Message),
             _ => entry.Message
         };
     }

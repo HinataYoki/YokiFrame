@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Models.LogKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.LogKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -15,8 +16,8 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     private const string PLAYER_SOURCE = "player";
     private static readonly IReadOnlyList<string> sSettingsLevelOptions =
         new[] { "Debug", "Info", "Warning", "Error" };
-    private static readonly IReadOnlyList<string> sHistoryLevelOptions =
-        new[] { "全部", "Debug", "Info", "Warning", "Error" };
+    /// <summary>内存历史等级筛选的“全部”哨兵值；与具体等级值互不冲突，展示文本由资源投影。</summary>
+    internal const string HISTORY_LEVEL_ALL = "all";
     private readonly Func<string, WorkbenchLogKitProjectSettings>? mLoadProjectSettings;
     private readonly Func<string, WorkbenchLogKitSettings, string, CancellationToken, Task<WorkbenchLogKitSettingsSaveResult>>? mSaveSettingsAsync;
     private readonly Func<string, CancellationToken, Task<WorkbenchLogKitState>>? mClearHistoryAsync;
@@ -27,9 +28,9 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     private string mEngineId = string.Empty;
     private string mSessionId = string.Empty;
     private string mMode = string.Empty;
-    private string mSource = "等待数据";
+    private string mSource = GetString(CommonWaitingForKey, "等待数据");
     private string mStaleReason = string.Empty;
-    private string mLoggerName = "未安装";
+    private string mLoggerName = GetString(LoggerNotInstalledKey, "未安装");
     private string mRuntimeMinimumLevel = "--";
     private long mGeneration;
     private long mDiagnosticVersion;
@@ -62,6 +63,8 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         mSaveSettingsAsync = saveSettingsAsync;
         mClearHistoryAsync = clearHistoryAsync;
         mReadFileAsync = readFileAsync;
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         SettingsDraft.Changed += OnSettingsDraftChanged;
         SaveSettingsCommand = new AsyncRelayCommand(SaveSettingsAsync, CanSaveSettings);
         ResetSettingsCommand = new RelayCommand(ResetSettingsToDefaults);
@@ -79,8 +82,9 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     public ObservableCollection<LogKitHistoryRowViewModel> HistoryRows { get; } = new();
     /// <summary>获取设置最低等级选项。</summary>
     public IReadOnlyList<string> SettingsLevelOptions => sSettingsLevelOptions;
-    /// <summary>获取内存历史等级筛选选项。</summary>
-    public IReadOnlyList<string> HistoryLevelOptions => sHistoryLevelOptions;
+    /// <summary>获取内存历史等级筛选选项；“全部”展示文本随语言投影。</summary>
+    public IReadOnlyList<string> HistoryLevelOptions =>
+        new[] { GetString("String.LogKit.LevelAll", "全部"), "Debug", "Info", "Warning", "Error" };
     /// <summary>获取保存设置命令。</summary>
     public AsyncRelayCommand SaveSettingsCommand { get; }
     /// <summary>获取恢复默认草稿命令。</summary>
@@ -150,17 +154,19 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         }
     }
     /// <summary>获取日志加密能力状态，避免把配置请求误认为已实现功能。</summary>
-    public string EncryptionStatusText => SupportsEncryption ? "Runtime 已声明支持" : "当前未实现";
+    public string EncryptionStatusText => SupportsEncryption
+        ? GetString("String.LogKit.EncryptionSupported", "Runtime 已声明支持")
+        : GetString("String.LogKit.EncryptionNotImplemented", "当前未实现");
     /// <summary>获取日志解密能力状态；当前协议未提供解密入口。</summary>
-    public string DecryptionStatusText => "当前不可用";
+    public string DecryptionStatusText => GetString("String.LogKit.DecryptionUnavailable", "当前不可用");
     /// <summary>获取当前版本实际使用的日志加密方式说明。</summary>
     public string EncryptionMethodText => SupportsEncryption
-        ? "由 Runtime capability 声明，当前页面未暴露算法"
-        : "未定义；当前不会使用固定 Key/IV";
+        ? GetString("String.LogKit.EncryptionMethodCapability", "由 Runtime capability 声明，当前页面未暴露算法")
+        : GetString("String.LogKit.EncryptionMethodUndefined", "未定义；当前不会使用固定 Key/IV");
     /// <summary>获取日志加密开关的说明性提示。</summary>
     public string EncryptionToggleToolTip => SupportsEncryption
-        ? "Runtime 已声明加密能力，但当前版本未提供解密入口和算法详情。"
-        : "当前 Runtime 未实现可信日志加密，保存此开关不会产生加密日志。";
+        ? GetString("String.LogKit.EncryptionTooltipSupported", "Runtime 已声明加密能力，但当前版本未提供解密入口和算法详情。")
+        : GetString("String.LogKit.EncryptionTooltipUnsupported", "当前 Runtime 未实现可信日志加密，保存此开关不会产生加密日志。");
     /// <summary>获取或设置界面上的有效加密状态；不支持 capability 时始终显示关闭。</summary>
     public bool EncryptionToggleValue
     {
@@ -178,9 +184,12 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         ? "Shared Memory"
         : (string.Equals(Source, "snapshot", StringComparison.OrdinalIgnoreCase) ? "FileBridge" : Source);
     /// <summary>获取运行状态摘要。</summary>
-    public string RuntimeStatusText => RuntimeEnabled ? "已启用" : "已停用";
+    public string RuntimeStatusText => RuntimeEnabled
+        ? GetString("String.LogKit.RuntimeEnabled", "已启用")
+        : GetString("String.LogKit.RuntimeDisabled", "已停用");
     /// <summary>获取内存历史与丢弃计数摘要。</summary>
-    public string RuntimeHistoryText => HistoryCount + " 条 / 丢弃 " + DroppedCount;
+    public string RuntimeHistoryText => string.Format(
+        GetString("String.LogKit.RuntimeHistoryTemplate", "{0} 条 / 丢弃 {1}"), HistoryCount, DroppedCount);
 
     /// <summary>应用低频 dashboard 状态，并通过稳定集合协调避免整页重建。</summary>
     /// <param name="state">Application 解析后的 LogKit 状态。</param>
@@ -255,6 +264,7 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         }
 
         mIsDisposed = true;
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         SettingsDraft.Changed -= OnSettingsDraftChanged;
         mLifetimeCancellation.Cancel();
         mIdentityCancellation.Cancel();
@@ -293,7 +303,7 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         Mode = state.Mode;
         Source = state.Source;
         StaleReason = state.StaleReason;
-        LoggerName = state.Stats.HasLogger ? state.Stats.LoggerName : "未安装";
+        LoggerName = state.Stats.HasLogger ? state.Stats.LoggerName : GetString(LoggerNotInstalledKey, "未安装");
         RuntimeEnabled = state.Stats.Enabled;
         RuntimeMinimumLevel = state.Stats.MinimumLevel;
         HistoryCount = state.History.TotalCount;
@@ -359,9 +369,9 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>清空断连后的运行状态，但保留用户正在编辑的项目草稿。</summary>
     private void ResetRuntimeState()
     {
-        Source = "等待数据";
+        Source = GetString(CommonWaitingForKey, "等待数据");
         StaleReason = string.Empty;
-        LoggerName = "未安装";
+        LoggerName = GetString(LoggerNotInstalledKey, "未安装");
         RuntimeEnabled = false;
         RuntimeMinimumLevel = "--";
         DiagnosticVersion = 0L;
@@ -407,5 +417,48 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
 
         SaveSettingsCommand.RaiseCanExecuteChanged();
         RefreshFileCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>按当前语言重新投影 LogKit 的动态展示文本；payload 来源与 Runtime 数据不变。</summary>
+    private void OnCultureChanged()
+    {
+        // 未连接 Runtime 时，占位来源与 logger 名称使用当前语言的等待/未安装文案。
+        if (string.IsNullOrWhiteSpace(mEngineId))
+        {
+            mSource = GetString(CommonWaitingForKey, "等待数据");
+            OnPropertyChanged(nameof(Source));
+            OnPropertyChanged(nameof(DataChannelText));
+            mLoggerName = GetString(LoggerNotInstalledKey, "未安装");
+            OnPropertyChanged(nameof(LoggerName));
+        }
+
+        OnPropertyChanged(nameof(EncryptionStatusText));
+        OnPropertyChanged(nameof(EncryptionMethodText));
+        OnPropertyChanged(nameof(EncryptionToggleToolTip));
+        OnPropertyChanged(nameof(RuntimeStatusText));
+        OnPropertyChanged(nameof(RuntimeHistoryText));
+        OnPropertyChanged(nameof(HistoryLevelOptions));
+        OnPropertyChanged(nameof(SaveSettingsButtonText));
+
+        // 等待项目配置的初始状态随语言重投影；其余状态文本是操作结果，保持原样。
+        if (mIsWaitingProjectConfigStatus)
+        {
+            SettingsStatusText = GetString(WaitingProjectConfigKey, "等待项目配置");
+        }
+    }
+
+    /// <summary>等待 Runtime 首帧数据时使用的通用占位文案资源 key。</summary>
+    private const string CommonWaitingForKey = "String.Common.WaitingForData";
+    /// <summary>Runtime 未声明 logger 时使用的占位文案资源 key。</summary>
+    private const string LoggerNotInstalledKey = "String.LogKit.LoggerNotInstalled";
+    /// <summary>项目配置尚未加载时使用的状态文本资源 key。</summary>
+    private const string WaitingProjectConfigKey = "String.LogKit.WaitingProjectConfig";
+    /// <summary>当前设置状态是否处于“等待项目配置”占位（仅该占位随语言重投影）。</summary>
+    private bool mIsWaitingProjectConfigStatus = true;
+
+    /// <summary>从当前语言资源读取 LogKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

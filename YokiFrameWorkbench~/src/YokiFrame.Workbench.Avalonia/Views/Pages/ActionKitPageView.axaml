@@ -26,7 +26,7 @@
             AutomationProperties.LiveSetting="Polite">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="14" Height="14" />
-        <TextBlock Text="诊断数据已达到有界预算，部分根、节点、深度、堆栈或终态记录未显示。" />
+        <TextBlock Text="{DynamicResource String.ActionKit.TruncationBanner}" />
       </StackPanel>
     </Border>
 
@@ -49,7 +49,7 @@
               <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                 <components:NavigationIcon IconKey="actionkit" Width="14" Height="14" />
                 <StackPanel Spacing="2">
-                  <TextBlock Text="根动作" Classes="actionkit-section-title" />
+                  <TextBlock Text="{DynamicResource String.ActionKit.RootActions}" Classes="actionkit-section-title" />
                   <TextBlock Text="{CompiledBinding Source}" Classes="actionkit-caption" />
                 </StackPanel>
               </StackPanel>
@@ -65,8 +65,8 @@
           <TextBox Grid.Row="1"
                    Margin="10,7"
                    Text="{CompiledBinding SearchText, Mode=TwoWay}"
-                   PlaceholderText="搜索类型、ID、状态、摘要或执行器"
-                   AutomationProperties.Name="搜索 ActionKit 根动作" />
+                   PlaceholderText="{DynamicResource String.ActionKit.SearchPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource String.ActionKit.RootSearchAutomationName}" />
 
           <Grid Grid.Row="2" Margin="8,0,4,8">
             <ListBox x:Name="ActionRoots"
@@ -76,7 +76,7 @@
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      AutomationProperties.AutomationId="actionkit.roots"
-                     AutomationProperties.Name="ActionKit 根动作列表">
+                     AutomationProperties.Name="{DynamicResource String.ActionKit.RootsAutomationName}">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                   <VirtualizingStackPanel Orientation="Vertical" />
@@ -135,7 +135,7 @@
                         Spacing="7"
                         Margin="16">
               <components:NavigationIcon IconKey="actionkit" Width="22" Height="22" />
-              <TextBlock Text="当前没有匹配的 Action" FontWeight="SemiBold" />
+              <TextBlock Text="{DynamicResource String.ActionKit.NoMatchingActions}" FontWeight="SemiBold" />
               <TextBlock Text="{CompiledBinding StaleReason}"
                          Classes="actionkit-empty-text"
                          MaxWidth="220"
@@ -161,7 +161,7 @@
           <Border Classes="kit-panel-header actionkit-panel-header">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <StackPanel Spacing="2">
-                <TextBlock Text="执行流程" Classes="actionkit-section-title" />
+                <TextBlock Text="{DynamicResource String.ActionKit.ExecutionFlow}" Classes="actionkit-section-title" />
                 <TextBlock Text="{CompiledBinding SelectedRoot.RootSummaryText}"
                            Classes="actionkit-caption"
                            TextTrimming="CharacterEllipsis" />
@@ -177,13 +177,13 @@
 
           <Grid Grid.Row="1" Margin="8,0,4,8">
             <TreeView ItemsSource="{CompiledBinding SelectedFlowNodes}"
-                     SelectedItem="{CompiledBinding SelectedNode, Mode=TwoWay}"
+                      SelectedItem="{CompiledBinding SelectedNode, Mode=TwoWay}"
                       ItemContainerTheme="{StaticResource ActionKitTreeViewItemTheme}"
                       Classes="actionkit-tree kit-flow-tree"
                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       AutomationProperties.AutomationId="actionkit.tree"
-                      AutomationProperties.Name="ActionKit 执行流程树">
+                      AutomationProperties.Name="{DynamicResource String.ActionKit.ExecutionTreeAutomationName}">
               <TreeView.ItemTemplate>
                 <TreeDataTemplate x:DataType="action:ActionKitNodeViewModel"
                                   ItemsSource="{CompiledBinding Children}">
@@ -256,7 +256,7 @@
                         VerticalAlignment="Center"
                         Spacing="8">
               <components:NavigationIcon IconKey="actionkit" Width="24" Height="24" />
-              <TextBlock Text="从左侧选择一个活动根以检查执行流程"
+              <TextBlock Text="{DynamicResource String.ActionKit.SelectRootToInspect}"
                          Classes="actionkit-empty-text"
                          AutomationProperties.LiveSetting="Polite" />
             </StackPanel>
@@ -294,7 +294,7 @@
             Padding="0"
             ClipToBounds="True"
             AutomationProperties.AutomationId="actionkit.drawer"
-            AutomationProperties.Name="ActionKit 节点详情、调用帧与最近终态抽屉">
+            AutomationProperties.Name="{DynamicResource String.ActionKit.DrawerAutomationName}">
       <Grid>
         <TabControl x:Name="DrawerTabs"
                     Classes="actionkit-drawer-tabs"
@@ -302,17 +302,17 @@
           <TabItem x:Name="CompactInspectorTab"
                    Classes="actionkit-drawer-tab">
             <TabItem.Header>
-              <TextBlock Text="节点详情" />
+              <TextBlock Text="{DynamicResource String.ActionKit.NodeDetails}" />
             </TabItem.Header>
             <actionViews:ActionKitNodeInspectorView Classes="drawer"
-                                                        DataContext="{CompiledBinding .}" />
+                                                    DataContext="{CompiledBinding .}" />
           </TabItem>
 
           <TabItem x:Name="StackTraceTab"
                    Classes="actionkit-drawer-tab">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="7">
-                <TextBlock Text="Start 调用帧" />
+                <TextBlock Text="{DynamicResource String.ActionKit.StartStackFrames}" />
                 <TextBlock Text="{CompiledBinding StackTraceCount}" Classes="mono actionkit-tab-count" />
               </StackPanel>
             </TabItem.Header>
@@ -321,7 +321,7 @@
                        Classes="actionkit-stack-list kit-data-list"
                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                        AutomationProperties.AutomationId="actionkit.stack"
-                       AutomationProperties.Name="ActionKit Start 调用帧列表">
+                       AutomationProperties.Name="{DynamicResource String.ActionKit.StackAutomationName}">
                 <ListBox.ItemsPanel>
                   <ItemsPanelTemplate>
                     <VirtualizingStackPanel Orientation="Vertical" />
@@ -346,7 +346,7 @@
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
-              <TextBlock Text="当前根没有已捕获的 Start 调用帧"
+              <TextBlock Text="{DynamicResource String.ActionKit.NoStackFrames}"
                          IsVisible="{CompiledBinding IsStackTraceEmpty}"
                          Classes="actionkit-empty-text"
                          HorizontalAlignment="Center"
@@ -358,7 +358,7 @@
                    Classes="actionkit-drawer-tab">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="7">
-                <TextBlock Text="最近终态" />
+                <TextBlock Text="{DynamicResource String.ActionKit.RecentTerminal}" />
                 <TextBlock Text="{CompiledBinding EventTotal}" Classes="mono actionkit-tab-count" />
               </StackPanel>
             </TabItem.Header>
@@ -367,7 +367,7 @@
                        Classes="actionkit-event-list kit-data-list"
                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                        AutomationProperties.AutomationId="actionkit.events"
-                       AutomationProperties.Name="ActionKit 最近终态列表">
+                       AutomationProperties.Name="{DynamicResource String.ActionKit.TerminalAutomationName}">
                 <ListBox.ItemsPanel>
                   <ItemsPanelTemplate>
                     <VirtualizingStackPanel Orientation="Vertical" />
@@ -401,7 +401,7 @@
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
-              <TextBlock Text="暂无终态记录"
+              <TextBlock Text="{DynamicResource String.ActionKit.NoTerminalRecords}"
                          IsVisible="{CompiledBinding IsEventEmpty}"
                          Classes="actionkit-empty-text"
                          HorizontalAlignment="Center"
@@ -417,8 +417,8 @@
                       Margin="0,2,8,0"
                       IsChecked="False"
                       IsCheckedChanged="OnDrawerToggleChanged"
-                      ToolTip.Tip="展开或折叠 ActionKit 诊断抽屉"
-                      AutomationProperties.Name="展开或折叠 ActionKit 诊断抽屉">
+                      ToolTip.Tip="{DynamicResource String.ActionKit.DrawerToggleTooltip}"
+                      AutomationProperties.Name="{DynamicResource String.ActionKit.DrawerToggleAutomationName}">
           <Grid>
             <PathIcon Data="{StaticResource Icon.ChevronUp}"
                       Width="14"

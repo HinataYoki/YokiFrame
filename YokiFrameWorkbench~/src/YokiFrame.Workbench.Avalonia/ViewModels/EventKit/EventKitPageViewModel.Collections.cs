@@ -108,8 +108,9 @@ public sealed partial class EventKitPageViewModel
     /// <summary>判断事件是否匹配通道和自由文本搜索。</summary>
     private bool MatchesFilter(EventKitEventListItemViewModel item)
     {
-        if (!string.Equals(SelectedChannel, "全部", StringComparison.Ordinal)
-            && !string.Equals(item.Channel, SelectedChannel, StringComparison.Ordinal))
+        var channel = EventKitPageViewModel.NormalizeChannelFilter(SelectedChannel);
+        if (channel != EventKitPageViewModel.CHANNEL_ALL
+            && !string.Equals(item.Channel, channel, StringComparison.Ordinal))
         {
             return false;
         }

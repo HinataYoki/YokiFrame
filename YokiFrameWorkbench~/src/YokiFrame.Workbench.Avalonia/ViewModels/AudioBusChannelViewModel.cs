@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.AudioKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -6,6 +7,7 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 public sealed class AudioBusChannelViewModel : ViewModelBase
 {
     private WorkbenchAudioBus? mBus;
+    private string mSubtitle;
     private int mActiveVoiceCount;
     private IReadOnlyList<WorkbenchAudioVoice> mVoices;
     private IReadOnlyList<WorkbenchAudioHistoryEntry> mHistory;
@@ -23,7 +25,7 @@ public sealed class AudioBusChannelViewModel : ViewModelBase
     {
         Key = key;
         Name = name;
-        Subtitle = subtitle;
+        mSubtitle = subtitle;
         IsMaster = isMaster;
         mBus = bus;
         mActiveVoiceCount = activeVoiceCount;
@@ -36,7 +38,7 @@ public sealed class AudioBusChannelViewModel : ViewModelBase
     /// <summary>获取 Bus 显示名称。</summary>
     public string Name { get; }
     /// <summary>获取 Bus 来源说明。</summary>
-    public string Subtitle { get; }
+    public string Subtitle { get => mSubtitle; private set => SetProperty(ref mSubtitle, value); }
     /// <summary>获取该卡片是否为 Master。</summary>
     public bool IsMaster { get; }
     /// <summary>获取该卡片是否代表框架内置 Bus。</summary>
@@ -72,5 +74,26 @@ public sealed class AudioBusChannelViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsDynamic));
         OnPropertyChanged(nameof(IsVoiceEmpty));
         OnPropertyChanged(nameof(IsHistoryEmpty));
+        RefreshLocalization();
+    }
+
+    /// <summary>按当前语言刷新 Bus 来源副标题，不改变 Runtime 原始名称。</summary>
+    internal void RefreshLocalization()
+    {
+        string key = IsMaster
+            ? "String.AudioKit.BusSource.Master"
+            : IsBuiltIn
+                ? "String.AudioKit.BusSource.BuiltIn"
+                : IsRegistered
+                    ? "String.AudioKit.BusSource.Registered"
+                    : "String.AudioKit.BusSource.Dynamic";
+        string fallback = IsMaster
+            ? "主输出"
+            : IsBuiltIn
+                ? "内置总线"
+                : IsRegistered
+                    ? "已注册自定义"
+                    : "动态发现";
+        Subtitle = WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

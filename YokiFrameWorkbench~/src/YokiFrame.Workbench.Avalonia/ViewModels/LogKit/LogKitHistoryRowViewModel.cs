@@ -58,11 +58,12 @@ public sealed class LogKitHistoryRowViewModel
 
     /// <summary>判断当前行是否匹配搜索文本和等级筛选。</summary>
     /// <param name="searchText">不区分大小写的自由文本。</param>
-    /// <param name="level">全部或具体日志等级。</param>
+    /// <param name="level">哨兵值 "all"、兼容旧中文“全部”或具体日志等级。</param>
     /// <returns>应显示当前行时返回 true。</returns>
     public bool Matches(string searchText, string level)
     {
         var levelMatches = string.IsNullOrWhiteSpace(level)
+            || string.Equals(level, "all", StringComparison.Ordinal)
             || string.Equals(level, "全部", StringComparison.Ordinal)
             || string.Equals(LevelText, level, StringComparison.OrdinalIgnoreCase)
             || (string.Equals(level, "Info", StringComparison.OrdinalIgnoreCase) && MatchesLevel("log"));

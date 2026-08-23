@@ -9,14 +9,18 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 public sealed partial class LocalizationKitPageViewModel : ViewModelBase
 {
     private const int PAGE_ENTRY_LIMIT = 1000;
+    /// <summary>语言筛选“全部”的不变哨兵值；展示文本由资源投影。</summary>
+    internal const string LANGUAGE_ALL = "all";
     private readonly LocalizationKitApplicationService mService;
     private string mProjectRoot;
     private string mSourcePath = "Assets/Settings/YokiFrame/localization.json";
     private string mSearchText = string.Empty;
     private bool mMissingOnly;
-    private string mStatusText = "等待刷新";
+    /// <summary>当前状态是否为“等待刷新”初始占位；仅占位随语言切换重投影。</summary>
+    private bool mIsWaitingRefreshStatus = true;
+    private string mStatusText = GetString(WaitingRefreshKey, "等待刷新");
     private string mProviderText = "Json";
-    private string mSelectedLanguage = "全部";
+    private string mSelectedLanguage = GetString(LanguageAllKey, "全部");
     private bool mHasAttemptedAutomaticLoad;
     private bool mIsRefreshing;
     private bool mIsCreatingTemplate;
@@ -25,6 +29,8 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     private LocalizationCatalog? mCatalog;
     private LocalizationEntryRecord? mSelectedEntry;
     private IReadOnlyList<LocalizationLanguageRecord> mCatalogLanguages = Array.Empty<LocalizationLanguageRecord>();
+    /// <summary>当前目录是否处于读取失败状态；空状态据此切换诊断文案。</summary>
+    private bool mHasLoadError;
 
     /// <summary>创建默认 LocalizationKit 页面。</summary>
     public LocalizationKitPageViewModel() : this(Directory.GetCurrentDirectory(), new LocalizationKitApplicationService(), null, null) { }
@@ -46,6 +52,8 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         mFolderPicker = folderPicker;
         mOpenDirectoryAsync = openDirectoryAsync;
         LoadLubanWorkspaceSettings();
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         CreateTemplateCommand = new AsyncRelayCommand(CreateLubanTemplateAsync);
         BrowseLubanWorkDirCommand = new AsyncRelayCommand(BrowseLubanWorkDirAsync);
@@ -61,7 +69,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         {
             if (SetProperty(ref mSourcePath, value ?? string.Empty))
             {
-                InvalidateCatalog("源文件已变更，点击刷新");
+                InvalidateCatalog(GetString(SourceChangedKey, "源文件已变更，点击刷新"));
             }
         }
     }
@@ -113,7 +121,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     }
 
     /// <summary>语言筛选选项。</summary>
-    public ObservableCollection<string> LanguageOptions { get; } = new() { "全部" };
+    public ObservableCollection<string> LanguageOptions { get; } = new() { GetString(LanguageAllKey, "全部") };
 
     /// <summary>当前选中的语言。</summary>
     public string SelectedLanguage
@@ -121,7 +129,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         get => mSelectedLanguage;
         set
         {
-            if (SetProperty(ref mSelectedLanguage, value ?? "全部"))
+            if (SetProperty(ref mSelectedLanguage, NormalizeLanguageFilter(value)))
             {
                 OnPropertyChanged(nameof(HasActiveFilters));
                 ApplyFilters();
@@ -156,10 +164,10 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
 
     /// <summary>选中条目的缺失语言摘要。</summary>
     public string SelectedEntryMissingText => SelectedEntry is null
-        ? "未选择条目"
+        ? GetString(NoEntrySelectedKey, "未选择条目")
         : SelectedEntry.HasMissing
-            ? "缺失 " + string.Join("、", SelectedEntry.MissingLanguages)
-            : "语言配置完整";
+            ? string.Format(GetString(MissingTemplateKey, "缺失 {0}"), string.Join("、", SelectedEntry.MissingLanguages))
+            : GetString(AllLanguagesCompleteKey, "语言配置完整");
 
     /// <summary>当前是否存在选中条目。</summary>
     public bool HasSelection => SelectedEntry is not null;
@@ -168,20 +176,22 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     public bool HasNoSelection => !HasSelection;
 
     /// <summary>当前目录是否读取失败，空状态需要显示诊断提示。</summary>
-    public bool HasLoadError => StatusText.StartsWith("失败:", StringComparison.Ordinal);
+    public bool HasLoadError => mHasLoadError;
 
     /// <summary>当前是否存在搜索、语言或缺失筛选条件。</summary>
     public bool HasActiveFilters => !string.IsNullOrWhiteSpace(SearchText)
         || MissingOnly
-        || !string.Equals(SelectedLanguage, "全部", StringComparison.Ordinal);
+        || NormalizeLanguageFilter(SelectedLanguage) != LANGUAGE_ALL;
 
     /// <summary>条目列表空状态标题。</summary>
-    public string EmptyTitleText => HasLoadError ? "无法读取本地化目录" : "没有匹配条目";
+    public string EmptyTitleText => HasLoadError
+        ? GetString(LoadErrorTitleKey, "无法读取本地化目录")
+        : GetString(EmptyTitleKey, "没有匹配条目");
 
     /// <summary>条目列表空状态说明。</summary>
     public string EmptyHintText => HasLoadError
-        ? "检查 Luban schema 或 standalone JSON 后点击刷新"
-        : "调整搜索、语言或缺失筛选";
+        ? GetString(LoadErrorHintKey, "检查 Luban schema 或 standalone JSON 后点击刷新")
+        : GetString(EmptyHintKey, "调整搜索、语言或缺失筛选");
 
     /// <summary>当前筛选结果是否为空。</summary>
     public bool IsEmpty => Entries.Count == 0;
@@ -196,7 +206,9 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     public int MissingEntryCount { get; private set; }
 
     /// <summary>页面顶部统计文本。</summary>
-    public string SummaryText => "语言 " + LanguageCount + " · 条目 " + EntryCount + " · 缺失 " + MissingEntryCount;
+    public string SummaryText => string.Format(
+        GetString(SummaryTemplateKey, "语言 {0} · 条目 {1} · 缺失 {2}"),
+        LanguageCount, EntryCount, MissingEntryCount);
 
     /// <summary>刷新目录命令。</summary>
     public AsyncRelayCommand RefreshCommand { get; }
@@ -219,7 +231,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         mProjectRoot = normalizedRoot;
         mHasAttemptedAutomaticLoad = false;
         LoadLubanWorkspaceSettings();
-        InvalidateCatalog("项目已切换，等待刷新");
+        InvalidateCatalog(GetString(ProjectSwitchedKey, "项目已切换，等待刷新"));
     }
 
     /// <summary>在页面首次激活时按需读取目录；同一项目失败后保持诊断状态，等待用户显式刷新。</summary>
@@ -266,7 +278,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
             return;
         }
 
-        StatusText = "正在加载本地化目录";
+        SetStatus(GetString(LoadingKey, "正在加载本地化目录"));
         try
         {
             LocalizationOperationResult result = await Task.Run(() => mService.LoadPreferredAsync(projectRoot, sourcePath, lubanWorkDir));
@@ -302,8 +314,35 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
             return;
         }
 
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         Interlocked.Increment(ref mLoadVersion);
         mIsRefreshing = false;
+    }
+
+    /// <summary>按当前语言重新投影占位、筛选选项和派生文案；目录数据不变。</summary>
+    private void OnCultureChanged()
+    {
+        // 语言下拉的“全部”展示值随语言重建，选中哨兵保持不变。
+        RebuildLanguageOptionsWithAllLabel();
+        if (mIsWaitingRefreshStatus)
+        {
+            StatusText = GetString(WaitingRefreshKey, "等待刷新");
+        }
+
+        OnPropertyChanged(nameof(SelectedEntryMissingText));
+        OnPropertyChanged(nameof(EmptyTitleText));
+        OnPropertyChanged(nameof(EmptyHintText));
+        OnPropertyChanged(nameof(SummaryText));
+    }
+
+    /// <summary>把语言下拉第一项替换为当前语言的“全部”展示文本。</summary>
+    private void RebuildLanguageOptionsWithAllLabel()
+    {
+        string allLabel = GetString(LanguageAllKey, "全部");
+        if (LanguageOptions.Count > 0 && !string.Equals(LanguageOptions[0], allLabel, StringComparison.Ordinal))
+        {
+            LanguageOptions[0] = allLabel;
+        }
     }
 
     /// <summary>一次性清除筛选条件后仅重投影内存目录，避免每个字段分别触发筛选。</summary>
@@ -311,7 +350,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     {
         bool changed = !string.IsNullOrWhiteSpace(mSearchText)
             || mMissingOnly
-            || !string.Equals(mSelectedLanguage, "全部", StringComparison.Ordinal);
+            || NormalizeLanguageFilter(mSelectedLanguage) != LANGUAGE_ALL;
         if (!changed)
         {
             return;
@@ -319,7 +358,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
 
         mSearchText = string.Empty;
         mMissingOnly = false;
-        mSelectedLanguage = "全部";
+        mSelectedLanguage = GetString(LanguageAllKey, "全部");
         OnPropertyChanged(nameof(SearchText));
         OnPropertyChanged(nameof(MissingOnly));
         OnPropertyChanged(nameof(SelectedLanguage));
@@ -343,10 +382,11 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     private void ApplyLoadFailure(LocalizationOperationResult result)
     {
         mCatalog = null;
+        mHasLoadError = true;
         ClearCatalogProjection();
-        ProviderText = string.IsNullOrWhiteSpace(result.Provider) ? "未知" : result.Provider;
+        ProviderText = string.IsNullOrWhiteSpace(result.Provider) ? GetString(UnknownProviderKey, "未知") : result.Provider;
         SetStatistics(0, 0, 0);
-        StatusText = "失败: " + string.Join("; ", result.Diagnostics);
+        SetStatus(string.Format(GetString(LoadFailedStatusTemplateKey, "失败: {0}"), string.Join("; ", result.Diagnostics)));
     }
 
     /// <summary>基于缓存目录应用搜索、缺失和语言筛选，不执行文件 IO。</summary>
@@ -375,7 +415,9 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         SelectedEntry = selectedId.HasValue
             ? Entries.FirstOrDefault(entry => entry.Id == selectedId.Value) ?? Entries.FirstOrDefault()
             : Entries.FirstOrDefault();
-        StatusText = "已加载 " + Entries.Count + " / " + EntryCount + " 条";
+        mHasLoadError = false;
+        SetStatus(string.Format(
+            GetString(LoadedEntriesTemplateKey, "已加载 {0} / {1} 条"), Entries.Count, EntryCount));
         OnPropertyChanged(nameof(IsEmpty));
     }
 
@@ -404,8 +446,14 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     /// <summary>同步语言选项并恢复仍然有效的筛选值。</summary>
     private void UpdateLanguageOptions(IReadOnlyList<LocalizationLanguageRecord> languages)
     {
+        // 语言筛选使用展示值存储；“全部”哨兵在 Normalize 中与各语言标签互转。
+        if (NormalizeLanguageFilter(mSelectedLanguage) == LANGUAGE_ALL)
+        {
+            mSelectedLanguage = GetString(LanguageAllKey, "全部");
+        }
+
         string selectedLanguage = mSelectedLanguage;
-        string[] nextOptions = new[] { "全部" }.Concat(languages.Select(static language => language.Id)).ToArray();
+        string[] nextOptions = new[] { GetString(LanguageAllKey, "全部") }.Concat(languages.Select(static language => language.Id)).ToArray();
         if (!LanguageOptions.SequenceEqual(nextOptions))
         {
             LanguageOptions.Clear();
@@ -427,7 +475,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     /// <summary>按当前语言筛选存在可显示文本的条目。</summary>
     private bool MatchesLanguage(LocalizationEntryRecord entry)
     {
-        return string.Equals(SelectedLanguage, "全部", StringComparison.Ordinal)
+        return NormalizeLanguageFilter(SelectedLanguage) == LANGUAGE_ALL
             || entry.HasValueFor(SelectedLanguage);
     }
 
@@ -452,7 +500,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
 
             SelectedValueRows.Add(new LocalizationPreviewValueViewModel(
                 language.Id,
-                hasText ? value! : "未配置",
+                hasText ? value! : GetString(NotConfiguredKey, "未配置"),
                 pluralValue,
                 !SelectedEntry.HasValueFor(language.Id)));
         }
@@ -465,15 +513,16 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         Entries.Clear();
         LanguageCoverage.Clear();
         SelectedEntry = null;
-        if (LanguageOptions.Count != 1 || LanguageOptions[0] != "全部")
+        string allLabel = GetString(LanguageAllKey, "全部");
+        if (LanguageOptions.Count != 1 || LanguageOptions[0] != allLabel)
         {
             LanguageOptions.Clear();
-            LanguageOptions.Add("全部");
+            LanguageOptions.Add(allLabel);
         }
 
-        if (!string.Equals(mSelectedLanguage, "全部", StringComparison.Ordinal))
+        if (NormalizeLanguageFilter(mSelectedLanguage) != LANGUAGE_ALL)
         {
-            mSelectedLanguage = "全部";
+            mSelectedLanguage = allLabel;
             OnPropertyChanged(nameof(SelectedLanguage));
             OnPropertyChanged(nameof(HasActiveFilters));
         }
@@ -490,7 +539,7 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
         ClearCatalogProjection();
         ProviderText = "Json";
         SetStatistics(0, 0, 0);
-        StatusText = statusText;
+        SetStatus(statusText);
     }
 
     /// <summary>更新顶部统计字段并通知依赖的摘要绑定。</summary>
@@ -509,5 +558,89 @@ public sealed partial class LocalizationKitPageViewModel : ViewModelBase
     private static string NormalizeProjectRoot(string projectRoot)
     {
         return Path.GetFullPath(string.IsNullOrWhiteSpace(projectRoot) ? Directory.GetCurrentDirectory() : projectRoot);
+    }
+
+    /// <summary>把界面传入的语言筛选值归一化；“全部”/"All"统一映射到不变哨兵，其余原样保留。</summary>
+    /// <param name="value">界面传入的语言展示值。</param>
+    /// <returns>归一化后的内部筛选值。</returns>
+    private static string NormalizeLanguageFilter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return LANGUAGE_ALL;
+        }
+
+        return value.Trim() switch
+        {
+            LANGUAGE_ALL => LANGUAGE_ALL,
+            "全部" => LANGUAGE_ALL,
+            "All" => LANGUAGE_ALL,
+            _ => value.Trim()
+        };
+    }
+
+    /// <summary>写入状态文本并维护“等待刷新”占位标记。</summary>
+    /// <param name="text">新的状态文本。</param>
+    private void SetStatus(string text)
+    {
+        mIsWaitingRefreshStatus = false;
+        StatusText = text;
+    }
+
+    /// <summary>等待首次刷新占位资源 key。</summary>
+    private const string WaitingRefreshKey = "String.LocalizationKit.WaitingRefresh";
+
+    /// <summary>语言筛选“全部”展示文本资源 key。</summary>
+    private const string LanguageAllKey = "String.LocalizationKit.LanguageAll";
+
+    /// <summary>未选择条目占位资源 key。</summary>
+    private const string NoEntrySelectedKey = "String.LocalizationKit.NoEntrySelected";
+
+    /// <summary>缺失摘要模板资源 key。</summary>
+    private const string MissingTemplateKey = "String.LocalizationKit.MissingTemplate";
+
+    /// <summary>语言配置完整提示资源 key。</summary>
+    private const string AllLanguagesCompleteKey = "String.LocalizationKit.AllLanguagesComplete";
+
+    /// <summary>目录读取失败标题资源 key。</summary>
+    private const string LoadErrorTitleKey = "String.LocalizationKit.LoadErrorTitle";
+
+    /// <summary>目录读取失败说明资源 key。</summary>
+    private const string LoadErrorHintKey = "String.LocalizationKit.LoadErrorHint";
+
+    /// <summary>无匹配条目标题资源 key。</summary>
+    private const string EmptyTitleKey = "String.LocalizationKit.EmptyTitle";
+
+    /// <summary>无匹配条目说明资源 key。</summary>
+    private const string EmptyHintKey = "String.LocalizationKit.EmptyHint";
+
+    /// <summary>顶部统计模板资源 key。</summary>
+    private const string SummaryTemplateKey = "String.LocalizationKit.SummaryTemplate";
+
+    /// <summary>源文件变更提示资源 key。</summary>
+    private const string SourceChangedKey = "String.LocalizationKit.SourceChanged";
+
+    /// <summary>项目切换提示资源 key。</summary>
+    private const string ProjectSwitchedKey = "String.LocalizationKit.ProjectSwitched";
+
+    /// <summary>正在加载提示资源 key。</summary>
+    private const string LoadingKey = "String.LocalizationKit.Loading";
+
+    /// <summary>加载完成模板资源 key。</summary>
+    private const string LoadedEntriesTemplateKey = "String.LocalizationKit.LoadedEntriesTemplate";
+
+    /// <summary>加载失败状态模板资源 key。</summary>
+    private const string LoadFailedStatusTemplateKey = "String.LocalizationKit.LoadFailedStatusTemplate";
+
+    /// <summary>未知 Provider 占位资源 key。</summary>
+    private const string UnknownProviderKey = "String.LocalizationKit.UnknownProvider";
+
+    /// <summary>未配置占位资源 key。</summary>
+    private const string NotConfiguredKey = "String.LocalizationKit.NotConfigured";
+
+    /// <summary>从当前语言资源读取 LocalizationKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

@@ -48,7 +48,7 @@
                       Orientation="Horizontal"
                       Spacing="7"
                       VerticalAlignment="Center">
-            <TextBlock Text="最低"
+            <TextBlock Text="{DynamicResource String.LogKit.MinimumLevel}"
                        Classes="logkit-runtime-label" />
             <TextBlock Text="{CompiledBinding RuntimeMinimumLevel}"
                        Classes="logkit-runtime-value" />
@@ -61,7 +61,7 @@
                       Orientation="Horizontal"
                       Spacing="7"
                       VerticalAlignment="Center">
-            <TextBlock Text="内存历史"
+            <TextBlock Text="{DynamicResource String.LogKit.MemoryHistory}"
                        Classes="logkit-runtime-label" />
             <TextBlock Text="{CompiledBinding RuntimeHistoryText}"
                        Classes="logkit-runtime-value"
@@ -76,7 +76,7 @@
                       Orientation="Horizontal"
                       Spacing="7"
                       VerticalAlignment="Center">
-            <TextBlock Text="来源"
+            <TextBlock Text="{DynamicResource String.LogKit.DataChannel}"
                        Classes="logkit-runtime-label" />
             <TextBlock Text="{CompiledBinding DataChannelText}"
                        Classes="mono logkit-runtime-value"
@@ -90,7 +90,7 @@
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto"
                     Padding="0,0,16,0"
-                    AutomationProperties.Name="LogKit 配置">
+                    AutomationProperties.Name="{DynamicResource String.LogKit.SettingsAutomationName}">
         <Grid x:Name="ConfigGrid"
               Margin="16"
               ColumnDefinitions="*,*"
@@ -106,9 +106,9 @@
                   Classes="card logkit-section-card">
               <StackPanel Spacing="8">
                 <StackPanel Spacing="3">
-                  <TextBlock Text="输出目标"
+                  <TextBlock Text="{DynamicResource String.LogKit.OutputTargets}"
                              Classes="logkit-section-title" />
-                  <TextBlock Text="选择 Runtime 将日志写入哪些目标。"
+                  <TextBlock Text="{DynamicResource String.LogKit.OutputTargetsHint}"
                              Classes="logkit-helper" />
                 </StackPanel>
 
@@ -118,14 +118,14 @@
                         Cursor="Hand"
                         Tag="LogKitEnabledToggle"
                         PointerPressed="OnSettingLabelPointerPressed">
-                    <TextBlock Text="LogKit 输出"
+                    <TextBlock Text="{DynamicResource String.LogKit.Enabled}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <ToggleSwitch x:Name="LogKitEnabledToggle"
                                   Grid.Column="1"
                                   Classes="logkit-editor"
-                                  OnContent="启用"
-                                  OffContent="关闭"
+                                  OnContent="{DynamicResource String.LogKit.On}"
+                                  OffContent="{DynamicResource String.LogKit.Off}"
                                   IsChecked="{CompiledBinding SettingsDraft.Enabled, Mode=TwoWay}" />
                   </Grid>
                 </Border>
@@ -137,14 +137,14 @@
                         Tag="EditorFileWriteToggle"
                         PointerPressed="OnSettingLabelPointerPressed">
                     <TextBlock x:Name="EditorFileWriteLabel"
-                               Text="Editor 文件写入"
+                               Text="{DynamicResource String.LogKit.EditorFileWrite}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <ToggleSwitch x:Name="EditorFileWriteToggle"
                                   Grid.Column="1"
                                   Classes="logkit-editor"
-                                  OnContent="启用"
-                                  OffContent="关闭"
+                                  OnContent="{DynamicResource String.LogKit.On}"
+                                  OffContent="{DynamicResource String.LogKit.Off}"
                                   IsChecked="{CompiledBinding SettingsDraft.SaveLogInEditor, Mode=TwoWay}" />
                   </Grid>
                 </Border>
@@ -155,14 +155,14 @@
                         Cursor="Hand"
                         Tag="PlayerFileWriteToggle"
                         PointerPressed="OnSettingLabelPointerPressed">
-                    <TextBlock Text="Player 文件写入"
+                    <TextBlock Text="{DynamicResource String.LogKit.PlayerFileWrite}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <ToggleSwitch x:Name="PlayerFileWriteToggle"
                                   Grid.Column="1"
                                   Classes="logkit-editor"
-                                  OnContent="启用"
-                                  OffContent="关闭"
+                                  OnContent="{DynamicResource String.LogKit.On}"
+                                  OffContent="{DynamicResource String.LogKit.Off}"
                                   IsChecked="{CompiledBinding SettingsDraft.SaveLogInPlayer, Mode=TwoWay}" />
                   </Grid>
                 </Border>
@@ -173,14 +173,14 @@
                         Cursor="Hand"
                         Tag="PlayerImGuiToggle"
                         PointerPressed="OnSettingLabelPointerPressed">
-                    <TextBlock Text="Player IMGUI"
+                    <TextBlock Text="{DynamicResource String.LogKit.PlayerImGui}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <ToggleSwitch x:Name="PlayerImGuiToggle"
                                   Grid.Column="1"
                                   Classes="logkit-editor"
-                                  OnContent="启用"
-                                  OffContent="关闭"
+                                  OnContent="{DynamicResource String.LogKit.On}"
+                                  OffContent="{DynamicResource String.LogKit.Off}"
                                   IsChecked="{CompiledBinding SettingsDraft.EnableImGuiInPlayer, Mode=TwoWay}" />
                   </Grid>
                 </Border>
@@ -191,7 +191,7 @@
                         Cursor="Hand"
                         Tag="EncryptionToggle"
                         PointerPressed="OnSettingLabelPointerPressed">
-                    <TextBlock Text="日志加密"
+                    <TextBlock Text="{DynamicResource String.LogKit.Encryption}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"
@@ -202,8 +202,8 @@
                     <ToggleSwitch x:Name="EncryptionToggle"
                                   Grid.Column="2"
                                   Classes="logkit-editor"
-                                  OnContent="启用"
-                                  OffContent="关闭"
+                                  OnContent="{DynamicResource String.LogKit.On}"
+                                  OffContent="{DynamicResource String.LogKit.Off}"
                                   IsEnabled="{CompiledBinding SupportsEncryption}"
                                   ToolTip.Tip="{CompiledBinding EncryptionToggleToolTip}"
                                   IsChecked="{CompiledBinding EncryptionToggleValue, Mode=TwoWay}" />
@@ -213,7 +213,7 @@
                 <Border Classes="logkit-setting-row">
                   <Grid ColumnDefinitions="*,Auto"
                         Background="Transparent">
-                    <TextBlock Text="日志解密"
+                    <TextBlock Text="{DynamicResource String.LogKit.Decryption}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"
@@ -226,7 +226,7 @@
                 <Border Classes="logkit-setting-row last">
                   <Grid ColumnDefinitions="*,Auto"
                         Background="Transparent">
-                    <TextBlock Text="加密方式"
+                    <TextBlock Text="{DynamicResource String.LogKit.EncryptionMethod}"
                                Classes="logkit-setting-label"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"
@@ -247,9 +247,9 @@
                   Classes="card logkit-section-card">
               <StackPanel Spacing="10">
                 <StackPanel Spacing="3">
-                  <TextBlock Text="日志文件"
+                  <TextBlock Text="{DynamicResource String.LogKit.LogFiles}"
                              Classes="logkit-section-title" />
-                  <TextBlock Text="配置日志目录以及 Editor、Player 的文件名称。"
+                  <TextBlock Text="{DynamicResource String.LogKit.LogFilesHint}"
                              Classes="logkit-helper" />
                 </StackPanel>
                 <Grid x:Name="FileFieldsGrid"
@@ -259,7 +259,7 @@
                       RowSpacing="10">
                 <StackPanel x:Name="LogDirectoryField"
                             Spacing="4">
-                  <TextBlock Text="日志目录"
+                  <TextBlock Text="{DynamicResource String.LogKit.LogDirectory}"
                              Classes="logkit-field-label" />
                   <TextBox x:Name="LogDirectoryInput"
                            Classes="logkit-editor"
@@ -269,7 +269,7 @@
                 <StackPanel x:Name="EditorFileNameField"
                             Grid.Column="1"
                             Spacing="4">
-                  <TextBlock Text="Editor 文件名"
+                  <TextBlock Text="{DynamicResource String.LogKit.EditorFileName}"
                              Classes="logkit-field-label" />
                   <TextBox Classes="logkit-editor"
                            Text="{CompiledBinding SettingsDraft.EditorFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -277,7 +277,7 @@
                 <StackPanel x:Name="PlayerFileNameField"
                             Grid.Column="2"
                             Spacing="4">
-                  <TextBlock Text="Player 文件名"
+                  <TextBlock Text="{DynamicResource String.LogKit.PlayerFileName}"
                              Classes="logkit-field-label" />
                   <TextBox Classes="logkit-editor"
                            Text="{CompiledBinding SettingsDraft.PlayerFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -293,9 +293,9 @@
                   Classes="card logkit-section-card">
             <StackPanel Spacing="10">
               <StackPanel Spacing="3">
-                <TextBlock Text="等级与容量"
+                <TextBlock Text="{DynamicResource String.LogKit.CapacitySettings}"
                            Classes="logkit-section-title" />
-                <TextBlock Text="设置过滤阈值、内存队列和日志文件保留策略。"
+                <TextBlock Text="{DynamicResource String.LogKit.CapacitySettingsHint}"
                            Classes="logkit-helper" />
               </StackPanel>
               <Grid ColumnDefinitions="*,*"
@@ -303,7 +303,7 @@
                     ColumnSpacing="16"
                     RowSpacing="16">
                 <StackPanel Spacing="4">
-                  <TextBlock Text="最低等级"
+                  <TextBlock Text="{DynamicResource String.LogKit.MinimumLevel}"
                              Classes="logkit-field-label" />
                   <ComboBox Classes="logkit-editor"
                             ItemsSource="{CompiledBinding SettingsLevelOptions}"
@@ -311,7 +311,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Spacing="4">
-                  <TextBlock Text="队列上限"
+                  <TextBlock Text="{DynamicResource String.LogKit.MaxQueueSize}"
                              Classes="logkit-field-label" />
                   <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxQueueSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
@@ -319,7 +319,7 @@
                 </StackPanel>
                 <StackPanel Grid.Row="1"
                             Spacing="4">
-                  <TextBlock Text="重复阈值"
+                  <TextBlock Text="{DynamicResource String.LogKit.MaxSameLogCount}"
                              Classes="logkit-field-label" />
                   <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxSameLogCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
@@ -328,7 +328,7 @@
                 <StackPanel Grid.Row="1"
                             Grid.Column="1"
                             Spacing="4">
-                  <TextBlock Text="保留天数"
+                  <TextBlock Text="{DynamicResource String.LogKit.MaxRetentionDays}"
                              Classes="logkit-field-label" />
                   <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxRetentionDays, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
@@ -336,7 +336,7 @@
                 </StackPanel>
                 <StackPanel Grid.Row="2"
                             Spacing="4">
-                  <TextBlock Text="单文件上限 MB"
+                  <TextBlock Text="{DynamicResource String.LogKit.MaxFileSizeMb}"
                              Classes="logkit-field-label" />
                   <NumericUpDown Value="{CompiledBinding SettingsDraft.MaxFileSizeMb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"
@@ -345,7 +345,7 @@
                 <StackPanel Grid.Row="2"
                             Grid.Column="1"
                             Spacing="4">
-                  <TextBlock Text="IMGUI 条数"
+                  <TextBlock Text="{DynamicResource String.LogKit.ImGuiMaxLogCount}"
                              Classes="logkit-field-label" />
                   <NumericUpDown Value="{CompiledBinding SettingsDraft.ImGuiMaxLogCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Classes="logkit-number logkit-editor"

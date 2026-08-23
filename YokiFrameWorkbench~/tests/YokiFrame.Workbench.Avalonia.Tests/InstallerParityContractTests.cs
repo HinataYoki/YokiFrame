@@ -15,11 +15,11 @@ public sealed class InstallerParityContractTests
 
         Assert.Contains("installer.source.pick", xaml);
         Assert.Contains("installer.target.pick", xaml);
-        Assert.Contains("本地包", xaml);
-        Assert.Contains("Git 包", xaml);
-        Assert.Contains("Git URL", xaml);
-        Assert.Contains("维护 project.godot 中的 YokiFrame 设置", xaml);
-        Assert.Contains("登记并启用 YokiFrame 编辑器插件", xaml);
+        Assert.Contains("String.Installer.UnityLocalMode", xaml);
+        Assert.Contains("String.Installer.UnityGitMode", xaml);
+        Assert.Contains("String.Installer.GitUrl", xaml);
+        Assert.Contains("String.Installer.RepairGodotSettings", xaml);
+        Assert.Contains("String.Installer.EnableGodotPlugin", xaml);
     }
 
     /// <summary>

@@ -531,11 +531,11 @@ public sealed partial class WorkbenchShellViewTests
     {
         var xaml = ReadWorkbenchShellViewXaml();
 
-        Assert.Contains("Content=\"Ping\"", xaml);
+        Assert.True(xaml.Contains("Content=\"Ping\"") || xaml.Contains("String.Overview.Ping"));
         Assert.Contains("Command=\"{CompiledBinding PingCommand}\"", xaml);
-        Assert.Contains("Content=\"状态\"", xaml);
+        Assert.True(xaml.Contains("Content=\"状态\"") || xaml.Contains("String.Overview.Status"));
         Assert.Contains("Command=\"{CompiledBinding BridgeStatusCommand}\"", xaml);
-        Assert.Contains("Content=\"目录\"", xaml);
+        Assert.True(xaml.Contains("Content=\"目录\"") || xaml.Contains("String.Overview.Catalog"));
         Assert.Contains("Command=\"{CompiledBinding RefreshCommandCatalogCommand}\"", xaml);
         Assert.DoesNotContain("Content=\"发送\"", xaml);
     }

@@ -35,17 +35,17 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <TextBlock Text="索引" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{DynamicResource String.SpatialKit.ActiveIndexes}" Classes="spatialkit-metric-label" />
           <TextBlock Text="{CompiledBinding ActiveIndexCount}" Classes="mono spatialkit-metric-value" />
         </StackPanel>
         <Border Grid.Column="2" Classes="spatialkit-divider" />
         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <TextBlock Text="实体" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{DynamicResource String.SpatialKit.Entities}" Classes="spatialkit-metric-label" />
           <TextBlock Text="{CompiledBinding EntityCount}" Classes="mono spatialkit-metric-value" />
         </StackPanel>
         <Border Grid.Column="4" Classes="spatialkit-divider" />
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <TextBlock Text="分区" Classes="spatialkit-metric-label" />
+          <TextBlock Text="{DynamicResource String.SpatialKit.Partitions}" Classes="spatialkit-metric-label" />
           <TextBlock Text="{CompiledBinding PartitionCount}" Classes="mono spatialkit-metric-value" />
         </StackPanel>
       </Grid>
@@ -62,7 +62,7 @@
         <Grid RowDefinitions="Auto,*">
           <Border Classes="kit-panel-header spatialkit-panel-header">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="运行中的索引" Classes="spatialkit-section-title" />
+              <TextBlock Text="{DynamicResource String.SpatialKit.IndexList}" Classes="spatialkit-section-title" />
               <TextBlock Grid.Column="1" Text="{CompiledBinding IndexCountText}"
                          Classes="mono spatialkit-caption" VerticalAlignment="Center" />
             </Grid>
@@ -76,7 +76,7 @@
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    SelectionMode="Single"
-                   AutomationProperties.Name="SpatialKit 索引实例列表">
+                   AutomationProperties.Name="{DynamicResource String.SpatialKit.IndexList}">
             <ListBox.ItemsPanel>
               <ItemsPanelTemplate>
                 <VirtualizingStackPanel Orientation="Vertical" />
@@ -105,8 +105,10 @@
                                Classes="mono spatialkit-caption"
                                TextTrimming="CharacterEllipsis"
                                ToolTip.Tip="{CompiledBinding DiagnosticsId}" />
-                    <TextBlock Grid.Column="1" Text="{CompiledBinding Count, StringFormat={}{0} 实体}"
-                               Classes="mono spatialkit-count" />
+                    <TextBlock Grid.Column="1" Classes="mono spatialkit-caption">
+                      <Run Text="{CompiledBinding Count}" />
+                      <Run Text=" items" />
+                    </TextBlock>
                   </Grid>
                 </Grid>
               </DataTemplate>
@@ -115,12 +117,11 @@
         </Grid>
       </Border>
 
-      <GridSplitter Grid.Column="1"
-                    Classes="spatialkit-master-splitter"
+      <GridSplitter Grid.Column="1" Classes="spatialkit-splitter"
                     ResizeDirection="Columns"
                     ResizeBehavior="PreviousAndNext"
                     Background="Transparent"
-                    AutomationProperties.Name="调整索引列表和密度详情宽度" />
+                    AutomationProperties.Name="{DynamicResource String.SpatialKit.ListSplitterAutomationName}" />
 
       <Border x:Name="SpatialDetailPanel" Grid.Column="2"
               Classes="panel spatialkit-detail-panel" Padding="0">
@@ -153,7 +154,7 @@
                         VerticalAlignment="Top">
                   <StackPanel Orientation="Horizontal" Spacing="4">
                     <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="12" Height="12" />
-                    <TextBlock Text="数据过期" Classes="spatialkit-chip-text" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.DataStale}" Classes="spatialkit-chip-text" />
                   </StackPanel>
                 </Border>
               </Grid>
@@ -163,11 +164,11 @@
               <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                 <WrapPanel Orientation="Horizontal">
                   <StackPanel Classes="spatialkit-context-cell" Spacing="2">
-                    <TextBlock Text="实体" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.Entities}" Classes="spatialkit-context-label" />
                     <TextBlock Text="{CompiledBinding SelectedIndex.Count}" Classes="mono spatialkit-context-value" />
                   </StackPanel>
                   <StackPanel Classes="spatialkit-context-cell" Spacing="2">
-                    <TextBlock Text="分区" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.Partitions}" Classes="spatialkit-context-label" />
                     <TextBlock Text="{CompiledBinding SelectedIndex.PartitionCount}" Classes="mono spatialkit-context-value" />
                   </StackPanel>
                   <StackPanel Classes="spatialkit-context-cell" Spacing="2">
@@ -175,11 +176,11 @@
                     <TextBlock Text="{CompiledBinding SelectedIndex.CellSize, StringFormat={}{0:0.###}}" Classes="mono spatialkit-context-value" />
                   </StackPanel>
                   <StackPanel Classes="spatialkit-context-cell" Spacing="2">
-                    <TextBlock Text="最大深度" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.MaxDepth}" Classes="spatialkit-context-label" />
                     <TextBlock Text="{CompiledBinding SelectedIndex.MaxDepth}" Classes="mono spatialkit-context-value" />
                   </StackPanel>
                   <StackPanel Classes="spatialkit-context-cell" Spacing="2">
-                    <TextBlock Text="网格" Classes="spatialkit-context-label" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.Resolution}" Classes="spatialkit-context-label" />
                     <TextBlock Text="{CompiledBinding DensityResolutionText}" Classes="mono spatialkit-context-value" />
                   </StackPanel>
                 </WrapPanel>
@@ -207,7 +208,7 @@
               <Grid RowDefinitions="Auto,Auto" RowSpacing="9">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="密度热力图" Classes="spatialkit-section-title" />
+                    <TextBlock Text="{DynamicResource String.SpatialKit.DensityHeatmap}" Classes="spatialkit-section-title" />
                     <TextBlock Text="{CompiledBinding DensitySummaryText}"
                                Classes="mono spatialkit-caption"
                                TextTrimming="CharacterEllipsis"
@@ -229,13 +230,13 @@
                 <UniformGrid Grid.Row="1" Columns="4" Rows="1">
                   <Border Classes="spatialkit-density-stat">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="占用" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{DynamicResource String.SpatialKit.Occupancy}" Classes="spatialkit-context-label" />
                       <TextBlock Text="{CompiledBinding DensityOccupancyText}" Classes="mono spatialkit-context-value" />
                     </StackPanel>
                   </Border>
                   <Border Classes="spatialkit-density-stat">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="平均" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{DynamicResource String.SpatialKit.Mean}" Classes="spatialkit-context-label" />
                       <TextBlock Text="{CompiledBinding DensityMeanCount}" Classes="mono spatialkit-context-value" />
                     </StackPanel>
                   </Border>
@@ -247,7 +248,7 @@
                   </Border>
                   <Border Classes="spatialkit-density-stat">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="最大" Classes="spatialkit-context-label" />
+                      <TextBlock Text="{DynamicResource String.SpatialKit.Peak}" Classes="spatialkit-context-label" />
                       <TextBlock Text="{CompiledBinding DensityMaxCount}" Classes="mono spatialkit-context-value" />
                     </StackPanel>
                   </Border>
@@ -263,7 +264,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         AutomationProperties.AutomationId="workbench.spatialkit.heatmap"
-                        AutomationProperties.Name="SpatialKit 密度热力图">
+                        AutomationProperties.Name="{DynamicResource String.SpatialKit.DensityHeatmap}">
                   <ItemsControl ItemsSource="{CompiledBinding DensityCells}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
@@ -292,10 +293,10 @@
                               Width="36" Height="36"
                               Foreground="{DynamicResource Brush.Icon.SpatialKit}"
                               HorizontalAlignment="Center" />
-                    <TextBlock Text="当前索引暂无密度数据"
+                    <TextBlock Text="{DynamicResource String.SpatialKit.NoDensity}"
                                Classes="spatialkit-empty-title"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="实体注册后，空间占用与热点会显示在这里。"
+                    <TextBlock Text="{DynamicResource String.SpatialKit.NoDensityHint}"
                                Classes="spatialkit-caption"
                                TextAlignment="Center"
                                TextWrapping="Wrap" />
@@ -313,10 +314,10 @@
                         Width="36" Height="36"
                         Foreground="{DynamicResource Brush.Icon.SpatialKit}"
                         HorizontalAlignment="Center" />
-              <TextBlock Text="选择一个空间索引"
+              <TextBlock Text="{DynamicResource String.SpatialKit.SelectIndex}"
                          Classes="spatialkit-empty-title"
                          HorizontalAlignment="Center" />
-              <TextBlock Text="选择后可查看参数上下文、密度热力图与健康诊断。"
+              <TextBlock Text="{DynamicResource String.SpatialKit.SelectIndexHint}"
                          Classes="spatialkit-caption"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
@@ -335,10 +336,10 @@
                   Width="42" Height="42"
                   Foreground="{DynamicResource Brush.Icon.SpatialKit}"
                   HorizontalAlignment="Center" />
-        <TextBlock Text="暂无运行中的 SpatialKit 索引"
+        <TextBlock Text="{DynamicResource String.SpatialKit.NoIndexes}"
                    Classes="spatialkit-empty-title"
                    HorizontalAlignment="Center" />
-        <TextBlock Text="等待运行时创建空间索引并通过 telemetry 或 snapshot 发布诊断数据。"
+        <TextBlock Text="{DynamicResource String.SpatialKit.NoIndexesHint}"
                    Classes="spatialkit-caption"
                    TextAlignment="Center"
                    TextWrapping="Wrap" />

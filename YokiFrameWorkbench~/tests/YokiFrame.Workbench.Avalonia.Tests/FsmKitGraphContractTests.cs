@@ -52,11 +52,16 @@ public sealed class FsmKitGraphContractTests
             "Components", "ObservedFsmGraph.Rendering.cs");
         var graphStyles = WorkbenchContractTestFiles.ReadSource("Styles", "FsmKit.axaml");
 
-        Assert.Contains("转换历史", xaml);
+        Assert.True(xaml.Contains("转换历史") || xaml.Contains("String.FsmKit.TransitionHistory"));
         Assert.Contains("ColumnDefinitions=\"252,*,300\"", xaml);
         Assert.Contains("SearchText", xaml);
-        Assert.Contains("AutomationProperties.Name=\"搜索活动状态机\"", xaml);
-        Assert.Contains("AutomationProperties.Name=\"活动状态机列表\"", xaml);
+        // i18n 切片后 AutomationProperties.Name 改用 DynamicResource 资源 key，兼容两种形态。
+        Assert.True(
+            xaml.Contains("AutomationProperties.Name=\"搜索活动状态机\"") || xaml.Contains("String.FsmKit.SearchAutomationName"),
+            "FsmKit 搜索框应包含活动状态机搜索词条");
+        Assert.True(
+            xaml.Contains("AutomationProperties.Name=\"活动状态机列表\"") || xaml.Contains("String.FsmKit.InstancesAutomationName"),
+            "FsmKit 实例列表应包含活动状态机列表词条");
         Assert.Contains("SelectedMachineName", xaml);
         Assert.Contains("MachineState", xaml);
         Assert.Contains("CurrentState", xaml);
@@ -65,9 +70,11 @@ public sealed class FsmKitGraphContractTests
         Assert.DoesNotContain("FsmKitPage.DataChannelText", shellXaml);
         Assert.Contains("ListBoxItem:selected /template/ ContentPresenter", graphStyles);
         Assert.Contains("Transitions", xaml);
-        Assert.Contains("已观测转换图", xaml);
+        Assert.True(xaml.Contains("已观测转换图") || xaml.Contains("String.FsmKit.ObservedTransitions"));
         Assert.Contains("Model=\"{CompiledBinding GraphModel}\"", xaml);
-        Assert.Contains("AutomationProperties.Name=\"已观测状态转换图\"", xaml);
+        Assert.True(
+            xaml.Contains("AutomationProperties.Name=\"已观测状态转换图\"") || xaml.Contains("String.FsmKit.ObservedGraphAutomationName"),
+            "FsmKit 状态图应包含已观测状态转换图词条");
         Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", xaml);
         Assert.Contains("OnGraphZoomOut", xaml);
         Assert.Contains("OnGraphZoomIn", xaml);

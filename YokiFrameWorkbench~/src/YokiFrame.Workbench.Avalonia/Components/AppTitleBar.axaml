@@ -29,8 +29,8 @@
       <Button Command="{CompiledBinding RuntimeUpdate.RebuildCommand}"
               IsVisible="{CompiledBinding RuntimeUpdate.IsVisible}"
               Classes="primary compact-action"
-              ToolTip.Tip="检测到新版源码，点击构建新的 Workbench Runtime"
-              AutomationProperties.Name="有新版可编译">
+              ToolTip.Tip="{DynamicResource String.TitleBar.NewVersionTooltip}"
+              AutomationProperties.Name="Rebuild Runtime">
         <StackPanel Orientation="Horizontal" Spacing="5">
           <shapes:Path Data="{StaticResource Icon.Download}"
                        Width="13"
@@ -62,7 +62,7 @@
     <Button Grid.Column="5"
             Classes="secondary icon-button chrome-button"
             Click="OnToggleThemeButtonClick"
-            ToolTip.Tip="切换主题"
+            ToolTip.Tip="{DynamicResource String.TitleBar.ThemeTooltip}"
             VerticalAlignment="Center"
             chrome:WindowDecorationProperties.ElementRole="User">
       <Grid Width="16"
@@ -92,15 +92,23 @@
     </Button>
     <ComboBox Grid.Column="6"
               Classes="titlebar-select"
-              SelectedItem="{CompiledBinding CultureText}"
+              SelectedItem="{CompiledBinding CultureText, Mode=TwoWay}"
               ItemsSource="{CompiledBinding CultureOptions}"
               Width="92"
               VerticalAlignment="Center"
-              chrome:WindowDecorationProperties.ElementRole="User" />
+              chrome:WindowDecorationProperties.ElementRole="User">
+      <ComboBox.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Text="{CompiledBinding}"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Center" />
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
     <Button Grid.Column="7"
             Classes="secondary icon-button chrome-button"
             Click="OnMaximizeWindowButtonClick"
-            ToolTip.Tip="最大化"
+            ToolTip.Tip="{DynamicResource String.TitleBar.MaximizeTooltip}"
             VerticalAlignment="Center"
             chrome:WindowDecorationProperties.ElementRole="MaximizeButton">
       <shapes:Path Data="{StaticResource Icon.Maximize}"
@@ -116,7 +124,7 @@
     <Button Grid.Column="8"
             Classes="secondary icon-button chrome-button close-button"
             Click="OnCloseWindowButtonClick"
-            ToolTip.Tip="关闭"
+            ToolTip.Tip="{DynamicResource String.TitleBar.CloseTooltip}"
             VerticalAlignment="Center"
             chrome:WindowDecorationProperties.ElementRole="CloseButton">
       <shapes:Path Data="{StaticResource Icon.Close}"

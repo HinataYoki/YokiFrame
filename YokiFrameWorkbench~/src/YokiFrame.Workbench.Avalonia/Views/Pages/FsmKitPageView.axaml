@@ -36,7 +36,7 @@
                 RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
-                <TextBlock Text="活动状态机" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.FsmKit.ActiveFsm}" Classes="section-title" />
                 <TextBlock Text="{CompiledBinding InstanceCountText}" Classes="muted mono kit-caption" />
               </StackPanel>
               <Border Grid.Column="1" Classes="badge" Padding="8,3" VerticalAlignment="Center">
@@ -45,14 +45,14 @@
             </Grid>
             <TextBox Grid.Row="1"
                      Text="{CompiledBinding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     PlaceholderText="搜索名称 / 状态 / instanceId"
-                     AutomationProperties.Name="搜索活动状态机"
+                     PlaceholderText="{DynamicResource String.FsmKit.SearchPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource String.FsmKit.SearchAutomationName}"
                      AutomationProperties.AutomationId="workbench.fsm.search" />
             <ListBox Grid.Row="2"
                      Classes="fsm-instance-list kit-selection-list"
                      ItemsSource="{CompiledBinding Machines}"
                      SelectedItem="{CompiledBinding SelectedMachine, Mode=TwoWay}"
-                     AutomationProperties.Name="活动状态机列表"
+                     AutomationProperties.Name="{DynamicResource String.FsmKit.InstancesAutomationName}"
                      AutomationProperties.AutomationId="workbench.fsm.instances">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="graph:FsmMachineListItemViewModel">
@@ -70,7 +70,8 @@
                     <TextBlock Text="{CompiledBinding CurrentState}" Classes="accent mono" FontSize="12" />
                     <TextBlock Classes="muted kit-micro">
                       <Run Text="{CompiledBinding StateCount}" />
-                      <Run Text=" 个状态" />
+                      <Run Text=" " />
+                      <Run Text="{DynamicResource String.FsmKit.TotalStates}" />
                     </TextBlock>
                   </StackPanel>
                 </DataTemplate>
@@ -86,7 +87,7 @@
                 ColumnSpacing="10">
             <Border Classes="card fsm-current-card" Padding="12">
               <StackPanel Spacing="3">
-                <TextBlock Text="当前状态" Classes="muted" FontSize="11" />
+                <TextBlock Text="{DynamicResource String.FsmKit.CurrentState}" Classes="muted" FontSize="11" />
                 <TextBlock Text="{CompiledBinding CurrentState}"
                            Classes="mono"
                            FontWeight="SemiBold"
@@ -103,16 +104,16 @@
             </Border>
             <Border Grid.Column="1" Classes="card" Padding="12">
               <StackPanel Spacing="3">
-                <TextBlock Text="状态总量" Classes="muted" FontSize="11" />
+                <TextBlock Text="{DynamicResource String.FsmKit.TotalStates}" Classes="muted" FontSize="11" />
                 <TextBlock Text="{CompiledBinding StateCountText}" Classes="mono accent" FontWeight="SemiBold" />
                 <TextBlock Text="{CompiledBinding MachineState}" Classes="muted mono" FontSize="10" />
               </StackPanel>
             </Border>
             <Border Grid.Column="2" Classes="card" Padding="12">
               <StackPanel Spacing="3">
-                <TextBlock Text="观测历史" Classes="muted" FontSize="11" />
+                <TextBlock Text="{DynamicResource String.FsmKit.ObservedHistory}" Classes="muted" FontSize="11" />
                 <TextBlock Text="{CompiledBinding HistoryCountText}" Classes="mono" FontWeight="SemiBold" />
-                <TextBlock Text="仅运行历史" Classes="muted" FontSize="10" />
+                <TextBlock Text="{DynamicResource String.FsmKit.History}" Classes="muted" FontSize="10" />
               </StackPanel>
             </Border>
           </Grid>
@@ -124,15 +125,15 @@
                   RowSpacing="10">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="已观测转换图" Classes="section-title" />
-                  <TextBlock Text="边只来自运行历史，不代表静态许可规则" Classes="muted" FontSize="11" />
+                  <TextBlock Text="{DynamicResource String.FsmKit.ObservedTransitions}" Classes="section-title" />
+                  <TextBlock Text="{DynamicResource String.FsmKit.ObservedHistoryReconstructed}" Classes="muted" FontSize="11" />
                   <TextBlock Text="{CompiledBinding StaleReason}" Classes="muted" TextWrapping="Wrap" FontSize="11" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                   <Button Classes="secondary icon-button"
                           Content="-"
-                          ToolTip.Tip="缩小状态流图"
-                          AutomationProperties.Name="缩小状态流图"
+                          ToolTip.Tip="{DynamicResource String.FsmKit.ZoomOut}"
+                          AutomationProperties.Name="{DynamicResource String.FsmKit.ZoomOutAutomationName}"
                           Click="OnGraphZoomOut" />
                   <TextBlock x:Name="GraphZoomLabel"
                              Text="100%"
@@ -142,12 +143,12 @@
                              VerticalAlignment="Center" />
                   <Button Classes="secondary icon-button"
                           Content="+"
-                          ToolTip.Tip="放大状态流图"
-                          AutomationProperties.Name="放大状态流图"
+                          ToolTip.Tip="{DynamicResource String.FsmKit.ZoomIn}"
+                          AutomationProperties.Name="{DynamicResource String.FsmKit.ZoomInAutomationName}"
                           Click="OnGraphZoomIn" />
                   <Button Classes="secondary compact-action"
-                          Content="适应"
-                          ToolTip.Tip="适应当前视口"
+                          Content="{DynamicResource String.FsmKit.Fit}"
+                          ToolTip.Tip="{DynamicResource String.FsmKit.Fit}"
                           Click="OnGraphFit" />
                 </StackPanel>
               </Grid>
@@ -159,13 +160,13 @@
                   <components:ObservedFsmGraph x:Name="ObservedGraph"
                                                Model="{CompiledBinding GraphModel}"
                                                Background="{DynamicResource Brush.Surface.Card}"
-                                               AutomationProperties.Name="已观测状态转换图"
+                                               AutomationProperties.Name="{DynamicResource String.FsmKit.ObservedGraphAutomationName}"
                                                AutomationProperties.AutomationId="workbench.fsm.observed-graph" />
                 </ScrollViewer>
                 <Border Classes="kit-empty-state fsm-graph-empty"
                         IsVisible="{CompiledBinding IsGraphEmpty}">
                   <StackPanel MaxWidth="360" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="等待完整状态图" FontWeight="SemiBold" TextAlignment="Center" />
+                    <TextBlock Text="{DynamicResource String.FsmKit.WaitingStateGraph}" FontWeight="SemiBold" TextAlignment="Center" />
                     <TextBlock Text="{CompiledBinding GraphEmptyHint}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
                   </StackPanel>
                 </Border>
@@ -179,13 +180,13 @@
                 Padding="12">
           <Grid RowDefinitions="Auto,*" RowSpacing="10">
             <StackPanel Spacing="2">
-              <TextBlock Text="转换历史" Classes="section-title" />
+              <TextBlock Text="{DynamicResource String.FsmKit.TransitionHistory}" Classes="section-title" />
               <TextBlock Text="{CompiledBinding HistoryCountText}" Classes="muted mono" FontSize="11" />
             </StackPanel>
             <ListBox Grid.Row="1"
                      Classes="kit-timeline-list"
                      ItemsSource="{CompiledBinding Transitions}"
-                     AutomationProperties.Name="状态转换历史">
+                     AutomationProperties.Name="{DynamicResource String.FsmKit.TransitionHistoryAutomationName}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="fsm:WorkbenchFsmTransition">
                   <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8" Margin="2,4">

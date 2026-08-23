@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.FsmKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -32,6 +33,7 @@ public sealed partial class FsmKitPageViewModel
     /// <summary>取消仍在等待 terminal response 的详情查询；页面关闭后不保留后台工作。</summary>
     public void Dispose()
     {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         Interlocked.Increment(ref mQueryVersion);
         CancelPendingDetailsQuery();
     }
@@ -63,7 +65,7 @@ public sealed partial class FsmKitPageViewModel
         {
             if (queryVersion == Volatile.Read(ref mQueryVersion))
             {
-                DiagnosticText = "详情查询失败: " + exception.Message;
+                DiagnosticText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.DetailQueryFailed") + exception.Message;
             }
         }
         finally
@@ -94,5 +96,42 @@ public sealed partial class FsmKitPageViewModel
     {
         var cancellation = Interlocked.Exchange(ref mDetailsQueryCancellation, null);
         cancellation?.Cancel();
+    }
+
+    /// <summary>语言切换时刷新 FsmKit 空状态、计数和可见诊断文本。</summary>
+    private void OnCultureChanged()
+    {
+        bool isNotSelected = string.Equals(EngineId, "未选择", StringComparison.Ordinal)
+            || string.Equals(EngineId, "Not selected", StringComparison.Ordinal);
+        bool isUnknown = string.Equals(SessionId, "未知", StringComparison.Ordinal)
+            || string.Equals(SessionId, "Unknown", StringComparison.Ordinal);
+        bool isWaiting = string.Equals(Source, "等待数据", StringComparison.Ordinal)
+            || string.Equals(Source, "Waiting for data", StringComparison.Ordinal);
+        if (isNotSelected)
+        {
+            EngineId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+            SelectedMachineName = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+            CurrentState = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+        }
+
+        if (isUnknown)
+        {
+            SessionId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+            Mode = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+            UpdatedAtText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+        }
+
+        if (isWaiting)
+        {
+            Source = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
+            DataChannelText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
+            DiagnosticText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingState");
+        }
+
+        OnPropertyChanged(nameof(DiagnosticText));
+        OnPropertyChanged(nameof(GraphEmptyHint));
+        OnPropertyChanged(nameof(InstanceCountText));
+        OnPropertyChanged(nameof(StateCountText));
+        OnPropertyChanged(nameof(HistoryCountText));
     }
 }

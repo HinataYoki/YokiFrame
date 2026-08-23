@@ -79,10 +79,12 @@ public sealed class TableKitExtraOutputViewModel : ViewModelBase
     };
 
     /// <summary>通过跨平台目录选择器更新额外数据输出目录。</summary>
-    private async Task BrowseDataAsync() => OutputDataDir = await BrowseAsync("选择额外数据输出目录", OutputDataDir);
+    private async Task BrowseDataAsync() => OutputDataDir = await BrowseAsync(
+        WorkbenchI18nService.Instance.GetString("String.TableKit.PickExtraDataDirTitle", "选择额外数据输出目录"), OutputDataDir);
 
     /// <summary>通过跨平台目录选择器更新额外代码输出目录。</summary>
-    private async Task BrowseCodeAsync() => OutputCodeDir = await BrowseAsync("选择额外代码输出目录", OutputCodeDir);
+    private async Task BrowseCodeAsync() => OutputCodeDir = await BrowseAsync(
+        WorkbenchI18nService.Instance.GetString("String.TableKit.PickExtraCodeDirTitle", "选择额外代码输出目录"), OutputCodeDir);
 
     /// <summary>从当前字段路径打开目录选择器，并保持项目相对显示。</summary>
     /// <param name="title">原生选择器标题。</param>

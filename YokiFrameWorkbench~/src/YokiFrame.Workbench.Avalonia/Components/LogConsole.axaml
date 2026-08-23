@@ -7,14 +7,17 @@
     <Grid RowDefinitions="Auto,*">
       <Grid ColumnDefinitions="*,Auto,Auto"
             Margin="16,8">
-        <TextBlock Text="▤  运行日志"
-                   FontWeight="SemiBold" />
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="▤" FontWeight="SemiBold" />
+          <TextBlock Text="{DynamicResource String.Overview.RuntimeLog}"
+                     FontWeight="SemiBold" />
+        </StackPanel>
         <Button Grid.Column="1"
-                Content="复制"
+                Content="{DynamicResource String.Overview.CopyLog}"
                 Classes="secondary"
                 Click="OnCopyLogsButtonClick" />
         <Button Grid.Column="2"
-                Content="清空"
+                Content="{DynamicResource String.Overview.ClearLog}"
                 Command="{CompiledBinding ClearLogCommand}"
                 Classes="secondary"
                 Margin="8,0,0,0" />

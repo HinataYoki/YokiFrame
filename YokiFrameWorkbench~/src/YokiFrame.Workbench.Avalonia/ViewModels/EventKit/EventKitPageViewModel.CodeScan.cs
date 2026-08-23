@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.EventKit.Scan;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -8,7 +9,7 @@ public sealed partial class EventKitPageViewModel : IDisposable
     private Func<bool, CancellationToken, Task<WorkbenchEventKitCodeScan>>? mScanAsync;
     private CancellationTokenSource mScanCancellation = new();
     private string mProjectRoot = string.Empty;
-    private string mScanStatusText = "等待进入页面";
+    private string mScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingPage");
     private bool mExcludeEditor = true;
     private bool mIsPageActive;
     private bool mIsScanning;
@@ -65,7 +66,9 @@ public sealed partial class EventKitPageViewModel : IDisposable
         ReconcileEventItems(mRuntimeEventsByIdentity.Values.ToArray());
         ReconcileVisibleEvents();
         RestoreSelection(SelectedEvent?.Identity ?? string.Empty);
-        ScanStatusText = string.IsNullOrEmpty(normalized) ? "等待项目" : "等待进入页面";
+        ScanStatusText = string.IsNullOrEmpty(normalized)
+            ? WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingProject")
+            : WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingPage");
         NotifyScanProperties();
         if (mIsPageActive)
         {
@@ -90,7 +93,9 @@ public sealed partial class EventKitPageViewModel : IDisposable
 
         CancelCurrentScan();
         IsScanning = false;
-        ScanStatusText = string.IsNullOrEmpty(ProjectRoot) ? "等待项目" : "等待进入页面";
+        ScanStatusText = string.IsNullOrEmpty(ProjectRoot)
+            ? WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingProject")
+            : WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingPage");
         NotifyScanProperties();
     }
 
@@ -99,7 +104,9 @@ public sealed partial class EventKitPageViewModel : IDisposable
     {
         if (mScanAsync == null || string.IsNullOrWhiteSpace(ProjectRoot))
         {
-            ScanStatusText = string.IsNullOrWhiteSpace(ProjectRoot) ? "等待项目" : "扫描不可用";
+            ScanStatusText = string.IsNullOrWhiteSpace(ProjectRoot)
+                ? WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingProject")
+                : WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Unavailable");
             return;
         }
 
@@ -107,7 +114,7 @@ public sealed partial class EventKitPageViewModel : IDisposable
         long scanGeneration = mScanGeneration;
         CancellationToken token = mScanCancellation.Token;
         IsScanning = true;
-        ScanStatusText = "正在扫描 C# 调用点";
+        ScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Running");
         try
         {
             WorkbenchEventKitCodeScan scan = await mScanAsync(ExcludeEditor, token);
@@ -117,15 +124,16 @@ public sealed partial class EventKitPageViewModel : IDisposable
             }
 
             ApplyCodeScan(scan);
-            ScanStatusText = "扫描完成 · " + scan.Elapsed.TotalMilliseconds.ToString("0") + " ms";
+            ScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Completed")
+                + scan.Elapsed.TotalMilliseconds.ToString("0") + " ms";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            UpdateScanStatus(scanGeneration, "扫描已取消");
+            UpdateScanStatus(scanGeneration, WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Cancelled"));
         }
         catch (Exception exception)
         {
-            UpdateScanStatus(scanGeneration, "扫描失败：" + exception.Message);
+            UpdateScanStatus(scanGeneration, WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Failed") + exception.Message);
         }
         finally
         {
@@ -177,18 +185,18 @@ public sealed partial class EventKitPageViewModel : IDisposable
     {
         if (mOpenLocationAsync == null)
         {
-            ScanStatusText = "当前宿主不支持源码定位";
+            ScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Unsupported");
             return;
         }
 
         try
         {
             await mOpenLocationAsync(location);
-            ScanStatusText = "已打开 " + location.Display;
+            ScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.Opened") + location.Display;
         }
         catch (Exception exception)
         {
-            ScanStatusText = "打开失败：" + exception.Message;
+            ScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.OpenFailed") + exception.Message;
         }
     }
 
@@ -210,8 +218,38 @@ public sealed partial class EventKitPageViewModel : IDisposable
     /// <summary>停止页面后台扫描并释放取消资源。</summary>
     public void Dispose()
     {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         mScanGeneration++;
         mScanCancellation.Cancel();
         mScanCancellation.Dispose();
+    }
+
+    /// <summary>语言切换时重新投影页面状态、扫描状态、通道选项和计数派生文本。</summary>
+    private void OnCultureChanged()
+    {
+        OnPropertyChanged(nameof(ChannelOptions));
+        OnPropertyChanged(nameof(DataChannelText));
+        OnPropertyChanged(nameof(SelectedEventKey));
+        OnPropertyChanged(nameof(SelectedPayloadSummaryText));
+        OnPropertyChanged(nameof(SelectedHandlerCountText));
+        OnPropertyChanged(nameof(SelectedSendCountText));
+        OnPropertyChanged(nameof(SelectedActivityCountText));
+        OnPropertyChanged(nameof(EmptyDescription));
+        for (var index = 0; index < Events.Count; index++)
+        {
+            Events[index].RefreshLocalization();
+        }
+
+        if (string.Equals(EngineId, "未选择", StringComparison.Ordinal)
+            || string.Equals(EngineId, "Not selected", StringComparison.Ordinal))
+        {
+            EngineId = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.NotSelected");
+        }
+
+        if (string.Equals(Source, "等待数据", StringComparison.Ordinal)
+            || string.Equals(Source, "Waiting for data", StringComparison.Ordinal))
+        {
+            Source = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.WaitingData");
+        }
     }
 }

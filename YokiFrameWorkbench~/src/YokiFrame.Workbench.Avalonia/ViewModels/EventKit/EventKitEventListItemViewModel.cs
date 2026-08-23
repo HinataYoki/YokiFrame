@@ -1,5 +1,6 @@
 using YokiFrame.Tooling.Application.Models.EventKit;
 using YokiFrame.Tooling.Application.Models.EventKit.Scan;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.EventKit;
 
@@ -38,7 +39,7 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
         mEventKey = item.EventKey;
         mEventKeyDisplay = WorkbenchEventKitDisplayName.CreateEventKey(Channel, item.EventKey);
         mPayloadType = item.PayloadType;
-        mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(item.PayloadType, "无负载");
+        mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(item.PayloadType, NoPayloadText);
         mOpenLocationAsync = openLocationAsync;
         Apply(item);
     }
@@ -53,7 +54,7 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
         mEventKey = relation.EventKey;
         mEventKeyDisplay = WorkbenchEventKitDisplayName.CreateEventKey(Channel, relation.EventKey);
         mPayloadType = relation.PayloadType;
-        mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(relation.PayloadType, "无负载");
+        mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(relation.PayloadType, NoPayloadText);
         mOpenLocationAsync = openLocationAsync;
         Apply(relation);
     }
@@ -107,17 +108,21 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
     /// <summary>获取负载展示文本。</summary>
     public string PayloadDisplay => mPayloadDisplay;
     /// <summary>获取监听器数量文本。</summary>
-    public string HandlerCountText => HandlerCount + " 个监听器";
+    public string HandlerCountText => HandlerCount + " " + WorkbenchI18nService.Instance.GetString("String.EventKit.Status.HandlerCount");
     /// <summary>获取最后活动展示文本。</summary>
-    public string LastActivityText => string.IsNullOrWhiteSpace(LastTime) ? "暂无运行时活动" : LastTime;
+    public string LastActivityText => string.IsNullOrWhiteSpace(LastTime)
+        ? WorkbenchI18nService.Instance.GetString("String.EventKit.Status.NoRuntimeActivity")
+        : LastTime;
     /// <summary>获取发送位置数量文本。</summary>
-    public string SenderCountText => Senders.Count + " 处";
+    public string SenderCountText => FormatLocations(Senders.Count);
     /// <summary>获取注册位置数量文本。</summary>
-    public string ReceiverCountText => Receivers.Count + " 处";
+    public string ReceiverCountText => FormatLocations(Receivers.Count);
     /// <summary>获取注销位置数量文本。</summary>
-    public string UnregisterCountText => Unregisters.Count + " 处";
+    public string UnregisterCountText => FormatLocations(Unregisters.Count);
     /// <summary>获取发送、注册和注销位置的紧凑计数。</summary>
-    public string RelationCountText => "发 " + Senders.Count + " · 注 " + Receivers.Count + " · 销 " + Unregisters.Count;
+    public string RelationCountText => string.Format(
+        WorkbenchI18nService.Instance.GetString("String.EventKit.RelationCountTemplate", "发 {0} · 注 {1} · 销 {2}"),
+        Senders.Count, Receivers.Count, Unregisters.Count);
     /// <summary>获取是否存在静态发送位置。</summary>
     public bool HasSenders => Senders.Count > 0;
     /// <summary>获取是否缺少静态发送位置。</summary>
@@ -139,13 +144,13 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
     /// <summary>获取注销位置是否超过关系行展示上限。</summary>
     public bool HasUnregisterOverflow => UnregisterGroups.Count > MAX_VISIBLE_CODE_FILES;
     /// <summary>获取未直接展示的发送位置数量。</summary>
-    public string SenderOverflowText => "还有 " + Math.Max(0, SenderGroups.Count - MAX_VISIBLE_CODE_FILES) + " 个文件";
+    public string SenderOverflowText => FormatOverflow(SenderGroups.Count);
     /// <summary>获取未直接展示的注册位置数量。</summary>
-    public string ReceiverOverflowText => "还有 " + Math.Max(0, ReceiverGroups.Count - MAX_VISIBLE_CODE_FILES) + " 个文件";
+    public string ReceiverOverflowText => FormatOverflow(ReceiverGroups.Count);
     /// <summary>获取未直接展示的注销位置数量。</summary>
-    public string UnregisterOverflowText => "还有 " + Math.Max(0, UnregisterGroups.Count - MAX_VISIBLE_CODE_FILES) + " 个文件";
+    public string UnregisterOverflowText => FormatOverflow(UnregisterGroups.Count);
     /// <summary>获取带标签的主要负载信息。</summary>
-    public string PayloadSummaryText => "参数: " + PayloadDisplay;
+    public string PayloadSummaryText => WorkbenchI18nService.Instance.GetString("String.EventKit.Status.Parameter") + PayloadDisplay;
     /// <summary>获取静态发送与注册覆盖状态。</summary>
     public string FlowCoverageText => CreateFlowCoverageText();
     /// <summary>获取静态注册与注销调用点平衡状态。</summary>
@@ -284,7 +289,7 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
     {
         if (SetProperty(ref mPayloadType, value))
         {
-            mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(value, "无负载");
+            mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(value, NoPayloadText);
             OnPropertyChanged(nameof(PayloadDisplay));
             OnPropertyChanged(nameof(PayloadSummaryText));
         }
@@ -293,22 +298,56 @@ public sealed class EventKitEventListItemViewModel : ViewModelBase
     /// <summary>根据静态调用点判断发送与注册是否同时存在。</summary>
     private string CreateFlowCoverageText()
     {
-        if (!HasStaticRelation) return "静态关系未扫描";
-        if (HasSenders && HasReceivers) return "发送与注册均存在";
-        if (HasSenders) return "仅发送，未发现注册";
-        if (HasReceivers) return "仅注册，未发现发送";
-        return "未发现发送或注册";
+        if (!HasStaticRelation) return WorkbenchI18nService.Instance.GetString("String.EventKit.NoRelations");
+        if (HasSenders && HasReceivers) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.FlowBoth");
+        if (HasSenders) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.FlowSendOnly");
+        if (HasReceivers) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.FlowReceiveOnly");
+        return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.FlowNone");
     }
 
     /// <summary>根据静态调用点比较注册与注销数量，不替代运行时生命周期判断。</summary>
     private string CreateLifetimeBalanceText()
     {
-        if (!HasStaticRelation) return "平衡状态未知";
-        if (Receivers.Count == 0) return "无需判断注册注销";
-        if (Receivers.Count == Unregisters.Count) return "注册/注销数量平衡";
-        if (Unregisters.Count == 0) return "已注册，未发现注销";
-        return Receivers.Count > Unregisters.Count ? "注册多于注销" : "注销多于注册";
+        if (!HasStaticRelation) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceUnknown");
+        if (Receivers.Count == 0) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceNotApplicable");
+        if (Receivers.Count == Unregisters.Count) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceEqual");
+        if (Unregisters.Count == 0) return WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceMissing");
+        return Receivers.Count > Unregisters.Count
+            ? WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceMoreRegister")
+            : WorkbenchI18nService.Instance.GetString("String.EventKit.Status.BalanceMoreUnregister");
     }
+
+    /// <summary>语言切换时刷新事件行的数量、空状态和关系摘要。</summary>
+    internal void RefreshLocalization()
+    {
+        mPayloadDisplay = WorkbenchEventKitDisplayName.CreatePayload(mPayloadType, NoPayloadText);
+        OnPropertyChanged(nameof(PayloadDisplay));
+        OnPropertyChanged(nameof(SenderCountText));
+        OnPropertyChanged(nameof(ReceiverCountText));
+        OnPropertyChanged(nameof(UnregisterCountText));
+        OnPropertyChanged(nameof(RelationCountText));
+        OnPropertyChanged(nameof(HandlerCountText));
+        OnPropertyChanged(nameof(LastActivityText));
+        OnPropertyChanged(nameof(PayloadSummaryText));
+        OnPropertyChanged(nameof(SenderOverflowText));
+        OnPropertyChanged(nameof(ReceiverOverflowText));
+        OnPropertyChanged(nameof(UnregisterOverflowText));
+        OnPropertyChanged(nameof(FlowCoverageText));
+        OnPropertyChanged(nameof(LifetimeBalanceText));
+    }
+
+    /// <summary>把位置数量格式化为当前语言的计数文本。</summary>
+    private string FormatLocations(int count) => string.Format(
+        WorkbenchI18nService.Instance.GetString("String.EventKit.LocationsSuffixTemplate", "{0} 处"), count);
+
+    /// <summary>把溢出文件数量格式化为当前语言的提示文本。</summary>
+    private string FormatOverflow(int groupCount) => string.Format(
+        WorkbenchI18nService.Instance.GetString("String.EventKit.OverflowTemplate", "还有 {0} 个文件"),
+        Math.Max(0, groupCount - MAX_VISIBLE_CODE_FILES));
+
+    /// <summary>无负载占位文本。</summary>
+    private static string NoPayloadText =>
+        WorkbenchI18nService.Instance.GetString("String.EventKit.NoPayload", "无负载");
 
     /// <summary>更新监听器数量并通知派生展示属性。</summary>
     private void SetHandlerCount(int value)

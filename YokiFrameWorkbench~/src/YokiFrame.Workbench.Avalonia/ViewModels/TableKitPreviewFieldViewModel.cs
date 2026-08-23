@@ -1,4 +1,5 @@
 using System.Text.Json;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -60,8 +61,10 @@ public sealed class TableKitPreviewFieldViewModel
     private static string ResolveValueText(JsonElement element) => element.ValueKind switch
     {
         JsonValueKind.String => element.GetString() ?? string.Empty,
-        JsonValueKind.Array => element.GetArrayLength() + " 项",
-        JsonValueKind.Object => CountObjectProperties(element) + " 字段",
+        JsonValueKind.Array => string.Format(WorkbenchI18nService.Instance.GetString(
+            "String.TableKit.ItemsSuffixTemplate", "{0} 项"), element.GetArrayLength()),
+        JsonValueKind.Object => string.Format(WorkbenchI18nService.Instance.GetString(
+            "String.TableKit.FieldsSuffixTemplate", "{0} 字段"), CountObjectProperties(element)),
         JsonValueKind.Null => "null",
         _ => element.GetRawText()
     };

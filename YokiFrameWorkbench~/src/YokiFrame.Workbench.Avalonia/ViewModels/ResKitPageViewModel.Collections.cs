@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.ResKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.ResKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -16,7 +17,7 @@ public sealed partial class ResKitPageViewModel
     private string mSearchText = string.Empty;
     private ResKitResourceListItemViewModel? mSelectedResource;
     private int mResourceTotal;
-    private string mSourceStatusText = "选择资源后可按需读取 lease 来源";
+    private string mSourceStatusText = GetString(SourceIdleKey, "选择资源后可按需读取 lease 来源");
 
     /// <summary>获取或设置资源搜索文本。</summary>
     public string SearchText
@@ -50,7 +51,8 @@ public sealed partial class ResKitPageViewModel
     /// <summary>获取是否等待选择。</summary>
     public bool IsSelectionEmpty => !HasSelection;
     /// <summary>获取当前资源路径。</summary>
-    public string SelectedPath => SelectedResource?.Path ?? "未选择资源";
+    public string SelectedPath => SelectedResource?.Path
+        ?? GetString(NoResourceSelectedKey, "未选择资源");
     /// <summary>获取当前资源类型。</summary>
     public string SelectedTypeName => SelectedResource?.TypeName ?? "--";
     /// <summary>获取当前资源状态。</summary>
@@ -64,7 +66,8 @@ public sealed partial class ResKitPageViewModel
     /// <summary>获取当前已跟踪来源数量。</summary>
     public int SelectedTrackedSourceCount => SelectedResource?.TrackedSourceCount ?? 0;
     /// <summary>获取来源数量文本。</summary>
-    public string SourceCountText => Sources.Count + " 条";
+    public string SourceCountText => string.Format(
+        GetString(ItemsSuffixTemplateKey, "{0} 条"), Sources.Count);
 
     /// <summary>协调完整资源集合并复用同身份行。</summary>
     private void ReconcileResources(WorkbenchResKitState state)
@@ -175,7 +178,7 @@ public sealed partial class ResKitPageViewModel
         ResKitResourceListItemViewModel? selected = SelectedResource;
         if (selected == null)
         {
-            SourceStatusText = "选择资源后可读取 lease 来源";
+            SourceStatusText = GetString(SourceSelectKey, "选择资源后可读取 lease 来源");
             NotifySourceProperties();
             return;
         }
@@ -195,13 +198,17 @@ public sealed partial class ResKitPageViewModel
         if (Sources.Count == 0)
         {
             return selected.TrackedSourceCount > 0
-                ? "当前状态尚无来源预览，可点击读取完整来源"
-                : "当前资源没有已跟踪的 lease 来源";
+                ? GetString(SourcePreviewNoneYetKey, "当前状态尚无来源预览，可点击读取完整来源")
+                : GetString(SourcePreviewNoneTrackedKey, "当前资源没有已跟踪的 lease 来源");
         }
 
         return selected.SourcesTruncated
-            ? "v" + mVersion + " · 已预览 " + Sources.Count + " / " + selected.SourceTotal + " 条来源，点击读取完整来源"
-            : "v" + mVersion + " · 已从实时状态读取 " + Sources.Count + " 条来源";
+            ? string.Format(
+                GetString(SourcePreviewPartialTemplateKey, "v{0} · 已预览 {1} / {2} 条来源，点击读取完整来源"),
+                mVersion, Sources.Count, selected.SourceTotal)
+            : string.Format(
+                GetString(SourcePreviewFullTemplateKey, "v{0} · 已从实时状态读取 {1} 条来源"),
+                mVersion, Sources.Count);
     }
 
     /// <summary>通知来源集合、空状态和计数绑定重新读取。</summary>
@@ -235,4 +242,28 @@ public sealed partial class ResKitPageViewModel
         OnPropertyChanged(nameof(HasNoSearchResults));
         OnPropertyChanged(nameof(SearchEmptyText));
     }
+
+    /// <summary>来源查询空闲提示资源 key。</summary>
+    private const string SourceIdleKey = "String.ResKit.SourceIdle";
+
+    /// <summary>未选择资源占位资源 key。</summary>
+    private const string NoResourceSelectedKey = "String.ResKit.NoResourceSelected";
+
+    /// <summary>来源计数后缀模板资源 key。</summary>
+    private const string ItemsSuffixTemplateKey = "String.ResKit.ItemsSuffixTemplate";
+
+    /// <summary>选择资源后读取来源提示资源 key。</summary>
+    private const string SourceSelectKey = "String.ResKit.SourceSelect";
+
+    /// <summary>尚无来源预览提示资源 key。</summary>
+    private const string SourcePreviewNoneYetKey = "String.ResKit.SourcePreviewNoneYet";
+
+    /// <summary>无已跟踪来源提示资源 key。</summary>
+    private const string SourcePreviewNoneTrackedKey = "String.ResKit.SourcePreviewNoneTracked";
+
+    /// <summary>部分预览模板资源 key。</summary>
+    private const string SourcePreviewPartialTemplateKey = "String.ResKit.SourcePreviewPartialTemplate";
+
+    /// <summary>完整预览模板资源 key。</summary>
+    private const string SourcePreviewFullTemplateKey = "String.ResKit.SourcePreviewFullTemplate";
 }

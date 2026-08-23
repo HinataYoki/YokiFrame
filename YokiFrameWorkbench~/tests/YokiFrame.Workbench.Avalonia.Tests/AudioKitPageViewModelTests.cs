@@ -43,11 +43,10 @@ public sealed class AudioKitPageViewModelTests
         Assert.Contains("SelectedBusChannel", xaml, StringComparison.Ordinal);
         Assert.Contains("AudioVoiceRowTemplate", xaml, StringComparison.Ordinal);
         Assert.Contains("ProgressBar", xaml, StringComparison.Ordinal);
-        Assert.Contains("AudioHistoryRowTemplate", xaml, StringComparison.Ordinal);
-        Assert.Contains("播放历史", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("播放历史") || xaml.Contains("String.AudioKit.PlaybackHistory"), "AudioKit 页面应包含播放历史词条");
         Assert.Contains("audiokit-index-drawer", xaml, StringComparison.Ordinal);
-        Assert.Contains("扫描预览", xaml, StringComparison.Ordinal);
-        Assert.Contains("生成索引", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("扫描预览") || xaml.Contains("String.AudioKit.ScanPreview"), "AudioKit 页面应包含扫描预览词条");
+        Assert.True(xaml.Contains("生成索引") || xaml.Contains("String.AudioKit.Generate"), "AudioKit 页面应包含生成索引词条");
         Assert.Contains("LostFocus=\"OnIndexSettingLostFocus\"", xaml, StringComparison.Ordinal);
         Assert.Contains(
             "ScanFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",

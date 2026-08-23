@@ -11,6 +11,8 @@
         <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Spacing.axaml"/>
         <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Radius.axaml"/>
         <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/Shadows.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/I18n/Strings.en-US.axaml"/>
+        <ResourceInclude Source="avares://YokiFrame.Workbench.Avalonia/Resources/I18n/Strings.zh-CN.axaml"/>
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

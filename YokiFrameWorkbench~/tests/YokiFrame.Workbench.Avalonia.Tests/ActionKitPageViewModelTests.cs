@@ -133,15 +133,17 @@ public sealed partial class ActionKitPageViewModelTests
         Assert.Contains("ActionKitTreeViewItemTheme", xaml, StringComparison.Ordinal);
         Assert.Contains("FilteredRoots", xaml, StringComparison.Ordinal);
         Assert.Contains("actionkit-type-badge sequence", xaml, StringComparison.Ordinal);
-        Assert.Contains("ActionKitNodeInspectorView", xaml, StringComparison.Ordinal);
-        Assert.Contains("节点详情", inspector, StringComparison.Ordinal);
+        Assert.True(inspector.Contains("节点详情") || inspector.Contains("String.ActionKit.NodeDetails"), "Inspector 应包含节点详情词条");
         Assert.DoesNotContain("actionkit-summary-strip", xaml, StringComparison.Ordinal);
         Assert.Contains("ActionKitPage.ToggleStackTraceCommand", shell, StringComparison.Ordinal);
         Assert.Contains("ActionKitPage.ClearStackTraceCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("清空历史", shell, StringComparison.Ordinal);
-        Assert.Contains("不影响最近终态记录", shell, StringComparison.Ordinal);
+        Assert.True(shell.Contains("清空历史") || shell.Contains("String.Common.ClearHistory"), "Shell 应包含清空历史词条");
+        // 清空 Start 帧按钮的提示在 i18n 切片中拆分为独立的 Tooltip / AutomationName 资源 key。
+        Assert.True(
+            shell.Contains("不影响最近终态记录") || shell.Contains("String.ActionKit.ClearStackTraceTooltip"),
+            "Shell 应包含清空 Start 帧不影响终态记录的提示");
         Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", shell, StringComparison.Ordinal);
-        Assert.Contains("从左侧选择一个活动根以检查执行流程", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("从左侧选择一个活动根以检查执行流程") || xaml.Contains("String.ActionKit.SelectRootToInspect"), "页面应包含未选中根时的提示");
         Assert.Contains("SelectedFlowNodes", xaml, StringComparison.Ordinal);
         Assert.Contains("ActionKitTreeIndentConverter", styles, StringComparison.Ordinal);
         Assert.Contains("IsExpanded\" Value=\"True", styles, StringComparison.Ordinal);

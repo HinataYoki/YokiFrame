@@ -1,5 +1,6 @@
 using System.Text.Json;
 using YokiFrame.Tooling.Application.Models.TableKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -33,8 +34,10 @@ public sealed class TableKitPreviewTableViewModel
     public bool IsRecordPreviewTruncated { get; }
     /// <summary>获取用于记录列表页头的完整或受限预览摘要。</summary>
     public string RecordSummary => IsRecordPreviewTruncated
-        ? "显示 " + Records.Count + " / " + Count + " 条"
-        : Count + " 条记录";
+        ? string.Format(WorkbenchI18nService.Instance.GetString(
+            "String.TableKit.RecordSummaryTruncatedTemplate", "显示 {0} / {1} 条"), Records.Count, Count)
+        : string.Format(WorkbenchI18nService.Instance.GetString(
+            "String.TableKit.RecordCountTemplate", "{0} 条记录"), Count);
 
     /// <summary>解析常见 Luban JSON 结构，至多物化固定数量的记录以限制编辑器开销。</summary>
     /// <param name="json">完整表 JSON。</param>

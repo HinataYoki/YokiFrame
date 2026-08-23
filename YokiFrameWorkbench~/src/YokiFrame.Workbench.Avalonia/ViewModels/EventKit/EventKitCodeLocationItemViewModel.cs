@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Models.EventKit.Scan;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.EventKit;
 
@@ -29,7 +30,9 @@ public sealed class EventKitCodeLocationItemViewModel
     /// <summary>获取显示文本。</summary>
     public string Display => Location.Display;
     /// <summary>获取屏幕阅读器使用的完整打开位置说明。</summary>
-    public string OpenAutomationName => "打开 " + FilePath + ":" + Line;
+    public string OpenAutomationName => string.Format(
+        WorkbenchI18nService.Instance.GetString("String.EventKit.OpenLocationTemplate", "打开 {0}"),
+        FilePath + ":" + Line);
     /// <summary>获取通过宿主代码编辑器打开位置的命令。</summary>
     public ICommand OpenCommand { get; }
 

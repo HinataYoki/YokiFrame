@@ -1,5 +1,6 @@
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Workbench.Avalonia.Pages;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -253,8 +254,12 @@ public sealed partial class WorkbenchShellViewModel
         WorkbenchPageModule module,
         IReadOnlyList<WorkbenchDisplaySection> sections)
     {
-        CurrentPageTitle = module.PageTitle;
-        CurrentPageDescription = module.Description;
+        CurrentPageTitle = WorkbenchI18nService.Instance.GetString(
+            "String.Page." + module.PageName + ".Title",
+            module.PageTitle);
+        CurrentPageDescription = WorkbenchI18nService.Instance.GetString(
+            "String.Page." + module.PageName + ".Description",
+            module.Description);
         CurrentSections = sections;
         IsOverviewPage = module.Presentation == WorkbenchPagePresentation.Overview;
         IsDetailPage = module.Presentation == WorkbenchPagePresentation.Detail;
@@ -400,6 +405,12 @@ public sealed partial class WorkbenchShellViewModel
     /// <returns>左侧导航分组。</returns>
     private static IReadOnlyList<WorkbenchNavigationGroup> CreatePageNavigationGroups()
     {
-        return sPageCatalog.CreateNavigationGroups();
+        return sPageCatalog.CreateLocalizedNavigationGroups(
+            static group => group switch
+            {
+                "工作台" => WorkbenchI18nService.Instance.GetString("String.Nav.Workspace", "工作台"),
+                _ => group
+            },
+            static (pageName, displayName) => WorkbenchI18nService.Instance.GetString("String.Nav." + pageName, displayName));
     }
 }

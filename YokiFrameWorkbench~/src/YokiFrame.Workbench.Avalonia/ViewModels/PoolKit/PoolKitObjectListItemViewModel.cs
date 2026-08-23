@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Models.PoolKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.PoolKit;
 
@@ -37,7 +38,8 @@ public sealed class PoolKitObjectListItemViewModel
     /// <summary>获取完整源码位置文本。</summary>
     public string FullSourceText => SourceFile + ":" + SourceLine;
     /// <summary>获取屏幕阅读器使用的完整定位说明。</summary>
-    public string OpenAutomationName => "打开 " + FullSourceText;
+    public string OpenAutomationName => string.Format(
+        GetString("String.PoolKit.OpenLocationTemplate", "打开 {0}"), FullSourceText);
     /// <summary>获取通过宿主代码编辑器打开位置的命令。</summary>
     public ICommand OpenCommand { get; }
 
@@ -50,5 +52,11 @@ public sealed class PoolKitObjectListItemViewModel
     private async Task OpenAsync()
     {
         if (mOpenLocationAsync != null) await mOpenLocationAsync(Item);
+    }
+
+    /// <summary>从当前语言资源读取 PoolKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

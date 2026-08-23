@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.EventKit;
 using YokiFrame.Tooling.Application.Models.EventKit.Scan;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.EventKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -10,8 +11,12 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 /// </summary>
 public sealed partial class EventKitPageViewModel : ViewModelBase
 {
-    private static readonly IReadOnlyList<string> sChannelOptions =
-        new[] { "全部", "Enum", "Type", "String" };
+    /// <summary>通道筛选“全部”的不变哨兵值；展示文本由资源投影。</summary>
+    internal const string CHANNEL_ALL = "all";
+    private static IReadOnlyList<string> CreateChannelOptions() => new[]
+    {
+        WorkbenchI18nService.Instance.GetString("String.EventKit.ChannelAll", "全部"), "Enum", "Type", "String"
+    };
     private readonly Dictionary<string, EventKitEventListItemViewModel> mItemsByIdentity =
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, WorkbenchEventKitEvent> mRuntimeEventsByIdentity =
@@ -30,11 +35,11 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
         Array.Empty<WorkbenchEventKitActivity>();
     private EventKitEventListItemViewModel? mSelectedEvent;
     private string mSearchText = string.Empty;
-    private string mSelectedChannel = "全部";
-    private string mEngineId = "未选择";
+    private string mSelectedChannel = CHANNEL_ALL;
+    private string mEngineId = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.NotSelected");
     private string mSessionId = string.Empty;
     private string mMode = string.Empty;
-    private string mSource = "等待数据";
+    private string mSource = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.WaitingData");
     private string mStaleReason = string.Empty;
     private long mGeneration;
     private long mVersion;
@@ -58,14 +63,15 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
     {
         mOpenLocationAsync = openLocationAsync;
         InitializeCodeScan(scanAsync);
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
     }
 
     /// <summary>获取筛选后的稳定事件列表。</summary>
     public ObservableCollection<EventKitEventListItemViewModel> Events { get; } = new();
     /// <summary>获取当前选择的有界时间线。</summary>
     public ObservableCollection<WorkbenchEventKitActivity> SelectedActivities { get; } = new();
-    /// <summary>获取可选 Runtime 通道。</summary>
-    public IReadOnlyList<string> ChannelOptions => sChannelOptions;
+    /// <summary>获取可选 Runtime 通道；“全部”展示文本随语言投影。</summary>
+    public IReadOnlyList<string> ChannelOptions => CreateChannelOptions();
 
     /// <summary>获取或设置搜索文本。</summary>
     public string SearchText
@@ -86,7 +92,7 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
         get => mSelectedChannel;
         set
         {
-            if (SetProperty(ref mSelectedChannel, value ?? "全部"))
+            if (SetProperty(ref mSelectedChannel, NormalizeChannelFilter(value)))
             {
                 ReconcileVisibleEvents();
             }
@@ -155,7 +161,8 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
     /// <summary>获取近期活动数量。</summary>
     public string RecentActivityCountText => mAllActivities.Count.ToString();
     /// <summary>获取所选事件键。</summary>
-    public string SelectedEventKey => SelectedEvent?.EventKeyDisplay ?? "未选择";
+    public string SelectedEventKey => SelectedEvent?.EventKeyDisplay
+        ?? WorkbenchI18nService.Instance.GetString("String.EventKit.Status.NotSelected");
     /// <summary>获取所选事件是否属于 Type 通道。</summary>
     public bool SelectedIsType => SelectedEvent?.IsType == true;
     /// <summary>获取所选事件是否属于 Enum 通道。</summary>
@@ -165,17 +172,20 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
     /// <summary>获取所选负载。</summary>
     public string SelectedPayloadText => SelectedEvent?.PayloadDisplay ?? "--";
     /// <summary>获取与中央事件节点一致的所选负载摘要。</summary>
-    public string SelectedPayloadSummaryText => "参数: " + SelectedPayloadText;
+    public string SelectedPayloadSummaryText => WorkbenchI18nService.Instance.GetString("String.EventKit.Status.Parameter") + SelectedPayloadText;
     /// <summary>获取所选监听器数量。</summary>
-    public string SelectedHandlerCountText => SelectedEvent?.HandlerCountText ?? "0 个监听器";
+    public string SelectedHandlerCountText => SelectedEvent?.HandlerCountText
+        ?? "0 " + WorkbenchI18nService.Instance.GetString("String.EventKit.Status.HandlerCount");
     /// <summary>获取所选发送活动数量。</summary>
-    public string SelectedSendCountText => CountSelectedActivities("send") + " 次发送";
+    public string SelectedSendCountText => CountSelectedActivities("send") + " "
+        + WorkbenchI18nService.Instance.GetString("String.EventKit.Status.SendCount");
     /// <summary>获取所选时间线数量。</summary>
-    public string SelectedActivityCountText => SelectedActivities.Count + " 条活动";
+    public string SelectedActivityCountText => SelectedActivities.Count + " "
+        + WorkbenchI18nService.Instance.GetString("String.EventKit.Status.ActivityCount");
     /// <summary>获取无数据时的真实说明。</summary>
     public string EmptyDescription => string.IsNullOrWhiteSpace(StaleReason)
-        ? "尚未扫描到 EventKit 调用，也没有观察到运行时活动。"
-        : "EventKit 状态不可用：" + StaleReason;
+        ? WorkbenchI18nService.Instance.GetString("String.EventKit.Status.EmptyDescription")
+        : WorkbenchI18nService.Instance.GetString("String.EventKit.Status.Unavailable") + StaleReason;
 
     /// <summary>应用低频 dashboard 状态；同宿主的旧版本不会覆盖较新的 Telemetry。</summary>
     public void ApplyPeriodicState(WorkbenchEventKitState? state)
@@ -264,11 +274,11 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
         ReconcileEventItems(Array.Empty<WorkbenchEventKitEvent>());
         SelectedActivities.Clear();
         mAllActivities = Array.Empty<WorkbenchEventKitActivity>();
-        EngineId = "未选择";
+        EngineId = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.NotSelected");
         SessionId = string.Empty;
         Generation = 0L;
         Mode = string.Empty;
-        Source = "等待数据";
+        Source = WorkbenchI18nService.Instance.GetString("String.EventKit.Status.WaitingData");
         StaleReason = string.Empty;
         Version = 0L;
         Sequence = 0L;
@@ -339,5 +349,22 @@ public sealed partial class EventKitPageViewModel : ViewModelBase
         if (channel == "Type") return 1;
         if (channel == "String") return 2;
         return 3;
+    }
+
+    /// <summary>把界面传入的通道值归一化；“全部”/"All"统一映射到不变哨兵，其余原样保留。</summary>
+    private static string NormalizeChannelFilter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return CHANNEL_ALL;
+        }
+
+        return value.Trim() switch
+        {
+            CHANNEL_ALL => CHANNEL_ALL,
+            "全部" => CHANNEL_ALL,
+            "All" => CHANNEL_ALL,
+            _ => value.Trim()
+        };
     }
 }

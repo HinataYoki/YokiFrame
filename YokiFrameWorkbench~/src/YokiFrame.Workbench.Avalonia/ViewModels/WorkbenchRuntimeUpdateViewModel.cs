@@ -61,7 +61,9 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
     public bool IsBuilding => mIsBuilding;
 
     /// <summary>获取当前构建按钮文本。</summary>
-    public string ButtonText => mIsBuilding ? "正在编译..." : "有新版可编译";
+    public string ButtonText => mIsBuilding
+        ? GetString("String.RuntimeUpdate.Building", "正在编译...")
+        : GetString("String.RuntimeUpdate.Available", "有新版可编译");
 
     /// <summary>获取新版检测或构建结果。</summary>
     public string StatusText
@@ -129,7 +131,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
             if (!mDisposed)
             {
                 Trace.TraceError("Workbench Runtime update check failed: {0}", exception);
-                StatusText = "新版检测失败";
+                StatusText = GetString("String.RuntimeUpdate.CheckFailed", "新版检测失败");
             }
         }
     }
@@ -147,7 +149,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
             if (!mDisposed)
             {
                 SetUpdateAvailable(false);
-                StatusText = "新版已编译，重新打开后生效";
+                StatusText = GetString("String.RuntimeUpdate.Rebuilt", "新版已编译，重新打开后生效");
             }
         }
         catch (OperationCanceledException) when (mLifetimeToken.IsCancellationRequested)
@@ -158,7 +160,7 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
             if (!mDisposed)
             {
                 Trace.TraceError("Workbench Runtime rebuild failed: {0}", exception);
-                StatusText = "新版编译失败";
+                StatusText = GetString("String.RuntimeUpdate.BuildFailed", "新版编译失败");
             }
         }
         finally
@@ -201,5 +203,11 @@ public sealed class WorkbenchRuntimeUpdateViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(IsBuilding));
         OnPropertyChanged(nameof(ButtonText));
+    }
+
+    /// <summary>从当前语言资源读取 Runtime 更新文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return YokiFrame.Workbench.Avalonia.Services.WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

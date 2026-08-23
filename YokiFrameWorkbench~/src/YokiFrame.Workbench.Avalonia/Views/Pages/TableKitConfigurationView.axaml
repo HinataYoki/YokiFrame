@@ -17,8 +17,8 @@
             <Grid ColumnDefinitions="3,*,Auto" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="环境与路径配置" Classes="section-title" />
-                <TextBlock Text="Luban 工作目录与工具入口" Classes="tablekit-hint" />
+                <TextBlock Text="{DynamicResource String.TableKit.LubanPaths}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.LubanPathsHint}" Classes="tablekit-hint" />
               </StackPanel>
               <TextBlock Grid.Column="2"
                          Text="{CompiledBinding LubanStatusText}"
@@ -26,17 +26,17 @@
                          VerticalAlignment="Center" />
             </Grid>
             <Grid ColumnDefinitions="92,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-              <TextBlock Text="工作目录" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Text="{DynamicResource String.TableKit.LubanWorkDir}" Classes="muted" VerticalAlignment="Center" />
               <TextBox x:Name="TableKitLubanWorkDir"
                        Grid.Column="1"
                        Text="{CompiledBinding LubanWorkDir, Mode=TwoWay}"
                        IsReadOnly="True"
                        ToolTip.Tip="{CompiledBinding LubanWorkDir}"
-                       AutomationProperties.Name="Luban 工作目录" />
+                       AutomationProperties.Name="{DynamicResource String.TableKit.LubanWorkDirAutomationName}" />
               <Button Grid.Column="2"
                       Command="{CompiledBinding BrowseLubanWorkDirCommand}"
                       Classes="secondary compact-action"
-                      AutomationProperties.Name="选择 Luban 工作目录">
+                      AutomationProperties.Name="{DynamicResource String.TableKit.BrowseLubanWorkDir}">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
               <TextBlock Grid.Row="1" Text="Luban.dll" Classes="muted" VerticalAlignment="Center" />
@@ -46,13 +46,13 @@
                        Text="{CompiledBinding LubanExecutablePath, Mode=TwoWay}"
                        IsReadOnly="True"
                        ToolTip.Tip="{CompiledBinding LubanExecutablePath}"
-                       AutomationProperties.Name="Luban 工具路径" />
+                       AutomationProperties.Name="{DynamicResource String.TableKit.LubanExecutableAutomationName}" />
               <Button Grid.Row="1"
                       Grid.Column="2"
                       Command="{CompiledBinding BrowseLubanExecutableCommand}"
                       Classes="secondary compact-action"
-                      ToolTip.Tip="选择 Luban.dll"
-                      AutomationProperties.Name="选择 Luban.dll">
+                       ToolTip.Tip="{DynamicResource String.TableKit.SelectLubanDll}"
+                       AutomationProperties.Name="{DynamicResource String.TableKit.SelectLubanDll}">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
             </Grid>
@@ -64,8 +64,8 @@
             <Grid ColumnDefinitions="3,*" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="目标与输出" Classes="section-title" />
-                <TextBlock Text="Luban target 与正式输出目录" Classes="tablekit-hint" />
+                <TextBlock Text="{DynamicResource String.TableKit.TargetConfig}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.TargetConfigHint}" Classes="tablekit-hint" />
               </StackPanel>
             </Grid>
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
@@ -89,32 +89,32 @@
               </StackPanel>
             </Grid>
             <Grid ColumnDefinitions="92,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-              <TextBlock Text="数据输出" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Text="{DynamicResource String.TableKit.OutputDataDir}" Classes="muted" VerticalAlignment="Center" />
               <TextBox x:Name="TableKitOutputDataDir"
                        Grid.Column="1"
                        Text="{CompiledBinding OutputDataDir, Mode=TwoWay}"
                        IsReadOnly="True"
                        ToolTip.Tip="{CompiledBinding OutputDataDir}"
-                       AutomationProperties.Name="TableKit 数据输出目录" />
+                       AutomationProperties.Name="{DynamicResource String.TableKit.OutputDataAutomationName}" />
               <Button Grid.Column="2"
                       Command="{CompiledBinding BrowseOutputDataCommand}"
                       Classes="secondary compact-action"
-                      AutomationProperties.Name="选择数据输出目录">
+                      AutomationProperties.Name="{DynamicResource String.TableKit.BrowseDataDirectory}">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
-              <TextBlock Grid.Row="1" Text="代码输出" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="1" Text="{DynamicResource String.TableKit.OutputCodeDir}" Classes="muted" VerticalAlignment="Center" />
               <TextBox x:Name="TableKitOutputCodeDir"
                        Grid.Row="1"
                        Grid.Column="1"
                        Text="{CompiledBinding OutputCodeDir, Mode=TwoWay}"
                        IsReadOnly="True"
                        ToolTip.Tip="{CompiledBinding OutputCodeDir}"
-                       AutomationProperties.Name="TableKit 代码输出目录" />
+                       AutomationProperties.Name="{DynamicResource String.TableKit.OutputCodeAutomationName}" />
               <Button Grid.Row="1"
                       Grid.Column="2"
                       Command="{CompiledBinding BrowseOutputCodeCommand}"
                       Classes="secondary compact-action"
-                      AutomationProperties.Name="选择代码输出目录">
+                      AutomationProperties.Name="{DynamicResource String.TableKit.BrowseCodeDirectory}">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
             </Grid>
@@ -128,14 +128,14 @@
             <Grid ColumnDefinitions="3,*,Auto" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="额外输出目标" Classes="section-title" />
-                <TextBlock Text="JSON、Lua、protobuf 等附加数据" Classes="tablekit-hint" />
+                <TextBlock Text="{DynamicResource String.TableKit.ExtraTargets}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.ExtraTargetsHint}" Classes="tablekit-hint" />
               </StackPanel>
               <Button Grid.Column="2"
                       Command="{CompiledBinding AddExtraOutputCommand}"
                       Classes="secondary compact-action"
-                      AutomationProperties.Name="添加额外输出目标">
-                <TextBlock Text="添加目标" />
+                       AutomationProperties.Name="{DynamicResource String.TableKit.AddExtraTargetAutomationName}">
+                <TextBlock Text="{DynamicResource String.TableKit.AddExtraTarget}" />
               </Button>
             </Grid>
             <ScrollViewer x:Name="TableKitExtraOutputScroll"
@@ -144,7 +144,7 @@
                           HorizontalScrollBarVisibility="Disabled"
                           HorizontalContentAlignment="Stretch">
               <StackPanel Spacing="8">
-                <TextBlock Text="未配置额外输出目标"
+                <TextBlock Text="{DynamicResource String.TableKit.NoExtraTargets}"
                            Classes="tablekit-hint"
                            IsVisible="{CompiledBinding !HasExtraOutputTargets}" />
                 <ItemsControl ItemsSource="{CompiledBinding ExtraOutputTargets}">
@@ -174,13 +174,13 @@
                                   Command="{CompiledBinding RemoveCommand}"
                                   Classes="ghost icon"
                                   VerticalAlignment="Bottom"
-                                  ToolTip.Tip="移除额外输出目标"
-                                  AutomationProperties.Name="移除额外输出目标">
+                                  ToolTip.Tip="{DynamicResource String.TableKit.RemoveTarget}"
+                                   AutomationProperties.Name="{DynamicResource String.TableKit.RemoveTargetAutomationName}">
                             <PathIcon Data="{StaticResource Icon.Trash2}" Width="14" Height="14" />
                           </Button>
                         </Grid>
                         <Grid Grid.Row="1" ColumnDefinitions="92,*,Auto" ColumnSpacing="6">
-                          <TextBlock Text="数据目录" Classes="muted" VerticalAlignment="Center" />
+                          <TextBlock Text="{DynamicResource String.TableKit.OutputDataDir}" Classes="muted" VerticalAlignment="Center" />
                           <TextBox Grid.Column="1"
                                    Text="{CompiledBinding OutputDataDir, Mode=TwoWay}"
                                    IsReadOnly="True"
@@ -188,13 +188,13 @@
                           <Button Grid.Column="2"
                                   Command="{CompiledBinding BrowseDataCommand}"
                                   Classes="secondary compact-action"
-                                  ToolTip.Tip="选择额外数据输出目录"
-                                  AutomationProperties.Name="选择额外数据输出目录">
+                                   ToolTip.Tip="{DynamicResource String.TableKit.BrowseDataDirectory}"
+                                   AutomationProperties.Name="{DynamicResource String.TableKit.BrowseDataDirectory}">
                             <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
                           </Button>
                         </Grid>
                         <Grid Grid.Row="2" ColumnDefinitions="92,*,Auto" ColumnSpacing="6">
-                          <TextBlock Text="代码目录" Classes="muted" VerticalAlignment="Center" />
+                          <TextBlock Text="{DynamicResource String.TableKit.OutputCodeDir}" Classes="muted" VerticalAlignment="Center" />
                           <TextBox Grid.Column="1"
                                    Text="{CompiledBinding OutputCodeDir, Mode=TwoWay}"
                                    IsReadOnly="True"
@@ -202,8 +202,8 @@
                           <Button Grid.Column="2"
                                   Command="{CompiledBinding BrowseCodeCommand}"
                                   Classes="secondary compact-action"
-                                  ToolTip.Tip="选择额外代码输出目录"
-                                  AutomationProperties.Name="选择额外代码输出目录">
+                                   ToolTip.Tip="{DynamicResource String.TableKit.BrowseCodeDirectory}"
+                                   AutomationProperties.Name="{DynamicResource String.TableKit.BrowseCodeDirectory}">
                             <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
                           </Button>
                         </Grid>
@@ -227,19 +227,19 @@
             <Grid ColumnDefinitions="3,*" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="TableKit 路径" Classes="section-title" />
-                <TextBlock Text="编辑器预览与 Runtime 资源定位" Classes="tablekit-hint" />
+                <TextBlock Text="{DynamicResource String.TableKit.RuntimePath}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.RuntimePathHint}" Classes="tablekit-hint" />
               </StackPanel>
             </Grid>
             <Grid ColumnDefinitions="104,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-              <TextBlock Text="资源可寻址" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Text="{DynamicResource String.TableKit.ResourceAddressable}" Classes="muted" VerticalAlignment="Center" />
               <ToggleSwitch x:Name="TableKitAddressableToggle"
                             Grid.Column="1"
                             Grid.ColumnSpan="2"
                             HorizontalAlignment="Left"
                             Classes="logkit-editor"
-                            OnContent="开"
-                            OffContent="关"
+                            OnContent="{DynamicResource String.LogKit.On}"
+                            OffContent="{DynamicResource String.LogKit.Off}"
                             IsChecked="{CompiledBinding IsAddressable, Mode=TwoWay}"
                             AutomationProperties.AutomationId="tablekit.location.addressable" />
               <Grid x:Name="TableKitRuntimePathRow"
@@ -247,7 +247,7 @@
                     Grid.ColumnSpan="3"
                     ColumnDefinitions="104,*,Auto"
                     IsVisible="{CompiledBinding IsRuntimePathVisible}">
-                <TextBlock Text="运行时地址模板" Classes="muted" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource String.TableKit.RuntimePathPattern}" Classes="muted" VerticalAlignment="Center" />
                 <TextBox x:Name="TableKitRuntimePathPattern"
                          Grid.Column="1"
                          Grid.ColumnSpan="2"
@@ -255,13 +255,13 @@
                          PlaceholderText="Art/Table/{0}" />
               </Grid>
               <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="104,*">
-                <TextBlock Text="定位结果" Classes="muted" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource String.TableKit.LocationPreview}" Classes="muted" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1"
                            Text="{CompiledBinding RuntimeLocationPreview}"
                            Classes="mono tablekit-hint"
                            TextWrapping="Wrap" />
               </Grid>
-              <TextBlock Grid.Row="3" Text="编辑器数据" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="3" Text="{DynamicResource String.TableKit.EditorDataPath}" Classes="muted" VerticalAlignment="Center" />
               <TextBox Grid.Row="3"
                        Grid.Column="1"
                        Text="{CompiledBinding EditorDataPath, Mode=TwoWay}"
@@ -272,16 +272,16 @@
                       Command="{CompiledBinding BrowseEditorDataCommand}"
                       Classes="secondary compact-action"
                       IsEnabled="{CompiledBinding CustomEditorDataPath}"
-                      AutomationProperties.Name="选择编辑器数据目录">
+                       AutomationProperties.Name="{DynamicResource String.TableKit.BrowseEditorDataDirectory}">
                 <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
               </Button>
             </Grid>
             <Grid ColumnDefinitions="*,Auto" MinHeight="34">
-              <TextBlock Text="自定义编辑器数据路径" VerticalAlignment="Center" />
+              <TextBlock Text="{DynamicResource String.TableKit.CustomEditorPath}" VerticalAlignment="Center" />
               <ToggleSwitch Grid.Column="1"
                             Classes="logkit-editor"
-                            OnContent="开"
-                            OffContent="关"
+                            OnContent="{DynamicResource String.LogKit.On}"
+                            OffContent="{DynamicResource String.LogKit.Off}"
                             IsChecked="{CompiledBinding CustomEditorDataPath, Mode=TwoWay}" />
             </Grid>
           </StackPanel>
@@ -292,32 +292,31 @@
             <Grid ColumnDefinitions="3,*" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="生成选项" Classes="section-title" />
-                <TextBlock Text="代码程序集与资源加载策略" Classes="tablekit-hint" />
+                <TextBlock Text="{DynamicResource String.TableKit.AdvancedOptions}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.AdvancedOptionsHint}" Classes="tablekit-hint" />
               </StackPanel>
             </Grid>
             <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto" RowSpacing="5">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="34">
-                <TextBlock Text="生成 Unity asmdef" VerticalAlignment="Center" />
-                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding UseAssemblyDefinition, Mode=TwoWay}" />
+                <TextBlock Text="{DynamicResource String.TableKit.UseAsmdef}" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="{DynamicResource String.LogKit.On}" OffContent="{DynamicResource String.LogKit.Off}" IsChecked="{CompiledBinding UseAssemblyDefinition, Mode=TwoWay}" />
               </Grid>
               <Grid Grid.Column="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="34">
-                <TextBlock Text="生成外部类型转换器" VerticalAlignment="Center" />
-                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding GenerateExternalTypeUtil, Mode=TwoWay}" />
+                <TextBlock Text="{DynamicResource String.TableKit.ExternalTypeUtil}" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="{DynamicResource String.LogKit.On}" OffContent="{DynamicResource String.LogKit.Off}" IsChecked="{CompiledBinding GenerateExternalTypeUtil, Mode=TwoWay}" />
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="34">
-                <TextBlock Text="原始资源加载" VerticalAlignment="Center" />
-                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="开" OffContent="关" IsChecked="{CompiledBinding UseRawResourceLoading, Mode=TwoWay}" />
+                <TextBlock Text="{DynamicResource String.TableKit.RawResourceLoading}" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" Classes="logkit-editor" OnContent="{DynamicResource String.LogKit.On}" OffContent="{DynamicResource String.LogKit.Off}" IsChecked="{CompiledBinding UseRawResourceLoading, Mode=TwoWay}" />
               </Grid>
             </Grid>
             <Grid ColumnDefinitions="92,*">
-              <TextBlock Text="程序集名称" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Text="{DynamicResource String.TableKit.AssemblyName}" Classes="muted" VerticalAlignment="Center" />
               <TextBox Grid.Column="1"
                        Text="{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
           </StackPanel>
         </Border>
-
       </Grid>
     </Border>
   </Grid>

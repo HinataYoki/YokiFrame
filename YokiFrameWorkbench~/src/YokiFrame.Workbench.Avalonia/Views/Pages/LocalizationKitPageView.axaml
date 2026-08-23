@@ -5,16 +5,16 @@
              x:Class="YokiFrame.Workbench.Avalonia.Views.Pages.LocalizationKitPageView"
              x:DataType="vm:LocalizationKitPageViewModel">
   <Grid RowDefinitions="Auto,*" RowSpacing="12">
-    <!-- 筛选工具条保持固定高度，三栏只承担本地化信息浏览。 -->
+    <!-- 筛选栏固定高度，只承担过滤与环境信息 -->
     <Border Classes="localization-filterbar">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="*,Auto,160,Auto,Auto,Auto" ColumnSpacing="10">
           <TextBox Text="{CompiledBinding SearchText, Mode=TwoWay}"
                    Classes="kit-input"
-                   PlaceholderText="搜索 ID、业务键或译文"
-                   AutomationProperties.Name="搜索本地化条目" />
+                   PlaceholderText="{DynamicResource String.LocalizationKit.SearchPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource String.LocalizationKit.SearchPlaceholder}" />
           <TextBlock Grid.Column="1"
-                     Text="语言筛选"
+                     Text="{DynamicResource String.LocalizationKit.LanguageFilter}"
                      Classes="localization-meta"
                      VerticalAlignment="Center" />
           <ComboBox x:Name="LocalizationLanguageFilter"
@@ -22,57 +22,57 @@
                     ItemsSource="{CompiledBinding LanguageOptions}"
                     SelectedItem="{CompiledBinding SelectedLanguage, Mode=TwoWay}"
                     Classes="kit-input"
-                    PlaceholderText="全部语言"
-                    AutomationProperties.Name="按语言筛选" />
+                    PlaceholderText="{DynamicResource String.LocalizationKit.AllLanguages}"
+                    AutomationProperties.Name="{DynamicResource String.LocalizationKit.LanguageFilter}" />
           <CheckBox Grid.Column="3"
-                    Content="只看缺失"
+                    Content="{DynamicResource String.LocalizationKit.MissingOnly}"
                     IsChecked="{CompiledBinding MissingOnly, Mode=TwoWay}"
                     VerticalAlignment="Center"
-                    AutomationProperties.Name="只显示缺失语言条目" />
+                    AutomationProperties.Name="{DynamicResource String.LocalizationKit.MissingOnly}" />
           <Button Grid.Column="4"
-                  Content="刷新"
+                  Content="{DynamicResource String.Common.Refresh}"
                   Command="{CompiledBinding RefreshCommand}"
                   Classes="secondary compact-action"
-                  AutomationProperties.Name="刷新本地化目录" />
+                  AutomationProperties.Name="{DynamicResource String.Common.Refresh}" />
           <Button Grid.Column="5"
-                  Content="创建模板"
+                  Content="{DynamicResource String.LocalizationKit.CreateTemplate}"
                   Command="{CompiledBinding CreateTemplateCommand}"
                   Classes="secondary compact-action"
-                  AutomationProperties.Name="创建 Luban 本地化模板" />
+                  AutomationProperties.Name="{DynamicResource String.LocalizationKit.CreateTemplate}" />
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-          <TextBlock Text="Luban 工作目录"
+          <TextBlock Text="{DynamicResource String.LocalizationKit.LubanWorkDir}"
                      Classes="localization-meta"
                      VerticalAlignment="Center" />
           <TextBox x:Name="LocalizationLubanWorkDir"
                    Grid.Column="1"
                    Text="{CompiledBinding LubanWorkDir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                    Classes="kit-input"
-                   PlaceholderText="留空自动发现，例如 Luban/MiniTemplate"
-                   ToolTip.Tip="选择项目内包含 luban.conf 的工作目录；留空时自动发现。"
-                   AutomationProperties.Name="LocalizationKit Luban 工作目录" />
+                   PlaceholderText="{DynamicResource String.LocalizationKit.LubanWorkDirPlaceholder}"
+                   ToolTip.Tip="{DynamicResource String.LocalizationKit.LubanWorkDir}"
+                   AutomationProperties.Name="{DynamicResource String.LocalizationKit.LubanWorkDir}" />
           <Button Grid.Column="2"
                   Command="{CompiledBinding BrowseLubanWorkDirCommand}"
                   Classes="secondary compact-action"
-                  ToolTip.Tip="选择 Luban 工作目录"
-                  AutomationProperties.Name="选择 LocalizationKit Luban 工作目录">
+                  ToolTip.Tip="{DynamicResource String.LocalizationKit.LubanWorkDir}"
+                  AutomationProperties.Name="{DynamicResource String.LocalizationKit.LubanWorkDir}">
             <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
           </Button>
           <Button Grid.Column="3"
                   Command="{CompiledBinding OpenExcelDirectoryCommand}"
                   Classes="secondary compact-action"
-                  ToolTip.Tip="打开 LocalizationKit Excel 作者目录"
-                  AutomationProperties.Name="打开 LocalizationKit Excel 目录">
+                  ToolTip.Tip="{DynamicResource String.LocalizationKit.ExcelDirectory}"
+                  AutomationProperties.Name="{DynamicResource String.LocalizationKit.ExcelDirectory}">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
-              <TextBlock Text="Excel 目录" />
+              <TextBlock Text="{DynamicResource String.LocalizationKit.ExcelDirectory}" />
             </StackPanel>
           </Button>
         </Grid>
       </Grid>
     </Border>
 
-    <!-- 27/50/23 比例让中栏随窗口增长，左右栏只保留可扫描的诊断宽度。 -->
+    <!-- 27/50/23 比例三窗格，支持横向扫描与深度提取 -->
     <Grid x:Name="LocalizationWorkspace" Grid.Row="1" ColumnSpacing="10">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="27*" MinWidth="220" MaxWidth="320" />
@@ -85,8 +85,8 @@
           <Border Classes="localization-pane-header">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <StackPanel Spacing="2">
-                <TextBlock Text="条目索引" Classes="localization-pane-title" />
-                <TextBlock Text="按 ID 和业务键快速定位" Classes="localization-meta" />
+                <TextBlock Text="{DynamicResource String.LocalizationKit.EntryIndex}" Classes="localization-pane-title" />
+                <TextBlock Text="{DynamicResource String.LocalizationKit.EntryIndexSubtitle}" Classes="localization-meta" />
               </StackPanel>
               <Border Grid.Column="1" Classes="badge" Padding="8,4" VerticalAlignment="Center">
                 <TextBlock Text="{CompiledBinding Entries.Count}"
@@ -102,7 +102,7 @@
                    SelectedItem="{CompiledBinding SelectedEntry, Mode=TwoWay}"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                   AutomationProperties.Name="本地化条目列表">
+                   AutomationProperties.Name="{DynamicResource String.LocalizationKit.EntryIndex}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:LocalizationEntryRecord">
                 <Border Classes="localization-entry-row">
@@ -116,9 +116,9 @@
                                  TextTrimming="CharacterEllipsis"
                                  ToolTip.Tip="{CompiledBinding Key}" />
                       <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{CompiledBinding Values.Count, StringFormat='普通文本 {0}'}"
+                        <TextBlock Text="{CompiledBinding Values.Count, StringFormat='{}Text {0}'}"
                                    Classes="localization-meta" />
-                        <TextBlock Text="复数配置"
+                        <TextBlock Text="{DynamicResource String.LocalizationKit.Plural}"
                                    Classes="localization-meta"
                                    IsVisible="{CompiledBinding HasPlural}" />
                       </StackPanel>
@@ -126,7 +126,7 @@
                     <Border Grid.Column="2"
                             Classes="localization-state missing"
                             IsVisible="{CompiledBinding HasMissing}">
-                      <TextBlock Text="{CompiledBinding MissingLanguages.Count, StringFormat='缺 {0}'}" />
+                      <TextBlock Text="{CompiledBinding MissingLanguages.Count, StringFormat='{}Missing {0}'}" />
                     </Border>
                   </Grid>
                 </Border>
@@ -149,16 +149,16 @@
                        TextAlignment="Center"
                        TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-              <Button Content="清除筛选"
+              <Button Content="{DynamicResource String.LocalizationKit.ClearFilter}"
                       Command="{CompiledBinding ClearFiltersCommand}"
                       Classes="secondary compact-action"
                       IsVisible="{CompiledBinding HasActiveFilters}"
-                      AutomationProperties.Name="清除本地化筛选" />
-              <Button Content="刷新"
+                       AutomationProperties.Name="{DynamicResource String.LocalizationKit.ClearFilter}" />
+              <Button Content="{DynamicResource String.Common.Refresh}"
                       Command="{CompiledBinding RefreshCommand}"
                       Classes="secondary compact-action"
                       IsVisible="{CompiledBinding HasLoadError}"
-                      AutomationProperties.Name="刷新本地化目录" />
+                       AutomationProperties.Name="{DynamicResource String.Common.Refresh}" />
             </StackPanel>
           </StackPanel>
         </Grid>
@@ -169,7 +169,7 @@
           <Border Classes="localization-pane-header">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <StackPanel Spacing="3" MinWidth="0">
-                <TextBlock Text="语言对照" Classes="localization-pane-title" />
+                <TextBlock Text="{DynamicResource String.LocalizationKit.Translations}" Classes="localization-pane-title" />
                 <TextBlock Text="{CompiledBinding SelectedEntry.Key, StringFormat='{}{0}'}"
                            Classes="localization-key"
                            TextTrimming="CharacterEllipsis"
@@ -189,7 +189,7 @@
                          Classes="localization-meta"
                          TextWrapping="Wrap" />
               <TextBlock Grid.Column="1"
-                         Text="{CompiledBinding SelectedEntry.HasPlural, StringFormat='复数配置: {0}'}"
+                         Text="{CompiledBinding SelectedEntry.HasPlural, StringFormat='Plural: {0}'}"
                          Classes="localization-meta"
                          VerticalAlignment="Center"
                          IsVisible="{CompiledBinding HasSelection}" />
@@ -197,9 +197,9 @@
           </Border>
           <Border Grid.Row="2" Classes="localization-column-header">
             <Grid ColumnDefinitions="150,*,76" ColumnSpacing="10">
-              <TextBlock Text="语言" Classes="localization-meta" />
-              <TextBlock Grid.Column="1" Text="译文预览 / 复数摘要" Classes="localization-meta" />
-              <TextBlock Grid.Column="2" Text="状态" Classes="localization-meta" TextAlignment="Right" />
+              <TextBlock Text="{DynamicResource String.LocalizationKit.Language}" Classes="localization-meta" />
+              <TextBlock Grid.Column="1" Text="{DynamicResource String.LocalizationKit.TranslationPreview}" Classes="localization-meta" />
+              <TextBlock Grid.Column="2" Text="{DynamicResource String.LocalizationKit.Status}" Classes="localization-meta" TextAlignment="Right" />
             </Grid>
           </Border>
           <Grid Grid.Row="3">
@@ -231,7 +231,7 @@
                         <Border Grid.Column="2"
                                 Classes="localization-state missing"
                                 IsVisible="{CompiledBinding IsMissing}">
-                          <TextBlock Text="缺失" />
+                          <TextBlock Text="{DynamicResource String.LocalizationKit.Missing}" />
                         </Border>
                         <Border Grid.Column="2"
                                 Classes="localization-state complete"
@@ -249,10 +249,10 @@
                         VerticalAlignment="Center"
                         Spacing="8"
                         Margin="20">
-              <TextBlock Text="选择一个条目查看译文"
+              <TextBlock Text="{DynamicResource String.LocalizationKit.SelectEntry}"
                          Classes="localization-pane-title"
                          HorizontalAlignment="Center" />
-              <TextBlock Text="左侧列表会显示搜索结果"
+              <TextBlock Text="{DynamicResource String.LocalizationKit.SelectEntryHint}"
                          Classes="localization-meta"
                          HorizontalAlignment="Center" />
             </StackPanel>
@@ -265,8 +265,8 @@
           <Border Classes="localization-pane-header">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <StackPanel Spacing="2">
-                <TextBlock Text="语言覆盖" Classes="localization-pane-title" />
-                <TextBlock Text="整个目录的完整度" Classes="localization-meta" />
+                <TextBlock Text="{DynamicResource String.LocalizationKit.LanguageCoverage}" Classes="localization-pane-title" />
+                <TextBlock Text="{DynamicResource String.LocalizationKit.AllLanguagesSummary}" Classes="localization-meta" />
               </StackPanel>
               <TextBlock Grid.Column="1"
                          Text="{CompiledBinding LanguageCoverage.Count}"
@@ -276,7 +276,7 @@
           </Border>
           <Border Grid.Row="1" Classes="localization-coverage-summary">
             <StackPanel Spacing="4">
-              <TextBlock Text="当前条目" Classes="localization-meta" />
+              <TextBlock Text="{DynamicResource String.LocalizationKit.CurrentEntry}" Classes="localization-meta" />
               <TextBlock Text="{CompiledBinding SelectedEntryMissingText}"
                          Classes="localization-language"
                          TextWrapping="Wrap" />

@@ -10,60 +10,60 @@
                   VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="14" Spacing="11">
         <StackPanel Spacing="4">
-          <TextBlock Text="面板类型名" Classes="kit-label" />
+          <TextBlock Text="{DynamicResource String.UIKit.Editor.PanelTypeName}" Classes="kit-label" />
           <TextBox Text="{CompiledBinding PanelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                    Classes="kit-input"
                    PlaceholderText="InventoryPanel"
-                   AutomationProperties.Name="面板类型名"
+                   AutomationProperties.Name="{DynamicResource String.UIKit.Editor.PanelTypeName}"
                    AutomationProperties.IsRequiredForForm="True"
                    AutomationProperties.AutomationId="uikit.editor.panel-name" />
         </StackPanel>
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <StackPanel Spacing="4">
-            <TextBlock Text="预制体目录" Classes="kit-label" />
+            <TextBlock Text="{DynamicResource String.UIKit.Editor.PrefabFolder}" Classes="kit-label" />
             <TextBox Text="{CompiledBinding PrefabFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
-                     AutomationProperties.Name="预制体输出目录"
+                     AutomationProperties.Name="{DynamicResource String.UIKit.Editor.PrefabFolder}"
                      AutomationProperties.AutomationId="uikit.editor.prefab-folder" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4">
-            <TextBlock Text="脚本目录" Classes="kit-label" />
+            <TextBlock Text="{DynamicResource String.UIKit.Editor.ScriptFolder}" Classes="kit-label" />
             <TextBox Text="{CompiledBinding ScriptFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
-                     AutomationProperties.Name="脚本输出目录"
+                     AutomationProperties.Name="{DynamicResource String.UIKit.Editor.ScriptFolder}"
                      AutomationProperties.AutomationId="uikit.editor.script-folder" />
           </StackPanel>
         </Grid>
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <StackPanel Spacing="4">
-            <TextBlock Text="命名空间" Classes="kit-label" />
+            <TextBlock Text="{DynamicResource String.UIKit.Editor.Namespace}" Classes="kit-label" />
             <TextBox Text="{CompiledBinding ScriptNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="kit-input mono"
-                     AutomationProperties.Name="代码命名空间"
+                     AutomationProperties.Name="{DynamicResource String.UIKit.Editor.Namespace}"
                      AutomationProperties.AutomationId="uikit.editor.namespace" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4">
-            <TextBlock Text="目标程序集" Classes="kit-label" />
+            <TextBlock Text="{DynamicResource String.UIKit.Editor.TargetAssembly}" Classes="kit-label" />
             <ComboBox x:Name="AssemblySelector"
                       ItemsSource="{CompiledBinding AssemblyNames}"
                       SelectedItem="{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       Classes="kit-input mono"
                       HorizontalAlignment="Stretch"
                       PlaceholderText="Assembly-CSharp"
-                      AutomationProperties.Name="目标程序集"
+                      AutomationProperties.Name="{DynamicResource String.UIKit.Editor.TargetAssembly}"
                       AutomationProperties.AutomationId="uikit.editor.assembly" />
           </StackPanel>
         </Grid>
 
         <StackPanel Spacing="4">
-          <TextBlock Text="代码模板" Classes="kit-label" />
+          <TextBlock Text="{DynamicResource String.UIKit.Editor.CodeTemplate}" Classes="kit-label" />
           <ComboBox ItemsSource="{CompiledBinding CodeTemplateOptions}"
                     SelectedItem="{CompiledBinding CodeTemplateDisplay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                     Classes="kit-input"
                     HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="代码模板"
+                    AutomationProperties.Name="{DynamicResource String.UIKit.Editor.CodeTemplate}"
                     AutomationProperties.AutomationId="uikit.editor.template" />
         </StackPanel>
 
@@ -78,21 +78,21 @@
           <Button x:Name="CreatePanelPrefabButton"
                   Command="{CompiledBinding CreatePanelPrefabCommand}"
                   Classes="primary kit-action"
-                  AutomationProperties.Name="创建面板预制体"
+                  AutomationProperties.Name="{DynamicResource String.UIKit.Editor.CreatePrefab}"
                   AutomationProperties.AutomationId="uikit.editor.create-prefab">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource Icon.Plus}" Width="14" Height="14" />
-              <TextBlock Text="创建预制体" />
+              <TextBlock Text="{DynamicResource String.UIKit.Editor.CreatePrefab}" />
             </StackPanel>
           </Button>
           <Button x:Name="GenerateCodeButton"
                   Command="{CompiledBinding GenerateCodeCommand}"
                   Classes="secondary kit-action"
-                  AutomationProperties.Name="为当前预制体生成代码"
+                  AutomationProperties.Name="{DynamicResource String.UIKit.Editor.GenerateCode}"
                   AutomationProperties.AutomationId="uikit.editor.generate-code">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource Icon.Code2}" Width="14" Height="14" />
-              <TextBlock Text="生成代码" />
+              <TextBlock Text="{DynamicResource String.UIKit.Editor.GenerateCode}" />
             </StackPanel>
           </Button>
         </StackPanel>

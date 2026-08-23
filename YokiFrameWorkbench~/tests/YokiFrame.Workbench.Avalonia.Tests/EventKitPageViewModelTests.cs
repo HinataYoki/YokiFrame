@@ -208,10 +208,10 @@ public sealed class EventKitPageViewModelTests
             "Views",
             "WorkbenchShellView.axaml"));
 
-        Assert.Contains("Text=\"发送方代码\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"注册 / 注销方\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("运行时间线", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"代码位置\"", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("发送方代码") || xaml.Contains("String.EventKit.SendersCode"), "EventKit 页面应包含发送方代码词条");
+        Assert.True(xaml.Contains("注册 / 注销方") || xaml.Contains("String.EventKit.Subscribers"), "EventKit 页面应包含注册/注销方词条");
+        Assert.True(xaml.Contains("运行时间线") || xaml.Contains("String.EventKit.RuntimeTimeline"), "EventKit 页面应包含运行时间线词条");
+        Assert.True(xaml.Contains("代码位置") || xaml.Contains("String.EventKit.CodeLocations"), "EventKit 页面应包含代码位置词条");
         Assert.Contains("<Button.Flyout>", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("workbench.eventkit.search", xaml, StringComparison.Ordinal);
         Assert.Contains("SenderPreview", xaml, StringComparison.Ordinal);
@@ -237,7 +237,8 @@ public sealed class EventKitPageViewModelTests
         Assert.DoesNotContain("workbench.eventkit.scan", shell, StringComparison.Ordinal);
         Assert.DoesNotContain("扫描代码", shell, StringComparison.Ordinal);
         Assert.DoesNotContain("扫描代码", xaml, StringComparison.Ordinal);
-        Assert.Contains("排除 Editor", shell, StringComparison.Ordinal);
+        // “排除 Editor”词条已迁移为 shell 中的 DynamicResource 资源 key，兼容两种形态。
+        Assert.True(shell.Contains("排除 Editor") || shell.Contains("String.EventKit.ExcludeEditor"), "Shell 应包含排除 Editor 词条");
         Assert.DoesNotContain("EventKitPage.DataChannelText", shell, StringComparison.Ordinal);
         Assert.Contains("IsVisible=\"{CompiledBinding IsType}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Classes.type=\"{CompiledBinding SelectedIsType}\"", xaml, StringComparison.Ordinal);
@@ -248,10 +249,10 @@ public sealed class EventKitPageViewModelTests
         Assert.Contains("ColumnDefinitions=\"3*,14,4*,14,3*\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Grid MinHeight=\"88\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("注册 / 注销方", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"注册\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"注销\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("未扫描到注销方", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("注册 / 注销方") || xaml.Contains("String.EventKit.Subscribers"), "应包含注册/注销方");
+        Assert.True(xaml.Contains("Text=\"注册\"") || xaml.Contains("String.EventKit.Register"), "应包含注册");
+        Assert.True(xaml.Contains("Text=\"注销\"") || xaml.Contains("String.EventKit.Unregister"), "应包含注销");
+        Assert.True(xaml.Contains("未扫描到注销方") || xaml.Contains("String.EventKit.NoUnregistersScanned"), "应包含未扫描到注销方");
         Assert.Contains("eventkit-endpoint sender", xaml, StringComparison.Ordinal);
         Assert.Contains("eventkit-endpoint receiver", xaml, StringComparison.Ordinal);
         Assert.Contains("eventkit-flow-connector", xaml, StringComparison.Ordinal);

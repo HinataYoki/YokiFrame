@@ -164,7 +164,8 @@ public sealed partial class ObservedFsmGraph
         var labelRect = new Rect(edge.LabelLeft - 18.0, edge.LabelTop - 12.0, 36.0, 24.0);
         context.DrawRectangle(resources.NodeBackground, resources.BorderPen, new RoundedRect(labelRect, 10.0));
         var text = CreateText(
-            edge.Count + " 次", sTitleTypeface, 10.0, resources.MutedTextBrush, 34.0);
+            string.Format(GetString("String.FsmKit.Graph.EdgeCountTemplate", "{0} 次"), edge.Count),
+            sTitleTypeface, 10.0, resources.MutedTextBrush, 34.0);
         context.DrawText(text, new Point(
             labelRect.X + (labelRect.Width - text.Width) / 2.0,
             labelRect.Y + (labelRect.Height - text.Height) / 2.0));
@@ -236,13 +237,23 @@ public sealed partial class ObservedFsmGraph
     /// <summary>创建节点的紧凑辅助文本，仅在模型变化后重建快照时分配。</summary>
     private static string CreateNodeMetadata(ObservedFsmGraphNode node)
     {
-        var role = node.IsCurrent ? "当前状态 · " : string.Empty;
+        // 组合顺序与中文资源保持一致；各语言模板自行安排片段位置。
+        var role = node.IsCurrent
+            ? GetString("String.FsmKit.Graph.CurrentStatePrefix", "当前状态 · ")
+            : string.Empty;
         if (node.IsComposite)
         {
-            role += " · 复合";
+            role += GetString("String.FsmKit.Graph.CompositeSuffix", " · 复合");
         }
 
-        return role + "进入 " + node.EntryCount + " 次";
+        return role + string.Format(
+            GetString("String.FsmKit.Graph.EntryCountTemplate", "进入 {0} 次"), node.EntryCount);
+    }
+
+    /// <summary>从当前语言资源读取 FsmKit 图渲染文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return YokiFrame.Workbench.Avalonia.Services.WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 
     /// <summary>保存一次快照共享的画刷和画笔，避免按边、按节点重复创建 Pen。</summary>

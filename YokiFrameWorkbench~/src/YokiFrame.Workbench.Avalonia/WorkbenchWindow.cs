@@ -364,10 +364,14 @@ public sealed partial class WorkbenchWindow : Window
         mShellViewModel.ResKitPage.Dispose();
         mShellViewModel.ActionKitPage.Dispose();
         mShellViewModel.AudioKitPage.Dispose();
+        mShellViewModel.UIKitPage.Dispose();
         mShellViewModel.SaveKitPage.Dispose();
+        mShellViewModel.SpatialKitPage.Dispose();
+        mShellViewModel.TableKitPage.Dispose();
         mShellViewModel.DocumentationPage.Dispose();
         mShellViewModel.LocalizationKitPage.Dispose();
         mShellViewModel.RuntimeUpdate.Dispose();
+        mShellViewModel.Dispose();
         if (mLifecycleMonitor != null)
         {
             mLifecycleMonitor.Changed -= OnEngineLifecycleChanged;

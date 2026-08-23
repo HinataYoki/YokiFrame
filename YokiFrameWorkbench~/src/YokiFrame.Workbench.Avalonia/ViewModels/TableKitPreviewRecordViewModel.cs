@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -23,7 +24,8 @@ public sealed partial class TableKitPreviewRecordViewModel
         Kind = element.ValueKind == JsonValueKind.Object ? "object" : element.ValueKind.ToString().ToLowerInvariant();
         Fields = CreateFields(element);
         Title = Index + ". " + ResolveIdentity(element, Index);
-        FieldCountText = Fields.Count + " 字段";
+        FieldCountText = string.Format(WorkbenchI18nService.Instance.GetString(
+            "String.TableKit.FieldsSuffixTemplate", "{0} 字段"), Fields.Count);
         PreviewJson = JsonSerializer.Serialize(element, sJsonContext.JsonElement);
     }
 
@@ -69,7 +71,7 @@ public sealed partial class TableKitPreviewRecordViewModel
             }
         }
 
-        return "记录 " + index;
+        return WorkbenchI18nService.Instance.GetString("String.TableKit.RecordPrefix", "记录 ") + index;
     }
 
     /// <summary>判断节点是否适合作为短标题标识。</summary>

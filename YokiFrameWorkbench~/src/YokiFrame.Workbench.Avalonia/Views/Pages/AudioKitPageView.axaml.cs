@@ -41,7 +41,7 @@ public partial class AudioKitPageView : UserControl
         mIsWideLayout = isWide;
         Classes.Set("audiokit-wide", isWide);
         Classes.Set("audiokit-compact", !isWide);
-        CompactDetailTabs.IsVisible = !isWide;
+        NarrowDetailTabs.IsVisible = !isWide;
         WideDetailLayout.IsVisible = isWide;
         ApplyMainAreaHeightBudget(IndexDrawerToggleButton.IsChecked == true);
 

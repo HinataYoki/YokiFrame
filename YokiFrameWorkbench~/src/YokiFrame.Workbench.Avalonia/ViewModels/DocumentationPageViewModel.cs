@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Documentation;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -20,12 +21,89 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     private DocumentationIndexEntry? mSelectedDocument;
     private DocumentationCodeBlock? mSelectedCodeBlock;
     private string mSearchText = string.Empty;
-    private string mPackageVersion = "未知";
-    private string mMarkdownText = "选择一篇文档开始阅读。";
-    private string mStatusText = "尚未加载离线文档。";
+    private string mPackageVersion = GetString(UnknownVersionKey, "未知");
+    private string mMarkdownText = GetString(MarkdownPlaceholderKey, "选择一篇文档开始阅读。");
+    private string mStatusText = GetString(NotLoadedKey, "尚未加载离线文档。");
     private int mLoadStarted;
     private int mDocumentLoadVersion;
     private int mDisposed;
+    /// <summary>当前状态文本是否处于“尚未加载离线文档”占位；仅占位随语言切换重投影。</summary>
+    private bool mIsWaitingStatus = true;
+
+    /// <summary>按当前语言重新投影未加载状态的占位文本；已加载内容为 payload 数据不变。</summary>
+    private void OnCultureChanged()
+    {
+        // 目录尚未加载时，版本、正文与状态均为占位，随语言重投影。
+        if (mCatalog == null)
+        {
+            PackageVersion = GetString(UnknownVersionKey, "未知");
+            MarkdownText = GetString(MarkdownPlaceholderKey, "选择一篇文档开始阅读。");
+            if (mIsWaitingStatus)
+            {
+                StatusText = GetString(NotLoadedKey, "尚未加载离线文档。");
+            }
+        }
+    }
+
+    /// <summary>写入状态文本并维护“尚未加载”占位标记。</summary>
+    /// <param name="text">新的状态文本。</param>
+    /// <param name="isWaitingStatus">是否为尚未加载的占位状态。</param>
+    private void SetStatus(string text, bool isWaitingStatus = false)
+    {
+        mIsWaitingStatus = isWaitingStatus;
+        StatusText = text;
+    }
+
+    /// <summary>从当前语言资源读取 Documentation 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
+    }
+
+    /// <summary>未知版本占位资源 key。</summary>
+    private const string UnknownVersionKey = "String.Documentation.UnknownVersion";
+
+    /// <summary>正文占位资源 key。</summary>
+    private const string MarkdownPlaceholderKey = "String.Documentation.MarkdownPlaceholder";
+
+    /// <summary>尚未加载状态占位资源 key。</summary>
+    private const string NotLoadedKey = "String.Documentation.NotLoaded";
+
+    /// <summary>无文档服务提示资源 key。</summary>
+    private const string NoServiceKey = "String.Documentation.NoService";
+
+    /// <summary>正在扫描提示资源 key。</summary>
+    private const string ScanningKey = "String.Documentation.Scanning";
+
+    /// <summary>目录加载失败模板资源 key。</summary>
+    private const string LoadFailedTemplateKey = "String.Documentation.LoadFailedTemplate";
+
+    /// <summary>搜索不可用提示资源 key。</summary>
+    private const string SearchUnavailableKey = "String.Documentation.SearchUnavailable";
+
+    /// <summary>目录未就绪提示资源 key。</summary>
+    private const string CatalogNotReadyKey = "String.Documentation.CatalogNotReady";
+
+    /// <summary>搜索无结果提示资源 key。</summary>
+    private const string SearchNoMatchKey = "String.Documentation.SearchNoMatch";
+
+    /// <summary>搜索完成模板资源 key。</summary>
+    private const string SearchDoneTemplateKey = "String.Documentation.SearchDoneTemplate";
+
+    /// <summary>搜索失败模板资源 key。</summary>
+    private const string SearchFailedTemplateKey = "String.Documentation.SearchFailedTemplate";
+
+    /// <summary>文档读取失败模板资源 key。</summary>
+    private const string ReadFailedTemplateKey = "String.Documentation.ReadFailedTemplate";
+
+    /// <summary>代码复制成功提示资源 key。</summary>
+    private const string CopiedKey = "String.Documentation.Copied";
+
+    /// <summary>复制失败模板资源 key。</summary>
+    private const string CopyFailedTemplateKey = "String.Documentation.CopyFailedTemplate";
+
+    /// <summary>目录加载完成模板资源 key。</summary>
+    private const string LoadedTemplateKey = "String.Documentation.LoadedTemplate";
 
     /// <summary>
     /// 创建离线文档页面状态；服务为空时保留可诊断的不可用页面。
@@ -46,8 +124,11 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         mInitializationError = initializationError ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(mInitializationError))
         {
-            StatusText = mInitializationError;
+            // 初始化失败信息是可诊断结果，清除占位标记。
+            SetStatus(mInitializationError);
         }
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         SearchCommand = new AsyncRelayCommand(SearchAsync, CanSearch);
         ReloadCommand = new AsyncRelayCommand(ReloadAsync);
         CopyCodeCommand = new AsyncRelayCommand(CopySelectedCodeAsync, CanCopySelectedCode);
@@ -213,7 +294,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         {
             if (string.IsNullOrWhiteSpace(mInitializationError))
             {
-                StatusText = "当前启动入口没有可用的包内文档服务。";
+                SetStatus(GetString(NoServiceKey, "当前启动入口没有可用的包内文档服务。"));
             }
 
             return;
@@ -221,13 +302,13 @@ public sealed class DocumentationPageViewModel : ViewModelBase
 
         try
         {
-            StatusText = "正在扫描包内离线文档…";
+            SetStatus(GetString(ScanningKey, "正在扫描包内离线文档…"));
             mCatalog = await Task.Run(mDocumentationService.GetIndex);
             ApplyLoadedCatalog(mCatalog);
         }
         catch (Exception exception)
         {
-            StatusText = "文档目录加载失败: " + exception.Message;
+            SetStatus(string.Format(GetString(LoadFailedTemplateKey, "文档目录加载失败: {0}"), exception.Message));
             Interlocked.Exchange(ref mLoadStarted, 0);
         }
     }
@@ -240,7 +321,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     {
         if (mDocumentationService == null)
         {
-            StatusText = "文档搜索不可用。";
+            SetStatus(GetString(SearchUnavailableKey, "文档搜索不可用。"));
             return;
         }
 
@@ -258,7 +339,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
 
         if (mCatalog == null)
         {
-            StatusText = "文档目录尚未准备完成。";
+            SetStatus(GetString(CatalogNotReadyKey, "文档目录尚未准备完成。"));
             return;
         }
 
@@ -272,13 +353,13 @@ public sealed class DocumentationPageViewModel : ViewModelBase
 
             SearchResults = results;
             ApplyFullTextSearchResults();
-            StatusText = Documents.Count == 0
-                ? "未找到匹配的包内文档。"
-                : "搜索完成，找到 " + Documents.Count + " 篇文档。";
+            SetStatus(Documents.Count == 0
+                ? GetString(SearchNoMatchKey, "未找到匹配的包内文档。")
+                : string.Format(GetString(SearchDoneTemplateKey, "搜索完成，找到 {0} 篇文档。"), Documents.Count));
         }
         catch (Exception exception)
         {
-            StatusText = "文档搜索失败: " + exception.Message;
+            SetStatus(string.Format(GetString(SearchFailedTemplateKey, "文档搜索失败: {0}"), exception.Message));
         }
     }
 
@@ -326,7 +407,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
             if (Volatile.Read(ref mDisposed) == 0
                 && loadVersion == Volatile.Read(ref mDocumentLoadVersion))
             {
-                StatusText = "文档读取失败: " + exception.Message;
+                SetStatus(string.Format(GetString(ReadFailedTemplateKey, "文档读取失败: {0}"), exception.Message));
             }
         }
     }
@@ -341,6 +422,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
             return;
         }
 
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         Interlocked.Increment(ref mDocumentLoadVersion);
         Interlocked.Exchange(ref mLoadStarted, 0);
     }
@@ -359,11 +441,11 @@ public sealed class DocumentationPageViewModel : ViewModelBase
         try
         {
             await mCopyTextAsync(SelectedCodeBlock.CopyText);
-            StatusText = "代码已复制。";
+            SetStatus(GetString(CopiedKey, "代码已复制。"));
         }
         catch (Exception exception)
         {
-            StatusText = "复制失败: " + exception.Message;
+            SetStatus(string.Format(GetString(CopyFailedTemplateKey, "复制失败: {0}"), exception.Message));
         }
     }
 
@@ -393,7 +475,7 @@ public sealed class DocumentationPageViewModel : ViewModelBase
     {
         PackageVersion = catalog.PackageVersion;
         ApplyCatalogFilter();
-        StatusText = "已加载 " + catalog.NavigationDocuments.Count + " 篇用户文档。";
+        SetStatus(string.Format(GetString(LoadedTemplateKey, "已加载 {0} 篇用户文档。"), catalog.NavigationDocuments.Count));
         if (SelectedDocument == null && Documents.Count > 0)
         {
             SelectedDocument = Documents[0];

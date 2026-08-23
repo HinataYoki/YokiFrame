@@ -18,11 +18,11 @@ public sealed partial class AudioKitPageViewModel
         try
         {
             settings = mLoadIndexSettings(mProjectRoot);
-            IndexStatusText = string.Empty;
+            SetIndexStatus(IndexStatusKind.None);
         }
         catch (Exception exception)
         {
-            IndexStatusText = "配置读取失败，已使用默认值：" + exception.Message;
+            SetIndexStatus(IndexStatusKind.LoadFailed, error: exception.Message);
         }
         ApplyIndexSettings(settings);
     }
@@ -77,17 +77,17 @@ public sealed partial class AudioKitPageViewModel
                 mProjectRoot,
                 CreateIndexSettings(),
                 mLifetimeCancellation.Token);
-            if (showSuccess) IndexStatusText = "配置已保存";
+            if (showSuccess) SetIndexStatus(IndexStatusKind.Saved);
             return true;
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
         {
-            IndexStatusText = string.Empty;
+            SetIndexStatus(IndexStatusKind.None);
             return false;
         }
         catch (Exception exception)
         {
-            IndexStatusText = "配置保存失败：" + exception.Message;
+            SetIndexStatus(IndexStatusKind.SaveFailed, error: exception.Message);
             return false;
         }
     }

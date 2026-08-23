@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.PoolKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.PoolKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -47,9 +48,11 @@ public sealed partial class PoolKitPageViewModel
     /// <summary>获取对象池存在但当前搜索没有结果。</summary>
     public bool HasNoSearchResults => !IsWaitingForData && PoolTotal > 0 && Pools.Count == 0;
     /// <summary>获取带当前关键字的搜索空状态文案。</summary>
-    public string SearchEmptyText => "未找到匹配 “" + SearchText + "” 的对象池";
+    public string SearchEmptyText => string.Format(
+        GetString("String.PoolKit.SearchNoMatchTemplate", "未找到匹配 “{0}” 的对象池"), SearchText);
     /// <summary>获取当前对象池名称。</summary>
-    public string SelectedName => SelectedPool?.Name ?? "未选择对象池";
+    public string SelectedName => SelectedPool?.Name
+        ?? GetString("String.PoolKit.NoSelection", "未选择对象池");
     /// <summary>获取当前对象池类型。</summary>
     public string SelectedTypeName => SelectedPool?.TypeName ?? "--";
     /// <summary>获取当前借出数量。</summary>
@@ -81,7 +84,8 @@ public sealed partial class PoolKitPageViewModel
     /// <summary>获取池内对象总量文本。</summary>
     public string SelectedInactiveObjectCountText => CreateObjectCountText(SelectedPool?.InactiveObjectTotal ?? 0, SelectedPool?.InactiveObjectTruncated == true);
     /// <summary>获取所选池事件数量文本。</summary>
-    public string SelectedEventCountText => Events.Count + " 条";
+    public string SelectedEventCountText => string.Format(
+        GetString("String.PoolKit.SelectedEventCountTemplate", "{0} 条"), Events.Count);
     /// <summary>获取当前借出对象列表是否为空。</summary>
     public bool SelectedActiveObjectsEmpty => SelectedActiveObjects.Count == 0;
     /// <summary>获取当前池内对象列表是否为空。</summary>
@@ -254,9 +258,9 @@ public sealed partial class PoolKitPageViewModel
         WorkbenchPoolKitEvent? item = events.FirstOrDefault(evt => IsEventForPool(evt, pool));
         return item?.EventType switch
         {
-            "Spawn" => "刚借出",
-            "Return" => "刚归还",
-            "Forced" => "强制归还",
+            "Spawn" => GetString("String.PoolKit.RecentSpawn", "刚借出"),
+            "Return" => GetString("String.PoolKit.RecentReturn", "刚归还"),
+            "Forced" => GetString("String.PoolKit.RecentForced", "强制归还"),
             _ => string.Empty
         };
     }

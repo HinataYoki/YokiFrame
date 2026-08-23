@@ -16,15 +16,15 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     private IReadOnlyList<WorkbenchSaveKitFile> mFilteredFiles = Array.Empty<WorkbenchSaveKitFile>();
     private WorkbenchSaveKitProjectSettings? mBaseline;
     private string mEngineId = string.Empty;
-    private string mEngineLabel = "未连接";
+    private string mEngineLabel = GetString(NotConnectedKey, "未连接");
     private string mStoragePath = string.Empty;
     private string mFileExtension = ".yoki";
     private string mResolvedStoragePath = string.Empty;
     private string mConfigPath = string.Empty;
     private string mFingerprint = "missing";
     private string mSearchText = string.Empty;
-    private string mFilter = "全部";
-    private string mStatusText = "等待项目配置";
+    private string mFilter = FILTER_ALL;
+    private string mStatusText = GetString(WaitingProjectConfigKey, "等待项目配置");
     private string mErrorText = string.Empty;
     private bool mDirectoryExists;
     private bool mIsSupported;
@@ -33,9 +33,11 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     private bool mIsDisposed;
     private int mSlotCount;
     private int mGlobalCount;
+    /// <summary>当前状态文本是否处于“等待项目配置”占位；仅占位随语言切换重投影。</summary>
+    private bool mIsWaitingProjectConfigStatus = true;
 
     /// <summary>创建设计时可用的空 SaveKit 页面。</summary>
-    public SaveKitPageViewModel()
+    public SaveKitPageViewModel() : this(null, null, null)
     {
     }
 
@@ -51,12 +53,14 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
         mService = service;
         mFolderPicker = folderPicker;
         mOpenDirectoryAsync = openDirectoryAsync;
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, CanRefresh);
         BrowseFolderCommand = new AsyncRelayCommand(BrowseFolderAsync, CanBrowseFolder);
         OpenDirectoryCommand = new AsyncRelayCommand(OpenDirectoryAsync, CanOpenDirectory);
         ResetCommand = new RelayCommand(Reset, CanReset);
-        SelectAllCommand = new RelayCommand(() => Filter = "全部");
+        SelectAllCommand = new RelayCommand(() => Filter = FILTER_ALL);
         SelectSlotCommand = new RelayCommand(() => Filter = "Slot");
         SelectGlobalCommand = new RelayCommand(() => Filter = "Global");
     }
@@ -168,13 +172,13 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>文件类型筛选，值为全部、Slot 或 Global。</summary>
+    /// <summary>文件类型筛选，值为哨兵 "all"、Slot 或 Global。</summary>
     public string Filter
     {
         get => mFilter;
         set
         {
-            if (SetProperty(ref mFilter, value))
+            if (SetProperty(ref mFilter, NormalizeFilter(value)))
             {
                 RebuildFilteredFiles();
                 OnPropertyChanged(nameof(IsAllFilter));
@@ -185,7 +189,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>是否选中全部文件筛选。</summary>
-    public bool IsAllFilter => Filter == "全部";
+    public bool IsAllFilter => Filter == FILTER_ALL;
 
     /// <summary>是否选中 Slot 文件筛选。</summary>
     public bool IsSlotFilter => Filter == "Slot";
@@ -301,7 +305,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
         }
 
         RebuildFilteredFiles();
-        StatusText = settings.StatusText;
+        SetStatus(settings.StatusText);
         OnPropertyChanged(nameof(SlotCount));
         OnPropertyChanged(nameof(GlobalCount));
         OnPropertyChanged(nameof(FileCount));
@@ -354,7 +358,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>判断文件是否匹配已经规范化的搜索文本和类型筛选。</summary>
     private static bool MatchesFilter(WorkbenchSaveKitFile file, string filter, string search)
     {
-        if (filter != "全部" && file.Kind != filter)
+        if (filter != FILTER_ALL && filter != "全部" && file.Kind != filter)
         {
             return false;
         }
@@ -376,4 +380,65 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
             : (value.StartsWith(".", StringComparison.Ordinal) ? value : "." + value);
     }
 
+    /// <summary>把界面传入的筛选值归一化为不随语言变化的哨兵或原始类型。</summary>
+    /// <param name="value">界面传入的筛选展示值（“全部”/"All"）或具体类型。</param>
+    /// <returns>归一化后的内部筛选值。</returns>
+    private static string NormalizeFilter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return FILTER_ALL;
+        }
+
+        return value.Trim() switch
+        {
+            FILTER_ALL => FILTER_ALL,
+            "全部" => FILTER_ALL,
+            "All" => FILTER_ALL,
+            _ => value.Trim()
+        };
+    }
+
+    /// <summary>按当前语言重新投影占位文本；payload 数据与用户草稿不变。</summary>
+    private void OnCultureChanged()
+    {
+        if (string.IsNullOrWhiteSpace(EngineId))
+        {
+            mEngineLabel = GetString(NotConnectedKey, "未连接");
+            OnPropertyChanged(nameof(EngineLabel));
+        }
+
+        // 仅“等待项目配置”占位随语言重投影；其余状态是操作结果，保持原样。
+        if (mIsWaitingProjectConfigStatus)
+        {
+            StatusText = GetString(WaitingProjectConfigKey, "等待项目配置");
+        }
+
+        // Runtime 派生文本由分部实现按缓存状态重投影。
+        OnRuntimeCultureChanged();
+    }
+
+    /// <summary>写入状态文本并维护“等待项目配置”占位标记。</summary>
+    /// <param name="text">新的状态文本。</param>
+    /// <param name="isWaitingStatus">是否为等待项目配置的占位状态。</param>
+    private void SetStatus(string text, bool isWaitingStatus = false)
+    {
+        mIsWaitingProjectConfigStatus = isWaitingStatus;
+        StatusText = text;
+    }
+
+    /// <summary>文件类型筛选的“全部”哨兵值；与 Slot/Global 类型值互不冲突。</summary>
+    internal const string FILTER_ALL = "all";
+
+    /// <summary>未连接 Runtime 时引擎标签的占位资源 key。</summary>
+    private const string NotConnectedKey = "String.SaveKit.NotConnected";
+
+    /// <summary>项目配置尚未加载时状态文本的资源 key。</summary>
+    private const string WaitingProjectConfigKey = "String.SaveKit.WaitingProjectConfig";
+
+    /// <summary>从当前语言资源读取 SaveKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
+    }
 }

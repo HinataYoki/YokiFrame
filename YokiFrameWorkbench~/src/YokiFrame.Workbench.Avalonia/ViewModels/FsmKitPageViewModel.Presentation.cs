@@ -1,5 +1,6 @@
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Workbench.Avalonia.ViewModels.FsmKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -17,12 +18,12 @@ public sealed partial class FsmKitPageViewModel
     private bool mHasMachines;
     private bool mIsEmptyWorkspaceVisible = true;
     private bool mIsGraphEmpty = true;
-    private string mEmptyStateTitle = "等待 FsmKit 状态";
-    private string mEmptyStateDescription = "正在读取宿主发布的 FsmKit 快照。";
+    private string mEmptyStateTitle = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.EmptyTitle");
+    private string mEmptyStateDescription = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.EmptyDescription");
     private string mInstanceCountText = "0 个实例";
-    private string mStateCountText = "0 个状态";
+    private string mStateCountText = "0 " + WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.StateCount");
     private string mHistoryCountText = "0 条转换";
-    private string mGraphEmptyHint = "选择一个实例以读取完整状态树和已观测转换。";
+    private string mGraphEmptyHint = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.GraphSelect");
 
     /// <summary>获取当前快照是否含有至少一个活动 FSM 实例。</summary>
     public bool HasMachines { get => mHasMachines; private set => SetProperty(ref mHasMachines, value); }
@@ -65,16 +66,21 @@ public sealed partial class FsmKitPageViewModel
     {
         HasMachines = mAllMachines.Count > 0;
         IsEmptyWorkspaceVisible = !HasMachines;
-        InstanceCountText = mAllMachines.Count + " 个实例";
-        StateCountText = (details?.StateCount ?? summary?.StateCount ?? 0) + " 个状态";
-        HistoryCountText = Transitions.Count + " 条转换";
+        InstanceCountText = string.Format(
+            WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.InstanceCountTemplate", "{0} 个实例"),
+            mAllMachines.Count);
+        StateCountText = (details?.StateCount ?? summary?.StateCount ?? 0) + " "
+            + WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.StateCount");
+        HistoryCountText = string.Format(
+            WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.TransitionCountTemplate", "{0} 条转换"),
+            Transitions.Count);
         if (!HasMachines)
         {
-            EmptyStateTitle = "未发现活动状态机";
-            EmptyStateDescription = "已读取 FsmKit 快照，但当前宿主没有注册 FSM。启动或注册状态机后，工作台会自动刷新。";
+            EmptyStateTitle = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NoActive");
+            EmptyStateDescription = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NoActiveDescription");
             GraphModel = ObservedFsmGraphModel.Empty;
             IsGraphEmpty = true;
-            GraphEmptyHint = "注册一个 FSM 后，工作台会在这里显示运行时状态图和转换历史。";
+            GraphEmptyHint = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.GraphReading");
             return;
         }
 
@@ -90,14 +96,14 @@ public sealed partial class FsmKitPageViewModel
     {
         HasMachines = false;
         IsEmptyWorkspaceVisible = true;
-        EmptyStateTitle = "等待 FsmKit 状态";
-        EmptyStateDescription = "正在读取宿主发布的 FsmKit 快照。";
+        EmptyStateTitle = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.EmptyTitle");
+        EmptyStateDescription = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.EmptyDescription");
         InstanceCountText = "0 个实例";
-        StateCountText = "0 个状态";
+        StateCountText = "0 " + WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.StateCount");
         HistoryCountText = "0 条转换";
         GraphModel = ObservedFsmGraphModel.Empty;
         IsGraphEmpty = true;
-        GraphEmptyHint = "选择一个实例以读取完整状态树和已观测转换。";
+        GraphEmptyHint = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.GraphSelect");
     }
 
     /// <summary>
@@ -126,7 +132,7 @@ public sealed partial class FsmKitPageViewModel
         {
             GraphModel = ObservedFsmGraphModel.Empty;
             IsGraphEmpty = true;
-            GraphEmptyHint = "当前实例尚未返回完整状态树；选择列表项会触发只读详情查询。";
+            GraphEmptyHint = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.GraphIncomplete");
             return;
         }
 

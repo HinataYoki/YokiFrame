@@ -71,14 +71,14 @@
                             VerticalAlignment="Center">
                   <TextBox Width="248"
                            Text="{CompiledBinding DocumentationPage.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="搜索文档关键字"
+                           PlaceholderText="{DynamicResource String.Docs.SearchPlaceholder}"
                            KeyDown="OnDocumentationSearchKeyDown"
-                           AutomationProperties.Name="搜索离线文档关键字"
+                           AutomationProperties.Name="{DynamicResource String.Docs.SearchAutomationName}"
                            AutomationProperties.AutomationId="workbench.docs.search" />
                   <Button Command="{CompiledBinding DocumentationPage.SearchCommand}"
                           Classes="secondary icon"
-                          ToolTip.Tip="搜索标题、路径和正文"
-                          AutomationProperties.Name="执行文档关键字搜索">
+                           ToolTip.Tip="{DynamicResource String.Docs.SearchTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.Docs.SearchAutomationName}">
                     <PathIcon Data="{StaticResource Icon.Search}" Width="14" Height="14" />
                   </Button>
                 </StackPanel>
@@ -88,46 +88,47 @@
                             VerticalAlignment="Center">
                   <Button Command="{CompiledBinding TableKitPage.ResetCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="还原当前项目的 TableKit 默认配置"
-                          AutomationProperties.Name="还原 TableKit 默认配置">
+                           ToolTip.Tip="{DynamicResource String.TableKit.RestoreTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.TableKit.RestoreAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
-                      <TextBlock Text="还原默认" />
+                      <TextBlock Text="{DynamicResource String.TableKit.RestoreDefault}" />
                     </StackPanel>
                   </Button>
                   <Button Command="{CompiledBinding TableKitPage.OpenConfigDirectoryCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="在系统文件管理器中打开 Luban Datas 目录"
-                          AutomationProperties.Name="打开 TableKit 配置目录">
+                           ToolTip.Tip="{DynamicResource String.TableKit.OpenConfigTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.TableKit.OpenConfigAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
-                      <TextBlock Text="打开配置" />
+                      <TextBlock Text="{DynamicResource String.TableKit.OpenConfig}" />
                     </StackPanel>
                   </Button>
                   <Button Command="{CompiledBinding TableKitPage.SaveCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="保存当前项目的 TableKit 配置"
-                          AutomationProperties.Name="保存 TableKit 配置">
+                           ToolTip.Tip="{DynamicResource String.TableKit.SaveTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.TableKit.SaveAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <PathIcon Data="{StaticResource Icon.Save}" Width="13" Height="13" />
-                      <TextBlock Text="保存" />
+                      <TextBlock Text="{DynamicResource String.Common.Save}" />
                     </StackPanel>
                   </Button>
                   <Button Command="{CompiledBinding TableKitPage.ValidateCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="验证 Luban 配置并读取临时 JSON 预览，不修改正式输出目录"
-                          AutomationProperties.Name="验证 TableKit 配置">
+                           ToolTip.Tip="{DynamicResource String.TableKit.ValidateTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.TableKit.ValidateAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
-                      <TextBlock Text="验证" />
+                      <TextBlock Text="{DynamicResource String.TableKit.Validate}" />
                     </StackPanel>
                   </Button>
                   <Button Command="{CompiledBinding TableKitPage.GenerateCommand}"
                           Classes="primary compact-action"
-                          AutomationProperties.Name="生成 TableKit 配置表">
+                           ToolTip.Tip="{DynamicResource String.TableKit.GenerateTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.TableKit.GenerateAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <PathIcon Data="{StaticResource Icon.Download}" Width="13" Height="13" />
-                      <TextBlock Text="生成" />
+                      <TextBlock Text="{DynamicResource String.TableKit.Generate}" />
                     </StackPanel>
                   </Button>
                 </StackPanel>
@@ -151,8 +152,8 @@
                              VerticalAlignment="Center" />
                   <Button Command="{CompiledBinding LocalizationKitPage.RefreshCommand}"
                           Classes="secondary icon"
-                          ToolTip.Tip="刷新本地化目录"
-                          AutomationProperties.Name="刷新本地化目录">
+                           ToolTip.Tip="{DynamicResource String.Common.Refresh}"
+                           AutomationProperties.Name="{DynamicResource String.Common.Refresh}">
                     <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
                   </Button>
                 </StackPanel>
@@ -162,17 +163,17 @@
                             VerticalAlignment="Center">
                   <TextBox Width="260"
                            Text="{CompiledBinding EventKitPage.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="搜索事件、参数或源码文件"
-                           AutomationProperties.Name="搜索 EventKit 关系"
+                            PlaceholderText="{DynamicResource String.EventKit.SearchPlaceholder}"
+                            AutomationProperties.Name="{DynamicResource String.EventKit.SearchAutomationName}"
                            AutomationProperties.AutomationId="workbench.eventkit.search" />
                   <ComboBox Width="108"
                             ItemsSource="{CompiledBinding EventKitPage.ChannelOptions}"
                             SelectedItem="{CompiledBinding EventKitPage.SelectedChannel, Mode=TwoWay}"
-                            AutomationProperties.Name="EventKit 通道筛选" />
-                  <CheckBox Content="排除 Editor"
+                             AutomationProperties.Name="{DynamicResource String.EventKit.ChannelFilter}" />
+                   <CheckBox Content="{DynamicResource String.EventKit.ExcludeEditor}"
                             IsChecked="{CompiledBinding EventKitPage.ExcludeEditor, Mode=TwoWay}"
                             VerticalAlignment="Center"
-                            AutomationProperties.Name="扫描时排除 Editor 目录" />
+                             AutomationProperties.Name="{DynamicResource String.EventKit.ExcludeEditorAutomationName}" />
                   <TextBlock Text="{CompiledBinding EventKitPage.ScanStatusText}"
                              Classes="muted"
                              FontSize="{DynamicResource FontSize.Xs}"
@@ -188,15 +189,15 @@
                   <Button x:Name="OpenLogDirectoryButton"
                           Command="{CompiledBinding LogKitPage.OpenDirectoryCommand}"
                           Classes="secondary icon"
-                          ToolTip.Tip="打开当前 Runtime 日志文件夹"
-                          AutomationProperties.Name="打开当前 Runtime 日志文件夹"
+                          ToolTip.Tip="{DynamicResource String.LogKit.OpenDirectoryTooltip}"
+                          AutomationProperties.Name="{DynamicResource String.LogKit.OpenDirectoryAutomationName}"
                           AutomationProperties.HelpText="{CompiledBinding LogKitPage.LogDirectoryPathText}">
                     <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
                   </Button>
-                  <Button Content="恢复默认"
+                   <Button Content="{DynamicResource String.LogKit.RestoreDefault}"
                           Command="{CompiledBinding LogKitPage.ResetSettingsCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="恢复默认草稿，保存后才生效" />
+                           ToolTip.Tip="{DynamicResource String.LogKit.RestoreDefaultTooltip}" />
                    <Button Content="{CompiledBinding LogKitPage.SaveSettingsButtonText}"
                            Command="{CompiledBinding LogKitPage.SaveSettingsCommand}"
                            Classes="primary compact-action" />
@@ -204,15 +205,15 @@
                  <Button IsVisible="{CompiledBinding IsSaveKitPage}"
                          Command="{CompiledBinding SaveKitPage.OpenDirectoryCommand}"
                          Classes="secondary icon"
-                         ToolTip.Tip="打开配置的 SaveKit 存档目录"
-                         AutomationProperties.Name="打开配置的 SaveKit 存档目录">
+                          ToolTip.Tip="{DynamicResource String.SaveKit.OpenDirectoryTooltip}"
+                          AutomationProperties.Name="{DynamicResource String.SaveKit.OpenDirectoryAutomationName}">
                    <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
                  </Button>
                  <Button IsVisible="{CompiledBinding IsSaveKitPage}"
                          Command="{CompiledBinding SaveKitPage.ResetCommand}"
                          Classes="secondary icon"
-                         ToolTip.Tip="恢复当前引擎的默认存档目录和扩展名"
-                         AutomationProperties.Name="恢复 SaveKit 默认设置">
+                          ToolTip.Tip="{DynamicResource String.SaveKit.ResetTooltip}"
+                          AutomationProperties.Name="{DynamicResource String.SaveKit.ResetAutomationName}">
                    <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
                  </Button>
                  <StackPanel IsVisible="{CompiledBinding IsPoolKitPage}"
@@ -230,7 +231,7 @@
                   <ToggleButton IsChecked="{CompiledBinding PoolKitPage.TrackingEnabled, Mode=OneWay}"
                                 Command="{CompiledBinding PoolKitPage.ToggleTrackingCommand}"
                                 Classes="poolkit-toolbar-toggle"
-                                AutomationProperties.Name="切换 PoolKit 对象跟踪">
+                                 AutomationProperties.Name="{DynamicResource String.PoolKit.TrackingAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
                       <TextBlock Text="{CompiledBinding PoolKitPage.TrackingButtonText}" />
@@ -239,8 +240,8 @@
                   <ToggleButton IsChecked="{CompiledBinding PoolKitPage.StackTraceEnabled, Mode=OneWay}"
                                 Command="{CompiledBinding PoolKitPage.ToggleLocationCommand}"
                                 Classes="poolkit-toolbar-toggle"
-                                ToolTip.Tip="开启定位会同时开启对象跟踪与事件历史"
-                                AutomationProperties.Name="切换 PoolKit 堆栈定位">
+                                 ToolTip.Tip="{DynamicResource String.PoolKit.LocationTooltip}"
+                                 AutomationProperties.Name="{DynamicResource String.PoolKit.LocationAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Crosshair}" Width="13" Height="13" />
                       <TextBlock Text="{CompiledBinding PoolKitPage.LocationButtonText}" />
@@ -248,12 +249,12 @@
                   </ToggleButton>
                    <Button Command="{CompiledBinding PoolKitPage.CheckLeaksCommand}"
                            Classes="secondary compact-action"
-                           ToolTip.Tip="扫描当前仍有借出对象的池，并自动定位首个候选"
-                           AutomationProperties.HelpText="检查只提供疑似未归还线索，不会直接判定内存泄漏"
-                           AutomationProperties.Name="检查 PoolKit 疑似未归还对象">
+                            ToolTip.Tip="{DynamicResource String.PoolKit.CheckLeaksTooltip}"
+                            AutomationProperties.HelpText="{DynamicResource String.PoolKit.CheckLeaksHelp}"
+                            AutomationProperties.Name="{DynamicResource String.PoolKit.CheckLeaksAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.TriangleAlert}" Width="13" Height="13" />
-                      <TextBlock Text="泄漏检查" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.CheckLeaks}" />
                     </StackPanel>
                   </Button>
                   <Button Command="{CompiledBinding PoolKitPage.ClearHistoryCommand}"
@@ -261,16 +262,16 @@
                     <Button.Content>
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
-                        <TextBlock Text="清空历史" />
+                        <TextBlock Text="{DynamicResource String.Common.ClearHistory}" />
                       </StackPanel>
                     </Button.Content>
                   </Button>
                   <Button Command="{CompiledBinding RefreshCommand}"
                           Classes="primary compact-action"
-                          AutomationProperties.Name="刷新 PoolKit">
+                           AutomationProperties.Name="{DynamicResource String.Common.Refresh}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
-                      <TextBlock Text="刷新" />
+                      <TextBlock Text="{DynamicResource String.Common.Refresh}" />
                     </StackPanel>
                   </Button>
                 </StackPanel>
@@ -289,9 +290,9 @@
                   <ToggleButton IsChecked="{CompiledBinding ResKitPage.TrackingEnabled, Mode=OneWay}"
                                 Command="{CompiledBinding ResKitPage.ToggleTrackingCommand}"
                                 Classes="reskit-toolbar-toggle"
-                                ToolTip.Tip="仅新建 lease 会记录加载来源"
-                                AutomationProperties.Name="切换 ResKit 加载位置跟踪"
-                                AutomationProperties.HelpText="开启后新建 lease 会记录源码位置">
+                                 ToolTip.Tip="{DynamicResource String.ResKit.TrackingTooltip}"
+                                 AutomationProperties.Name="{DynamicResource String.ResKit.TrackingAutomationName}"
+                                 AutomationProperties.HelpText="{DynamicResource String.ResKit.TrackingHelp}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Crosshair}" Width="13" Height="13" />
                       <TextBlock Text="{CompiledBinding ResKitPage.TrackingButtonText}" />
@@ -300,19 +301,19 @@
                   <Button
                           Command="{CompiledBinding ResKitPage.ClearHistoryCommand}"
                           Classes="secondary compact-action"
-                          AutomationProperties.Name="清空 ResKit 卸载历史">
+                           AutomationProperties.Name="{DynamicResource String.Common.ClearHistory}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
-                      <TextBlock Text="清空历史" />
+                      <TextBlock Text="{DynamicResource String.Common.ClearHistory}" />
                     </StackPanel>
                   </Button>
                   <Button
                           Command="{CompiledBinding RefreshCommand}"
                           Classes="primary compact-action"
-                          AutomationProperties.Name="刷新 ResKit">
+                           AutomationProperties.Name="{DynamicResource String.Common.Refresh}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="13" Height="13" />
-                      <TextBlock Text="刷新" />
+                      <TextBlock Text="{DynamicResource String.Common.Refresh}" />
                     </StackPanel>
                   </Button>
                 </StackPanel>
@@ -326,14 +327,14 @@
                              MaxWidth="170"
                              TextTrimming="CharacterEllipsis"
                              ToolTip.Tip="{CompiledBinding ActionKitPage.OperationStatusText}"
-                             AutomationProperties.Name="ActionKit 操作状态"
+                              AutomationProperties.Name="{DynamicResource String.ActionKit.StatusAutomationName}"
                              AutomationProperties.LiveSetting="Polite"
                              VerticalAlignment="Center" />
                   <ToggleButton Command="{CompiledBinding ActionKitPage.ToggleStackTraceCommand}"
                                 IsChecked="{CompiledBinding ActionKitPage.StackTraceEnabled, Mode=OneWay}"
                                 Classes="actionkit-toolbar-toggle"
-                                ToolTip.Tip="为后续启动的根 Action 捕获调用堆栈"
-                                AutomationProperties.Name="切换 ActionKit 堆栈捕获">
+                                 ToolTip.Tip="{DynamicResource String.ActionKit.StackTraceTooltip}"
+                                 AutomationProperties.Name="{DynamicResource String.ActionKit.StackTraceAutomationName}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
                       <TextBlock Text="{CompiledBinding ActionKitPage.StackTraceButtonText}" />
@@ -341,20 +342,20 @@
                   </ToggleButton>
                   <Button Command="{CompiledBinding ActionKitPage.ClearStackTraceCommand}"
                           Classes="secondary compact-action"
-                          ToolTip.Tip="清空当前活动根已捕获的 Start 调用帧，不影响最近终态记录"
-                          AutomationProperties.Name="清空 ActionKit Start 调用帧历史"
-                          AutomationProperties.HelpText="只清空当前活动根已捕获的 Start 调用帧，不影响最近终态记录">
+                           ToolTip.Tip="{DynamicResource String.ActionKit.ClearStackTraceTooltip}"
+                           AutomationProperties.Name="{DynamicResource String.ActionKit.ClearStackTraceAutomationName}"
+                           AutomationProperties.HelpText="{DynamicResource String.ActionKit.ClearStackTraceHelp}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <PathIcon Data="{StaticResource Icon.Trash2}" Width="13" Height="13" />
-                      <TextBlock Text="清空历史" />
+                       <TextBlock Text="{DynamicResource String.Common.ClearHistory}" />
                     </StackPanel>
                   </Button>
                 </StackPanel>
-                <Button Content="刷新"
+                <Button Content="{DynamicResource String.Overview.Refresh}"
                         Command="{CompiledBinding RefreshCommand}"
                         Classes="secondary"
                         IsVisible="{CompiledBinding IsOverviewPage}" />
-                <Button Content="刷新"
+                <Button Content="{DynamicResource String.Overview.Refresh}"
                         Command="{CompiledBinding RefreshCommand}"
                         Classes="secondary"
                         IsVisible="{CompiledBinding IsDetailPage}" />
@@ -372,7 +373,7 @@
                 <Border Classes="panel"
                         Padding="10">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="运行状态"
+                    <TextBlock Text="{DynamicResource String.Overview.RuntimeStatus}"
                                Classes="section-title" />
                     <ItemsControl ItemsSource="{CompiledBinding SummaryCards}">
                       <ItemsControl.ItemsPanel>
@@ -410,7 +411,7 @@
                     <StackPanel Orientation="Horizontal"
                                 Spacing="6"
                                 VerticalAlignment="Center">
-                      <TextBlock Text="命令桥"
+                      <TextBlock Text="{DynamicResource String.Overview.CommandBridge}"
                                  FontSize="{DynamicResource FontSize.Md}"
                                  FontWeight="SemiBold"
                                  VerticalAlignment="Center" />
@@ -423,19 +424,19 @@
                       </Border>
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Content="Ping"
+                            Content="{DynamicResource String.Overview.Ping}"
                             Command="{CompiledBinding PingCommand}"
                             Classes="primary compact-action" />
                     <Button Grid.Column="2"
-                            Content="状态"
+                            Content="{DynamicResource String.Overview.Status}"
                             Command="{CompiledBinding BridgeStatusCommand}"
                             Classes="secondary compact-action" />
                     <Button Grid.Column="3"
-                            Content="目录"
+                            Content="{DynamicResource String.Overview.Catalog}"
                             Command="{CompiledBinding RefreshCommandCatalogCommand}"
                             Classes="secondary compact-action" />
                     <TextBlock Grid.Column="5"
-                               Text="字体"
+                               Text="{DynamicResource String.Overview.FontLabel}"
                                Classes="muted"
                                FontSize="{DynamicResource FontSize.Sm}"
                                VerticalAlignment="Center" />
@@ -455,7 +456,7 @@
                 <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
                       RowSpacing="8">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="安装 Skill"
+                    <TextBlock Text="{DynamicResource String.Overview.SkillsTitle}"
                                Classes="section-title" />
                     <TextBlock Text="{CompiledBinding SkillInstallStatusText}"
                                Classes="muted"
@@ -544,11 +545,11 @@
                                          FontSize="{DynamicResource FontSize.Xs}" />
                             </Border>
                             <Button Grid.Column="2"
-                                    Content="安装"
+                                    Content="{DynamicResource String.Overview.Install}"
                                     Command="{CompiledBinding InstallCommand}"
                                     Classes="primary compact-action" />
                             <Button Grid.Column="3"
-                                    Content="卸载"
+                                    Content="{DynamicResource String.Overview.Uninstall}"
                                     Command="{CompiledBinding UninstallCommand}"
                                     Classes="secondary compact-action" />
                           </Grid>
@@ -563,7 +564,7 @@
                         RowSpacing="4">
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="6">
-                      <TextBlock Text="自定义目录"
+                      <TextBlock Text="{DynamicResource String.Overview.CustomDirectory}"
                                  FontSize="{DynamicResource FontSize.Md}"
                                  FontWeight="SemiBold" />
                       <TextBlock Grid.Column="1"
@@ -580,11 +581,11 @@
                       <TextBox Text="{CompiledBinding CustomSkillPath, Mode=TwoWay}"
                                PlaceholderText="custom/skills" />
                       <Button Grid.Column="1"
-                              Content="安装"
+                              Content="{DynamicResource String.Overview.Install}"
                               Command="{CompiledBinding InstallCustomSkillCommand}"
                               Classes="secondary" />
                       <Button Grid.Column="2"
-                              Content="卸载"
+                              Content="{DynamicResource String.Overview.Uninstall}"
                               Command="{CompiledBinding UninstallCustomSkillCommand}"
                               Classes="ghost" />
                     </Grid>

@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.LogKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -9,7 +10,7 @@ public sealed partial class LogKitPageViewModel
     private string mProjectSettingsEngineId = string.Empty;
     private string mProjectSettingsPath = string.Empty;
     private string mProjectSettingsFingerprint = string.Empty;
-    private string mSettingsStatusText = "等待项目配置";
+    private string mSettingsStatusText = WorkbenchI18nService.Instance.GetString("String.LogKit.WaitingProjectConfig", "等待项目配置");
     private long mProjectSettingsIdentityVersion;
     private bool mProjectSettingsLoaded;
     private bool mProjectCanPersist;
@@ -27,7 +28,9 @@ public sealed partial class LogKitPageViewModel
     /// <summary>获取是否正在保存配置。</summary>
     public bool IsSavingSettings { get => mIsSavingSettings; private set => SetSavingSettings(value); }
     /// <summary>获取保存按钮显示文本。</summary>
-    public string SaveSettingsButtonText => IsSavingSettings ? "保存中" : "保存";
+    public string SaveSettingsButtonText => IsSavingSettings
+        ? GetString("String.LogKit.SavingText", "保存中")
+        : GetString("String.LogKit.SaveText", "保存");
 
     /// <summary>页面激活后按项目根读取一次小型配置，不依赖 Runtime 在线，也不参与周期 telemetry。</summary>
     private void EnsureProjectSettingsLoaded()
@@ -48,7 +51,8 @@ public sealed partial class LogKitPageViewModel
             // 读取失败不能标记为已完成，否则页面会永久停留在只读状态，后续 Runtime 帧也无法触发重试。
             mProjectSettingsLoaded = false;
             ProjectCanPersist = false;
-            SettingsStatusText = "项目配置读取失败: " + exception.Message;
+            SetSettingsStatus(string.Format(
+                GetString("String.LogKit.LoadConfigFailedTemplate", "项目配置读取失败: {0}"), exception.Message));
         }
     }
 
@@ -89,7 +93,9 @@ public sealed partial class LogKitPageViewModel
     {
         SettingsDraft.Apply(WorkbenchLogKitSettings.CreateDefault());
         UpdateSettingsDirty();
-        SettingsStatusText = "已恢复默认草稿，保存后写入项目并尝试应用到当前 Runtime";
+        SetSettingsStatus(GetString(
+            "String.LogKit.ResetDefaultsMessage",
+            "已恢复默认草稿，保存后写入项目并尝试应用到当前 Runtime"));
     }
 
     /// <summary>保存项目设置并独立呈现 Runtime 应用结果。</summary>
@@ -103,7 +109,7 @@ public sealed partial class LogKitPageViewModel
         var context = CaptureSettingsSaveContext();
         var token = mLifetimeCancellation.Token;
         IsSavingSettings = true;
-        SettingsStatusText = "正在保存项目配置...";
+        SetSettingsStatus(GetString("String.LogKit.SavingConfig", "正在保存项目配置..."));
         try
         {
             var result = await mSaveSettingsAsync(
@@ -120,7 +126,8 @@ public sealed partial class LogKitPageViewModel
         {
             if (MatchesProjectSettingsIdentity(context))
             {
-                SettingsStatusText = "保存失败: " + exception.Message;
+                SetSettingsStatus(string.Format(
+                    GetString("String.LogKit.SaveFailedTemplate", "保存失败: {0}"), exception.Message));
             }
         }
         finally
@@ -152,7 +159,9 @@ public sealed partial class LogKitPageViewModel
         if (result.ConflictDetected)
         {
             ApplyProjectSettings(result.ProjectSettings, false);
-            SettingsStatusText = "配置已被其它进程修改，当前草稿已保留；再次保存将基于最新版本。";
+            SetSettingsStatus(GetString(
+                "String.LogKit.ConfigConflictMessage",
+                "配置已被其它进程修改，当前草稿已保留；再次保存将基于最新版本。"));
             return;
         }
 
@@ -163,7 +172,7 @@ public sealed partial class LogKitPageViewModel
         }
 
         var appliedToCurrentRuntime = TryApplySavedRuntimeState(context.RuntimeIdentity, result.AppliedState);
-        SettingsStatusText = CreateSaveResultText(result, appliedToCurrentRuntime);
+        SetSettingsStatus(CreateSaveResultText(result, appliedToCurrentRuntime));
     }
 
     /// <summary>仅在发起身份和返回状态都仍属于当前 Runtime 且未落后时应用命令结果。</summary>
@@ -201,17 +210,17 @@ public sealed partial class LogKitPageViewModel
 
         if (result.ProjectSaved && appliedToCurrentRuntime)
         {
-            return "项目配置已保存，并已应用到当前 Runtime";
+            return GetString("String.LogKit.SavedApplied", "项目配置已保存，并已应用到当前 Runtime");
         }
 
         if (result.ProjectSaved && result.RuntimeApplied)
         {
-            return "项目配置已保存；Runtime 已切换，已忽略旧实例返回状态";
+            return GetString("String.LogKit.SavedRuntimeSwitched", "项目配置已保存；Runtime 已切换，已忽略旧实例返回状态");
         }
 
         return result.ProjectSaved
-            ? "项目配置已保存；当前 Runtime 未应用，重连或初始化时会加载"
-            : "项目配置未保存";
+            ? GetString("String.LogKit.SavedNotApplied", "项目配置已保存；当前 Runtime 未应用，重连或初始化时会加载")
+            : GetString("String.LogKit.SavedNotSaved", "项目配置未保存");
     }
 
     /// <summary>判断当前草稿是否允许写入项目。</summary>
@@ -243,7 +252,7 @@ public sealed partial class LogKitPageViewModel
         ProjectCanPersist = false;
         SettingsDraft.Apply(mBaselineSettings);
         UpdateSettingsDirty();
-        SettingsStatusText = "等待项目配置";
+        SetSettingsStatus(GetString(WaitingProjectConfigKey, "等待项目配置"), isWaitingStatus: true);
     }
 
     /// <summary>更新项目持久化能力并刷新保存命令。</summary>
@@ -284,4 +293,13 @@ public sealed partial class LogKitPageViewModel
         string ProjectFingerprint,
         WorkbenchLogKitSettings SubmittedSettings,
         HostIdentity RuntimeIdentity);
+
+    /// <summary>写入设置状态文本并维护“等待项目配置”占位标记；仅占位随语言切换重投影。</summary>
+    /// <param name="text">新的状态文本。</param>
+    /// <param name="isWaitingStatus">是否为等待项目配置的占位状态。</param>
+    private void SetSettingsStatus(string text, bool isWaitingStatus = false)
+    {
+        mIsWaitingProjectConfigStatus = isWaitingStatus;
+        SettingsStatusText = text;
+    }
 }

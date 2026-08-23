@@ -1,11 +1,38 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.AudioKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 AudioKit Bus、活动 voice、历史与稳定索引的只读观察页面。</summary>
 public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
 {
+    private const string BUS_SCOPE_ALL = "all";
+    private const string BUS_SCOPE_BUILT_IN = "built-in";
+    private const string BUS_SCOPE_REGISTERED = "registered";
+    private const string BUS_SCOPE_DYNAMIC = "dynamic";
+
+    private enum IndexStatusKind
+    {
+        None,
+        Scanning,
+        Generating,
+        Scanned,
+        Generated,
+        Saved,
+        LoadFailed,
+        SaveFailed,
+        Error
+    }
+
+    private enum IndexEmptyKind
+    {
+        None,
+        ScanHint,
+        NoEntries,
+        ScanFailed
+    }
+
     private readonly Func<AudioIndexRequest, CancellationToken, Task<AudioIndexResult>>? mScanIndexAsync;
     private readonly Func<AudioIndexRequest, CancellationToken, Task<AudioIndexResult>>? mGenerateIndexAsync;
     private readonly Func<string, AudioIndexSettings>? mLoadIndexSettings;
@@ -20,10 +47,11 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
     private bool mPayloadTruncated;
     private string mBusSearchText = string.Empty;
     private bool mShowActiveBusesOnly;
-    private string mSelectedBusScope = "全部";
+    private string mSelectedBusScope = BUS_SCOPE_ALL;
     private int mBusTotal;
     private int mLoadedBusCount;
-    private string mBusCoverageText = "0 条总线";
+    private string mBusCoverageText = WorkbenchI18nService.Instance.GetString(
+        "String.AudioKit.Coverage.Total", "{0} 条总线").Replace("{0}", "0", StringComparison.Ordinal);
     private bool mHasBusCoverageWarning;
     private string mProjectRoot = string.Empty;
     private string mScanFolder = "Assets/Art/Audio";
@@ -33,7 +61,12 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
     private string mIndexClassName = "AudioIds";
     private decimal mIndexStartId = 1001m;
     private string mIndexStatusText = string.Empty;
-    private string mIndexEmptyText = "点击“扫描预览”查看可索引音频";
+    private string mIndexEmptyText = WorkbenchI18nService.Instance.GetString(
+        "String.AudioKit.Index.Empty", "点击“扫描预览”查看可索引音频");
+    private IndexStatusKind mIndexStatusKind;
+    private IndexEmptyKind mIndexEmptyKind = IndexEmptyKind.ScanHint;
+    private int mIndexStatusCount;
+    private string mIndexStatusError = string.Empty;
 
     /// <summary>创建可独立预览的 AudioKit 观察页面。</summary>
     public AudioKitPageViewModel() : this(null, null, null, null) { }
@@ -49,6 +82,7 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         mGenerateIndexAsync = generateIndexAsync;
         mLoadIndexSettings = loadIndexSettings;
         mSaveIndexSettingsAsync = saveIndexSettingsAsync;
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         CreateCommands();
     }
 
@@ -80,15 +114,22 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>获取可用于大量 Bus 分类筛选的稳定范围选项。</summary>
-    public IReadOnlyList<string> BusScopeOptions { get; } = new[] { "全部", "内置", "已注册", "动态" };
+    /// <summary>获取可用于大量 Bus 分类筛选的本地化范围选项。</summary>
+    public IReadOnlyList<string> BusScopeOptions => new[]
+    {
+        GetString("String.AudioKit.BusScope.All", "全部"),
+        GetString("String.AudioKit.BusScope.BuiltIn", "内置"),
+        GetString("String.AudioKit.BusScope.Registered", "已注册"),
+        GetString("String.AudioKit.BusScope.Dynamic", "动态")
+    };
     /// <summary>获取或设置当前 Bus 来源范围。</summary>
     public string SelectedBusScope
     {
-        get => mSelectedBusScope;
+        get => GetBusScopeDisplay(mSelectedBusScope);
         set
         {
-            if (SetProperty(ref mSelectedBusScope, value ?? "全部")) RefreshBusFilter();
+            string normalized = NormalizeBusScope(value);
+            if (SetProperty(ref mSelectedBusScope, normalized)) RefreshBusFilter();
         }
     }
 
@@ -138,8 +179,8 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         if (string.Equals(mProjectRoot, projectRoot, StringComparison.OrdinalIgnoreCase)) return;
         mProjectRoot = projectRoot ?? string.Empty;
         IndexEntries.Clear();
-        IndexStatusText = string.Empty;
-        IndexEmptyText = "点击“扫描预览”查看可索引音频";
+        SetIndexStatus(IndexStatusKind.None);
+        SetIndexEmpty(IndexEmptyKind.ScanHint);
         LoadIndexSettings();
         OnPropertyChanged(nameof(IsIndexEmpty));
         RaiseIndexCommands();
@@ -172,6 +213,7 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>取消页面仍在执行的索引任务。</summary>
     public void Dispose()
     {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         mLifetimeCancellation.Cancel();
         mLifetimeCancellation.Dispose();
     }
@@ -213,8 +255,8 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         PayloadTruncated = false;
         BusTotal = 0;
         LoadedBusCount = 0;
-        BusCoverageText = "0 条总线";
         HasBusCoverageWarning = false;
+        UpdateBusCoverageText();
     }
 
     /// <summary>根据 payload 总数与实际列表更新 Bus 覆盖率和截断警告。</summary>
@@ -223,8 +265,107 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         BusTotal = state.BusTotal;
         LoadedBusCount = state.Buses.Count;
         HasBusCoverageWarning = state.BusesTruncated || state.Buses.Count < state.BusTotal;
+        UpdateBusCoverageText();
+    }
+
+    /// <summary>根据当前语言重新投影 AudioKit 的动态展示文本。</summary>
+    private void OnCultureChanged()
+    {
+        OnPropertyChanged(nameof(BusScopeOptions));
+        OnPropertyChanged(nameof(SelectedBusScope));
+        UpdateBusCoverageText();
+        SetIndexStatus(mIndexStatusKind, mIndexStatusCount, mIndexStatusError);
+        SetIndexEmpty(mIndexEmptyKind);
+        for (var index = 0; index < mAllBusChannels.Count; index++)
+        {
+            mAllBusChannels[index].RefreshLocalization();
+        }
+        OnPropertyChanged(nameof(BusChannels));
+    }
+
+    /// <summary>从当前语言资源读取 AudioKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
+    }
+
+    /// <summary>把筛选展示值归一化为不随语言变化的内部范围键。</summary>
+    private static string NormalizeBusScope(string? value)
+    {
+        if (string.Equals(value, BUS_SCOPE_BUILT_IN, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "内置", StringComparison.Ordinal)
+            || string.Equals(value, "Built-in", StringComparison.OrdinalIgnoreCase)) return BUS_SCOPE_BUILT_IN;
+        if (string.Equals(value, BUS_SCOPE_REGISTERED, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "已注册", StringComparison.Ordinal)
+            || string.Equals(value, "Registered", StringComparison.OrdinalIgnoreCase)) return BUS_SCOPE_REGISTERED;
+        if (string.Equals(value, BUS_SCOPE_DYNAMIC, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "动态", StringComparison.Ordinal)
+            || string.Equals(value, "Dynamic", StringComparison.OrdinalIgnoreCase)) return BUS_SCOPE_DYNAMIC;
+        return BUS_SCOPE_ALL;
+    }
+
+    /// <summary>根据内部范围键返回当前语言的筛选显示值。</summary>
+    private static string GetBusScopeDisplay(string scope)
+    {
+        return scope switch
+        {
+            BUS_SCOPE_BUILT_IN => GetString("String.AudioKit.BusScope.BuiltIn", "内置"),
+            BUS_SCOPE_REGISTERED => GetString("String.AudioKit.BusScope.Registered", "已注册"),
+            BUS_SCOPE_DYNAMIC => GetString("String.AudioKit.BusScope.Dynamic", "动态"),
+            _ => GetString("String.AudioKit.BusScope.All", "全部")
+        };
+    }
+
+    /// <summary>根据 Bus 数量和裁剪状态重建覆盖率文本。</summary>
+    private void UpdateBusCoverageText()
+    {
+        string key = HasBusCoverageWarning
+            ? "String.AudioKit.Coverage.Partial"
+            : "String.AudioKit.Coverage.Total";
+        string fallback = HasBusCoverageWarning
+            ? "已加载 {0} / 共 {1} 条总线"
+            : "{0} 条总线";
+        string template = GetString(key, fallback);
         BusCoverageText = HasBusCoverageWarning
-            ? "已加载 " + state.Buses.Count + " / 共 " + state.BusTotal + " 条总线"
-            : state.BusTotal + " 条总线";
+            ? string.Format(template, LoadedBusCount, BusTotal)
+            : string.Format(template, BusTotal);
+    }
+
+    /// <summary>记录并显示索引操作状态，使语言切换能够重放同一状态。</summary>
+    private void SetIndexStatus(IndexStatusKind kind, int count = 0, string? error = null)
+    {
+        mIndexStatusKind = kind;
+        mIndexStatusCount = count;
+        mIndexStatusError = error ?? string.Empty;
+        string text = kind switch
+        {
+            IndexStatusKind.Scanning => GetString("String.AudioKit.Index.Scanning", "扫描中"),
+            IndexStatusKind.Generating => GetString("String.AudioKit.Index.Generating", "生成中"),
+            IndexStatusKind.Scanned => string.Format(GetString("String.AudioKit.Index.Scanned", "已扫描 {0} 项"), count),
+            IndexStatusKind.Generated => string.Format(GetString("String.AudioKit.Index.Generated", "已生成 {0} 项"), count),
+            IndexStatusKind.Saved => GetString("String.AudioKit.Index.Saved", "配置已保存"),
+            IndexStatusKind.LoadFailed => string.Format(
+                GetString("String.AudioKit.Index.LoadFailed", "配置读取失败，已使用默认值：{0}"), mIndexStatusError),
+            IndexStatusKind.SaveFailed => string.Format(
+                GetString("String.AudioKit.Index.SaveFailed", "配置保存失败：{0}"), mIndexStatusError),
+            IndexStatusKind.Error => mIndexStatusError,
+            _ => string.Empty
+        };
+        IndexStatusText = text;
+    }
+
+    /// <summary>记录并显示索引列表空态，使语言切换能够重放同一空态。</summary>
+    private void SetIndexEmpty(IndexEmptyKind kind)
+    {
+        mIndexEmptyKind = kind;
+        IndexEmptyText = kind switch
+        {
+            IndexEmptyKind.None => string.Empty,
+            IndexEmptyKind.NoEntries => GetString(
+                "String.AudioKit.Index.NoEntries", "未找到 wav、mp3、ogg、aiff、flac 或 m4a"),
+            IndexEmptyKind.ScanFailed => GetString(
+                "String.AudioKit.Index.ScanFailed", "扫描失败，请检查路径与上方错误"),
+            _ => GetString("String.AudioKit.Index.Empty", "点击“扫描预览”查看可索引音频")
+        };
     }
 }

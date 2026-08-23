@@ -21,6 +21,7 @@ public sealed partial class InstallerShellView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     /// <summary>
@@ -73,6 +74,19 @@ public sealed partial class InstallerShellView : UserControl
         }
 
         InstallerLogList.ScrollIntoView(mObservedLogs[^1]);
+    }
+
+    /// <summary>
+    /// 视图从窗口树移除时释放当前 Installer ViewModel，解除静态语言服务和会话事件订阅。
+    /// </summary>
+    /// <param name="sender">Installer 视图。</param>
+    /// <param name="eventArgs">视觉树分离事件参数。</param>
+    private void OnDetachedFromVisualTree(object? sender, EventArgs eventArgs)
+    {
+        if (DataContext is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 
     /// <summary>

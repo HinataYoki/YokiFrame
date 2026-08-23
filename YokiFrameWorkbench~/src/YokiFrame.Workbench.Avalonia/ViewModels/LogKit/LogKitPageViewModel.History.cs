@@ -13,7 +13,7 @@ public sealed partial class LogKitPageViewModel
     private readonly List<LogKitHistoryRowViewModel> mAllHistoryRows = new();
     private readonly List<LogKitHistoryRowViewModel> mDesiredHistoryRows = new();
     private string mHistorySearchText = string.Empty;
-    private string mSelectedHistoryLevel = "全部";
+    private string mSelectedHistoryLevel = HISTORY_LEVEL_ALL;
     private LogKitHistoryRowViewModel? mSelectedHistoryRow;
     private string mHistoryStatusText = string.Empty;
 
@@ -36,7 +36,7 @@ public sealed partial class LogKitPageViewModel
         get => mSelectedHistoryLevel;
         set
         {
-            if (SetProperty(ref mSelectedHistoryLevel, value ?? "全部"))
+            if (SetProperty(ref mSelectedHistoryLevel, NormalizeHistoryLevel(value)))
             {
                 ReconcileVisibleHistory();
             }
@@ -77,11 +77,13 @@ public sealed partial class LogKitPageViewModel
     /// <summary>获取是否已选择一条内存日志。</summary>
     public bool HasSelectedHistory => SelectedHistoryRow != null;
     /// <summary>获取详情区等级。</summary>
-    public string SelectedHistoryLevelText => SelectedHistoryRow?.LevelText ?? "未选择日志";
+    public string SelectedHistoryLevelText => SelectedHistoryRow?.LevelText
+        ?? GetString("String.LogKit.NoLogSelected", "未选择日志");
     /// <summary>获取详情区本地时间。</summary>
     public string SelectedHistoryTimeText => SelectedHistoryRow?.TimeText ?? "--";
     /// <summary>获取详情区消息。</summary>
-    public string SelectedHistoryMessageText => SelectedHistoryRow?.MessageText ?? "未选择日志记录";
+    public string SelectedHistoryMessageText => SelectedHistoryRow?.MessageText
+        ?? GetString("String.LogKit.NoLogRecordSelected", "未选择日志记录");
     /// <summary>获取详情区上下文。</summary>
     public string SelectedHistoryContextText => SelectedHistoryRow?.Entry.Context ?? string.Empty;
     /// <summary>获取详情区异常摘要。</summary>
@@ -224,14 +226,14 @@ public sealed partial class LogKitPageViewModel
 
         var identity = CaptureIdentity();
         var token = mIdentityCancellation.Token;
-        HistoryStatusText = "正在清空内存历史...";
+        HistoryStatusText = GetString("String.LogKit.ClearingHistory", "正在清空内存历史...");
         try
         {
             var state = await mClearHistoryAsync(EngineId, token);
             if (MatchesIdentity(identity.EngineId, identity.SessionId, identity.Generation))
             {
                 ApplyState(state, false);
-                HistoryStatusText = "内存历史已清空";
+                HistoryStatusText = GetString("String.LogKit.HistoryCleared", "内存历史已清空");
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -239,7 +241,8 @@ public sealed partial class LogKitPageViewModel
         }
         catch (Exception exception)
         {
-            HistoryStatusText = "清空失败: " + exception.Message;
+            HistoryStatusText = string.Format(
+                GetString("String.LogKit.ClearFailedTemplate", "清空失败: {0}"), exception.Message);
         }
     }
 
@@ -283,6 +286,25 @@ public sealed partial class LogKitPageViewModel
     private HostIdentity CaptureIdentity()
     {
         return new HostIdentity(EngineId, SessionId, Generation);
+    }
+
+    /// <summary>把界面传入的等级值归一化为不随语言变化的哨兵或原始等级。</summary>
+    /// <param name="value">界面传入的等级展示值（“全部”/"All"）或具体等级。</param>
+    /// <returns>归一化后的内部筛选值。</returns>
+    private static string NormalizeHistoryLevel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return HISTORY_LEVEL_ALL;
+        }
+
+        return value.Trim() switch
+        {
+            HISTORY_LEVEL_ALL => HISTORY_LEVEL_ALL,
+            "全部" => HISTORY_LEVEL_ALL,
+            "All" => HISTORY_LEVEL_ALL,
+            _ => value.Trim()
+        };
     }
 
     /// <summary>使用完整日志值和重复序号标识帧内唯一行。</summary>

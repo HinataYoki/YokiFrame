@@ -29,28 +29,26 @@ public sealed partial class AudioKitPageViewModel
         bool generated)
     {
         if (!await TrySaveIndexSettingsAsync(false)) return;
-        IndexStatusText = generated ? "生成中" : "扫描中";
+        SetIndexStatus(generated ? IndexStatusKind.Generating : IndexStatusKind.Scanning);
         try
         {
             AudioIndexResult result = await operation(CreateIndexRequest(), mLifetimeCancellation.Token);
             IndexEntries.Clear();
             for (var index = 0; index < result.Entries.Count; index++) IndexEntries.Add(result.Entries[index]);
             OnPropertyChanged(nameof(IsIndexEmpty));
-            IndexStatusText = generated
-                ? "已生成 " + result.Entries.Count + " 项"
-                : "已扫描 " + result.Entries.Count + " 项";
-            IndexEmptyText = result.Entries.Count == 0
-                ? "未找到 wav、mp3、ogg、aiff、flac 或 m4a"
-                : string.Empty;
+            SetIndexStatus(
+                generated ? IndexStatusKind.Generated : IndexStatusKind.Scanned,
+                result.Entries.Count);
+            SetIndexEmpty(result.Entries.Count == 0 ? IndexEmptyKind.NoEntries : IndexEmptyKind.None);
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
         {
-            IndexStatusText = string.Empty;
+            SetIndexStatus(IndexStatusKind.None);
         }
         catch (Exception exception)
         {
-            IndexStatusText = exception.Message;
-            IndexEmptyText = "扫描失败，请检查路径与上方错误";
+            SetIndexStatus(IndexStatusKind.Error, error: exception.Message);
+            SetIndexEmpty(IndexEmptyKind.ScanFailed);
         }
     }
 

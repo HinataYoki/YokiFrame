@@ -11,12 +11,14 @@ public sealed partial class SaveKitPageViewModel
     private long mRuntimeGeneration;
     private long mRuntimeVersion;
     private bool mHasRuntimeState;
-    private string mRuntimeStatusText = "未连接";
-    private string mRuntimeStorageText = "未配置";
-    private string mRuntimeSerializerText = "未配置";
-    private string mRuntimeEncryptorText = "未启用";
-    private string mRuntimeAutoSaveText = "未启用";
-    private string mRuntimeMetadataText = "未读取";
+    /// <summary>缓存最近一次 Runtime 状态；语言切换时用它重投影派生文本。</summary>
+    private WorkbenchSaveKitState? mLastRuntimeState;
+    private string mRuntimeStatusText = GetString(NotConnectedKey, "未连接");
+    private string mRuntimeStorageText = GetString(NotConfiguredKey, "未配置");
+    private string mRuntimeSerializerText = GetString(NotConfiguredKey, "未配置");
+    private string mRuntimeEncryptorText = GetString(NotEnabledKey, "未启用");
+    private string mRuntimeAutoSaveText = GetString(NotEnabledKey, "未启用");
+    private string mRuntimeMetadataText = GetString(NotReadKey, "未读取");
     private string mRuntimeWarningText = string.Empty;
 
     /// <summary>获取当前页面是否已收到可信的 SaveKit Runtime state。</summary>
@@ -104,12 +106,28 @@ public sealed partial class SaveKitPageViewModel
         mRuntimeSessionId = state.SessionId;
         mRuntimeGeneration = state.Generation;
         mRuntimeVersion = state.Version;
+        mLastRuntimeState = state;
         HasRuntimeState = true;
-        RuntimeStatusText = state.Backend.Ready ? "已就绪" : "等待业务初始化";
-        RuntimeStorageText = FormatConfiguredValue(state.Backend.StorageConfigured, state.Backend.StorageType, "已配置");
-        RuntimeSerializerText = FormatConfiguredValue(state.Backend.SerializerConfigured, state.Backend.SerializerId, "已配置");
+        ApplyRuntimeTexts(state);
+    }
+
+    /// <summary>按当前语言把 Runtime 状态投影为界面文本；供状态应用与语言切换复用。</summary>
+    /// <param name="state">最近一次接受的 Runtime 状态。</param>
+    private void ApplyRuntimeTexts(WorkbenchSaveKitState state)
+    {
+        RuntimeStatusText = state.Backend.Ready
+            ? GetString("String.SaveKit.RuntimeReady", "已就绪")
+            : GetString("String.SaveKit.RuntimeWaitingInit", "等待业务初始化");
+        RuntimeStorageText = FormatConfiguredValue(
+            state.Backend.StorageConfigured,
+            state.Backend.StorageType,
+            GetString("String.SaveKit.Configured", "已配置"));
+        RuntimeSerializerText = FormatConfiguredValue(
+            state.Backend.SerializerConfigured,
+            state.Backend.SerializerId,
+            GetString("String.SaveKit.Configured", "已配置"));
         RuntimeEncryptorText = string.IsNullOrWhiteSpace(state.Backend.EncryptorId)
-            ? "未启用"
+            ? GetString(NotEnabledKey, "未启用")
             : state.Backend.EncryptorId;
         RuntimeAutoSaveText = FormatAutoSave(state.AutoSave);
         RuntimeMetadataText = FormatMetadata(state);
@@ -132,12 +150,13 @@ public sealed partial class SaveKitPageViewModel
         mRuntimeGeneration = 0L;
         mRuntimeVersion = 0L;
         HasRuntimeState = false;
-        RuntimeStatusText = "未连接";
-        RuntimeStorageText = "未配置";
-        RuntimeSerializerText = "未配置";
-        RuntimeEncryptorText = "未启用";
-        RuntimeAutoSaveText = "未启用";
-        RuntimeMetadataText = "未读取";
+        mLastRuntimeState = null;
+        RuntimeStatusText = GetString(NotConnectedKey, "未连接");
+        RuntimeStorageText = GetString(NotConfiguredKey, "未配置");
+        RuntimeSerializerText = GetString(NotConfiguredKey, "未配置");
+        RuntimeEncryptorText = GetString(NotEnabledKey, "未启用");
+        RuntimeAutoSaveText = GetString(NotEnabledKey, "未启用");
+        RuntimeMetadataText = GetString(NotReadKey, "未读取");
         RuntimeWarningText = string.Empty;
     }
 
@@ -146,7 +165,7 @@ public sealed partial class SaveKitPageViewModel
     {
         if (!configured)
         {
-            return "未配置";
+            return GetString(NotConfiguredKey, "未配置");
         }
 
         return string.IsNullOrWhiteSpace(value) ? configuredFallback : value;
@@ -157,7 +176,7 @@ public sealed partial class SaveKitPageViewModel
     {
         if (!autoSave.Enabled || autoSave.Target == null)
         {
-            return "未启用";
+            return GetString(NotEnabledKey, "未启用");
         }
 
         string target = autoSave.Target.Kind == "Slot"
@@ -172,7 +191,7 @@ public sealed partial class SaveKitPageViewModel
         string slots = state.SlotCount + " / " + state.SlotTotal + " Slot";
         string globals = state.GlobalCount + " / " + state.GlobalTotal + " Global";
         return state.SlotsTruncated || state.GlobalsTruncated
-            ? slots + " · " + globals + " · 已裁剪"
+            ? slots + " · " + globals + GetString("String.SaveKit.MetadataTruncatedSuffix", " · 已裁剪")
             : slots + " · " + globals;
     }
 
@@ -184,8 +203,37 @@ public sealed partial class SaveKitPageViewModel
             return state.StaleReason;
         }
 
-        return state.MetadataReadFailed ? "部分存档容器头读取失败" : string.Empty;
+        return state.MetadataReadFailed
+            ? GetString("String.SaveKit.MetadataReadFailed", "部分存档容器头读取失败")
+            : string.Empty;
     }
+
+    /// <summary>按当前语言重投影 Runtime 派生文本；有缓存状态时重算，否则回到占位。</summary>
+    private void OnRuntimeCultureChanged()
+    {
+        if (mLastRuntimeState != null && HasRuntimeState)
+        {
+            ApplyRuntimeTexts(mLastRuntimeState);
+            return;
+        }
+
+        if (!HasRuntimeState)
+        {
+            RuntimeStatusText = GetString(NotConnectedKey, "未连接");
+            RuntimeStorageText = GetString(NotConfiguredKey, "未配置");
+            RuntimeSerializerText = GetString(NotConfiguredKey, "未配置");
+            RuntimeEncryptorText = GetString(NotEnabledKey, "未启用");
+            RuntimeAutoSaveText = GetString(NotEnabledKey, "未启用");
+            RuntimeMetadataText = GetString(NotReadKey, "未读取");
+        }
+    }
+
+    /// <summary>未配置占位资源 key。</summary>
+    private const string NotConfiguredKey = "String.SaveKit.NotConfigured";
+    /// <summary>未启用占位资源 key。</summary>
+    private const string NotEnabledKey = "String.SaveKit.NotEnabled";
+    /// <summary>未读取占位资源 key。</summary>
+    private const string NotReadKey = "String.SaveKit.NotRead";
 
     /// <summary>把有限秒数格式化为紧凑且稳定的小数文本。</summary>
     private static string FormatSeconds(float value)

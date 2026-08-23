@@ -1,10 +1,11 @@
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Models.ResKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.ResKit;
 
 /// <summary>包装一条 lease 来源，并提供受控源码定位命令。</summary>
-public sealed class ResKitLoadSourceItemViewModel
+public sealed class ResKitLoadSourceItemViewModel : ViewModelBase
 {
     private readonly Func<WorkbenchResKitLoadSource, Task>? mOpenLocationAsync;
 
@@ -35,7 +36,9 @@ public sealed class ResKitLoadSourceItemViewModel
     /// <summary>获取源码定位命令。</summary>
     public ICommand OpenCommand { get; }
     /// <summary>获取屏幕阅读器使用的完整定位说明。</summary>
-    public string OpenAutomationName => "打开 " + FilePath + ":" + Line;
+    public string OpenAutomationName => string.Format(
+        WorkbenchI18nService.Instance.GetString("String.ResKit.OpenLocationTemplate", "打开 {0}"),
+        FilePath + ":" + Line);
 
     /// <summary>判断当前来源是否可请求宿主打开。</summary>
     private bool CanOpen() => Source.HasSourceLocation && mOpenLocationAsync != null;
@@ -44,5 +47,11 @@ public sealed class ResKitLoadSourceItemViewModel
     private async Task OpenAsync()
     {
         if (mOpenLocationAsync != null) await mOpenLocationAsync(Source);
+    }
+
+    /// <summary>按当前语言刷新行的展示文本；来源数据不变。</summary>
+    internal void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(OpenAutomationName));
     }
 }

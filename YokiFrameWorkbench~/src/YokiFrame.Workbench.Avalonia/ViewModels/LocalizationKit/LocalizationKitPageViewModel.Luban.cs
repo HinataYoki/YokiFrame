@@ -22,7 +22,7 @@ public sealed partial class LocalizationKitPageViewModel
             if (SetProperty(ref mLubanWorkDir, value?.Trim() ?? string.Empty))
             {
                 mLubanSettingsDirty = true;
-                InvalidateCatalog("Luban 工作目录已变更，点击刷新");
+                InvalidateCatalog(GetString(WorkDirChangedKey, "Luban 工作目录已变更，点击刷新"));
             }
         }
     }
@@ -48,7 +48,7 @@ public sealed partial class LocalizationKitPageViewModel
             mLubanWorkDir = string.Empty;
             mLubanSettingsDirty = false;
             OnPropertyChanged(nameof(LubanWorkDir));
-            StatusText = "Luban 配置读取失败: " + exception.Message;
+            SetStatus(string.Format(GetString(ConfigLoadFailedTemplateKey, "Luban 配置读取失败: {0}"), exception.Message));
         }
     }
 
@@ -72,7 +72,7 @@ public sealed partial class LocalizationKitPageViewModel
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
         {
-            StatusText = "Luban 配置保存失败: " + exception.Message;
+            SetStatus(string.Format(GetString(ConfigSaveFailedTemplateKey, "Luban 配置保存失败: {0}"), exception.Message));
             return false;
         }
     }
@@ -89,12 +89,12 @@ public sealed partial class LocalizationKitPageViewModel
     {
         if (mFolderPicker == null)
         {
-            StatusText = "当前窗口没有可用的目录选择器。";
+            SetStatus(GetString(NoFolderPickerKey, "当前窗口没有可用的目录选择器。"));
             return;
         }
 
         string? selectedDirectory = await mFolderPicker.PickFolderAsync(
-            "选择 Luban 工作目录",
+            GetString(PickWorkDirTitleKey, "选择 Luban 工作目录"),
             suggestedPath: GetLubanWorkDirPickerStartDirectory());
         if (string.IsNullOrWhiteSpace(selectedDirectory))
         {
@@ -103,14 +103,14 @@ public sealed partial class LocalizationKitPageViewModel
 
         if (!TryConvertToProjectRelativeDirectory(selectedDirectory, out string relativeDirectory))
         {
-            StatusText = "Luban 工作目录必须位于当前项目内。";
+            SetStatus(GetString(WorkDirOutsideProjectKey, "Luban 工作目录必须位于当前项目内。"));
             return;
         }
 
         LubanWorkDir = relativeDirectory;
         if (TryPersistLubanWorkspaceSettings())
         {
-            StatusText = "Luban 工作目录已保存，点击刷新读取 Excel。";
+            SetStatus(GetString(WorkDirSavedKey, "Luban 工作目录已保存，点击刷新读取 Excel。"));
         }
     }
 
@@ -125,29 +125,29 @@ public sealed partial class LocalizationKitPageViewModel
 
         string projectRoot = mProjectRoot;
         string lubanWorkDir = LubanWorkDir;
-        StatusText = "正在定位 Excel 作者目录";
+        SetStatus(GetString(LocatingExcelKey, "正在定位 Excel 作者目录"));
         LocalizationLubanWorkspaceResult result = await Task.Run(() =>
             mService.ResolveLubanWorkspace(projectRoot, lubanWorkDir));
         if (!result.Succeeded)
         {
-            StatusText = "失败: " + string.Join("; ", result.Diagnostics);
+            SetStatus(string.Format(GetString(FailedStatusTemplateKey, "失败: {0}"), string.Join("; ", result.Diagnostics)));
             return;
         }
 
         if (!Directory.Exists(result.WorkbookDirectory))
         {
-            StatusText = "Excel 作者目录尚不存在，请先创建模板。";
+            SetStatus(GetString(ExcelDirMissingKey, "Excel 作者目录尚不存在，请先创建模板。"));
             return;
         }
 
         if (mOpenDirectoryAsync == null)
         {
-            StatusText = "当前窗口没有可用的目录打开服务。";
+            SetStatus(GetString(NoDirectoryOpenerKey, "当前窗口没有可用的目录打开服务。"));
             return;
         }
 
         await mOpenDirectoryAsync(result.WorkbookDirectory);
-        StatusText = "已打开 Excel 作者目录。";
+        SetStatus(GetString(ExcelOpenedKey, "已打开 Excel 作者目录。"));
     }
 
     /// <summary>显式创建 LocalizationKit 自有 Luban XML 与 Excel 模板，避免刷新操作隐式写入作者文件。</summary>
@@ -165,7 +165,7 @@ public sealed partial class LocalizationKitPageViewModel
         }
 
         mIsCreatingTemplate = true;
-        StatusText = "正在创建 Luban 本地化模板";
+        SetStatus(GetString(CreatingTemplateKey, "正在创建 Luban 本地化模板"));
         try
         {
             string projectRoot = mProjectRoot;
@@ -177,13 +177,13 @@ public sealed partial class LocalizationKitPageViewModel
             }));
             if (!result.Succeeded)
             {
-                StatusText = "失败: " + string.Join("; ", result.Diagnostics);
+                SetStatus(string.Format(GetString(FailedStatusTemplateKey, "失败: {0}"), string.Join("; ", result.Diagnostics)));
                 return;
             }
 
-            StatusText = result.Diagnostics.Count == 0
-                ? "Luban 本地化模板已创建"
-                : "模板已创建: " + string.Join("; ", result.Diagnostics);
+            SetStatus(result.Diagnostics.Count == 0
+                ? GetString(TemplateCreatedKey, "Luban 本地化模板已创建")
+                : string.Format(GetString(TemplateCreatedPathKey, "模板已创建: {0}"), string.Join("; ", result.Diagnostics)));
             await RefreshAsync();
         }
         finally
@@ -226,4 +226,49 @@ public sealed partial class LocalizationKitPageViewModel
         relativeDirectory = relativePath;
         return true;
     }
+
+    /// <summary>Luban 工作目录变更提示资源 key。</summary>
+    private const string WorkDirChangedKey = "String.LocalizationKit.WorkDirChanged";
+
+    /// <summary>Luban 配置读取失败模板资源 key。</summary>
+    private const string ConfigLoadFailedTemplateKey = "String.LocalizationKit.ConfigLoadFailedTemplate";
+
+    /// <summary>Luban 配置保存失败模板资源 key。</summary>
+    private const string ConfigSaveFailedTemplateKey = "String.LocalizationKit.ConfigSaveFailedTemplate";
+
+    /// <summary>无目录选择器提示资源 key。</summary>
+    private const string NoFolderPickerKey = "String.LocalizationKit.NoFolderPicker";
+
+    /// <summary>工作目录选择器标题资源 key。</summary>
+    private const string PickWorkDirTitleKey = "String.LocalizationKit.PickWorkDirTitle";
+
+    /// <summary>工作目录超出项目边界提示资源 key。</summary>
+    private const string WorkDirOutsideProjectKey = "String.LocalizationKit.WorkDirOutsideProject";
+
+    /// <summary>工作目录已保存提示资源 key。</summary>
+    private const string WorkDirSavedKey = "String.LocalizationKit.WorkDirSaved";
+
+    /// <summary>正在定位 Excel 目录提示资源 key。</summary>
+    private const string LocatingExcelKey = "String.LocalizationKit.LocatingExcel";
+
+    /// <summary>Excel 目录不存在提示资源 key。</summary>
+    private const string ExcelDirMissingKey = "String.LocalizationKit.ExcelDirMissing";
+
+    /// <summary>无目录打开服务提示资源 key。</summary>
+    private const string NoDirectoryOpenerKey = "String.LocalizationKit.NoDirectoryOpener";
+
+    /// <summary>Excel 目录已打开提示资源 key。</summary>
+    private const string ExcelOpenedKey = "String.LocalizationKit.ExcelOpened";
+
+    /// <summary>正在创建模板提示资源 key。</summary>
+    private const string CreatingTemplateKey = "String.LocalizationKit.CreatingTemplate";
+
+    /// <summary>模板创建完成提示资源 key。</summary>
+    private const string TemplateCreatedKey = "String.LocalizationKit.TemplateCreated";
+
+    /// <summary>模板创建路径模板资源 key。</summary>
+    private const string TemplateCreatedPathKey = "String.LocalizationKit.TemplateCreatedPathTemplate";
+
+    /// <summary>失败状态模板资源 key。</summary>
+    private const string FailedStatusTemplateKey = "String.LocalizationKit.FailedStatusTemplate";
 }

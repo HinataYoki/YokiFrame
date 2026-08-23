@@ -44,7 +44,7 @@
                           Spacing="7"
                           VerticalAlignment="Center">
                 <components:NavigationIcon IconKey="reskit" Width="15" Height="15" />
-                <TextBlock Text="已加载资源"
+                <TextBlock Text="{DynamicResource String.ResKit.LoadedAssets}"
                            Classes="reskit-section-title" />
               </StackPanel>
               <Border Grid.Column="1"
@@ -60,8 +60,8 @@
           <TextBox Grid.Row="1"
                    Margin="12,10"
                    Text="{CompiledBinding SearchText, Mode=TwoWay}"
-                   PlaceholderText="搜索路径、类型、Provider 或 lease"
-                   AutomationProperties.Name="搜索 ResKit 已加载资源"
+                   PlaceholderText="{DynamicResource String.ResKit.SearchPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource String.ResKit.SearchAutomationName}"
                    AutomationProperties.AutomationId="workbench.reskit.search" />
 
           <Grid Grid.Row="2"
@@ -71,7 +71,7 @@
                      ItemsSource="{CompiledBinding Resources}"
                      SelectedItem="{CompiledBinding SelectedResource, Mode=TwoWay}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     AutomationProperties.Name="ResKit 已加载资源列表">
+                     AutomationProperties.Name="{DynamicResource String.ResKit.LoadedAssetsAutomationName}">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                   <VirtualizingStackPanel Orientation="Vertical" />
@@ -131,7 +131,7 @@
               <ProgressBar Width="120"
                            Height="4"
                            IsIndeterminate="True" />
-              <TextBlock Text="等待 ResKit 状态..."
+              <TextBlock Text="{DynamicResource String.ResKit.WaitingStatus}"
                          Classes="reskit-empty-text" />
             </StackPanel>
 
@@ -141,9 +141,9 @@
                         Margin="24"
                         IsVisible="{CompiledBinding HasNoRuntimeResources}">
               <components:NavigationIcon IconKey="reskit" Width="24" Height="24" />
-              <TextBlock Text="暂无已加载资源"
+              <TextBlock Text="{DynamicResource String.ResKit.NoRuntimeResources}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="资源获得 lease 后会随下一帧诊断状态显示。"
+              <TextBlock Text="{DynamicResource String.ResKit.NoRuntimeResourcesHint}"
                          Classes="reskit-empty-text"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
@@ -179,9 +179,9 @@
                         VerticalAlignment="Center"
                         Spacing="8">
               <components:NavigationIcon IconKey="reskit" Width="24" Height="24" />
-              <TextBlock Text="选择一个资源"
+              <TextBlock Text="{DynamicResource String.ResKit.SelectAResource}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="Provider、lease 和按需加载来源将在这里显示。"
+              <TextBlock Text="{DynamicResource String.ResKit.SelectAResourceHint}"
                          Classes="reskit-empty-text"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
@@ -215,11 +215,11 @@
                                  ToolTip.Tip="{CompiledBinding SelectedProviderName}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="2">
-                      <TextBlock Text="状态" Classes="reskit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.Common.State}" Classes="reskit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedState}" FontWeight="SemiBold" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="2">
-                      <TextBlock Text="当前 lease" Classes="reskit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.ResKit.CurrentLeases}" Classes="reskit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedLeaseCount}" Classes="mono reskit-metric-value" />
                     </StackPanel>
                     <StackPanel Grid.Column="3" Spacing="2">
@@ -227,7 +227,7 @@
                       <TextBlock Text="{CompiledBinding SelectedProviderGeneration}" Classes="mono" />
                     </StackPanel>
                     <StackPanel Grid.Column="4" Spacing="2">
-                      <TextBlock Text="已跟踪来源" Classes="reskit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.ResKit.TrackedSources}" Classes="reskit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedTrackedSourceCount}" Classes="mono" />
                     </StackPanel>
                   </Grid>
@@ -243,7 +243,7 @@
                   <Grid ColumnDefinitions="*,Auto,Auto"
                         ColumnSpacing="8">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Lease 来源"
+                      <TextBlock Text="{DynamicResource String.ResKit.LeaseSources}"
                                  Classes="reskit-section-title" />
                       <TextBlock Text="{CompiledBinding SourceStatusText}"
                                  Classes="reskit-caption"
@@ -256,10 +256,10 @@
                     <Button Grid.Column="2"
                             Command="{CompiledBinding LoadSourcesCommand}"
                             Classes="secondary compact-action"
-                            AutomationProperties.Name="读取 ResKit lease 来源">
+                            AutomationProperties.Name="{DynamicResource String.ResKit.ReadLeaseSourcesAutomationName}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Data="{StaticResource Icon.Eye}" Width="13" Height="13" />
-                        <TextBlock Text="读取来源" />
+                        <TextBlock Text="{DynamicResource String.ResKit.ReadSources}" />
                       </StackPanel>
                     </Button>
                   </Grid>
@@ -270,7 +270,7 @@
                            Classes="reskit-source-list kit-data-list"
                            ItemsSource="{CompiledBinding Sources}"
                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                           AutomationProperties.Name="ResKit Lease 来源列表">
+                           AutomationProperties.Name="{DynamicResource String.ResKit.LeaseSourcesAutomationName}">
                     <ListBox.ItemsPanel>
                       <ItemsPanelTemplate>
                         <VirtualizingStackPanel Orientation="Vertical" />
@@ -317,12 +317,12 @@
                             <Border Grid.Column="1"
                                     Classes="reskit-source-chip tracked"
                                     IsVisible="{CompiledBinding IsTracked}">
-                              <TextBlock Text="已跟踪" Classes="reskit-caption" />
+                              <TextBlock Text="{DynamicResource String.ResKit.Tracked}" Classes="reskit-caption" />
                             </Border>
                             <Border Grid.Column="2"
                                     Classes="reskit-source-chip anonymous"
                                     IsVisible="{CompiledBinding IsAnonymous}">
-                              <TextBlock Text="匿名" Classes="reskit-caption" />
+                              <TextBlock Text="{DynamicResource String.ResKit.Anonymous}" Classes="reskit-caption" />
                             </Border>
                           </Grid>
                         </Grid>
@@ -337,7 +337,7 @@
                     <ProgressBar Width="120"
                                  Height="4"
                                  IsIndeterminate="True" />
-                    <TextBlock Text="正在读取 Lease 来源..."
+                    <TextBlock Text="{DynamicResource String.ResKit.ReadingSources}"
                                Classes="reskit-empty-text" />
                   </StackPanel>
 
@@ -366,10 +366,10 @@
       <Expander.Header>
         <Grid ColumnDefinitions="*,Auto,Auto,Auto"
               ColumnSpacing="10">
-          <TextBlock Text="卸载历史"
+          <TextBlock Text="{DynamicResource String.ResKit.UnloadHistory}"
                      FontWeight="SemiBold" />
           <TextBlock Grid.Column="1"
-                     Text="最新优先"
+                     Text="{DynamicResource String.ResKit.LatestFirst}"
                      Classes="reskit-caption" />
           <TextBlock Grid.Column="2"
                      Text="{CompiledBinding HistoryCountText}"
@@ -387,9 +387,9 @@
         <Border Classes="reskit-history-header">
           <Grid ColumnDefinitions="180,200,*,180"
                 ColumnSpacing="10">
-            <TextBlock Text="卸载时间" />
-            <TextBlock Grid.Column="1" Text="类型" />
-            <TextBlock Grid.Column="2" Text="资源路径" />
+            <TextBlock Text="{DynamicResource String.ResKit.UnloadTime}" />
+            <TextBlock Grid.Column="1" Text="{DynamicResource String.Common.Type}" />
+            <TextBlock Grid.Column="2" Text="{DynamicResource String.ResKit.ResourcePath}" />
             <TextBlock Grid.Column="3" Text="Provider" />
           </Grid>
         </Border>
@@ -398,7 +398,7 @@
           <ListBox Classes="reskit-history-list kit-timeline-list"
                    ItemsSource="{CompiledBinding History}"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                   AutomationProperties.Name="ResKit 卸载历史">
+                   AutomationProperties.Name="{DynamicResource String.ResKit.UnloadHistoryAutomationName}">
             <ListBox.ItemsPanel>
               <ItemsPanelTemplate>
                 <VirtualizingStackPanel Orientation="Vertical" />
@@ -431,7 +431,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <TextBlock Text="暂无卸载历史"
+          <TextBlock Text="{DynamicResource String.ResKit.NoHistory}"
                      Classes="reskit-empty-text"
                      IsVisible="{CompiledBinding IsHistoryEmpty}"
                      HorizontalAlignment="Center"

@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.AudioKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -49,7 +50,7 @@ public sealed partial class AudioKitPageViewModel
         if (!existing.TryGetValue(key, out AudioBusChannelViewModel? channel))
         {
             return new AudioBusChannelViewModel(
-                key, "MASTER", "主输出", bus, true,
+                key, "MASTER", CreateBusSubtitle(bus), bus, true,
                 state.Master.ActiveVoiceCount, state.Voices, playbackHistory);
         }
 
@@ -161,9 +162,17 @@ public sealed partial class AudioKitPageViewModel
     /// <summary>根据 Bus 来源生成稳定、可扫描的副标题。</summary>
     private static string CreateBusSubtitle(WorkbenchAudioBus bus)
     {
-        if (bus.IsMaster) return "主输出";
-        if (bus.IsBuiltIn) return "内置总线";
-        return bus.IsRegistered ? "已注册自定义" : "动态发现";
+        if (bus.IsMaster)
+        {
+            return WorkbenchI18nService.Instance.GetString("String.AudioKit.BusSource.Master", "主输出");
+        }
+        if (bus.IsBuiltIn)
+        {
+            return WorkbenchI18nService.Instance.GetString("String.AudioKit.BusSource.BuiltIn", "内置总线");
+        }
+        return bus.IsRegistered
+            ? WorkbenchI18nService.Instance.GetString("String.AudioKit.BusSource.Registered", "已注册自定义")
+            : WorkbenchI18nService.Instance.GetString("String.AudioKit.BusSource.Dynamic", "动态发现");
     }
 
     /// <summary>按当前搜索与活跃条件重建可见 Bus 卡片。</summary>
@@ -215,10 +224,10 @@ public sealed partial class AudioKitPageViewModel
     /// <summary>判断普通 Bus 是否属于用户选择的来源范围。</summary>
     private bool MatchesBusScope(AudioBusChannelViewModel channel)
     {
-        if (string.Equals(SelectedBusScope, "内置", StringComparison.Ordinal)) return channel.IsBuiltIn;
-        if (string.Equals(SelectedBusScope, "已注册", StringComparison.Ordinal))
+        if (string.Equals(mSelectedBusScope, BUS_SCOPE_BUILT_IN, StringComparison.Ordinal)) return channel.IsBuiltIn;
+        if (string.Equals(mSelectedBusScope, BUS_SCOPE_REGISTERED, StringComparison.Ordinal))
             return channel.IsRegistered && !channel.IsBuiltIn;
-        if (string.Equals(SelectedBusScope, "动态", StringComparison.Ordinal)) return channel.IsDynamic;
+        if (string.Equals(mSelectedBusScope, BUS_SCOPE_DYNAMIC, StringComparison.Ordinal)) return channel.IsDynamic;
         return true;
     }
 }

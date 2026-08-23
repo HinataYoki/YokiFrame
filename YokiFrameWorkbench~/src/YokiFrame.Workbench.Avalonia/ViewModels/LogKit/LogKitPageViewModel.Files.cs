@@ -1,5 +1,6 @@
 using System.Globalization;
 using YokiFrame.Tooling.Application.Models.LogKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -12,7 +13,7 @@ public sealed partial class LogKitPageViewModel
     private WorkbenchLogKitFilePreview? mFilePreview;
     private string mLogDirectoryPath = string.Empty;
     private string mSelectedSource = MEMORY_SOURCE;
-    private string mFileStatusText = "尚未读取文件";
+    private string mFileStatusText = WorkbenchI18nService.Instance.GetString("String.LogKit.FileNotReadYet", "尚未读取文件");
     private bool mIsFileLoading;
 
     /// <summary>获取或设置当前日志来源。</summary>
@@ -62,14 +63,18 @@ public sealed partial class LogKitPageViewModel
     public bool IsFileLoading { get => mIsFileLoading; private set => SetFileLoading(value); }
     /// <summary>获取当前来源计数。</summary>
     public string ActiveSourceCountText => IsMemorySource
-        ? VisibleHistoryCountText + " 条"
-        : (mFilePreview?.LineCount ?? 0) + " 行";
+        ? string.Format(GetString("String.LogKit.ItemsSuffixTemplate", "{0} 条"), VisibleHistoryCountText)
+        : string.Format(
+            GetString("String.LogKit.LinesSuffixTemplate", "{0} 行"),
+            (mFilePreview?.LineCount ?? 0).ToString(CultureInfo.InvariantCulture));
     /// <summary>获取当前来源最近一次显式操作状态。</summary>
     public string ActiveSourceStatusText => IsMemorySource ? HistoryStatusText : FileStatusText;
     /// <summary>获取当前文件名。</summary>
     public string SelectedFileNameText => mFilePreview?.FileName
         ?? SelectedFileMetadata?.FileName
-        ?? (IsEditorSource ? "Editor 日志" : "Player 日志");
+        ?? (IsEditorSource
+            ? GetString("String.LogKit.EditorLogLabel", "Editor 日志")
+            : GetString("String.LogKit.PlayerLogLabel", "Player 日志"));
     /// <summary>获取当前完整文件路径。</summary>
     public string SelectedFilePathText => mFilePreview?.Path ?? SelectedFileMetadata?.Path ?? "--";
     /// <summary>获取当前文件大小。</summary>
@@ -87,11 +92,12 @@ public sealed partial class LogKitPageViewModel
     /// <summary>获取文件预览是否只包含尾部片段。</summary>
     public bool IsFilePreviewTruncated => mFilePreview?.Truncated == true;
     /// <summary>获取文件预览实际传输通道。</summary>
-    public string FilePreviewTransportText => mFilePreview?.Transport ?? "按需读取";
+    public string FilePreviewTransportText => mFilePreview?.Transport
+        ?? GetString("String.LogKit.TransportOnDemand", "按需读取");
     /// <summary>获取文件空状态说明。</summary>
     public string FilePreviewEmptyText => SelectedFileExists
-        ? "文件当前没有可显示内容"
-        : "日志文件尚不存在";
+        ? GetString("String.LogKit.FilePreviewEmpty", "文件当前没有可显示内容")
+        : GetString("String.LogKit.FileMissing", "日志文件尚不存在");
 
     /// <summary>获取 Runtime 实际解析出的日志目录。</summary>
     public string LogDirectoryPathText => string.IsNullOrWhiteSpace(mLogDirectoryPath) ? "--" : mLogDirectoryPath;
@@ -141,7 +147,8 @@ public sealed partial class LogKitPageViewModel
         }
         catch (Exception exception)
         {
-            SettingsStatusText = "打开日志目录失败: " + exception.Message;
+            SetSettingsStatus(string.Format(
+                GetString("String.LogKit.OpenDirectoryFailedTemplate", "打开日志目录失败: {0}"), exception.Message));
         }
     }
 
@@ -177,7 +184,9 @@ public sealed partial class LogKitPageViewModel
         CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(mIdentityCancellation.Token);
         mFilePreviewCancellation = cancellation;
         IsFileLoading = true;
-        FileStatusText = "正在读取 " + (kind == EDITOR_SOURCE ? "Editor" : "Player") + " 文件尾部...";
+        FileStatusText = string.Format(
+            GetString("String.LogKit.ReadingTailTemplate", "正在读取 {0} 文件尾部..."),
+            kind == EDITOR_SOURCE ? "Editor" : "Player");
         await ReadSelectedFileCoreAsync(identity, kind, cancellation);
     }
 
@@ -204,7 +213,8 @@ public sealed partial class LogKitPageViewModel
         {
             if (ReferenceEquals(mFilePreviewCancellation, cancellation))
             {
-                FileStatusText = "文件读取失败: " + exception.Message;
+                SetFileStatus(string.Format(
+                    GetString("String.LogKit.ReadFailedTemplate", "文件读取失败: {0}"), exception.Message));
             }
         }
         finally
@@ -217,11 +227,14 @@ public sealed partial class LogKitPageViewModel
     private void ApplyFilePreview(WorkbenchLogKitFilePreview preview)
     {
         mFilePreview = preview;
-        FileStatusText = !string.IsNullOrWhiteSpace(preview.ErrorMessage)
-            ? "文件读取失败: " + preview.ErrorMessage
+        SetFileStatus(!string.IsNullOrWhiteSpace(preview.ErrorMessage)
+            ? string.Format(
+                GetString("String.LogKit.ReadFailedTemplate", "文件读取失败: {0}"), preview.ErrorMessage)
             : (preview.Exists
-                ? (preview.Truncated ? "已读取文件尾部" : "已读取完整文件")
-                : "文件尚不存在");
+                ? (preview.Truncated
+                    ? GetString("String.LogKit.ReadTailDone", "已读取文件尾部")
+                    : GetString("String.LogKit.ReadFullDone", "已读取完整文件"))
+                : GetString("String.LogKit.FileNotFoundShort", "文件尚不存在")));
         NotifyFileProperties();
     }
 
@@ -313,6 +326,13 @@ public sealed partial class LogKitPageViewModel
             OnPropertyChanged(nameof(IsFilePreviewEmpty));
             RefreshFileCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>写入文件读取状态文本的集中入口。</summary>
+    /// <param name="text">新的状态文本。</param>
+    private void SetFileStatus(string text)
+    {
+        FileStatusText = text;
     }
 
     /// <summary>格式化文件字节数。</summary>

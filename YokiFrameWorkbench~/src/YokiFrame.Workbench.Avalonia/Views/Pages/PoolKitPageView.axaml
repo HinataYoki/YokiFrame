@@ -26,7 +26,7 @@
                           Spacing="7"
                           VerticalAlignment="Center">
                 <components:NavigationIcon IconKey="poolkit" Width="15" Height="15" />
-                <TextBlock Text="对象池"
+                <TextBlock Text="{DynamicResource String.PoolKit.Pools}"
                            Classes="poolkit-section-title" />
               </StackPanel>
               <Border Grid.Column="1"
@@ -42,8 +42,8 @@
           <TextBox Grid.Row="1"
                    Margin="12,10"
                    Text="{CompiledBinding SearchText, Mode=TwoWay}"
-                   PlaceholderText="搜索对象池、类型或状态"
-                   AutomationProperties.Name="搜索 PoolKit 对象池"
+                   PlaceholderText="{DynamicResource String.PoolKit.SearchPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource String.PoolKit.SearchAutomationName}"
                    AutomationProperties.AutomationId="workbench.poolkit.search" />
 
           <Grid Grid.Row="2"
@@ -54,7 +54,7 @@
                      SelectedItem="{CompiledBinding SelectedPool, Mode=TwoWay}"
                      Padding="0,0,12,0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     AutomationProperties.Name="PoolKit 对象池列表">
+                     AutomationProperties.Name="{DynamicResource String.PoolKit.PoolsAutomationName}">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                   <VirtualizingStackPanel Orientation="Vertical" />
@@ -80,7 +80,7 @@
                                 Height="13"
                                 Classes="poolkit-warning-icon"
                                 IsVisible="{CompiledBinding IsLeakCandidate}"
-                                ToolTip.Tip="最近一次检查将其列为疑似未归还候选" />
+                                ToolTip.Tip="{DynamicResource String.PoolKit.SuspectedLeakTooltip}" />
                       <TextBlock Text="{CompiledBinding UsagePercentText}"
                                  Classes="mono poolkit-pool-usage"
                                  Classes.warning="{CompiledBinding IsHighPressure}" />
@@ -118,7 +118,7 @@
               <ProgressBar Width="120"
                            Height="4"
                            IsIndeterminate="True" />
-              <TextBlock Text="等待诊断连接..."
+              <TextBlock Text="{DynamicResource String.PoolKit.WaitingConnection}"
                          Classes="poolkit-empty-text" />
             </StackPanel>
 
@@ -128,9 +128,9 @@
                         Margin="24"
                         IsVisible="{CompiledBinding HasNoRuntimePools}">
               <components:NavigationIcon IconKey="poolkit" Width="24" Height="24" />
-              <TextBlock Text="暂无对象池接入"
+              <TextBlock Text="{DynamicResource String.PoolKit.NoRuntimePools}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="请检查 Runtime 连接或等待对象池创建。"
+              <TextBlock Text="{DynamicResource String.PoolKit.NoRuntimePoolsHint}"
                          Classes="poolkit-empty-text"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
@@ -165,9 +165,9 @@
                         VerticalAlignment="Center"
                         Spacing="8">
               <components:NavigationIcon IconKey="poolkit" Width="24" Height="24" />
-              <TextBlock Text="选择一个对象池"
+              <TextBlock Text="{DynamicResource String.PoolKit.SelectAPool}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="借出对象、池内对象与事件记录将在这里联动显示。"
+              <TextBlock Text="{DynamicResource String.PoolKit.SelectAPoolHint}"
                          Classes="poolkit-empty-text"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
@@ -200,7 +200,7 @@
                       <PathIcon Data="{StaticResource Icon.TriangleAlert}"
                                 Width="13"
                                 Height="13" />
-                      <TextBlock Text="疑似未归还"
+                      <TextBlock Text="{DynamicResource String.PoolKit.SuspectedLeak}"
                                  FontWeight="SemiBold" />
                     </StackPanel>
                   </Border>
@@ -225,23 +225,23 @@
                         Classes="poolkit-metric-strip">
                   <Grid ColumnDefinitions="*,*,*,*,*">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                      <TextBlock Text="借出" Classes="poolkit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.ActiveCount}" Classes="poolkit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedActiveCount}" Classes="mono poolkit-metric-value" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                      <TextBlock Text="池内" Classes="poolkit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.InactiveCount}" Classes="poolkit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedInactiveCount}" Classes="mono poolkit-metric-value" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                      <TextBlock Text="容量" Classes="poolkit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.Capacity}" Classes="poolkit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedTotalCount}" Classes="mono poolkit-metric-value" />
                     </StackPanel>
                     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                      <TextBlock Text="峰值" Classes="poolkit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.Peak}" Classes="poolkit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedPeakCount}" Classes="mono poolkit-metric-value" />
                     </StackPanel>
                     <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                      <TextBlock Text="上限" Classes="poolkit-metric-label" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.MaxLimit}" Classes="poolkit-metric-label" />
                       <TextBlock Text="{CompiledBinding SelectedMaxCacheCountText}" Classes="mono poolkit-metric-value" />
                     </StackPanel>
                   </Grid>
@@ -255,7 +255,7 @@
               <TabItem Classes="poolkit-object-tab">
                 <TabItem.Header>
                   <StackPanel Orientation="Horizontal" Spacing="7">
-                    <TextBlock Text="借出对象" />
+                    <TextBlock Text="{DynamicResource String.PoolKit.ActiveObjects}" />
                     <TextBlock Text="{CompiledBinding SelectedActiveObjectCountText}"
                                Classes="mono poolkit-tab-count" />
                   </StackPanel>
@@ -268,9 +268,9 @@
                         <ColumnDefinition Width="90" />
                         <ColumnDefinition Width="3*" MinWidth="220" />
                       </Grid.ColumnDefinitions>
-                      <TextBlock Text="对象" />
-                      <TextBlock Grid.Column="1" Text="借出时间" />
-                      <TextBlock Grid.Column="2" Text="源码位置" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.Object}" />
+                      <TextBlock Grid.Column="1" Text="{DynamicResource String.PoolKit.SpawnTime}" />
+                      <TextBlock Grid.Column="2" Text="{DynamicResource String.PoolKit.SourceLocation}" />
                     </Grid>
                   </Border>
                   <ListBox Grid.Row="1"
@@ -315,7 +315,7 @@
                             </Grid>
                           </Button>
                           <TextBlock Grid.Column="2"
-                                     Text="未记录定位"
+                                     Text="{DynamicResource String.PoolKit.NoSourceLocation}"
                                      Classes="poolkit-caption"
                                      IsVisible="{CompiledBinding !HasSourceLocation}" />
                         </Grid>
@@ -323,7 +323,7 @@
                     </ListBox.ItemTemplate>
                   </ListBox>
                   <TextBlock Grid.Row="1"
-                             Text="当前没有借出对象"
+                             Text="{DynamicResource String.PoolKit.NoActiveObjects}"
                              Classes="poolkit-empty-text"
                              IsVisible="{CompiledBinding SelectedActiveObjectsEmpty}"
                              HorizontalAlignment="Center"
@@ -333,7 +333,7 @@
               <TabItem Classes="poolkit-object-tab">
                 <TabItem.Header>
                   <StackPanel Orientation="Horizontal" Spacing="7">
-                    <TextBlock Text="池内对象" />
+                    <TextBlock Text="{DynamicResource String.PoolKit.InactiveObjects}" />
                     <TextBlock Text="{CompiledBinding SelectedInactiveObjectCountText}"
                                Classes="mono poolkit-tab-count" />
                   </StackPanel>
@@ -342,8 +342,8 @@
                   <Border Classes="poolkit-table-header">
                     <Grid ColumnDefinitions="*,100"
                           ColumnSpacing="10">
-                      <TextBlock Text="对象" />
-                      <TextBlock Grid.Column="1" Text="状态" />
+                      <TextBlock Text="{DynamicResource String.PoolKit.Object}" />
+                      <TextBlock Grid.Column="1" Text="{DynamicResource String.Common.State}" />
                     </Grid>
                   </Border>
                   <ListBox Grid.Row="1"
@@ -364,14 +364,14 @@
                                      TextTrimming="CharacterEllipsis"
                                      ToolTip.Tip="{CompiledBinding ObjectName}" />
                           <TextBlock Grid.Column="1"
-                                     Text="可用"
+                                     Text="{DynamicResource String.PoolKit.Available}"
                                      Classes="poolkit-available" />
                         </Grid>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
                   <TextBlock Grid.Row="1"
-                             Text="当前没有池内对象"
+                             Text="{DynamicResource String.PoolKit.NoInactiveObjects}"
                              Classes="poolkit-empty-text"
                              IsVisible="{CompiledBinding SelectedInactiveObjectsEmpty}"
                              HorizontalAlignment="Center"
@@ -388,13 +388,13 @@
               <Expander.Header>
                 <Grid ColumnDefinitions="*,Auto,Auto"
                       ColumnSpacing="10">
-                  <TextBlock Text="事件流"
+                  <TextBlock Text="{DynamicResource String.PoolKit.EventStream}"
                              FontWeight="SemiBold" />
                   <TextBlock Grid.Column="1"
                              Text="{CompiledBinding SelectedEventCountText}"
                              Classes="mono poolkit-caption" />
                   <TextBlock Grid.Column="2"
-                             Text="部分事件已裁剪"
+                             Text="{DynamicResource String.PoolKit.EventsTruncated}"
                              Classes="poolkit-warning-text"
                              IsVisible="{CompiledBinding EventsTruncated}" />
                 </Grid>
@@ -404,7 +404,7 @@
                 <ListBox Classes="poolkit-event-list kit-timeline-list"
                          ItemsSource="{CompiledBinding Events}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         AutomationProperties.Name="PoolKit 当前池事件流">
+                         AutomationProperties.Name="{DynamicResource String.PoolKit.EventStreamAutomationName}">
                   <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                       <VirtualizingStackPanel Orientation="Vertical" />
@@ -439,7 +439,7 @@
                     </DataTemplate>
                   </ListBox.ItemTemplate>
                 </ListBox>
-                <TextBlock Text="当前对象池还没有事件记录"
+                <TextBlock Text="{DynamicResource String.PoolKit.NoEvents}"
                            Classes="poolkit-empty-text"
                            IsVisible="{CompiledBinding IsEventEmpty}"
                            HorizontalAlignment="Center"
@@ -456,15 +456,18 @@
       <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"
             ColumnSpacing="14">
         <TextBlock Classes="poolkit-footer-item">
-          <Run Text="对象池 " />
+          <Run Text="{DynamicResource String.PoolKit.Pools}" />
+          <Run Text=": " />
           <Run Text="{CompiledBinding PoolTotal}" FontWeight="SemiBold" />
         </TextBlock>
         <TextBlock Grid.Column="1" Classes="poolkit-footer-item">
-          <Run Text="全局借出 " />
+          <Run Text="{DynamicResource String.PoolKit.GlobalActive}" />
+          <Run Text=": " />
           <Run Text="{CompiledBinding TotalActive}" FontWeight="SemiBold" />
         </TextBlock>
         <TextBlock Grid.Column="2" Classes="poolkit-footer-item">
-          <Run Text="候选池 " />
+          <Run Text="{DynamicResource String.PoolKit.CandidatePools}" />
+          <Run Text=": " />
           <Run Text="{CompiledBinding LeakCount}" FontWeight="SemiBold" />
         </TextBlock>
         <StackPanel Grid.Column="3"
@@ -474,7 +477,7 @@
                      Classes="poolkit-footer-item"
                      TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="{CompiledBinding OperationStatusText}" />
-          <TextBlock Text="部分候选池已裁剪"
+          <TextBlock Text="{DynamicResource String.PoolKit.LeaksTruncated}"
                      Classes="poolkit-warning-text"
                      IsVisible="{CompiledBinding LeaksTruncated}" />
           <TextBlock Text="{CompiledBinding StaleReason}"

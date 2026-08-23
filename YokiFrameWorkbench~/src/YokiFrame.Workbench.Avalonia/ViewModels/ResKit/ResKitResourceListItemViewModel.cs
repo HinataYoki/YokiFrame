@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.ResKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.ResKit;
 
@@ -50,7 +51,8 @@ public sealed class ResKitResourceListItemViewModel : ViewModelBase
     /// <summary>获取资源状态是否为就绪。</summary>
     public bool IsReady => string.Equals(State, "Ready", StringComparison.OrdinalIgnoreCase);
     /// <summary>获取屏幕阅读器使用的资源摘要。</summary>
-    public string AutomationName => Path + "，" + TypeName + "，lease " + LeaseCount + "，状态 " + State;
+    public string AutomationName => Path + "，" + TypeName + "，lease " + LeaseCount
+        + WorkbenchI18nService.Instance.GetString("String.ResKit.AutomationStateSuffix", "，状态 ") + State;
 
     /// <summary>应用同身份新帧并通知全部绑定指标。</summary>
     internal void Update(WorkbenchResKitResource resource)
@@ -70,6 +72,13 @@ public sealed class ResKitResourceListItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasLeases));
         OnPropertyChanged(nameof(IsReady));
         OnPropertyChanged(nameof(AutomationName));
+    }
+
+    /// <summary>按当前语言刷新行的展示文本；行身份与 Runtime 数据不变。</summary>
+    internal void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(AutomationName));
+        OnPropertyChanged(nameof(ParentPath));
     }
 
     /// <summary>在周期状态到达时预计算列表文本，避免 Avalonia 重复读取绑定属性时分配字符串。</summary>
@@ -104,7 +113,9 @@ public sealed class ResKitResourceListItemViewModel : ViewModelBase
     private static string GetParentPath(string value)
     {
         int separatorIndex = GetLastPathSeparatorIndex(value);
-        return separatorIndex <= 0 ? "根路径" : value[..separatorIndex];
+        return separatorIndex <= 0
+            ? WorkbenchI18nService.Instance.GetString("String.ResKit.RootPath", "根路径")
+            : value[..separatorIndex];
     }
 
     /// <summary>返回正斜杠或反斜杠中最后出现的位置，不创建临时字符数组。</summary>

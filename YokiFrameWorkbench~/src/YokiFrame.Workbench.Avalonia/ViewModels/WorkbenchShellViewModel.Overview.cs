@@ -1,6 +1,7 @@
 using YokiFrame;
 using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -9,6 +10,30 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 /// </summary>
 public sealed partial class WorkbenchShellViewModel
 {
+    private static string I18n(string key, string fallback) =>
+        WorkbenchI18nService.Instance.GetString(key, fallback);
+
+    /// <summary>等待数据占位资源 key。</summary>
+    private const string EngineWaitingDataKey = "String.Common.WaitingForData";
+
+    /// <summary>等待发现占位资源 key。</summary>
+    private const string EngineWaitingDiscoveryKey = "String.Overview.WaitingDiscovery";
+
+    /// <summary>等待桥接状态占位资源 key。</summary>
+    private const string BridgeWaitingKey = "String.Overview.BridgeWaiting";
+
+    /// <summary>实时数据卡片标题资源 key。</summary>
+    private const string LiveDataKey = "String.Overview.LiveData";
+
+    /// <summary>等待 dashboard 提示资源 key。</summary>
+    private const string WaitingDashboardKey = "String.Overview.WaitingDashboard";
+
+    /// <summary>没有注册 snapshot 提示资源 key。</summary>
+    private const string NoSnapshotKey = "String.Overview.NoSnapshot";
+
+    /// <summary>等待选择引擎占位资源 key。</summary>
+    private const string EngineWaitingSelectionKey = "String.Overview.EngineWaitingSelection";
+
     /// <summary>
     /// 创建顶部摘要卡片。
     /// </summary>
@@ -20,20 +45,24 @@ public sealed partial class WorkbenchShellViewModel
         {
             return new[]
             {
-                new WorkbenchMetricCard("连接", "等待数据", "FileBridge"),
-                new WorkbenchMetricCard("引擎", "等待发现", "0 registry"),
-                new WorkbenchMetricCard("队列", "0 / 0", "results 0 / deadletter 0"),
-                new WorkbenchMetricCard("最近问题", "--", "等待桥接状态")
+                new WorkbenchMetricCard(I18n("String.Overview.Card.Connection", "连接"), I18n("String.Common.WaitingForData", "等待数据"), "FileBridge"),
+                new WorkbenchMetricCard(I18n("String.Overview.Card.Engine", "引擎"), I18n(EngineWaitingDiscoveryKey, "等待发现"), "0 registry"),
+                new WorkbenchMetricCard(I18n("String.Overview.Card.Queue", "队列"), "0 / 0", "results 0 / deadletter 0"),
+                new WorkbenchMetricCard(I18n("String.Overview.Card.RecentIssue", "最近问题"), "--", I18n(BridgeWaitingKey, "等待桥接状态"))
             };
         }
 
         var health = state.BridgeHealth;
         return new[]
         {
-            new WorkbenchMetricCard("连接", health.RequiresReconnect ? "等待连接" : "已连接", CreateConnectionDetail(state), isPositive: !health.RequiresReconnect),
-            new WorkbenchMetricCard("引擎", CreateSelectedEngineHeadline(state), CreateEngineRegistryDetail(state)),
-            new WorkbenchMetricCard("队列", CreateCompactQueueHeadline(state), CreateResultQueueDetail(state)),
-            new WorkbenchMetricCard("最近问题", CreateRecentErrorHeadline(state), CreateRecentErrorDetail(state.BridgeStatus), isPositive: IsRecentIssueEmpty(state))
+            new WorkbenchMetricCard(
+                I18n("String.Overview.Card.Connection", "连接"),
+                health.RequiresReconnect ? I18n("String.Common.Disconnected", "未连接") : I18n("String.Common.Connected", "已连接"),
+                CreateConnectionDetail(state),
+                isPositive: !health.RequiresReconnect),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Engine", "引擎"), CreateSelectedEngineHeadline(state), CreateEngineRegistryDetail(state)),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Queue", "队列"), CreateCompactQueueHeadline(state), CreateResultQueueDetail(state)),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.RecentIssue", "最近问题"), CreateRecentErrorHeadline(state), CreateRecentErrorDetail(state.BridgeStatus), isPositive: IsRecentIssueEmpty(state))
         };
     }
 
@@ -48,10 +77,10 @@ public sealed partial class WorkbenchShellViewModel
         var status = state?.BridgeStatus;
         return new[]
         {
-            new WorkbenchMetricCard("心跳", CreateHeartbeatText(health), CreateHeartbeatDetail(health), isPositive: health?.RequiresReconnect == false),
-            new WorkbenchMetricCard("命令", CreateCommandPathText(status), "engine-scoped"),
-            new WorkbenchMetricCard("事件", "JSONL", CreateProtocolStorageDetail(status)),
-            new WorkbenchMetricCard("背压", CreateBackpressureHeadline(status), CreateBackpressureDetail(status), isPositive: status?.BackpressureActive != true)
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Heartbeat", "心跳"), CreateHeartbeatText(health), CreateHeartbeatDetail(health), isPositive: health?.RequiresReconnect == false),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Command", "命令"), CreateCommandPathText(status), "engine-scoped"),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Events", "事件"), "JSONL", CreateProtocolStorageDetail(status)),
+            new WorkbenchMetricCard(I18n("String.Overview.Card.Pressure", "背压"), CreateBackpressureHeadline(status), CreateBackpressureDetail(status), isPositive: status?.BackpressureActive != true)
         };
     }
 
@@ -66,7 +95,7 @@ public sealed partial class WorkbenchShellViewModel
         {
             return new[]
             {
-                new WorkbenchMetricCard("实时数据", "waiting", "等待 dashboard")
+                new WorkbenchMetricCard(I18n(LiveDataKey, "实时数据"), "waiting", I18n(WaitingDashboardKey, "等待 dashboard"))
             };
         }
 
@@ -74,7 +103,7 @@ public sealed partial class WorkbenchShellViewModel
         {
             return new[]
             {
-                new WorkbenchMetricCard("实时数据", "0/0", "没有注册 snapshot")
+                new WorkbenchMetricCard(I18n(LiveDataKey, "实时数据"), "0/0", I18n(NoSnapshotKey, "没有注册 snapshot"))
             };
         }
 
@@ -141,7 +170,7 @@ public sealed partial class WorkbenchShellViewModel
     private static string CreateSelectedEngineHeadline(WorkbenchDashboardState state)
     {
         return string.IsNullOrWhiteSpace(state.SelectedEngineId)
-            ? "等待选择"
+            ? I18n(EngineWaitingSelectionKey, "等待选择")
             : state.SelectedEngineId;
     }
 
@@ -225,7 +254,7 @@ public sealed partial class WorkbenchShellViewModel
     private static string CreateRecentErrorDetail(FileBridgeStatus? status)
     {
         return string.IsNullOrWhiteSpace(status?.LastPollLimitReason)
-            ? "无活动限制"
+            ? I18n("String.Common.NoActiveIssue", "无活动限制")
             : "limit " + status.LastPollLimitReason;
     }
 
@@ -250,10 +279,12 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (health == null)
         {
-            return "等待心跳";
+            return "waiting";
         }
 
-        return health.RequiresReconnect ? "已过期" : "新鲜";
+        return health.RequiresReconnect
+            ? I18n("String.Common.Stale", "已过期")
+            : I18n("String.Common.Fresh", "新鲜");
     }
 
     /// <summary>

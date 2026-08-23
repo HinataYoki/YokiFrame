@@ -10,6 +10,7 @@ using System.Globalization;
 using YokiFrame.Tooling.Application.Models.UIKit;
 using YokiFrame.Tooling.Application.Services.UIKit;
 using YokiFrame.Workbench.Avalonia.Converters;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 using YokiFrame.Workbench.Avalonia.Views;
 using YokiFrame.Workbench.Avalonia.Views.Pages;
@@ -69,8 +70,9 @@ public sealed class UIKitPageViewModelTests
         Assert.Contains("UIKitMetricsPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("UIKitDetailPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("运行时诊断", xaml, StringComparison.Ordinal);
-        Assert.Contains("编辑器工具", xaml, StringComparison.Ordinal);
+        // i18n 切片后页面词条改用 DynamicResource 资源 key，兼容旧中文直书与资源 key 两种契约。
+        Assert.True(xaml.Contains("运行时诊断") || xaml.Contains("String.UIKit.RuntimeDiagnostics"), "UIKit 页面应包含运行时诊断词条");
+        Assert.True(xaml.Contains("编辑器工具") || xaml.Contains("String.UIKit.EditorTools"), "UIKit 页面应包含编辑器工具词条");
         Assert.DoesNotContain("根节点设置", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("UIKitRootSettingsView", xaml, StringComparison.Ordinal);
         Assert.Contains("kit-panel-header", xaml, StringComparison.Ordinal);
@@ -523,7 +525,8 @@ public sealed class UIKitPageViewModelTests
 
         Assert.Contains("uikit.editor.create-prefab", xaml, StringComparison.Ordinal);
         Assert.Contains("uikit.editor.generate-code", xaml, StringComparison.Ordinal);
-        Assert.Contains("创建预制体", xaml, StringComparison.Ordinal);
+        Assert.Contains("String.UIKit.Editor.CreatePrefab", xaml, StringComparison.Ordinal);
+        Assert.Equal("创建预制体", WorkbenchI18nService.Instance.GetString("String.UIKit.Editor.CreatePrefab"));
         Assert.Contains("AssemblySelector", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{CompiledBinding AssemblyNames}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);

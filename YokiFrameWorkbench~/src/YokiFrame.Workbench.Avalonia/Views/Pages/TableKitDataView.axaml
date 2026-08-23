@@ -7,7 +7,7 @@
     <Border Grid.Column="0" Classes="tablekit-data-pane tablekit-table-pane">
       <Grid RowDefinitions="Auto,Auto,*">
         <Grid Margin="14,12,14,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBlock Text="配置表" Classes="section-title" />
+          <TextBlock Text="{DynamicResource String.TableKit.Tables}" Classes="section-title" />
           <TextBlock Grid.Column="1"
                      Text="{CompiledBinding PreviewCountText}"
                      Classes="mono tablekit-kicker"
@@ -16,8 +16,8 @@
         <TextBox Grid.Row="1"
                  Margin="12,0,12,9"
                  Text="{CompiledBinding PreviewSearch, Mode=TwoWay}"
-                 PlaceholderText="搜索表名..."
-                 AutomationProperties.Name="搜索 TableKit 预览表" />
+                 PlaceholderText="{DynamicResource String.Common.SearchPlaceholder}"
+                 AutomationProperties.Name="{DynamicResource String.TableKit.PreviewSearchAutomationName}" />
         <ListBox x:Name="TableKitPreviewTableList"
                  Grid.Row="2"
                  ItemsSource="{CompiledBinding FilteredPreviewTables}"
@@ -38,7 +38,7 @@
                            TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{CompiledBinding Name}" />
                 <TextBlock Grid.Column="1"
-                           Text="{CompiledBinding Count, StringFormat='{}{0} 条'}"
+                           Text="{CompiledBinding Count, StringFormat='{}{0} rows'}"
                            Classes="mono tablekit-kicker"
                            VerticalAlignment="Center" />
               </Grid>
@@ -52,12 +52,12 @@
                   Classes="tablekit-data-splitter"
                   ResizeDirection="Columns"
                   ResizeBehavior="PreviousAndNext"
-                  AutomationProperties.Name="调整 TableKit 表列表宽度" />
+                  AutomationProperties.Name="{DynamicResource String.TableKit.DataSplitterAutomationName}" />
 
     <Border Grid.Column="2" Classes="tablekit-data-pane tablekit-record-pane">
       <Grid RowDefinitions="Auto,*">
         <Grid Margin="14,12,14,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBlock Text="记录" Classes="section-title" />
+          <TextBlock Text="{DynamicResource String.TableKit.Records}" Classes="section-title" />
           <TextBlock Grid.Column="1"
                      Text="{CompiledBinding SelectedPreviewTableSummary}"
                      Classes="mono tablekit-kicker"
@@ -97,16 +97,16 @@
                   Classes="tablekit-data-splitter"
                   ResizeDirection="Columns"
                   ResizeBehavior="PreviousAndNext"
-                  AutomationProperties.Name="调整 TableKit 记录列表宽度" />
+                  AutomationProperties.Name="{DynamicResource String.TableKit.RecordsSplitterAutomationName}" />
 
     <Border Grid.Column="4" Classes="tablekit-data-detail">
       <Grid RowDefinitions="Auto,Auto,1,*">
         <Grid Margin="14,12,14,10" ColumnDefinitions="*,Auto" ColumnSpacing="8">
           <StackPanel Spacing="2">
-            <TextBlock Text="{CompiledBinding SelectedPreviewRecord.Title, FallbackValue=记录详情}"
+            <TextBlock Text="{CompiledBinding SelectedPreviewRecord.Title, FallbackValue={DynamicResource String.TableKit.RecordDetails}}"
                        Classes="mono section-title"
                        TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{CompiledBinding SelectedPreviewTable.Name, FallbackValue=等待选择}"
+            <TextBlock Text="{CompiledBinding SelectedPreviewTable.Name, FallbackValue={DynamicResource String.TableKit.WaitingSelection}}"
                        Classes="mono tablekit-hint"
                        TextTrimming="CharacterEllipsis" />
           </StackPanel>
@@ -163,9 +163,9 @@
 
         <Grid Grid.Row="3" RowDefinitions="Auto,*" MinHeight="160">
           <Grid Margin="14,8,14,7" ColumnDefinitions="*,Auto">
-            <TextBlock Text="原始 JSON" Classes="section-title" />
+            <TextBlock Text="{DynamicResource String.TableKit.RawJson}" Classes="section-title" />
             <TextBlock Grid.Column="1"
-                       Text="只读"
+                       Text="{DynamicResource String.TableKit.ReadOnly}"
                        Classes="mono tablekit-kicker"
                        VerticalAlignment="Center" />
           </Grid>

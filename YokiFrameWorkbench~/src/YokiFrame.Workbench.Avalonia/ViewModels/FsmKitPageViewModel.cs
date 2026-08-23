@@ -1,5 +1,6 @@
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Workbench.Avalonia.ViewModels.FsmKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -16,19 +17,19 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
     private FsmMachineListItemViewModel? mSelectedMachine;
     private WorkbenchFsmKitState? mSelectedDetailsState;
     private string mSearchText = string.Empty;
-    private string mEngineId = "未选择";
-    private string mSessionId = "未知";
-    private string mMode = "未知";
-    private string mSource = "等待数据";
+    private string mEngineId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+    private string mSessionId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+    private string mMode = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+    private string mSource = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
     private string mTransport = string.Empty;
-    private string mUpdatedAtText = "未知";
+    private string mUpdatedAtText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
     private string mStaleReason = string.Empty;
     private string mSelectedInstanceId = string.Empty;
-    private string mSelectedMachineName = "未选择";
-    private string mDataChannelText = "等待数据";
+    private string mSelectedMachineName = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+    private string mDataChannelText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
     private string mMachineState = "End";
-    private string mCurrentState = "未选择";
-    private string mDiagnosticText = "等待 FsmKit 状态。";
+    private string mCurrentState = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+    private string mDiagnosticText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingState");
     private string mRawPayload = string.Empty;
     private long mGeneration;
     private bool mIsApplyingState;
@@ -42,6 +43,7 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         Func<string, CancellationToken, Task<WorkbenchFsmKitState>>? detailsQuery = null)
     {
         mDetailsQuery = detailsQuery;
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
     }
 
     /// <summary>当当前 instanceId 变化时通知窗口刷新精确命名 Telemetry 订阅。</summary>
@@ -174,7 +176,7 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         }
 
         StaleReason = diagnostic;
-        DiagnosticText = "Shared Memory 高频读取已暂停: " + diagnostic;
+        DiagnosticText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.TelemetryPaused") + diagnostic;
     }
 
     /// <summary>
@@ -215,7 +217,7 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         Transport = state.Transport;
         DataChannelText = WorkbenchFsmKitPresentation.CreateDataChannelText(Source, Transport);
         UpdatedAtText = state.UpdatedAtUtc == DateTimeOffset.MinValue
-            ? "未知"
+            ? WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown")
             : state.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
         StaleReason = state.StaleReason;
         RawPayload = state.RawPayloadJson;
@@ -231,9 +233,11 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
     {
         var details = state.Selected?.InstanceId == summary?.InstanceId ? state.Selected : null;
         SelectedInstanceId = details?.InstanceId ?? summary?.InstanceId ?? state.InstanceId;
-        SelectedMachineName = details?.FsmName ?? summary?.Name ?? state.FsmName ?? "未选择";
+        SelectedMachineName = details?.FsmName ?? summary?.Name ?? state.FsmName
+            ?? WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         MachineState = details?.MachineState ?? summary?.MachineState ?? "End";
-        CurrentState = details?.CurrentState ?? summary?.CurrentState ?? "未选择";
+        CurrentState = details?.CurrentState ?? summary?.CurrentState
+            ?? WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         StateTree = details?.States ?? Array.Empty<WorkbenchFsmStateNode>();
         SynchronizeTransitionHistory(state.History);
         StateEvents = state.StateEvents;
@@ -256,9 +260,9 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         }
 
         SelectedInstanceId = machine?.InstanceId ?? string.Empty;
-        SelectedMachineName = machine?.Name ?? "未选择";
+        SelectedMachineName = machine?.Name ?? WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         MachineState = machine?.MachineState ?? "End";
-        CurrentState = machine?.CurrentState ?? "未选择";
+        CurrentState = machine?.CurrentState ?? WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         RebuildMachineList();
         if (!mIsApplyingState && machine != null)
         {
@@ -280,14 +284,15 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         RawPayload = string.Empty;
         EvidencePaths = Array.Empty<string>();
         StaleReason = string.Empty;
-        Source = "正在查询";
+        Source = GetString("String.FsmKit.Status.Querying", "正在查询");
         Transport = string.Empty;
-        DataChannelText = "查询中";
-        DiagnosticText = "正在查询 instanceId: " + instanceId;
+        DataChannelText = GetString("String.FsmKit.Status.DataChannelQuerying", "查询中");
+        DiagnosticText = string.Format(GetString("String.FsmKit.Status.DetailQueryTemplate", "正在查询 instanceId: {0}"), instanceId);
         GraphModel = global::YokiFrame.Workbench.Avalonia.ViewModels.FsmKit.ObservedFsmGraphModel.Empty;
         IsGraphEmpty = true;
-        GraphEmptyHint = "正在读取该实例的完整状态树和转换历史。";
-        HistoryCountText = "0 条转换";
+        GraphEmptyHint = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.GraphReading");
+        HistoryCountText = string.Format(
+            WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.TransitionCountTemplate", "{0} 条转换"), 0);
     }
 
     /// <summary>
@@ -300,25 +305,31 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
         mSelectedDetailsState = null;
         ClearMachineList();
         SelectedMachine = null;
-        EngineId = "未选择";
-        SessionId = "未知";
+        EngineId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
+        SessionId = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
         Generation = 0L;
-        Mode = "未知";
-        Source = "等待数据";
+        Mode = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
+        Source = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
         Transport = string.Empty;
-        DataChannelText = "等待数据";
-        UpdatedAtText = "未知";
+        DataChannelText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingData");
+        UpdatedAtText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.Unknown");
         StaleReason = string.Empty;
         SelectedInstanceId = string.Empty;
-        SelectedMachineName = "未选择";
+        SelectedMachineName = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         MachineState = "End";
-        CurrentState = "未选择";
+        CurrentState = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.NotSelected");
         StateTree = Array.Empty<WorkbenchFsmStateNode>();
         ClearTransitionHistory();
         StateEvents = Array.Empty<WorkbenchFsmStateEvent>();
         RawPayload = string.Empty;
         EvidencePaths = Array.Empty<string>();
-        DiagnosticText = "等待 FsmKit 状态。";
+        DiagnosticText = WorkbenchI18nService.Instance.GetString("String.FsmKit.Status.WaitingState");
         ResetWorkspacePresentation();
+    }
+
+    /// <summary>从当前语言资源读取 FsmKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

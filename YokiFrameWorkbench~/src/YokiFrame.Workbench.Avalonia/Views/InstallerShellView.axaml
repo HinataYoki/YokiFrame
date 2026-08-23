@@ -36,9 +36,9 @@
                          Classes="installer-step-number active" />
             </Border>
             <StackPanel Grid.Column="1" Spacing="2">
-              <TextBlock Text="选择项目"
+              <TextBlock Text="{DynamicResource String.Installer.Step.SelectProject}"
                          Classes="installer-step-title active" />
-              <TextBlock Text="识别目标引擎"
+              <TextBlock Text="{DynamicResource String.Installer.Step.RecognizeEngine}"
                          Classes="installer-step-caption" />
             </StackPanel>
           </Grid>
@@ -49,9 +49,9 @@
                          Classes="installer-step-number" />
             </Border>
             <StackPanel Grid.Column="1" Spacing="2">
-              <TextBlock Text="配置来源"
+              <TextBlock Text="{DynamicResource String.Installer.Step.ConfigureSource}"
                          Classes="installer-step-title" />
-              <TextBlock Text="本地包或 Git"
+              <TextBlock Text="{DynamicResource String.Installer.Step.LocalOrGit}"
                          Classes="installer-step-caption" />
             </StackPanel>
           </Grid>
@@ -62,9 +62,9 @@
                          Classes="installer-step-number" />
             </Border>
             <StackPanel Grid.Column="1" Spacing="2">
-              <TextBlock Text="审阅并安装"
+              <TextBlock Text="{DynamicResource String.Installer.Step.ReviewInstall}"
                          Classes="installer-step-title" />
-              <TextBlock Text="备份、替换、校验"
+              <TextBlock Text="{DynamicResource String.Installer.Step.BackupReplaceVerify}"
                          Classes="installer-step-caption" />
             </StackPanel>
           </Grid>
@@ -74,7 +74,7 @@
                 Classes="installer-rail-status"
                 Margin="18,0,16,22">
           <StackPanel Spacing="4">
-            <TextBlock Text="当前目标"
+            <TextBlock Text="{DynamicResource String.Installer.CurrentTarget}"
                        Classes="installer-rail-kicker" />
             <TextBlock Text="{CompiledBinding EngineStatusText}"
                        Classes="installer-rail-engine"
@@ -92,9 +92,9 @@
             Margin="28,0,18,0">
         <StackPanel VerticalAlignment="Center"
                     Spacing="1">
-          <TextBlock Text="安装 YokiFrame"
+          <TextBlock Text="{DynamicResource String.Installer.Title}"
                      Classes="section-title" />
-          <TextBlock Text="选择项目并确认将要发生的变更"
+          <TextBlock Text="{DynamicResource String.Installer.Subtitle}"
                      Classes="muted" />
         </StackPanel>
         <Button Grid.Column="1"
@@ -103,8 +103,8 @@
                 Height="36"
                 chrome:WindowDecorationProperties.ElementRole="CloseButton"
                 Click="OnCloseInstallerButtonClick"
-                ToolTip.Tip="关闭安装器"
-                AutomationProperties.Name="关闭安装器">
+                 ToolTip.Tip="{DynamicResource String.Installer.CloseTooltip}"
+                 AutomationProperties.Name="{DynamicResource String.Installer.CloseTooltip}">
           <shapes:Path Data="{StaticResource Icon.Close}"
                        Width="16"
                        Height="16"
@@ -122,10 +122,10 @@
       <StackPanel Margin="30,25,30,28"
                   Spacing="28">
         <StackPanel Spacing="5">
-          <TextBlock Text="项目与来源"
+          <TextBlock Text="{DynamicResource String.Installer.ProjectAndSource}"
                      FontSize="22"
                      FontWeight="SemiBold" />
-          <TextBlock Text="安装器会根据项目类型显示可用选项"
+          <TextBlock Text="{DynamicResource String.Installer.ProjectAndSourceHint}"
                      Classes="secondary" />
         </StackPanel>
 
@@ -136,14 +136,14 @@
                        Classes="installer-field-index" />
             <TextBlock x:Name="TargetProjectRootLabel"
                        Grid.Column="1"
-                       Text="目标项目"
+                       Text="{DynamicResource String.Installer.TargetProject}"
                        Classes="label" />
           </Grid>
           <Grid ColumnDefinitions="*,84"
                 ColumnSpacing="8">
             <TextBox Text="{CompiledBinding TargetProjectRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="form-input"
-                     PlaceholderText="选择 Unity 或 Godot 项目根目录"
+                     PlaceholderText="{DynamicResource String.Installer.TargetProjectPlaceholder}"
                      AutomationProperties.AutomationId="installer.target.path"
                      AutomationProperties.LabeledBy="{Binding ElementName=TargetProjectRootLabel}" />
             <Button Grid.Column="1"
@@ -158,7 +158,7 @@
                              Stroke="{DynamicResource Brush.Text.Primary}"
                              StrokeThickness="1.7"
                              AutomationProperties.AccessibilityView="Raw" />
-                <TextBlock Text="选择" />
+                 <TextBlock Text="{DynamicResource String.Installer.SelectButton}" />
               </StackPanel>
             </Button>
           </Grid>
@@ -174,27 +174,27 @@
             <TextBlock Text="02"
                        Classes="installer-field-index" />
             <TextBlock Grid.Column="1"
-                       Text="安装来源"
+                        Text="{DynamicResource String.Installer.InstallSource}"
                        Classes="label" />
           </Grid>
 
           <StackPanel Spacing="8"
                       IsVisible="{CompiledBinding IsUnityOptionsVisible}">
-            <TextBlock Text="安装方式" Classes="muted" />
+            <TextBlock Text="{DynamicResource String.Installer.InstallMode}" Classes="muted" />
             <Grid ColumnDefinitions="*,*">
               <RadioButton GroupName="UnityInstallMode"
                            Classes="install-mode-option segment-left"
-                           Content="本地包"
+                           Content="{DynamicResource String.Installer.UnityLocalMode}"
                            IsChecked="{CompiledBinding IsUnityLocalSelected, Mode=TwoWay}"
                            AutomationProperties.AutomationId="installer.mode.local" />
               <RadioButton Grid.Column="1"
                            GroupName="UnityInstallMode"
                            Classes="install-mode-option segment-right"
-                           Content="Git 包"
+                           Content="{DynamicResource String.Installer.UnityGitMode}"
                            IsChecked="{CompiledBinding IsUnityGitSelected, Mode=TwoWay}"
                            AutomationProperties.AutomationId="installer.mode.git" />
             </Grid>
-            <TextBlock Text="本地包使用受控整包替换；Git 包只保留 manifest 中的唯一来源"
+             <TextBlock Text="{DynamicResource String.Installer.InstallModeHint}"
                        Classes="muted"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -202,13 +202,13 @@
           <StackPanel Spacing="8"
                       IsVisible="{CompiledBinding IsSourcePathVisible}">
             <TextBlock x:Name="SourcePackageRootLabel"
-                       Text="YokiFrame 源目录"
+                        Text="{DynamicResource String.Installer.SourceDirectory}"
                        Classes="muted" />
             <Grid ColumnDefinitions="*,84"
                   ColumnSpacing="8">
               <TextBox Text="{CompiledBinding SourcePackageRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                        Classes="form-input"
-                       PlaceholderText="选择 YokiFrame 包根目录"
+                        PlaceholderText="{DynamicResource String.Installer.SourceDirectoryPlaceholder}"
                        AutomationProperties.AutomationId="installer.source.path"
                        AutomationProperties.LabeledBy="{Binding ElementName=SourcePackageRootLabel}" />
               <Button Grid.Column="1"
@@ -223,7 +223,7 @@
                                Stroke="{DynamicResource Brush.Text.Primary}"
                                StrokeThickness="1.7"
                                AutomationProperties.AccessibilityView="Raw" />
-                  <TextBlock Text="选择" />
+                   <TextBlock Text="{DynamicResource String.Installer.SelectButton}" />
                 </StackPanel>
               </Button>
             </Grid>
@@ -232,7 +232,7 @@
           <StackPanel Spacing="8"
                       IsVisible="{CompiledBinding IsGitUrlVisible}">
             <TextBlock x:Name="GitUrlLabel"
-                       Text="Git URL"
+                       Text="{DynamicResource String.Installer.GitUrl}"
                        Classes="muted" />
             <TextBox Text="{CompiledBinding GitUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      Classes="form-input"
@@ -242,12 +242,12 @@
 
           <StackPanel Spacing="7"
                       IsVisible="{CompiledBinding IsGodotOptionsVisible}">
-            <TextBlock Text="Godot 项目选项"
+             <TextBlock Text="{DynamicResource String.Installer.GodotOptions}"
                        Classes="muted" />
-            <CheckBox Content="维护 project.godot 中的 YokiFrame 设置"
+             <CheckBox Content="{DynamicResource String.Installer.RepairGodotSettings}"
                       IsChecked="{CompiledBinding RepairGodotProjectSettings, Mode=TwoWay}"
                       AutomationProperties.AutomationId="installer.godot.repair" />
-            <CheckBox Content="登记并启用 YokiFrame 编辑器插件"
+             <CheckBox Content="{DynamicResource String.Installer.EnableGodotPlugin}"
                       IsChecked="{CompiledBinding EnableGodotPlugin, Mode=TwoWay}"
                       AutomationProperties.AutomationId="installer.godot.enable" />
           </StackPanel>
@@ -262,7 +262,7 @@
         <StackPanel Margin="22,24,20,16"
                     Spacing="4">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="变更审阅"
+             <TextBlock Text="{DynamicResource String.Installer.ReviewTitle}"
                        Classes="section-title" />
             <TextBlock Grid.Column="1"
                        Text="{CompiledBinding CurrentPlatformText}"
@@ -272,7 +272,7 @@
           </Grid>
           <TextBlock Text="{CompiledBinding SessionStatusText}"
                      Classes="secondary"
-                     AutomationProperties.Name="安装状态"
+                     AutomationProperties.Name="{DynamicResource String.Installer.SessionStatusName}"
                      AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
 
@@ -284,19 +284,19 @@
             <Grid RowDefinitions="Auto,Auto,Auto"
                   RowSpacing="10">
               <Grid ColumnDefinitions="66,*">
-                <TextBlock Text="引擎" Classes="muted" />
+                 <TextBlock Text="{DynamicResource String.Installer.EngineLabel}" Classes="muted" />
                 <TextBlock Grid.Column="1"
                            Text="{CompiledBinding EngineStatusText}"
                            FontWeight="SemiBold" />
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="66,*">
-                <TextBlock Text="方式" Classes="muted" />
+                 <TextBlock Text="{DynamicResource String.Installer.ModeLabel}" Classes="muted" />
                 <TextBlock Grid.Column="1"
                            Text="{CompiledBinding SelectedInstallModeText}"
                            FontWeight="SemiBold" />
               </Grid>
               <Grid Grid.Row="2" ColumnDefinitions="66,*">
-                <TextBlock Text="位置" Classes="muted" />
+                 <TextBlock Text="{DynamicResource String.Installer.LocationLabel}" Classes="muted" />
                 <TextBlock Grid.Column="1"
                            Text="{CompiledBinding TargetStatusText}"
                            FontWeight="SemiBold"
@@ -309,7 +309,7 @@
                     Background="{DynamicResource Brush.Border.Subtle}" />
 
             <StackPanel Spacing="7">
-              <TextBlock Text="将执行"
+               <TextBlock Text="{DynamicResource String.Installer.PlanActionsTitle}"
                          Classes="label" />
               <TextBlock Text="{CompiledBinding PlanActionsText}"
                          Classes="body"
@@ -319,7 +319,7 @@
             <Border Classes="installer-warning-band"
                     IsVisible="{CompiledBinding IsPlanWarningVisible}">
               <StackPanel Spacing="4">
-                <TextBlock Text="将覆盖本地修改"
+                 <TextBlock Text="{DynamicResource String.Installer.PlanWarningsTitle}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource Brush.Status.WarningText}" />
                 <TextBlock Text="{CompiledBinding PlanWarningsText}"
@@ -331,7 +331,7 @@
             <Border Classes="installer-result-band"
                     IsVisible="{CompiledBinding IsCompletionSummaryVisible}">
               <StackPanel Spacing="4">
-                <TextBlock Text="安装完成" Classes="label" />
+                 <TextBlock Text="{DynamicResource String.Installer.CompletionTitle}" Classes="label" />
                 <TextBlock Text="{CompiledBinding CompletionSummaryText}"
                            Classes="body"
                            TextWrapping="Wrap" />
@@ -349,7 +349,7 @@
               </StackPanel>
             </Border>
 
-            <CheckBox Content="我确认接管并替换未受管的旧版 YokiFrame"
+             <CheckBox Content="{DynamicResource String.Installer.LegacyTakeoverConfirmation}"
                       IsChecked="{CompiledBinding ConfirmLegacyTakeover, Mode=TwoWay}"
                       IsVisible="{CompiledBinding IsTakeoverConfirmationVisible}"
                       AutomationProperties.AutomationId="installer.legacy.takeover" />
@@ -367,7 +367,7 @@
               ColumnDefinitions="*,Auto">
           <ToggleButton x:Name="LogDrawerToggle"
                         Classes="installer-log-toggle"
-                        AutomationProperties.Name="展开或收起运行日志">
+                        AutomationProperties.Name="{DynamicResource String.Installer.LogToggleName}">
             <StackPanel Classes="installer-button-content"
                         Orientation="Horizontal" Spacing="8">
               <shapes:Path Data="{StaticResource Icon.ChevronUp}"
@@ -375,7 +375,7 @@
                            Height="14"
                            Stroke="{DynamicResource Brush.Text.Primary}"
                            StrokeThickness="1.7" />
-              <TextBlock Text="运行日志"
+              <TextBlock Text="{DynamicResource String.Installer.LogTitle}"
                          FontWeight="SemiBold" />
             </StackPanel>
           </ToggleButton>
@@ -391,7 +391,7 @@
                            Height="14"
                            Stroke="{DynamicResource Brush.Text.Primary}"
                            StrokeThickness="1.7" />
-              <TextBlock Text="清空" />
+               <TextBlock Text="{DynamicResource String.Installer.ClearLog}" />
             </StackPanel>
           </Button>
         </Grid>
@@ -403,7 +403,7 @@
           <ListBox x:Name="InstallerLogList"
                    Classes="installer-log"
                    ItemsSource="{CompiledBinding LogEntries}"
-                   AutomationProperties.Name="安装日志"
+                    AutomationProperties.Name="{DynamicResource String.Installer.LogName}"
                    AutomationProperties.LiveSetting="Polite">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:InstallerLogLine">
@@ -442,8 +442,8 @@
                   Classes="secondary icon-button"
                   Command="{CompiledBinding RetryCommand}"
                   IsVisible="{CompiledBinding CanRetry}"
-                  ToolTip.Tip="重新检测"
-                  AutomationProperties.Name="重新检测">
+                  ToolTip.Tip="{DynamicResource String.Installer.RetryTooltip}"
+                  AutomationProperties.Name="{DynamicResource String.Installer.RetryTooltip}">
             <shapes:Path Data="{StaticResource Icon.RotateCcw}"
                          Width="16"
                          Height="16"
@@ -455,7 +455,7 @@
                   Command="{CompiledBinding BootstrapGodotRuntimeCommand}"
                   IsVisible="{CompiledBinding IsGodotRuntimeBootstrapVisible}"
                   AutomationProperties.AutomationId="installer.godot.bootstrap">
-            <TextBlock Text="构建 Runtime" />
+             <TextBlock Text="{DynamicResource String.Installer.BuildRuntime}" />
           </Button>
           <Button Grid.Column="3"
                   Classes="secondary"
@@ -468,7 +468,7 @@
                            Height="16"
                            Stroke="{DynamicResource Brush.Text.Primary}"
                            StrokeThickness="1.7" />
-              <TextBlock Text="查看计划" />
+               <TextBlock Text="{DynamicResource String.Installer.PreviewPlan}" />
             </StackPanel>
           </Button>
           <Button Grid.Column="4"
@@ -482,7 +482,7 @@
                            Height="16"
                            Stroke="White"
                            StrokeThickness="1.7" />
-              <TextBlock Text="安装 / 更新" />
+               <TextBlock Text="{DynamicResource String.Installer.InstallOrUpdate}" />
             </StackPanel>
           </Button>
         </Grid>

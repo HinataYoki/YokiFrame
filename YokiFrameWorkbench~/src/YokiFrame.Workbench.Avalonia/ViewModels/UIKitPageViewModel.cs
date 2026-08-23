@@ -1,11 +1,12 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.UIKit;
 using YokiFrame.Tooling.Application.Services.UIKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 Unity UIKit Runtime 面板、栈、缓存和模态只读诊断页面。</summary>
-public sealed partial class UIKitPageViewModel : ViewModelBase
+public sealed partial class UIKitPageViewModel : ViewModelBase, IDisposable
 {
     private readonly Func<string, Task>? mCopyTextAsync;
     private IReadOnlyList<WorkbenchUIKitPanel> mAllPanels = Array.Empty<WorkbenchUIKitPanel>();
@@ -15,10 +16,11 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
     private WorkbenchUIKitStack? mSelectedStack;
     private int mSelectedCollectionIndex;
     private string mSearchText = string.Empty;
-    private string mSource = "等待数据";
+    private string mSource = WorkbenchI18nService.Instance.GetString("String.Common.WaitingForData", "等待数据");
     private string mUpdatedAtText = "--";
     private string mStaleReason = string.Empty;
     private string mCopyStatusText = string.Empty;
+    private bool mIsDisposed;
 
     /// <summary>创建不依赖系统剪贴板的 UIKit 页面状态。</summary>
     public UIKitPageViewModel() : this(null, null, null) { }
@@ -52,6 +54,40 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
         CopySnapshotCommand = new AsyncRelayCommand(CopySnapshotAsync, CanCopySnapshot);
         CopySelectedCommand = new AsyncRelayCommand(CopySelectedAsync, CanCopySelected);
         InitializeEditorCommands();
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
+    }
+
+    /// <summary>
+    /// 响应语言切换并刷新依赖当前语言的状态文本；真实 Runtime 数据源保持原始协议值。
+    /// </summary>
+    private void OnCultureChanged()
+    {
+        if (mIsDisposed)
+        {
+            return;
+        }
+
+        if (mState == null)
+        {
+            Source = WorkbenchI18nService.Instance.GetString("String.Common.WaitingForData", "等待数据");
+        }
+
+        NotifySummaryChanged();
+        NotifyCollectionPresentationChanged();
+    }
+
+    /// <summary>
+    /// 解除全局语言事件订阅，避免窗口关闭后静态服务继续持有页面状态。
+    /// </summary>
+    public void Dispose()
+    {
+        if (mIsDisposed)
+        {
+            return;
+        }
+
+        mIsDisposed = true;
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
     }
 
     /// <summary>获取当前筛选后的面板列表。</summary>
@@ -125,7 +161,11 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
     /// <summary>获取是否已读取状态但 UIKit Root 不存在。</summary>
     public bool RootMissing => HasState && !RootExists;
     /// <summary>获取 Root 状态文本。</summary>
-    public string RootStatusText => RootExists ? "根节点在线" : HasState ? "未发现根节点" : "根节点状态未知";
+    public string RootStatusText => RootExists
+        ? WorkbenchI18nService.Instance.GetString("String.UIKit.RootOnline", "根节点在线")
+        : HasState
+            ? WorkbenchI18nService.Instance.GetString("String.UIKit.RootMissing", "未发现根节点")
+            : WorkbenchI18nService.Instance.GetString("String.UIKit.RootUnknown", "根节点状态未知");
     /// <summary>获取面板总量。</summary>
     public int PanelCount => mState?.Stats.PanelCount ?? 0;
     /// <summary>获取命名栈总量。</summary>
@@ -165,7 +205,9 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
     /// <summary>获取 Modal blocker 是否处于活动状态。</summary>
     public bool ModalBlockerActive => mState?.Modal.BlockerActive == true;
     /// <summary>获取 Modal blocker 状态文本。</summary>
-    public string ModalStatusText => ModalBlockerActive ? "遮罩已启用" : "无遮罩";
+    public string ModalStatusText => ModalBlockerActive
+        ? WorkbenchI18nService.Instance.GetString("String.UIKit.ModalBlockerActive", "遮罩已启用")
+        : WorkbenchI18nService.Instance.GetString("String.UIKit.NoModalBlocker", "无遮罩");
     /// <summary>获取面板集合是否被裁剪。</summary>
     public bool PanelsTruncated => mState?.PanelsTruncated == true;
     /// <summary>获取命名栈集合是否被裁剪。</summary>
@@ -288,11 +330,11 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
         try
         {
             await mCopyTextAsync(WorkbenchUIKitPresentation.CreateSnapshotText(mState));
-            CopyStatusText = "已复制 UIKit 诊断";
+            CopyStatusText = GetString("String.UIKit.SnapshotCopied", "已复制 UIKit 诊断");
         }
         catch (Exception exception)
         {
-            CopyStatusText = "复制失败: " + exception.Message;
+            CopyStatusText = string.Format(GetString("String.UIKit.CopyFailedTemplate", "复制失败: {0}"), exception.Message);
         }
         OnPropertyChanged(nameof(HasCopyStatus));
     }
@@ -307,11 +349,11 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
         try
         {
             await mCopyTextAsync(text);
-            CopyStatusText = "已复制当前项";
+            CopyStatusText = GetString("String.UIKit.SelectionCopied", "已复制当前项");
         }
         catch (Exception exception)
         {
-            CopyStatusText = "复制失败: " + exception.Message;
+            CopyStatusText = string.Format(GetString("String.UIKit.CopyFailedTemplate", "复制失败: {0}"), exception.Message);
         }
         OnPropertyChanged(nameof(HasCopyStatus));
     }
@@ -343,19 +385,23 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
     /// <summary>构造当前集合空状态标题。</summary>
     private string CreateEmptyTitle()
     {
-        if (!HasState) return "等待 UIKit 运行时数据";
-        if (!RootExists) return "当前未发现 UIKit Root";
-        if (!string.IsNullOrWhiteSpace(SearchText)) return "没有匹配项";
-        return IsPanelsView ? "当前没有已加载面板" : "当前没有命名栈";
+        if (!HasState) return WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyWaitingData", "等待 UIKit 运行时数据");
+        if (!RootExists) return WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoRoot", "当前未发现 UIKit Root");
+        if (!string.IsNullOrWhiteSpace(SearchText)) return WorkbenchI18nService.Instance.GetString("String.Common.NoMatchingItems", "没有匹配项");
+        return IsPanelsView
+            ? WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoPanels", "当前没有已加载面板")
+            : WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoStacks", "当前没有命名栈");
     }
 
     /// <summary>构造当前集合空状态说明。</summary>
     private string CreateEmptyHint()
     {
-        if (!HasState) return "等待 Unity Editor 发布 telemetry 或 snapshot";
-        if (!RootExists) return "运行时尚未创建或注册 UIKit 根节点";
-        if (!string.IsNullOrWhiteSpace(SearchText)) return "调整搜索条件查看其它运行时条目";
-        return IsPanelsView ? "面板加载后会出现在这里" : "命名栈创建后会出现在这里";
+        if (!HasState) return WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyWaitingDataHint", "等待 Unity Editor 发布 telemetry 或 snapshot");
+        if (!RootExists) return WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoRootHint", "运行时尚未创建或注册 UIKit 根节点");
+        if (!string.IsNullOrWhiteSpace(SearchText)) return WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyFilterHint", "调整搜索条件查看其它运行时条目");
+        return IsPanelsView
+            ? WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoPanelsHint", "面板加载后会出现在这里")
+            : WorkbenchI18nService.Instance.GetString("String.UIKit.EmptyNoStacksHint", "命名栈创建后会出现在这里");
     }
 
     /// <summary>清空已离线或未选中宿主的 UIKit 页面状态。</summary>
@@ -367,7 +413,7 @@ public sealed partial class UIKitPageViewModel : ViewModelBase
         Stacks.Clear();
         SelectedPanel = null;
         SelectedStack = null;
-        Source = "等待数据";
+        Source = WorkbenchI18nService.Instance.GetString("String.Common.WaitingForData", "等待数据");
         UpdatedAtText = "--";
         StaleReason = string.Empty;
         CopyStatusText = string.Empty;

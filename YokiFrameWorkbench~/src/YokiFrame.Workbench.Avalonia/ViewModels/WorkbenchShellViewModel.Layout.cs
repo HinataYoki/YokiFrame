@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using YokiFrame.Tooling.Application.Packages;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -9,30 +10,34 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 public sealed partial class WorkbenchShellViewModel
 {
     private const int MAX_LOG_LINES = 80;
-    private static readonly IReadOnlyList<string> sDisplayFontOptions = new[]
+    private static IReadOnlyList<string> CreateDisplayFontOptions() => new[]
     {
-        "默认字体",
-        "等宽字体",
+        GetString(FontDefaultKey, "默认字体"),
+        GetString(FontMonoKey, "等宽字体"),
         "LXGW WenKai"
     };
-    private static readonly IReadOnlyList<string> sCultureOptions = new[] { "中文", "English" };
     private IReadOnlyList<WorkbenchMetricCard> mEngineCards = Array.Empty<WorkbenchMetricCard>();
     private IReadOnlyList<WorkbenchLogLine> mLogLines = Array.Empty<WorkbenchLogLine>();
     private readonly List<WorkbenchLogLine> mLogBuffer = new(MAX_LOG_LINES);
     private IReadOnlyList<WorkbenchMetricCard> mSnapshotCards = Array.Empty<WorkbenchMetricCard>();
     private IReadOnlyList<WorkbenchMetricCard> mSummaryCards = Array.Empty<WorkbenchMetricCard>();
     private WorkbenchNavigationItem? mSelectedNavigationItem;
-    private string mConnectionBadgeText = "未连接";
-    private string mCultureText = "中文";
-    private string mSelectedDisplayFontName = "默认字体";
-    private FontFamily mSelectedDisplayFontFamily = CreateDisplayFontFamily("默认字体");
-    private string mVersionText = "版本未知";
+    private string mConnectionBadgeText = GetString(NotConnectedKey, "未连接");
+    private string mSelectedDisplayFontName = GetString(FontDefaultKey, "默认字体");
+    private FontFamily mSelectedDisplayFontFamily = CreateDisplayFontFamily(GetString(FontDefaultKey, "默认字体"));
+    private string mVersionText = GetString(VersionUnknownKey, "版本未知");
     private Uri? mRepositoryUri;
+
+    private IReadOnlyList<WorkbenchNavigationGroup> mNavigationGroups = Array.Empty<WorkbenchNavigationGroup>();
 
     /// <summary>
     /// 获取左侧导航分组。
     /// </summary>
-    public IReadOnlyList<WorkbenchNavigationGroup> NavigationGroups { get; private set; } = Array.Empty<WorkbenchNavigationGroup>();
+    public IReadOnlyList<WorkbenchNavigationGroup> NavigationGroups
+    {
+        get => mNavigationGroups;
+        private set => SetProperty(ref mNavigationGroups, value);
+    }
 
     /// <summary>
     /// 获取当前选中的导航项。
@@ -99,7 +104,7 @@ public sealed partial class WorkbenchShellViewModel
     /// <summary>
     /// 获取总览页可选显示字体名称。
     /// </summary>
-    public IReadOnlyList<string> DisplayFontOptions => sDisplayFontOptions;
+    public IReadOnlyList<string> DisplayFontOptions => CreateDisplayFontOptions();
 
     /// <summary>
     /// 获取或设置当前显示字体名称；修改后会同步刷新 Shell 根容器字体。
@@ -139,15 +144,21 @@ public sealed partial class WorkbenchShellViewModel
     /// <summary>
     /// 获取顶部语言选择器可用的语言选项。
     /// </summary>
-    public IReadOnlyList<string> CultureOptions => sCultureOptions;
+    public IReadOnlyList<string> CultureOptions => WorkbenchI18nService.Instance.CultureOptions;
 
     /// <summary>
     /// 获取或设置顶部语言选择器当前值。
     /// </summary>
     public string CultureText
     {
-        get => mCultureText;
-        set => SetProperty(ref mCultureText, value);
+        get => WorkbenchI18nService.Instance.CurrentCultureDisplayName;
+        set
+        {
+            if (WorkbenchI18nService.Instance.SetCultureByDisplayName(value))
+            {
+                OnPropertyChanged(nameof(CultureText));
+            }
+        }
     }
 
     /// <summary>
@@ -176,11 +187,33 @@ public sealed partial class WorkbenchShellViewModel
     /// </summary>
     private void InitializeWorkbenchLayout()
     {
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         NavigationGroups = CreatePageNavigationGroups();
         SelectedNavigationItem = FindNavigationItem(DefaultPageName);
         RefreshNavigationSelection();
         RefreshWorkbenchLayout();
         AddLogLine("Workbench 总览已初始化，等待宿主状态刷新。");
+    }
+
+    /// <summary>
+    /// 响应语言切换事件，重新生成导航项、卡片投影与当前页面。
+    /// </summary>
+    private void OnCultureChanged()
+    {
+        NavigationGroups = CreatePageNavigationGroups();
+        RefreshNavigationSelection();
+        RefreshWorkbenchLayout();
+        UpdateCurrentPage();
+        var switchMsg = WorkbenchI18nService.Instance.CurrentCultureName == "en-US"
+            ? "Language switched: English"
+            : "显示语言已切换: 中文";
+        AddLogLine(switchMsg);
+        OnPropertyChanged(nameof(CultureText));
+        OnPropertyChanged(nameof(CurrentPageTitle));
+        OnPropertyChanged(nameof(CurrentPageDescription));
+        OnPropertyChanged(nameof(ConnectionBadgeText));
+        // Skill 安装面板的卡片与状态文本随语言重投影。
+        RefreshSkillTargets();
     }
 
     /// <summary>
@@ -191,7 +224,9 @@ public sealed partial class WorkbenchShellViewModel
         SummaryCards = CreateSummaryCards(mDashboardState);
         EngineCards = CreateEngineCards(mDashboardState);
         SnapshotCards = CreateSnapshotCards(mDashboardState);
-        ConnectionBadgeText = mDashboardState?.BridgeHealth.RequiresReconnect == false ? "已连接" : "未连接";
+        ConnectionBadgeText = mDashboardState?.BridgeHealth.RequiresReconnect == false
+            ? WorkbenchI18nService.Instance.GetString("String.Common.Connected", "已连接")
+            : WorkbenchI18nService.Instance.GetString("String.Common.Disconnected", "未连接");
     }
 
     /// <summary>
@@ -202,7 +237,7 @@ public sealed partial class WorkbenchShellViewModel
     {
         mRepositoryUri = packageMetadata?.RepositoryUri;
         VersionText = packageMetadata == null
-            ? "版本未知"
+            ? WorkbenchI18nService.Instance.GetString("String.Common.VersionUnknown", "版本未知")
             : "v" + packageMetadata.Version.TrimStart('v', 'V');
         OnPropertyChanged(nameof(RepositoryUrl));
     }
@@ -302,7 +337,7 @@ public sealed partial class WorkbenchShellViewModel
     /// <returns>可用字体名称。</returns>
     private static string NormalizeDisplayFontName(string name)
     {
-        return sDisplayFontOptions.Contains(name, StringComparer.Ordinal) ? name : "默认字体";
+        return CreateDisplayFontOptions().Contains(name, StringComparer.Ordinal) ? name : GetString(FontDefaultKey, "默认字体");
     }
 
     /// <summary>
@@ -318,5 +353,23 @@ public sealed partial class WorkbenchShellViewModel
             "LXGW WenKai" => new FontFamily("LXGW WenKai, Microsoft YaHei UI, Inter"),
             _ => new FontFamily("Inter, Segoe UI, Microsoft YaHei UI, PingFang SC")
         };
+    }
+
+    /// <summary>默认字体选项资源 key。</summary>
+    private const string FontDefaultKey = "String.Layout.FontDefault";
+
+    /// <summary>等宽字体选项资源 key。</summary>
+    private const string FontMonoKey = "String.Layout.FontMono";
+
+    /// <summary>未连接徽标占位资源 key。</summary>
+    private const string NotConnectedKey = "String.SaveKit.NotConnected";
+
+    /// <summary>版本未知占位资源 key。</summary>
+    private const string VersionUnknownKey = "String.Layout.VersionUnknown";
+
+    /// <summary>从当前语言资源读取 Shell 布局文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

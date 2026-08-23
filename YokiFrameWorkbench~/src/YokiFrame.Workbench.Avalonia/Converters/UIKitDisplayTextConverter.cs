@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.Converters;
 
@@ -40,53 +41,36 @@ public sealed class UIKitDisplayTextConverter : IValueConverter
     /// <summary>转换 UIKit PanelState 名称。</summary>
     private static string ConvertState(string value)
     {
-        return value switch
+        string normalized = value switch
         {
-            "Preloaded" => "已预加载",
-            "Opening" => "打开中",
-            "Open" => "已打开",
-            "Hiding" => "隐藏中",
-            "Hide" or "Hidden" => "已隐藏",
-            "Closing" => "关闭中",
-            "Cached" => "已缓存",
-            "Close" or "Closed" => "已关闭",
+            "Hide" => "Hidden",
+            "Close" => "Closed",
             _ => value,
         };
+        return WorkbenchI18nService.Instance.GetString("String.UIKit.State." + normalized, value);
     }
 
     /// <summary>转换 UIKit 预定义 UILevel 名称，自定义层级保持原始值。</summary>
     private static string ConvertLevel(string value)
     {
-        return value switch
-        {
-            "AlwayBottom" => "最底层",
-            "Bg" => "背景层",
-            "Hud" => "HUD 层",
-            "Common" => "常规层",
-            "Toast" => "轻提示层",
-            "Pop" or "PopUI" => "弹窗层",
-            "Guide" => "引导层",
-            "AlwayTop" => "最顶层",
-            "CanvasPanel" => "独立画布层",
-            _ => value,
-        };
+        return WorkbenchI18nService.Instance.GetString("String.UIKit.Level." + value, value);
     }
 
     /// <summary>转换 UIKit PanelCachePolicy 名称。</summary>
     private static string ConvertCachePolicy(string value)
     {
-        return value switch
-        {
-            "Transient" => "临时",
-            "Reusable" => "可复用",
-            "Persistent" => "持久",
-            _ => value,
-        };
+        return WorkbenchI18nService.Instance.GetString("String.UIKit.Cache." + value, value);
     }
 
     /// <summary>把布尔诊断值转换为“是”或“否”。</summary>
     private static string ConvertBoolean(object? value)
     {
-        return value is bool boolean ? boolean ? "是" : "否" : value?.ToString() ?? string.Empty;
+        if (value is bool boolean)
+        {
+            return boolean
+                ? WorkbenchI18nService.Instance.GetString("String.Common.Yes", "是")
+                : WorkbenchI18nService.Instance.GetString("String.Common.No", "否");
+        }
+        return value?.ToString() ?? string.Empty;
     }
 }

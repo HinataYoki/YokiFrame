@@ -40,29 +40,29 @@
   <Grid x:Name="RootLayout" RowDefinitions="Auto,8,220,6,*,0,32">
     <Border Grid.Row="0" Classes="audiokit-status-strip" AutomationProperties.AutomationId="audiokit.status">
       <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6"
-            AutomationProperties.Name="AudioKit 观察状态">
+            AutomationProperties.Name="{DynamicResource String.Page.AudioKit.Title}">
         <Border Classes="audiokit-status-chip"
                 Classes.warning="{CompiledBinding HasBusCoverageWarning}"
-                ToolTip.Tip="Bus payload 的完整覆盖情况" AutomationProperties.LiveSetting="Polite">
+                ToolTip.Tip="{DynamicResource String.AudioKit.BusPayloadTooltip}" AutomationProperties.LiveSetting="Polite">
           <TextBlock Text="{CompiledBinding BusCoverageText}" Classes="mono" />
         </Border>
         <Border Grid.Column="1" Classes="audiokit-status-chip warning"
                 IsVisible="{CompiledBinding PayloadTruncated}"
-                ToolTip.Tip="当前 AudioKit payload 已按预算裁剪，列表不是完整快照">
-          <TextBlock Text="已裁剪" />
+                ToolTip.Tip="{DynamicResource String.AudioKit.Truncated}">
+          <TextBlock Text="{DynamicResource String.AudioKit.Truncated}" />
         </Border>
         <TextBlock Grid.Column="2" Text="{CompiledBinding StaleReason}" Classes="muted audiokit-stale-text"
                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{CompiledBinding StaleReason}"
-                   AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="AudioKit 观察诊断" />
+                   AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{DynamicResource String.AudioKit.StaleReasonAutomationName}" />
         <TextBox Grid.Column="3" Width="150" Classes="audiokit-toolbar-field"
                  Text="{CompiledBinding BusSearchText, Mode=TwoWay}"
-                 PlaceholderText="搜索 Bus" AutomationProperties.Name="搜索 AudioKit Bus" />
+                 PlaceholderText="{DynamicResource String.AudioKit.SearchBus}" AutomationProperties.Name="{DynamicResource String.AudioKit.SearchBus}" />
         <ComboBox Grid.Column="4" Width="78" Classes="audiokit-toolbar-field"
                 ItemsSource="{CompiledBinding BusScopeOptions}"
                 SelectedItem="{CompiledBinding SelectedBusScope, Mode=TwoWay}"
-                AutomationProperties.Name="筛选 AudioKit Bus 来源" />
-        <ToggleButton Grid.Column="5" Content="仅活跃" IsChecked="{CompiledBinding ShowActiveBusesOnly, Mode=TwoWay}"
-                    Classes="audiokit-toolbar-toggle" AutomationProperties.Name="仅显示活跃 AudioKit Bus" />
+                AutomationProperties.Name="{DynamicResource String.AudioKit.BusSourceFilterAutomationName}" />
+        <ToggleButton Grid.Column="5" Content="{DynamicResource String.AudioKit.ActiveOnly}" IsChecked="{CompiledBinding ShowActiveBusesOnly, Mode=TwoWay}"
+                    Classes="audiokit-toolbar-toggle" AutomationProperties.Name="{DynamicResource String.AudioKit.ActiveBusFilterAutomationName}" />
       </Grid>
     </Border>
 
@@ -95,7 +95,7 @@
                   </Border>
                 </Grid>
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBlock Text="活动 Voice" Classes="audiokit-label" VerticalAlignment="Center" />
+                  <TextBlock Text="{DynamicResource String.AudioKit.ActiveVoices}" Classes="audiokit-label" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Text="{CompiledBinding Voices.Count}" Classes="mono audiokit-voice-count"
                              VerticalAlignment="Center" />
                 </Grid>
@@ -109,12 +109,13 @@
     <GridSplitter Grid.Row="3" Classes="audiokit-splitter"
                   ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNorthSouth" />
 
-    <TabControl x:Name="CompactDetailTabs" Grid.Row="4" Classes="audiokit-compact-detail" TabStripPlacement="Top">
+    <TabControl x:Name="NarrowDetailTabs" Grid.Row="4" Classes="audiokit-compact-detail"
+                AutomationProperties.AutomationId="audiokit.detail-tabs">
       <TabItem Classes="kit-tab">
         <TabItem.Header>
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="活动 Voice" />
-            <TextBlock Text="{CompiledBinding SelectedBusChannel.ActiveVoiceCount}" Classes="mono muted" />
+            <TextBlock Text="{DynamicResource String.AudioKit.ActiveVoices}" />
+            <TextBlock Text="{CompiledBinding SelectedBusChannel.Voices.Count}" Classes="mono muted" />
           </StackPanel>
         </TabItem.Header>
         <Border Classes="panel audiokit-detail-panel" Padding="12">
@@ -123,13 +124,13 @@
             <Grid Grid.Row="1" Classes="audiokit-table-header" ColumnDefinitions="72,*,132" ColumnSpacing="8">
               <TextBlock Text="VOICE ID" />
               <TextBlock Grid.Column="1" Text="PATH" />
-              <TextBlock Grid.Column="2" Text="进度" />
+              <TextBlock Grid.Column="2" Text="{DynamicResource String.AudioKit.Progress}" />
             </Grid>
             <Grid Grid.Row="2">
               <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.Voices}"
                        ItemTemplate="{StaticResource AudioVoiceRowTemplate}"
                        Classes="audiokit-detail-list kit-data-list" />
-              <TextBlock Text="当前 Bus 没有 active voice"
+              <TextBlock Text="{DynamicResource String.AudioKit.NoActiveVoices}"
                          IsVisible="{CompiledBinding SelectedBusChannel.IsVoiceEmpty}"
                          Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
@@ -139,7 +140,7 @@
       <TabItem Classes="kit-tab">
         <TabItem.Header>
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="播放历史" />
+            <TextBlock Text="{DynamicResource String.AudioKit.PlaybackHistory}" />
             <TextBlock Text="{CompiledBinding SelectedBusChannel.History.Count}" Classes="mono muted" />
           </StackPanel>
         </TabItem.Header>
@@ -147,7 +148,7 @@
           <Grid RowDefinitions="Auto,Auto,*">
             <TextBlock Text="{CompiledBinding SelectedBusChannel.Name}" Classes="section-title" />
             <Grid Grid.Row="1" Classes="audiokit-table-header" ColumnDefinitions="150,*,96" ColumnSpacing="8">
-              <TextBlock Text="时间" />
+              <TextBlock Text="{DynamicResource String.AudioKit.Time}" />
               <TextBlock Grid.Column="1" Text="PATH" />
               <TextBlock Grid.Column="2" Text="BUS" HorizontalAlignment="Right" />
             </Grid>
@@ -155,7 +156,7 @@
               <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.History}"
                        ItemTemplate="{StaticResource AudioHistoryRowTemplate}"
                        Classes="audiokit-detail-list kit-timeline-list" />
-              <TextBlock Text="暂无播放历史"
+              <TextBlock Text="{DynamicResource String.AudioKit.NoPlaybackHistory}"
                          IsVisible="{CompiledBinding SelectedBusChannel.IsHistoryEmpty}"
                          Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
@@ -168,19 +169,19 @@
       <Border Classes="panel audiokit-detail-panel" Padding="12">
         <Grid RowDefinitions="Auto,Auto,*">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="活动 Voice ·" Classes="section-title" />
+            <TextBlock Text="{DynamicResource String.AudioKit.ActiveVoicesOf}" Classes="section-title" />
             <TextBlock Text="{CompiledBinding SelectedBusChannel.Name}" Classes="section-title" />
           </StackPanel>
           <Grid Grid.Row="1" Classes="audiokit-table-header" ColumnDefinitions="72,*,132" ColumnSpacing="8">
             <TextBlock Text="VOICE ID" />
             <TextBlock Grid.Column="1" Text="PATH" />
-            <TextBlock Grid.Column="2" Text="进度" />
+            <TextBlock Grid.Column="2" Text="{DynamicResource String.AudioKit.Progress}" />
           </Grid>
           <Grid Grid.Row="2">
             <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.Voices}"
                      ItemTemplate="{StaticResource AudioVoiceRowTemplate}"
                      Classes="audiokit-detail-list kit-data-list" />
-            <TextBlock Text="当前 Bus 没有 active voice"
+            <TextBlock Text="{DynamicResource String.AudioKit.NoActiveVoices}"
                        IsVisible="{CompiledBinding SelectedBusChannel.IsVoiceEmpty}"
                        Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Grid>
@@ -191,11 +192,11 @@
       <Border Grid.Column="2" Classes="panel audiokit-detail-panel" Padding="12">
         <Grid RowDefinitions="Auto,Auto,*">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="播放历史 ·" Classes="section-title" />
+            <TextBlock Text="{DynamicResource String.AudioKit.PlaybackHistoryOf}" Classes="section-title" />
             <TextBlock Text="{CompiledBinding SelectedBusChannel.Name}" Classes="section-title" />
           </StackPanel>
           <Grid Grid.Row="1" Classes="audiokit-table-header" ColumnDefinitions="150,*,96" ColumnSpacing="8">
-            <TextBlock Text="时间" />
+            <TextBlock Text="{DynamicResource String.AudioKit.Time}" />
             <TextBlock Grid.Column="1" Text="PATH" />
             <TextBlock Grid.Column="2" Text="BUS" HorizontalAlignment="Right" />
           </Grid>
@@ -203,7 +204,7 @@
             <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.History}"
                      ItemTemplate="{StaticResource AudioHistoryRowTemplate}"
                      Classes="audiokit-detail-list kit-timeline-list" />
-            <TextBlock Text="暂无播放历史"
+            <TextBlock Text="{DynamicResource String.AudioKit.NoPlaybackHistory}"
                        IsVisible="{CompiledBinding SelectedBusChannel.IsHistoryEmpty}"
                        Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Grid>
@@ -216,19 +217,19 @@
 
     <Border x:Name="IndexDrawerPanel" Grid.Row="6" Classes="panel audiokit-index-drawer" Padding="0"
             ClipToBounds="True" AutomationProperties.AutomationId="audiokit.index-panel"
-            AutomationProperties.Name="AudioKit 稳定音频索引">
+            AutomationProperties.Name="{DynamicResource String.AudioKit.StableAudioIndexAutomationName}">
       <Grid RowDefinitions="Auto,*">
         <ToggleButton x:Name="IndexDrawerToggleButton" Grid.Row="0" Classes="audiokit-drawer-toggle"
                       IsCheckedChanged="OnIndexDrawerToggleChanged"
-                      AutomationProperties.Name="展开或收起稳定音频索引">
+                      AutomationProperties.Name="{DynamicResource String.AudioKit.StableAudioIndex}">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <PathIcon Data="{StaticResource Icon.ChevronDown}" Width="14" Height="14" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="稳定音频索引" Classes="section-title" />
+              <TextBlock Text="{DynamicResource String.AudioKit.StableAudioIndex}" Classes="section-title" />
               <TextBlock Text="{CompiledBinding IndexStatusText}" Classes="muted" TextTrimming="CharacterEllipsis"
-                         AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="稳定音频索引状态" />
+                         AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{DynamicResource String.AudioKit.StableAudioIndexStatusAutomationName}" />
             </StackPanel>
-            <TextBlock Grid.Column="2" Text="文件路径 → 稳定 ID" Classes="muted" />
+            <TextBlock Grid.Column="2" Text="{DynamicResource String.AudioKit.StableAudioIndexSubtitle}" Classes="muted" />
           </Grid>
         </ToggleButton>
         <Grid x:Name="IndexDrawerContent" Grid.Row="1" IsVisible="False"
@@ -237,53 +238,53 @@
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="7"
                   AutomationProperties.AutomationId="audiokit.index-settings">
               <Grid ColumnDefinitions="76,*" ColumnSpacing="8">
-                <TextBlock Text="扫描目录" Classes="audiokit-form-label" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource String.AudioKit.ScanFolder}" Classes="audiokit-form-label" VerticalAlignment="Center" />
                 <TextBox Grid.Column="1" Text="{CompiledBinding ScanFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="音频扫描目录" />
+                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="{DynamicResource String.AudioKit.ScanDirectoryAutomationName}" />
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="76,*" ColumnSpacing="8">
-                <TextBlock Text="代码输出" Classes="audiokit-form-label" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource String.AudioKit.OutputPath}" Classes="audiokit-form-label" VerticalAlignment="Center" />
                 <TextBox Grid.Column="1" Text="{CompiledBinding IndexOutputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="音频索引代码输出路径" />
+                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="{DynamicResource String.AudioKit.ConstantOutputPathAutomationName}" />
               </Grid>
               <Grid Grid.Row="2" ColumnDefinitions="76,*" ColumnSpacing="8">
                 <TextBlock Text="Manifest" Classes="audiokit-form-label" VerticalAlignment="Center" />
                 <TextBox Grid.Column="1" Text="{CompiledBinding IndexManifestPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="音频索引 Manifest 路径" />
+                         LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="{DynamicResource String.AudioKit.ManifestPathAutomationName}" />
               </Grid>
               <Grid Grid.Row="3" ColumnDefinitions="*,*,96" ColumnSpacing="7">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="命名空间" Classes="audiokit-form-label" />
+                  <TextBlock Text="{DynamicResource String.AudioKit.Namespace}" Classes="audiokit-form-label" />
                   <TextBox Text="{CompiledBinding IndexNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" LostFocus="OnIndexSettingLostFocus"
-                           AutomationProperties.Name="生成代码命名空间" />
+                           AutomationProperties.Name="{DynamicResource String.AudioKit.NamespaceAutomationName}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="2">
-                  <TextBlock Text="常量类名" Classes="audiokit-form-label" />
+                  <TextBlock Text="{DynamicResource String.AudioKit.ClassName}" Classes="audiokit-form-label" />
                   <TextBox Text="{CompiledBinding IndexClassName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" LostFocus="OnIndexSettingLostFocus"
-                           AutomationProperties.Name="生成常量类名" />
+                           AutomationProperties.Name="{DynamicResource String.AudioKit.ClassNameAutomationName}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="2">
-                  <TextBlock Text="起始 ID" Classes="audiokit-form-label" />
+                  <TextBlock Text="{DynamicResource String.AudioKit.StartId}" Classes="audiokit-form-label" />
                   <NumericUpDown Value="{CompiledBinding IndexStartId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1"
                                  Maximum="2147483647" Increment="1" FormatString="0"
-                                 LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="新音频起始 ID" />
+                                 LostFocus="OnIndexSettingLostFocus" AutomationProperties.Name="{DynamicResource String.AudioKit.StartIdAutomationName}" />
                 </StackPanel>
               </Grid>
-              <TextBlock Grid.Row="4" Text="已有 ID 不会因排序变化重排"
+              <TextBlock Grid.Row="4" Text="{DynamicResource String.AudioKit.StableIdHint}"
                          Classes="muted audiokit-index-help" TextWrapping="Wrap" />
               <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                 <Button Command="{CompiledBinding ScanIndexCommand}" Classes="secondary compact-action"
-                        AutomationProperties.Name="扫描音频索引预览">
+                        AutomationProperties.Name="{DynamicResource String.AudioKit.ScanPreviewAutomationName}">
                   <StackPanel Orientation="Horizontal" Spacing="5">
                     <PathIcon Data="{StaticResource Icon.Eye}" Width="14" Height="14" />
-                    <TextBlock Text="扫描预览" />
+                    <TextBlock Text="{DynamicResource String.AudioKit.ScanPreview}" />
                   </StackPanel>
                 </Button>
                 <Button Command="{CompiledBinding GenerateIndexCommand}" Classes="primary compact-action"
-                        AutomationProperties.Name="生成稳定音频索引">
+                        AutomationProperties.Name="{DynamicResource String.AudioKit.GenerateIndexAutomationName}">
                   <StackPanel Orientation="Horizontal" Spacing="5">
                     <PathIcon Data="{StaticResource Icon.Download}" Width="14" Height="14" />
-                    <TextBlock Text="生成索引" />
+                    <TextBlock Text="{DynamicResource String.AudioKit.Generate}" />
                   </StackPanel>
                 </Button>
               </StackPanel>
@@ -293,8 +294,8 @@
           <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="6"
                 AutomationProperties.AutomationId="audiokit.index-preview-panel">
             <Grid ColumnDefinitions="160,*,68" ColumnSpacing="8" Margin="4,0">
-              <TextBlock Text="常量" Classes="audiokit-index-label" />
-              <TextBlock Grid.Column="1" Text="项目路径" Classes="audiokit-index-label" />
+              <TextBlock Text="{DynamicResource String.AudioKit.Constant}" Classes="audiokit-index-label" />
+              <TextBlock Grid.Column="1" Text="{DynamicResource String.AudioKit.ProjectPath}" Classes="audiokit-index-label" />
               <TextBlock Grid.Column="2" Text="ID" Classes="audiokit-index-label" HorizontalAlignment="Right" />
             </Grid>
             <Grid Grid.Row="1">

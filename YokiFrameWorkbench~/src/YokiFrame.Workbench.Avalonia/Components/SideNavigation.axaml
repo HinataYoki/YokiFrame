@@ -65,7 +65,7 @@
                 HorizontalAlignment="Center"
                 HorizontalContentAlignment="Center"
                 ToolTip.Tip="{CompiledBinding RepositoryUrl}"
-                AutomationProperties.Name="打开 YokiFrame GitHub 仓库">
+                AutomationProperties.Name="{DynamicResource String.Nav.OpenGitHub}">
           <StackPanel Orientation="Horizontal"
                       Spacing="7">
             <shapes:Path Width="16"

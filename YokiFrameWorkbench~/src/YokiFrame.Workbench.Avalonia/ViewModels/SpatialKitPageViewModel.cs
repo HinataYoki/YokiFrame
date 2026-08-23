@@ -1,17 +1,18 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.SpatialKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 SpatialKit 索引列表、密度热力图和健康摘要。</summary>
-public sealed class SpatialKitPageViewModel : ViewModelBase
+public sealed class SpatialKitPageViewModel : ViewModelBase, IDisposable
 {
     private const int EMPTY_RESOLUTION = 8;
     private string mEngineId = string.Empty;
     private string mSessionId = string.Empty;
     private long mGeneration;
     private long mVersion;
-    private string mSource = "等待数据";
+    private string mSource = GetString(CommonWaitingForKey, "等待数据");
     private string mStaleReason = string.Empty;
     private int mActiveIndexCount;
     private int mEntityCount;
@@ -20,15 +21,54 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
     private WorkbenchSpatialIndex? mSelectedIndex;
     private int mDensityRows = EMPTY_RESOLUTION;
     private int mDensityColumns = EMPTY_RESOLUTION;
-    private string mDensitySummaryText = "等待密度数据";
+    private string mDensitySummaryText = GetString(WaitingDensityKey, "等待密度数据");
     private string mDensityResolutionText = "--";
     private string mDensityOccupancyText = "--";
     private int mDensityMeanCount;
     private int mDensityP95Count;
     private int mDensityMaxCount;
-    private string mHealthText = "等待数据";
+    private string mHealthText = GetString(CommonWaitingForKey, "等待数据");
     private bool mHasDensity;
     private bool mHasHealthWarning;
+    /// <summary>记录是否已经应用过任何密度数据；用于语言切换时区分“等待”与“无密度”占位。</summary>
+    private bool mDensityEverApplied;
+    /// <summary>记录最近一次应用的密度数据，供语言切换重投影健康文案。</summary>
+    private WorkbenchSpatialDensity? mLastDensity;
+
+    /// <summary>创建页面并订阅全局语言切换；解除订阅由 Dispose 承担。</summary>
+    public SpatialKitPageViewModel()
+    {
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
+    }
+
+    /// <summary>解除语言事件订阅，避免窗口关闭后静态服务继续持有页面状态。</summary>
+    public void Dispose()
+    {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
+    }
+
+    /// <summary>按当前语言重新投影占位与健康摘要；Runtime 数据与密度单元格不变。</summary>
+    private void OnCultureChanged()
+    {
+        if (string.IsNullOrWhiteSpace(mEngineId))
+        {
+            Source = GetString(CommonWaitingForKey, "等待数据");
+        }
+
+        if (mHasDensity && mLastDensity != null)
+        {
+            HealthText = CreateHealthText(mLastDensity);
+            return;
+        }
+
+        // 未曾应用密度：显示等待占位；已选索引但无密度：显示无数据占位。
+        DensitySummaryText = mDensityEverApplied
+            ? GetString(NoDensityDataKey, "暂无密度数据")
+            : GetString(WaitingDensityKey, "等待密度数据");
+        HealthText = mDensityEverApplied
+            ? GetString(IndexNoDensityKey, "当前索引暂无密度数据")
+            : GetString(CommonWaitingForKey, "等待数据");
+    }
 
     /// <summary>获取当前 SpatialKit 索引实例。</summary>
     public ObservableCollection<WorkbenchSpatialIndex> Indexes { get; } = new();
@@ -205,19 +245,22 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
         {
             DensityRows = EMPTY_RESOLUTION;
             DensityColumns = EMPTY_RESOLUTION;
-            DensitySummaryText = "暂无密度数据";
+            DensitySummaryText = GetString(NoDensityDataKey, "暂无密度数据");
             DensityResolutionText = "--";
             DensityOccupancyText = "--";
             DensityMeanCount = 0;
             DensityP95Count = 0;
             DensityMaxCount = 0;
-            HealthText = "当前索引暂无密度数据";
+            HealthText = GetString(IndexNoDensityKey, "当前索引暂无密度数据");
             HasDensity = false;
             HasHealthWarning = false;
+            mDensityEverApplied = true;
             NotifyDensityPresentationChanged();
             return;
         }
 
+        mLastDensity = density;
+        mDensityEverApplied = true;
         DensityRows = density.Resolution;
         DensityColumns = density.Resolution;
         DensityResolutionText = density.Resolution + " x " + density.Resolution;
@@ -254,20 +297,22 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
     {
         if (density.MaxCount == 0)
         {
-            return "当前没有实体";
+            return GetString("String.SpatialKit.HealthNoEntities", "当前没有实体");
         }
 
         if (HasDensityHotspot(density))
         {
-            return "存在明显热点分区，建议检查 cell size 或实体分布";
+            return GetString(
+                "String.SpatialKit.HealthHotspot",
+                "存在明显热点分区，建议检查 cell size 或实体分布");
         }
 
         if (density.OccupiedBins * 4 < density.TotalBins)
         {
-            return "分布较稀疏，当前索引仍可正常观察";
+            return GetString("String.SpatialKit.HealthSparse", "分布较稀疏，当前索引仍可正常观察");
         }
 
-        return "分布均衡，未发现明显热点";
+        return GetString("String.SpatialKit.HealthBalanced", "分布均衡，未发现明显热点");
     }
 
     /// <summary>判断密度是否存在显著热点，供健康文案和视觉状态复用同一规则。</summary>
@@ -308,7 +353,7 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
         mSessionId = string.Empty;
         mGeneration = 0L;
         mVersion = 0L;
-        Source = "等待数据";
+        Source = GetString(CommonWaitingForKey, "等待数据");
         StaleReason = string.Empty;
         ActiveIndexCount = 0;
         EntityCount = 0;
@@ -318,14 +363,16 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
         DensityCells.Clear();
         DensityRows = EMPTY_RESOLUTION;
         DensityColumns = EMPTY_RESOLUTION;
-        DensitySummaryText = "等待密度数据";
+        DensitySummaryText = GetString(WaitingDensityKey, "等待密度数据");
         DensityResolutionText = "--";
         DensityOccupancyText = "--";
         DensityMeanCount = 0;
         DensityP95Count = 0;
         DensityMaxCount = 0;
-        HealthText = "等待数据";
+        HealthText = GetString(CommonWaitingForKey, "等待数据");
         HasDensity = false;
+        mLastDensity = null;
+        mDensityEverApplied = false;
         HasHealthWarning = false;
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasIndexes));
@@ -335,6 +382,21 @@ public sealed class SpatialKitPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowNoSelection));
         OnPropertyChanged(nameof(ShowDensityEmpty));
         OnPropertyChanged(nameof(IsHealthPositive));
+    }
+
+    /// <summary>等待 Runtime 首帧数据时使用的通用占位文案资源 key。</summary>
+    private const string CommonWaitingForKey = "String.Common.WaitingForData";
+    /// <summary>尚未应用任何密度数据时的摘要占位资源 key。</summary>
+    private const string WaitingDensityKey = "String.SpatialKit.WaitingDensity";
+    /// <summary>选中索引缺少密度数据时的摘要占位资源 key。</summary>
+    private const string NoDensityDataKey = "String.SpatialKit.NoDensityData";
+    /// <summary>选中索引缺少密度数据时的健康占位资源 key。</summary>
+    private const string IndexNoDensityKey = "String.SpatialKit.IndexNoDensity";
+
+    /// <summary>从当前语言资源读取 SpatialKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }
 

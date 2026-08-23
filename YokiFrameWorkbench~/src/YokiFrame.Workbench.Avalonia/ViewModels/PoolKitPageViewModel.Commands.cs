@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.PoolKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.PoolKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -41,7 +42,7 @@ public sealed partial class PoolKitPageViewModel
         mSessionId = string.Empty;
         mGeneration = 0L;
         mVersion = 0L;
-        Source = "等待数据";
+        Source = GetString(CommonWaitingForKey, "等待数据");
         StaleReason = string.Empty;
         PoolTotal = 0;
         EventTotal = 0;
@@ -90,33 +91,47 @@ public sealed partial class PoolKitPageViewModel
     private async Task RunTrackingCommandAsync(bool tracking, bool events, bool stackTrace)
     {
         if (mSetTrackingAsync == null) return;
-        OperationStatusText = "正在更新诊断开关...";
+        OperationStatusText = GetString("String.PoolKit.UpdatingToggles", "正在更新诊断开关...");
         try
         {
             WorkbenchPoolKitState state = await mSetTrackingAsync(
                 mEngineId, tracking, events, stackTrace, mLifetimeCancellation.Token);
             ApplyState(state);
-            OperationStatusText = stackTrace ? "已启用堆栈定位" : (tracking ? "已启用对象跟踪" : "已停止对象跟踪");
+            OperationStatusText = stackTrace
+                ? GetString("String.PoolKit.EnabledStackTrace", "已启用堆栈定位")
+                : (tracking
+                    ? GetString("String.PoolKit.EnabledTracking", "已启用对象跟踪")
+                    : GetString("String.PoolKit.StoppedTracking", "已停止对象跟踪"));
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested) { }
-        catch (Exception exception) { OperationStatusText = "更新失败: " + exception.Message; }
+        catch (Exception exception)
+        {
+            OperationStatusText = string.Format(
+                GetString("String.PoolKit.UpdateFailedTemplate", "更新失败: {0}"), exception.Message);
+        }
     }
 
     /// <summary>执行疑似未归还对象检查。</summary>
     private async Task CheckLeaksAsync()
     {
         if (mCheckLeaksAsync == null) return;
-        OperationStatusText = "正在检查借出对象...";
+        OperationStatusText = GetString("String.PoolKit.CheckingBorrowedObjects", "正在检查借出对象...");
         try
         {
             ApplyState(await mCheckLeaksAsync(mEngineId, mLifetimeCancellation.Token));
             PoolKitPoolListItemViewModel? candidate = FocusFirstLeakCandidate();
             OperationStatusText = candidate == null
-                ? "未发现仍借出的对象"
-                : "发现 " + LeakCount + " 个候选池，已定位到 " + candidate.Name;
+                ? GetString("String.PoolKit.NoBorrowedObjects", "未发现仍借出的对象")
+                : string.Format(
+                    GetString("String.PoolKit.LeaksLocatedTemplate", "发现 {0} 个候选池，已定位到 {1}"),
+                    LeakCount, candidate.Name);
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested) { }
-        catch (Exception exception) { OperationStatusText = "检查失败: " + exception.Message; }
+        catch (Exception exception)
+        {
+            OperationStatusText = string.Format(
+                GetString("String.PoolKit.CheckFailedTemplate", "检查失败: {0}"), exception.Message);
+        }
     }
 
     /// <summary>通过宿主打开借出对象源码位置，并把成功或失败反馈到页头状态。</summary>
@@ -126,11 +141,14 @@ public sealed partial class PoolKitPageViewModel
         try
         {
             await mOpenCodeLocationAsync(item.SourceFile, item.SourceLine);
-            OperationStatusText = "已打开 " + Path.GetFileName(item.SourceFile) + ":" + item.SourceLine;
+            OperationStatusText = string.Format(
+                GetString("String.PoolKit.OpenedTemplate", "已打开 {0}"),
+                Path.GetFileName(item.SourceFile) + ":" + item.SourceLine);
         }
         catch (Exception exception)
         {
-            OperationStatusText = "定位失败: " + exception.Message;
+            OperationStatusText = string.Format(
+                GetString("String.PoolKit.LocateFailedTemplate", "定位失败: {0}"), exception.Message);
         }
     }
 
@@ -138,14 +156,18 @@ public sealed partial class PoolKitPageViewModel
     private async Task ClearHistoryAsync()
     {
         if (mClearHistoryAsync == null) return;
-        OperationStatusText = "正在清空事件历史...";
+        OperationStatusText = GetString("String.PoolKit.ClearingEventHistory", "正在清空事件历史...");
         try
         {
             ApplyState(await mClearHistoryAsync(mEngineId, mLifetimeCancellation.Token));
-            OperationStatusText = "事件历史已清空";
+            OperationStatusText = GetString("String.PoolKit.EventHistoryCleared", "事件历史已清空");
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested) { }
-        catch (Exception exception) { OperationStatusText = "清空失败: " + exception.Message; }
+        catch (Exception exception)
+        {
+            OperationStatusText = string.Format(
+                GetString("String.PoolKit.ClearFailedTemplate", "清空失败: {0}"), exception.Message);
+        }
     }
 
     /// <summary>判断当前是否可修改诊断开关。</summary>

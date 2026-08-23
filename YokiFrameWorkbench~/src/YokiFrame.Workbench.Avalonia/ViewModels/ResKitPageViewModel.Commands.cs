@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.ResKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.ResKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -42,7 +43,9 @@ public sealed partial class ResKitPageViewModel
         }
         else if (Sources.Count > 0 && mSourceDetailVersion != state.Version)
         {
-            SourceStatusText = "来源读取于 v" + mSourceDetailVersion + "，当前 v" + state.Version + "，可重新读取";
+            SourceStatusText = string.Format(
+                GetString(SourceStaleAfterReadTemplateKey, "来源读取于 v{0}，当前 v{1}，可重新读取"),
+                mSourceDetailVersion, state.Version);
         }
         OnPropertyChanged(nameof(VisibleCountText));
         OnPropertyChanged(nameof(HistoryCountText));
@@ -60,7 +63,7 @@ public sealed partial class ResKitPageViewModel
         mGeneration = 0L;
         mVersion = 0L;
         mHasRuntimeState = false;
-        Source = "等待数据";
+        Source = GetString(CommonWaitingForKey, "等待数据");
         StaleReason = string.Empty;
         mLastBackgroundFailure = string.Empty;
         HistoryTotal = 0;
@@ -75,7 +78,7 @@ public sealed partial class ResKitPageViewModel
         Resources.Clear();
         History.Clear();
         SelectedResource = null;
-        ClearSources("等待 ResKit 状态");
+        ClearSources(GetString(WaitingStateKey, "等待 ResKit 状态"));
         OnPropertyChanged(nameof(VisibleCountText));
         OnPropertyChanged(nameof(HistoryCountText));
         OnPropertyChanged(nameof(IsResourceEmpty));
@@ -96,7 +99,7 @@ public sealed partial class ResKitPageViewModel
         long requestGeneration = mGeneration;
         string requestIdentity = selected.Identity;
         long requestProviderGeneration = selected.ProviderGeneration;
-        SourceStatusText = "正在读取 lease 来源...";
+        SourceStatusText = GetString(ReadingSourcesKey, "正在读取 lease 来源...");
         IsSourceLoading = true;
         try
         {
@@ -112,8 +115,9 @@ public sealed partial class ResKitPageViewModel
                 || mGeneration != requestGeneration) return;
             if (result.Version < mVersion)
             {
-                SourceStatusText = "来源读取于 v" + result.Version
-                    + "，当前状态已更新至 v" + mVersion + "，已保留实时预览";
+                SourceStatusText = string.Format(
+                    GetString(SourceStaleKeptTemplateKey, "来源读取于 v{0}，当前状态已更新至 v{1}，已保留实时预览"),
+                    result.Version, mVersion);
                 return;
             }
 
@@ -124,8 +128,12 @@ public sealed partial class ResKitPageViewModel
             }
             mSourceDetailVersion = result.Version;
             SourceStatusText = detail.SourcesTruncated
-                ? "v" + result.Version + " · 已显示 " + Sources.Count + " / " + detail.SourceTotal + " 条来源"
-                : "v" + result.Version + " · 已读取 " + Sources.Count + " 条来源";
+                ? string.Format(
+                    GetString(SourceShownPartialTemplateKey, "v{0} · 已显示 {1} / {2} 条来源"),
+                    result.Version, Sources.Count, detail.SourceTotal)
+                : string.Format(
+                    GetString(SourceReadAllTemplateKey, "v{0} · 已读取 {1} 条来源"),
+                    result.Version, Sources.Count);
             OnPropertyChanged(nameof(SourceCountText));
             OnPropertyChanged(nameof(IsSourceEmpty));
             OnPropertyChanged(nameof(ShowSourceEmpty));
@@ -135,8 +143,9 @@ public sealed partial class ResKitPageViewModel
         catch (Exception exception)
         {
             SourceStatusText = Sources.Count > 0
-                ? "读取失败: " + exception.Message + " · 已保留实时预览"
-                : "读取失败: " + exception.Message;
+                ? string.Format(
+                    GetString(SourceReadFailedKeptTemplateKey, "读取失败: {0} · 已保留实时预览"), exception.Message)
+                : string.Format(GetString(SourceReadFailedTemplateKey, "读取失败: {0}"), exception.Message);
         }
         finally { IsSourceLoading = false; }
     }
@@ -146,28 +155,38 @@ public sealed partial class ResKitPageViewModel
     {
         if (mSetTrackingAsync == null) return;
         bool enabled = !TrackingEnabled;
-        OperationStatusText = "正在更新加载位置跟踪...";
+        OperationStatusText = GetString(UpdatingTrackingKey, "正在更新加载位置跟踪...");
         try
         {
             ApplyState(await mSetTrackingAsync(mEngineId, enabled, mLifetimeCancellation.Token));
-            OperationStatusText = enabled ? "已启用加载位置跟踪，新 lease 将记录来源" : "已关闭加载位置跟踪";
+            OperationStatusText = enabled
+                ? GetString(TrackingEnabledTextKey, "已启用加载位置跟踪，新 lease 将记录来源")
+                : GetString(TrackingDisabledTextKey, "已关闭加载位置跟踪");
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested) { }
-        catch (Exception exception) { OperationStatusText = "更新失败: " + exception.Message; }
+        catch (Exception exception)
+        {
+            OperationStatusText = string.Format(
+                GetString(UpdateFailedTemplateKey, "更新失败: {0}"), exception.Message);
+        }
     }
 
     /// <summary>清空卸载历史并保留当前资源选择。</summary>
     private async Task ClearHistoryAsync()
     {
         if (mClearHistoryAsync == null) return;
-        OperationStatusText = "正在清空卸载历史...";
+        OperationStatusText = GetString(ClearingHistoryKey, "正在清空卸载历史...");
         try
         {
             ApplyState(await mClearHistoryAsync(mEngineId, mLifetimeCancellation.Token));
-            OperationStatusText = "卸载历史已清空";
+            OperationStatusText = GetString(HistoryClearedKey, "卸载历史已清空");
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested) { }
-        catch (Exception exception) { OperationStatusText = "清空失败: " + exception.Message; }
+        catch (Exception exception)
+        {
+            OperationStatusText = string.Format(
+                GetString(ClearFailedTemplateKey, "清空失败: {0}"), exception.Message);
+        }
     }
 
     /// <summary>判断当前是否可读取来源。</summary>
@@ -184,4 +203,49 @@ public sealed partial class ResKitPageViewModel
         ToggleTrackingCommand.RaiseCanExecuteChanged();
         ClearHistoryCommand.RaiseCanExecuteChanged();
     }
+
+    /// <summary>来源读取落后于当前版本的提示模板资源 key。</summary>
+    private const string SourceStaleAfterReadTemplateKey = "String.ResKit.SourceStaleAfterReadTemplate";
+
+    /// <summary>等待 ResKit 状态占位资源 key。</summary>
+    private const string WaitingStateKey = "String.ResKit.WaitingState";
+
+    /// <summary>正在读取来源提示资源 key。</summary>
+    private const string ReadingSourcesKey = "String.ResKit.ReadingSources";
+
+    /// <summary>来源读取后状态更新的保留预览模板资源 key。</summary>
+    private const string SourceStaleKeptTemplateKey = "String.ResKit.SourceStaleKeptTemplate";
+
+    /// <summary>部分显示模板资源 key。</summary>
+    private const string SourceShownPartialTemplateKey = "String.ResKit.SourceShownPartialTemplate";
+
+    /// <summary>完整读取模板资源 key。</summary>
+    private const string SourceReadAllTemplateKey = "String.ResKit.SourceReadAllTemplate";
+
+    /// <summary>读取失败模板资源 key。</summary>
+    private const string SourceReadFailedTemplateKey = "String.ResKit.SourceReadFailedTemplate";
+
+    /// <summary>读取失败但保留预览模板资源 key。</summary>
+    private const string SourceReadFailedKeptTemplateKey = "String.ResKit.SourceReadFailedKeptTemplate";
+
+    /// <summary>正在更新定位跟踪提示资源 key。</summary>
+    private const string UpdatingTrackingKey = "String.ResKit.UpdatingTracking";
+
+    /// <summary>启用定位跟踪结果文案资源 key。</summary>
+    private const string TrackingEnabledTextKey = "String.ResKit.TrackingEnabledText";
+
+    /// <summary>关闭定位跟踪结果文案资源 key。</summary>
+    private const string TrackingDisabledTextKey = "String.ResKit.TrackingDisabledText";
+
+    /// <summary>更新失败模板资源 key。</summary>
+    private const string UpdateFailedTemplateKey = "String.ResKit.UpdateFailedTemplate";
+
+    /// <summary>正在清空卸载历史提示资源 key。</summary>
+    private const string ClearingHistoryKey = "String.ResKit.ClearingHistory";
+
+    /// <summary>卸载历史已清空文案资源 key。</summary>
+    private const string HistoryClearedKey = "String.ResKit.HistoryCleared";
+
+    /// <summary>清空失败模板资源 key。</summary>
+    private const string ClearFailedTemplateKey = "String.ResKit.ClearFailedTemplate";
 }

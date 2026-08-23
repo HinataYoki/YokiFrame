@@ -7,7 +7,7 @@ using YokiFrame.Workbench.Avalonia.Services;
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 TableKit Luban 配置、控制台、验证预览和生成操作。</summary>
-public sealed partial class TableKitPageViewModel : ViewModelBase
+public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
 {
     private readonly string mProjectRoot;
     private readonly TableKitApplicationService mService;
@@ -34,13 +34,13 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     private bool mGenerateExternalTypeUtil;
     private bool mUseAssemblyDefinition;
     private string mAssemblyName = string.Empty;
-    private string mStatusText = "等待验证";
-    private string mStatusDetailText = "检查 Luban 环境后即可开始生成。";
+    private string mStatusText = GetString(WaitingValidateKey, "等待验证");
+    private string mStatusDetailText = GetString(CheckEnvironmentHintKey, "检查 Luban 环境后即可开始生成。");
     private string mLubanStatusText = "Luban OFF";
-    private string mEnvironmentMessage = "尚未检查当前项目的 Luban 工具路径。";
-    private string mCommandPreviewText = "尚未构建 Luban 命令。";
-    private string mTablesType = "未解析";
-    private string mDataExtension = "未解析";
+    private string mEnvironmentMessage = GetString(EnvironmentNotCheckedKey, "尚未检查当前项目的 Luban 工具路径。");
+    private string mCommandPreviewText = GetString(CommandNotBuiltKey, "尚未构建 Luban 命令。");
+    private string mTablesType = GetString(UnresolvedKey, "未解析");
+    private string mDataExtension = GetString(UnresolvedKey, "未解析");
     private string mPreviewDirectory = string.Empty;
     private string mPreviewSearch = string.Empty;
     private IReadOnlyList<TableKitPreviewTableViewModel> mFilteredPreviewTables = Array.Empty<TableKitPreviewTableViewModel>();
@@ -105,7 +105,27 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
         BrowseOutputCodeCommand = new AsyncRelayCommand(BrowseOutputCodeAsync);
         BrowseEditorDataCommand = new AsyncRelayCommand(BrowseEditorDataAsync);
         OpenConfigDirectoryCommand = new AsyncRelayCommand(OpenConfigDirectoryAsync);
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         RefreshEnvironment();
+    }
+
+    /// <summary>解除语言事件订阅，避免窗口关闭后静态服务继续持有页面状态。</summary>
+    public void Dispose()
+    {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
+    }
+
+    /// <summary>按当前语言重新投影计算型摘要文本；操作结果状态保持产出时语言。</summary>
+    private void OnCultureChanged()
+    {
+        OnPropertyChanged(nameof(PreviewCountText));
+        OnPropertyChanged(nameof(SelectedPreviewTableSummary));
+        OnPropertyChanged(nameof(SelectedPreviewRecordSummary));
+        OnPropertyChanged(nameof(PreviewStatusText));
+        OnPropertyChanged(nameof(ConsoleCountText));
+        OnPropertyChanged(nameof(ConsoleSummaryText));
+        OnPropertyChanged(nameof(ConsoleToggleText));
     }
 
     /// <summary>可选的 Luban target 名称集合；配置刷新后会追加用户 target。</summary>
@@ -273,27 +293,36 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     /// <summary>获取当前是否存在预览表。</summary>
     public bool HasPreviewTables => PreviewTables.Count > 0;
     /// <summary>获取验证预览表数量摘要。</summary>
-    public string PreviewCountText => HasPreviewTables ? PreviewTables.Count + " 张表" : "等待验证";
+    public string PreviewCountText => HasPreviewTables
+        ? string.Format(GetString(TablesSuffixTemplateKey, "{0} 张表"), PreviewTables.Count)
+        : GetString(WaitingValidateKey, "等待验证");
     /// <summary>获取当前是否存在预览选择。</summary>
     public bool HasPreviewSelection => SelectedPreviewTable != null;
     /// <summary>获取当前是否存在可浏览记录。</summary>
     public bool HasPreviewRecord => SelectedPreviewRecord != null;
     /// <summary>获取当前表的记录数量摘要。</summary>
-    public string SelectedPreviewTableSummary => SelectedPreviewTable?.RecordSummary ?? "未选择表";
+    public string SelectedPreviewTableSummary => SelectedPreviewTable?.RecordSummary
+        ?? GetString(NoTableSelectedKey, "未选择表");
     /// <summary>获取当前记录的字段数量摘要。</summary>
-    public string SelectedPreviewRecordSummary => SelectedPreviewRecord?.FieldCountText ?? "未选择记录";
+    public string SelectedPreviewRecordSummary => SelectedPreviewRecord?.FieldCountText
+        ?? GetString(NoRecordSelectedKey, "未选择记录");
     /// <summary>获取预览状态摘要。</summary>
-    public string PreviewStatusText => HasPreviewTables ? PreviewDirectory : "验证配置后显示 Luban 临时 JSON 预览。";
+    public string PreviewStatusText => HasPreviewTables
+        ? PreviewDirectory
+        : GetString(PreviewHintKey, "验证配置后显示 Luban 临时 JSON 预览。");
     /// <summary>获取控制台是否为空。</summary>
     public bool IsConsoleEmpty => ConsoleEntries.Count == 0;
     /// <summary>获取控制台区域的紧凑状态摘要。</summary>
-    public string ConsoleCountText => IsConsoleEmpty ? "等待操作" : ConsoleEntries.Count + " 条日志";
+    public string ConsoleCountText => IsConsoleEmpty
+        ? GetString(WaitingOperationKey, "等待操作")
+        : string.Format(GetString(LogsSuffixTemplateKey, "{0} 条日志"), ConsoleEntries.Count);
     /// <summary>获取控制台错误条目数量。</summary>
     public int ConsoleErrorCount => ConsoleEntries.Count(entry => string.Equals(entry.Level, "ERROR", StringComparison.OrdinalIgnoreCase));
     /// <summary>获取收起控制台时的一行状态摘要。</summary>
     public string ConsoleSummaryText => IsConsoleEmpty
-        ? StatusText + " · 等待操作 · 0 错误"
-        : StatusText + " · " + PreviewCountText + " · " + ConsoleCountText + " · " + ConsoleErrorCount + " 错误";
+        ? StatusText + GetString(SummaryIdleSuffixKey, " · 等待操作 · 0 错误")
+        : StatusText + " · " + PreviewCountText + " · " + ConsoleCountText
+            + " · " + ConsoleErrorCount + GetString(ErrorSuffixKey, " 错误");
     /// <summary>获取或设置控制台是否展开显示日志正文。</summary>
     public bool IsConsoleExpanded
     {
@@ -304,7 +333,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
         }
     }
     /// <summary>获取控制台展开按钮文本。</summary>
-    public string ConsoleToggleText => IsConsoleExpanded ? "收起" : "展开";
+    public string ConsoleToggleText => IsConsoleExpanded
+        ? GetString(ConsoleCollapseKey, "收起")
+        : GetString(ConsoleExpandKey, "展开");
     /// <summary>获取或设置当前任务工作区，0 为配置，1 为数据。</summary>
     public int SelectedWorkspaceIndex
     {
@@ -354,4 +385,62 @@ public sealed partial class TableKitPageViewModel : ViewModelBase
     public AsyncRelayCommand BrowseEditorDataCommand { get; }
     /// <summary>在系统文件管理器中打开配置表目录。</summary>
     public AsyncRelayCommand OpenConfigDirectoryCommand { get; }
+
+    /// <summary>等待首次验证占位资源 key。</summary>
+    private const string WaitingValidateKey = "String.TableKit.WaitingValidate";
+
+    /// <summary>检查环境提示资源 key。</summary>
+    private const string CheckEnvironmentHintKey = "String.TableKit.CheckEnvironmentHint";
+
+    /// <summary>环境未检查提示资源 key。</summary>
+    private const string EnvironmentNotCheckedKey = "String.TableKit.EnvironmentNotChecked";
+
+    /// <summary>命令未构建提示资源 key。</summary>
+    private const string CommandNotBuiltKey = "String.TableKit.CommandNotBuilt";
+
+    /// <summary>未解析占位资源 key。</summary>
+    private const string UnresolvedKey = "String.TableKit.Unresolved";
+
+    /// <summary>表计数后缀模板资源 key。</summary>
+    private const string TablesSuffixTemplateKey = "String.TableKit.TablesSuffixTemplate";
+
+    /// <summary>未选择表占位资源 key。</summary>
+    private const string NoTableSelectedKey = "String.TableKit.NoTableSelected";
+
+    /// <summary>未选择记录占位资源 key。</summary>
+    private const string NoRecordSelectedKey = "String.TableKit.NoRecordSelected";
+
+    /// <summary>预览提示资源 key。</summary>
+    private const string PreviewHintKey = "String.TableKit.PreviewHint";
+
+    /// <summary>等待操作占位资源 key。</summary>
+    private const string WaitingOperationKey = "String.TableKit.WaitingOperation";
+
+    /// <summary>日志计数模板资源 key。</summary>
+    private const string LogsSuffixTemplateKey = "String.TableKit.LogsSuffixTemplate";
+
+    /// <summary>控制台空闲摘要后缀资源 key。</summary>
+    private const string SummaryIdleSuffixKey = "String.TableKit.SummaryIdleSuffix";
+
+    /// <summary>错误计数后缀资源 key。</summary>
+    private const string ErrorSuffixKey = "String.TableKit.ErrorSuffix";
+
+    /// <summary>收起控制台文案资源 key。</summary>
+    private const string ConsoleCollapseKey = "String.TableKit.ConsoleCollapse";
+
+    /// <summary>展开控制台文案资源 key。</summary>
+    private const string ConsoleExpandKey = "String.TableKit.ConsoleExpand";
+
+    /// <summary>写入操作状态文本的集中入口。</summary>
+    /// <param name="text">新的状态文本。</param>
+    private void SetStatus(string text)
+    {
+        StatusText = text;
+    }
+
+    /// <summary>从当前语言资源读取 TableKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
+    }
 }

@@ -105,6 +105,13 @@ public sealed class PoolKitPoolListItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasRecentEvent));
     }
 
+    /// <summary>按当前语言刷新最近事件提示；行身份与 Runtime 指标不变。</summary>
+    /// <param name="recentEventText">由页面用当前语言重新计算的最近事件文本。</param>
+    internal void RefreshRecentEventText(string recentEventText)
+    {
+        RecentEventText = recentEventText;
+    }
+
     /// <summary>把有界借出对象包装为带源码定位命令的只读行。</summary>
     /// <param name="source">Runtime 状态中的有界借出对象。</param>
     /// <returns>与当前帧对应的可绑定对象行。</returns>

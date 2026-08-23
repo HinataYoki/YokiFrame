@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.ActionKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.ActionKit;
@@ -44,9 +45,9 @@ public sealed class ActionKitEventListItemViewModel : ViewModelBase
     /// <summary>获取本地化终态名称。</summary>
     public string OutcomeText => Outcome switch
     {
-        "Completed" => "完成",
-        "Cancelled" => "取消",
-        "Faulted" => "故障",
+        "Completed" => GetString("String.ActionKit.Outcome.Completed", "完成"),
+        "Cancelled" => GetString("String.ActionKit.Outcome.Cancelled", "取消"),
+        "Faulted" => GetString("String.ActionKit.Outcome.Faulted", "故障"),
         _ => Outcome
     };
 
@@ -77,5 +78,11 @@ public sealed class ActionKitEventListItemViewModel : ViewModelBase
             throw new InvalidOperationException("ActionKit event identity cannot change during an in-place update.");
         ActionType = item.ActionType;
         ErrorMessage = item.ErrorMessage;
+    }
+
+    /// <summary>从当前语言资源读取 ActionKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

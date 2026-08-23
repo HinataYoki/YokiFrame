@@ -1,3 +1,5 @@
+using YokiFrame.Workbench.Avalonia.Services;
+
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 SaveKit 页面命令、异步 IO 和生命周期操作。</summary>
@@ -26,6 +28,7 @@ public sealed partial class SaveKitPageViewModel
         }
 
         mIsDisposed = true;
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         mLifetimeCancellation.Cancel();
         mLifetimeCancellation.Dispose();
     }
@@ -50,9 +53,10 @@ public sealed partial class SaveKitPageViewModel
         }
         catch (Exception exception)
         {
-            ErrorText = "读取 SaveKit 配置失败: " + exception.Message;
+            ErrorText = string.Format(
+                GetString("String.SaveKit.LoadFailedTemplate", "读取 SaveKit 配置失败: {0}"), exception.Message);
             OnPropertyChanged(nameof(HasError));
-            StatusText = "配置读取失败";
+            SetStatus(GetString("String.SaveKit.LoadFailedShort", "配置读取失败"));
         }
         finally
         {
@@ -71,7 +75,7 @@ public sealed partial class SaveKitPageViewModel
         IsBusy = true;
         ErrorText = string.Empty;
         OnPropertyChanged(nameof(HasError));
-        StatusText = "正在保存 SaveKit 配置...";
+        SetStatus(GetString("String.SaveKit.Saving", "正在保存 SaveKit 配置..."));
         try
         {
             var result = await mService.SaveAsync(EngineId, StoragePath, FileExtension, Fingerprint, mLifetimeCancellation.Token);
@@ -80,12 +84,12 @@ public sealed partial class SaveKitPageViewModel
                 ApplySettings(result.Settings, false);
                 ErrorText = result.ErrorMessage;
                 OnPropertyChanged(nameof(HasError));
-                StatusText = "保存冲突，草稿已保留";
+                SetStatus(GetString("String.SaveKit.SaveConflict", "保存冲突，草稿已保留"));
             }
             else if (result.Saved)
             {
                 ApplySettings(result.Settings, true);
-                StatusText = "SaveKit 配置已保存";
+                SetStatus(GetString("String.SaveKit.Saved", "SaveKit 配置已保存"));
             }
             else
             {
@@ -98,7 +102,8 @@ public sealed partial class SaveKitPageViewModel
         }
         catch (Exception exception)
         {
-            ErrorText = "保存 SaveKit 配置失败: " + exception.Message;
+            ErrorText = string.Format(
+                GetString("String.SaveKit.SaveFailedTemplate", "保存 SaveKit 配置失败: {0}"), exception.Message);
             OnPropertyChanged(nameof(HasError));
         }
         finally
@@ -115,7 +120,9 @@ public sealed partial class SaveKitPageViewModel
             return;
         }
 
-        string? selected = await mFolderPicker.PickFolderAsync("选择 SaveKit 存档目录", mLifetimeCancellation.Token, ResolvedStoragePath);
+        string? selected = await mFolderPicker.PickFolderAsync(
+            GetString("String.SaveKit.PickFolderTitle", "选择 SaveKit 存档目录"),
+            mLifetimeCancellation.Token, ResolvedStoragePath);
         if (!string.IsNullOrWhiteSpace(selected))
         {
             StoragePath = selected;
@@ -136,7 +143,8 @@ public sealed partial class SaveKitPageViewModel
         }
         catch (Exception exception)
         {
-            ErrorText = "打开存档目录失败: " + exception.Message;
+            ErrorText = string.Format(
+                GetString("String.SaveKit.OpenDirectoryFailedTemplate", "打开存档目录失败: {0}"), exception.Message);
             OnPropertyChanged(nameof(HasError));
         }
     }
@@ -153,7 +161,7 @@ public sealed partial class SaveKitPageViewModel
             ? "${userDataDir}/YokiFrame/Saves"
             : "${persistentDataPath}/YokiFrame/Saves";
         FileExtension = ".yoki";
-        StatusText = "已恢复默认草稿，保存后生效";
+        SetStatus(GetString("String.SaveKit.ResetDefaultsMessage", "已恢复默认草稿，保存后生效"));
     }
 
     /// <summary>判断刷新命令是否可执行。</summary>

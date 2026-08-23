@@ -19,6 +19,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- 将 xunit.runner.json 复制到输出目录，使“禁止集合并行”的运行器配置生效。 -->
+  <ItemGroup>
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\YokiFrame.Workbench.Avalonia\YokiFrame.Workbench.Avalonia.csproj" />
   </ItemGroup>

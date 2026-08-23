@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Installer;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -54,7 +55,10 @@ public sealed partial class InstallerShellViewModel
     /// <returns>目录选择和检测完成任务。</returns>
     public async Task PickSourceAsync()
     {
-        var selected = await mFolderPicker.PickFolderAsync("选择 YokiFrame 源目录");
+        var selected = await mFolderPicker.PickFolderAsync(
+            WorkbenchI18nService.Instance.GetString(
+                "String.Installer.SourceDirectoryPickerTitle",
+                "选择 YokiFrame 源目录"));
         if (string.IsNullOrWhiteSpace(selected))
         {
             return;
@@ -70,7 +74,10 @@ public sealed partial class InstallerShellViewModel
     /// <returns>目录选择和检测完成任务。</returns>
     public async Task PickTargetAsync()
     {
-        var selected = await mFolderPicker.PickFolderAsync("选择 Unity 或 Godot 项目根目录");
+        var selected = await mFolderPicker.PickFolderAsync(
+            WorkbenchI18nService.Instance.GetString(
+                "String.Installer.TargetDirectoryPickerTitle",
+                "选择 Unity 或 Godot 项目根目录"));
         if (string.IsNullOrWhiteSpace(selected))
         {
             return;
@@ -119,8 +126,12 @@ public sealed partial class InstallerShellViewModel
                 openInstaller: true,
                 CancellationToken.None).ConfigureAwait(true);
             mSession.InvalidatePlan();
-            SessionStatusText = "当前 Runtime 已准备完成，新的安装器已打开";
-            AppendLocalLog("Runtime 已构建完成，已打开与当前源码包匹配的新安装器。");
+            SessionStatusText = WorkbenchI18nService.Instance.GetString(
+                "String.Installer.Session.RuntimeReadyNewInstaller",
+                "当前 Runtime 已准备完成，新的安装器已打开");
+            AppendLocalLog(WorkbenchI18nService.Instance.GetString(
+                "String.Installer.Log.RuntimeReadyNewInstaller",
+                "Runtime 已构建完成，已打开与当前源码包匹配的新安装器。"));
         }
         catch (Exception exception)
         {
@@ -154,7 +165,9 @@ public sealed partial class InstallerShellViewModel
                 openInstaller: false,
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            PostToUi(() => AppendLocalLog("Runtime 已构建完成，正在重新生成安装计划。"));
+            PostToUi(() => AppendLocalLog(WorkbenchI18nService.Instance.GetString(
+                "String.Installer.Log.RuntimeReadyReplanning",
+                "Runtime 已构建完成，正在重新生成安装计划。")));
             await mSession.PrepareAsync(options, cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -207,9 +220,8 @@ public sealed partial class InstallerShellViewModel
     private void BeginGodotRuntimeBootstrapPresentation(bool openInstaller)
     {
         mIsGodotRuntimeBootstrapRunning = true;
-        var message = openInstaller
-            ? "正在为 Godot 构建当前平台 Runtime"
-            : "正在为 Godot 自动构建当前平台 Runtime";
+        mIsGodotRuntimeBootstrapOpeningInstaller = openInstaller;
+        var message = GetBootstrapStatusText(openInstaller);
         PostToUi(() =>
         {
             OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
@@ -218,7 +230,9 @@ public sealed partial class InstallerShellViewModel
             ProgressValue = 0;
             SessionStatusText = message;
             ClearOutcomeDetails();
-            AppendLocalLog("正在从选定 YokiFrame 源码包构建 Godot 项目 Runtime。");
+            AppendLocalLog(WorkbenchI18nService.Instance.GetString(
+                "String.Installer.Log.BuildingGodotRuntime",
+                "正在从选定 YokiFrame 源码包构建 Godot 项目 Runtime。"));
             RaiseCommandStates();
         });
     }
@@ -230,6 +244,7 @@ public sealed partial class InstallerShellViewModel
     private Task EndGodotRuntimeBootstrapPresentationAsync(bool succeeded)
     {
         mIsGodotRuntimeBootstrapRunning = false;
+        mIsGodotRuntimeBootstrapOpeningInstaller = false;
         return PostToUiAndWaitAsync(() =>
         {
             OnPropertyChanged(nameof(IsGodotRuntimeBootstrapVisible));
@@ -431,11 +446,15 @@ public sealed partial class InstallerShellViewModel
 
         EngineStatusText = target.Kind switch
         {
-            InstallerTargetKind.Unity => "Unity",
-            InstallerTargetKind.Godot => "Godot",
-            _ => "未检测"
+            InstallerTargetKind.Unity => GetEngineText(InstallerTargetKind.Unity),
+            InstallerTargetKind.Godot => GetEngineText(InstallerTargetKind.Godot),
+            _ => GetEngineText(InstallerTargetKind.Unknown)
         };
-        TargetStatusText = target.IsRecognized ? target.PackageTarget : "路径无效或不是支持的项目";
+        TargetStatusText = target.IsRecognized
+            ? target.PackageTarget
+            : WorkbenchI18nService.Instance.GetString(
+                "String.Installer.TargetInvalid",
+                "路径无效或不是支持的项目");
         NotifyTargetPresentationChanged();
     }
 
@@ -446,8 +465,10 @@ public sealed partial class InstallerShellViewModel
     private void ApplyDetectionFailure(string message)
     {
         mTargetKind = InstallerTargetKind.Unknown;
-        EngineStatusText = "未检测";
-        TargetStatusText = "路径无效或不是支持的项目";
+        EngineStatusText = GetEngineText(InstallerTargetKind.Unknown);
+        TargetStatusText = WorkbenchI18nService.Instance.GetString(
+            "String.Installer.TargetInvalid",
+            "路径无效或不是支持的项目");
         SessionStatusText = message;
         NotifyTargetPresentationChanged();
         RaiseCommandStates();

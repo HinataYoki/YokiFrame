@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.ActionKit;
 using YokiFrame.Workbench.Avalonia.ViewModels;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.ActionKit;
 
@@ -187,7 +188,9 @@ public class ActionKitNodeViewModel : ViewModelBase
         {
             string progress = ProgressText;
             if (string.IsNullOrEmpty(progress)) return string.Empty;
-            return IsRepeat ? "轮次 " + progress : progress;
+            return IsRepeat
+                ? WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.Round") + progress
+                : progress;
         }
     }
 
@@ -345,6 +348,16 @@ public class ActionKitNodeViewModel : ViewModelBase
         OnPropertyChanged(nameof(ProgressText));
         OnPropertyChanged(nameof(ProgressLabelText));
         OnPropertyChanged(nameof(MetadataText));
+    }
+
+    /// <summary>递归刷新语言相关的进度派生文本。</summary>
+    protected void RefreshNodeLocalization()
+    {
+        OnPropertyChanged(nameof(ProgressLabelText));
+        for (var index = 0; index < Children.Count; index++)
+        {
+            Children[index].RefreshNodeLocalization();
+        }
     }
 
     /// <summary>按目标顺序移动、更新或创建子节点，并删除不再存在的尾项。</summary>

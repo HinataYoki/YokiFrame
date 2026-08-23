@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.ActionKit;
 using YokiFrame.Workbench.Avalonia.ViewModels.ActionKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -16,7 +17,7 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     private string mSessionId = string.Empty;
     private long mGeneration;
     private long mVersion;
-    private string mSource = "等待数据";
+    private string mSource = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.WaitingData");
     private string mStaleReason = string.Empty;
     private string mOperationStatusText = string.Empty;
     private long mFrameCount;
@@ -39,6 +40,7 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     {
         mSetStackTraceAsync = setStackTraceAsync;
         mClearStackTraceAsync = clearStackTraceAsync;
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         ToggleStackTraceCommand = new AsyncRelayCommand(ToggleStackTraceAsync, CanSetStackTrace);
         ClearStackTraceCommand = new AsyncRelayCommand(ClearStackTraceAsync, CanClearStackTrace);
     }
@@ -124,7 +126,8 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>获取堆栈切换按钮文本。</summary>
-    public string StackTraceButtonText => StackTraceEnabled ? "关闭堆栈" : "捕获堆栈";
+    public string StackTraceButtonText => WorkbenchI18nService.Instance.GetString(
+        StackTraceEnabled ? "String.ActionKit.Status.CloseStack" : "String.ActionKit.Status.CaptureStack");
 
     /// <summary>获取是否存在活动根。</summary>
     public bool HasRoots => Roots.Count > 0;
@@ -203,8 +206,26 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>取消页面仍在执行的诊断操作。</summary>
     public void Dispose()
     {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         mLifetimeCancellation.Cancel();
         mLifetimeCancellation.Dispose();
+    }
+
+    /// <summary>语言切换时刷新页面派生文本；协议原始字段保持不变。</summary>
+    private void OnCultureChanged()
+    {
+        if (string.Equals(Source, "等待数据", StringComparison.Ordinal)
+            || string.Equals(Source, "Waiting for data", StringComparison.Ordinal))
+        {
+            Source = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.WaitingData");
+        }
+
+        OnPropertyChanged(nameof(StackTraceButtonText));
+        OnPropertyChanged(nameof(OperationStatusText));
+        for (var index = 0; index < Roots.Count; index++)
+        {
+            Roots[index].RefreshLocalization();
+        }
     }
 
     /// <summary>应用完整状态并尽量保持根 Action 选择。</summary>
@@ -358,7 +379,7 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
         mSessionId = string.Empty;
         mGeneration = 0L;
         mVersion = 0L;
-        Source = "等待数据";
+        Source = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.WaitingData");
         StaleReason = string.Empty;
         OperationStatusText = string.Empty;
         FrameCount = 0L;

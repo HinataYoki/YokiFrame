@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.FsmKit;
 
 namespace YokiFrame.Workbench.Avalonia.Components;
@@ -96,8 +97,30 @@ public sealed partial class ObservedFsmGraph : Control
         PointerMoved += HandlePointerMoved;
         PointerReleased += HandlePointerReleased;
         PointerCaptureLost += HandlePointerCaptureLost;
+        // 语言切换时重建渲染快照；订阅随可视树挂载/卸载，避免静态事件泄漏。
+        AttachedToVisualTree += OnAttachedToVisualTreeForCulture;
+        DetachedFromVisualTree += OnDetachedFromVisualTreeForCulture;
         UpdateCanvasSize();
         RebuildRenderSnapshot();
+    }
+
+    /// <summary>挂载到可视树后订阅语言切换，使画布文字随语言重建。</summary>
+    private void OnAttachedToVisualTreeForCulture(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChangedRebuild;
+    }
+
+    /// <summary>从可视树卸载后解除语言切换订阅。</summary>
+    private void OnDetachedFromVisualTreeForCulture(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChangedRebuild;
+    }
+
+    /// <summary>语言切换后重建渲染快照并触发重绘。</summary>
+    private void OnCultureChangedRebuild()
+    {
+        RebuildRenderSnapshot();
+        InvalidateVisual();
     }
 
     /// <summary>当缩放比例变化时通知页面更新百分比文本。</summary>

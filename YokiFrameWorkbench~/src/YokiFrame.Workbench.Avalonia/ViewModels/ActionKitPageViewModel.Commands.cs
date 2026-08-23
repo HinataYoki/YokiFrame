@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.ActionKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -21,7 +22,8 @@ public sealed partial class ActionKitPageViewModel
                 !StackTraceEnabled,
                 mLifetimeCancellation.Token);
             if (!TryApplyCommandState(requestIdentity, state)) return;
-            OperationStatusText = StackTraceEnabled ? "堆栈捕获已开启" : "堆栈捕获已关闭";
+            OperationStatusText = WorkbenchI18nService.Instance.GetString(
+                StackTraceEnabled ? "String.ActionKit.Status.StackEnabled" : "String.ActionKit.Status.StackDisabled");
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
         {
@@ -30,7 +32,7 @@ public sealed partial class ActionKitPageViewModel
         catch (Exception exception)
         {
             if (MatchesIdentity(requestIdentity))
-                OperationStatusText = "堆栈设置失败: " + exception.Message;
+                OperationStatusText = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.StackSetFailed") + exception.Message;
         }
     }
 
@@ -49,7 +51,7 @@ public sealed partial class ActionKitPageViewModel
                 requestIdentity.EngineId,
                 mLifetimeCancellation.Token);
             if (!TryApplyCommandState(requestIdentity, state)) return;
-            OperationStatusText = "活动堆栈已清空";
+            OperationStatusText = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.StackCleared");
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
         {
@@ -58,7 +60,7 @@ public sealed partial class ActionKitPageViewModel
         catch (Exception exception)
         {
             if (MatchesIdentity(requestIdentity))
-                OperationStatusText = "清空堆栈失败: " + exception.Message;
+                OperationStatusText = WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.StackClearFailed") + exception.Message;
         }
     }
 

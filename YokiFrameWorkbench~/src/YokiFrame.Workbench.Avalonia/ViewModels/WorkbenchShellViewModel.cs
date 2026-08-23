@@ -22,7 +22,7 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 /// <summary>
 /// 承载 Workbench Shell 的可绑定状态和首批页面投影。
 /// </summary>
-public sealed partial class WorkbenchShellViewModel : ViewModelBase
+public sealed partial class WorkbenchShellViewModel : ViewModelBase, IDisposable
 {
     private const int MAX_COMMAND_RESULT_LOG_LENGTH = 180;
     private readonly Action mRefreshRequested;
@@ -37,6 +37,7 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
     private string mSelectedEngineId = string.Empty;
     private string mStatusText = "waiting for dashboard";
     private bool mIsUpdatingEngines;
+    private bool mIsDisposed;
 
 
     /// <summary>
@@ -127,6 +128,21 @@ public sealed partial class WorkbenchShellViewModel : ViewModelBase
         {
             mTrackTask(task);
         }
+    }
+
+    /// <summary>
+    /// 解除全局语言事件订阅，避免窗口关闭后静态服务继续持有 Shell 状态。
+    /// </summary>
+    public void Dispose()
+    {
+        if (mIsDisposed)
+        {
+            return;
+        }
+
+        mIsDisposed = true;
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
+        mTrackTask = null;
     }
 
     /// <summary>

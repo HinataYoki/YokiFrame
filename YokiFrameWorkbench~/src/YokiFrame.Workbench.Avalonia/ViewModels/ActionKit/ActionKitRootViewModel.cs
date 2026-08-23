@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.ActionKit;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels.ActionKit;
 
@@ -32,7 +33,16 @@ public sealed class ActionKitRootViewModel : ActionKitNodeViewModel
     }
 
     /// <summary>获取时间源和子节点数量摘要。</summary>
-    public string RootSummaryText => UpdateMode + "  ·  " + ChildCount + " 个子节点";
+    public string RootSummaryText => UpdateMode + "  ·  " + ChildCount + " "
+        + WorkbenchI18nService.Instance.GetString("String.ActionKit.Status.ChildNodes");
+
+    /// <summary>刷新语言相关的根摘要及其子节点派生文本。</summary>
+    internal void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(RootSummaryText));
+        OnPropertyChanged(nameof(UpdateModeShortText));
+        RefreshNodeLocalization();
+    }
 
     /// <summary>获取适合紧凑根列表显示的时间源名称。</summary>
     public string UpdateModeShortText => UpdateMode switch

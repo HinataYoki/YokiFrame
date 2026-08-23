@@ -37,9 +37,9 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("CurrentPageTitle", xaml);
         Assert.Contains("Classes=\"page-header\"", xaml);
         Assert.Contains("CurrentPageDescription", xaml);
-        Assert.Contains("运行状态", xaml);
-        Assert.Contains("命令桥", xaml);
-        Assert.Contains("安装 Skill", xaml);
+        Assert.True(xaml.Contains("运行状态") || xaml.Contains("String.Overview.RuntimeStatus"));
+        Assert.True(xaml.Contains("命令桥") || xaml.Contains("String.Overview.CommandBridge"));
+        Assert.True(xaml.Contains("安装 Skill") || xaml.Contains("String.Overview.SkillsTitle"));
         Assert.Contains("components:LogConsole", xaml);
         Assert.Contains("SummaryCards", xaml);
         Assert.Contains("EngineCards", xaml);
@@ -99,10 +99,10 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
     {
         var xaml = ReadWorkbenchShellViewXaml();
 
-        Assert.Contains("Text=\"命令桥\"", xaml);
-        Assert.Contains("Content=\"Ping\"", xaml);
-        Assert.Contains("Content=\"状态\"", xaml);
-        Assert.Contains("Content=\"目录\"", xaml);
+        Assert.True(xaml.Contains("Text=\"命令桥\"") || xaml.Contains("String.Overview.CommandBridge"));
+        Assert.True(xaml.Contains("Content=\"Ping\"") || xaml.Contains("String.Overview.Ping"));
+        Assert.True(xaml.Contains("Content=\"状态\"") || xaml.Contains("String.Overview.Status"));
+        Assert.True(xaml.Contains("Content=\"目录\"") || xaml.Contains("String.Overview.Catalog"));
         Assert.Contains("PingCommand", xaml);
         Assert.Contains("BridgeStatusCommand", xaml);
         Assert.Contains("RefreshCommandCatalogCommand", xaml);
@@ -119,7 +119,7 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
     {
         var xaml = ReadWorkbenchShellViewXaml();
 
-        Assert.Contains("Text=\"字体\"", xaml);
+        Assert.True(xaml.Contains("Text=\"字体\"") || xaml.Contains("String.Overview.FontLabel"));
         Assert.Contains("DisplayFontOptions", xaml);
         Assert.Contains("SelectedDisplayFontName", xaml);
         Assert.Contains("SelectedDisplayFontFamily", xaml);
@@ -265,10 +265,10 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         viewModel.UpdateDashboard(CreateDashboardState());
 
         Assert.InRange(viewModel.EngineCards.Count, 1, 4);
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "心跳");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "命令");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "事件");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "背压");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "心跳" || card.Title == "Heartbeat");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "命令" || card.Title == "Command");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "事件" || card.Title == "Events");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "背压" || card.Title == "Pressure");
         Assert.DoesNotContain(viewModel.EngineCards, card => card.Value.Contains("F:/Project", StringComparison.Ordinal));
         Assert.DoesNotContain(viewModel.EngineCards, card => card.Detail.Contains("F:/Project", StringComparison.Ordinal));
     }

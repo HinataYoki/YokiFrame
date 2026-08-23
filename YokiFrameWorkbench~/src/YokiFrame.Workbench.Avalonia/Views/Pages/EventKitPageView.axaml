@@ -51,12 +51,12 @@
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="8">
-          <TextBlock Text="尚无 EventKit 关系" Classes="h2" TextAlignment="Center" />
+          <TextBlock Text="{DynamicResource String.EventKit.NoRelations}" Classes="h2" TextAlignment="Center" />
           <TextBlock Text="{CompiledBinding EmptyDescription}"
                      Classes="body"
                      TextAlignment="Center"
                      TextWrapping="Wrap" />
-          <TextBlock Text="重新进入页面会自动扫描；Play Mode 活动会实时补充。"
+          <TextBlock Text="{DynamicResource String.EventKit.AutoScanHint}"
                      Classes="muted"
                      FontSize="{DynamicResource FontSize.Sm}"
                      TextAlignment="Center" />
@@ -66,13 +66,13 @@
       <Grid IsVisible="{CompiledBinding HasEvents}"
             Classes="eventkit-column-header"
             ColumnDefinitions="3*,14,4*,14,3*">
-        <TextBlock Text="发送方代码"
+        <TextBlock Text="{DynamicResource String.EventKit.SendersCode}"
                    Classes="eventkit-column-title" />
         <TextBlock Grid.Column="2"
-                   Text="事件通道"
+                   Text="{DynamicResource String.EventKit.EventChannel}"
                    Classes="eventkit-column-title center" />
         <TextBlock Grid.Column="4"
-                   Text="注册 / 注销方"
+                   Text="{DynamicResource String.EventKit.Subscribers}"
                    Classes="eventkit-column-title" />
       </Grid>
 
@@ -82,11 +82,11 @@
                ItemsSource="{CompiledBinding Events}"
                SelectedItem="{CompiledBinding SelectedEvent, Mode=TwoWay}"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-               AutomationProperties.Name="EventKit 发送注册关系"
+               AutomationProperties.Name="{DynamicResource String.EventKit.RelationsAutomationName}"
                AutomationProperties.AutomationId="workbench.eventkit.relations">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="eventVm:EventKitEventListItemViewModel">
-            <!-- 一行就是一条完整通道：发送端、事件核心和接收端始终保持同屏。 -->
+            <!-- 每一行即一个通道两端：事件名居中，发送和接收端始终并排同行 -->
             <Grid MinHeight="88" ColumnDefinitions="3*,14,4*,14,3*">
               <Border Classes="eventkit-endpoint sender"
                       ToolTip.Tip="{CompiledBinding SenderPreview.FilePath}">
@@ -98,10 +98,9 @@
                              TextTrimming="CharacterEllipsis"
                              TextAlignment="Right"
                              HorizontalAlignment="Stretch"
-                             VerticalAlignment="Center"
+                             ToolTip.Tip="{CompiledBinding SenderPreview.FilePath}"
                              IsVisible="{CompiledBinding HasSenders}" />
-                  <TextBlock
-                             Text="未扫描到发送方"
+                  <TextBlock Text="{DynamicResource String.EventKit.NoSendersScanned}"
                              Classes="eventkit-relation-empty"
                              TextAlignment="Right"
                              HorizontalAlignment="Stretch"
@@ -124,7 +123,7 @@
               </Border>
 
               <TextBlock Grid.Column="1"
-                         Text="›"
+                         Text="→"
                          Classes="eventkit-flow-connector"
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center" />
@@ -179,7 +178,7 @@
               </Border>
 
               <TextBlock Grid.Column="3"
-                         Text="›"
+                         Text="→"
                          Classes="eventkit-flow-connector"
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center" />
@@ -190,7 +189,7 @@
                       RowSpacing="4"
                       VerticalAlignment="Center">
                   <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="4">
-                    <TextBlock Text="注册"
+                    <TextBlock Text="{DynamicResource String.EventKit.Register}"
                                Classes="eventkit-lifecycle-label register" />
                     <TextBlock Grid.Column="1"
                                Text="{CompiledBinding ReceiverPreview.FileName}"
@@ -200,7 +199,7 @@
                                VerticalAlignment="Center"
                                IsVisible="{CompiledBinding HasReceivers}" />
                     <TextBlock Grid.Column="1"
-                               Text="未扫描到注册方"
+                               Text="{DynamicResource String.EventKit.NoReceiversScanned}"
                                Classes="eventkit-relation-empty"
                                IsVisible="{CompiledBinding HasNoReceivers}" />
                     <Button Grid.Column="2"
@@ -214,7 +213,7 @@
                   <Grid Grid.Row="1"
                         ColumnDefinitions="40,*,Auto"
                         ColumnSpacing="4">
-                    <TextBlock Text="注销"
+                    <TextBlock Text="{DynamicResource String.EventKit.Unregister}"
                                Classes="eventkit-lifecycle-label unregister" />
                     <TextBlock Grid.Column="1"
                                Text="{CompiledBinding UnregisterPreview.FileName}"
@@ -224,7 +223,7 @@
                                VerticalAlignment="Center"
                                IsVisible="{CompiledBinding HasUnregisters}" />
                     <TextBlock Grid.Column="1"
-                               Text="未扫描到注销方"
+                               Text="{DynamicResource String.EventKit.NoUnregistersScanned}"
                                Classes="eventkit-relation-empty eventkit-unregister-empty"
                                Classes.warning="{CompiledBinding HasMissingUnregister}"
                                IsVisible="{CompiledBinding HasNoUnregisters}" />
@@ -252,23 +251,23 @@
     </Grid>
 
     <GridSplitter Grid.Column="1"
-                  Width="4"
-                  HorizontalAlignment="Center"
-                  Background="{DynamicResource Brush.Border.Subtle}"
+                  Classes="eventkit-splitter"
                   ResizeDirection="Columns"
-                  ResizeBehavior="PreviousAndNext" />
+                  ResizeBehavior="PreviousAndNext"
+                  Cursor="SizeWestEast" />
 
-    <Border Grid.Column="2" Classes="panel eventkit-detail-panel" Padding="0">
+    <Border Grid.Column="2"
+            Classes="panel eventkit-detail-panel"
+            Padding="0">
       <Grid>
-        <Border Margin="12"
-                Padding="20"
-                IsVisible="{CompiledBinding IsSelectionEmpty}"
+        <Border IsVisible="{CompiledBinding !HasSelection}"
+                Margin="16"
                 Classes="kit-empty-state eventkit-empty-state">
           <StackPanel HorizontalAlignment="Center"
                       VerticalAlignment="Center"
                       Spacing="6">
-            <TextBlock Text="选择一个事件关系" FontWeight="SemiBold" />
-            <TextBlock Text="右侧显示所选事件与运行时间线。"
+            <TextBlock Text="{DynamicResource String.EventKit.SelectRelation}" FontWeight="SemiBold" />
+            <TextBlock Text="{DynamicResource String.EventKit.SelectRelationHint}"
                        Classes="muted"
                        FontSize="{DynamicResource FontSize.Sm}"
                        TextAlignment="Center"
@@ -308,7 +307,7 @@
                 <Button Grid.Column="2"
                         Classes="eventkit-code-summary"
                         Content="{CompiledBinding SelectedEvent.RelationCountText}"
-                        ToolTip.Tip="查看全部代码位置">
+                        ToolTip.Tip="{DynamicResource String.EventKit.ViewAllLocations}">
                   <Button.Flyout>
                     <Flyout Placement="BottomEdgeAlignedRight">
                       <Border Width="360"
@@ -318,43 +317,43 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
                           <StackPanel Spacing="10">
-                            <TextBlock Text="代码位置" Classes="section-title" />
+                            <TextBlock Text="{DynamicResource String.EventKit.CodeLocations}" Classes="section-title" />
                             <StackPanel Spacing="4">
                               <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="发送位置" Classes="eventkit-relation-group-title" />
+                                <TextBlock Text="{DynamicResource String.EventKit.SenderLocations}" Classes="eventkit-relation-group-title" />
                                 <TextBlock Grid.Column="1"
                                            Text="{CompiledBinding SelectedEvent.SenderCountText}"
                                            Classes="mono eventkit-relation-group-title" />
                               </Grid>
                               <ItemsControl ItemsSource="{CompiledBinding SelectedEvent.SenderGroups}"
                                             ItemTemplate="{StaticResource EventKitCodeGroupTemplate}" />
-                              <TextBlock Text="未扫描到发送方"
+                              <TextBlock Text="{DynamicResource String.EventKit.NoSendersScanned}"
                                          Classes="eventkit-relation-empty"
                                          IsVisible="{CompiledBinding SelectedEvent.HasNoSenders}" />
                             </StackPanel>
                             <StackPanel Spacing="4">
                               <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="注册位置" Classes="eventkit-relation-group-title" />
+                                <TextBlock Text="{DynamicResource String.EventKit.ReceiverLocations}" Classes="eventkit-relation-group-title" />
                                 <TextBlock Grid.Column="1"
                                            Text="{CompiledBinding SelectedEvent.ReceiverCountText}"
                                            Classes="mono eventkit-relation-group-title" />
                               </Grid>
                               <ItemsControl ItemsSource="{CompiledBinding SelectedEvent.ReceiverGroups}"
                                             ItemTemplate="{StaticResource EventKitCodeGroupTemplate}" />
-                              <TextBlock Text="未扫描到注册方"
+                              <TextBlock Text="{DynamicResource String.EventKit.NoReceiversScanned}"
                                          Classes="eventkit-relation-empty"
                                          IsVisible="{CompiledBinding SelectedEvent.HasNoReceivers}" />
                             </StackPanel>
                             <StackPanel Spacing="4">
                               <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="注销位置" Classes="eventkit-relation-group-title" />
+                                <TextBlock Text="{DynamicResource String.EventKit.UnregisterLocations}" Classes="eventkit-relation-group-title" />
                                 <TextBlock Grid.Column="1"
                                            Text="{CompiledBinding SelectedEvent.UnregisterCountText}"
                                            Classes="mono eventkit-relation-group-title" />
                               </Grid>
                               <ItemsControl ItemsSource="{CompiledBinding SelectedEvent.UnregisterGroups}"
                                             ItemTemplate="{StaticResource EventKitCodeGroupTemplate}" />
-                              <TextBlock Text="未扫描到注销方"
+                              <TextBlock Text="{DynamicResource String.EventKit.NoUnregistersScanned}"
                                          Classes="eventkit-relation-empty"
                                          IsVisible="{CompiledBinding SelectedEvent.HasNoUnregisters}" />
                             </StackPanel>
@@ -384,7 +383,7 @@
 
           <Grid Grid.Row="1" RowDefinitions="Auto,*">
             <Grid Margin="12,0,12,7" ColumnDefinitions="*,Auto">
-              <TextBlock Text="运行时间线" Classes="section-title" />
+              <TextBlock Text="{DynamicResource String.EventKit.RuntimeTimeline}" Classes="section-title" />
               <TextBlock Grid.Column="1"
                          Text="{CompiledBinding SelectedActivityCountText}"
                          Classes="muted"
@@ -395,24 +394,30 @@
                      Classes="eventkit-timeline kit-timeline-list"
                      ItemsSource="{CompiledBinding SelectedActivities}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     AutomationProperties.Name="EventKit 运行时间线">
+                     AutomationProperties.Name="{DynamicResource String.EventKit.RuntimeTimelineAutomationName}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="eventKit:WorkbenchEventKitActivity">
-                  <Grid ColumnDefinitions="82,64,*" ColumnSpacing="7">
-                    <TextBlock Text="{CompiledBinding Time}"
-                               Classes="muted mono"
-                               FontSize="{DynamicResource FontSize.Sm}" />
+                  <Grid Margin="12,6"
+                        ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="8">
+                    <Border Classes="eventkit-action-badge"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="{CompiledBinding Kind}"
+                                 Classes="kit-micro"
+                                 FontWeight="SemiBold" />
+                    </Border>
                     <TextBlock Grid.Column="1"
-                               Text="{CompiledBinding Kind}"
-                               Classes="eventkit-timeline-kind"
-                               FontSize="{DynamicResource FontSize.Sm}"
-                               FontWeight="SemiBold" />
-                    <TextBlock Grid.Column="2"
                                Text="{CompiledBinding Detail}"
                                Classes="mono"
-                               FontSize="{DynamicResource FontSize.Body}"
+                               FontSize="{DynamicResource FontSize.Sm}"
                                TextTrimming="CharacterEllipsis"
-                               ToolTip.Tip="{CompiledBinding Detail}" />
+                               ToolTip.Tip="{CompiledBinding Detail}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2"
+                               Text="{CompiledBinding Time}"
+                               Classes="muted mono"
+                               FontSize="{DynamicResource FontSize.Sm}"
+                               VerticalAlignment="Center" />
                   </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>

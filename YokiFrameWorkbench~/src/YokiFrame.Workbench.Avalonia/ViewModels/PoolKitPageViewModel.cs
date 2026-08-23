@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using YokiFrame.Tooling.Application.Models.PoolKit;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels.PoolKit;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -16,7 +17,7 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
     private string mSessionId = string.Empty;
     private long mGeneration;
     private long mVersion;
-    private string mSource = "等待数据";
+    private string mSource = GetString(CommonWaitingForKey, "等待数据");
     private string mStaleReason = string.Empty;
     private string mOperationStatusText = string.Empty;
     private bool mTrackingEnabled;
@@ -44,6 +45,8 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
         mCheckLeaksAsync = checkLeaksAsync;
         mClearHistoryAsync = clearHistoryAsync;
         mOpenCodeLocationAsync = openCodeLocationAsync;
+        // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
+        WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         ToggleTrackingCommand = new AsyncRelayCommand(ToggleTrackingAsync, CanSetTracking);
         ToggleLocationCommand = new AsyncRelayCommand(ToggleLocationAsync, CanSetTracking);
         CheckLeaksCommand = new AsyncRelayCommand(CheckLeaksAsync, CanCheckLeaks);
@@ -98,18 +101,32 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>获取最近操作结果。</summary>
     public string OperationStatusText { get => mOperationStatusText; private set => SetProperty(ref mOperationStatusText, value); }
     /// <summary>获取跟踪按钮文本。</summary>
-    public string TrackingButtonText => TrackingEnabled ? "停止跟踪" : "启用跟踪";
+    public string TrackingButtonText => TrackingEnabled
+        ? GetString("String.PoolKit.StopTracking", "停止跟踪")
+        : GetString("String.PoolKit.EnableTracking", "启用跟踪");
     /// <summary>获取定位按钮文本。</summary>
-    public string LocationButtonText => StackTraceEnabled ? "关闭定位" : "启用定位";
+    public string LocationButtonText => StackTraceEnabled
+        ? GetString("String.PoolKit.DisableLocation", "关闭定位")
+        : GetString("String.PoolKit.EnableLocation", "启用定位");
     /// <summary>获取对象跟踪开关的紧凑状态文本。</summary>
-    public string TrackingStatusText => TrackingEnabled ? "跟踪 开" : "跟踪 关";
+    public string TrackingStatusText => TrackingEnabled
+        ? GetString("String.PoolKit.TrackingOn", "跟踪 开")
+        : GetString("String.PoolKit.TrackingOff", "跟踪 关");
     /// <summary>获取堆栈定位开关的紧凑状态文本。</summary>
-    public string LocationStatusText => StackTraceEnabled ? "定位 开" : "定位 关";
+    public string LocationStatusText => StackTraceEnabled
+        ? GetString("String.PoolKit.LocationOn", "定位 开")
+        : GetString("String.PoolKit.LocationOff", "定位 关");
     /// <summary>获取事件历史开关的紧凑状态文本。</summary>
-    public string EventHistoryStatusText => EventHistoryEnabled ? "事件 开" : "事件 关";
+    public string EventHistoryStatusText => EventHistoryEnabled
+        ? GetString("String.PoolKit.EventHistoryOn", "事件 开")
+        : GetString("String.PoolKit.EventHistoryOff", "事件 关");
     /// <summary>获取泄漏告警文本。</summary>
-    public string LeakWarningText => "本次检查发现 " + LeakCount + " 个仍有借出对象的候选池；这不是内存泄漏定论。"
-        + (LeaksTruncated ? " 候选明细已裁剪。" : string.Empty);
+    public string LeakWarningText => string.Format(
+            GetString(
+                "String.PoolKit.LeakWarningTemplate",
+                "本次检查发现 {0} 个仍有借出对象的候选池；这不是内存泄漏定论。"),
+            LeakCount)
+        + (LeaksTruncated ? GetString("String.PoolKit.LeakTruncatedSuffix", " 候选明细已裁剪。") : string.Empty);
     /// <summary>获取是否显示泄漏告警。</summary>
     public bool HasLeakWarning => LeakCount > 0;
     /// <summary>获取列表是否为空。</summary>
@@ -135,11 +152,40 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
         ApplyState(state);
     }
 
-    /// <summary>取消页面仍在执行的诊断操作。</summary>
+    /// <summary>取消页面仍在执行的诊断操作并解除语言事件订阅。</summary>
     public void Dispose()
     {
+        WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         mLifetimeCancellation.Cancel();
         mLifetimeCancellation.Dispose();
+    }
+
+    /// <summary>按当前语言重新投影 PoolKit 的动态展示文本与既有列表行。</summary>
+    private void OnCultureChanged()
+    {
+        if (IsWaitingForData)
+        {
+            Source = GetString(CommonWaitingForKey, "等待数据");
+        }
+
+        OnPropertyChanged(nameof(TrackingButtonText));
+        OnPropertyChanged(nameof(LocationButtonText));
+        OnPropertyChanged(nameof(TrackingStatusText));
+        OnPropertyChanged(nameof(LocationStatusText));
+        OnPropertyChanged(nameof(EventHistoryStatusText));
+        OnPropertyChanged(nameof(LeakWarningText));
+        OnPropertyChanged(nameof(SearchEmptyText));
+        OnPropertyChanged(nameof(SelectedName));
+        OnPropertyChanged(nameof(SelectedEventCountText));
+        for (var index = 0; index < mAllPools.Count; index++)
+        {
+            mAllPools[index].RefreshRecentEventText(FindRecentEventText(mAllPools[index].Pool, mAllEvents));
+        }
+
+        foreach (PoolKitEventListItemViewModel row in Events)
+        {
+            row.RefreshLocalization();
+        }
     }
 
     /// <summary>更新跟踪状态并通知按钮文本。</summary>
@@ -164,5 +210,14 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
         return string.Equals(mEngineId, state.EngineId, StringComparison.Ordinal)
             && string.Equals(mSessionId, state.SessionId, StringComparison.Ordinal)
             && mGeneration == state.Generation;
+    }
+
+    /// <summary>等待 Runtime 首帧数据时使用的通用占位文案资源 key。</summary>
+    private const string CommonWaitingForKey = "String.Common.WaitingForData";
+
+    /// <summary>从当前语言资源读取 PoolKit 文案，保留测试与无资源环境的中文兜底。</summary>
+    private static string GetString(string key, string fallback)
+    {
+        return WorkbenchI18nService.Instance.GetString(key, fallback);
     }
 }

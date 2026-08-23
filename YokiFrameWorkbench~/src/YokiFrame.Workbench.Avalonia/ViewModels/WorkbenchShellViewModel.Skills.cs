@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using YokiFrame.Tooling.Application.Skills;
+using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -22,9 +23,9 @@ public sealed partial class WorkbenchShellViewModel
     private IReadOnlyList<WorkbenchSkillTarget> mSkillTargets = Array.Empty<WorkbenchSkillTarget>();
     private SkillInstallationStatus? mSkillInstallStatus;
     private string mCustomSkillPath = "custom/skills";
-    private string mCustomSkillStatusText = "相对项目根目录";
+    private string mCustomSkillStatusText = GetString(RelativeRootHintKey, "相对项目根目录");
     private string mSelectedSkillName = "yokiframe";
-    private string mSkillInstallStatusText = "等待项目状态";
+    private string mSkillInstallStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
     private string mSkillProjectRoot = string.Empty;
 
     /// <summary>
@@ -156,7 +157,7 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (string.IsNullOrWhiteSpace(mSkillProjectRoot))
         {
-            SkillInstallStatusText = "等待项目状态";
+            SkillInstallStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
             RefreshSkillTargets();
             return;
         }
@@ -166,11 +167,11 @@ public sealed partial class WorkbenchShellViewModel
             mSkillInstallStatus = mSkillInstallationService.GetStatus(mSkillProjectRoot);
             RefreshSkillNames();
             RefreshSkillTargets();
-            AddLogLine("Skill 状态已刷新。");
+            AddLogLine(GetString(StatusRefreshedKey, "Skill 状态已刷新。"));
         }
         catch (Exception exception)
         {
-            SkillInstallStatusText = "Skill 状态读取失败: " + exception.Message;
+            SkillInstallStatusText = string.Format(GetString(StatusReadFailedTemplateKey, "Skill 状态读取失败: {0}"), exception.Message);
             AddLogLine(SkillInstallStatusText);
         }
     }
@@ -248,7 +249,9 @@ public sealed partial class WorkbenchShellViewModel
             target.Id,
             target.Label,
             target.RelativePath,
-            isInstalled ? "已安装" : "未安装",
+            isInstalled
+                ? GetString("String.Overview.Installed", "已安装")
+                : GetString("String.Overview.NotInstalled", "未安装"),
             isInstalled,
             new RelayCommand(() => InstallSkill(target.Id), () => isPackaged),
             new RelayCommand(() => UninstallSkill(target.Id), () => isInstalled));
@@ -283,9 +286,22 @@ public sealed partial class WorkbenchShellViewModel
         var targetCount = targets?.Count ?? DEFAULT_SKILL_TARGET_COUNT;
         return new[]
         {
-            new WorkbenchMetricCard("包内源", CreateSkillSourceHeadline(), "自动探测 Unity/Godot 包内 Skills", isPositive: mSkillInstallStatus?.Skills.Count > 0),
-            new WorkbenchMetricCard("当前 Skill", CreateSkillOptionLabel(SelectedSkillName), isPackaged ? "已随包提供" : "包内未提供", isPositive: isPackaged, isAccent: true),
-            new WorkbenchMetricCard("安装目标", installedCount + "/" + targetCount, "当前 Skill 的预设目标覆盖", isPositive: installedCount > 0)
+            new WorkbenchMetricCard(
+                GetString("String.Overview.BuiltinPackage", "包内源"),
+                CreateSkillSourceHeadline(),
+                GetString("String.Overview.AutoDetect", "自动探测 Unity/Godot 包内 Skills"),
+                isPositive: mSkillInstallStatus?.Skills.Count > 0),
+            new WorkbenchMetricCard(
+                GetString("String.Overview.CurrentSkill", "当前 Skill"),
+                CreateSkillOptionLabel(SelectedSkillName),
+                isPackaged ? GetString("String.Overview.Preloaded", "已随包提供") : GetString(PackagedMissingKey, "包内未提供"),
+                isPositive: isPackaged,
+                isAccent: true),
+            new WorkbenchMetricCard(
+                GetString(TargetsLabelKey, "安装目标"),
+                installedCount + "/" + targetCount,
+                GetString(TargetCoverageHintKey, "当前 Skill 的预设目标覆盖"),
+                isPositive: installedCount > 0)
         };
     }
 
@@ -307,7 +323,7 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (string.IsNullOrWhiteSpace(mSkillInstallStatus?.SourceRoot))
         {
-            return "等待扫描";
+            return GetString(SourceWaitingKey, "等待扫描");
         }
 
         return "Core/Editor/Skills";
@@ -322,9 +338,9 @@ public sealed partial class WorkbenchShellViewModel
     {
         return name switch
         {
-            "yokiframe" => "使用指南",
-            "yokiframe-cli" => "CLI 指南",
-            "yokiframe-workbench" => "工作台指南",
+            "yokiframe" => GetString(GuideYokiframeKey, "使用指南"),
+            "yokiframe-cli" => GetString(GuideCliKey, "CLI 指南"),
+            "yokiframe-workbench" => GetString(GuideWorkbenchKey, "工作台指南"),
             _ => name
         };
     }
@@ -402,7 +418,7 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (string.IsNullOrWhiteSpace(mSkillProjectRoot))
         {
-            SkillInstallStatusText = "等待项目状态";
+            SkillInstallStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
             if (targetId == "custom")
             {
                 CustomSkillStatusText = SkillInstallStatusText;
@@ -427,7 +443,7 @@ public sealed partial class WorkbenchShellViewModel
         }
         catch (Exception exception)
         {
-            SkillInstallStatusText = "Skill 操作失败: " + exception.Message;
+            SkillInstallStatusText = string.Format(GetString(OperationFailedTemplateKey, "Skill 操作失败: {0}"), exception.Message);
             if (targetId == "custom")
             {
                 CustomSkillStatusText = SkillInstallStatusText;
@@ -444,25 +460,27 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (string.IsNullOrWhiteSpace(mSkillProjectRoot))
         {
-            CustomSkillStatusText = "等待项目状态";
+            CustomSkillStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(CustomSkillPath))
         {
-            CustomSkillStatusText = "请输入相对目录";
+            CustomSkillStatusText = GetString(EnterRelativePathKey, "请输入相对目录");
             return;
         }
 
         var normalizedPath = CustomSkillPath.Trim().Replace('\\', '/');
         if (Path.IsPathRooted(normalizedPath) || normalizedPath.Contains(':', StringComparison.Ordinal))
         {
-            CustomSkillStatusText = "必须是项目内相对目录";
+            CustomSkillStatusText = GetString(MustBeRelativeKey, "必须是项目内相对目录");
             return;
         }
 
         var skillFile = Path.Combine(mSkillProjectRoot, normalizedPath, SelectedSkillName, "SKILL.md");
-        CustomSkillStatusText = File.Exists(skillFile) ? "已安装" : "未安装";
+        CustomSkillStatusText = File.Exists(skillFile)
+            ? GetString("String.Overview.Installed", "已安装")
+            : GetString("String.Overview.NotInstalled", "未安装");
     }
 
     /// <summary>
@@ -475,16 +493,66 @@ public sealed partial class WorkbenchShellViewModel
     {
         if (mSkillInstallStatus == null)
         {
-            return "等待项目状态";
+            return GetString(WaitingProjectStatusKey, "等待项目状态");
         }
 
         if (!isPackaged)
         {
-            return "包内 Skill 未提供: " + SelectedSkillName;
+            return string.Format(GetString(NotProvidedTemplateKey, "包内 Skill 未提供: {0}"), SelectedSkillName);
         }
 
         var installedCount = targets?.Count(target => target.InstalledSkills.Contains(SelectedSkillName, StringComparer.Ordinal)) ?? 0;
         var targetCount = targets?.Count ?? 0;
-        return SelectedSkillName + " 已安装 " + installedCount + "/" + targetCount;
+        return string.Format(
+            GetString(InstallSummaryTemplateKey, "{0} 已安装 {1}/{2}"),
+            SelectedSkillName, installedCount, targetCount);
     }
+
+    /// <summary>相对项目根目录提示资源 key。</summary>
+    private const string RelativeRootHintKey = "String.Skills.RelativeRootHint";
+
+    /// <summary>等待项目状态占位资源 key。</summary>
+    private const string WaitingProjectStatusKey = "String.Skills.WaitingProjectStatus";
+
+    /// <summary>状态已刷新提示资源 key。</summary>
+    private const string StatusRefreshedKey = "String.Skills.StatusRefreshed";
+
+    /// <summary>状态读取失败模板资源 key。</summary>
+    private const string StatusReadFailedTemplateKey = "String.Skills.StatusReadFailedTemplate";
+
+    /// <summary>包内未提供占位资源 key。</summary>
+    private const string PackagedMissingKey = "String.Skills.PackagedMissing";
+
+    /// <summary>安装目标卡片标题资源 key。</summary>
+    private const string TargetsLabelKey = "String.Skills.TargetsLabel";
+
+    /// <summary>预设目标覆盖说明资源 key。</summary>
+    private const string TargetCoverageHintKey = "String.Skills.TargetCoverageHint";
+
+    /// <summary>等待扫描占位资源 key。</summary>
+    private const string SourceWaitingKey = "String.Skills.SourceWaiting";
+
+    /// <summary>yokiframe 指南标题资源 key。</summary>
+    private const string GuideYokiframeKey = "String.Skills.GuideYokiframe";
+
+    /// <summary>CLI 指南标题资源 key。</summary>
+    private const string GuideCliKey = "String.Skills.GuideCli";
+
+    /// <summary>工作台指南标题资源 key。</summary>
+    private const string GuideWorkbenchKey = "String.Skills.GuideWorkbench";
+
+    /// <summary>操作失败模板资源 key。</summary>
+    private const string OperationFailedTemplateKey = "String.Skills.OperationFailedTemplate";
+
+    /// <summary>请输入相对目录提示资源 key。</summary>
+    private const string EnterRelativePathKey = "String.Skills.EnterRelativePath";
+
+    /// <summary>必须是项目内相对目录提示资源 key。</summary>
+    private const string MustBeRelativeKey = "String.Skills.MustBeRelative";
+
+    /// <summary>包内未提供模板资源 key。</summary>
+    private const string NotProvidedTemplateKey = "String.Skills.NotProvidedTemplate";
+
+    /// <summary>安装摘要模板资源 key。</summary>
+    private const string InstallSummaryTemplateKey = "String.Skills.InstallSummaryTemplate";
 }

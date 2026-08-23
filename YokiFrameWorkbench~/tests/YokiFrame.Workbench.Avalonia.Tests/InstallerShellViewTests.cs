@@ -30,15 +30,15 @@ public sealed class InstallerShellViewTests
         Assert.Contains("Classes=\"installer-review-pane\"", xaml);
         Assert.Contains("Classes=\"installer-footer\"", xaml);
         Assert.Contains("Classes=\"installer-log-header\"", xaml);
-        Assert.Contains("Text=\"安装 YokiFrame\"", xaml);
-        Assert.Contains("Text=\"项目与来源\"", xaml);
-        Assert.Contains("Text=\"变更审阅\"", xaml);
-        Assert.Contains("Text=\"YokiFrame 源目录\"", xaml);
-        Assert.Contains("Text=\"目标项目\"", xaml);
-        Assert.Contains("Text=\"运行日志\"", xaml);
-        Assert.Contains("Text=\"查看计划\"", xaml);
-        Assert.Contains("Text=\"安装 / 更新\"", xaml);
-        Assert.Contains("Text=\"构建 Runtime\"", xaml);
+        Assert.Contains("String.Installer.Title", xaml);
+        Assert.Contains("String.Installer.ProjectAndSource", xaml);
+        Assert.Contains("String.Installer.ReviewTitle", xaml);
+        Assert.Contains("String.Installer.SourceDirectory", xaml);
+        Assert.Contains("String.Installer.TargetProject", xaml);
+        Assert.Contains("String.Installer.LogTitle", xaml);
+        Assert.Contains("String.Installer.PreviewPlan", xaml);
+        Assert.Contains("String.Installer.InstallOrUpdate", xaml);
+        Assert.Contains("String.Installer.BuildRuntime", xaml);
     }
 
     /// <summary>

@@ -104,7 +104,18 @@ public sealed class WorkbenchPageModuleCatalog
     /// 按模块首次出现的分组顺序创建新的可变导航项，避免跨 Shell 共享选中态。
     /// </summary>
     /// <returns>稳定排序的导航分组。</returns>
-    public IReadOnlyList<WorkbenchNavigationGroup> CreateNavigationGroups()
+    public IReadOnlyList<WorkbenchNavigationGroup> CreateNavigationGroups() =>
+        CreateLocalizedNavigationGroups(null, null);
+
+    /// <summary>
+    /// 按模块首次出现的分组顺序创建新的可变导航项，并支持自定义本地化函数。
+    /// </summary>
+    /// <param name="groupNameLocalizer">可选的分组名称本地化函数。</param>
+    /// <param name="itemNameLocalizer">可选的导航项名称本地化函数。</param>
+    /// <returns>稳定排序的导航分组。</returns>
+    public IReadOnlyList<WorkbenchNavigationGroup> CreateLocalizedNavigationGroups(
+        Func<string, string>? groupNameLocalizer,
+        Func<string, string, string>? itemNameLocalizer)
     {
         Dictionary<string, List<WorkbenchNavigationItem>> itemsByGroup = new(StringComparer.Ordinal);
         List<string> groupOrder = new();
@@ -122,13 +133,17 @@ public sealed class WorkbenchPageModuleCatalog
                 groupOrder.Add(module.GroupName);
             }
 
-            items.Add(new WorkbenchNavigationItem(module.PageName, module.DisplayName, module.IconKey));
+            var displayName = itemNameLocalizer != null
+                ? itemNameLocalizer(module.PageName, module.DisplayName)
+                : module.DisplayName;
+            items.Add(new WorkbenchNavigationItem(module.PageName, displayName, module.IconKey));
         }
 
         List<WorkbenchNavigationGroup> groups = new();
         foreach (var groupName in groupOrder)
         {
-            groups.Add(new WorkbenchNavigationGroup(groupName, itemsByGroup[groupName]));
+            var localizedGroupName = groupNameLocalizer != null ? groupNameLocalizer(groupName) : groupName;
+            groups.Add(new WorkbenchNavigationGroup(localizedGroupName, itemsByGroup[groupName]));
         }
 
         return groups;
