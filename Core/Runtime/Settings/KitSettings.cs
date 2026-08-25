@@ -4,7 +4,9 @@ using System.Globalization;
 namespace YokiFrame
 {
     /// <summary>
-    /// 定义 Kit 运行时设置存储，宿主可注入持久化实现，Core 默认使用内存存储。
+    /// 定义 Kit 运行时设置的内存读写契约。
+    /// 宿主 Adapter 把 JSON 或 ProjectSettings 填进实现后再交给 <see cref="KitSettings"/>；
+    /// 本接口不表达文件路径、宿主 SDK 或持久化格式。
     /// </summary>
     public interface IKitSettingsStore
     {
@@ -68,9 +70,10 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 注入宿主设置存储；传入 null 时钉住到内存存储，直到注册新的宿主工厂为止。
+        /// 注入已经填充好的设置存储。传入 null 会清除显式存储；
+        /// 下一次访问重新解析已注册工厂，没有工厂时才回退到内置内存存储。
         /// </summary>
-        /// <param name="store">宿主设置存储。</param>
+        /// <param name="store">已填充的设置存储；null 表示放弃显式存储。</param>
         public static void SetStore(IKitSettingsStore store)
         {
             lock (sLock)
@@ -221,7 +224,8 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 在锁内解析当前有效 Store：显式 Store 优先，其次工厂结果；无工厂或被 SetStore(null) 钉住时使用内存回退。
+        /// 在锁内解析当前有效 Store：显式 Store 优先；否则复用已解析结果。
+        /// 若当前仍钉在内存回退且此后已注册工厂，则按新工厂重新解析一次。
         /// </summary>
         /// <returns>当前会话唯一的设置 Store。</returns>
         private static IKitSettingsStore GetStoreLocked()

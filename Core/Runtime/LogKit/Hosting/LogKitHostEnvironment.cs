@@ -224,8 +224,13 @@ namespace YokiFrame
                 string parent = Path.GetDirectoryName(defaultDirectory) ?? defaultDirectory;
                 return Path.GetFullPath(Path.Combine(parent, configured));
             }
-            catch (Exception)
+            catch (Exception exception) when (
+                exception is ArgumentException ||
+                exception is NotSupportedException ||
+                exception is PathTooLongException ||
+                exception is IOException)
             {
+                // 用户覆盖目录无法解析时回退宿主默认目录；其它异常继续抛出。
                 return defaultDirectory;
             }
         }

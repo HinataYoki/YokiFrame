@@ -132,6 +132,29 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证宿主订阅者抛错不会传到日志调用方，后续订阅者仍会执行。
+        /// </summary>
+        [Test]
+        public void SubscriberExceptionDoesNotPropagateFromApplyBaseRuntimeSettings()
+        {
+            var laterHandlerCount = 0;
+            Action failingHandler = static () => throw new InvalidOperationException("overlay-failed");
+            Action laterHandler = () => laterHandlerCount++;
+            LogKitSettings.RuntimeSettingsApplied += failingHandler;
+            LogKitSettings.RuntimeSettingsApplied += laterHandler;
+            try
+            {
+                Assert.DoesNotThrow(LogKitSettings.ApplyBaseRuntimeSettings);
+                Assert.AreEqual(1, laterHandlerCount);
+            }
+            finally
+            {
+                LogKitSettings.RuntimeSettingsApplied -= failingHandler;
+                LogKitSettings.RuntimeSettingsApplied -= laterHandler;
+            }
+        }
+
+        /// <summary>
         /// 验证默认 logger 工厂内部写日志不会递归创建工厂，首条日志正常安装后端且不栈溢出。
         /// </summary>
         [Test]

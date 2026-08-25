@@ -9,16 +9,6 @@ namespace YokiFrame
     public static partial class JsonHelper
     {
         /// <summary>
-        /// 验证文本是完整 JSON 值；语法状态机位于独立纯 C# 校验器中。
-        /// </summary>
-        /// <param name="json">待验证 JSON 文本。</param>
-        /// <exception cref="FormatException">JSON 语法不完整或包含非法 token 时抛出。</exception>
-        internal static void EnsureValidJson(string json)
-        {
-            YokiFrameJsonSyntaxValidator.EnsureValidJson(json);
-        }
-
-        /// <summary>
         /// 在顶层 JSON 对象中定位字段值起始位置；跳过字符串值与嵌套对象、数组，重复字段按第一次出现处理。
         /// </summary>
         /// <param name="json">JSON 文本。</param>

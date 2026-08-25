@@ -6,7 +6,7 @@ using System.Text;
 namespace YokiFrame
 {
     /// <summary>
-    /// 提供 CommandBridge v2 的最小跨宿主命令策略。
+    /// 提供跨宿主 FileBridge 命令的最小允许策略。
     /// </summary>
     public sealed class YokiFrameCommandPolicy
     {

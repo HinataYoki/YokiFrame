@@ -217,9 +217,11 @@ namespace YokiFrame
             {
                 LogKit.Error("[AudioKit] Backend " + stage + " failed during disposal: " + exception);
             }
-            catch (Exception)
+            catch (Exception loggingException)
             {
-                // 清理路径不能依赖日志后端可用，否则一次日志异常会再次造成资源泄漏。
+                // 清理路径不能依赖日志后端可用；最后只写 Debug，避免二次异常中断剩余释放。
+                System.Diagnostics.Debug.WriteLine(
+                    "[AudioKit] Backend " + stage + " failed and logger was unavailable: " + loggingException);
             }
         }
 

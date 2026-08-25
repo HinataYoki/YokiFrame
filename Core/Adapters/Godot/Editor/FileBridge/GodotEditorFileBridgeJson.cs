@@ -91,15 +91,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 payloadJson 是合法 JSON，避免损坏文本进入 dispatcher。
-        /// </summary>
-        /// <param name="payloadJson">待验证 payload。</param>
-        public static void ValidatePayloadJson(string payloadJson)
-        {
-            JsonHelper.EnsureValidJson(payloadJson);
-        }
-
-        /// <summary>
         /// 创建 Editor Host 共用的 camelCase JSON 配置。
         /// </summary>
         /// <returns>序列化配置。</returns>

@@ -64,7 +64,7 @@ namespace YokiFrame
 
             try
             {
-                JsonHelper.EnsureValidJson(payloadJson);
+                YokiFrameJsonSyntaxValidator.EnsureValidJson(payloadJson);
             }
             catch (FormatException exception)
             {

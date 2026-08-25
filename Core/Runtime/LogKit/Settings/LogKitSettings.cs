@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 #if UNITY_EDITOR || (GODOT && TOOLS)
 using System.Globalization;
 using System.Text;
@@ -175,7 +176,8 @@ namespace YokiFrame
 #endif
 
         /// <summary>
-        /// 将通用设置中的 LogKit 开关和等级同步到 LogKit 运行状态；订阅者异常不会传播到日志调用方。
+        /// 将通用设置中的 LogKit 开关和等级同步到 LogKit 运行状态。
+        /// 订阅者异常只记录诊断，不传播到日志调用方，也不再走 LogKit 以免重入。
         /// </summary>
         public static void ApplyBaseRuntimeSettings()
         {
@@ -193,9 +195,10 @@ namespace YokiFrame
                 {
                     ((Action)handler)();
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
-                    // 订阅者异常不得传播到日志调用方。
+                    // 首次写日志也会走到这里；不能再调用 LogKit，否则可能重入工厂或覆盖层。
+                    Debug.WriteLine("[YokiFrame][LogKit] RuntimeSettingsApplied handler failed: " + exception);
                 }
             }
         }

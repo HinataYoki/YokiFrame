@@ -55,6 +55,47 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证首次访问发生在工厂注册前时先使用内存回退，工厂注册后下一次访问改用工厂 Store。
+        /// </summary>
+        [Test]
+        public void FactoryReplacesMemoryFallbackAfterEarlyAccess()
+        {
+            Assert.AreEqual("fallback", KitSettings.GetString("LogKit", "source", "fallback"));
+
+            KitSettings.RegisterDefaultStoreFactory(() =>
+            {
+                YokiFrameRuntimeSettingsStore store = new();
+                store.SetValue("LogKit", "source", "factory");
+                return store;
+            });
+
+            Assert.AreEqual("factory", KitSettings.GetString("LogKit", "source", "fallback"));
+        }
+
+        /// <summary>
+        /// 验证清除显式 Store 后，若默认工厂已注册，下一次访问会重新解析工厂而不是长期钉在内存回退。
+        /// </summary>
+        [Test]
+        public void ClearingExplicitStoreReusesRegisteredFactory()
+        {
+            KitSettings.RegisterDefaultStoreFactory(() =>
+            {
+                YokiFrameRuntimeSettingsStore store = new();
+                store.SetValue("LogKit", "source", "factory");
+                return store;
+            });
+            YokiFrameRuntimeSettingsStore explicitStore = new();
+            explicitStore.SetValue("LogKit", "source", "explicit");
+            KitSettings.SetStore(explicitStore);
+
+            Assert.AreEqual("explicit", KitSettings.GetString("LogKit", "source", "fallback"));
+
+            KitSettings.SetStore(null);
+
+            Assert.AreEqual("factory", KitSettings.GetString("LogKit", "source", "fallback"));
+        }
+
+        /// <summary>
         /// 验证显式注入 Store 优先于已注册的宿主默认工厂。
         /// </summary>
         [Test]

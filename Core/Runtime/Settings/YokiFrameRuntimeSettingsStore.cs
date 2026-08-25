@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace YokiFrame
 {
     /// <summary>
-    /// 保存当前项目加载后的运行时配置；宿主 Adapter 负责填充，Core Kit 只通过 IKitSettingsStore 读取。
+    /// 当前唯一的运行时设置实现：按 kit/key 保存稀疏字符串。
+    /// 宿主 Adapter 负责从 JSON 或 ProjectSettings 填充后注入，本类型不读写磁盘。
     /// </summary>
     public sealed class YokiFrameRuntimeSettingsStore : IKitSettingsStore
     {
