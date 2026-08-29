@@ -435,7 +435,7 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>按绑定输出形态计算 C# 字段类型表达式。</summary>
+        /// <summary>按绑定输出形态计算 C# 字段类型表达式；项目命名空间使用普通限定名，不添加 global:: 前缀。</summary>
         private static string GetFieldType(UIKitPanelCodeLayout layout, UIKitBindNode node)
         {
             switch (node.Strategy.OutputKind)
@@ -443,9 +443,9 @@ namespace YokiFrame
                 case UIKitBindOutputKind.Member:
                     return node.TypeName;
                 case UIKitBindOutputKind.Element:
-                    return "global::" + layout.GetElementNamespace() + "." + node.TypeName;
+                    return layout.GetElementNamespace() + "." + node.TypeName;
                 case UIKitBindOutputKind.Component:
-                    return "global::" + layout.ScriptNamespace + "." + node.TypeName;
+                    return layout.ScriptNamespace + "." + node.TypeName;
                 default:
                     return string.Empty;
             }

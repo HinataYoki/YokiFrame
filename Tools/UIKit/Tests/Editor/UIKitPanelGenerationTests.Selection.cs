@@ -29,6 +29,14 @@ namespace YokiFrame.Tests
                 AssertGeneratedOwnerSource(
                     sources[layout.GetComponentPath("InventoryComponent", false)],
                     "UIComponent");
+                string panelDesigner = sources[layout.PanelDesignerPath];
+                StringAssert.Contains(
+                    "public YokiFrame.GeneratedTests.OwnerTypesPanelUIElement.InventoryElement InventoryElement;",
+                    panelDesigner);
+                StringAssert.Contains(
+                    "public YokiFrame.GeneratedTests.InventoryComponent InventoryComponent;",
+                    panelDesigner);
+                StringAssert.DoesNotContain("global::", panelDesigner);
             }
             finally
             {
