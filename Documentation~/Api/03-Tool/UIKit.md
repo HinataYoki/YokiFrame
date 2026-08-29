@@ -308,7 +308,7 @@ UIKit.ClosePanel(panel);
 | `UIElement` | Element 节点 | 生成 Panel 内部可复用元素 |
 | `UIComponent` | Component 节点 | 生成可复用 UI 组件 |
 
-一个节点只挂一个 `Bind`。用户 partial 与 Designer 分开保存，重新生成不会覆盖用户 partial。
+一个节点只挂一个 `Bind`。用户 partial 与 Designer 分开保存，重新生成不会覆盖用户 partial。Designer 文件会带有 `YokiFrame UIKit` 自动生成头部，请勿直接修改其中内容。
 
 ## 生命周期与错误边界
 
