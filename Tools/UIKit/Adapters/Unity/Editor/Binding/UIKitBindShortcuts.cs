@@ -6,17 +6,10 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 提供 Bind 快捷键和 Panel 创建菜单；代码生成固定由三类 owner Inspector 发起。
+    /// 提供 Bind 快捷键；Panel 创建统一由 Workbench 发起，代码生成由 Workbench 或 owner Inspector 发起。
     /// </summary>
     internal static class UIKitBindShortcuts
     {
-        /// <summary>打开 Panel Prefab 创建窗口。</summary>
-        [MenuItem("YokiFrame/UIKit/Create Panel Prefab", false, 100)]
-        private static void OpenPanelCreator()
-        {
-            UIKitPanelCreatorWindow.Open();
-        }
-
         /// <summary>使用 Alt+B 为当前选择批量添加 Bind。</summary>
         [MenuItem("Edit/UIKit/Add Bind Component &b", false, 100)]
         private static void AddBind()

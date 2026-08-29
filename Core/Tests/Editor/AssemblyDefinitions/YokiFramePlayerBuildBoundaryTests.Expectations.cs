@@ -22,7 +22,7 @@ namespace YokiFrame
             "UnityEditorContextService", "UnityEditorContextInteractionProvider",
             "UIKitInteractionProvider", "UIKitCommandHandler", "UIKitSnapshotWriter",
             "UIKitBindScanner", "UIKitBindInspector", "UIKitPanelCodeGenerator",
-            "UIKitPrefabBindingProcessor", "UIKitEditorContextWriter", "UIKitPanelCreatorWindow",
+            "UIKitPrefabBindingProcessor", "UIKitEditorContextWriter",
             "UIPanelValidator", "UILevelPropertyDrawer",
             "YokiFrameSharedMemoryTelemetryContract", "ArchitectureRealtimeTestBootstrap",
             "AudioKitWorkbenchStressController", "EventKitRuntimeSmokeController",
