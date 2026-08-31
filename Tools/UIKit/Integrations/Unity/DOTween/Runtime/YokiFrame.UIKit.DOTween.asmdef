@@ -2,8 +2,7 @@
     "name": "YokiFrame.UIKit.DOTween",
     "rootNamespace": "YokiFrame",
     "references": [
-        "GUID:70f72e85051a8df4fa8542144c429d1f",
-        "DOTween.Modules"
+        "GUID:70f72e85051a8df4fa8542144c429d1f"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

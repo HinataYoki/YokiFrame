@@ -63,6 +63,7 @@ namespace YokiFrame.Tests
             AssertSingleDefine(null, new[] { "YooAsset" }, null, "YOKIFRAME_YOOASSET_SUPPORT");
             AssertSingleDefine(null, null, new[] { "Luban.Runtime.dll" }, "YOKIFRAME_LUBAN_SUPPORT");
             AssertSingleDefine(new[] { "com.cysharp.zstring" }, null, null, "YOKIFRAME_ZSTRING_SUPPORT");
+            AssertSingleDefine(null, new[] { "DOTween" }, null, "YOKIFRAME_DOTWEEN_SUPPORT");
             AssertSingleDefine(null, null, new[] { "DOTween.dll" }, "YOKIFRAME_DOTWEEN_SUPPORT");
             AssertSingleDefine(new[] { "com.jasonxudeveloper.nino" }, null, null, "YOKIFRAME_NINO_SUPPORT");
             AssertSingleDefine(new[] { "com.unity.inputsystem" }, null, null, "YOKIFRAME_INPUTSYSTEM_SUPPORT");

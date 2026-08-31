@@ -11,6 +11,8 @@ namespace YokiFrame
             "Assets/YokiFrame/Tools/UIKit/Adapters/Unity/Runtime/YokiFrame.UIKit.Unity.asmdef";
         private const string UIKIT_EDITOR_ASMDEF_PATH =
             "Assets/YokiFrame/Tools/UIKit/Adapters/Unity/Editor/YokiFrame.UIKit.Unity.Editor.asmdef";
+        private const string UIKIT_DOTWEEN_ASMDEF_PATH =
+            "Assets/YokiFrame/Tools/UIKit/Integrations/Unity/DOTween/Runtime/YokiFrame.UIKit.DOTween.asmdef";
 
         /// <summary>
         /// 验证 UIKit 只提供 Unity Runtime 与 Unity Editor 两个程序集，不创建共享或 Godot 实现壳。
@@ -38,6 +40,18 @@ namespace YokiFrame
             Assert.IsTrue(references.Contains("\"UniTask\""), "UIKit UniTask 必须使用可缺失程序集名引用。");
             Assert.IsFalse(references.Contains(".Editor"), "UIKit Runtime 禁止依赖 Editor 程序集。");
             Assert.IsFalse(references.Contains("AudioKit") || references.Contains("ActionKit"), "UIKit 禁止依赖其它 Tool。");
+        }
+
+        /// <summary>
+        /// 验证 UIKit DOTween 集成只依赖 DOTween 核心，避免未执行 DOTween Setup 时硬引用缺失的 Modules 程序集。
+        /// </summary>
+        [Test]
+        public void UIKitDOTweenIntegrationDoesNotRequireOptionalModulesAssembly()
+        {
+            string asmdef = ReadProjectFile(UIKIT_DOTWEEN_ASMDEF_PATH);
+            string references = GetReferencesBlock(asmdef);
+            Assert.IsFalse(references.Contains("DOTween.Modules"), "UIKit DOTween 集成不应硬引用可选 Modules 程序集。");
+            Assert.IsTrue(asmdef.Contains("YOKIFRAME_DOTWEEN_SUPPORT"), "UIKit DOTween 集成必须受 DOTween 宏保护。");
         }
 
         /// <summary>

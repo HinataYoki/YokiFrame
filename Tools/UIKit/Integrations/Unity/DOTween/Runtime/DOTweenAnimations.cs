@@ -105,7 +105,10 @@ namespace YokiFrame
         /// <inheritdoc />
         protected override Tween CreateTween(RectTransform target)
         {
-            return EnsureCanvasGroup(target).DOFade(mToAlpha, Duration).SetEase(mEase);
+            CanvasGroup group = EnsureCanvasGroup(target);
+            // 直接调用 DOTween 核心 To，避免依赖可选的 DOTween.Modules asmdef。
+            return DOTween.To(() => group.alpha, value => group.alpha = value, mToAlpha, Duration)
+                .SetEase(mEase);
         }
 
         /// <summary>获取或创建目标上的 CanvasGroup。</summary>
@@ -182,7 +185,13 @@ namespace YokiFrame
         /// <inheritdoc />
         protected override Tween CreateTween(RectTransform target)
         {
-            return target.DOAnchorPos(mToPosition, Duration).SetEase(mEase);
+            // anchoredPosition 属于 Unity UI 属性，使用 DOTween 核心 To 可兼容未执行 Setup 的安装形态。
+            return DOTween.To(
+                    () => target.anchoredPosition,
+                    value => target.anchoredPosition = value,
+                    mToPosition,
+                    Duration)
+                .SetEase(mEase);
         }
     }
 }

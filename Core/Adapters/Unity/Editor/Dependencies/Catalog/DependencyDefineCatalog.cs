@@ -27,7 +27,7 @@ namespace YokiFrame.Unity
             new(YOOASSET_SUPPORT_DEFINE, "com.tuyoogame.yooasset", "YooAsset", "YooAsset.dll"),
             new(LUBAN_SUPPORT_DEFINE, "com.code-philosophy.luban", "Luban.Runtime", "Luban.Runtime.dll"),
             new(ZSTRING_SUPPORT_DEFINE, "com.cysharp.zstring", "ZString", "ZString.dll"),
-            new(DOTWEEN_SUPPORT_DEFINE, "com.demigiant.dotween", "DOTween.Modules", "DOTween.dll"),
+            new(DOTWEEN_SUPPORT_DEFINE, "com.demigiant.dotween", "DOTween", "DOTween.dll"),
             new(NINO_SUPPORT_DEFINE, "com.jasonxudeveloper.nino", "Nino.Core", "Nino.Core.dll"),
             new(INPUT_SYSTEM_SUPPORT_DEFINE, "com.unity.inputsystem", "Unity.InputSystem", "Unity.InputSystem.dll")
         };
