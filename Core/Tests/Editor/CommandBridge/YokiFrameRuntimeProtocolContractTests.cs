@@ -68,6 +68,28 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证 Unity Editor 动态 FileBridge 路径在 containment 检查前拒绝目录分隔符，保持各宿主 SafeId 语义一致。
+        /// </summary>
+        [Test]
+        public void UnityDynamicFileBridgePathsRejectUnsafeIds()
+        {
+            string[] unsafeIds = { "bad/name", "../bad", @"bad\name", string.Empty, new string('a', 129) };
+            foreach (string unsafeId in unsafeIds)
+            {
+                Assert.Throws<ArgumentException>(() =>
+                    YokiFrameEditorFileBridgePaths.GetSnapshotPath(unsafeId, "state"));
+                Assert.Throws<ArgumentException>(() =>
+                    YokiFrameEditorFileBridgePaths.GetSnapshotPath("FsmKit", unsafeId));
+                Assert.Throws<ArgumentException>(() =>
+                    YokiFrameEditorFileBridgePaths.GetResponsePath(unsafeId));
+                Assert.Throws<ArgumentException>(() =>
+                    YokiFrameEditorFileBridgePaths.GetDeadletterInfoPath(unsafeId));
+                Assert.Throws<ArgumentException>(() =>
+                    YokiFrameEditorFileBridgePaths.GetDeadletterRequestPath(unsafeId));
+            }
+        }
+
+        /// <summary>
         /// 验证 Runtime assembly 暴露 Shared Memory v1 header 与 write state 契约。
         /// </summary>
         [Test]

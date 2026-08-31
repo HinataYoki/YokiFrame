@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 
+using System;
 using System.IO;
 using UnityEngine;
 
@@ -195,6 +196,8 @@ namespace YokiFrame
         /// <returns>snapshot 文件绝对路径。</returns>
         public static string GetSnapshotPath(string kit, string name)
         {
+            EnsureSafeId(kit, nameof(kit));
+            EnsureSafeId(name, nameof(name));
             return EnsureSafePathBelowVerifiedRoot(
                 GetSnapshotsRoot(),
                 Path.Combine(GetSnapshotsRoot(), kit, name + YokiFrameFileBridgeLayout.JSON_EXTENSION));
@@ -207,6 +210,7 @@ namespace YokiFrame
         /// <returns>response 文件绝对路径。</returns>
         public static string GetResponsePath(string requestId)
         {
+            EnsureSafeId(requestId, nameof(requestId));
             return EnsureSafePathBelowVerifiedRoot(
                 GetResultsRoot(),
                 Path.Combine(GetResultsRoot(), requestId + YokiFrameFileBridgeLayout.RESPONSE_FILE_SUFFIX));
@@ -231,6 +235,7 @@ namespace YokiFrame
         /// <returns>deadletter 诊断文件绝对路径。</returns>
         public static string GetDeadletterInfoPath(string deadletterId)
         {
+            EnsureSafeId(deadletterId, nameof(deadletterId));
             return EnsureSafePathBelowVerifiedRoot(
                 GetDeadletterRoot(),
                 Path.Combine(GetDeadletterRoot(), deadletterId + "-deadletter.json"));
@@ -243,6 +248,7 @@ namespace YokiFrame
         /// <returns>deadletter 原始请求文件绝对路径。</returns>
         public static string GetDeadletterRequestPath(string deadletterId)
         {
+            EnsureSafeId(deadletterId, nameof(deadletterId));
             return EnsureSafePathBelowVerifiedRoot(
                 GetDeadletterRoot(),
                 Path.Combine(GetDeadletterRoot(), deadletterId + "-request.json"));
@@ -314,6 +320,19 @@ namespace YokiFrame
             var fullPath = EnsureInsideProject(path);
             YokiFrameFilePathPolicy.EnsureNoReparsePointBelow(verifiedRoot, fullPath);
             return fullPath;
+        }
+
+        /// <summary>
+        /// 验证动态协议路径片段符合共享 SafeId 契约，阻止分隔符和目录穿越进入 FileBridge 文件名。
+        /// </summary>
+        /// <param name="value">待验证的路径片段。</param>
+        /// <param name="parameterName">异常参数名。</param>
+        private static void EnsureSafeId(string value, string parameterName)
+        {
+            if (!YokiFrameSafeIdContract.IsSafeId(value))
+            {
+                throw new ArgumentException("FileBridge path segment is not a safe ID.", parameterName);
+            }
         }
 
         /// <summary>规范化候选路径并拒绝逃逸到项目根之外。</summary>

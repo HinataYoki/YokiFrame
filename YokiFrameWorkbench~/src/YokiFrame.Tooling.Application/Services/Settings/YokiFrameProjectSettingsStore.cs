@@ -45,7 +45,7 @@ public sealed partial class YokiFrameProjectSettingsStore
     {
         ArgumentNullException.ThrowIfNull(target);
         IYokiFrameProjectSettingsBackend backend = ResolveBackend(target);
-        return ResolveInside(backend.GetRelativePath(target), string.Empty);
+        return ResolveInside(backend.GetRelativePath(target));
     }
 
     /// <summary>读取一个或多个目标，返回同一项目锁保护下的结构化快照。</summary>
@@ -149,21 +149,7 @@ public sealed partial class YokiFrameProjectSettingsStore
     /// <summary>仅读取文件指纹计算 revision，供损坏外部文件的冲突响应使用。</summary>
     private string ComputeRevisionFromPaths(IReadOnlyList<YokiFrameProjectSettingsTarget> targets)
     {
-        List<LoadedSettingsDocument> documents = new(targets.Count);
-        foreach (YokiFrameProjectSettingsTarget target in targets.OrderBy(static item => item.Id, StringComparer.Ordinal))
-        {
-            string path = GetPath(target);
-            bool exists = File.Exists(path);
-            documents.Add(new LoadedSettingsDocument(
-                target,
-                path,
-                exists,
-                exists ? ReadCurrentFingerprint(path) : MISSING_FINGERPRINT,
-                string.Empty,
-                new List<YokiFrameProjectSetting>()));
-        }
-
-        return ComputeCombinedFingerprint(documents);
+        return ComputeCombinedFingerprint(LoadDocumentsByFingerprint(targets));
     }
 
     /// <summary>读取冲突后的最新快照；文档损坏时返回只含路径和指纹的空投影。</summary>
@@ -296,8 +282,8 @@ public sealed partial class YokiFrameProjectSettingsStore
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
 
-    /// <summary>解析相对路径并确认结果仍位于当前项目约束目录。</summary>
-    private string ResolveInside(string relativePath, string containmentDirectory)
+    /// <summary>解析后端相对路径并确认结果仍位于当前项目根目录。</summary>
+    private string ResolveInside(string relativePath)
     {
         string candidate = Path.GetFullPath(Path.Combine(mProjectRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
         string projectPrefix = mProjectRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
@@ -307,16 +293,6 @@ public sealed partial class YokiFrameProjectSettingsStore
         if (!candidate.StartsWith(projectPrefix, comparison))
         {
             throw new InvalidOperationException("Settings path escaped the project root.");
-        }
-
-        if (!string.IsNullOrEmpty(containmentDirectory))
-        {
-            string containmentRoot = Path.GetFullPath(Path.Combine(mProjectRoot, containmentDirectory));
-            string containmentPrefix = containmentRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            if (!candidate.StartsWith(containmentPrefix, comparison))
-            {
-                throw new InvalidOperationException("Settings path escaped its project boundary.");
-            }
         }
 
         return candidate;

@@ -1,17 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using YokiFrame.Client;
 using YokiFrame.Client.FileBridge.Diagnostics;
-using YokiFrame.Protocol.Common;
 using YokiFrame.Protocol.FileBridge;
-using YokiFrame.Protocol.Results;
-using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Engines;
 using YokiFrame.Tooling.Application.Models;
-using YokiFrame.Tooling.Application.Models.Architecture;
-using YokiFrame.Tooling.Application.Models.SaveKit;
-using YokiFrame.Tooling.Application.Models.SpatialKit;
-using YokiFrame.Tooling.Application.Models.UIKit;
 
 namespace YokiFrame.Tooling.Application.Services;
 
@@ -110,30 +100,6 @@ public sealed partial class WorkbenchDashboardService : IDisposable
         CancellationToken cancellationToken)
     {
         return await SendCommandAsync(engineId, "System", action, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// 读取 engine registry 列表；失败时记录错误并返回空列表。
-    /// </summary>
-    /// <param name="errors">错误收集列表。</param>
-    /// <returns>engine registry 列表。</returns>
-    private IReadOnlyList<EngineRegistryEntry> ReadEngines(List<string> errors)
-    {
-        try
-        {
-            return mClient.ReadEngineEntries();
-        }
-        catch (EngineRegistryReadException exception)
-        {
-            errors.Add("engine list: " + exception.Message);
-            errors.AddRange(exception.InvalidPaths.Select(static path => "engine registry invalid: " + path));
-            return exception.ValidEntries;
-        }
-        catch (Exception exception)
-        {
-            errors.Add("engine list: " + exception.Message);
-            return Array.Empty<EngineRegistryEntry>();
-        }
     }
 
     /// <summary>

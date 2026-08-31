@@ -138,11 +138,23 @@ namespace YokiFrame
             catch
             {
                 IsRunning = false;
-                StopFastChannel();
-                DisposeTelemetry();
-                ReleaseActiveState();
-                mAdmissionLease?.Dispose();
-                mAdmissionLease = null;
+                try
+                {
+                    StopFastChannel();
+                    DisposeTelemetry();
+                    ReleaseActiveState();
+                }
+                finally
+                {
+                    try
+                    {
+                        mAdmissionLease?.Dispose();
+                    }
+                    finally
+                    {
+                        mAdmissionLease = null;
+                    }
+                }
                 throw;
             }
         }
@@ -192,11 +204,23 @@ namespace YokiFrame
             }
 
             IsRunning = false;
-            StopFastChannel();
-            DisposeTelemetry();
-            ReleaseActiveState();
-            mAdmissionLease?.Dispose();
-            mAdmissionLease = null;
+            try
+            {
+                StopFastChannel();
+                DisposeTelemetry();
+                ReleaseActiveState();
+            }
+            finally
+            {
+                try
+                {
+                    mAdmissionLease?.Dispose();
+                }
+                finally
+                {
+                    mAdmissionLease = null;
+                }
+            }
         }
 
         /// <summary>

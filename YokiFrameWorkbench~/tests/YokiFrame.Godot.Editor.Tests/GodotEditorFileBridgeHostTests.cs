@@ -39,6 +39,66 @@ public sealed class GodotEditorFileBridgeHostTests
     }
 
     /// <summary>
+    /// 验证 Editor registry 清理因外部文件句柄失败时，Stop 仍释放 admission lease，避免编辑器 Host 无法恢复启动。
+    /// </summary>
+    [Fact]
+    public void StopReleasesAdmissionLeaseWhenActiveStateCleanupFails()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using GodotEditorFileBridgeHostFixture fixture = GodotEditorFileBridgeHostFixture.Create();
+        using GodotEditorFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
+        host.Start();
+
+        using (FileStream registryBlocker = new(
+            fixture.RegistryPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read))
+        {
+            Assert.Throws<IOException>(() => host.Stop());
+            Assert.False(host.IsRunning);
+        }
+
+        using GodotEditorFileBridgeHost restartedHost = new(fixture.ProjectRoot, "4.7.0");
+        restartedHost.Start();
+        Assert.True(restartedHost.IsRunning);
+    }
+
+    /// <summary>
+    /// 验证 Editor 启动阶段 registry 写入失败时，Start 回滚也会释放已经取得的 admission lease。
+    /// </summary>
+    [Fact]
+    public void StartFailureReleasesAdmissionLease()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using GodotEditorFileBridgeHostFixture fixture = GodotEditorFileBridgeHostFixture.Create();
+        Directory.CreateDirectory(Path.GetDirectoryName(fixture.RegistryPath)!);
+        File.WriteAllText(fixture.RegistryPath, "{\"sessionId\":\"old\",\"generation\":1}");
+        using (FileStream registryBlocker = new(
+            fixture.RegistryPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read))
+        {
+            using GodotEditorFileBridgeHost failedHost = new(fixture.ProjectRoot, "4.7.0");
+            Assert.Throws<IOException>(() => failedHost.Start());
+            Assert.False(failedHost.IsRunning);
+        }
+
+        using GodotEditorFileBridgeHost restartedHost = new(fixture.ProjectRoot, "4.7.0");
+        restartedHost.Start();
+        Assert.True(restartedHost.IsRunning);
+    }
+
+    /// <summary>
     /// 验证 Editor Host 只接受三个 System 只读命令，并为 ping 写入与当前身份一致的 terminal response。
     /// </summary>
     [Fact]

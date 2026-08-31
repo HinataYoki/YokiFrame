@@ -326,7 +326,6 @@ public sealed class CommandExecutionService
                     FastChannelMaximumCooldown.TotalMilliseconds,
                     FastChannelInitialCooldown.TotalMilliseconds * multiplier));
             mFastChannelHealth[identityKey] = new FastChannelHealth(
-                identityKey,
                 failureCount,
                 DateTimeOffset.UtcNow + cooldown);
             TrimFastChannelHealthCache();
@@ -387,7 +386,7 @@ public sealed class CommandExecutionService
     /// <summary>
     /// 保存一个宿主代次的快速通道失败窗口。
     /// </summary>
-    private sealed record FastChannelHealth(string IdentityKey, int FailureCount, DateTimeOffset CooldownUntilUtc);
+    private sealed record FastChannelHealth(int FailureCount, DateTimeOffset CooldownUntilUtc);
 
     /// <summary>
     /// 判断异常是否属于可选 FastChannel 的连接、协议或对象生命周期故障。

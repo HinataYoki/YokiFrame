@@ -58,6 +58,7 @@
         "evidence": ["command-response"]
       }
     ],
-    "sourcePath": "Tools/SpatialKit/Editor/Interaction/SpatialKitInteractionProvider.cs"
+    "sourcePath": "Tools/SpatialKit/Editor/Interaction/SpatialKitInteractionProvider.cs",
+    "sourceHash": "b306faea37543c3b145f16b93a14df959568c4a03b87462d97b91dd8c9d075bb"
   }
 }

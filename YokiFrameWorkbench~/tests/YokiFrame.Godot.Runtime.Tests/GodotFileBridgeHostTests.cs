@@ -513,6 +513,66 @@ public sealed partial class GodotFileBridgeHostTests
     }
 
     /// <summary>
+    /// 验证活动 registry 清理因外部文件句柄失败时，Stop 仍释放 admission lease，避免后续 Host 被永久判定为已占用。
+    /// </summary>
+    [Fact]
+    public void StopReleasesAdmissionLeaseWhenActiveStateCleanupFails()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
+        using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
+        host.Start();
+
+        using (FileStream registryBlocker = new(
+            fixture.RegistryPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read))
+        {
+            Assert.Throws<IOException>(() => host.Stop());
+            Assert.False(host.IsRunning);
+        }
+
+        using GodotFileBridgeHost restartedHost = new(fixture.ProjectRoot, "4.7.0");
+        restartedHost.Start();
+        Assert.True(restartedHost.IsRunning);
+    }
+
+    /// <summary>
+    /// 验证启动阶段 registry 写入失败时，Start 回滚也会释放已经取得的 admission lease。
+    /// </summary>
+    [Fact]
+    public void StartFailureReleasesAdmissionLease()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
+        Directory.CreateDirectory(Path.GetDirectoryName(fixture.RegistryPath)!);
+        File.WriteAllText(fixture.RegistryPath, "{\"sessionId\":\"old\",\"generation\":1}");
+        using (FileStream registryBlocker = new(
+            fixture.RegistryPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read))
+        {
+            using GodotFileBridgeHost failedHost = new(fixture.ProjectRoot, "4.7.0");
+            Assert.Throws<IOException>(() => failedHost.Start());
+            Assert.False(failedHost.IsRunning);
+        }
+
+        using GodotFileBridgeHost restartedHost = new(fixture.ProjectRoot, "4.7.0");
+        restartedHost.Start();
+        Assert.True(restartedHost.IsRunning);
+    }
+
+    /// <summary>
     /// 验证同一项目的第二个 Runtime Host 不得覆盖首个 Host 的 registry、heartbeat 或 listener。
     /// </summary>
     [Fact]

@@ -1,3 +1,4 @@
+using YokiFrame;
 using YokiFrame.Protocol.FastChannel;
 
 namespace YokiFrame.Protocol.Tests;
@@ -23,6 +24,7 @@ public sealed class FastChannelEndpointTests
 
         var roundtrip = FastChannelEndpoint.FromJson(endpoint.ToJson());
 
+        Assert.Equal(YokiFrameFastChannelContract.PROTOCOL_VERSION, roundtrip.ProtocolVersion);
         Assert.True(roundtrip.Enabled);
         Assert.Equal("unity-editor", roundtrip.EngineId);
         Assert.Equal("session-a", roundtrip.SessionId);

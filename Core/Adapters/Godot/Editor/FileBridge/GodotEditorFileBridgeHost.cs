@@ -115,9 +115,21 @@ namespace YokiFrame
             catch
             {
                 IsRunning = false;
-                ReleaseActiveState();
-                mAdmissionLease?.Dispose();
-                mAdmissionLease = null;
+                try
+                {
+                    ReleaseActiveState();
+                }
+                finally
+                {
+                    try
+                    {
+                        mAdmissionLease?.Dispose();
+                    }
+                    finally
+                    {
+                        mAdmissionLease = null;
+                    }
+                }
                 throw;
             }
         }
@@ -145,9 +157,21 @@ namespace YokiFrame
             }
 
             IsRunning = false;
-            ReleaseActiveState();
-            mAdmissionLease?.Dispose();
-            mAdmissionLease = null;
+            try
+            {
+                ReleaseActiveState();
+            }
+            finally
+            {
+                try
+                {
+                    mAdmissionLease?.Dispose();
+                }
+                finally
+                {
+                    mAdmissionLease = null;
+                }
+            }
         }
 
         /// <summary>

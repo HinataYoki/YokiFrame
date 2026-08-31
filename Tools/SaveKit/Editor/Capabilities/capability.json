@@ -34,6 +34,7 @@
         "evidence": ["command-response"]
       }
     ],
-    "sourcePath": "Tools/SaveKit/Editor/Interaction/SaveKitInteractionProvider.cs"
+    "sourcePath": "Tools/SaveKit/Editor/Interaction/SaveKitInteractionProvider.cs",
+    "sourceHash": "e94f3d00cb615d3dd6a2bf3a82fbaa4064f8c5662e8234d0542217d50f10e41f"
   }
 }

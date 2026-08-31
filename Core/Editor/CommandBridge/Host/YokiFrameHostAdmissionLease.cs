@@ -22,14 +22,14 @@ namespace YokiFrame
         private const int ERROR_LOCK_VIOLATION = 33;
         private FileStream mStream;
 
-        private YokiFrameHostAdmissionLease(FileStream stream, string lockPath)
+        /// <summary>
+        /// 创建只持有独占文件句柄的 lease；锁路径只在打开句柄时使用，不作为生命周期状态保存。
+        /// </summary>
+        /// <param name="stream">已按独占方式打开的锁文件句柄。</param>
+        private YokiFrameHostAdmissionLease(FileStream stream)
         {
             mStream = stream;
-            LockPath = lockPath;
         }
-
-        /// <summary>获取此 lease 使用的锁路径。</summary>
-        public string LockPath { get; }
 
         /// <summary>尝试取得独占文件句柄。</summary>
         public static YokiFrameHostAdmissionResult TryAcquire(
@@ -56,7 +56,7 @@ namespace YokiFrame
 
                 Directory.CreateDirectory(directoryPath);
                 var stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-                lease = new YokiFrameHostAdmissionLease(stream, lockPath);
+                lease = new YokiFrameHostAdmissionLease(stream);
                 return YokiFrameHostAdmissionResult.Acquired;
             }
             catch (IOException exception)

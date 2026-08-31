@@ -210,6 +210,25 @@ public sealed class ProjectCapabilityDescriptorTests
     }
 
     /// <summary>
+    /// 验证包内全部 capability descriptor 都绑定当前实现源码，避免未被逐项语义测试覆盖的 Kit 静默漂移。
+    /// </summary>
+    [Fact]
+    public void AllPackageCapabilityDescriptorsHaveCurrentSourceHashes()
+    {
+        var packageRoot = FindPackageRoot();
+        var descriptorPaths = Directory
+            .EnumerateFiles(Path.Combine(packageRoot, "Core"), "capability.json", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(packageRoot, "Tools"), "capability.json", SearchOption.AllDirectories))
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.NotEmpty(descriptorPaths);
+        Assert.All(
+            descriptorPaths,
+            path => AssertSourceHash(ProjectCapabilityDescriptor.FromJson(File.ReadAllText(path)).Kit));
+    }
+
+    /// <summary>
     /// 校验通用 descriptor schema、唯一 action、验证配方引用和实现来源哈希。
     /// </summary>
     /// <param name="descriptor">待检查 descriptor。</param>

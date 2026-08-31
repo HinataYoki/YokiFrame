@@ -20,7 +20,7 @@ public sealed class FastChannelEndpoint
     /// 获取或设置 FastChannel endpoint 协议版本。
     /// </summary>
     [JsonPropertyName("protocolVersion")]
-    public int ProtocolVersion { get; set; } = 1;
+    public int ProtocolVersion { get; set; } = YokiFrameFastChannelContract.PROTOCOL_VERSION;
 
     /// <summary>
     /// 获取或设置 engine 标识。
