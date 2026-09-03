@@ -15,7 +15,7 @@ public sealed class GodotPluginEntryPointBuilder
             + "name=\"YokiFrame\"\n"
             + "description=\"YokiFrame integration for Godot .NET.\"\n"
             + "author=\"YokiFrame\"\n"
-            + "version=\"2.0.0-preview\"\n"
+            + "version=\"2.0.0\"\n"
             + "script=\"YokiFrameGodotEditorPlugin.cs\"\n";
     }
 

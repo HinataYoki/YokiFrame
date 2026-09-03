@@ -1,6 +1,6 @@
 {
     "name": "com.hinatayoki.yokiframe",
-    "version": "2.0.0-preview",
+    "version": "2.0.0",
     "displayName": "YokiFrame",
     "description": "YokiFrame is a cross-engine C# game framework with Unity and Godot adapters, a validated FileBridge protocol, shared-memory telemetry, and an Avalonia Workbench that provides workbench, installer, and CLI workflows for developers and AI tools.",
     "unity": "2022.3",

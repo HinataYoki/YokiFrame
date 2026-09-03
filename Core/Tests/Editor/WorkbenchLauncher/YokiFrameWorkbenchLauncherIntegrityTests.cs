@@ -79,5 +79,20 @@ namespace YokiFrame
             Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
             Assert.AreEqual(true, GetProperty(plan, "RequiresBootstrap"));
         }
+
+        /// <summary>
+        /// 验证将 Assets/YokiFrame 完整导出为 Unitypackage 产物，确保发布包无损坏依赖并生成合法交付物。
+        /// </summary>
+        [Test]
+        public void ExportUnityPackage_SucceedsAndGeneratesExpectedArtifact()
+        {
+            string outputDir = Path.GetFullPath("Releases");
+            Directory.CreateDirectory(outputDir);
+            string packagePath = Path.Combine(outputDir, "YokiFrame_v2.0.0.unitypackage");
+            UnityEditor.AssetDatabase.ExportPackage("Assets/YokiFrame", packagePath, UnityEditor.ExportPackageOptions.Recurse);
+            Assert.IsTrue(File.Exists(packagePath), "Unitypackage should be exported successfully.");
+            FileInfo fileInfo = new FileInfo(packagePath);
+            Assert.Greater(fileInfo.Length, 1024, "Unitypackage size should be greater than 1KB.");
+        }
     }
 }

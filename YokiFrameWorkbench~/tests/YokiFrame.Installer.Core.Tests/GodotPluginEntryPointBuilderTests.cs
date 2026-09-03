@@ -19,7 +19,7 @@ public sealed class GodotPluginEntryPointBuilderTests
         Assert.Equal("YokiFrame", plugin["name"]);
         Assert.Equal("YokiFrame integration for Godot .NET.", plugin["description"]);
         Assert.Equal("YokiFrame", plugin["author"]);
-        Assert.Equal("2.0.0-preview", plugin["version"]);
+        Assert.Equal("2.0.0", plugin["version"]);
         Assert.Equal("YokiFrameGodotEditorPlugin.cs", plugin["script"]);
         Assert.Equal(5, plugin.Count);
     }

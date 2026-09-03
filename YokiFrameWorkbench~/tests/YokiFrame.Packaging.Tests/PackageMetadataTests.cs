@@ -11,7 +11,7 @@ public sealed class PackageMetadataTests
     private const string PACKAGE_NAME = "com.hinatayoki.yokiframe";
     private const string UNITY_VERSION = "2022.3";
     private const string REPOSITORY_URL = "https://github.com/HinataYoki/YokiFrame.git";
-    private const string VERSION_PATTERN = @"^2\.0\.(?:0|[1-9][0-9]*)-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*$";
+    private const string VERSION_PATTERN = @"^2\.0\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$";
 
     private static readonly HashSet<string> sRequiredCapabilityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
