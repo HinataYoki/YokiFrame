@@ -40,6 +40,16 @@ namespace YokiFrame
             Assert.AreEqual(0, implicitDefault.InitialCount);
             Assert.AreEqual(PoolOptions.UNBOUNDED, implicitDefault.MaxRetained);
             Assert.AreEqual(0, zeroRetained.MaxRetained);
+
+            // 验证 IEquatable<PoolOptions> 与值相等运算符
+            PoolOptions explicitDefault = new(0, PoolOptions.UNBOUNDED);
+            Assert.AreEqual(defaultValue, explicitDefault);
+            Assert.AreEqual(implicitDefault, explicitDefault);
+            Assert.IsTrue(defaultValue == explicitDefault);
+            Assert.IsTrue(implicitDefault == PoolOptions.Default);
+            Assert.IsFalse(defaultValue != explicitDefault);
+            Assert.IsFalse(defaultValue == zeroRetained);
+            Assert.AreEqual(defaultValue.GetHashCode(), explicitDefault.GetHashCode());
         }
 
         /// <summary>

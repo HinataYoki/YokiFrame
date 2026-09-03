@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace YokiFrame
@@ -87,7 +88,7 @@ namespace YokiFrame
         /// <summary>返回便于诊断的二维向量文本。</summary>
         public override string ToString()
         {
-            return "(" + X.ToString("F2") + ", " + Y.ToString("F2") + ")";
+            return "(" + X.ToString("F2", CultureInfo.InvariantCulture) + ", " + Y.ToString("F2", CultureInfo.InvariantCulture) + ")";
         }
     }
 }

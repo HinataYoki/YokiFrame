@@ -33,8 +33,22 @@ namespace YokiFrame
         {
             unchecked
             {
-                return (AssetType.GetHashCode() * 397) ^ StringComparer.Ordinal.GetHashCode(Path);
+                int typeHash = AssetType != null ? AssetType.GetHashCode() : 0;
+                int pathHash = Path != null ? StringComparer.Ordinal.GetHashCode(Path) : 0;
+                return (typeHash * 397) ^ pathHash;
             }
         }
+
+        /// <summary>判断两个资源缓存键是否相等。</summary>
+        /// <param name="left">左侧操作数。</param>
+        /// <param name="right">右侧操作数。</param>
+        /// <returns>两个键相等时返回 true，否则返回 false。</returns>
+        public static bool operator ==(ResCacheKey left, ResCacheKey right) => left.Equals(right);
+
+        /// <summary>判断两个资源缓存键是否不相等。</summary>
+        /// <param name="left">左侧操作数。</param>
+        /// <param name="right">右侧操作数。</param>
+        /// <returns>两个键不相等时返回 true，否则返回 false。</returns>
+        public static bool operator !=(ResCacheKey left, ResCacheKey right) => !left.Equals(right);
     }
 }

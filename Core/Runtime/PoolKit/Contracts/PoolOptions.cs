@@ -5,7 +5,7 @@ namespace YokiFrame
     /// <summary>
     /// 对象池的预热和缓存容量配置。
     /// </summary>
-    public readonly struct PoolOptions
+    public readonly struct PoolOptions : IEquatable<PoolOptions>
     {
         /// <summary>
         /// C# 9 的默认 struct 值没有机会执行参数化构造，使用该标记把它稳定映射为默认容量策略。
@@ -74,5 +74,41 @@ namespace YokiFrame
         {
             get { return mHasExplicitValues ? mMaxRetained : UNBOUNDED; }
         }
+
+        /// <summary>
+        /// 判断两个容量配置是否具有相同的业务容量语义。
+        /// </summary>
+        /// <param name="other">另一个容量配置。</param>
+        /// <returns>预热和最大容量均一致时返回 true。</returns>
+        public bool Equals(PoolOptions other) => InitialCount == other.InitialCount && MaxRetained == other.MaxRetained;
+
+        /// <summary>
+        /// 判断任意对象是否为相同容量配置。
+        /// </summary>
+        /// <param name="obj">待比较对象。</param>
+        /// <returns>对象为相同业务语义的 PoolOptions 时返回 true。</returns>
+        public override bool Equals(object obj) => obj is PoolOptions other && Equals(other);
+
+        /// <summary>
+        /// 基于业务容量属性生成哈希值。
+        /// </summary>
+        /// <returns>容量配置的哈希值。</returns>
+        public override int GetHashCode() => HashCode.Combine(InitialCount, MaxRetained);
+
+        /// <summary>
+        /// 比较两个容量配置是否相等。
+        /// </summary>
+        /// <param name="left">左侧配置。</param>
+        /// <param name="right">右侧配置。</param>
+        /// <returns>业务语义一致时返回 true。</returns>
+        public static bool operator ==(PoolOptions left, PoolOptions right) => left.Equals(right);
+
+        /// <summary>
+        /// 比较两个容量配置是否不相等。
+        /// </summary>
+        /// <param name="left">左侧配置。</param>
+        /// <param name="right">右侧配置。</param>
+        /// <returns>业务语义不一致时返回 true。</returns>
+        public static bool operator !=(PoolOptions left, PoolOptions right) => !left.Equals(right);
     }
 }

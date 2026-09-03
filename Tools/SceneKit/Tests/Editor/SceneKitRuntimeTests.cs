@@ -290,6 +290,39 @@ namespace YokiFrame.Tests
             }
         }
 
+        /// <summary>验证 SceneHandle 与 SceneLoadResult 在 default 状态下的空安全与值相等语义。</summary>
+        [Test]
+        public void SceneHandle_And_SceneLoadResult_ValueEqualityAndDefaultSafety()
+        {
+            SceneHandle defaultHandle = default;
+            SceneHandle explicitEmpty = new(null, 0, false);
+            SceneHandle validHandle = new("Gameplay", 1, true);
+
+            // 验证 default 句柄 SceneName 永远非空
+            Assert.AreEqual(string.Empty, defaultHandle.SceneName);
+            Assert.AreEqual(0, defaultHandle.SceneName.Length);
+            Assert.IsFalse(defaultHandle.IsValid);
+
+            // 验证值相等性与运算符
+            Assert.AreEqual(defaultHandle, explicitEmpty);
+            Assert.IsTrue(defaultHandle == explicitEmpty);
+            Assert.IsFalse(defaultHandle != explicitEmpty);
+            Assert.IsTrue(defaultHandle != validHandle);
+            Assert.AreEqual(defaultHandle.GetHashCode(), explicitEmpty.GetHashCode());
+
+            // 验证 SceneLoadResult 值相等性
+            SceneLoadResult result1 = new(validHandle);
+            SceneLoadResult result2 = new(new SceneHandle("Gameplay", 1, true));
+            SceneLoadResult defaultResult = default;
+            Assert.IsTrue(result1.Succeeded);
+            Assert.IsFalse(defaultResult.Succeeded);
+            Assert.AreEqual(result1, result2);
+            Assert.IsTrue(result1 == result2);
+            Assert.IsFalse(result1 != result2);
+            Assert.IsTrue(result1 != defaultResult);
+            Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
+        }
+
         /// <summary>提供普通资源与场景可选能力的同步测试 Provider。</summary>
         private sealed class TestResourceProvider : IResourceProvider, IResSceneProvider
         {

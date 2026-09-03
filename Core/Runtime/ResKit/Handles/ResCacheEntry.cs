@@ -313,6 +313,7 @@ namespace YokiFrame
             if (dispose)
             {
                 LoadCancellation?.Dispose();
+                GC.SuppressFinalize(this);
             }
         }
     }

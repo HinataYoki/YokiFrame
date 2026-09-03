@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace YokiFrame
 {
     /// <summary>描述一次二维投影半径查询，供 Snapshot 批量查询使用。</summary>
-    public readonly struct SpatialRadiusQuery
+    public readonly struct SpatialRadiusQuery : IEquatable<SpatialRadiusQuery>
     {
         /// <summary>创建半径查询描述。</summary>
         /// <param name="center">查询中心。</param>
@@ -21,6 +21,21 @@ namespace YokiFrame
 
         /// <summary>获取查询半径。</summary>
         public float Radius { get; }
+
+        /// <inheritdoc />
+        public bool Equals(SpatialRadiusQuery other) => Center == other.Center && Radius == other.Radius;
+
+        /// <inheritdoc />
+        public override bool Equals(object obj) => obj is SpatialRadiusQuery other && Equals(other);
+
+        /// <inheritdoc />
+        public override int GetHashCode() => HashCode.Combine(Center, Radius);
+
+        /// <summary>比较两个半径查询是否相等。</summary>
+        public static bool operator ==(SpatialRadiusQuery left, SpatialRadiusQuery right) => left.Equals(right);
+
+        /// <summary>比较两个半径查询是否不等。</summary>
+        public static bool operator !=(SpatialRadiusQuery left, SpatialRadiusQuery right) => !left.Equals(right);
     }
 
     /// <summary>

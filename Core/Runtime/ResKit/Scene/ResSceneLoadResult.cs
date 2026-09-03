@@ -1,7 +1,9 @@
+using System;
+
 namespace YokiFrame
 {
     /// <summary>表示 ResKit Provider 完成一次场景加载后的结果。</summary>
-    public readonly struct ResSceneLoadResult
+    public readonly struct ResSceneLoadResult : IEquatable<ResSceneLoadResult>
     {
         /// <summary>创建场景加载结果。</summary>
         public ResSceneLoadResult(ResSceneHandle scene)
@@ -14,5 +16,20 @@ namespace YokiFrame
 
         /// <summary>获取加载是否成功。</summary>
         public bool Succeeded => Scene.IsValid;
+
+        /// <inheritdoc />
+        public bool Equals(ResSceneLoadResult other) => Scene.Equals(other.Scene);
+
+        /// <inheritdoc />
+        public override bool Equals(object obj) => obj is ResSceneLoadResult other && Equals(other);
+
+        /// <inheritdoc />
+        public override int GetHashCode() => Scene.GetHashCode();
+
+        /// <summary>比较两个场景加载结果是否相等。</summary>
+        public static bool operator ==(ResSceneLoadResult left, ResSceneLoadResult right) => left.Equals(right);
+
+        /// <summary>比较两个场景加载结果是否不等。</summary>
+        public static bool operator !=(ResSceneLoadResult left, ResSceneLoadResult right) => !left.Equals(right);
     }
 }

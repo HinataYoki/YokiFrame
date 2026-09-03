@@ -62,6 +62,21 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>
+        /// 判断两个枚举事件缓存键是否相等。
+        /// </summary>
+        /// <param name="left">左侧操作数。</param>
+        /// <param name="right">右侧操作数。</param>
+        /// <returns>两个键相等时返回 true，否则返回 false。</returns>
+        public static bool operator ==(EnumEventKey left, EnumEventKey right) => left.Equals(right);
+
+        /// <summary>
+        /// 判断两个枚举事件缓存键是否不相等。
+        /// </summary>
+        /// <param name="left">左侧操作数。</param>
+        /// <param name="right">右侧操作数。</param>
+        /// <returns>两个键不相等时返回 true，否则返回 false。</returns>
+        public static bool operator !=(EnumEventKey left, EnumEventKey right) => !left.Equals(right);
     }
 
     /// <summary>以枚举值为键的事件总线。</summary>
@@ -445,7 +460,8 @@ namespace YokiFrame
         private static class EnumValueCache<TEnum> where TEnum : Enum
         {
             private const int MAX_CACHED_VALUES = 128;
-            private static readonly Dictionary<TEnum, ulong> sValues = new();
+            private static readonly object sLock = new();
+            private static volatile Dictionary<TEnum, ulong> sValues = new();
 
             /// <summary>获取当前枚举类型的底层类型码，避免每次查找反射元数据。</summary>
             internal static readonly TypeCode UnderlyingTypeCode;
@@ -463,7 +479,7 @@ namespace YokiFrame
                 UnderlyingTypeCode = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(TEnum)));
             }
 
-            /// <summary>读取已缓存转换结果；首次见到的值才执行接口转换并按预算缓存。</summary>
+            /// <summary>读取已缓存转换结果；命中时零锁极速返回，冷路径安全加锁并以写时复制发布快照。</summary>
             /// <param name="value">需要转换的枚举值。</param>
             /// <returns>用于 EventKit 字典的无符号底层值。</returns>
             internal static ulong ToUInt64(TEnum value)
@@ -473,13 +489,23 @@ namespace YokiFrame
                     return cachedValue;
                 }
 
-                ulong convertedValue = ToEnumKeyValue(value);
-                if (sValues.Count < MAX_CACHED_VALUES)
+                lock (sLock)
                 {
-                    sValues.Add(value, convertedValue);
-                }
+                    if (sValues.TryGetValue(value, out cachedValue))
+                    {
+                        return cachedValue;
+                    }
 
-                return convertedValue;
+                    ulong convertedValue = ToEnumKeyValue(value);
+                    if (sValues.Count < MAX_CACHED_VALUES)
+                    {
+                        Dictionary<TEnum, ulong> copy = new(sValues);
+                        copy[value] = convertedValue;
+                        sValues = copy;
+                    }
+
+                    return convertedValue;
+                }
             }
         }
     }

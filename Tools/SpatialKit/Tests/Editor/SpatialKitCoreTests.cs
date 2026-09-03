@@ -240,6 +240,23 @@ namespace YokiFrame.Tests
             Assert.Throws<ArgumentException>(() => snapshot.QueryBoundsBatchParallel(boundsQueries, results));
         }
 
+        /// <summary>验证 SpatialRadiusQuery 满足泛型值相等契约与重载运算符一致性。</summary>
+        [Test]
+        public void SpatialRadiusQuery_EqualityAndOperatorsUseValueSemantics()
+        {
+            var query1 = new SpatialRadiusQuery(new YokiVector3(1f, 2f, 3f), 5f);
+            var query2 = new SpatialRadiusQuery(new YokiVector3(1f, 2f, 3f), 5f);
+            var query3 = new SpatialRadiusQuery(new YokiVector3(1f, 2f, 3f), 10f);
+            var defaultQuery = default(SpatialRadiusQuery);
+
+            Assert.AreEqual(query1, query2);
+            Assert.IsTrue(query1 == query2);
+            Assert.IsFalse(query1 != query2);
+            Assert.IsTrue(query1 != query3);
+            Assert.IsTrue(query1 != defaultQuery);
+            Assert.AreEqual(query1.GetHashCode(), query2.GetHashCode());
+        }
+
         /// <summary>提供可变引用实体以覆盖真实游戏对象移动路径。</summary>
         private sealed class MutableEntity : ISpatialEntity
         {

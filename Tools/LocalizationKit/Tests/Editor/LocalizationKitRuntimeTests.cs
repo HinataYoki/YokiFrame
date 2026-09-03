@@ -344,6 +344,29 @@ namespace YokiFrame.Tests
             Assert.IsFalse(provider.GetLanguageInfo(LanguageId.Korean).IsValid);
         }
 
+        /// <summary>验证 LanguageInfo 满足值相等语义，重载运算符与 Equals 行为一致。</summary>
+        [Test]
+        public void LanguageInfo_EqualityAndOperatorsUseValueSemantics()
+        {
+            var info1 = new LanguageInfo(LanguageId.English, 10, 20, 30);
+            var info2 = new LanguageInfo(LanguageId.English, 10, 20, 30);
+            var info3 = new LanguageInfo(LanguageId.English, 10, 20, 31);
+
+            Assert.IsTrue(info1 == info2);
+            Assert.IsFalse(info1 != info2);
+            Assert.IsTrue(info1.Equals(info2));
+            Assert.AreEqual(info1.GetHashCode(), info2.GetHashCode());
+
+            Assert.IsFalse(info1 == info3);
+            Assert.IsTrue(info1 != info3);
+            Assert.IsFalse(info1.Equals(info3));
+
+            var empty1 = LanguageInfo.Empty;
+            var empty2 = default(LanguageInfo);
+            Assert.IsTrue(empty1 == empty2);
+            Assert.AreEqual(empty1.GetHashCode(), empty2.GetHashCode());
+        }
+
         /// <summary>失效 Binder 必须在刷新时被移除，避免静态注册表无界增长。</summary>
         [Test]
         public void NotifyBinders_RemovesInvalidBinders()

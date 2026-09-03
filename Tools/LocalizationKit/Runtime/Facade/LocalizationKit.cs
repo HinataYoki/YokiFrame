@@ -404,6 +404,12 @@ namespace YokiFrame
             public bool Equals(TextCacheKey other) => LanguageId == other.LanguageId && TextId == other.TextId;
             public override bool Equals(object obj) => obj is TextCacheKey && Equals((TextCacheKey)obj);
             public override int GetHashCode() => ((int)LanguageId * 397) ^ TextId;
+
+            /// <summary>比较两个文本缓存键是否相等。</summary>
+            public static bool operator ==(TextCacheKey left, TextCacheKey right) => left.Equals(right);
+
+            /// <summary>比较两个文本缓存键是否不相等。</summary>
+            public static bool operator !=(TextCacheKey left, TextCacheKey right) => !left.Equals(right);
         }
 
         private readonly struct PluralCacheKey : IEquatable<PluralCacheKey>
@@ -422,6 +428,12 @@ namespace YokiFrame
                 LanguageId == other.LanguageId && TextId == other.TextId && Category == other.Category;
             public override bool Equals(object obj) => obj is PluralCacheKey && Equals((PluralCacheKey)obj);
             public override int GetHashCode() => (((int)LanguageId * 397) ^ TextId) * 397 ^ (int)Category;
+
+            /// <summary>比较两个复数缓存键是否相等。</summary>
+            public static bool operator ==(PluralCacheKey left, PluralCacheKey right) => left.Equals(right);
+
+            /// <summary>比较两个复数缓存键是否不相等。</summary>
+            public static bool operator !=(PluralCacheKey left, PluralCacheKey right) => !left.Equals(right);
         }
     }
 }

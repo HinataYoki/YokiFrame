@@ -70,6 +70,26 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 验证 EnumEventKey 满足值相等语义，重载运算符与 Equals 行为一致。
+        /// </summary>
+        [Test]
+        public void EnumEventKey_EqualityAndOperatorsUseValueSemantics()
+        {
+            var key1 = new EnumEventKey(typeof(SampleEventKey), (ulong)SampleEventKey.TypedPayload);
+            var key2 = new EnumEventKey(typeof(SampleEventKey), (ulong)SampleEventKey.TypedPayload);
+            var key3 = new EnumEventKey(typeof(SampleEventKey), 999UL);
+
+            Assert.IsTrue(key1 == key2);
+            Assert.IsFalse(key1 != key2);
+            Assert.IsTrue(key1.Equals(key2));
+            Assert.AreEqual(key1.GetHashCode(), key2.GetHashCode());
+
+            Assert.IsFalse(key1 == key3);
+            Assert.IsTrue(key1 != key3);
+            Assert.IsFalse(key1.Equals(key3));
+        }
+
+        /// <summary>
         /// 验证 EnumEvent 和 StringEvent 具备旧版同款的带类型负载注册、发送和清理语义。
         /// </summary>
         [Test]
@@ -95,6 +115,36 @@ namespace YokiFrame
 
             Assert.AreEqual(3, enumValue);
             Assert.AreEqual(5, stringValue);
+        }
+
+        /// <summary>
+        /// 验证多线程并发向 EnumEvent 发送事件时，EnumValueCache 内部字典安全不发生数据竞争或异常。
+        /// </summary>
+        [Test]
+        public void EnumEventConcurrentSend_DoesNotCorruptOrThrow()
+        {
+            var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+            var tasks = new System.Threading.Tasks.Task[8];
+            for (var taskIndex = 0; taskIndex < tasks.Length; taskIndex++)
+            {
+                tasks[taskIndex] = System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        for (var iteration = 0; iteration < 200; iteration++)
+                        {
+                            EventKit.Enum.Send(SampleEventKey.TypedPayload, iteration);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
+                });
+            }
+
+            System.Threading.Tasks.Task.WaitAll(tasks);
+            Assert.IsEmpty(exceptions, "并发调用 EnumEvent.Send 时不应抛出任何异常。");
         }
 
         /// <summary>验证未使用的 Editor 事件总线不会作为平行公开 API 保留。</summary>

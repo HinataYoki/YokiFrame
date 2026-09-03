@@ -58,6 +58,67 @@ namespace YokiFrame.Tests
             Assert.AreEqual(1, mProvider.ReleaseCount);
         }
 
+        /// <summary>
+        /// 验证 ResCacheKey 满足值相等语义，重载运算符与 Equals 行为一致。
+        /// </summary>
+        [Test]
+        public void ResCacheKey_EqualityAndOperatorsUseValueSemantics()
+        {
+            var key1 = new ResCacheKey(typeof(TestAsset), "Configs/Main");
+            var key2 = new ResCacheKey(typeof(TestAsset), "Configs/Main");
+            var key3 = new ResCacheKey(typeof(TestAsset), "Configs/Other");
+
+            Assert.IsTrue(key1 == key2);
+            Assert.IsFalse(key1 != key2);
+            Assert.IsTrue(key1.Equals(key2));
+            Assert.AreEqual(key1.GetHashCode(), key2.GetHashCode());
+
+            Assert.IsFalse(key1 == key3);
+            Assert.IsTrue(key1 != key3);
+            Assert.IsFalse(key1.Equals(key3));
+
+            var defaultKey1 = default(ResCacheKey);
+            var defaultKey2 = default(ResCacheKey);
+            Assert.DoesNotThrow(() => defaultKey1.GetHashCode());
+            Assert.AreEqual(defaultKey1.GetHashCode(), defaultKey2.GetHashCode());
+            Assert.IsTrue(defaultKey1 == defaultKey2);
+            Assert.IsTrue(defaultKey1.Equals(defaultKey2));
+            Assert.IsFalse(defaultKey1 == key1);
+        }
+
+        /// <summary>验证 ResSceneHandle 与 ResSceneLoadResult 在 default 状态下的空安全与值相等语义。</summary>
+        [Test]
+        public void ResSceneHandle_And_ResSceneLoadResult_ValueEqualityAndDefaultSafety()
+        {
+            ResSceneHandle defaultHandle = default;
+            ResSceneHandle explicitEmpty = new(null, 0, false);
+            ResSceneHandle validHandle = new("MainScene", 0, true);
+
+            // 验证 default 句柄 SceneName 永远非空
+            Assert.AreEqual(string.Empty, defaultHandle.SceneName);
+            Assert.AreEqual(0, defaultHandle.SceneName.Length);
+            Assert.IsFalse(defaultHandle.IsValid);
+
+            // 验证值相等性与运算符
+            Assert.AreEqual(defaultHandle, explicitEmpty);
+            Assert.IsTrue(defaultHandle == explicitEmpty);
+            Assert.IsFalse(defaultHandle != explicitEmpty);
+            Assert.IsTrue(defaultHandle != validHandle);
+            Assert.AreEqual(defaultHandle.GetHashCode(), explicitEmpty.GetHashCode());
+
+            // 验证 ResSceneLoadResult 值相等性与运算符
+            ResSceneLoadResult result1 = new(validHandle);
+            ResSceneLoadResult result2 = new(new ResSceneHandle("MainScene", 0, true));
+            ResSceneLoadResult defaultResult = default;
+            Assert.IsTrue(result1.Succeeded);
+            Assert.IsFalse(defaultResult.Succeeded);
+            Assert.AreEqual(result1, result2);
+            Assert.IsTrue(result1 == result2);
+            Assert.IsFalse(result1 != result2);
+            Assert.IsTrue(result1 != defaultResult);
+            Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
+        }
+
         /// <summary>验证对象式 API 每次只释放一个已登记匿名租约，未知对象不会交给 Provider。</summary>
         [Test]
         public void ReleaseObjectConsumesOnlyRegisteredAnonymousLeases()

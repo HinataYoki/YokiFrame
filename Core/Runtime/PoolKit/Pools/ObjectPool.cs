@@ -188,6 +188,7 @@ namespace YokiFrame
 #if UNITY_EDITOR || (GODOT && TOOLS)
                 PoolEditorHook.UnregisterPool(this);
 #endif
+                GC.SuppressFinalize(this);
             }
         }
 

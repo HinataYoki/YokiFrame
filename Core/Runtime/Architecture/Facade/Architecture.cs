@@ -18,7 +18,7 @@ namespace YokiFrame
         private readonly object mSyncRoot = new();
         private readonly Dictionary<Type, IService> mServices = new();
         private readonly Dictionary<Type, Lazy<IService>> mPendingServiceCreations = new();
-        private bool mInitialized;
+        private volatile bool mInitialized;
         private bool mDisposed;
 
         /// <summary>
@@ -170,6 +170,7 @@ namespace YokiFrame
             }
 
             DisposeInstance();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -190,6 +191,13 @@ namespace YokiFrame
         /// <returns>已初始化的架构实例。</returns>
         private static T GetOrCreate()
         {
+            T instance = Volatile.Read(ref sArchitecture);
+#if !UNITY_EDITOR && !(GODOT && TOOLS)
+            if (instance != null && instance.mInitialized)
+            {
+                return instance;
+            }
+#endif
             lock (sStaticLock)
             {
                 if (sArchitecture == null)

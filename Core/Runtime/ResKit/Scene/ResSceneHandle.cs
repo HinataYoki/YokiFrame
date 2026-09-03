@@ -5,16 +5,18 @@ namespace YokiFrame
     /// <summary>表示由 ResKit 场景 Provider 返回的跨引擎场景句柄。</summary>
     public readonly struct ResSceneHandle : IEquatable<ResSceneHandle>
     {
+        private readonly string mSceneName;
+
         /// <summary>创建场景句柄。</summary>
         public ResSceneHandle(string sceneName, int buildIndex, bool isValid)
         {
-            SceneName = sceneName ?? string.Empty;
+            mSceneName = sceneName ?? string.Empty;
             BuildIndex = buildIndex;
             IsValid = isValid;
         }
 
         /// <summary>获取场景名称或 Provider 路径。</summary>
-        public string SceneName { get; }
+        public string SceneName => mSceneName ?? string.Empty;
 
         /// <summary>获取场景构建索引；不支持时为负数。</summary>
         public int BuildIndex { get; }

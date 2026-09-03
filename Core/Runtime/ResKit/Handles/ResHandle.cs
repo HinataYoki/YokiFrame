@@ -47,6 +47,10 @@ namespace YokiFrame
         public void Release() => ResKit.ReleaseLease(mLease);
 
         /// <summary>按 IDisposable 约定释放当前 handle。</summary>
-        public void Dispose() => Release();
+        public void Dispose()
+        {
+            Release();
+            GC.SuppressFinalize(this);
+        }
     }
 }
