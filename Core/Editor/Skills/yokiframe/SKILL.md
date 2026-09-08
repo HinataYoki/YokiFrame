@@ -18,6 +18,7 @@ description: Use when Codex needs to select or use a YokiFrame Runtime API, veri
 2. 读取 [Kit 能力索引](references/kit-index.md)，分别确认 Runtime API、Kit Interaction 和 Workbench 完成度
 3. 需要具体行为或签名时，先读取对应 `Documentation~/Api` 主页面，再读取公开类型源码
 4. 需要在线状态、snapshot、telemetry 或 command 时切换到 `yokiframe-cli`
+5. 处理配表、Luban schema、Excel 填表、生成失败或运行时加载时，读取 `references/tablekit-luban.md`，按 Workbench 保存的 TableKit 路径导入官方 Luban Skill，不要让用户复制提示词
 
 ## 执行步骤
 
@@ -26,6 +27,7 @@ description: Use when Codex needs to select or use a YokiFrame Runtime API, veri
 3. 为事件订阅、资源 lease、状态机、动作 controller 和异步工作指定 owner、取消或释放路径
 4. 首次真实调用允许既有宿主 Adapter 惰性创建默认 Store、Logger、Provider 或 Backend；显式注入始终优先
 5. 改动公开 API、Kit 状态或宿主入口时，同步更新 Kit 主页面、`kit-index.md` 和相关 CLI/Workbench Skill
+6. 官方 Luban Skill 存在时按其 `SKILL.md` 执行；生成仍走 Workbench/TableKit 已配置的主 `Luban.dll`。YokiFrame 只负责项目路径、TableKit 约束和官方 Skill 路由
 
 ## 副作用边界
 
@@ -47,6 +49,7 @@ description: Use when Codex needs to select or use a YokiFrame Runtime API, veri
 | 人类使用入口 | 包根 `README.md`；快速上手之后进入对应 Kit 文档 |
 | 面向用户的框架概览 | `Documentation~/Api/00-GettingStarted/FrameworkOverview.md` |
 | CLI / Runtime evidence | `yokiframe-cli` |
+| TableKit / Luban AI | [tablekit-luban.md](references/tablekit-luban.md) |
 | Workbench / Installer | `yokiframe-workbench` |
 
 ## 维护触发条件

@@ -20,7 +20,7 @@
 | LocalizationKit | 已实现 | 未完成 | 已实现，standalone JSON 或 Luban Excel 预览 | `LocalizationKit`、`ILocalizationProvider` | `Api/03-Tool/LocalizationKit.md` |
 | SaveKit | 已实现 | 已实现：`state`、`stats`、`get_workbench_snapshot` 均只读 | 已实现：配置、文件元信息与 Runtime 摘要 | `SaveKit`、`SaveTarget`、`SaveData` | `Api/03-Tool/SaveKit.md` |
 | SpatialKit | 已实现 | 已实现 | 已实现 | `SpatialKit`、`ISpatialIndex<T>` | `Api/03-Tool/SpatialKit.md` |
-| TableKit | 已实现，生成后 | 未完成 | 已实现，Luban 生成 | Workbench TableKit 页面与生成门面 | `Api/03-Tool/TableKit.md` |
+| TableKit | 已实现，生成后 | 未完成 | 已实现，Luban 生成；新版 Luban Agent/MCP/Skill 路径可选发现与校验 | Workbench TableKit 页面与生成门面；配表 AI 走 `references/tablekit-luban.md` | `Api/03-Tool/TableKit.md` |
 | UIKit | 已实现，Unity 专属 | 已实现，Unity Editor | 已实现 | `UIKit`、`UIPanel` | `Api/03-Tool/UIKit.md` |
 | BuffKit / InputKit | 已废弃 | 不迁入 | 不迁入 | 无 | 不恢复 |
 

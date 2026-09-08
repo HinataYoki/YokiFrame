@@ -88,7 +88,7 @@ namespace YokiFrame
         {
             string outputDir = Path.GetFullPath("Releases");
             Directory.CreateDirectory(outputDir);
-            string packagePath = Path.Combine(outputDir, "YokiFrame_v2.0.0.unitypackage");
+            string packagePath = Path.Combine(outputDir, "YokiFrame_v2.0.1.unitypackage");
             UnityEditor.AssetDatabase.ExportPackage("Assets/YokiFrame", packagePath, UnityEditor.ExportPackageOptions.Recurse);
             Assert.IsTrue(File.Exists(packagePath), "Unitypackage should be exported successfully.");
             FileInfo fileInfo = new FileInfo(packagePath);

@@ -11,9 +11,9 @@
     <Border x:Name="TableKitLeftPane"
             Grid.Column="0"
             Classes="tablekit-config-pane">
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+      <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
         <Border Classes="tablekit-config-section">
-          <StackPanel Spacing="10">
+          <StackPanel Spacing="8">
             <Grid ColumnDefinitions="3,*,Auto" ColumnSpacing="9">
               <Border Classes="tablekit-section-accent" />
               <StackPanel Grid.Column="1" Spacing="2">
@@ -25,7 +25,7 @@
                          Classes="mono tablekit-kicker"
                          VerticalAlignment="Center" />
             </Grid>
-            <Grid ColumnDefinitions="92,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+            <Grid ColumnDefinitions="92,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="8">
               <TextBlock Text="{DynamicResource String.TableKit.LubanWorkDir}" Classes="muted" VerticalAlignment="Center" />
               <TextBox x:Name="TableKitLubanWorkDir"
                        Grid.Column="1"
@@ -122,7 +122,7 @@
         </Border>
 
         <Border x:Name="TableKitExtraOutputCard"
-                Grid.Row="2"
+                Grid.Row="3"
                 Classes="tablekit-extra-output-card">
           <Grid RowDefinitions="Auto,*" RowSpacing="10">
             <Grid ColumnDefinitions="3,*,Auto" ColumnSpacing="9">
@@ -138,15 +138,16 @@
                 <TextBlock Text="{DynamicResource String.TableKit.AddExtraTarget}" />
               </Button>
             </Grid>
-            <ScrollViewer x:Name="TableKitExtraOutputScroll"
-                          Grid.Row="1"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          HorizontalContentAlignment="Stretch">
-              <StackPanel Spacing="8">
-                <TextBlock Text="{DynamicResource String.TableKit.NoExtraTargets}"
-                           Classes="tablekit-hint"
-                           IsVisible="{CompiledBinding !HasExtraOutputTargets}" />
+            <Grid Grid.Row="1">
+              <TextBlock Text="{DynamicResource String.TableKit.NoExtraTargets}"
+                         Classes="tablekit-hint"
+                         VerticalAlignment="Top"
+                         IsVisible="{CompiledBinding !HasExtraOutputTargets}" />
+              <ScrollViewer x:Name="TableKitExtraOutputScroll"
+                            MinHeight="20"
+                            HorizontalScrollBarVisibility="Disabled"
+                            HorizontalContentAlignment="Stretch"
+                            IsVisible="{CompiledBinding HasExtraOutputTargets}">
                 <ItemsControl ItemsSource="{CompiledBinding ExtraOutputTargets}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TableKitExtraOutputViewModel">
@@ -211,8 +212,8 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-              </StackPanel>
-            </ScrollViewer>
+              </ScrollViewer>
+            </Grid>
           </Grid>
         </Border>
       </Grid>
@@ -221,7 +222,11 @@
     <Border x:Name="TableKitRightPane"
             Grid.Column="2"
             Classes="tablekit-config-pane">
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+      <ScrollViewer x:Name="TableKitRightPaneScroll"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    HorizontalContentAlignment="Stretch">
+       <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
         <Border Classes="tablekit-config-section">
           <StackPanel Spacing="10">
             <Grid ColumnDefinitions="3,*" ColumnSpacing="9">
@@ -317,7 +322,84 @@
             </Grid>
           </StackPanel>
         </Border>
+
+        <Border x:Name="TableKitOptionalLubanToolsSection"
+                Grid.Row="2"
+                Classes="tablekit-config-section last">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="3,*" ColumnSpacing="9">
+              <Border Classes="tablekit-section-accent" />
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="{DynamicResource String.TableKit.OptionalLubanTools}" Classes="section-title" />
+                <TextBlock Text="{DynamicResource String.TableKit.OptionalLubanToolsHint}" Classes="tablekit-hint" />
+              </StackPanel>
+            </Grid>
+            <Grid ColumnDefinitions="104,*,Auto"
+                  RowDefinitions="Auto,Auto,Auto"
+                  RowSpacing="8"
+                  ColumnSpacing="8">
+              <TextBlock Text="{DynamicResource String.TableKit.LubanAgentPath}" Classes="muted" VerticalAlignment="Center" />
+              <TextBox x:Name="TableKitLubanAgentPath"
+                       Grid.Column="1"
+                       Text="{CompiledBinding LubanAgentExecutablePath, Mode=TwoWay}"
+                       IsReadOnly="True"
+                       PlaceholderText="{DynamicResource String.TableKit.OptionalToolMissing}"
+                       ToolTip.Tip="{CompiledBinding LubanAgentExecutablePath}"
+                       AutomationProperties.Name="{DynamicResource String.TableKit.LubanAgentPath}" />
+              <Button x:Name="TableKitBrowseLubanAgent"
+                      Grid.Column="2"
+                      Command="{CompiledBinding BrowseLubanAgentCommand}"
+                      Classes="secondary compact-action"
+                      ToolTip.Tip="{DynamicResource String.TableKit.SelectLubanAgent}"
+                      AutomationProperties.Name="{DynamicResource String.TableKit.SelectLubanAgent}">
+                <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
+              </Button>
+
+              <TextBlock Grid.Row="1" Text="{DynamicResource String.TableKit.LubanMcpPath}" Classes="muted" VerticalAlignment="Center" />
+              <TextBox x:Name="TableKitLubanMcpPath"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Text="{CompiledBinding LubanMcpExecutablePath, Mode=TwoWay}"
+                       IsReadOnly="True"
+                       PlaceholderText="{DynamicResource String.TableKit.OptionalToolMissing}"
+                       ToolTip.Tip="{CompiledBinding LubanMcpExecutablePath}"
+                       AutomationProperties.Name="{DynamicResource String.TableKit.LubanMcpPath}" />
+              <Button x:Name="TableKitBrowseLubanMcp"
+                      Grid.Row="1"
+                      Grid.Column="2"
+                      Command="{CompiledBinding BrowseLubanMcpCommand}"
+                      Classes="secondary compact-action"
+                      ToolTip.Tip="{DynamicResource String.TableKit.SelectLubanMcp}"
+                      AutomationProperties.Name="{DynamicResource String.TableKit.SelectLubanMcp}">
+                <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
+              </Button>
+
+              <TextBlock Grid.Row="2" Text="{DynamicResource String.TableKit.LubanSkillsPath}" Classes="muted" VerticalAlignment="Center" />
+              <TextBox x:Name="TableKitLubanSkillsPath"
+                       Grid.Row="2"
+                       Grid.Column="1"
+                       Text="{CompiledBinding LubanSkillsPath, Mode=TwoWay}"
+                       IsReadOnly="True"
+                       PlaceholderText="{DynamicResource String.TableKit.OptionalToolMissing}"
+                       ToolTip.Tip="{CompiledBinding LubanSkillsPath}"
+                       AutomationProperties.Name="{DynamicResource String.TableKit.LubanSkillsPath}" />
+              <Button x:Name="TableKitBrowseLubanSkills"
+                      Grid.Row="2"
+                      Grid.Column="2"
+                      Command="{CompiledBinding BrowseLubanSkillsCommand}"
+                      Classes="secondary compact-action"
+                      ToolTip.Tip="{DynamicResource String.TableKit.SelectLubanSkills}"
+                      AutomationProperties.Name="{DynamicResource String.TableKit.SelectLubanSkills}">
+                <PathIcon Data="{StaticResource Icon.Folder}" Width="13" Height="13" />
+              </Button>
+            </Grid>
+            <TextBlock Text="{CompiledBinding OptionalLubanToolsSummary}"
+                       Classes="tablekit-hint"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
       </Grid>
+      </ScrollViewer>
     </Border>
   </Grid>
 </UserControl>

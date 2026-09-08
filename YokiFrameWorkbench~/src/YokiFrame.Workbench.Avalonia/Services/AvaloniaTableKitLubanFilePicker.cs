@@ -7,11 +7,6 @@ namespace YokiFrame.Workbench.Avalonia.Services;
 /// </summary>
 public sealed class AvaloniaTableKitLubanFilePicker : ITableKitLubanFilePicker
 {
-    private static readonly FilePickerFileType sLubanDllFileType = new("Luban.dll")
-    {
-        Patterns = new[] { "Luban.dll" }
-    };
-
     private readonly Func<IStorageProvider?> mStorageProviderAccessor;
 
     /// <summary>
@@ -36,6 +31,23 @@ public sealed class AvaloniaTableKitLubanFilePicker : ITableKitLubanFilePicker
         CancellationToken cancellationToken = default,
         string? suggestedPath = null)
     {
+        return await PickLubanFileAsync(title, "Luban.dll", cancellationToken, suggestedPath);
+    }
+
+    /// <summary>
+    /// 打开按指定文件名过滤的 Luban 工具文件选择器，并返回用户选择的本地绝对路径。
+    /// </summary>
+    /// <param name="title">原生对话框标题。</param>
+    /// <param name="fileName">允许选择的文件名。</param>
+    /// <param name="cancellationToken">调用方取消令牌。</param>
+    /// <param name="suggestedPath">已配置工具所在目录。</param>
+    /// <returns>用户选中的工具文件；取消或平台不支持时返回 null。</returns>
+    public async Task<string?> PickLubanFileAsync(
+        string title,
+        string fileName,
+        CancellationToken cancellationToken = default,
+        string? suggestedPath = null)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         IStorageProvider? provider = mStorageProviderAccessor();
         if (provider == null || !provider.CanOpen)
@@ -48,7 +60,13 @@ public sealed class AvaloniaTableKitLubanFilePicker : ITableKitLubanFilePicker
         {
             Title = title,
             AllowMultiple = false,
-            FileTypeFilter = new[] { sLubanDllFileType },
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType(fileName)
+                {
+                    Patterns = new[] { fileName }
+                }
+            },
             SuggestedStartLocation = suggestedStartLocation
         });
         cancellationToken.ThrowIfCancellationRequested();

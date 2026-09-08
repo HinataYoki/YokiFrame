@@ -28,6 +28,7 @@ description: Use when Codex needs to guide or diagnose the YokiFrame Avalonia Wo
 4. Installer 必须先 plan，报告来源、目标、warning 和 rollback 条件，确认后才 apply；Godot apply 会完整替换 `addons/yokiframe`
 5. 安装 YokiFrame 自有 Skill 时仅从包根 `Core/Editor/Skills` 复制三个正式身份，目标在项目根内且排除 Unity `.meta`
 6. Unity 的 `Ctrl+E` 会优先激活同一项目已打开的 Workbench；已有可用 Runtime 时直接打开。Workbench 会后台检查源码指纹，发现新版后通过页头“重新编译新版”按钮显式构建；窗口关闭必须取消检查和构建，旧进程占用的 Runtime 目录延迟清理。
+7. TableKit 以 `luban.conf` 与 `Luban.dll` 作为主工具发现和生成前提；新版 Luban 的 `Luban.Agent`、`Luban.Mcp`、Skill 目录只做可选发现和路径校验。缺失这些伴随能力不得阻断旧版 Luban。Workbench 不复制提示词、不托管 MCP、不重复实现官方 Agent；配表需求由 `yokiframe` Skill 读取这些路径并导入官方 Skill。
 
 ## 副作用边界
 

@@ -1,8 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Text.Json;
+using YokiFrame.Tooling.Application.Models.Luban;
 using YokiFrame.Tooling.Application.Models.TableKit;
+using YokiFrame.Tooling.Application.Services.Luban;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -192,6 +193,81 @@ public sealed partial class TableKitPageViewModel
         }
     }
 
+    /// <summary>通过文件选择器设置可选 Luban.Agent 文件。</summary>
+    private async Task BrowseLubanAgentAsync()
+    {
+        await PickLubanToolAsync(
+            GetString(PickLubanAgentTitleKey, "选择 Luban.Agent.dll"),
+            "Luban.Agent.dll",
+            LubanAgentExecutablePath,
+            path => LubanAgentExecutablePath = path);
+    }
+
+    /// <summary>通过文件选择器设置可选 Luban.Mcp 文件。</summary>
+    private async Task BrowseLubanMcpAsync()
+    {
+        await PickLubanToolAsync(
+            GetString(PickLubanMcpTitleKey, "选择 Luban.Mcp.dll"),
+            "Luban.Mcp.dll",
+            LubanMcpExecutablePath,
+            path => LubanMcpExecutablePath = path);
+    }
+
+    /// <summary>通过目录选择器设置可选 Luban Skill 源目录。</summary>
+    private async Task BrowseLubanSkillsAsync()
+    {
+        await PickFolderAsync(
+            GetString(PickLubanSkillsTitleKey, "选择 Luban Skill 目录"),
+            LubanSkillsPath,
+            false,
+            path => LubanSkillsPath = path);
+    }
+
+    /// <summary>根据三个可选路径是否真实存在，生成给用户看的校验摘要。</summary>
+    private string CreateOptionalLubanToolsSummary()
+    {
+        int configured = CountExistingOptionalTools();
+        return configured == 0
+            ? GetString(OptionalLubanToolsEmptyKey, "未配置官方 Agent、MCP 或 Skill；旧版 Luban 可继续验证和生成。")
+            : string.Format(
+                GetString(OptionalLubanToolsReadyKey, "已识别 {0}/3 项官方 AI 路径。配表需求由 YokiFrame Skill 自动读取这些路径并导入官方 Skill。"),
+                configured);
+    }
+
+    /// <summary>统计当前页面已配置且实际存在的官方 AI 路径数量。</summary>
+    private int CountExistingOptionalTools()
+    {
+        int count = 0;
+        if (File.Exists(ResolveOptionalInputPath(LubanAgentExecutablePath))) count++;
+        if (File.Exists(ResolveOptionalInputPath(LubanMcpExecutablePath))) count++;
+        if (!string.IsNullOrWhiteSpace(ResolveOfficialSkillsRoot(LubanSkillsPath))) count++;
+        return count;
+    }
+
+    /// <summary>把用户选择的 Skill 根或 skills 子目录解析成包含官方 SKILL.md 的目录。</summary>
+    private string ResolveOfficialSkillsRoot(string path)
+    {
+        return LubanProjectDiscoveryService.ResolveOfficialSkillsRoot(ResolveOptionalInputPath(path));
+    }
+
+    /// <summary>按文件名过滤选择可选 Luban 工具，并将结果转换为项目相对路径。</summary>
+    /// <param name="title">文件选择器标题。</param>
+    /// <param name="fileName">允许选择的文件名。</param>
+    /// <param name="currentPath">字段当前显示的路径。</param>
+    /// <param name="apply">接收项目相对路径的更新回调。</param>
+    private async Task PickLubanToolAsync(string title, string fileName, string currentPath, Action<string> apply)
+    {
+        if (mLubanFilePicker == null)
+        {
+            StatusDetailText = GetString(NoLubanFilePickerKey, "当前窗口没有可用的 Luban 文件选择器。");
+            return;
+        }
+
+        string suggested = TableKitPathUtilities.FindPickerStartDirectory(mProjectRoot, currentPath, true);
+        string? selected = await mLubanFilePicker.PickLubanFileAsync(title, fileName, suggestedPath: suggested);
+        if (!string.IsNullOrWhiteSpace(selected)) apply(ToProjectRelativePath(selected));
+    }
+
     /// <summary>选择正式数据输出目录。</summary>
     private async Task BrowseOutputDataAsync() => await PickFolderAsync(GetString(PickDataDirTitleKey, "选择 TableKit 数据输出目录"), OutputDataDir, false, path => OutputDataDir = path);
 
@@ -300,6 +376,7 @@ public sealed partial class TableKitPageViewModel
         bool configExists = File.Exists(ResolveInputPath(ConfigPath));
         bool executableExists = File.Exists(ResolveInputPath(LubanExecutablePath));
         LubanAvailable = configExists && executableExists;
+        RefreshOptionalLubanTools();
         OnPropertyChanged(nameof(LubanUnavailable));
         LubanStatusText = LubanAvailable ? "Luban ON" : "Luban OFF";
         EnvironmentMessage = LubanAvailable
@@ -307,6 +384,36 @@ public sealed partial class TableKitPageViewModel
             : GetString(EnvironmentMissingKey, "请确认工作目录包含 luban.conf，并配置 Luban.dll 或可执行文件路径。");
         CommandPreviewText = CreateCommandPreview();
         OnPropertyChanged(nameof(LoaderText));
+    }
+
+    /// <summary>读取可选 AI 伴随工具路径；自动发现只补充空字段，不覆盖用户已配置的路径。</summary>
+    private void RefreshOptionalLubanTools()
+    {
+        LubanToolDiscoveryResult discovery = mService.DiscoverLubanTools(mProjectRoot, LubanWorkDir);
+        if (!discovery.Succeeded || discovery.Options == null)
+        {
+            return;
+        }
+
+        LubanToolOptions options = discovery.Options;
+        ApplyDiscoveredOptionalPath(ref mLubanAgentExecutablePath, nameof(LubanAgentExecutablePath), options.LubanAgentExecutablePath);
+        ApplyDiscoveredOptionalPath(ref mLubanMcpExecutablePath, nameof(LubanMcpExecutablePath), options.LubanMcpExecutablePath);
+        ApplyDiscoveredOptionalPath(ref mLubanSkillsPath, nameof(LubanSkillsPath), options.LubanSkillsPath);
+        OnPropertyChanged(nameof(AgentAvailable));
+        OnPropertyChanged(nameof(OptionalLubanToolsSummary));
+    }
+
+    /// <summary>把自动发现结果写入仍为空的可选路径字段，避免刷新覆盖显式选择。</summary>
+    /// <param name="currentPath">当前字段的项目相对路径。</param>
+    /// <param name="propertyName">需要通知的绑定属性名。</param>
+    /// <param name="discoveredPath">自动发现的绝对路径。</param>
+    private void ApplyDiscoveredOptionalPath(ref string currentPath, string propertyName, string discoveredPath)
+    {
+        if (!string.IsNullOrWhiteSpace(currentPath) || string.IsNullOrWhiteSpace(discoveredPath)) return;
+        string projectedPath = ToProjectRelativePath(discoveredPath);
+        if (string.Equals(currentPath, projectedPath, StringComparison.Ordinal)) return;
+        currentPath = projectedPath;
+        OnPropertyChanged(propertyName);
     }
 
     /// <summary>构建当前配置的命令预览，不执行任何外部进程。</summary>
@@ -326,6 +433,9 @@ public sealed partial class TableKitPageViewModel
             ProjectRoot = mProjectRoot,
             LubanConfigPath = ResolveInputPath(ConfigPath),
             LubanExecutablePath = ResolveInputPath(LubanExecutablePath),
+            LubanAgentExecutablePath = ResolveOptionalInputPath(LubanAgentExecutablePath),
+            LubanMcpExecutablePath = ResolveOptionalInputPath(LubanMcpExecutablePath),
+            LubanSkillsPath = ResolveOptionalInputPath(LubanSkillsPath),
             LubanWorkDir = ResolveInputPath(LubanWorkDir),
             TargetName = string.IsNullOrWhiteSpace(TargetName) ? "client" : TargetName,
             CodeTarget = string.IsNullOrWhiteSpace(CodeTarget) ? "cs-bin" : CodeTarget,
@@ -350,6 +460,9 @@ public sealed partial class TableKitPageViewModel
     {
         mConfigPath = ToProjectRelativePath(options.LubanConfigPath);
         mLubanExecutablePath = ToProjectRelativePath(options.LubanExecutablePath);
+        mLubanAgentExecutablePath = ToProjectRelativePath(options.LubanAgentExecutablePath);
+        mLubanMcpExecutablePath = ToProjectRelativePath(options.LubanMcpExecutablePath);
+        mLubanSkillsPath = ToProjectRelativePath(options.LubanSkillsPath);
         mLubanWorkDir = ToProjectRelativePath(options.LubanWorkDir);
         mTargetName = string.IsNullOrWhiteSpace(options.TargetName) ? "client" : options.TargetName;
         mCodeTarget = string.IsNullOrWhiteSpace(options.CodeTarget) ? "cs-bin" : options.CodeTarget;
@@ -405,6 +518,14 @@ public sealed partial class TableKitPageViewModel
     private string ResolveInputPath(string path)
     {
         return TableKitPathUtilities.Resolve(mProjectRoot, path);
+    }
+
+    /// <summary>解析可选工具路径；未发现时保持空文本，避免把项目根误写成工具路径。</summary>
+    /// <param name="path">可选的项目相对或绝对路径。</param>
+    /// <returns>规范化绝对路径或空文本。</returns>
+    private string ResolveOptionalInputPath(string path)
+    {
+        return string.IsNullOrWhiteSpace(path) ? string.Empty : ResolveInputPath(path);
     }
 
     /// <summary>将项目内绝对路径折叠为稳定的项目相对路径。</summary>
@@ -480,6 +601,11 @@ public sealed partial class TableKitPageViewModel
     {
         OnPropertyChanged(nameof(ConfigPath));
         OnPropertyChanged(nameof(LubanExecutablePath));
+        OnPropertyChanged(nameof(LubanAgentExecutablePath));
+        OnPropertyChanged(nameof(AgentAvailable));
+        OnPropertyChanged(nameof(LubanMcpExecutablePath));
+        OnPropertyChanged(nameof(LubanSkillsPath));
+        OnPropertyChanged(nameof(OptionalLubanToolsSummary));
         OnPropertyChanged(nameof(LubanWorkDir));
         OnPropertyChanged(nameof(TargetName));
         OnPropertyChanged(nameof(CodeTarget));
@@ -549,6 +675,15 @@ public sealed partial class TableKitPageViewModel
     /// <summary>选择 Luban.dll 标题资源 key。</summary>
     private const string PickLubanDllTitleKey = "String.TableKit.PickLubanDllTitle";
 
+    /// <summary>选择 Luban.Agent 标题资源 key。</summary>
+    private const string PickLubanAgentTitleKey = "String.TableKit.PickLubanAgentTitle";
+
+    /// <summary>选择 Luban.Mcp 标题资源 key。</summary>
+    private const string PickLubanMcpTitleKey = "String.TableKit.PickLubanMcpTitle";
+
+    /// <summary>选择 Luban Skill 目录标题资源 key。</summary>
+    private const string PickLubanSkillsTitleKey = "String.TableKit.PickLubanSkillsTitle";
+
     /// <summary>选择数据目录标题资源 key。</summary>
     private const string PickDataDirTitleKey = "String.TableKit.PickDataDirTitle";
 
@@ -587,4 +722,6 @@ public sealed partial class TableKitPageViewModel
 
     /// <summary>可寻址模式说明资源 key。</summary>
     private const string AddressableModeKey = "String.TableKit.AddressableMode";
+    private const string OptionalLubanToolsEmptyKey = "String.TableKit.OptionalLubanToolsEmpty";
+    private const string OptionalLubanToolsReadyKey = "String.TableKit.OptionalLubanToolsReady";
 }

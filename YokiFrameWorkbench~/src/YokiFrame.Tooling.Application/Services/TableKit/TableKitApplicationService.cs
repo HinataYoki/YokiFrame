@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models.TableKit;
+using YokiFrame.Tooling.Application.Models.Luban;
 using YokiFrame.Tooling.Application.Services.Luban;
 
 namespace YokiFrame.Tooling.Application.Services.TableKit;
@@ -21,6 +22,15 @@ public sealed class TableKitApplicationService
     public IReadOnlyList<string> ReadLubanTargetNames(string configPath)
     {
         return new LubanConfigurationReader().Read(configPath).TargetNames;
+    }
+
+    /// <summary>发现当前项目的主 Luban 工具及可选 Agent、MCP、Skills 伴随工具。</summary>
+    /// <param name="projectRoot">当前项目根目录。</param>
+    /// <param name="lubanWorkDir">可选的 Luban 工作目录；为空时自动发现配置。</param>
+    /// <returns>主工具发现结果；可选伴随工具缺失不会导致主工具发现失败。</returns>
+    public LubanToolDiscoveryResult DiscoverLubanTools(string projectRoot, string lubanWorkDir = "")
+    {
+        return new LubanProjectDiscoveryService().Discover(projectRoot, lubanWorkDir);
     }
 
     /// <summary>只解析当前 Luban 配置，不启动外部进程。</summary>

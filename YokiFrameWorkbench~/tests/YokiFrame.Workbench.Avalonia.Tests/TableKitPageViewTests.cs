@@ -86,6 +86,7 @@ public sealed class TableKitPageViewTests
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                WorkbenchI18nService.Instance.SetCulture("zh-CN");
                 TableKitPageViewModel viewModel = new(root, new TableKitApplicationService());
                 TableKitConfigurationView view = new() { DataContext = viewModel };
                 Window window = new() { Width = 1000, Height = 680, Content = view };
@@ -122,6 +123,100 @@ public sealed class TableKitPageViewTests
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
     }
+
+    /// <summary>验证新版 Luban 的 Agent、MCP 与 Skill 路径会投影到右侧独立配置区域。</summary>
+    [Fact]
+    public async Task OptionalLubanAiPathsAreProjectedToRightConfigurationSection()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        string root = CreateConfiguredProject(true);
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                WorkbenchI18nService.Instance.SetCulture("zh-CN");
+                TableKitPageViewModel viewModel = new(root, new TableKitApplicationService());
+                TableKitConfigurationView view = new() { DataContext = viewModel };
+                Window window = new() { Width = 1000, Height = 760, Content = view };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+
+                    Assert.Equal("Luban/Tools/Luban.Agent/Luban.Agent.dll", viewModel.LubanAgentExecutablePath);
+                    Assert.Equal("Luban/Tools/Luban.Mcp/Luban.Mcp.dll", viewModel.LubanMcpExecutablePath);
+                    Assert.Equal("Luban/Tools/Luban.Skill/skills", viewModel.LubanSkillsPath);
+                    Assert.Contains("3/3", viewModel.OptionalLubanToolsSummary, StringComparison.Ordinal);
+                    Assert.Equal(viewModel.LubanAgentExecutablePath,
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanAgentPath")!.Text);
+                    Assert.Equal(viewModel.LubanMcpExecutablePath,
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanMcpPath")!.Text);
+                    Assert.Equal(viewModel.LubanSkillsPath,
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanSkillsPath")!.Text);
+                    Assert.NotNull(FindNamedDescendant<Border>(view, "TableKitOptionalLubanToolsSection"));
+                    Assert.Null(FindNamedDescendant<Expander>(view, "TableKitOptionalLubanToolsCard"));
+                    Assert.Same(viewModel.BrowseLubanAgentCommand, FindNamedDescendant<Button>(view, "TableKitBrowseLubanAgent")!.Command);
+                    Assert.Same(viewModel.BrowseLubanMcpCommand, FindNamedDescendant<Button>(view, "TableKitBrowseLubanMcp")!.Command);
+                    Assert.Same(viewModel.BrowseLubanSkillsCommand, FindNamedDescendant<Button>(view, "TableKitBrowseLubanSkills")!.Command);
+                    Assert.True(FindNamedDescendant<TextBox>(view, "TableKitLubanAgentPath")!.Bounds.Y < FindNamedDescendant<TextBox>(view, "TableKitLubanMcpPath")!.Bounds.Y);
+                    Assert.True(FindNamedDescendant<TextBox>(view, "TableKitLubanMcpPath")!.Bounds.Y < FindNamedDescendant<TextBox>(view, "TableKitLubanSkillsPath")!.Bounds.Y);
+                }
+                finally
+                {
+                    window.Close();
+                    viewModel.Dispose();
+                }
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>验证旧版 Luban 缺少 AI 伴随工具时页面显示可选缺失占位且主状态仍可用。</summary>
+    [Fact]
+    public async Task LegacyLubanKeepsMainAvailabilityWhenOptionalAiPathsAreMissing()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        string root = CreateConfiguredProject();
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                WorkbenchI18nService.Instance.SetCulture("zh-CN");
+                TableKitPageViewModel viewModel = new(root, new TableKitApplicationService());
+                TableKitConfigurationView view = new() { DataContext = viewModel };
+                Window window = new() { Width = 1000, Height = 760, Content = view };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+
+                    Assert.True(viewModel.LubanAvailable);
+                    Assert.Equal(string.Empty, viewModel.LubanAgentExecutablePath);
+                    Assert.Equal(string.Empty, viewModel.LubanMcpExecutablePath);
+                    Assert.Equal(string.Empty, viewModel.LubanSkillsPath);
+                    Assert.Equal("未发现（可选）",
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanAgentPath")!.PlaceholderText);
+                    Assert.Equal("未发现（可选）",
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanMcpPath")!.PlaceholderText);
+                    Assert.Equal("未发现（可选）",
+                        FindNamedDescendant<TextBox>(view, "TableKitLubanSkillsPath")!.PlaceholderText);
+                    Assert.Contains("未配置官方", viewModel.OptionalLubanToolsSummary, StringComparison.Ordinal);
+                }
+                finally
+                {
+                    window.Close();
+                    viewModel.Dispose();
+                }
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
     /// <summary>验证 Luban.dll 文件选择器从字段原目录打开，并将选择折叠为项目相对路径。</summary>
     [Fact]
     public async Task LubanFilePickerStartsFromConfiguredPath()
@@ -146,6 +241,85 @@ public sealed class TableKitPageViewTests
         }
     }
 
+    /// <summary>验证 Agent、MCP 文件和 Skill 目录都能通过快速选择命令写回项目相对路径。</summary>
+    [Fact]
+    public async Task OptionalLubanToolsCanBePickedIndividually()
+    {
+        string root = CreateConfiguredProject();
+        try
+        {
+            string agentPath = Path.Combine(root, "External", "Luban.Agent.dll");
+            string mcpPath = Path.Combine(root, "External", "Luban.Mcp.dll");
+            string skillsPath = Path.Combine(root, "External", "skills");
+            Directory.CreateDirectory(Path.GetDirectoryName(agentPath)!);
+            Directory.CreateDirectory(skillsPath);
+            File.WriteAllText(agentPath, string.Empty);
+            File.WriteAllText(mcpPath, string.Empty);
+            RecordingLubanFilePicker filePicker = new()
+            {
+                SelectedPaths = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["Luban.Agent.dll"] = agentPath,
+                    ["Luban.Mcp.dll"] = mcpPath
+                }
+            };
+            RecordingFolderPicker folderPicker = new() { SelectedPath = skillsPath };
+            TableKitPageViewModel viewModel = new(root, new TableKitApplicationService(), folderPicker: folderPicker, lubanFilePicker: filePicker);
+
+            await viewModel.BrowseLubanAgentCommand.ExecuteAsync();
+            await viewModel.BrowseLubanMcpCommand.ExecuteAsync();
+            await viewModel.BrowseLubanSkillsCommand.ExecuteAsync();
+
+            Assert.Equal("External/Luban.Agent.dll", viewModel.LubanAgentExecutablePath);
+            Assert.Equal("External/Luban.Mcp.dll", viewModel.LubanMcpExecutablePath);
+            Assert.Equal("External/skills", viewModel.LubanSkillsPath);
+            Assert.Equal("Luban.Mcp.dll", filePicker.LastFileName);
+            Assert.Equal(root, filePicker.LastSuggestedPath);
+            Assert.Equal(root, folderPicker.LastSuggestedPath);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>验证 TableKit 右侧配置列在窗口高度不足时独立滚动，底部可选 AI 路径仍可访问。</summary>
+    [Fact]
+    public async Task RightConfigurationPaneScrollsIndependently()
+    {
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        string root = CreateConfiguredProject(true);
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                TableKitPageViewModel viewModel = new(root, new TableKitApplicationService());
+                TableKitConfigurationView view = new() { DataContext = viewModel };
+                Window window = new() { Width = 720, Height = 420, Content = view };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    ScrollViewer scroll = view.FindControl<ScrollViewer>("TableKitRightPaneScroll")!;
+                    Assert.Contains(scroll.GetVisualDescendants().OfType<ScrollBar>(),
+                        static item => item.IsVisible && item.Orientation == Orientation.Vertical);
+                    Assert.NotNull(view.FindControl<TextBox>("TableKitLubanSkillsPath"));
+                    Assert.Null(view.FindControl<Button>("TableKitCopyLubanAiHandoff"));
+                    Assert.Null(view.FindControl<Button>("TableKitCopyLubanMcpConfig"));
+                    Assert.Null(view.FindControl<Button>("TableKitOpenLubanSkills"));
+                }
+                finally
+                {
+                    window.Close();
+                    viewModel.Dispose();
+                }
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
     /// <summary>验证额外输出完整展示 target、代码/数据 target 和两条只读输出路径。</summary>
     [Fact]
     public async Task ExtraOutputRendersCompleteContract()
@@ -236,7 +410,11 @@ public sealed class TableKitPageViewTests
                 Assert.True(extraOutputCard.CornerRadius.TopLeft > 0d);
                 Assert.Equal(1d, leftPane.BorderThickness.Left);
                 Assert.Equal(1d, rightPane.BorderThickness.Left);
-                AssertNoVisibleVerticalScrollBar(view);
+                ScrollViewer rightPaneScroll = configurationView.FindControl<ScrollViewer>("TableKitRightPaneScroll")!;
+                Assert.NotNull(rightPaneScroll);
+                bool hasRightPaneVerticalScroll = rightPaneScroll.GetVisualDescendants().OfType<ScrollBar>()
+                    .Any(static item => item.IsVisible && item.Orientation == Orientation.Vertical);
+                Assert.Equal(height < 800d, hasRightPaneVerticalScroll);
                 AssertNoVisibleHorizontalScrollBar(view);
                 AssertMinimumTextSize(view);
                 SaveFrame(window, width, height, "configuration");
@@ -383,7 +561,7 @@ public sealed class TableKitPageViewTests
 
     /// <summary>创建带历史绝对路径设置和已存在 Luban 目录的临时项目。</summary>
     /// <returns>临时项目根目录。</returns>
-    private static string CreateConfiguredProject()
+    private static string CreateConfiguredProject(bool includeOptionalLubanTools = false)
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-paths-" + Guid.NewGuid().ToString("N"));
         string workDir = Path.Combine(root, "Luban", "MiniTemplate");
@@ -392,7 +570,22 @@ public sealed class TableKitPageViewTests
         Directory.CreateDirectory(executableDir);
         Directory.CreateDirectory(Path.Combine(root, "ProjectSettings"));
         File.WriteAllText(Path.Combine(root, "ProjectSettings", "ProjectVersion.txt"), "m_EditorVersion: 2022.3.0f1");
+        File.WriteAllText(
+            Path.Combine(workDir, "luban.conf"),
+            "{\"dataDir\":\"Datas\",\"targets\":[{\"name\":\"client\"}]}" );
         File.WriteAllText(Path.Combine(executableDir, "Luban.dll"), string.Empty);
+        if (includeOptionalLubanTools)
+        {
+            string agentDirectory = Path.Combine(root, "Luban", "Tools", "Luban.Agent");
+            string mcpDirectory = Path.Combine(root, "Luban", "Tools", "Luban.Mcp");
+            Directory.CreateDirectory(agentDirectory);
+            Directory.CreateDirectory(mcpDirectory);
+            File.WriteAllText(Path.Combine(agentDirectory, "Luban.Agent.dll"), string.Empty);
+            File.WriteAllText(Path.Combine(mcpDirectory, "Luban.Mcp.dll"), string.Empty);
+            string skillsDirectory = Path.Combine(root, "Luban", "Tools", "Luban.Skill", "skills", "luban-validator");
+            Directory.CreateDirectory(skillsDirectory);
+            File.WriteAllText(Path.Combine(skillsDirectory, "SKILL.md"), "---\nname: luban-validator\n---\n");
+        }
         TableKitOptions options = new()
         {
             ProjectRoot = root,
@@ -518,8 +711,12 @@ public sealed class TableKitPageViewTests
     {
         /// <summary>下一次选择器调用返回的文件。</summary>
         public string? SelectedPath { get; init; }
+        /// <summary>按工具文件名返回的选择结果。</summary>
+        public IReadOnlyDictionary<string, string>? SelectedPaths { get; init; }
         /// <summary>最近一次选择器收到的建议起始目录。</summary>
         public string? LastSuggestedPath { get; private set; }
+        /// <summary>最近一次选择器收到的文件名过滤条件。</summary>
+        public string? LastFileName { get; private set; }
 
         /// <summary>记录建议目录并返回预设 Luban.dll 文件。</summary>
         /// <param name="title">选择器标题。</param>
@@ -534,6 +731,26 @@ public sealed class TableKitPageViewTests
             cancellationToken.ThrowIfCancellationRequested();
             LastSuggestedPath = suggestedPath;
             return Task.FromResult(SelectedPath);
+        }
+
+        /// <summary>记录文件名过滤条件、建议目录并返回对应的预设文件。</summary>
+        /// <param name="title">选择器标题。</param>
+        /// <param name="fileName">文件名过滤条件。</param>
+        /// <param name="cancellationToken">调用方取消令牌。</param>
+        /// <param name="suggestedPath">建议起始目录。</param>
+        /// <returns>预设文件路径。</returns>
+        public Task<string?> PickLubanFileAsync(
+            string title,
+            string fileName,
+            CancellationToken cancellationToken = default,
+            string? suggestedPath = null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastFileName = fileName;
+            LastSuggestedPath = suggestedPath;
+            return Task.FromResult(SelectedPaths != null && SelectedPaths.TryGetValue(fileName, out string? selected)
+                ? selected
+                : SelectedPath);
         }
     }
 }

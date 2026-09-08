@@ -6,7 +6,7 @@
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3%2B-blue.svg?style=flat-square)](https://unity.com/)
 [![Godot](https://img.shields.io/badge/Godot-4.x%20.NET-blue.svg?style=flat-square)](https://godotengine.org/)
-[![Version](https://img.shields.io/badge/Version-2.0.0--preview-orange.svg?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.0.1-blue.svg?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
 </div>

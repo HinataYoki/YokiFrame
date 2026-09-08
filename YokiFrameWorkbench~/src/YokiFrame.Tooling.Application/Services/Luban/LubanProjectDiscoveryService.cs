@@ -97,6 +97,7 @@ public sealed class LubanProjectDiscoveryService
                 return Failed("发现多个 Luban 工具，无法自动选择: " + string.Join("; ", executablePaths), configuration);
             }
 
+            string mainExecutablePath = executablePaths[0];
             return new LubanToolDiscoveryResult
             {
                 Succeeded = true,
@@ -106,7 +107,27 @@ public sealed class LubanProjectDiscoveryService
                     ProjectRoot = root,
                     LubanConfigPath = configuration.ConfigPath,
                     LubanWorkDir = configuration.ConfigDirectory,
-                    LubanExecutablePath = executablePaths[0],
+                    LubanExecutablePath = mainExecutablePath,
+                    LubanAgentExecutablePath = FindOptionalExecutablePath(
+                        root,
+                        configuration.ConfigDirectory,
+                        mainExecutablePath,
+                        "Luban.Agent",
+                        "Luban.Agent"),
+                    LubanMcpExecutablePath = FindOptionalExecutablePath(
+                        root,
+                        configuration.ConfigDirectory,
+                        mainExecutablePath,
+                        "Luban.Mcp",
+                        "Luban.Mcp"),
+                    LubanSkillsPath = FindOptionalSkillsPath(
+                        root,
+                        configuration.ConfigDirectory,
+                        mainExecutablePath),
+                    LubanDocumentationPath = FindOptionalDocumentationPath(
+                        root,
+                        configuration.ConfigDirectory,
+                        mainExecutablePath),
                     TargetName = targetName
                 }
             };
@@ -192,6 +213,145 @@ public sealed class LubanProjectDiscoveryService
         AddExecutableCandidates(paths, Path.Combine(projectRoot, "Luban", "Tools", "Luban"));
         AddExecutableCandidates(paths, Path.Combine(projectRoot, "Tools", "Luban"));
         return paths.OrderBy(static value => value, GetPathComparer()).ToArray();
+    }
+
+    /// <summary>尽力发现新版 Luban 的可选伴随工具；候选有歧义时返回空文本而不阻断主工具。</summary>
+    /// <param name="projectRoot">已规范化的项目根。</param>
+    /// <param name="configDirectory">luban.conf 所在目录。</param>
+    /// <param name="mainExecutablePath">已选中的主 Luban 入口。</param>
+    /// <param name="directoryName">伴随工具目录名。</param>
+    /// <param name="fileName">伴随工具基名，不含扩展名。</param>
+    /// <returns>唯一可确认的 DLL/EXE 路径；缺失或歧义时返回空文本。</returns>
+    private static string FindOptionalExecutablePath(
+        string projectRoot,
+        string configDirectory,
+        string mainExecutablePath,
+        string directoryName,
+        string fileName)
+    {
+        HashSet<string> candidates = new(GetPathComparer());
+        foreach (string directory in GetCompanionDirectories(projectRoot, configDirectory, mainExecutablePath, directoryName))
+        {
+            AddOptionalExecutableCandidate(candidates, directory, fileName);
+        }
+
+        return candidates.Count == 1 ? candidates.Single() : string.Empty;
+    }
+
+    /// <summary>发现项目内常见 Luban 文档目录；文档属于可选 AI 辅助能力。</summary>
+    /// <param name="projectRoot">已规范化的项目根。</param>
+    /// <param name="configDirectory">luban.conf 所在目录。</param>
+    /// <param name="mainExecutablePath">已选中的主 Luban 入口。</param>
+    /// <returns>唯一可确认的文档目录；缺失或歧义时返回空文本。</returns>
+    private static string FindOptionalDocumentationPath(
+        string projectRoot,
+        string configDirectory,
+        string mainExecutablePath)
+    {
+        HashSet<string> candidates = new(GetPathComparer());
+        AddExistingDirectory(candidates, Path.Combine(projectRoot, "luban-doc", "docs"));
+        AddExistingDirectory(candidates, Path.Combine(projectRoot, "Luban", "luban-doc", "docs"));
+        AddExistingDirectory(candidates, Path.Combine(configDirectory, "..", "..", "luban-doc", "docs"));
+        AddExistingDirectory(candidates, Path.Combine(Path.GetDirectoryName(mainExecutablePath)!, "..", "..", "..", "luban-doc", "docs"));
+        return candidates.Count == 1 ? candidates.Single() : string.Empty;
+    }
+
+    /// <summary>发现新版 Luban 官方 Skills 源目录；安装到 AI 客户端的目标目录不在此处自动写入。</summary>
+    /// <param name="projectRoot">已规范化的项目根。</param>
+    /// <param name="configDirectory">luban.conf 所在目录。</param>
+    /// <param name="mainExecutablePath">已选中的主 Luban 入口。</param>
+    /// <returns>唯一可确认且包含官方 SKILL.md 的 Skills 根目录；缺失或歧义时返回空文本。</returns>
+    private static string FindOptionalSkillsPath(
+        string projectRoot,
+        string configDirectory,
+        string mainExecutablePath)
+    {
+        HashSet<string> candidates = new(GetPathComparer());
+        AddExistingSkillsRoot(candidates, Path.Combine(projectRoot, "Luban", "Tools", "Luban.Skill", "skills"));
+        AddExistingSkillsRoot(candidates, Path.Combine(projectRoot, "Luban", "Tools", "Luban.Skill"));
+        AddExistingSkillsRoot(candidates, Path.Combine(projectRoot, "ai", "skills"));
+        AddExistingSkillsRoot(candidates, Path.Combine(projectRoot, "Luban", "ai", "skills"));
+        AddExistingSkillsRoot(candidates, Path.Combine(configDirectory, "..", "..", "ai", "skills"));
+        AddExistingSkillsRoot(candidates, Path.Combine(Path.GetDirectoryName(mainExecutablePath)!, "..", "..", "..", "ai", "skills"));
+        return candidates.Count == 1 ? candidates.Single() : string.Empty;
+    }
+
+    /// <summary>生成伴随工具的候选目录，并按当前平台路径规则去重。</summary>
+    /// <param name="projectRoot">已规范化的项目根。</param>
+    /// <param name="configDirectory">luban.conf 所在目录。</param>
+    /// <param name="mainExecutablePath">已选中的主 Luban 入口。</param>
+    /// <param name="directoryName">伴随工具目录名。</param>
+    /// <returns>按优先级排列的候选目录。</returns>
+    private static IReadOnlyList<string> GetCompanionDirectories(
+        string projectRoot,
+        string configDirectory,
+        string mainExecutablePath,
+        string directoryName)
+    {
+        string mainDirectory = Path.GetDirectoryName(mainExecutablePath)!;
+        HashSet<string> directories = new(GetPathComparer());
+        directories.Add(Path.GetFullPath(Path.Combine(mainDirectory, "..", directoryName)));
+        directories.Add(Path.GetFullPath(Path.Combine(configDirectory, "..", "Tools", directoryName)));
+        directories.Add(Path.GetFullPath(Path.Combine(projectRoot, "Luban", "Tools", directoryName)));
+        directories.Add(Path.GetFullPath(Path.Combine(projectRoot, "Tools", directoryName)));
+        return directories.OrderBy(static value => value, GetPathComparer()).ToArray();
+    }
+
+    /// <summary>把目录中的可选伴随工具按 DLL 优先加入候选集合。</summary>
+    /// <param name="paths">去重候选集合。</param>
+    /// <param name="directory">待检查目录。</param>
+    /// <param name="fileName">工具基名，不含扩展名。</param>
+    private static void AddOptionalExecutableCandidate(HashSet<string> paths, string directory, string fileName)
+    {
+        string assemblyPath = Path.Combine(directory, fileName + ".dll");
+        if (File.Exists(assemblyPath))
+        {
+            paths.Add(Path.GetFullPath(assemblyPath));
+            return;
+        }
+
+        AddExistingFile(paths, Path.Combine(directory, fileName + ".exe"));
+    }
+
+    /// <summary>在目录存在时按绝对路径加入可选文档目录候选。</summary>
+    /// <param name="paths">去重候选集合。</param>
+    /// <param name="path">待检查目录。</param>
+    private static void AddExistingDirectory(HashSet<string> paths, string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        if (Directory.Exists(fullPath))
+        {
+            paths.Add(fullPath);
+        }
+    }
+
+    /// <summary>仅接受实际包含官方 Skill 定义的目录，避免把空目录误报为可用能力。</summary>
+    /// <param name="paths">待写入的候选集合。</param>
+    /// <param name="path">待检查的 Skills 根目录。</param>
+    private static void AddExistingSkillsRoot(HashSet<string> paths, string path)
+    {
+        string? skillsRoot = ResolveOfficialSkillsRoot(path);
+        if (!string.IsNullOrWhiteSpace(skillsRoot)) paths.Add(skillsRoot);
+    }
+
+    /// <summary>兼容用户选择 Luban.Skill 根目录或其中的 skills 子目录。</summary>
+    /// <param name="path">待检查的目录。</param>
+    /// <returns>包含官方 SKILL.md 的 skills 根目录；无法确认时返回空文本。</returns>
+    public static string ResolveOfficialSkillsRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        string fullPath = Path.GetFullPath(path);
+        if (!Directory.Exists(fullPath)) return string.Empty;
+        if (ContainsOfficialSkill(fullPath)) return fullPath;
+        string nested = Path.Combine(fullPath, "skills");
+        return ContainsOfficialSkill(nested) ? nested : string.Empty;
+    }
+
+    /// <summary>判断目录是否直接包含至少一个官方 Skill 定义。</summary>
+    private static bool ContainsOfficialSkill(string path)
+    {
+        return Directory.Exists(path)
+            && Directory.EnumerateDirectories(path).Any(static directory => File.Exists(Path.Combine(directory, "SKILL.md")));
     }
 
     /// <summary>根据常见 client/all 约定选择 target；其余多 target 配置要求调用方显式配置。</summary>

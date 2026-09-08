@@ -9,8 +9,12 @@ TableKit 把 Luban 数据表生成流程接入 Workbench，并为运行时提供
 使用前准备：
 
 - 可正常运行的 Luban 配置文件（通常为 `luban.conf`）和表数据。
-- Workbench 中可用的 Luban 工具路径。
+- Workbench 中可用的 Luban 主工具路径（通常是 `Luban.dll`）。
 - 代码输出目录和数据输出目录。
+
+新版 Luban 的 `Luban.Agent`、`Luban.Mcp` 和 Skill 目录属于可选 AI 辅助能力。Workbench 会在 TableKit 页面自动发现并校验项目内能唯一确认的路径；旧版 Luban 缺少这些目录或工具时，仍可正常验证和生成，不需要额外配置。
+
+Workbench 不重复实现 Luban AI，也不再提供复制提示词入口。配置好路径后，直接向 AI 提出配表需求即可：YokiFrame Skill 会读取 TableKit 配置，并按任务导入官方 Luban Skill。
 
 TableKit 只负责验证、生成和加载，不提供运行时编辑表数据的功能。首次生成成功后，项目才会获得对应的 `TableKit` 门面和表管理器类型。
 
@@ -106,7 +110,7 @@ Workbench 不会替项目安装 Addressables、YooAsset 或其它资源方案；
 
 ## 在工具中查看
 
-Workbench 的 TableKit 页面提供配置校验、表预览和代码生成。生成结果属于项目代码，由项目自行提交和维护。
+Workbench 的 TableKit 页面提供配置校验、表预览和代码生成，并在“可选 AI 工具”中显示 Luban 主工具之外的 `Luban.Agent`、`Luban.Mcp` 和 Skill 路径。这些路径只用于校验和给 YokiFrame Skill 读取，不在页面内直接调用官方 Agent。生成结果属于项目代码，由项目自行提交和维护。
 
 ## 限制与相关资料
 

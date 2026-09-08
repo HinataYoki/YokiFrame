@@ -115,6 +115,17 @@
   <x:String x:Key="String.TableKit.BrowseLubanWorkDir">选择 Luban 工作目录</x:String>
   <x:String x:Key="String.TableKit.LubanExecutableAutomationName">Luban 执行路径</x:String>
   <x:String x:Key="String.TableKit.SelectLubanDll">选择 Luban.dll</x:String>
+  <x:String x:Key="String.TableKit.LubanAgentPath">Luban.Agent</x:String>
+  <x:String x:Key="String.TableKit.LubanMcpPath">Luban.Mcp</x:String>
+  <x:String x:Key="String.TableKit.LubanSkillsPath">Skill 路径</x:String>
+  <x:String x:Key="String.TableKit.OptionalToolMissing">未发现（可选）</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanTools">可选 AI 工具</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsHint">Agent、MCP 与 Skill 可按需配置，旧版 Luban 可留空</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsEmpty">未配置官方 Agent、MCP 或 Skill；旧版 Luban 可继续验证和生成。</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsReady">已识别 {0}/3 项官方 AI 路径。配表需求由 YokiFrame Skill 自动读取这些路径并导入官方 Skill。</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanAgent">选择 Luban.Agent.dll</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanMcp">选择 Luban.Mcp.dll</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanSkills">选择 Skill 目录</x:String>
   <x:String x:Key="String.TableKit.OutputDataAutomationName">TableKit 数据目录</x:String>
   <x:String x:Key="String.TableKit.BrowseDataDirectory">选择数据目录</x:String>
   <x:String x:Key="String.TableKit.OutputCodeAutomationName">TableKit 代码目录</x:String>
@@ -469,7 +480,7 @@
   <x:String x:Key="String.TableKit.DataPreview">数据预览</x:String>
   <x:String x:Key="String.TableKit.Console">控制台</x:String>
   <x:String x:Key="String.TableKit.LubanPaths">环境与路径配置</x:String>
-  <x:String x:Key="String.TableKit.LubanPathsHint">Luban 工作目录与运行工具</x:String>
+  <x:String x:Key="String.TableKit.LubanPathsHint">主 Luban 工具必需，Agent、MCP 与 Skill 为可选能力</x:String>
   <x:String x:Key="String.TableKit.LubanWorkDir">工作目录</x:String>
   <x:String x:Key="String.TableKit.TargetConfig">目标与输出</x:String>
   <x:String x:Key="String.TableKit.TargetConfigHint">Luban target、代码格式与数据目录</x:String>
@@ -817,6 +828,9 @@
   <x:String x:Key="String.TableKit.PickWorkDirTitle">选择 Luban 工作目录</x:String>
   <x:String x:Key="String.TableKit.NoLubanFilePicker">当前窗口没有可用的 Luban.dll 文件选择器。</x:String>
   <x:String x:Key="String.TableKit.PickLubanDllTitle">选择 Luban.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanAgentTitle">选择 Luban.Agent.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanMcpTitle">选择 Luban.Mcp.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanSkillsTitle">选择 Luban Skill 目录</x:String>
   <x:String x:Key="String.TableKit.PickDataDirTitle">选择 TableKit 数据输出目录</x:String>
   <x:String x:Key="String.TableKit.PickCodeDirTitle">选择 TableKit 代码输出目录</x:String>
   <x:String x:Key="String.TableKit.PickEditorDataDirTitle">选择 TableKit 编辑器数据目录</x:String>

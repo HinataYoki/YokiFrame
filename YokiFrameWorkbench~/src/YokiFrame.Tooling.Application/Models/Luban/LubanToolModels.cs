@@ -15,6 +15,18 @@ public sealed record LubanToolOptions
     /// <summary>Luban 可执行文件或 Luban.dll 的绝对或项目根相对路径。</summary>
     public string LubanExecutablePath { get; init; } = string.Empty;
 
+    /// <summary>可选的 Luban.Agent CLI 路径；旧版 Luban 缺失时不影响主生成器。</summary>
+    public string LubanAgentExecutablePath { get; init; } = string.Empty;
+
+    /// <summary>可选的 Luban.Mcp Server 路径；Workbench 不依赖它执行普通生成。</summary>
+    public string LubanMcpExecutablePath { get; init; } = string.Empty;
+
+    /// <summary>可选的 Luban 官方 Skills 源目录；旧版 Luban 缺失时保持为空。</summary>
+    public string LubanSkillsPath { get; init; } = string.Empty;
+
+    /// <summary>可选的 Luban 本地文档目录，用于后续 AI/MCP 文档查询。</summary>
+    public string LubanDocumentationPath { get; init; } = string.Empty;
+
     /// <summary>本次调用的 Luban target 名称。</summary>
     public string TargetName { get; init; } = "client";
 }

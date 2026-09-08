@@ -20,6 +20,12 @@ public sealed record TableKitOptions
     public string LubanWorkDir { get; init; } = string.Empty;
     /// <summary>Luban 可执行文件或 Luban.dll 路径。</summary>
     public string LubanExecutablePath { get; init; } = string.Empty;
+    /// <summary>可选的 Luban.Agent CLI 路径；缺失时不影响 TableKit 主流程。</summary>
+    public string LubanAgentExecutablePath { get; init; } = string.Empty;
+    /// <summary>可选的 Luban.Mcp Server 路径；缺失时不影响 TableKit 主流程。</summary>
+    public string LubanMcpExecutablePath { get; init; } = string.Empty;
+    /// <summary>可选的 Luban 官方 Skills 源目录。</summary>
+    public string LubanSkillsPath { get; init; } = string.Empty;
     /// <summary>目标名称；默认生成客户端字段分组。</summary>
     public string TargetName { get; init; } = "client";
     /// <summary>代码生成 target，例如 cs-bin、cs-dotnet-json。</summary>

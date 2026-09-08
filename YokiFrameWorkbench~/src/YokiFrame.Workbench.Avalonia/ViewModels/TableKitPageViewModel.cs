@@ -19,6 +19,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     private readonly TableKitOptions mDefaultOptions;
     private string mConfigPath = string.Empty;
     private string mLubanExecutablePath = string.Empty;
+    private string mLubanAgentExecutablePath = string.Empty;
+    private string mLubanMcpExecutablePath = string.Empty;
+    private string mLubanSkillsPath = string.Empty;
     private string mLubanWorkDir = string.Empty;
     private string mTargetName = string.Empty;
     private string mCodeTarget = string.Empty;
@@ -101,6 +104,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         ClearConsoleCommand = new RelayCommand(ClearConsole);
         BrowseLubanWorkDirCommand = new AsyncRelayCommand(BrowseLubanWorkDirAsync);
         BrowseLubanExecutableCommand = new AsyncRelayCommand(BrowseLubanExecutableAsync);
+        BrowseLubanAgentCommand = new AsyncRelayCommand(BrowseLubanAgentAsync);
+        BrowseLubanMcpCommand = new AsyncRelayCommand(BrowseLubanMcpAsync);
+        BrowseLubanSkillsCommand = new AsyncRelayCommand(BrowseLubanSkillsAsync);
         BrowseOutputDataCommand = new AsyncRelayCommand(BrowseOutputDataAsync);
         BrowseOutputCodeCommand = new AsyncRelayCommand(BrowseOutputCodeAsync);
         BrowseEditorDataCommand = new AsyncRelayCommand(BrowseEditorDataAsync);
@@ -126,6 +132,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ConsoleCountText));
         OnPropertyChanged(nameof(ConsoleSummaryText));
         OnPropertyChanged(nameof(ConsoleToggleText));
+        OnPropertyChanged(nameof(OptionalLubanToolsSummary));
     }
 
     /// <summary>可选的 Luban target 名称集合；配置刷新后会追加用户 target。</summary>
@@ -149,6 +156,35 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     public string ConfigPath { get => mConfigPath; set { if (SetProperty(ref mConfigPath, value)) RefreshEnvironment(); } }
     /// <summary>获取或设置 Luban 可执行文件或 DLL 路径。</summary>
     public string LubanExecutablePath { get => mLubanExecutablePath; set { if (SetProperty(ref mLubanExecutablePath, value)) RefreshEnvironment(); } }
+    /// <summary>获取自动发现的可选 Luban.Agent CLI 路径。</summary>
+    public string LubanAgentExecutablePath
+    {
+        get => mLubanAgentExecutablePath;
+        set
+        {
+            if (!SetProperty(ref mLubanAgentExecutablePath, value)) return;
+            OnPropertyChanged(nameof(AgentAvailable));
+            OnPropertyChanged(nameof(OptionalLubanToolsSummary));
+        }
+    }
+    /// <summary>获取自动发现的可选 Luban.Mcp Server 路径。</summary>
+    public string LubanMcpExecutablePath
+    {
+        get => mLubanMcpExecutablePath;
+        set
+        {
+            if (SetProperty(ref mLubanMcpExecutablePath, value)) OnPropertyChanged(nameof(OptionalLubanToolsSummary));
+        }
+    }
+    /// <summary>获取自动发现的可选 Luban 官方 Skills 源目录。</summary>
+    public string LubanSkillsPath
+    {
+        get => mLubanSkillsPath;
+        set
+        {
+            if (SetProperty(ref mLubanSkillsPath, value)) OnPropertyChanged(nameof(OptionalLubanToolsSummary));
+        }
+    }
     /// <summary>获取或设置 Luban 工作目录。</summary>
     public string LubanWorkDir { get => mLubanWorkDir; set { if (SetProperty(ref mLubanWorkDir, value)) RefreshEnvironment(); } }
     /// <summary>获取或设置 Luban target 名称。</summary>
@@ -344,6 +380,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     }
     /// <summary>获取当前 Luban 是否可用。</summary>
     public bool LubanAvailable { get => mLubanAvailable; private set => SetProperty(ref mLubanAvailable, value); }
+    /// <summary>获取当前是否已发现可直接执行的官方 Luban.Agent。</summary>
+    public bool AgentAvailable => !string.IsNullOrWhiteSpace(LubanAgentExecutablePath)
+        && File.Exists(ResolveInputPath(LubanAgentExecutablePath));
     /// <summary>获取当前 Luban 是否不可用，用于状态提示样式。</summary>
     public bool LubanUnavailable => !LubanAvailable;
     /// <summary>获取 Luban 包标识；宿主未上报时显示默认安装契约。</summary>
@@ -356,6 +395,8 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     public string LoaderText => string.IsNullOrWhiteSpace(mLoaderSummary)
         ? (UseRawResourceLoading ? "ResKit.LoadRaw / LoadRawText" : "ResKit.Load<TextAsset>")
         : mLoaderSummary;
+    /// <summary>获取当前可选 Luban AI 路径的校验摘要。</summary>
+    public string OptionalLubanToolsSummary => CreateOptionalLubanToolsSummary();
 
     /// <summary>读取 Luban 配置并显示临时 JSON 预览。</summary>
     public AsyncRelayCommand ValidateCommand { get; }
@@ -377,6 +418,12 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand BrowseLubanWorkDirCommand { get; }
     /// <summary>选择实际 Luban.dll 文件。</summary>
     public AsyncRelayCommand BrowseLubanExecutableCommand { get; }
+    /// <summary>选择可选 Luban.Agent 文件。</summary>
+    public AsyncRelayCommand BrowseLubanAgentCommand { get; }
+    /// <summary>选择可选 Luban.Mcp 文件。</summary>
+    public AsyncRelayCommand BrowseLubanMcpCommand { get; }
+    /// <summary>选择可选 Luban Skill 目录。</summary>
+    public AsyncRelayCommand BrowseLubanSkillsCommand { get; }
     /// <summary>选择数据输出目录。</summary>
     public AsyncRelayCommand BrowseOutputDataCommand { get; }
     /// <summary>选择代码输出目录。</summary>

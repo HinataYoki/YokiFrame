@@ -115,6 +115,17 @@
   <x:String x:Key="String.TableKit.BrowseLubanWorkDir">Choose Luban working directory</x:String>
   <x:String x:Key="String.TableKit.LubanExecutableAutomationName">Luban executable path</x:String>
   <x:String x:Key="String.TableKit.SelectLubanDll">Choose Luban.dll</x:String>
+  <x:String x:Key="String.TableKit.LubanAgentPath">Luban.Agent</x:String>
+  <x:String x:Key="String.TableKit.LubanMcpPath">Luban.Mcp</x:String>
+  <x:String x:Key="String.TableKit.LubanSkillsPath">Skill path</x:String>
+  <x:String x:Key="String.TableKit.OptionalToolMissing">Not found (optional)</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanTools">Optional AI Tools</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsHint">Configure Agent, MCP, and Skills as needed; legacy Luban can leave these empty</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsEmpty">Official Agent, MCP, and Skills are not configured; legacy Luban can still validate and generate.</x:String>
+  <x:String x:Key="String.TableKit.OptionalLubanToolsReady">Recognized {0}/3 official AI paths. Table requests are handled by YokiFrame Skills, which import official Luban Skills from these paths.</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanAgent">Choose Luban.Agent.dll</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanMcp">Choose Luban.Mcp.dll</x:String>
+  <x:String x:Key="String.TableKit.SelectLubanSkills">Choose Skill directory</x:String>
   <x:String x:Key="String.TableKit.OutputDataAutomationName">TableKit data directory</x:String>
   <x:String x:Key="String.TableKit.BrowseDataDirectory">Choose data directory</x:String>
   <x:String x:Key="String.TableKit.OutputCodeAutomationName">TableKit code directory</x:String>
@@ -469,7 +480,7 @@
   <x:String x:Key="String.TableKit.DataPreview">Data Preview</x:String>
   <x:String x:Key="String.TableKit.Console">Console</x:String>
   <x:String x:Key="String.TableKit.LubanPaths">Environment &amp; Path Configuration</x:String>
-  <x:String x:Key="String.TableKit.LubanPathsHint">Luban working directory &amp; runtime executable</x:String>
+  <x:String x:Key="String.TableKit.LubanPathsHint">Luban is required; Agent, MCP, and Skills are optional</x:String>
   <x:String x:Key="String.TableKit.LubanWorkDir">Working Directory</x:String>
   <x:String x:Key="String.TableKit.TargetConfig">Targets &amp; Output</x:String>
   <x:String x:Key="String.TableKit.TargetConfigHint">Luban target, code format &amp; data directories</x:String>
@@ -817,6 +828,9 @@
   <x:String x:Key="String.TableKit.PickWorkDirTitle">Choose Luban working directory</x:String>
   <x:String x:Key="String.TableKit.NoLubanFilePicker">No Luban.dll file picker available in this window.</x:String>
   <x:String x:Key="String.TableKit.PickLubanDllTitle">Choose Luban.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanAgentTitle">Choose Luban.Agent.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanMcpTitle">Choose Luban.Mcp.dll</x:String>
+  <x:String x:Key="String.TableKit.PickLubanSkillsTitle">Choose Luban Skill directory</x:String>
   <x:String x:Key="String.TableKit.PickDataDirTitle">Choose the TableKit data output directory</x:String>
   <x:String x:Key="String.TableKit.PickCodeDirTitle">Choose the TableKit code output directory</x:String>
   <x:String x:Key="String.TableKit.PickEditorDataDirTitle">Choose the TableKit editor data directory</x:String>

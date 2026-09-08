@@ -17,7 +17,7 @@
 | Tools | AudioKit | 按 Bus 查看 active voice、播放进度、播放历史和稳定音频索引 | Runtime 只读；仅索引生成写项目代码与 manifest |
 | Tools | SpatialKit | 索引、分区、投影密度、热点和分析 | 只读；不修改实体 |
 | Tools | UIKit | Unity Runtime 诊断、Panel Prefab、Bind 和代码生成工具 | 仅 Unity Editor 用户 action；不远程控制 Runtime UI |
-| Tools | TableKit | Luban 配置校验、生成和临时预览 | 显式生成项目代码 |
+| Tools | TableKit | Luban 配置校验、生成、临时预览，以及新版 Luban 可选 Agent/MCP/Skill 路径发现与校验 | 显式生成项目代码；AI 伴随路径只保存并校验，不复制提示词 |
 | Tools | LocalizationKit | standalone JSON 或 Luban 单表 Excel 的目录、搜索、语言和缺失项 | 配置项目内 Luban 工作目录、打开 Excel 作者目录、显式创建 XML/Excel 模板；预览只写项目 Temp |
 | Tools | SaveKit | 存档路径/扩展名、文件元信息与 Runtime 后端/自动保存/容器头摘要 | 保存配置；不读取或发布真实 payload |
 
@@ -45,7 +45,7 @@ Architecture 没有独立 Workbench 页面；Runtime API、Interaction 和 CLI �
 | AudioKit | 总线目录可能裁剪；播放历史只投影 `play_started`，页面没有 Runtime 操作入口 |
 | SpatialKit | Octree 密度是 XZ 投影并沿 Y 聚合，不是三维节点图 |
 | UIKit | 只在 Unity engine 下可用；Root 配置由 Prefab Variant 与 `UIKit.SetRootPrefab` 管理，不在 Workbench 设置 |
-| TableKit | 未生成项目没有 Runtime TableKit 类型；页面是离线生成入口 |
+| TableKit | 未生成项目没有 Runtime TableKit 类型；页面是离线生成入口。主 `Luban.dll` 是验证/生成前提，`Luban.Agent`、`Luban.Mcp` 和 Skill 路径是可选发现项，缺失不阻断旧版 Luban。官方 Skill/Agent/MCP 由 Luban 自己负责，Workbench 只负责发现、保存和路径校验 |
 | LocalizationKit | 页面消费 Application 强类型 catalog，不解析 wire JSON；发现已注册 XML 后 Luban 失败不得伪装为 standalone JSON |
 | SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；`${persistentDataPath}` 和 `${userDataDir}` 可能只能显示运行时解析状态 |
 

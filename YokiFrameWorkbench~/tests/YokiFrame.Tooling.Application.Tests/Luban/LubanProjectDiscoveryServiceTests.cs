@@ -17,6 +17,58 @@ public sealed class LubanProjectDiscoveryServiceTests
 
         Assert.True(result.Succeeded, string.Join("; ", result.Diagnostics));
         Assert.Equal(Path.Combine(project.Root, "Luban", "Tools", "Luban", "Luban.dll"), result.Options?.LubanExecutablePath);
+        Assert.Equal(string.Empty, result.Options?.LubanAgentExecutablePath);
+        Assert.Equal(string.Empty, result.Options?.LubanMcpExecutablePath);
+        Assert.Equal(string.Empty, result.Options?.LubanSkillsPath);
+        Assert.Equal(string.Empty, result.Options?.LubanDocumentationPath);
+    }
+
+    /// <summary>新版伴随工具存在时，应附加到发现结果但不改变主工具入口。</summary>
+    [Fact]
+    public void DiscoverFindsOptionalAiCompanionTools()
+    {
+        using TemporaryLubanProject project = TemporaryLubanProject.Create();
+        project.AddStandardToolPair();
+        project.AddCompanionTool("Luban.Agent", "Luban.Agent.dll");
+        project.AddCompanionTool("Luban.Mcp", "Luban.Mcp.dll");
+        project.AddDocumentationDirectory();
+        project.AddSkillsDirectory();
+
+        LubanToolDiscoveryResult result = new LubanProjectDiscoveryService().Discover(project.Root);
+
+        Assert.True(result.Succeeded, string.Join("; ", result.Diagnostics));
+        Assert.Equal(
+            Path.Combine(project.Root, "Luban", "Tools", "Luban.Agent", "Luban.Agent.dll"),
+            result.Options?.LubanAgentExecutablePath);
+        Assert.Equal(
+            Path.Combine(project.Root, "Luban", "Tools", "Luban.Mcp", "Luban.Mcp.dll"),
+            result.Options?.LubanMcpExecutablePath);
+        Assert.Equal(
+            Path.Combine(project.Root, "Luban", "Tools", "Luban.Skill", "skills"),
+            result.Options?.LubanSkillsPath);
+        Assert.Equal(
+            Path.Combine(project.Root, "Luban", "Tools", "Luban.Skill", "skills"),
+            LubanProjectDiscoveryService.ResolveOfficialSkillsRoot(
+                Path.Combine(project.Root, "Luban", "Tools", "Luban.Skill")));
+        Assert.Equal(
+            Path.Combine(project.Root, "luban-doc", "docs"),
+            result.Options?.LubanDocumentationPath);
+    }
+
+    /// <summary>可选工具存在多个候选时不得静默猜测，主 Luban 仍必须保持可用。</summary>
+    [Fact]
+    public void DiscoverIgnoresAmbiguousOptionalCompanionTools()
+    {
+        using TemporaryLubanProject project = TemporaryLubanProject.Create();
+        project.AddStandardToolPair();
+        project.AddCompanionTool("Luban.Agent", "Luban.Agent.dll");
+        project.AddProjectCompanionTool("Luban.Agent", "Luban.Agent.dll");
+
+        LubanToolDiscoveryResult result = new LubanProjectDiscoveryService().Discover(project.Root);
+
+        Assert.True(result.Succeeded, string.Join("; ", result.Diagnostics));
+        Assert.Equal(Path.Combine(project.Root, "Luban", "Tools", "Luban", "Luban.dll"), result.Options?.LubanExecutablePath);
+        Assert.Equal(string.Empty, result.Options?.LubanAgentExecutablePath);
     }
 
     /// <summary>不同目录中的多份 Luban 工具仍必须拒绝自动猜测，避免静默使用错误版本。</summary>
@@ -92,6 +144,39 @@ public sealed class LubanProjectDiscoveryServiceTests
             string directory = Path.Combine(Root, "Luban", "Tools", directoryName);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, fileName), string.Empty);
+        }
+
+        /// <summary>在标准 Luban Tools 目录创建一个可选伴随工具入口。</summary>
+        /// <param name="directoryName">伴随工具目录名。</param>
+        /// <param name="fileName">工具入口文件名。</param>
+        public void AddCompanionTool(string directoryName, string fileName)
+        {
+            AddTool(directoryName, fileName);
+        }
+
+        /// <summary>在项目根级 Tools 目录创建一个可选伴随工具入口，用于构造发现歧义。</summary>
+        /// <param name="directoryName">伴随工具目录名。</param>
+        /// <param name="fileName">工具入口文件名。</param>
+        public void AddProjectCompanionTool(string directoryName, string fileName)
+        {
+            string directory = Path.Combine(Root, "Tools", directoryName);
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, fileName), string.Empty);
+        }
+
+        /// <summary>创建项目根级 Luban 文档目录。</summary>
+        public void AddDocumentationDirectory()
+        {
+            Directory.CreateDirectory(Path.Combine(Root, "luban-doc", "docs"));
+        }
+
+        /// <summary>创建项目根级 Luban 官方 Skills 源目录。</summary>
+        public void AddSkillsDirectory()
+        {
+            string skillsRoot = Path.Combine(Root, "Luban", "Tools", "Luban.Skill", "skills");
+            string skillDirectory = Path.Combine(skillsRoot, "luban-validator");
+            Directory.CreateDirectory(skillDirectory);
+            File.WriteAllText(Path.Combine(skillDirectory, "SKILL.md"), "---\nname: luban-validator\n---\n");
         }
 
         /// <summary>在项目根级候选工具目录创建一个空入口文件。</summary>
