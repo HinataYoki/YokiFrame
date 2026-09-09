@@ -15,7 +15,8 @@ public sealed class WorkbenchSkillTarget
     /// <param name="relativePath">相对项目根的安装目录。</param>
     /// <param name="statusText">安装状态文本。</param>
     /// <param name="isInstalled">当前选中 Skill 是否已安装。</param>
-    /// <param name="installCommand">安装命令。</param>
+    /// <param name="actionText">安装或更新按钮文案。</param>
+    /// <param name="installCommand">安装或更新命令；已安装时仍走整目录替换。</param>
     /// <param name="uninstallCommand">卸载命令。</param>
     public WorkbenchSkillTarget(
         string id,
@@ -23,6 +24,7 @@ public sealed class WorkbenchSkillTarget
         string relativePath,
         string statusText,
         bool isInstalled,
+        string actionText,
         ICommand installCommand,
         ICommand uninstallCommand)
     {
@@ -31,6 +33,7 @@ public sealed class WorkbenchSkillTarget
         RelativePath = relativePath;
         StatusText = statusText;
         IsInstalled = isInstalled;
+        ActionText = actionText;
         InstallCommand = installCommand;
         UninstallCommand = uninstallCommand;
     }
@@ -61,7 +64,12 @@ public sealed class WorkbenchSkillTarget
     public bool IsInstalled { get; }
 
     /// <summary>
-    /// 获取安装命令。
+    /// 获取安装或更新按钮文案。
+    /// </summary>
+    public string ActionText { get; }
+
+    /// <summary>
+    /// 获取安装或更新命令。
     /// </summary>
     public ICommand InstallCommand { get; }
 

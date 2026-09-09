@@ -87,6 +87,7 @@
   <x:String x:Key="String.Overview.PresetTargets">Preset targets for current skill...</x:String>
   <x:String x:Key="String.Overview.CustomDirectory">Custom Directory</x:String>
   <x:String x:Key="String.Overview.Install">Install</x:String>
+  <x:String x:Key="String.Overview.Update">Update</x:String>
   <x:String x:Key="String.Overview.Uninstall">Uninstall</x:String>
   <x:String x:Key="String.Overview.Installed">Installed</x:String>
   <x:String x:Key="String.Overview.NotInstalled">Not Installed</x:String>

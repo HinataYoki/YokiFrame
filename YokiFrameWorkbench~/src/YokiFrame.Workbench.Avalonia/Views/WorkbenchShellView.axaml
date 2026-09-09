@@ -539,13 +539,18 @@
                                     Classes="badge"
                                     Classes.positive="{CompiledBinding IsInstalled}"
                                     Classes.neutral="{CompiledBinding !IsInstalled}"
-                                    Padding="6,2">
+                                    Padding="6,2"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center">
                               <TextBlock Text="{CompiledBinding StatusText}"
                                          Classes="muted"
-                                         FontSize="{DynamicResource FontSize.Xs}" />
+                                         FontSize="{DynamicResource FontSize.Xs}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         TextAlignment="Center" />
                             </Border>
                             <Button Grid.Column="2"
-                                    Content="{DynamicResource String.Overview.Install}"
+                                    Content="{CompiledBinding ActionText}"
                                     Command="{CompiledBinding InstallCommand}"
                                     Classes="primary compact-action" />
                             <Button Grid.Column="3"
@@ -581,7 +586,7 @@
                       <TextBox Text="{CompiledBinding CustomSkillPath, Mode=TwoWay}"
                                PlaceholderText="custom/skills" />
                       <Button Grid.Column="1"
-                              Content="{DynamicResource String.Overview.Install}"
+                              Content="{CompiledBinding CustomSkillActionText}"
                               Command="{CompiledBinding InstallCustomSkillCommand}"
                               Classes="secondary" />
                       <Button Grid.Column="2"

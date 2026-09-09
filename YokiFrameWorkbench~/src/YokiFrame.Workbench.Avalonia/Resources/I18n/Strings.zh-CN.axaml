@@ -87,6 +87,7 @@
   <x:String x:Key="String.Overview.PresetTargets">当前 Skill 的预设目标...</x:String>
   <x:String x:Key="String.Overview.CustomDirectory">自定义目录</x:String>
   <x:String x:Key="String.Overview.Install">安装</x:String>
+  <x:String x:Key="String.Overview.Update">更新</x:String>
   <x:String x:Key="String.Overview.Uninstall">卸载</x:String>
   <x:String x:Key="String.Overview.Installed">已安装</x:String>
   <x:String x:Key="String.Overview.NotInstalled">未安装</x:String>

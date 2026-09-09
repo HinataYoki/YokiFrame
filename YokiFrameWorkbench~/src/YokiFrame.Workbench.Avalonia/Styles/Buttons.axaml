@@ -118,6 +118,8 @@
   <Style Selector="ProgressBar.runtime-update-progress">
     <Setter Property="Height" Value="3" />
     <Setter Property="MinHeight" Value="3" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Foreground" Value="{DynamicResource Brush.Action.Primary}" />
     <Setter Property="Background" Value="{DynamicResource Brush.Surface.Elevated}" />
   </Style>

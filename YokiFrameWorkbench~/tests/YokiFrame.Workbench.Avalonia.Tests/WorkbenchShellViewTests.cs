@@ -193,6 +193,7 @@ public sealed partial class WorkbenchShellViewTests
         Assert.True(maximizeIndex < closeIndex);
         Assert.Contains("Classes=\"runtime-update-progress\"", titleBarXaml);
         Assert.Contains("RuntimeUpdate.IsBuilding", titleBarXaml);
+        Assert.Contains("MinWidth=\"0\"", titleBarXaml);
         Assert.DoesNotContain("RuntimeUpdate.StatusText", shellXaml);
         Assert.DoesNotContain("RuntimeUpdate.RebuildCommand", shellXaml);
     }

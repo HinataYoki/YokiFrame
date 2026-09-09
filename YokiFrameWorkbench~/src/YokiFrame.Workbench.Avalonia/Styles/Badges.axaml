@@ -7,6 +7,11 @@
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
     <Setter Property="Padding" Value="{DynamicResource Padding.Badge}" />
   </Style>
+  <Style Selector="Border.badge TextBlock, Border.kit-badge TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
   <Style Selector="Border.badge.accent, Border.kit-badge.accent">
     <Setter Property="Background" Value="{DynamicResource Brush.Action.Selected}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.Action.Primary}" />

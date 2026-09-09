@@ -24,11 +24,13 @@
                chrome:WindowDecorationProperties.ElementRole="User" />
     <Grid Grid.Column="3"
           RowDefinitions="Auto,Auto"
+          HorizontalAlignment="Left"
           VerticalAlignment="Center"
           chrome:WindowDecorationProperties.ElementRole="User">
       <Button Command="{CompiledBinding RuntimeUpdate.RebuildCommand}"
               IsVisible="{CompiledBinding RuntimeUpdate.IsVisible}"
               Classes="primary compact-action"
+              HorizontalAlignment="Stretch"
               ToolTip.Tip="{DynamicResource String.TitleBar.NewVersionTooltip}"
               AutomationProperties.Name="Rebuild Runtime">
         <StackPanel Orientation="Horizontal" Spacing="5">
@@ -46,6 +48,8 @@
       </Button>
       <ProgressBar Grid.Row="1"
                    Classes="runtime-update-progress"
+                   MinWidth="0"
+                   HorizontalAlignment="Stretch"
                    Margin="0,3,0,0"
                    IsVisible="{CompiledBinding RuntimeUpdate.IsBuilding}"
                    IsIndeterminate="True" />

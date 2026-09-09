@@ -23,6 +23,29 @@ public sealed class SkillInstallServiceTests
     }
 
     /// <summary>
+    /// 验证对已安装 Skill 再次安装会删除旧目录并替换为包内新文档。
+    /// </summary>
+    [Fact]
+    public void InstallReplacesExistingSkillDirectory()
+    {
+        var projectRoot = CreateProjectWithPackagedSkill("yokiframe");
+        var targetRoot = Path.Combine(projectRoot, ".codex", "skills", "yokiframe");
+        Directory.CreateDirectory(targetRoot);
+        File.WriteAllText(Path.Combine(targetRoot, "SKILL.md"), "old");
+        File.WriteAllText(Path.Combine(targetRoot, "stale.md"), "stale");
+        File.WriteAllText(
+            Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills", "yokiframe", "SKILL.md"),
+            "new-content");
+
+        var result = new SkillInstallService().Install(projectRoot, "codex", "yokiframe");
+
+        Assert.True(result.Success);
+        Assert.Contains("已更新", result.Log, StringComparison.Ordinal);
+        Assert.Equal("new-content", File.ReadAllText(Path.Combine(targetRoot, "SKILL.md")));
+        Assert.False(File.Exists(Path.Combine(targetRoot, "stale.md")));
+    }
+
+    /// <summary>
     /// 验证安装到 AI 目录时不会把 Unity 导入用的 meta 文件复制过去。
     /// </summary>
     [Fact]

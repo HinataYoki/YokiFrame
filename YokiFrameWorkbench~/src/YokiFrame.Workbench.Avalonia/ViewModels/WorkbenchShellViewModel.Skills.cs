@@ -24,6 +24,7 @@ public sealed partial class WorkbenchShellViewModel
     private SkillInstallationStatus? mSkillInstallStatus;
     private string mCustomSkillPath = "custom/skills";
     private string mCustomSkillStatusText = GetString(RelativeRootHintKey, "相对项目根目录");
+    private string mCustomSkillActionText = GetString(InstallActionKey, "安装");
     private string mSelectedSkillName = "yokiframe";
     private string mSkillInstallStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
     private string mSkillProjectRoot = string.Empty;
@@ -112,6 +113,15 @@ public sealed partial class WorkbenchShellViewModel
     {
         get => mCustomSkillStatusText;
         private set => SetProperty(ref mCustomSkillStatusText, value);
+    }
+
+    /// <summary>
+    /// 获取自定义目录安装或更新按钮文案。
+    /// </summary>
+    public string CustomSkillActionText
+    {
+        get => mCustomSkillActionText;
+        private set => SetProperty(ref mCustomSkillActionText, value);
     }
 
     /// <summary>
@@ -253,6 +263,7 @@ public sealed partial class WorkbenchShellViewModel
                 ? GetString("String.Overview.Installed", "已安装")
                 : GetString("String.Overview.NotInstalled", "未安装"),
             isInstalled,
+            CreateSkillActionText(isInstalled),
             new RelayCommand(() => InstallSkill(target.Id), () => isPackaged),
             new RelayCommand(() => UninstallSkill(target.Id), () => isInstalled));
     }
@@ -360,12 +371,25 @@ public sealed partial class WorkbenchShellViewModel
             relativePath,
             "等待扫描",
             false,
+            CreateSkillActionText(false),
             new RelayCommand(static () => { }, static () => false),
             new RelayCommand(static () => { }, static () => false));
     }
 
     /// <summary>
-    /// 执行安装并刷新目标状态。
+    /// 创建安装或更新按钮文案；已安装目标显示更新，仍走整目录替换。
+    /// </summary>
+    /// <param name="isInstalled">当前目标是否已安装该 Skill。</param>
+    /// <returns>按钮文案。</returns>
+    private static string CreateSkillActionText(bool isInstalled)
+    {
+        return isInstalled
+            ? GetString(UpdateActionKey, "更新")
+            : GetString(InstallActionKey, "安装");
+    }
+
+    /// <summary>
+    /// 执行安装或更新并刷新目标状态；已存在时由 Core 删除旧目录后写入新文档。
     /// </summary>
     /// <param name="targetId">目标标识。</param>
     private void InstallSkill(string targetId)
@@ -461,12 +485,14 @@ public sealed partial class WorkbenchShellViewModel
         if (string.IsNullOrWhiteSpace(mSkillProjectRoot))
         {
             CustomSkillStatusText = GetString(WaitingProjectStatusKey, "等待项目状态");
+            CustomSkillActionText = CreateSkillActionText(false);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(CustomSkillPath))
         {
             CustomSkillStatusText = GetString(EnterRelativePathKey, "请输入相对目录");
+            CustomSkillActionText = CreateSkillActionText(false);
             return;
         }
 
@@ -474,13 +500,16 @@ public sealed partial class WorkbenchShellViewModel
         if (Path.IsPathRooted(normalizedPath) || normalizedPath.Contains(':', StringComparison.Ordinal))
         {
             CustomSkillStatusText = GetString(MustBeRelativeKey, "必须是项目内相对目录");
+            CustomSkillActionText = CreateSkillActionText(false);
             return;
         }
 
         var skillFile = Path.Combine(mSkillProjectRoot, normalizedPath, SelectedSkillName, "SKILL.md");
-        CustomSkillStatusText = File.Exists(skillFile)
+        var isInstalled = File.Exists(skillFile);
+        CustomSkillStatusText = isInstalled
             ? GetString("String.Overview.Installed", "已安装")
             : GetString("String.Overview.NotInstalled", "未安装");
+        CustomSkillActionText = CreateSkillActionText(isInstalled);
     }
 
     /// <summary>
@@ -507,6 +536,12 @@ public sealed partial class WorkbenchShellViewModel
             GetString(InstallSummaryTemplateKey, "{0} 已安装 {1}/{2}"),
             SelectedSkillName, installedCount, targetCount);
     }
+
+    /// <summary>安装按钮文案资源 key。</summary>
+    private const string InstallActionKey = "String.Overview.Install";
+
+    /// <summary>更新按钮文案资源 key。</summary>
+    private const string UpdateActionKey = "String.Overview.Update";
 
     /// <summary>相对项目根目录提示资源 key。</summary>
     private const string RelativeRootHintKey = "String.Skills.RelativeRootHint";

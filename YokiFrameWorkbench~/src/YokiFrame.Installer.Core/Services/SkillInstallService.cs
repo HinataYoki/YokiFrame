@@ -39,7 +39,7 @@ public sealed class SkillInstallService
     }
 
     /// <summary>
-    /// 把指定包内 Skill 安装到目标 AI 助手目录。
+    /// 把指定包内 Skill 安装到目标 AI 助手目录；目标已存在时先删除旧目录再整份复制。
     /// </summary>
     /// <param name="projectRoot">项目根目录。</param>
     /// <param name="targetId">目标标识。</param>
@@ -51,19 +51,21 @@ public sealed class SkillInstallService
         var fullProjectRoot = InstallerPathGuard.RequireFullPath(projectRoot, nameof(projectRoot));
         var sourceDir = ResolveSkillSourceDirectory(fullProjectRoot, skillName);
         var targetDir = ResolveSkillTargetDirectory(fullProjectRoot, targetId, skillName, customPath);
-        if (Directory.Exists(targetDir))
+        var replaced = Directory.Exists(targetDir);
+        if (replaced)
         {
             Directory.Delete(targetDir, recursive: true);
         }
 
         CopySkillDirectory(sourceDir, targetDir);
+        var verb = replaced ? "已更新 " : "已安装 ";
         return new SkillInstallResult(
             true,
             true,
             skillName,
             targetId,
             ToSlash(targetDir),
-            "已安装 " + skillName + " 到 " + ToSlash(targetDir));
+            verb + skillName + " 到 " + ToSlash(targetDir));
     }
 
     /// <summary>
