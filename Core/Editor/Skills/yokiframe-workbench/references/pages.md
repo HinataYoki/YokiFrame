@@ -49,7 +49,9 @@ Architecture 没有独立 Workbench 页面；Runtime API、Interaction 和 CLI �
 | LocalizationKit | 页面消费 Application 强类型 catalog，不解析 wire JSON；发现已注册 XML 后 Luban 失败不得伪装为 standalone JSON |
 | SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；`${persistentDataPath}` 和 `${userDataDir}` 可能只能显示运行时解析状态 |
 
-## 新页面门禁
+## 新页面门禁（仅 YokiFrame 包开发者适用）
+
+以下条目供框架开发者新增 Workbench 页面时使用；用户项目 AI 只按上方「当前导航」选择已实现页面，不执行门禁。
 
 1. Kit Runtime API 已迁入并通过测试
 2. Interaction Provider、capability、snapshot/telemetry/command 与宿主身份规则已落地，或该页面明确不依赖 Interaction

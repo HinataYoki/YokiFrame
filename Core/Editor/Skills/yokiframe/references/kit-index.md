@@ -1,6 +1,6 @@
 # Kit 能力索引
 
-本文件是 AI 判断当前能力完成度的紧凑事实表。Runtime API、Kit Interaction、Workbench 页面分别判断；文档存在、旧入口或空程序集不构成已实现证据。
+本文件供用户游戏项目中的 AI 判断当前能力完成度。Runtime API、Kit Interaction、Workbench 页面分别判断；文档存在、旧入口或空程序集不构成已实现证据。
 
 | 能力 | Runtime API | Kit Interaction | Workbench | 推荐入口 | 人类主页面 |
 |---|---|---|---|---|---|
@@ -18,7 +18,7 @@
 | AudioKit | 已实现 | 已实现 | 已实现 | `AudioKit`、`AudioVoiceHandle` | `Api/03-Tool/AudioKit.md` |
 | SceneKit | 已实现 | 不规划 | 不规划 | `SceneKit`、`SceneHandler` | `Api/03-Tool/SceneKit.md` |
 | LocalizationKit | 已实现 | 未完成 | 已实现，standalone JSON 或 Luban Excel 预览 | `LocalizationKit`、`ILocalizationProvider` | `Api/03-Tool/LocalizationKit.md` |
-| SaveKit | 已实现 | 已实现：`state`、`stats`、`get_workbench_snapshot` 均只读 | 已实现：配置、文件元信息与 Runtime 摘要 | `SaveKit`、`SaveTarget`、`SaveData` | `Api/03-Tool/SaveKit.md` |
+| SaveKit | 已实现 | 已实现：`stats`、`get_workbench_snapshot` 只读；snapshot 名称为 `state` | 已实现：配置、文件元信息与 Runtime 摘要 | `SaveKit`、`SaveTarget`、`SaveData` | `Api/03-Tool/SaveKit.md` |
 | SpatialKit | 已实现 | 已实现 | 已实现 | `SpatialKit`、`ISpatialIndex<T>` | `Api/03-Tool/SpatialKit.md` |
 | TableKit | 已实现，生成后 | 未完成 | 已实现，Luban 生成；新版 Luban Agent/MCP/Skill 路径可选发现与校验 | Workbench TableKit 页面与生成门面；配表 AI 走 `references/tablekit-luban.md` | `Api/03-Tool/TableKit.md` |
 | UIKit | 已实现，Unity 专属 | 已实现，Unity Editor | 已实现 | `UIKit`、`UIPanel` | `Api/03-Tool/UIKit.md` |
@@ -31,14 +31,14 @@
 - 已完成 Workbench 只表示有 Application 强类型 read model 和真实页面，不表示可从 Workbench 修改 Runtime 业务状态
 - TableKit 未生成时不向项目或包宣称存在 Runtime 类型
 - UIKit 只在 Unity 使用；Godot 不发布 UIKit capability、Provider 或占位状态
-- ResKit Workbench 已实现；不要再把它标为未完成
+- ResKit 的 Workbench 页面已实现，可正常使用其展示的只读诊断
 
 ## 关键边界
 
 | 能力 | 不可省略的约束 |
 |---|---|
 | EventKit | 新代码优先 `Type`/`Enum`；订阅令牌由业务 owner 注销 |
-| ResKit / SceneKit | 每个 handle/Handler 保持创建 Provider/Backend 的所有权；显式注入优先，读取不创建默认后端 |
+| ResKit / SceneKit | 每个 handle/Handler 保持创建 Provider/Backend 的所有权；显式注入优先；首次业务加载/场景调用才惰性创建宿主默认 Provider，CLI/Workbench 观察读取不创建默认后端 |
 | ActionKit | Start、Tick、暂停和恢复在同一宿主线程；跨线程仅允许 `Cancel()` |
 | AudioKit | 保留完整 `AudioVoiceHandle`；自定义 Bus 优先显式注册；Workbench/Interaction 只读，后端切换不复用旧 generation |
 | SaveKit | `Slot` 与 `Global` 用 `SaveTarget` 区分；Interaction 只读已存在后端和容器头，绝不读取 payload 或创建默认后端 |
@@ -48,6 +48,7 @@
 ## 核实顺序
 
 1. 用本表选取已实现入口
-2. 阅读对应人类主页面和公开源码确认签名与约束
-3. 需要运行态证据时转入 `yokiframe-cli`
-4. 需要页面或安装流程时转入 `yokiframe-workbench`
+2. 编写业务代码时先读 [usage-patterns.md](usage-patterns.md) 的对应骨架与生命周期归属
+3. 阅读对应人类主页面和公开源码确认签名与约束
+4. 需要运行态证据时转入 `yokiframe-cli`
+5. 需要页面或安装流程时转入 `yokiframe-workbench`

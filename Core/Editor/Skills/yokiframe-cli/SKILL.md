@@ -1,11 +1,13 @@
 ---
 name: yokiframe-cli
-description: Use when Codex needs YokiFrame Project Model, capability catalog, engine, telemetry, snapshot, FastChannel, FileBridge, supported runtime commands, Godot Player export, AudioKit index generation, LocalizationKit operations, SpatialKit queries, or Installer plan/apply. Route Runtime API design to yokiframe and Avalonia UI navigation to yokiframe-workbench.
+description: Use in a Unity or Godot game project for YokiFrame Project Model, capability catalog, engine, telemetry, snapshot, FastChannel, FileBridge, supported runtime commands, Godot Player export, AudioKit index generation, LocalizationKit operations, SpatialKit queries, or Installer plan/apply. Route Runtime API usage to yokiframe and Avalonia UI navigation to yokiframe-workbench.
 ---
 
 # YokiFrame CLI
 
 ## 职责与非目标
+
+本 Skill 面向**用户游戏项目中的 AI 助手**：通过 `yoki` CLI 读取运行态证据、执行受控操作，辅助业务开发与诊断。
 
 - 负责通过项目 Runtime 缓存中的 `yoki` 查询项目与运行态，并执行当前宿主声明的受控操作
 - 不直接创建、编辑、清理 `.yokiframe` 协议文件
@@ -15,13 +17,13 @@ description: Use when Codex needs YokiFrame Project Model, capability catalog, e
 
 ## 前置核实
 
-1. 定位当前项目使用的 YokiFrame 包根、`.yokiframe/runtime/com.hinatayoki.yokiframe/current.json` 和当前指纹目录的 `tool-manifest.json`
-2. 选择 manifest 指向的当前平台 `yoki`；Windows 使用 `win-x64-aot`，缓存缺失或源码指纹不匹配时先执行 bootstrap
+1. 定位当前游戏项目根（含 `ProjectSettings` 的 Unity 项目或含 `project.godot` 的 Godot 项目），再读取 `.yokiframe/runtime/com.hinatayoki.yokiframe/current.json` 和当前指纹目录的 `tool-manifest.json`。已安装包根：Unity 本地嵌入为 `Packages/com.hinatayoki.yokiframe`；Unity Git URL 以 manifest 解析目录为准（通常 `Library/PackageCache`）；Godot 为 `addons/yokiframe/package/YokiFrame`
+2. 选择 manifest 指向的当前平台 `yoki`；Windows 使用 `win-x64-aot`。缓存缺失或源码指纹不匹配时，按 `Documentation~/Guides/AI-Install.md` 执行 bootstrap，不要假设开发机上已有 `yoki.exe`
 3. 对 Project Model、harness、engine、snapshot、telemetry 和 command 显式传入 `--project <projectRoot>`
 4. 不依赖 `--help`；它不是稳定 CLI 契约。按 [commands.md](references/commands.md) 和当前错误建议核实命令面
 5. CLI 在进入任何业务模块前执行命令级 schema：未知选项、缺失必填项、非法布尔/整数和越界值都会返回 JSON `error`，不会静默回落默认值
-6. FastChannel 能力由 Application 的 `IFastChannelCommandTransport` 窄端口提供；CLI 不直接持有 Named Pipe 或 Unix Domain Socket。只读 action 必须先确认 registry 的 endpoint、session/generation 和 `readOnlyCommands`，其它请求保持 FileBridge。
-7. Workbench 运行期间可能持有当前 fingerprint 的 `.runtime.lease`；CLI/Packaging 清理缓存时必须尊重活动 lease，不把“目录未能删除”误报为发布成功。
+6. CLI 不直接持有 Named Pipe 或 Unix Domain Socket。只读 action 必须先确认 registry 的 endpoint、session/generation 和 `readOnlyCommands`，其它请求保持 FileBridge。
+7. Workbench 运行期间可能持有当前 fingerprint 的 `.runtime.lease`。用户项目 AI 不主动清理 Runtime 缓存；遇到 lease 占用或目录未能删除时向用户报告，不要把该现象误报为发布成功。
 
 ## 执行步骤
 
@@ -60,7 +62,9 @@ CLI 的 `--timeout` 是 Application 总预算；FastChannel 内部可以使用�
 | Workbench 页面与 Installer UI | `yokiframe-workbench` |
 | 人类入口总览 | 包根 `README.md`；快速上手之后进入对应 Kit 文档 |
 
-## 维护触发条件
+## 维护触发条件（仅 YokiFrame 包开发者适用）
+
+以下条目供框架开发者维护本 Skill 时使用；用户项目 AI 只读本 Skill，不执行维护。
 
 - 增删 CLI 动词、选项、默认值、错误码或输出语义
 - 修改命令 schema、Ctrl+C 取消传播、退出码或 warning envelope

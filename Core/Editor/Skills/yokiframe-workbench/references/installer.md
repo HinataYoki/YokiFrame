@@ -1,6 +1,6 @@
 # Installer 参考
 
-本文件面向 AI 的 Installer 事务路由。只在用户明确安装、更新、接管或回滚 YokiFrame 时进入 apply；一般状态查询只做 detect 或 plan。
+本文件面向用户游戏项目中的 AI：只在用户明确安装、更新、接管或回滚 YokiFrame 时进入 apply；一般状态查询只做 detect 或 plan。不要把 Installer 当成框架源码开发入口。
 
 ## 安装模式
 

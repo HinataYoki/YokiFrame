@@ -12,7 +12,7 @@ YokiFrame 不重复实现 Luban AI。Workbench 只保存并校验官方路径；
 
 ## 读取配置
 
-1. 定位当前项目根，不要假设固定为 `Assets/YokiFrame`
+1. 定位当前游戏项目根（含 `ProjectSettings` 的 Unity 项目或含 `project.godot` 的 Godot 项目）
 2. 读取 `ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json`
 3. 使用其中的：
    - `LubanConfigPath` / `LubanWorkDir` / `LubanExecutablePath`
