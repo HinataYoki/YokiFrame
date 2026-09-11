@@ -129,6 +129,17 @@ if (-not (Test-Path -LiteralPath $yoki)) {
 
 刚创建的 Godot .NET 空项目可能还没有顶层 `.csproj`。Installer 会根据检测到的 Godot .NET 证据和 `project.godot` 的程序集名在安装事务中生成主 `.csproj`，计划阶段不会提前写入；普通非 .NET Godot 项目仍不受支持。
 
+## 安装 AI Skill（可选）
+
+包内 AI Skill 是单一入口 `yokiframe`，源码位于包根 `Core/Editor/Skills/yokiframe/`。它不随 Installer 事务写入目标项目。
+
+**当前没有对应的 CLI 命令**：Skill 安装只在 Workbench 的框架页完成（目标列表、安装、更新、卸载）。AI 需要安装 Skill 时，引导用户在 Workbench 中操作，或按已安装 Skill 的目标目录约定手工复制 `Core/Editor/Skills/yokiframe/`（排除 `.meta`）。
+
+- 支持目标：Claude Code、Codex、Cursor、Windsurf、GitHub Copilot、Agents，以及自定义项目内相对目录
+- 安装是整目录替换：目标已存在旧版本时先删除再复制，Unity `.meta` 不进入 AI 目录
+- 只有用户明确要求安装 Skill 时才执行；Skill 不是"安装 YokiFrame"的必需步骤
+- 旧身份 `yokiframe-cli`、`yokiframe-workbench`、`yokiframe-command-bridge`、`yokiframe-editor` 不再随包提供
+
 ## 执行安装事务
 
 以下命令使用 PowerShell；Linux/macOS 去掉命令前的 `&`，并按本机路径修改分隔符。每种模式都必须先 plan，再 apply。

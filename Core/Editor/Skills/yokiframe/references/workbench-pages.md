@@ -49,12 +49,14 @@ Architecture 没有独立 Workbench 页面；Runtime API、Interaction 和 CLI �
 | LocalizationKit | 页面消费 Application 强类型 catalog，不解析 wire JSON；发现已注册 XML 后 Luban 失败不得伪装为 standalone JSON |
 | SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；`${persistentDataPath}` 和 `${userDataDir}` 可能只能显示运行时解析状态 |
 
-## 新页面门禁（仅 YokiFrame 包开发者适用）
+## Workbench 运行
 
-以下条目供框架开发者新增 Workbench 页面时使用；用户项目 AI 只按上方「当前导航」选择已实现页面，不执行门禁。
+- Unity 的 `Ctrl+E` 优先激活同一项目已打开的 Workbench；已有可用 Runtime 时直接打开
+- Workbench 会后台检查源码指纹，发现新版后由页头「有新版可编译」按钮触发显式构建；窗口关闭必须取消检查和构建，旧进程占用的 Runtime 目录延迟清理
+- 运行期间可能持有当前 fingerprint 的 `.runtime.lease`；用户项目 AI 不主动清理 Runtime 缓存，遇到占用或目录未能删除时向用户报告
 
-1. Kit Runtime API 已迁入并通过测试
-2. Interaction Provider、capability、snapshot/telemetry/command 与宿主身份规则已落地，或该页面明确不依赖 Interaction
-3. `Tooling.Application` 有强类型 read model；Avalonia 不解析 wire JSON
-4. 页面有真实用户领域信息、空状态、错误状态和测试
-5. 同一变更更新本文件、Kit 索引、人类 API 文档和相关 Skill
+## Skill 安装
+
+- 只安装包根 `Core/Editor/Skills` 下的 `yokiframe`；目标必须在项目根内，并排除 Unity `.meta`
+- 目标已存在时显示「更新」，会删除旧 Skill 目录后整份替换
+- 不恢复旧身份 `yokiframe-command-bridge` 与 `yokiframe-editor`
