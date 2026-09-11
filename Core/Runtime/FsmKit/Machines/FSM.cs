@@ -112,8 +112,18 @@ namespace YokiFrame
                     state.End();
                 }
 
-                state.Dispose();
-                mStateDic.Remove(id);
+                try
+                {
+                    state.Dispose();
+                }
+                finally
+                {
+                    // IState.Dispose 契约保证“每次移除只调用一次 Dispose”。
+                    // 解除容器持有必须放在 finally：否则 Dispose 抛出后状态会残留在 mStateDic，
+                    // 之后 FSM.Dispose → ClearStates 会对同一实例再次 Dispose，直接破坏该契约。
+                    mStateDic.Remove(id);
+                }
+
 #if UNITY_EDITOR || (GODOT && TOOLS)
                 RemoveStateOrder(id);
 #endif

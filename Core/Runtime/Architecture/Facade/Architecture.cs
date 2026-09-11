@@ -19,6 +19,15 @@ namespace YokiFrame
         private readonly Dictionary<Type, IService> mServices = new();
         private readonly Dictionary<Type, Lazy<IService>> mPendingServiceCreations = new();
         private volatile bool mInitialized;
+
+        /// <summary>
+        /// 标记当前线程正在执行初始化，仅用于识别初始化期间的重入。
+        /// 与 <see cref="mInitialized"/> 分离是必要的：初始化未完成前不能让其它线程看到已发布状态，
+        /// 否则 Player 的无锁快路径会把半初始化实例直接返回。
+        /// 该字段只在 <see cref="mSyncRoot"/> 内读写。
+        /// </summary>
+        private bool mInitializing;
+
         private bool mDisposed;
 
         /// <summary>
@@ -228,13 +237,30 @@ namespace YokiFrame
                     return;
                 }
 
+                // 初始化期间的重入：OnInit 与服务初始化都会调用用户代码，用户代码可能再次取回同型单例。
+                // 此处必须直接返回，否则外层尚未发布 mInitialized，会导致 OnInit 被重复执行。
+                // 发布仍由最外层那一次完成，因此 mInitialized 的可见时机保持不变。
+                if (mInitializing)
+                {
+                    return;
+                }
+
                 mDisposed = false;
+                mInitializing = true;
 #if UNITY_EDITOR || (GODOT && TOOLS)
                 RegisterSnapshot();
 #endif
-                OnInit();
-                InitializePendingServices();
-                mInitialized = true;
+                try
+                {
+                    OnInit();
+                    InitializePendingServices();
+                    mInitialized = true;
+                }
+                finally
+                {
+                    // 初始化失败时解除标记，使后续调用可以重试，与既有行为一致。
+                    mInitializing = false;
+                }
 #if UNITY_EDITOR || (GODOT && TOOLS)
                 RegisterSnapshot();
 #endif

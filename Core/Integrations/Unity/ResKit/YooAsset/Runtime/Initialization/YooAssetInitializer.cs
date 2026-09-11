@@ -7,6 +7,7 @@ using Cysharp.Threading.Tasks;
 #else
 using System.Threading.Tasks;
 #endif
+using UnityEngine;
 using YokiFrame;
 using YooAsset;
 
@@ -172,13 +173,54 @@ namespace YokiFrame.Unity
             if (sIsInitializing)
                 throw new InvalidOperationException("Cannot reset YooAsset registration while initialization is running.");
 
+            ResetSessionState();
+            CustomInitializationHandler = null;
+            HostInitializationHandler = null;
+            WebInitializationHandler = null;
+        }
+
+        /// <summary>
+        /// 在进入新 Player 子系统时释放上一会话的登记状态。
+        /// </summary>
+        /// <remarks>
+        /// 必要性：关闭 Domain Reload（Enter Play Mode Options）后静态字段会跨 Play 会话存活，
+        /// 而 <see cref="InitializeAsync(YooAssetInitializationOptions, CancellationToken)"/> 开头的
+        /// <c>if (IsInitialized) return;</c> 会因此静默提前返回 —— 结果是第二次进入 Play Mode 时
+        /// 既不初始化 package、也不执行 <see cref="InstallProvider(ResourcePackage, bool)"/>，
+        /// ResKit 静默退回 Unity Resources 加载资源（不抛异常、不打日志）。
+        /// 本钩子让每个会话都从干净状态重新初始化。
+        /// <para>
+        /// 刻意只重置会话状态而**不清除三个初始化回调**：它们是项目配置，而 Unity 对同一
+        /// <c>SubsystemRegistration</c> 阶段多个钩子的调用顺序不作保证；若项目的注册钩子先于本钩子执行，
+        /// 清除会永久丢失项目配置。回调由项目在每次会话自行注册，无需框架代为清理。
+        /// </para>
+        /// </remarks>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRegistrationOnSubsystemRegistration()
+        {
+            if (sIsInitializing)
+            {
+                return;
+            }
+
+            ResetSessionState();
+        }
+
+        /// <summary>
+        /// 清除单个 Player 会话内积累的登记状态（不含项目配置的初始化回调）。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="InitializePackagesAsync(YooAssetInitializationOptions, CancellationToken)"/> 开头本就会重清
+        /// package 登记，因此真正会阻断重新初始化的只有 <see cref="IsInitialized"/>；
+        /// 这里一并清理 <see cref="DefaultPackage"/>/<see cref="DefaultPackageName"/>/<see cref="sPackages"/>，
+        /// 使门面在重新初始化前不暴露上一会话的 package 实例。
+        /// </remarks>
+        private static void ResetSessionState()
+        {
             IsInitialized = false;
             DefaultPackage = null;
             DefaultPackageName = null;
             sPackages.Clear();
-            CustomInitializationHandler = null;
-            HostInitializationHandler = null;
-            WebInitializationHandler = null;
         }
 
         /// <summary>确保 YooAsset 全局驱动已创建。</summary>

@@ -4,6 +4,7 @@
     "references": [
         "YokiFrame",
         "YokiFrame.SceneKit",
+        "YokiFrame.SceneKit.Unity",
         "UniTask",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
