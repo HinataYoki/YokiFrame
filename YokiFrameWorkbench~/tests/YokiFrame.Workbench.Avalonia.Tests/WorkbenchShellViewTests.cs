@@ -477,12 +477,11 @@ public sealed partial class WorkbenchShellViewTests
         Assert.InRange(viewModel.EngineCards.Count, 1, 4);
         Assert.NotEmpty(viewModel.SnapshotCards);
         Assert.NotEmpty(viewModel.SkillOptions);
-        Assert.Equal(
-            new[] { "yokiframe", "yokiframe-cli", "yokiframe-workbench" },
-            viewModel.SkillOptions.Select(static option => option.Name));
-        Assert.Contains(viewModel.SkillOptions, static option => option.Name == "yokiframe-cli" && option.Label == "CLI 指南");
-        Assert.Contains(viewModel.SkillOptions, static option => option.Name == "yokiframe-workbench" && option.Label == "工作台指南");
-        Assert.DoesNotContain(viewModel.SkillOptions, static option => option.Name is "yokiframe-command-bridge" or "yokiframe-editor");
+        Assert.Equal(new[] { "yokiframe" }, viewModel.SkillOptions.Select(static option => option.Name));
+        Assert.Contains(viewModel.SkillOptions, static option => option.Name == "yokiframe" && option.Label == "使用指南");
+        Assert.DoesNotContain(
+            viewModel.SkillOptions,
+            static option => option.Name is "yokiframe-cli" or "yokiframe-workbench" or "yokiframe-command-bridge" or "yokiframe-editor");
         Assert.NotEmpty(viewModel.SkillStatusCards);
         Assert.NotEmpty(viewModel.SkillTargets);
         Assert.NotEmpty(viewModel.LogLines);

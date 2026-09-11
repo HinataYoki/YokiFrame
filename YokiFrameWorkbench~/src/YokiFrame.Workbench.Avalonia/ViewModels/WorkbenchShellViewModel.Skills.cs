@@ -10,11 +10,10 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 public sealed partial class WorkbenchShellViewModel
 {
     private const int DEFAULT_SKILL_TARGET_COUNT = 6;
+    // 包内只有单一 Skill 入口；能力分流由该 Skill 的 references/ 承担。
     private static readonly IReadOnlyList<string> sDefaultSkillNames = new[]
     {
-        "yokiframe",
-        "yokiframe-cli",
-        "yokiframe-workbench"
+        "yokiframe"
     };
     private readonly SkillInstallationService mSkillInstallationService = new();
     private IReadOnlyList<string> mSkillNames = sDefaultSkillNames;
@@ -347,13 +346,9 @@ public sealed partial class WorkbenchShellViewModel
     /// <returns>卡片标题。</returns>
     private static string CreateSkillOptionLabel(string name)
     {
-        return name switch
-        {
-            "yokiframe" => GetString(GuideYokiframeKey, "使用指南"),
-            "yokiframe-cli" => GetString(GuideCliKey, "CLI 指南"),
-            "yokiframe-workbench" => GetString(GuideWorkbenchKey, "工作台指南"),
-            _ => name
-        };
+        return string.Equals(name, "yokiframe", StringComparison.Ordinal)
+            ? GetString(GuideYokiframeKey, "使用指南")
+            : name;
     }
 
     /// <summary>
@@ -569,12 +564,6 @@ public sealed partial class WorkbenchShellViewModel
 
     /// <summary>yokiframe 指南标题资源 key。</summary>
     private const string GuideYokiframeKey = "String.Skills.GuideYokiframe";
-
-    /// <summary>CLI 指南标题资源 key。</summary>
-    private const string GuideCliKey = "String.Skills.GuideCli";
-
-    /// <summary>工作台指南标题资源 key。</summary>
-    private const string GuideWorkbenchKey = "String.Skills.GuideWorkbench";
 
     /// <summary>操作失败模板资源 key。</summary>
     private const string OperationFailedTemplateKey = "String.Skills.OperationFailedTemplate";

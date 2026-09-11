@@ -27,6 +27,8 @@ public sealed partial class WorkbenchApp : Application
         {
             AvaloniaXamlLoader.Load(this);
             RequestedThemeVariant = DefaultThemeVariant;
+            // 字符串表在 C# 中，必须在 XAML 载入后注入，否则首帧 DynamicResource 解析不到键。
+            WorkbenchI18nService.Instance.ApplyCurrentCulture();
         }
         finally
         {

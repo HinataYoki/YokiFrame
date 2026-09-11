@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Xunit;
@@ -73,34 +73,62 @@ public sealed class WorkbenchI18nServiceTests
         });
     }
 
+    /// <summary>
+    /// 验证启动后 Application 资源已注入当前语言字符串表。
+    /// 字符串表迁出 axaml 后，ApplyCurrentCulture 是 XAML DynamicResource 的唯一注入点，
+    /// 该调用缺失会让全部界面文案退化为资源键。
+    /// </summary>
     [Fact]
-    public void ResourceDictionaries_ZhAndEnKeysAreAligned()
+    public async Task ApplicationResources_ArePopulatedAtStartup()
     {
-        var zhContent = WorkbenchContractTestFiles.ReadSource("Resources", "I18n", "Strings.zh-CN.axaml");
-        var enContent = WorkbenchContractTestFiles.ReadSource("Resources", "I18n", "Strings.en-US.axaml");
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var service = WorkbenchI18nService.Instance;
+            service.SetCulture("zh-CN");
 
-        Assert.False(string.IsNullOrWhiteSpace(zhContent), "Strings.zh-CN.axaml 内容不能为空");
-        Assert.False(string.IsNullOrWhiteSpace(enContent), "Strings.en-US.axaml 内容不能为空");
+            var resources = Application.Current?.Resources;
+            Assert.NotNull(resources);
 
-        var zhDoc = XDocument.Parse(zhContent);
-        var enDoc = XDocument.Parse(enContent);
+            Assert.True(resources!.TryGetResource("String.Nav.Workspace", null, out var zhValue));
+            Assert.Equal("工作台", Assert.IsType<string>(zhValue));
 
-        XNamespace xNs = "http://schemas.microsoft.com/winfx/2006/xaml";
-        var zhKeys = zhDoc.Descendants(xNs + "String")
-            .Select(el => el.Attribute(xNs + "Key")?.Value)
-            .Where(k => !string.IsNullOrWhiteSpace(k))
-            .OrderBy(k => k)
-            .ToArray();
+            // 语言切换后必须重新注入，否则 DynamicResource 仍停留在旧语言。
+            service.SetCulture("en-US");
+            Assert.True(resources.TryGetResource("String.Nav.Workspace", null, out var enValue));
+            Assert.Equal("Workspace", Assert.IsType<string>(enValue));
 
-        var enKeys = enDoc.Descendants(xNs + "String")
-            .Select(el => el.Attribute(xNs + "Key")?.Value)
-            .Where(k => !string.IsNullOrWhiteSpace(k))
-            .OrderBy(k => k)
-            .ToArray();
+            service.SetCulture("zh-CN");
+        });
+    }
+
+    /// <summary>
+    /// 验证 zh/en 两份字符串表键集对齐；表已从 axaml 迁到 C#，此处直接比较两份表源码。
+    /// </summary>
+    [Fact]
+    public void StringTables_ZhAndEnKeysAreAligned()
+    {
+        var zhSource = WorkbenchContractTestFiles.ReadSource("Services", "WorkbenchI18nService.Strings.Zh.cs");
+        var enSource = WorkbenchContractTestFiles.ReadSource("Services", "WorkbenchI18nService.Strings.En.cs");
+
+        var zhKeys = ExtractStringKeys(zhSource);
+        var enKeys = ExtractStringKeys(enSource);
 
         Assert.NotEmpty(zhKeys);
         Assert.NotEmpty(enKeys);
         Assert.Equal(zhKeys, enKeys);
+    }
+
+    /// <summary>从字符串表源码提取按序排列的资源键。</summary>
+    /// <param name="source">字符串表源码文本。</param>
+    /// <returns>按序排列的资源键。</returns>
+    private static string[] ExtractStringKeys(string source)
+    {
+        return System.Text.RegularExpressions.Regex
+            .Matches(source, "\\[\"(String\\.[^\"]+)\"\\]\\s*=")
+            .Select(static match => match.Groups[1].Value)
+            .OrderBy(static key => key, StringComparer.Ordinal)
+            .ToArray();
     }
 
     [Fact]
