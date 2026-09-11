@@ -243,6 +243,23 @@ namespace YokiFrame.Unity
                 array[offset + index] ^= mKey[(int)((position + index) % mKey.Length)];
             return read;
         }
+
+        /// <summary>
+        /// 读取并解密单个字节。
+        /// </summary>
+        /// <remarks>
+        /// 必须独立覆写：FileStream.ReadByte() 由 FileStream 自身实现，不会虚回调到
+        /// <see cref="Read(byte[], int, int)"/>；漏掉该覆写时单字节读取会把密文交给调用方
+        /// （其 Span 与 ReadAsync 路径会回调经典重载，故只有本路径需要单独覆盖，见
+        /// YokiFrameFileStreamOverrideContractTests）。此实现与同模式的 V2 解密流保持一致。
+        /// </remarks>
+        /// <returns>解密后的字节值；已到流末尾时返回 -1。</returns>
+        public override int ReadByte()
+        {
+            long position = Position;
+            int value = base.ReadByte();
+            return value < 0 ? value : value ^ mKey[(int)(position % mKey.Length)];
+        }
     }
 }
 #endif
