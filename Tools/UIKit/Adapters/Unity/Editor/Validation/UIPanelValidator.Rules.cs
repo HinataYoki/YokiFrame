@@ -131,14 +131,37 @@ namespace YokiFrame
             ValidateAnimationConfig(panel.HideAnimationConfig, "隐藏动画", panel, result);
         }
 
+        /// <summary>
+        /// 动画配置允许的最大嵌套层数；远大于任何真实 UI 动画层级，仅用于阻断自引用环。
+        /// </summary>
+        private const int MAX_ANIMATION_DEPTH = 32;
+
         /// <summary>递归检查一个 SerializeReference 动画配置。</summary>
+        /// <param name="config">待检查配置。</param>
+        /// <param name="label">用于定位问题的层级标签。</param>
+        /// <param name="panel">所属面板，用于问题定位。</param>
+        /// <param name="result">校验结果收集器。</param>
+        /// <param name="depth">当前已下钻层数。</param>
         private static void ValidateAnimationConfig(
             UIAnimationConfig config,
             string label,
             UIPanel panel,
-            UIPanelValidationResult result)
+            UIPanelValidationResult result,
+            int depth = 0)
         {
             if (config == null) return;
+            if (depth >= MAX_ANIMATION_DEPTH)
+            {
+                AddIssue(
+                    result,
+                    UIPanelValidationSeverity.Error,
+                    UIPanelValidationCategory.Animation,
+                    label + "嵌套层级超过上限 " + MAX_ANIMATION_DEPTH + "，可能是自引用配置，已停止继续检查。",
+                    panel,
+                    fixSuggestion: "检查组合动画是否存在自引用或过深嵌套，并移除环。");
+                return;
+            }
+
             if (config.Duration < 0f)
             {
                 AddIssue(
@@ -192,7 +215,8 @@ namespace YokiFrame
                     composite.Animations[index],
                     label + "/" + index,
                     panel,
-                    result);
+                    result,
+                    depth + 1);
             }
         }
 

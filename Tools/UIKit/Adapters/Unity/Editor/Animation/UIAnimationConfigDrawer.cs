@@ -11,6 +11,16 @@ namespace YokiFrame.Editor
     {
         private const float INDENT = 16f;
 
+        /// <summary>
+        /// 允许继续下钻的最大 SerializedProperty 深度。
+        /// </summary>
+        /// <remarks>
+        /// 自引用的 <c>[SerializeReference]</c> 配置会让本 Drawer 经
+        /// <c>EditorGUI.PropertyField</c> 被 Unity 反复派发回自身，形成无界递归。
+        /// SerializedProperty 的深度按属性节点计数，每层配置约增加 2~3 级，故此处取值大于运行时层数上限。
+        /// </remarks>
+        private const int MAX_DRAW_DEPTH = 64;
+
         /// <inheritdoc />
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -26,7 +36,9 @@ namespace YokiFrame.Editor
                     ShowTypeMenu(property);
             }
 
-            if (property.isExpanded && property.managedReferenceValue != null)
+            if (property.depth < MAX_DRAW_DEPTH
+                && property.isExpanded
+                && property.managedReferenceValue != null)
                 DrawChildren(position, property);
             EditorGUI.EndProperty();
         }
@@ -35,7 +47,8 @@ namespace YokiFrame.Editor
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             float height = EditorGUIUtility.singleLineHeight;
-            if (!property.isExpanded || property.managedReferenceValue == null) return height;
+            if (!property.isExpanded || property.managedReferenceValue == null
+                || property.depth >= MAX_DRAW_DEPTH) return height;
 
             SerializedProperty child = property.Copy();
             SerializedProperty end = child.GetEndProperty();

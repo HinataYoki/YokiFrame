@@ -34,11 +34,56 @@ namespace YokiFrame
         /// <inheritdoc />
         public bool IsPlaying => mPlayback != null;
 
-        /// <summary>向组合末尾添加一个非空动画。</summary>
+        /// <summary>
+        /// 向组合末尾添加一个非空动画，并拒绝会形成环的添加。
+        /// </summary>
+        /// <remarks>
+        /// 本类的播放、停止、复位、回收和时长计算都按子项递归，且递归经 <see cref="IUIAnimation"/>
+        /// 接口下钻，无法用深度参数穿透；因此改为在构造期保证不出现环，使全部递归方法天然有界。
+        /// 遍历规模等于被添加子树的节点数（动画构建期一次），不进入按帧执行的播放路径。
+        /// </remarks>
+        /// <param name="animation">待添加的子动画；为 null 时忽略。</param>
+        /// <returns>当前组合实例，便于链式添加。</returns>
         public CompositeAnimation Add(IUIAnimation animation)
         {
-            if (animation != null) mAnimations.Add(animation);
+            if (animation == null) return this;
+            if (animation is CompositeAnimation composite && Reaches(composite, this))
+            {
+                throw new InvalidOperationException(
+                    "Cannot add a composite animation that already contains this instance; it would create a cycle.");
+            }
+
+            mAnimations.Add(animation);
             return this;
+        }
+
+        /// <summary>
+        /// 迭代判断 <paramref name="from"/> 的子树中是否可达 <paramref name="target"/>。
+        /// </summary>
+        /// <remarks>
+        /// 使用 visited 集合而非递归，保证在已存在环的异常结构上自身也可终止。
+        /// </remarks>
+        /// <param name="from">搜索起点。</param>
+        /// <param name="target">搜索目标。</param>
+        /// <returns>可达时返回 true。</returns>
+        private static bool Reaches(CompositeAnimation from, CompositeAnimation target)
+        {
+            var pending = new Stack<CompositeAnimation>();
+            var visited = new HashSet<CompositeAnimation>();
+            pending.Push(from);
+            while (pending.Count > 0)
+            {
+                CompositeAnimation node = pending.Pop();
+                if (ReferenceEquals(node, target)) return true;
+                if (!visited.Add(node)) continue;
+
+                for (var index = 0; index < node.mAnimations.Count; index++)
+                {
+                    if (node.mAnimations[index] is CompositeAnimation child) pending.Push(child);
+                }
+            }
+
+            return false;
         }
 
         /// <summary>按枚举顺序添加多个非空动画。</summary>

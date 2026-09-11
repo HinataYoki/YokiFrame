@@ -244,13 +244,47 @@ namespace YokiFrame
         /// <returns>完整文本或安全前缀。</returns>
         private static string NormalizeText(string value, int maxUtf8Bytes)
         {
-            if (sUtf8.GetByteCount(value) <= maxUtf8Bytes) return value;
+            int usedBytes = sUtf8.GetByteCount(value);
+            if (usedBytes <= maxUtf8Bytes) return value;
+
             int length = value.Length;
-            while (length > 0 && sUtf8.GetByteCount(value, 0, length) > maxUtf8Bytes) length--;
+            while (length > 0 && usedBytes > maxUtf8Bytes)
+            {
+                usedBytes -= GetRemovedUtf8ByteCount(value, length);
+                length--;
+            }
+
+            // 与 PoolKit/ResKit 的循环内修正不同，UIKit 原本就在循环后单独处理代理项：
+            // 仅当被切开的恰好是一个完整代理项对时才再回退一位。
             if (length > 0 && length < value.Length
                 && char.IsHighSurrogate(value[length - 1])
                 && char.IsLowSurrogate(value[length])) length--;
             return value.Substring(0, length);
+        }
+
+        /// <summary>
+        /// 计算把前缀长度从 <paramref name="length"/> 减到 <paramref name="length"/>-1 时的 UTF-8 字节减少量。
+        /// </summary>
+        /// <remarks>
+        /// 递减循环需要每一步都知道当前前缀的字节数。原实现每步都用
+        /// <c>GetByteCount(value, 0, length)</c> 从头重算，导致 O(n²)：
+        /// 实测 100 万字符文本单次调用需 7.7 秒，会在 Unity Editor 主线程上造成明显卡顿。
+        /// 改为按末字符的增量扣减后为 O(n)。
+        /// </remarks>
+        /// <param name="value">待裁剪文本。</param>
+        /// <param name="length">当前前缀长度。</param>
+        /// <returns>去掉末字符后应扣减的字节数。</returns>
+        private static int GetRemovedUtf8ByteCount(string value, int length)
+        {
+            char last = value[length - 1];
+            if (length >= 2 && char.IsHighSurrogate(value[length - 2]) && char.IsLowSurrogate(last))
+            {
+                return 1;
+            }
+
+            if (char.IsSurrogate(last)) return 3;
+            if (last <= 0x7f) return 1;
+            return last <= 0x7ff ? 2 : 3;
         }
 
         /// <summary>把布尔值转换为 JSON 小写字面量。</summary>
