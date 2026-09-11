@@ -16,33 +16,35 @@
       {
         "action": "get_workbench_snapshot",
         "kind": "ReadOnly",
-        "engineKinds": [
-          "Unity",
-          "Godot"
-        ],
+        "engineKinds": ["Unity", "Godot"],
         "sideEffects": [],
-        "preconditions": [
-          "engine.reachable",
-          "eventkit.diagnostics.available"
-        ],
+        "preconditions": ["engine.reachable", "eventkit.diagnostics.available"],
         "verifyRecipe": "eventkit-read-only"
+      },
+      {
+        "action": "set_tracking",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["runtime.eventkit.tracking-settings"],
+        "preconditions": ["engine.reachable", "eventkit.diagnostics.available"],
+        "verifyRecipe": "eventkit-user-action"
       }
     ],
     "verifyRecipes": [
       {
         "id": "eventkit-read-only",
         "description": "Verify a read-only EventKit response against the current engine identity and payload contract.",
-        "gates": [
-          "runtime-response-success",
-          "engine-identity-current",
-          "eventkit-payload-valid"
-        ],
-        "evidence": [
-          "command-response"
-        ]
+        "gates": ["runtime-response-success", "engine-identity-current", "eventkit-payload-valid"],
+        "evidence": ["command-response"]
+      },
+      {
+        "id": "eventkit-user-action",
+        "description": "Verify an explicit EventKit tracking toggle against the returned state.",
+        "gates": ["runtime-response-success", "engine-identity-current", "eventkit-state-updated"],
+        "evidence": ["command-response", "eventkit-state"]
       }
     ],
     "sourcePath": "Core/Editor/EventKit/Interaction/EventKitInteractionProvider.cs",
-    "sourceHash": "dfb60dbdf15d19e2133d1a30d704a08e7548f6fc70982237b2b18507a4df6ac5"
+    "sourceHash": "06f4060c022035a2230322ad757a556ada801f88b231c8c0d5c5146485824af2"
   }
 }

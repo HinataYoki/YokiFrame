@@ -101,8 +101,9 @@ namespace YokiFrame
                 1000,
                 64));
 
-            Assert.AreEqual(1, provider.Commands.Count);
+            Assert.AreEqual(2, provider.Commands.Count);
             Assert.AreEqual("get_workbench_snapshot", provider.Commands[0].Action);
+            Assert.AreEqual("set_tracking", provider.Commands[1].Action);
             Assert.IsTrue(commandResult.IsSuccess);
             StringAssert.Contains("\"eventKey\":\"" + typeof(SamplePayload).FullName + "\"", payloadJson);
             StringAssert.Contains("\"payloadType\":\"" + typeof(SamplePayload).FullName + "\"", payloadJson);
@@ -214,7 +215,7 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>验证 capability 只声明 state 和只读 get_workbench_snapshot。</summary>
+        /// <summary>验证 capability 声明 state、只读 get_workbench_snapshot 与用户触发的 set_tracking。</summary>
         [Test]
         public void CapabilityDescriptorExcludesLegacyActions()
         {
@@ -229,6 +230,7 @@ namespace YokiFrame
             string descriptor = File.ReadAllText(path);
 
             StringAssert.Contains("\"get_workbench_snapshot\"", descriptor);
+            StringAssert.Contains("\"set_tracking\"", descriptor);
             StringAssert.DoesNotContain("fire_event", descriptor);
             StringAssert.DoesNotContain("monitor_start", descriptor);
             StringAssert.DoesNotContain("scan", descriptor);

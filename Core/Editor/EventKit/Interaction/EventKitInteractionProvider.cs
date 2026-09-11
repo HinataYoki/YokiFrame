@@ -19,7 +19,11 @@ namespace YokiFrame
                 new YokiFrameCommandDescriptor(
                     KIT,
                     "get_workbench_snapshot",
-                    YokiFrameCommandKind.ReadOnly)
+                    YokiFrameCommandKind.ReadOnly),
+                new YokiFrameCommandDescriptor(
+                    KIT,
+                    "set_tracking",
+                    YokiFrameCommandKind.UserAction)
             });
 
         private readonly EventKitCommandHandler mHandler = new();
@@ -36,7 +40,7 @@ namespace YokiFrame
         /// <summary>获取 EventKit 当前提供的 state Snapshot。</summary>
         public IReadOnlyList<string> SnapshotNames => sSnapshotNames;
 
-        /// <summary>获取 EventKit 唯一的只读 Workbench 命令。</summary>
+        /// <summary>获取 EventKit 的 Workbench 快照与跟踪开关命令。</summary>
         public IReadOnlyList<YokiFrameCommandDescriptor> Commands => sCommands;
 
         /// <summary>获取 EventKit Runtime 活动的单调版本。</summary>

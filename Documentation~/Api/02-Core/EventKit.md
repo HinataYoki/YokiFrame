@@ -4,11 +4,11 @@
 
 EventKit 是跨模块通知用的事件基础设施。需要让发布方和订阅方解耦、又不希望引入宿主类型时使用它。新代码优先使用强类型 `TypeEvent`；固定协议信号使用 `EnumEvent`；`StringEvent` 仅用于旧代码兼容。
 
-EventKit 不负责命令总线、请求-响应、跨进程消息或把事件自动变成 Workbench/CLI 可写操作。页面与 CLI 只读观察，不会代替业务注销监听器。
+EventKit 不负责命令总线、请求-响应或跨进程消息。Workbench 与 CLI 只观察事件关系与活动，不会代替业务发送事件或注销监听器；唯一的可写操作是关闭诊断跟踪（`set_tracking`），用于停止活动记录。
 
 ## 使用前提
 
-EventKit 可直接用于 Unity 与 Godot .NET Runtime。Workbench 只读展示事件关系和活动信息，不会替业务发送事件或注销监听器。
+EventKit 可直接用于 Unity 与 Godot .NET Runtime。Workbench 展示事件关系和活动信息，不会替业务发送事件或注销监听器；诊断跟踪可在排查结束后通过 `set_tracking` 关闭。
 
 ## 快速上手
 
@@ -116,7 +116,7 @@ link.UnRegister();
 
 ## 在工具中查看
 
-Workbench 的 EventKit 页面只读展示事件关系、当前监听数量和最近活动，不会触发事件，也不会代替业务注销监听器。
+Workbench 的 EventKit 页面展示事件关系、当前监听数量和最近活动，不会触发事件，也不会代替业务注销监听器。诊断跟踪一旦开启，整个会话内每次注册、注销、发送和清空都会记录活动；短时排查结束后应通过 `set_tracking` 关闭，关闭时会同时清空已积累的活动历史。
 
 ## 限制与相关资料
 

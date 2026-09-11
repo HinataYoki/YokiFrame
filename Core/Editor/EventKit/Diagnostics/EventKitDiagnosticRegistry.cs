@@ -21,6 +21,8 @@ namespace YokiFrame
 
         private static long sVersion;
         private static long sSequence;
+        private static bool sTrackingEnabled;
+        private static bool sInitialized;
 
         /// <summary>获取 EventKit Runtime 事实的当前单调版本。</summary>
         internal static long StateVersion
@@ -34,14 +36,75 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>获取当前是否正在记录 EventKit Runtime 活动。</summary>
+        internal static bool IsTrackingEnabled
+        {
+            get
+            {
+                lock (sGate)
+                {
+                    return sTrackingEnabled;
+                }
+            }
+        }
+
         /// <summary>
-        /// 安装 Runtime EventKit 最小 hook；首次真正需要 Workbench 观察时才开始记录活动。
+        /// 安装 Runtime EventKit 最小 hook，并按默认值开启活动记录。
+        /// 重复调用保持幂等，不会重置已由 <see cref="Configure"/> 设置的开关。
         /// </summary>
         internal static void EnsureInitialized()
         {
+            lock (sGate)
+            {
+                if (sInitialized)
+                {
+                    return;
+                }
+
+                sInitialized = true;
+                sTrackingEnabled = true;
+            }
+
             EasyEventEditorHook.Activity -= OnActivity;
             EasyEventEditorHook.Activity += OnActivity;
             EasyEventEditorHook.SetTrackingEnabled(true);
+        }
+
+        /// <summary>
+        /// 设置当前会话是否记录 EventKit Runtime 活动。
+        /// </summary>
+        /// <remarks>
+        /// 关闭时同时卸载 Runtime hook 并清空已积累的活动历史与类型缓存，
+        /// 使关闭后不再产生每次派发的 <c>GetInvocationList</c> 分配、锁与时间戳开销，
+        /// 也不会让陈旧活动继续占用有界缓冲。
+        /// </remarks>
+        /// <param name="trackingEnabled">需要记录活动时为 true。</param>
+        internal static void Configure(bool trackingEnabled)
+        {
+            lock (sGate)
+            {
+                if (sTrackingEnabled == trackingEnabled)
+                {
+                    return;
+                }
+
+                sTrackingEnabled = trackingEnabled;
+                sVersion++;
+                if (!trackingEnabled)
+                {
+                    sActivities.Clear();
+                    sTypeNames.Clear();
+                    sEnumKeys.Clear();
+                }
+            }
+
+            // 关闭时卸载 hook，开启时重新订阅，保证开关双向都真正生效。
+            EasyEventEditorHook.SetTrackingEnabled(trackingEnabled);
+            EasyEventEditorHook.Activity -= OnActivity;
+            if (trackingEnabled)
+            {
+                EasyEventEditorHook.Activity += OnActivity;
+            }
         }
 
         /// <summary>创建不持锁的 EventKit 诊断快照。</summary>
@@ -63,6 +126,8 @@ namespace YokiFrame
                 sEnumKeys.Clear();
                 sVersion = 0L;
                 sSequence = 0L;
+                sTrackingEnabled = false;
+                sInitialized = false;
             }
         }
 
