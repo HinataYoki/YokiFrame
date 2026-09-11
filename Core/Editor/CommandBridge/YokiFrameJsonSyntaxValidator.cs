@@ -9,6 +9,16 @@ namespace YokiFrame
     internal static class YokiFrameJsonSyntaxValidator
     {
         /// <summary>
+        /// 允许的最大嵌套层数。
+        /// 取值 64 与 <c>System.Text.Json</c> 的默认 <c>MaxDepth</c> 一致，也与工具侧
+        /// <c>CommandEnvelope</c> 和 Runtime 缓存校验使用的上限一致；协议在两端本就不可能
+        /// 接受更深的 payload，因此该上限不缩小可用能力。
+        /// 必要性：本类用递归下降解析，深层嵌套会耗尽线程栈并触发<b>不可捕获</b>的栈溢出，
+        /// 直接终止宿主进程，故必须在进入容器前显式限深。
+        /// </summary>
+        private const int MAX_DEPTH = 64;
+
+        /// <summary>
         /// 验证文本是完整 JSON 值；空 payload 按空对象处理以兼容旧命令。
         /// </summary>
         /// <param name="json">待验证 JSON 文本。</param>
@@ -18,7 +28,7 @@ namespace YokiFrame
             var text = string.IsNullOrWhiteSpace(json) ? "{}" : json;
             var index = 0;
             SkipWhitespace(text, ref index);
-            ParseValue(text, ref index);
+            ParseValue(text, ref index, 0);
             SkipWhitespace(text, ref index);
             if (index != text.Length)
             {
@@ -27,8 +37,17 @@ namespace YokiFrame
         }
 
         /// <summary>解析一个 JSON 值并推进索引。</summary>
-        private static void ParseValue(string json, ref int index)
+        /// <param name="json">完整 JSON 文本。</param>
+        /// <param name="index">当前解析位置。</param>
+        /// <param name="depth">当前值所处的嵌套层数，顶层为 0；进入容器前先校验上限。</param>
+        private static void ParseValue(string json, ref int index, int depth)
         {
+            if (depth >= MAX_DEPTH)
+            {
+                // 递归下降会在进入下一层容器时占用栈帧；在此拦截可避免不可捕获的栈溢出。
+                throw new FormatException("JSON nesting is too deep.");
+            }
+
             if (index >= json.Length)
             {
                 throw new FormatException("JSON value is missing.");
@@ -36,8 +55,8 @@ namespace YokiFrame
 
             switch (json[index])
             {
-                case '{': ParseObject(json, ref index); return;
-                case '[': ParseArray(json, ref index); return;
+                case '{': ParseObject(json, ref index, depth); return;
+                case '[': ParseArray(json, ref index, depth); return;
                 case '"': ParseString(json, ref index); return;
                 case 't': ParseLiteral(json, ref index, "true"); return;
                 case 'f': ParseLiteral(json, ref index, "false"); return;
@@ -54,7 +73,10 @@ namespace YokiFrame
         }
 
         /// <summary>解析 JSON 对象。</summary>
-        private static void ParseObject(string json, ref int index)
+        /// <param name="json">完整 JSON 文本。</param>
+        /// <param name="index">当前解析位置。</param>
+        /// <param name="depth">本对象所处层数；其成员值在 depth + 1 层解析。</param>
+        private static void ParseObject(string json, ref int index, int depth)
         {
             index++;
             SkipWhitespace(json, ref index);
@@ -77,7 +99,7 @@ namespace YokiFrame
                     throw new FormatException("JSON object property separator is missing.");
                 }
 
-                ParseValue(json, ref index);
+                ParseValue(json, ref index, depth + 1);
                 SkipWhitespace(json, ref index);
                 if (Consume(json, ref index, '}'))
                 {
@@ -94,7 +116,10 @@ namespace YokiFrame
         }
 
         /// <summary>解析 JSON 数组。</summary>
-        private static void ParseArray(string json, ref int index)
+        /// <param name="json">完整 JSON 文本。</param>
+        /// <param name="index">当前解析位置。</param>
+        /// <param name="depth">本数组所处层数；其元素在 depth + 1 层解析。</param>
+        private static void ParseArray(string json, ref int index, int depth)
         {
             index++;
             SkipWhitespace(json, ref index);
@@ -105,7 +130,7 @@ namespace YokiFrame
 
             while (true)
             {
-                ParseValue(json, ref index);
+                ParseValue(json, ref index, depth + 1);
                 SkipWhitespace(json, ref index);
                 if (Consume(json, ref index, ']'))
                 {
