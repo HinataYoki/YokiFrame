@@ -73,8 +73,11 @@ namespace YokiFrame
         public static List<UIPanelValidationResult> ValidateAllPanelsInScene()
         {
             List<UIPanelValidationResult> results = new();
-            // Unity 6000.7 起提供不带排序参数的新重载；更早版本继续使用二参数重载。
-#if UNITY_6000_7_OR_NEWER
+            // Unity 6000.5 起提供不带排序参数的新重载，同时把带 FindObjectsSortMode 的重载标记为过时；
+            // Unity 2022.2 至 6000.4 只有带排序参数的重载，因此继续使用二参数形式。
+            // 说明：6000.4 是过渡版本 —— FindObjectsSortMode 已过时但新重载尚未提供，该区间无法避免过时提示。
+            // 更早版本回退到 FindObjectsOfType。
+#if UNITY_6000_5_OR_NEWER
             UIPanel[] panels = Object.FindObjectsByType<UIPanel>(FindObjectsInactive.Exclude);
 #elif UNITY_2022_2_OR_NEWER
             UIPanel[] panels = Object.FindObjectsByType<UIPanel>(
