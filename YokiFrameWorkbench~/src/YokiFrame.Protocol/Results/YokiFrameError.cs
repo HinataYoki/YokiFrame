@@ -77,15 +77,13 @@ public sealed class YokiFrameError
             evidencePaths.Add(JsonValue.Create(path));
         }
 
+        // 身份字段由 CLI envelope 顶层统一承载，这里不再重复一份，避免同一 requestId/engineId/transport 出现两次。
         return new JsonObject
         {
             ["code"] = Code,
             ["message"] = Message,
             ["suggestion"] = Suggestion,
-            ["evidencePaths"] = evidencePaths,
-            ["requestId"] = string.IsNullOrEmpty(RequestId) ? null : RequestId,
-            ["engineId"] = string.IsNullOrEmpty(EngineId) ? null : EngineId,
-            ["transport"] = string.IsNullOrEmpty(Transport) ? null : Transport
+            ["evidencePaths"] = evidencePaths
         };
     }
 }

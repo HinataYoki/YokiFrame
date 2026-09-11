@@ -93,13 +93,13 @@ public sealed partial class LocalizationKitApplicationService
     {
         try
         {
-            if (request is null) throw new ArgumentNullException(nameof(request));
-            if (request.Options is null) throw new ArgumentException("LocalizationKit 选项不能为空。", nameof(request));
-
-            string sourcePath = ResolveContainedPath(request.Options.ProjectRoot, request.Options.SourcePath);
-            using SourceWriteLock writeLock = AcquireSourceWriteLock(sourcePath);
-            sourcePath = ResolveContainedPath(request.Options.ProjectRoot, request.Options.SourcePath);
-            return AddLocked(request, sourcePath);
+            PreparedAdd prepared = RunAddInLock(request, write: true);
+            return new LocalizationOperationResult
+            {
+                Succeeded = true,
+                Catalog = prepared.UpdatedCatalog,
+                Files = new[] { prepared.SourcePath }
+            };
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidDataException or IOException or InvalidOperationException or JsonException or UnauthorizedAccessException)
         {
@@ -107,11 +107,59 @@ public sealed partial class LocalizationKitApplicationService
         }
     }
 
-    /// <summary>在源文件独占锁内重读最新内容、合并单条文本并原子提交，避免并发调用覆盖彼此更新。</summary>
+    /// <summary>在不写入磁盘的前提下完成与 Add 完全相同的校验和内容计算，供 CLI dry-run 使用。</summary>
+    /// <param name="request">补充请求。</param>
+    /// <returns>计划写入的文件；校验失败时返回诊断。</returns>
+    public LocalizationOperationResult PlanAdd(LocalizationAddRequest request)
+    {
+        try
+        {
+            PreparedAdd prepared = RunAddInLock(request, write: false);
+            return new LocalizationOperationResult
+            {
+                Succeeded = true,
+                Catalog = prepared.UpdatedCatalog,
+                PlannedWrites = new[]
+                {
+                    new LocalizationPlannedWrite(prepared.SourcePath, prepared.OverwritesExistingValue)
+                }
+            };
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException or IOException or InvalidOperationException or JsonException or UnauthorizedAccessException)
+        {
+            return new LocalizationOperationResult { Succeeded = false, Diagnostics = new[] { exception.Message } };
+        }
+    }
+
+    /// <summary>
+    /// 在源文件独占写锁内完成 read-modify-write；write 为 false 时只计算不落盘。
+    /// 锁必须覆盖写入本身，否则并发补充会以同一份旧内容相互覆盖。
+    /// </summary>
+    /// <param name="request">补充请求。</param>
+    /// <param name="write">是否把准备好的内容原子提交。</param>
+    /// <returns>已通过 schema 复核的待写入内容与影响说明。</returns>
+    private static PreparedAdd RunAddInLock(LocalizationAddRequest request, bool write)
+    {
+        if (request is null) throw new ArgumentNullException(nameof(request));
+        if (request.Options is null) throw new ArgumentException("LocalizationKit 选项不能为空。", nameof(request));
+
+        string sourcePath = ResolveContainedPath(request.Options.ProjectRoot, request.Options.SourcePath);
+        using SourceWriteLock writeLock = AcquireSourceWriteLock(sourcePath);
+        sourcePath = ResolveContainedPath(request.Options.ProjectRoot, request.Options.SourcePath);
+        PreparedAdd prepared = PrepareAddLocked(request, sourcePath);
+        if (write)
+        {
+            WriteAtomically(prepared.SourcePath, prepared.Content);
+        }
+
+        return prepared;
+    }
+
+    /// <summary>在源文件独占锁内重读最新内容、合并单条文本并生成待提交内容，不执行磁盘写入。</summary>
     /// <param name="request">已经完成基础空值校验的补充请求。</param>
     /// <param name="sourcePath">已通过项目根和重解析点校验的绝对源路径。</param>
-    /// <returns>写入结果和提交后的目录快照。</returns>
-    private static LocalizationOperationResult AddLocked(LocalizationAddRequest request, string sourcePath)
+    /// <returns>待写入内容、更新后的目录快照和是否替换已有文本。</returns>
+    private static PreparedAdd PrepareAddLocked(LocalizationAddRequest request, string sourcePath)
     {
         if (!File.Exists(sourcePath)) throw new FileNotFoundException("找不到 LocalizationKit JSON 源文件。", sourcePath);
 
@@ -133,15 +181,25 @@ public sealed partial class LocalizationKitApplicationService
             ? GetOrCreateObject(entry, "values")
             : GetOrCreateObject(GetOrCreateObject(entry, "plural"), languageId);
         string key = pluralCategory.Length == 0 ? languageId : pluralCategory;
-        if (target[key] is not null && !request.Force)
+        bool overwritesExistingValue = target[key] is not null;
+        if (overwritesExistingValue && !request.Force)
             throw new InvalidOperationException("目标文本已存在，使用 force 才能覆盖。");
         target[key] = request.Value;
 
         string content = rootObject.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        LocalizationCatalog updatedCatalog = ParseCatalog(sourcePath, content);
-        WriteAtomically(sourcePath, content);
-        return new LocalizationOperationResult { Succeeded = true, Catalog = updatedCatalog, Files = new[] { sourcePath } };
+        return new PreparedAdd(sourcePath, content, ParseCatalog(sourcePath, content), overwritesExistingValue);
     }
+
+    /// <summary>保存一次 Add/PlanAdd 共用的写入前准备结果。</summary>
+    /// <param name="SourcePath">已通过边界校验的源文件绝对路径。</param>
+    /// <param name="Content">已通过完整 schema 复核、可直接提交的 JSON 文本。</param>
+    /// <param name="UpdatedCatalog">合并后的目录快照。</param>
+    /// <param name="OverwritesExistingValue">目标语言或复数分类下已有文本时返回 true。</param>
+    private sealed record PreparedAdd(
+        string SourcePath,
+        string Content,
+        LocalizationCatalog UpdatedCatalog,
+        bool OverwritesExistingValue);
 
     /// <summary>向 texts 数组追加一个只包含稳定编号的新条目，并返回供当前写入继续填充的对象。</summary>
     /// <param name="texts">已通过 schema 校验的文本数组。</param>

@@ -345,6 +345,85 @@ public sealed class LocalizationKitApplicationServiceTests
         Assert.Equal(new[] { "ChineseSimplified", "English" }, catalog.Languages.Select(static language => language.Id));
     }
 
+    /// <summary>PlanAdd 必须与 Add 判定一致但不写盘，供 CLI dry-run 复用同一校验。</summary>
+    [Fact]
+    public void PlanAddMatchesAddWithoutWriting()
+    {
+        using TemporaryProject project = TemporaryProject.Create();
+        LocalizationKitApplicationService service = new();
+        string original = File.ReadAllText(project.SourcePath);
+
+        LocalizationOperationResult plan = service.PlanAdd(new LocalizationAddRequest
+        {
+            Options = project.Options,
+            TextId = 1,
+            Language = "English",
+            Value = "Start"
+        });
+
+        Assert.True(plan.Succeeded, string.Join("; ", plan.Diagnostics));
+        Assert.Equal(original, File.ReadAllText(project.SourcePath));
+        LocalizationPlannedWrite write = Assert.Single(plan.PlannedWrites);
+        Assert.Equal(project.SourcePath, write.Path);
+        Assert.False(write.OverwritesExistingValue);
+        Assert.Contains("Start", plan.Catalog!.Entries.Single(static entry => entry.Id == 1).Values["English"]);
+    }
+
+    /// <summary>PlanAdd 必须在已有文本且未 force 时拒绝，避免 dry-run 给出可通过的错误结论。</summary>
+    [Fact]
+    public void PlanAddRejectsOverwriteWithoutForce()
+    {
+        using TemporaryProject project = TemporaryProject.Create();
+        LocalizationKitApplicationService service = new();
+
+        LocalizationOperationResult rejected = service.PlanAdd(new LocalizationAddRequest
+        {
+            Options = project.Options,
+            TextId = 1,
+            Language = "ChineseSimplified",
+            Value = "覆盖"
+        });
+        Assert.False(rejected.Succeeded);
+        Assert.Contains("force", string.Join("; ", rejected.Diagnostics), StringComparison.OrdinalIgnoreCase);
+
+        LocalizationOperationResult forced = service.PlanAdd(new LocalizationAddRequest
+        {
+            Options = project.Options,
+            TextId = 1,
+            Language = "ChineseSimplified",
+            Value = "覆盖",
+            Force = true
+        });
+        Assert.True(forced.Succeeded, string.Join("; ", forced.Diagnostics));
+        Assert.True(Assert.Single(forced.PlannedWrites).OverwritesExistingValue);
+    }
+
+    /// <summary>PlanLubanTemplate 必须报告两个作者文件且不落地，已存在时才要求 force。</summary>
+    [Fact]
+    public void PlanLubanTemplateReportsTargetsWithoutWriting()
+    {
+        using TemporaryProject project = TemporaryProject.CreateLubanProject();
+        LocalizationKitApplicationService service = new();
+        LocalizationLubanTemplateRequest request = new()
+        {
+            ProjectRoot = project.Root,
+            Languages = new[] { "ChineseSimplified", "English" }
+        };
+
+        LocalizationOperationResult plan = service.PlanLubanTemplate(request);
+
+        Assert.True(plan.Succeeded, string.Join("; ", plan.Diagnostics));
+        Assert.Equal(2, plan.PlannedWrites.Count);
+        Assert.All(plan.PlannedWrites, static write => Assert.False(write.OverwritesExistingValue));
+        Assert.All(plan.PlannedWrites, static write => Assert.False(File.Exists(write.Path)));
+
+        Assert.True(service.GenerateLubanTemplate(request).Succeeded);
+        LocalizationOperationResult secondPlan = service.PlanLubanTemplate(request);
+        Assert.False(secondPlan.Succeeded);
+        Assert.All(service.PlanLubanTemplate(request with { Force = true }).PlannedWrites,
+            static write => Assert.True(write.OverwritesExistingValue));
+    }
+
     /// <summary>创建带最小 schema 的临时项目。</summary>
     private sealed class TemporaryProject : IDisposable
     {

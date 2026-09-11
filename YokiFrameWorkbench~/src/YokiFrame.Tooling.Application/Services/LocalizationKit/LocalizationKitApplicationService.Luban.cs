@@ -51,6 +51,41 @@ public sealed partial class LocalizationKitApplicationService
         }
     }
 
+    /// <summary>在不写入磁盘的前提下规划 Luban 模板生成，供 CLI dry-run 复用与真实生成相同的校验。</summary>
+    /// <param name="request">项目、可选工具参数、语言列和覆盖策略。</param>
+    /// <returns>计划写入的两个作者文件；校验失败时返回诊断。</returns>
+    public LocalizationOperationResult PlanLubanTemplate(LocalizationLubanTemplateRequest request)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            LocalizationLubanPlan plan = ResolveLubanPlan(request.ProjectRoot, request.Tool, request.LubanWorkDir);
+            _ = NormalizeTemplateLanguages(request.Languages);
+            EnsureTemplateTargetsWritable(plan, request.Force);
+            List<string> diagnostics = new();
+            if (!plan.IsSchemaRegistered)
+            {
+                diagnostics.Add("XML 尚未被 luban.conf 的 schemaFiles 注册。添加后再执行预览: " + plan.RegistrationHint);
+            }
+
+            return new LocalizationOperationResult
+            {
+                Succeeded = true,
+                Provider = "Luban",
+                Diagnostics = diagnostics,
+                PlannedWrites = new[]
+                {
+                    new LocalizationPlannedWrite(plan.SchemaPath, File.Exists(plan.SchemaPath)),
+                    new LocalizationPlannedWrite(plan.WorkbookPath, File.Exists(plan.WorkbookPath))
+                }
+            };
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            return new LocalizationOperationResult { Succeeded = false, Provider = "Luban", Diagnostics = new[] { exception.Message } };
+        }
+    }
+
     /// <summary>调用 Luban 导出单表临时 JSON，并投影为与 JSON standalone 相同的本地化目录模型。</summary>
     /// <param name="request">项目和可选显式 Luban 参数。</param>
     /// <param name="cancellationToken">取消时停止 Luban 子进程。</param>

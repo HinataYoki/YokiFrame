@@ -25,10 +25,23 @@ internal static class CliLocalizationKitCommands
     {
         LocalizationKitApplicationService service = new();
         string projectRoot = client.Paths.ProjectRoot;
-        if (commandLine.IsCommand("localization", "template", "generate")) return GenerateLubanTemplate(commandLine, projectRoot, service);
+        bool dryRun = CliStatusProjection.IsDryRun(commandLine);
+        if (commandLine.IsCommand("localization", "template", "generate")) return GenerateLubanTemplate(commandLine, projectRoot, service, dryRun);
         if (commandLine.IsCommand("localization", "preview")) return await PreviewLubanAsync(commandLine, projectRoot, service, cancellationToken).ConfigureAwait(false);
         LocalizationKitOptions options = new() { ProjectRoot = projectRoot, SourcePath = commandLine.GetOption("source", "Assets/Settings/YokiFrame/localization.json") };
-        LocalizationOperationResult result = commandLine.IsCommand("localization", "add")
+        bool isAdd = commandLine.IsCommand("localization", "add");
+        if (dryRun)
+        {
+            return isAdd
+                ? WriteAddDryRun(commandLine, projectRoot, service, options)
+                : throw new YokiFrameProtocolException(new YokiFrameError(
+                    "UnsupportedDryRun",
+                    "--dry-run is only supported for localization add and localization template generate.",
+                    "Remove --dry-run from this read-only command.",
+                    Array.Empty<string>()));
+        }
+
+        LocalizationOperationResult result = isAdd
             ? service.Add(CreateAddRequest(commandLine, options))
             : commandLine.IsCommand("localization", "check")
                 ? service.Check(options)
@@ -62,8 +75,54 @@ internal static class CliLocalizationKitCommands
         return new LocalizationAddRequest { Options = options, TextId = textId, Language = language, Value = value, PluralCategory = commandLine.GetOption("plural", string.Empty), Force = commandLine.GetBoolOption("force", false) };
     }
 
+    /// <summary>在不写入 JSON 源文件的前提下规划一条文本补充，复用 Add 的全部校验。</summary>
+    /// <param name="commandLine">已解析命令行。</param>
+    /// <param name="projectRoot">当前项目根。</param>
+    /// <param name="service">LocalizationKit 应用服务。</param>
+    /// <param name="options">源文件选项。</param>
+    /// <returns>CLI 退出码。</returns>
+    private static int WriteAddDryRun(
+        CliCommandLine commandLine,
+        string projectRoot,
+        LocalizationKitApplicationService service,
+        LocalizationKitOptions options)
+    {
+        LocalizationOperationResult result = service.PlanAdd(CreateAddRequest(commandLine, options));
+        if (!result.Succeeded)
+        {
+            JsonObject failed = CliStatusProjection.CreateDryRunEnvelope(
+                "localization add",
+                projectRoot,
+                Array.Empty<(string, bool)>(),
+                "localization add");
+            return CliStatusProjection.WriteDryRunFailure(
+                failed,
+                "LocalizationAddRejected",
+                string.Join("; ", result.Diagnostics),
+                "localization add");
+        }
+
+        JsonObject payload = CliStatusProjection.CreateDryRunEnvelope(
+            "localization add",
+            projectRoot,
+            result.PlannedWrites.Select(static write => (write.Path, write.OverwritesExistingValue)),
+            "localization add");
+        // 提示真实执行时是否需要 --force，避免 AI 先跑一次失败命令才发现冲突。
+        payload["requiresForce"] = result.PlannedWrites.Any(static write => write.OverwritesExistingValue);
+        return CliJsonOutput.WriteSuccess(payload);
+    }
+
     /// <summary>生成由 XML schema 注册的 Luban 本地化 Excel 模板。</summary>
-    private static int GenerateLubanTemplate(CliCommandLine commandLine, string projectRoot, LocalizationKitApplicationService service)
+    /// <param name="commandLine">已解析命令行。</param>
+    /// <param name="projectRoot">当前项目根。</param>
+    /// <param name="service">LocalizationKit 应用服务。</param>
+    /// <param name="dryRun">是否只规划不写入。</param>
+    /// <returns>CLI 退出码。</returns>
+    private static int GenerateLubanTemplate(
+        CliCommandLine commandLine,
+        string projectRoot,
+        LocalizationKitApplicationService service,
+        bool dryRun)
     {
         string languageText = commandLine.GetOption("languages", "ChineseSimplified,English");
         LocalizationLubanTemplateRequest request = new()
@@ -73,6 +132,33 @@ internal static class CliLocalizationKitCommands
             Languages = languageText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             Force = commandLine.GetBoolOption("force", false)
         };
+        if (dryRun)
+        {
+            LocalizationOperationResult plan = service.PlanLubanTemplate(request);
+            if (!plan.Succeeded)
+            {
+                JsonObject failed = CliStatusProjection.CreateDryRunEnvelope(
+                    "localization template generate",
+                    projectRoot,
+                    Array.Empty<(string, bool)>(),
+                    "localization template generate");
+                return CliStatusProjection.WriteDryRunFailure(
+                    failed,
+                    "LocalizationLubanTemplateRejected",
+                    string.Join("; ", plan.Diagnostics),
+                    "localization template generate");
+            }
+
+            JsonObject planned = CliStatusProjection.CreateDryRunEnvelope(
+                "localization template generate",
+                projectRoot,
+                plan.PlannedWrites.Select(static write => (write.Path, write.OverwritesExistingValue)),
+                "localization template generate");
+            planned["languages"] = CliJsonOutput.ToJsonNode(request.Languages.ToArray());
+            planned["diagnostics"] = CliJsonOutput.ToJsonNode(plan.Diagnostics.ToArray());
+            return CliJsonOutput.WriteSuccess(planned);
+        }
+
         LocalizationOperationResult result = service.GenerateLubanTemplate(request);
         if (!result.Succeeded) throw new YokiFrameProtocolException(new YokiFrameError("LocalizationLubanTemplateFailed", string.Join("; ", result.Diagnostics), "Check Luban path, schemaFiles, and --force override option.", new[] { projectRoot }));
         JsonObject payload = new()

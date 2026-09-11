@@ -181,4 +181,11 @@ public sealed record LocalizationOperationResult
     public IReadOnlyList<string> Files { get; init; } = Array.Empty<string>();
     /// <summary>Luban 预览成功时对应的临时输出目录。</summary>
     public string PreviewDirectory { get; init; } = string.Empty;
+    /// <summary>dry-run 计划中的待写入文件；真实执行时为空。</summary>
+    public IReadOnlyList<LocalizationPlannedWrite> PlannedWrites { get; init; } = Array.Empty<LocalizationPlannedWrite>();
 }
+
+/// <summary>描述 dry-run 计划中的一次写入目标及其对现有内容的影响。</summary>
+/// <param name="Path">将要写入的绝对路径。</param>
+/// <param name="OverwritesExistingValue">目标内容已存在且会被替换时返回 true。</param>
+public sealed record LocalizationPlannedWrite(string Path, bool OverwritesExistingValue);

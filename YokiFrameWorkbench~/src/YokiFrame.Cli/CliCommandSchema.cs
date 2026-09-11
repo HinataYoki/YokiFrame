@@ -91,6 +91,16 @@ internal sealed class CliCommandSchema
     public IReadOnlyList<string> Verbs { get; }
 
     /// <summary>
+    /// 判断当前命令是否声明了指定选项；Skill 文档漂移校验据此确认命令面被完整记录。
+    /// </summary>
+    /// <param name="optionName">不含双横线的选项名。</param>
+    /// <returns>schema 允许该选项时返回 true。</returns>
+    public bool HasOption(string optionName)
+    {
+        return mOptionNames.Contains(optionName);
+    }
+
+    /// <summary>
     /// 判断解析结果是否匹配当前 schema。
     /// </summary>
     /// <param name="commandLine">已解析命令行。</param>
@@ -263,6 +273,11 @@ internal static class CliCommandSchemaRegistry
     private static readonly IReadOnlyList<CliCommandSchema> sSchemas = CreateSchemas();
 
     /// <summary>
+    /// 获取全部公开命令 schema；Skill 文档漂移校验复用同一事实来源，不另建命令清单。
+    /// </summary>
+    public static IReadOnlyList<CliCommandSchema> Schemas => sSchemas;
+
+    /// <summary>
     /// 校验命令及其选项；未知命令也在这里转换为稳定错误。
     /// </summary>
     /// <param name="commandLine">已解析命令行。</param>
@@ -295,23 +310,25 @@ internal static class CliCommandSchemaRegistry
         CliOptionSpec detail = new("detail");
         CliOptionSpec kit = new("kit");
         CliOptionSpec name = new("name");
+        CliOptionSpec dryRun = new("dry-run", CliOptionValueKind.Boolean);
 
         return new[]
         {
             Schema("harness status", new[] { "harness", "status" }, project),
             Schema("harness catalog", new[] { "harness", "catalog" }, project, engine, new("refresh-commands", CliOptionValueKind.Boolean), strict, timeout),
-            Schema("project status", new[] { "project", "status" }, project, strict, detail),
-            Schema("project refresh", new[] { "project", "refresh" }, project, strict, detail, new("package")),
-            Schema("player build", new[] { "player", "build" }, project, new("engine", required: true), new("godot", required: true), new("preset", required: true), new("output", required: true), new("configuration")),
+            Schema("project status", new[] { "project", "status" }, project, detail),
+            Schema("project refresh", new[] { "project", "refresh" }, project, detail, dryRun, new("package")),
+            Schema("player build", new[] { "player", "build" }, project, new("engine", required: true), new("godot", required: true), new("preset", required: true), new("output", required: true), new("configuration"), dryRun),
             Schema("installer plan", new[] { "installer", "plan" }, new("mode", required: true), new("target", required: true), source, new("git-url"), new("take-over", CliOptionValueKind.Boolean), new("repair-godot", CliOptionValueKind.Boolean), new("enable-godot", CliOptionValueKind.Boolean)),
             Schema("installer apply", new[] { "installer", "apply" }, new("mode", required: true), new("target", required: true), source, new("git-url"), new("take-over", CliOptionValueKind.Boolean), new("repair-godot", CliOptionValueKind.Boolean), new("enable-godot", CliOptionValueKind.Boolean)),
-            Schema("engine list", new[] { "engine", "list" }, project),
-            Schema("snapshot read", new[] { "snapshot", "read" }, project, engine, kit, name),
-            Schema("bridge status", new[] { "bridge", "status" }, project, engine),
-            Schema("doctor", new[] { "doctor" }, project, engine),
-            Schema("command send", new[] { "command", "send" }, project, engine, kit, new("action"), new("payload"), source, timeout),
+            Schema("kit status", new[] { "kit", "status" }, project, engine, kit, name, detail),
+            Schema("engine list", new[] { "engine", "list" }, project, detail),
+            Schema("snapshot read", new[] { "snapshot", "read" }, project, engine, kit, name, detail),
+            Schema("bridge status", new[] { "bridge", "status" }, project, engine, detail),
+            Schema("doctor", new[] { "doctor" }, project, engine, detail),
+            Schema("command send", new[] { "command", "send" }, project, engine, kit, new("action"), new("payload"), source, timeout, detail),
             Schema("command status", new[] { "command", "status" }, project, engine, new("request-id", required: true)),
-            Schema("telemetry read", new[] { "telemetry", "read" }, project, engine, kit, name, new("maxPayload", CliOptionValueKind.Int32, minimum: 1), new("generation", CliOptionValueKind.Int64, minimum: 1)),
+            Schema("telemetry read", new[] { "telemetry", "read" }, project, engine, kit, name, detail, new("maxPayload", CliOptionValueKind.Int32, minimum: 1), new("generation", CliOptionValueKind.Int64, minimum: 1)),
             Schema("fastchannel status", new[] { "fastchannel", "status" }, project, engine),
             Schema("audio index scan", new[] { "audio", "index", "scan" }, project, new("scan"), new("output"), new("manifest"), new("namespace"), new("class"), new("start-id", CliOptionValueKind.Int32, minimum: 0)),
             Schema("audio index generate", new[] { "audio", "index", "generate" }, project, new("scan"), new("output"), new("manifest"), new("namespace"), new("class"), new("start-id", CliOptionValueKind.Int32, minimum: 0)),
@@ -321,8 +338,8 @@ internal static class CliCommandSchemaRegistry
             Schema("spatialkit analyze", new[] { "spatialkit", "analyze" }, project, engine, source, timeout),
             Schema("localization search", new[] { "localization", "search" }, project, source, new("keyword"), new("missing-only", CliOptionValueKind.Boolean), new("limit", CliOptionValueKind.Int32, minimum: 1)),
             Schema("localization check", new[] { "localization", "check" }, project, source),
-            Schema("localization add", new[] { "localization", "add" }, project, source, new("text-id", CliOptionValueKind.Int32), new("language", required: true), new("value", required: true), new("plural"), new("force", CliOptionValueKind.Boolean)),
-            Schema("localization template generate", new[] { "localization", "template", "generate" }, project, new("languages"), new("force", CliOptionValueKind.Boolean), new("luban-config"), new("luban"), new("luban-workdir"), new("target")),
+            Schema("localization add", new[] { "localization", "add" }, project, source, new("text-id", CliOptionValueKind.Int32), new("language", required: true), new("value", required: true), new("plural"), new("force", CliOptionValueKind.Boolean), dryRun),
+            Schema("localization template generate", new[] { "localization", "template", "generate" }, project, new("languages"), new("force", CliOptionValueKind.Boolean), dryRun, new("luban-config"), new("luban"), new("luban-workdir"), new("target")),
             Schema("localization preview", new[] { "localization", "preview" }, project, new("luban-config"), new("luban"), new("luban-workdir"), new("target"))
         };
     }

@@ -47,7 +47,6 @@ internal static class CliJson
 [JsonSerializable(typeof(EngineRegistryEntry))]
 [JsonSerializable(typeof(FastChannelEndpoint))]
 [JsonSerializable(typeof(List<FastChannelEndpoint>))]
-[JsonSerializable(typeof(WorkbenchDoctorIssue[]))]
 [JsonSerializable(typeof(CapabilityCatalog))]
 [JsonSerializable(typeof(CapabilityCatalogProject))]
 [JsonSerializable(typeof(CapabilityCatalogEngine))]

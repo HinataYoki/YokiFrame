@@ -287,13 +287,13 @@ public sealed class ProjectModelService
                 ["modelGeneration"] = bundle.Manifest.ModelGeneration,
                 ["modelId"] = bundle.Manifest.ModelId
             },
+            // 不再输出 CLI 版本：Runtime manifest 不携带产品版本，硬编码值会与 package.json 漂移。
             ["cli"] = new JsonObject
             {
                 ["available"] = runtimeCache.IsCliAvailable,
                 ["path"] = cliPath,
                 ["runtimeRoot"] = runtimeRoot,
-                ["runtimeIdentifier"] = runtimeCache.RuntimeIdentifier,
-                ["version"] = "0.1.0-preview"
+                ["runtimeIdentifier"] = runtimeCache.RuntimeIdentifier
             },
             ["workbench"] = new JsonObject
             {

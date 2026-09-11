@@ -369,13 +369,21 @@ public sealed class CliErrorOutputTests
         Assert.Equal("The host rejected this command.", json["error"]!["message"]!.GetValue<string>());
         Assert.Equal("file-bridge", json["transport"]!.GetValue<string>());
         Assert.Equal(execution.Envelope.RequestId, json["requestId"]!.GetValue<string>());
-        Assert.Equal(execution.CommandPath, json["commandPath"]!.GetValue<string>());
-        Assert.Equal(execution.ResponsePath, json["responsePath"]!.GetValue<string>());
         Assert.Equal("Error", json["response"]!["status"]!.GetValue<string>());
+
+        // 身份字段只在顶层出现一次，不再在 error 对象里重复。
+        Assert.False(json["error"]!.AsObject().ContainsKey("requestId"));
+        Assert.False(json["error"]!.AsObject().ContainsKey("engineId"));
+        Assert.False(json["error"]!.AsObject().ContainsKey("transport"));
+
+        // 默认失败输出只给项目相对证据；绝对路径属于 L2，需要 --detail full。
+        Assert.False(json.AsObject().ContainsKey("commandPath"));
+        Assert.False(json.AsObject().ContainsKey("responsePath"));
         var evidencePaths = json["error"]!["evidencePaths"]!.AsArray()
-            .Select(static node => node!.GetValue<string>());
-        Assert.Contains(execution.CommandPath, evidencePaths);
-        Assert.Contains(execution.ResponsePath, evidencePaths);
+            .Select(static node => node!.GetValue<string>())
+            .ToArray();
+        Assert.Contains(".yokiframe/engines/unity-editor/commands/", string.Join(";", evidencePaths), StringComparison.Ordinal);
+        Assert.All(evidencePaths, static path => Assert.False(Path.IsPathRooted(path)));
     }
 
     /// <summary>启动真实 CLI 程序并捕获标准输出和标准错误。</summary>

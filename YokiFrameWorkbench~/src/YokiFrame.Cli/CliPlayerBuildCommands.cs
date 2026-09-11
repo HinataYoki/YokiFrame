@@ -42,8 +42,35 @@ internal static class CliPlayerBuildCommands
         }
 
         var options = CreateOptions(commandLine, projectRoot);
+        if (CliStatusProjection.IsDryRun(commandLine))
+        {
+            return WriteDryRun(options);
+        }
+
         var result = await RunGodotExportAsync(options, cancellationToken).ConfigureAwait(false);
         return WriteResult(result);
+    }
+
+    /// <summary>
+    /// 输出 Godot 导出计划：CreateOptions 已校验项目文件、preset、配置和输出边界，此处只报告目标文件。
+    /// </summary>
+    /// <param name="options">已验证构建选项。</param>
+    /// <returns>成功退出码。</returns>
+    private static int WriteDryRun(GodotPlayerBuildOptions options)
+    {
+        JsonObject payload = CliStatusProjection.CreateDryRunEnvelope(
+            "player build",
+            options.ProjectRoot,
+            new[]
+            {
+                (options.OutputPath, File.Exists(options.OutputPath)),
+                (options.LogPath, false)
+            },
+            "player build");
+        payload["engine"] = "Godot";
+        payload["configuration"] = options.Configuration;
+        payload["preset"] = options.Preset;
+        return CliJsonOutput.WriteSuccess(payload);
     }
 
     /// <summary>把 CLI 文本参数转换为经过路径和项目文件校验的 Godot 导出选项。</summary>

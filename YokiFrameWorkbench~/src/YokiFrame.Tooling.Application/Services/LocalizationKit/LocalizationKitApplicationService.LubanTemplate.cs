@@ -48,10 +48,7 @@ public sealed partial class LocalizationKitApplicationService
         IReadOnlyList<LanguageId> languages,
         bool force)
     {
-        if (!force && (File.Exists(plan.SchemaPath) || File.Exists(plan.WorkbookPath)))
-        {
-            throw new IOException("LocalizationKit XML 或 Excel 已存在；使用 force 才能覆盖。");
-        }
+        EnsureTemplateTargetsWritable(plan, force);
 
         Directory.CreateDirectory(Path.GetDirectoryName(plan.SchemaPath)!);
         Directory.CreateDirectory(Path.GetDirectoryName(plan.WorkbookPath)!);
@@ -67,6 +64,17 @@ public sealed partial class LocalizationKitApplicationService
         {
             DeleteIfExists(schemaTemporaryPath);
             DeleteIfExists(workbookTemporaryPath);
+        }
+    }
+
+    /// <summary>校验模板目标可写；已有作者文件且未显式 force 时拒绝，dry-run 与真实写入共用同一判断。</summary>
+    /// <param name="plan">已完成路径 containment 和注册判断的模板计划。</param>
+    /// <param name="force">已有作者文件时是否允许替换。</param>
+    private static void EnsureTemplateTargetsWritable(LocalizationLubanPlan plan, bool force)
+    {
+        if (!force && (File.Exists(plan.SchemaPath) || File.Exists(plan.WorkbookPath)))
+        {
+            throw new IOException("LocalizationKit XML 或 Excel 已存在；使用 force 才能覆盖。");
         }
     }
 

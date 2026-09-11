@@ -1,11 +1,14 @@
 using System.Text.Json.Nodes;
 using YokiFrame;
 using YokiFrame.Client;
+using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Cli;
+using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Results;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Capabilities;
 using YokiFrame.Tooling.Application.Engines;
+using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Services;
 
 /// <summary>
@@ -119,9 +122,14 @@ internal static class Program
             return await CliSpatialKitCommands.DispatchAsync(commandLine, client, cancellationToken).ConfigureAwait(false);
         }
 
+        if (CliKitStatusCommand.IsKitStatusCommand(commandLine))
+        {
+            return CliKitStatusCommand.Dispatch(commandLine, client);
+        }
+
         if (commandLine.IsCommand("engine", "list"))
         {
-            return WriteEngineList(client);
+            return WriteEngineList(commandLine, client);
         }
 
         if (commandLine.IsCommand("snapshot", "read"))
@@ -162,7 +170,7 @@ internal static class Program
         throw new YokiFrameProtocolException(new YokiFrameError(
             "UnknownCommand",
             "Unsupported command.",
-            "Use project status/refresh, player build, spatialkit stats/indexes/density/analyze, audio index scan/generate, localization search/check/add/template generate, doctor, harness status/catalog, engine list, snapshot read, command send/status, bridge status, telemetry read or fastchannel status.",
+            "Use project status/refresh, player build, spatialkit stats/indexes/density/analyze, audio index scan/generate, localization search/check/add/template generate, doctor, harness status/catalog, kit status, engine list, snapshot read, command send/status, bridge status, telemetry read or fastchannel status.",
             Array.Empty<string>()));
     }
 
@@ -224,29 +232,75 @@ internal static class Program
     }
 
     /// <summary>
-    /// 输出当前 engine registry 列表。
+    /// 输出当前 engine registry 列表；默认只给 AI 判断宿主身份和能力所需的字段。
     /// </summary>
+    /// <param name="commandLine">已解析命令行。</param>
     /// <param name="client">FileBridge 客户端。</param>
     /// <returns>进程退出码。</returns>
-    private static int WriteEngineList(IYokiFrameClient client)
+    private static int WriteEngineList(CliCommandLine commandLine, IYokiFrameClient client)
     {
+        var detail = CliStatusProjection.ParseDetail(commandLine);
+        var entries = client.ReadEngineEntries();
         JsonArray engines = new();
-        foreach (var entry in client.ReadEngineEntries())
+        foreach (var entry in entries)
         {
-            engines.Add(CliJsonOutput.ToJsonNode(entry));
+            engines.Add(detail == CliStatusProjection.FULL_DETAIL
+                ? CliJsonOutput.ToJsonNode(entry)
+                : CreateEngineSummaryJson(entry));
         }
 
         JsonObject payload = new()
         {
             ["command"] = "engine list",
-            ["enginesRoot"] = client.Paths.EnginesRoot,
+            ["state"] = entries.Count == 0 ? CliStatusProjection.UNAVAILABLE : CliStatusProjection.READY,
             ["engines"] = engines
         };
-        return CliJsonOutput.WriteSuccess(payload);
+        if (detail == CliStatusProjection.FULL_DETAIL)
+        {
+            payload["enginesRoot"] = client.Paths.EnginesRoot;
+        }
+
+        if (entries.Count != 0)
+        {
+            return CliJsonOutput.WriteSuccess(payload);
+        }
+
+        return CliJsonOutput.WriteError(
+            new YokiFrameError(
+                "NoEngineOnline",
+                "No engine host is registered in this project.",
+                "Start the Unity Editor or Godot host, then run engine list again.",
+                CliStatusProjection.CompactPaths(client.Paths.ProjectRoot, new[] { client.Paths.EnginesRoot })),
+            payload);
     }
 
     /// <summary>
-    /// 输出指定 snapshot 内容。
+    /// 生成单个 engine 的默认摘要；省略 registry 绝对路径和 FastChannel action 全量列表。
+    /// </summary>
+    /// <param name="entry">engine registry 条目。</param>
+    /// <returns>AI 默认可见的 engine 摘要。</returns>
+    private static JsonObject CreateEngineSummaryJson(EngineRegistryEntry entry)
+    {
+        JsonArray capabilities = new();
+        foreach (var capability in entry.Capabilities)
+        {
+            capabilities.Add(JsonValue.Create(capability));
+        }
+
+        return new JsonObject
+        {
+            ["engineId"] = entry.EngineId,
+            ["engine"] = entry.Engine,
+            ["version"] = entry.Version,
+            ["mode"] = entry.Mode,
+            ["generation"] = entry.Generation,
+            ["capabilities"] = capabilities,
+            ["fastChannel"] = entry.FastChannels.Count > 0
+        };
+    }
+
+    /// <summary>
+    /// 输出指定 snapshot；默认展开内嵌 payload 为 summary，原始节点和协议路径留给 --detail full。
     /// </summary>
     /// <param name="commandLine">已解析命令行。</param>
     /// <param name="client">FileBridge 客户端。</param>
@@ -256,20 +310,60 @@ internal static class Program
         var engineId = ResolveEngineId(commandLine, client);
         var kit = commandLine.GetOption("kit", "System");
         var name = commandLine.GetOption("name", "state");
-        JsonObject payload = new()
+        var detail = CliStatusProjection.ParseDetail(commandLine);
+        var data = client.ReadSnapshot(engineId, kit, name);
+        if (detail == CliStatusProjection.FULL_DETAIL)
         {
-            ["command"] = "snapshot read",
-            ["engineId"] = engineId,
-            ["kit"] = kit,
-            ["name"] = name,
-            ["path"] = client.Paths.GetSnapshotPath(engineId, kit, name),
-            ["data"] = client.ReadSnapshot(engineId, kit, name)
-        };
+            return CliJsonOutput.WriteSuccess(new JsonObject
+            {
+                ["command"] = "snapshot read",
+                ["engineId"] = engineId,
+                ["kit"] = kit,
+                ["name"] = name,
+                ["state"] = CliStatusProjection.READY,
+                ["path"] = client.Paths.GetSnapshotPath(engineId, kit, name),
+                ["data"] = data
+            });
+        }
+
+        JsonObject payload = CliStatusProjection.CreateKitEnvelope(
+            "snapshot read",
+            engineId,
+            kit,
+            CliStatusProjection.READY,
+            "snapshot");
+        payload["name"] = name;
+        if (data["generation"] is JsonValue generation && generation.TryGetValue<long>(out var generationValue))
+        {
+            payload["generation"] = generationValue;
+        }
+
+        if (data["sequence"] is JsonValue sequence && sequence.TryGetValue<long>(out var sequenceValue))
+        {
+            payload["sequence"] = sequenceValue;
+        }
+
+        var payloadJson = data["payloadJson"] is JsonValue payloadValue && payloadValue.TryGetValue<string>(out var text)
+            ? text
+            : string.Empty;
+        if (CliStatusProjection.TryParseSummary(payloadJson, out var summary))
+        {
+            payload["summary"] = summary;
+        }
+        else
+        {
+            ((JsonArray)payload["issues"]!).Add(CliStatusProjection.CreateIssue(
+                "SnapshotSummaryLimited",
+                CliStatusProjection.SEVERITY_WARNING,
+                "Snapshot payload exceeds the default summary budget; use --detail full for the raw node.",
+                false));
+        }
+
         return CliJsonOutput.WriteSuccess(payload);
     }
 
     /// <summary>
-    /// 输出指定 engine 的 FileBridge 队列状态。
+    /// 输出指定 engine 的 FileBridge 队列状态；默认只给队列指标和 heartbeat 新鲜度，不含协议目录绝对路径。
     /// </summary>
     /// <param name="commandLine">已解析命令行。</param>
     /// <param name="client">FileBridge 客户端。</param>
@@ -277,13 +371,111 @@ internal static class Program
     private static int WriteBridgeStatus(CliCommandLine commandLine, IYokiFrameClient client)
     {
         var engineId = ResolveEngineId(commandLine, client);
+        var detail = CliStatusProjection.ParseDetail(commandLine);
         var nowUtc = DateTimeOffset.UtcNow;
+        var status = client.ReadBridgeStatus(engineId);
+        var state = ResolveBridgeState(status, nowUtc);
+        if (detail == CliStatusProjection.FULL_DETAIL)
+        {
+            return CliJsonOutput.WriteSuccess(new JsonObject
+            {
+                ["command"] = "bridge status",
+                ["engineId"] = engineId,
+                ["state"] = state,
+                ["status"] = status.ToJson(nowUtc, WorkbenchDoctorService.HeartbeatStaleThreshold)
+            });
+        }
+
         JsonObject payload = new()
         {
             ["command"] = "bridge status",
-            ["status"] = client.ReadBridgeStatus(engineId).ToJson(nowUtc, WorkbenchDoctorService.HeartbeatStaleThreshold)
+            ["engineId"] = engineId,
+            ["state"] = state,
+            ["summary"] = CreateBridgeSummaryJson(status, nowUtc),
+            ["issues"] = new JsonArray(),
+            ["detailAvailable"] = true
         };
-        return CliJsonOutput.WriteSuccess(payload);
+        if (status.DeadletterCount > 0)
+        {
+            ((JsonArray)payload["issues"]!).Add(CliStatusProjection.CreateIssue(
+                "DeadletterPresent",
+                CliStatusProjection.SEVERITY_WARNING,
+                "Deadletter evidence exists; inspect it before sending more commands.",
+                false));
+        }
+
+        if (CliStatusProjection.IsUsable(state))
+        {
+            return CliJsonOutput.WriteSuccess(payload);
+        }
+
+        payload["nextActions"] = new JsonArray(JsonValue.Create("doctor"));
+        var heartbeat = status.Heartbeat;
+        return CliJsonOutput.WriteError(
+            new YokiFrameError(
+                heartbeat == null ? "BridgeHostOffline" : "BridgeHeartbeatStale",
+                heartbeat == null
+                    ? "No engine heartbeat was found for this engine."
+                    : "Engine heartbeat is stale.",
+                "Start or restart the engine host, then run bridge status again.",
+                CliStatusProjection.CompactPaths(client.Paths.ProjectRoot, new[] { client.Paths.GetHeartbeatPath(engineId) }),
+                null,
+                engineId),
+            payload);
+    }
+
+    /// <summary>
+    /// 根据 heartbeat 与队列事实判定 FileBridge 可用状态；缺失 heartbeat 表示宿主未运行。
+    /// </summary>
+    /// <param name="status">FileBridge 状态。</param>
+    /// <param name="nowUtc">当前 UTC 时间。</param>
+    /// <returns>AI 可见状态词。</returns>
+    private static string ResolveBridgeState(FileBridgeStatus status, DateTimeOffset nowUtc)
+    {
+        var heartbeat = status.Heartbeat;
+        if (heartbeat == null)
+        {
+            return CliStatusProjection.UNAVAILABLE;
+        }
+
+        if (heartbeat.IsStale(nowUtc, WorkbenchDoctorService.HeartbeatStaleThreshold))
+        {
+            return CliStatusProjection.STALE;
+        }
+
+        return status.DeadletterCount > 0 || status.BackpressureActive
+            ? CliStatusProjection.DEGRADED
+            : CliStatusProjection.READY;
+    }
+
+    /// <summary>
+    /// 生成 FileBridge 默认摘要；省略协议目录绝对路径、保留策略和 heartbeat 文件路径。
+    /// </summary>
+    /// <param name="status">FileBridge 状态。</param>
+    /// <param name="nowUtc">当前 UTC 时间。</param>
+    /// <returns>队列与 heartbeat 摘要。</returns>
+    private static JsonObject CreateBridgeSummaryJson(FileBridgeStatus status, DateTimeOffset nowUtc)
+    {
+        var heartbeat = status.Heartbeat;
+        JsonObject summary = new()
+        {
+            ["pending"] = status.PendingCount,
+            ["processing"] = status.ProcessingCount,
+            ["deadletter"] = status.DeadletterCount,
+            ["results"] = status.ResultCount,
+            ["protocolFileCount"] = status.ProtocolFileCount,
+            ["backpressure"] = status.BackpressureActive
+        };
+        if (heartbeat == null)
+        {
+            return summary;
+        }
+
+        summary["mode"] = heartbeat.Mode;
+        summary["generation"] = heartbeat.Generation;
+        summary["heartbeatAgeSeconds"] = Math.Max(0L, (long)(nowUtc - heartbeat.CreatedAtUtc).TotalSeconds);
+        summary["heartbeatStale"] = heartbeat.IsStale(nowUtc, WorkbenchDoctorService.HeartbeatStaleThreshold);
+        return summary;
     }
 
     /// <summary>
@@ -295,17 +487,53 @@ internal static class Program
     private static int WriteDoctor(CliCommandLine commandLine, IYokiFrameClient client)
     {
         var requestedEngineId = commandLine.GetOption("engine", string.Empty);
+        var detail = CliStatusProjection.ParseDetail(commandLine);
         var report = new WorkbenchDoctorService(client).Analyze(requestedEngineId);
         JsonObject payload = new()
         {
             ["command"] = "doctor",
             ["engineId"] = report.EngineId,
+            ["state"] = CliStatusProjection.FromDoctorLevel(report.Level),
             ["level"] = report.Level,
             ["issueCount"] = report.IssueCount,
-            ["issues"] = CliJsonOutput.ToJsonNode(report.Issues.ToArray()),
-            ["status"] = report.Status.ToJson(report.GeneratedAtUtc, WorkbenchDoctorService.HeartbeatStaleThreshold)
+            ["issues"] = CreateDoctorIssueArray(report.Issues)
         };
+        if (detail == CliStatusProjection.FULL_DETAIL)
+        {
+            payload["status"] = report.Status.ToJson(report.GeneratedAtUtc, WorkbenchDoctorService.HeartbeatStaleThreshold);
+            return CliJsonOutput.WriteSuccess(payload);
+        }
+
+        payload["summary"] = CreateBridgeSummaryJson(report.Status, report.GeneratedAtUtc);
+        payload["detailAvailable"] = true;
+        if (report.IssueCount > 0)
+        {
+            // doctor 的诊断结果本身可用，Degraded 仍为 ok=true；问题内容通过 issues 和 nextActions 传达。
+            payload["nextActions"] = new JsonArray(JsonValue.Create("bridge status"), JsonValue.Create("doctor --detail full"));
+        }
+
         return CliJsonOutput.WriteSuccess(payload);
+    }
+
+    /// <summary>
+    /// 把 doctor 诊断投影为统一 issue 结构，保留证据路径并补齐 severity 和 retryable。
+    /// </summary>
+    /// <param name="issues">doctor 诊断问题列表。</param>
+    /// <returns>统一 issue 数组。</returns>
+    private static JsonArray CreateDoctorIssueArray(IReadOnlyList<WorkbenchDoctorIssue> issues)
+    {
+        JsonArray array = new();
+        foreach (var issue in issues)
+        {
+            array.Add(CliStatusProjection.CreateIssue(
+                issue.Code,
+                CliStatusProjection.SEVERITY_WARNING,
+                issue.Message,
+                true,
+                issue.EvidencePaths));
+        }
+
+        return array;
     }
 
     /// <summary>
@@ -335,24 +563,29 @@ internal static class Program
             timeoutMs,
             cancellationToken).ConfigureAwait(false);
 
+        // 失败时必须保留请求证据路径：脚本和 AI 需要按 requestId 复查 terminal response。
+        var detail = CliStatusProjection.ParseDetail(commandLine);
+        var failed = !string.Equals(result.Response.Status, "Success", StringComparison.OrdinalIgnoreCase);
         JsonObject payload = new()
         {
             ["command"] = "command send",
             ["requestId"] = result.Response.RequestId,
             ["outcome"] = result.Outcome.ToString(),
-            ["transport"] = result.Transport,
-            ["commandPath"] = result.CommandPath,
-            ["responsePath"] = result.ResponsePath,
             ["response"] = CliJsonOutput.ToJsonNode(result.Response)
         };
-        if (!string.Equals(result.Response.Status, "Success", StringComparison.OrdinalIgnoreCase))
+        // 传输与请求证据是 L2 信息：默认只保留相对路径证据，绝对路径仅在 --detail full 出现。
+        if (detail == CliStatusProjection.FULL_DETAIL)
         {
-            var evidencePaths = new[]
-                {
-                    result.Evidence.CommandPath,
-                    result.Evidence.ResponsePath
-                }
-                .Where(static path => !string.IsNullOrWhiteSpace(path))
+            payload["transport"] = result.Transport;
+            payload["commandPath"] = result.CommandPath;
+            payload["responsePath"] = result.ResponsePath;
+        }
+
+        if (failed)
+        {
+            var evidencePaths = CliStatusProjection.CompactPaths(
+                    client.Paths.ProjectRoot,
+                    new[] { result.Evidence.CommandPath, result.Evidence.ResponsePath })
                 .ToArray();
             var errorEngineId = string.IsNullOrWhiteSpace(result.Response.EngineId)
                 ? requestedEngineId
@@ -407,7 +640,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// 从 shared memory telemetry segment 读取最新帧；不可用时输出状态供调用侧回落 snapshot。
+    /// 读取 shared memory telemetry 最新帧；默认只输出状态摘要，协议原始字段需要 --detail full。
     /// </summary>
     /// <param name="commandLine">已解析命令行。</param>
     /// <param name="client">FileBridge 客户端，用于推断当前 engine generation。</param>
@@ -417,24 +650,157 @@ internal static class Program
         var engineId = ResolveEngineId(commandLine, client);
         var kit = commandLine.GetOption("kit", "System");
         var name = commandLine.GetOption("name", "state");
-        var segmentName = SharedMemoryTelemetrySegmentName.Create(client.Paths.ProjectRoot, engineId, kit, name);
+        var detail = CliStatusProjection.ParseDetail(commandLine);
         var maxPayloadBytes = commandLine.GetIntOption(
             "maxPayload",
             SharedMemoryTelemetryFrameReader.DEFAULT_MAX_PAYLOAD_BYTES);
         var expectedGeneration = ResolveExpectedGeneration(commandLine, client, engineId);
         var result = client.ReadTelemetry(engineId, kit, name, expectedGeneration, maxPayloadBytes);
+        if (detail == CliStatusProjection.FULL_DETAIL)
+        {
+            return WriteTelemetryFullDetail(client, engineId, kit, name, expectedGeneration, result);
+        }
 
+        var state = CliStatusProjection.FromTelemetryFrame(result.Status);
+        JsonObject payload = CliStatusProjection.CreateKitEnvelope(
+            "telemetry read",
+            engineId,
+            kit,
+            state,
+            "telemetry");
+        if (result.Header != null)
+        {
+            payload["generation"] = result.Header.Generation;
+            payload["sequence"] = result.Header.Sequence;
+        }
+
+        if (!result.IsAccepted)
+        {
+            return WriteTelemetryFailure(payload, client, engineId, kit, name, state, result.Status);
+        }
+
+        if (CliStatusProjection.TryParseSummary(result.PayloadJson, out var summary))
+        {
+            payload["summary"] = summary;
+        }
+        else
+        {
+            ((JsonArray)payload["issues"]!).Add(CliStatusProjection.CreateIssue(
+                "TelemetrySummaryLimited",
+                CliStatusProjection.SEVERITY_WARNING,
+                "Telemetry payload exceeds the default summary budget; use --detail full for the raw payload.",
+                false));
+        }
+
+        return CliJsonOutput.WriteSuccess(payload);
+    }
+
+    /// <summary>
+    /// 输出 telemetry 完整分层：保留 segment、generation 期望值、header 校验字段和原始 payload。
+    /// </summary>
+    /// <param name="client">FileBridge 客户端。</param>
+    /// <param name="engineId">目标 engine。</param>
+    /// <param name="kit">目标 Kit。</param>
+    /// <param name="name">telemetry 名称。</param>
+    /// <param name="expectedGeneration">期望 generation。</param>
+    /// <param name="result">telemetry 读取结果。</param>
+    /// <returns>进程退出码。</returns>
+    private static int WriteTelemetryFullDetail(
+        IYokiFrameClient client,
+        string engineId,
+        string kit,
+        string name,
+        long? expectedGeneration,
+        SharedMemoryTelemetryFrameReadResult result)
+    {
         JsonObject payload = new()
         {
             ["command"] = "telemetry read",
             ["engineId"] = engineId,
             ["kit"] = kit,
             ["name"] = name,
-            ["segment"] = segmentName,
+            ["detail"] = CliStatusProjection.FULL_DETAIL,
+            ["segment"] = SharedMemoryTelemetrySegmentName.Create(client.Paths.ProjectRoot, engineId, kit, name),
             ["expectedGeneration"] = expectedGeneration,
             ["result"] = CreateTelemetryResultJson(result)
         };
         return CliJsonOutput.WriteSuccess(payload);
+    }
+
+    /// <summary>
+    /// 输出 telemetry 不可用时的标准失败 envelope，并指出可回落的 snapshot 证据。
+    /// </summary>
+    /// <param name="payload">已填充公共字段的 envelope。</param>
+    /// <param name="client">FileBridge 客户端。</param>
+    /// <param name="engineId">目标 engine。</param>
+    /// <param name="kit">目标 Kit。</param>
+    /// <param name="name">telemetry 名称。</param>
+    /// <param name="state">AI 可见状态词。</param>
+    /// <param name="status">telemetry 帧读取状态。</param>
+    /// <returns>失败退出码。</returns>
+    private static int WriteTelemetryFailure(
+        JsonObject payload,
+        IYokiFrameClient client,
+        string engineId,
+        string kit,
+        string name,
+        string state,
+        SharedMemoryTelemetryFrameStatus status)
+    {
+        var (code, message, retryable) = DescribeTelemetryFailure(status);
+        ((JsonArray)payload["issues"]!).Add(CliStatusProjection.CreateIssue(
+            code,
+            CliStatusProjection.SEVERITY_ERROR,
+            message,
+            retryable));
+        payload["nextActions"] = new JsonArray(JsonValue.Create("kit status"));
+        return CliJsonOutput.WriteError(
+            new YokiFrameError(
+                CliStatusProjection.ToErrorCode(state),
+                message,
+                "Retry the read, or fall back to snapshot read for this Kit.",
+                CliStatusProjection.CompactPaths(
+                    client.Paths.ProjectRoot,
+                    new[] { client.Paths.GetSnapshotPath(engineId, kit, name) }),
+                null,
+                engineId),
+            payload);
+    }
+
+    /// <summary>
+    /// 把 telemetry 读取失败状态翻译为稳定错误码、说明和可重试性，保证 AI 不需要理解 reader 内部枚举。
+    /// </summary>
+    /// <param name="status">telemetry 帧读取状态。</param>
+    /// <returns>错误码、说明和是否可重试。</returns>
+    private static (string Code, string Message, bool Retryable) DescribeTelemetryFailure(
+        SharedMemoryTelemetryFrameStatus status)
+    {
+        switch (status)
+        {
+            case SharedMemoryTelemetryFrameStatus.Unavailable:
+                return ("TelemetrySegmentUnavailable", "Telemetry shared memory segment is not published for this Kit.", true);
+            case SharedMemoryTelemetryFrameStatus.GenerationMismatch:
+                return ("TelemetryGenerationMismatch", "Telemetry frame generation does not match the current engine generation.", true);
+            case SharedMemoryTelemetryFrameStatus.Writing:
+                return ("TelemetryWriterBusy", "The telemetry writer is publishing a frame; retry the read.", true);
+            case SharedMemoryTelemetryFrameStatus.HalfWrite:
+                return ("TelemetryHalfWrite", "The telemetry frame changed while reading; retry the read.", true);
+            case SharedMemoryTelemetryFrameStatus.CrcMismatch:
+                return ("TelemetryCrcMismatch", "Telemetry payload failed CRC validation.", true);
+            case SharedMemoryTelemetryFrameStatus.EngineIdHashMismatch:
+                return ("TelemetryEngineMismatch", "Telemetry segment belongs to a different engine host.", false);
+            case SharedMemoryTelemetryFrameStatus.UnsupportedVersion:
+                return ("TelemetryVersionUnsupported", "Telemetry frame protocol version is not supported by this CLI.", false);
+            case SharedMemoryTelemetryFrameStatus.PayloadTooLarge:
+            case SharedMemoryTelemetryFrameStatus.BufferTooSmall:
+                return ("TelemetryPayloadTooLarge", "Telemetry payload exceeds the allowed read size.", false);
+            case SharedMemoryTelemetryFrameStatus.InvalidUtf8:
+                return ("TelemetryPayloadInvalid", "Telemetry payload is not valid UTF-8.", false);
+            case SharedMemoryTelemetryFrameStatus.InvalidMagic:
+                return ("TelemetrySegmentInvalid", "The shared memory segment is not a YokiFrame telemetry frame.", false);
+            default:
+                return ("TelemetryReadFailed", "Telemetry frame could not be read for this Kit.", true);
+        }
     }
 
     /// <summary>
@@ -444,7 +810,7 @@ internal static class Program
     /// <param name="client">FileBridge 客户端。</param>
     /// <param name="engineId">目标 engine。</param>
     /// <returns>期望 generation；无法推断时返回 null。</returns>
-    private static long? ResolveExpectedGeneration(
+    internal static long? ResolveExpectedGeneration(
         CliCommandLine commandLine,
         IYokiFrameClient client,
         string engineId)
@@ -509,7 +875,7 @@ internal static class Program
     /// <param name="commandLine">已解析命令行。</param>
     /// <param name="client">统一 YokiFrame Client。</param>
     /// <returns>安全 engine 标识。</returns>
-    private static string ResolveEngineId(CliCommandLine commandLine, IYokiFrameClient client)
+    internal static string ResolveEngineId(CliCommandLine commandLine, IYokiFrameClient client)
     {
         var requestedEngineId = commandLine.GetOption("engine", string.Empty);
         return new EngineSelectionService(client).Resolve(requestedEngineId, DateTimeOffset.UtcNow);
