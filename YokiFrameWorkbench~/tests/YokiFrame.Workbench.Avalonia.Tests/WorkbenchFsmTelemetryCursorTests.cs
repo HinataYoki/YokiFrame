@@ -7,6 +7,7 @@ using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Tooling.Application.Models.FsmKit;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Services;
 
 namespace YokiFrame.Workbench.Avalonia.Tests;
@@ -135,11 +136,10 @@ public sealed class WorkbenchFsmTelemetryCursorTests
                     "{}",
                     "YokiFrame.FsmKit.default-instance",
                     "Idle");
-                var result = CreateInternal<WorkbenchFsmKitTelemetryReadResult>(
-                    WorkbenchFsmKitTelemetryReadStatus.Accepted,
+                var result = CreateInternal<WorkbenchTelemetryReadResult<WorkbenchFsmKitState>>(
+                    WorkbenchTelemetryReadStatus.Accepted,
                     acceptedState,
                     41L,
-                    638880000000000000L,
                     true,
                     string.Empty);
 

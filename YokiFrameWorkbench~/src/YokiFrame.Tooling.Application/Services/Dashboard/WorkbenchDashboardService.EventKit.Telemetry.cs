@@ -1,5 +1,6 @@
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.EventKit;
 
 namespace YokiFrame.Tooling.Application.Services;
@@ -8,7 +9,7 @@ namespace YokiFrame.Tooling.Application.Services;
 public sealed partial class WorkbenchDashboardService
 {
     /// <summary>只读取晚于游标的 EventKit/state，不访问文件或发送命令。</summary>
-    public WorkbenchEventKitTelemetryReadResult PollEventKitTelemetry(
+    public WorkbenchTelemetryReadResult<WorkbenchEventKitState> PollEventKitTelemetry(
         string engineId,
         WorkbenchBridgeHealth bridgeHealth,
         long afterSequence)
@@ -17,7 +18,7 @@ public sealed partial class WorkbenchDashboardService
             || bridgeHealth.State != WorkbenchBridgeConnectionState.Online
             || bridgeHealth.Generation <= 0L)
         {
-            return WorkbenchEventKitTelemetryReadResult.Unavailable(
+            return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Unavailable(
                 "EventKit telemetry requires an online engine with a valid generation.");
         }
 
@@ -30,7 +31,7 @@ public sealed partial class WorkbenchDashboardService
             afterSequence);
         if (telemetry == null)
         {
-            return WorkbenchEventKitTelemetryReadResult.Unchanged();
+            return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Unchanged();
         }
 
         return telemetry.IsAccepted
@@ -39,7 +40,7 @@ public sealed partial class WorkbenchDashboardService
     }
 
     /// <summary>解析协议已接受的 EventKit 帧，并把 JSON 失败转成可信游标拒绝。</summary>
-    private WorkbenchEventKitTelemetryReadResult ParseAcceptedEventKitTelemetry(
+    private WorkbenchTelemetryReadResult<WorkbenchEventKitState> ParseAcceptedEventKitTelemetry(
         string engineId,
         WorkbenchBridgeHealth bridgeHealth,
         SharedMemoryTelemetryFrameReadResult telemetry)
@@ -67,36 +68,36 @@ public sealed partial class WorkbenchDashboardService
                 telemetry.PayloadJson);
             WorkbenchEventKitState state = WorkbenchEventKitStateParser.Parse(dataSource);
             return string.IsNullOrWhiteSpace(state.StaleReason)
-                ? WorkbenchEventKitTelemetryReadResult.Accepted(state, header)
-                : WorkbenchEventKitTelemetryReadResult.RejectedWithTrustedCursor(
+                ? WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Accepted(state, header)
+                : WorkbenchTelemetryReadResult<WorkbenchEventKitState>.RejectedWithTrustedCursor(
                     header,
                     state.StaleReason);
         }
         catch (Exception exception)
         {
-            return WorkbenchEventKitTelemetryReadResult.RejectedWithTrustedCursor(
+            return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.RejectedWithTrustedCursor(
                 header,
                 "EventKit telemetry payload could not be parsed: " + exception.Message);
         }
     }
 
     /// <summary>映射底层半写、不可用和协议拒绝状态。</summary>
-    private static WorkbenchEventKitTelemetryReadResult MapRejectedEventKitTelemetry(
+    private static WorkbenchTelemetryReadResult<WorkbenchEventKitState> MapRejectedEventKitTelemetry(
         SharedMemoryTelemetryFrameReadResult telemetry)
     {
         if (telemetry.Status is SharedMemoryTelemetryFrameStatus.Writing
             or SharedMemoryTelemetryFrameStatus.HalfWrite)
         {
-            return WorkbenchEventKitTelemetryReadResult.Retryable(telemetry.Message);
+            return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Retryable(telemetry.Message);
         }
 
         if (telemetry.Header == null
             || telemetry.Status is SharedMemoryTelemetryFrameStatus.Unavailable
                 or SharedMemoryTelemetryFrameStatus.GenerationMismatch)
         {
-            return WorkbenchEventKitTelemetryReadResult.Unavailable(telemetry.Message);
+            return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Unavailable(telemetry.Message);
         }
 
-        return WorkbenchEventKitTelemetryReadResult.Rejected(telemetry.Message);
+        return WorkbenchTelemetryReadResult<WorkbenchEventKitState>.Rejected(telemetry.Message);
     }
 }

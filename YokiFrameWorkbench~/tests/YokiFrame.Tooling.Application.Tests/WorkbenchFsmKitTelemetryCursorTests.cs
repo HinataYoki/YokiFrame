@@ -6,6 +6,7 @@ using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Tooling.Application.Services;
 
@@ -37,7 +38,7 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
             "fsm-00000002",
             long.MinValue);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Unavailable, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unavailable, result.Status);
         Assert.Null(result.State);
         Assert.False(result.HasCursor);
         Assert.Equal(new[] { "fsm-00000002" }, client.TelemetryNames);
@@ -58,9 +59,9 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
         var unchanged = service.PollFsmKitTelemetry(
             "unity-editor", CreateOnlineHealth(), "fsm-00000002", rejected.Sequence);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Rejected, rejected.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Rejected, rejected.Status);
         Assert.True(rejected.HasCursor);
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Unchanged, unchanged.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unchanged, unchanged.Status);
         Assert.Equal(2, client.TelemetryNames.Count);
     }
 
@@ -76,7 +77,7 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
         var result = service.PollFsmKitTelemetry(
             "unity-editor", CreateOnlineHealth(), string.Empty, long.MinValue);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Retryable, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Retryable, result.Status);
         Assert.False(result.HasCursor);
         Assert.Null(result.State);
     }
@@ -97,7 +98,7 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
         var result = service.PollFsmKitTelemetry(
             "unity-editor", CreateOnlineHealth(), string.Empty, 10L);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Rejected, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Rejected, result.Status);
         Assert.False(result.HasCursor);
         Assert.Equal(long.MinValue, result.Sequence);
         Assert.Null(result.State);
@@ -112,7 +113,7 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
             ["state"] = "not-json"
         });
         WorkbenchDashboardService service = new(client);
-        WorkbenchFsmKitTelemetryReadResult? result = null;
+        WorkbenchTelemetryReadResult<WorkbenchFsmKitState>? result = null;
 
         var exception = Record.Exception(() =>
         {
@@ -125,7 +126,7 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
 
         Assert.Null(exception);
         Assert.NotNull(result);
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Unchanged, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unchanged, result.Status);
         Assert.False(result.HasCursor);
     }
 
@@ -145,13 +146,13 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
             string.Empty,
             SEQUENCE);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Unchanged, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unchanged, result.Status);
         Assert.Null(result.State);
     }
 
-    /// <summary>验证 sequence 前进时接受新帧，并保留 header 写入时间供显示与诊断。</summary>
+    /// <summary>验证 sequence 前进时接受新帧，并保留可信游标供后续读取推进。</summary>
     [Fact]
-    public void HigherSequenceAcceptsFrameAndPreservesWrittenAtTime()
+    public void HigherSequenceAcceptsFrameAndPreservesCursor()
     {
         CursorTelemetryClient client = new(new Dictionary<string, string>
         {
@@ -165,10 +166,10 @@ public sealed class WorkbenchFsmKitTelemetryCursorTests
             string.Empty,
             SEQUENCE - 1L);
 
-        Assert.Equal(WorkbenchFsmKitTelemetryReadStatus.Accepted, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Accepted, result.Status);
         Assert.NotNull(result.State);
         Assert.Equal(SEQUENCE, result.Sequence);
-        Assert.Equal(WRITTEN_AT_UTC_TICKS, result.WrittenAtUtcTicks);
+        Assert.True(result.HasCursor);
     }
 
     /// <summary>创建指定底层状态并携带稳定 header 的测试读取结果。</summary>

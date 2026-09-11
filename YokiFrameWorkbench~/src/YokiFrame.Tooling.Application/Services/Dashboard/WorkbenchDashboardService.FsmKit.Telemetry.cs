@@ -1,5 +1,6 @@
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.FsmKit;
 
 namespace YokiFrame.Tooling.Application.Services;
@@ -34,7 +35,7 @@ public sealed partial class WorkbenchDashboardService
     /// <param name="selectedInstanceId">页面当前选择；非空时禁止回落总览详情。</param>
     /// <param name="afterSequence">最后接受的帧序号。</param>
     /// <returns>明确区分 accepted、unchanged、retryable、unavailable 和 rejected 的轮询结果。</returns>
-    public WorkbenchFsmKitTelemetryReadResult PollFsmKitTelemetry(
+    public WorkbenchTelemetryReadResult<WorkbenchFsmKitState> PollFsmKitTelemetry(
         string engineId,
         WorkbenchBridgeHealth bridgeHealth,
         string selectedInstanceId,
@@ -44,7 +45,7 @@ public sealed partial class WorkbenchDashboardService
             || bridgeHealth.State != WorkbenchBridgeConnectionState.Online
             || bridgeHealth.Generation <= 0L)
         {
-            return WorkbenchFsmKitTelemetryReadResult.Unavailable(
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Unavailable(
                 "FsmKit telemetry requires an online engine with a valid generation.");
         }
 
@@ -64,7 +65,7 @@ public sealed partial class WorkbenchDashboardService
     /// <param name="bridgeHealth">周期 dashboard 已确认的宿主身份。</param>
     /// <param name="afterSequence">最后接受的帧序号。</param>
     /// <returns>区分新帧、未变化、命名段不可用和内容被拒绝的读取结果。</returns>
-    private WorkbenchFsmKitTelemetryReadResult TryReadFsmKitTelemetry(
+    private WorkbenchTelemetryReadResult<WorkbenchFsmKitState> TryReadFsmKitTelemetry(
         string engineId,
         string name,
         WorkbenchBridgeHealth bridgeHealth,
@@ -79,7 +80,7 @@ public sealed partial class WorkbenchDashboardService
             afterSequence);
         if (telemetry == null)
         {
-            return WorkbenchFsmKitTelemetryReadResult.Unchanged();
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Unchanged();
         }
 
         if (!telemetry.IsAccepted)
@@ -97,7 +98,7 @@ public sealed partial class WorkbenchDashboardService
         }
         catch (Exception exception)
         {
-            return WorkbenchFsmKitTelemetryReadResult.RejectedWithTrustedCursor(
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.RejectedWithTrustedCursor(
                 acceptedHeader,
                 "FsmKit telemetry payload could not be parsed: " + exception.Message);
         }
@@ -105,34 +106,34 @@ public sealed partial class WorkbenchDashboardService
         if (!string.Equals(name, "state", StringComparison.Ordinal)
             && !string.Equals(state.Selected?.InstanceId, name, StringComparison.Ordinal))
         {
-            return WorkbenchFsmKitTelemetryReadResult.RejectedWithTrustedCursor(
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.RejectedWithTrustedCursor(
                 acceptedHeader,
                 "FsmKit named telemetry selected.instanceId does not match the segment name.");
         }
 
-        return WorkbenchFsmKitTelemetryReadResult.Accepted(state, acceptedHeader);
+        return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Accepted(state, acceptedHeader);
     }
 
     /// <summary>映射底层未接受状态；协议坏帧不得暴露尚未经过 parser 信任的 header 游标。</summary>
     /// <param name="telemetry">底层 Shared Memory 读取结果。</param>
     /// <returns>瞬态、不可用或不可信拒绝结果。</returns>
-    private static WorkbenchFsmKitTelemetryReadResult MapRejectedFsmTelemetryRead(
+    private static WorkbenchTelemetryReadResult<WorkbenchFsmKitState> MapRejectedFsmTelemetryRead(
         SharedMemoryTelemetryFrameReadResult telemetry)
     {
         if (telemetry.Status is SharedMemoryTelemetryFrameStatus.Writing
             or SharedMemoryTelemetryFrameStatus.HalfWrite)
         {
-            return WorkbenchFsmKitTelemetryReadResult.Retryable(telemetry.Message);
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Retryable(telemetry.Message);
         }
 
         if (telemetry.Header == null
             || telemetry.Status is SharedMemoryTelemetryFrameStatus.Unavailable
                 or SharedMemoryTelemetryFrameStatus.GenerationMismatch)
         {
-            return WorkbenchFsmKitTelemetryReadResult.Unavailable(telemetry.Message);
+            return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Unavailable(telemetry.Message);
         }
 
-        return WorkbenchFsmKitTelemetryReadResult.Rejected(telemetry.Message);
+        return WorkbenchTelemetryReadResult<WorkbenchFsmKitState>.Rejected(telemetry.Message);
     }
 
     /// <summary>把已校验 payload 投影为强类型状态，并保留实际 Shared Memory segment 证据。</summary>

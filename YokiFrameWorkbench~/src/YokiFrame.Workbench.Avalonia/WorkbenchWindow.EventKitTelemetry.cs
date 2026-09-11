@@ -1,4 +1,5 @@
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.EventKit;
 using YokiFrame.Workbench.Avalonia.Diagnostics;
 using YokiFrame.Workbench.Avalonia.Services;
@@ -25,7 +26,7 @@ public sealed partial class WorkbenchWindow
     }
 
     /// <summary>EventKit 遥测通道：提供读取用例、结果判定与页面投影。</summary>
-    private sealed class EventKitTelemetryChannel : WorkbenchTelemetryChannel<WorkbenchEventKitTelemetryReadResult>
+    private sealed class EventKitTelemetryChannel : WorkbenchTelemetryChannel<WorkbenchTelemetryReadResult<WorkbenchEventKitState>>
     {
         private readonly WorkbenchWindow mWindow;
 
@@ -64,7 +65,7 @@ public sealed partial class WorkbenchWindow
         }
 
         /// <inheritdoc />
-        protected override WorkbenchEventKitTelemetryReadResult Poll(PollRequest request)
+        protected override WorkbenchTelemetryReadResult<WorkbenchEventKitState> Poll(PollRequest request)
         {
             return mWindow.mDashboardService.PollEventKitTelemetry(
                 request.EngineId,
@@ -73,39 +74,39 @@ public sealed partial class WorkbenchWindow
         }
 
         /// <inheritdoc />
-        protected override bool IsTransientRead(WorkbenchEventKitTelemetryReadResult result)
+        protected override bool IsTransientRead(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
-            return result.Status is WorkbenchEventKitTelemetryReadStatus.Unchanged
-                or WorkbenchEventKitTelemetryReadStatus.Retryable;
+            return result.Status is WorkbenchTelemetryReadStatus.Unchanged
+                or WorkbenchTelemetryReadStatus.Retryable;
         }
 
         /// <inheritdoc />
-        protected override bool IsAcceptedRead(WorkbenchEventKitTelemetryReadResult result)
+        protected override bool IsAcceptedRead(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
-            return result.Status == WorkbenchEventKitTelemetryReadStatus.Accepted;
+            return result.Status == WorkbenchTelemetryReadStatus.Accepted;
         }
 
         /// <inheritdoc />
-        protected override bool HasTrustedCursor(WorkbenchEventKitTelemetryReadResult result)
+        protected override bool HasTrustedCursor(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
             return result.HasCursor;
         }
 
         /// <inheritdoc />
-        protected override long ReadCursor(WorkbenchEventKitTelemetryReadResult result)
+        protected override long ReadCursor(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
             return result.Sequence;
         }
 
         /// <inheritdoc />
-        protected override string ReadDiagnostic(WorkbenchEventKitTelemetryReadResult result)
+        protected override string ReadDiagnostic(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
             return result.Diagnostic;
         }
 
         /// <inheritdoc />
         protected override bool IsFrameConsistent(
-            WorkbenchEventKitTelemetryReadResult result,
+            WorkbenchTelemetryReadResult<WorkbenchEventKitState> result,
             WorkbenchDashboardState dashboardState)
         {
             WorkbenchEventKitState? state = result.State;
@@ -119,7 +120,7 @@ public sealed partial class WorkbenchWindow
         }
 
         /// <inheritdoc />
-        protected override bool TryApplyFrame(WorkbenchEventKitTelemetryReadResult result)
+        protected override bool TryApplyFrame(WorkbenchTelemetryReadResult<WorkbenchEventKitState> result)
         {
             return mWindow.mShellViewModel.EventKitPage.TryApplyTelemetryState(result.State!);
         }

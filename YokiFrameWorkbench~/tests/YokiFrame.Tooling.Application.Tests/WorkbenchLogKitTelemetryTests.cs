@@ -2,6 +2,7 @@ using System.IO.MemoryMappedFiles;
 using System.Text;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.LogKit;
 using YokiFrame.Tooling.Application.Services;
 
@@ -32,10 +33,10 @@ public sealed class WorkbenchLogKitTelemetryTests
         var accepted = service.PollLogKitTelemetry(engineId, health, long.MinValue);
         var unchanged = service.PollLogKitTelemetry(engineId, health, accepted.Sequence);
 
-        Assert.Equal(WorkbenchLogKitTelemetryReadStatus.Accepted, accepted.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Accepted, accepted.Status);
         Assert.Equal(12L, accepted.Sequence);
         Assert.Equal(8L, accepted.State!.DiagnosticVersion);
-        Assert.Equal(WorkbenchLogKitTelemetryReadStatus.Unchanged, unchanged.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unchanged, unchanged.Status);
         Assert.False(unchanged.HasCursor);
     }
 

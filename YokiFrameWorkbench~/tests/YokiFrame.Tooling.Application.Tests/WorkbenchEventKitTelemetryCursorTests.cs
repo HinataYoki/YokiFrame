@@ -6,6 +6,7 @@ using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Tooling.Application.Models.Telemetry;
 using YokiFrame.Tooling.Application.Models.EventKit;
 using YokiFrame.Tooling.Application.Services;
 
@@ -35,7 +36,7 @@ public sealed class WorkbenchEventKitTelemetryCursorTests
             CreateOnlineHealth(),
             SEQUENCE - 1L);
 
-        Assert.Equal(WorkbenchEventKitTelemetryReadStatus.Accepted, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Accepted, result.Status);
         Assert.NotNull(result.State);
         Assert.True(result.HasCursor);
         Assert.Equal(SEQUENCE, result.Sequence);
@@ -55,7 +56,7 @@ public sealed class WorkbenchEventKitTelemetryCursorTests
             CreateOnlineHealth(),
             SEQUENCE);
 
-        Assert.Equal(WorkbenchEventKitTelemetryReadStatus.Unchanged, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Unchanged, result.Status);
         Assert.Null(result.State);
         Assert.False(result.HasCursor);
     }
@@ -74,7 +75,7 @@ public sealed class WorkbenchEventKitTelemetryCursorTests
             CreateOnlineHealth(),
             long.MinValue);
 
-        Assert.Equal(WorkbenchEventKitTelemetryReadStatus.Retryable, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Retryable, result.Status);
         Assert.Null(result.State);
         Assert.False(result.HasCursor);
     }
@@ -93,7 +94,7 @@ public sealed class WorkbenchEventKitTelemetryCursorTests
             CreateOnlineHealth(),
             SEQUENCE - 1L);
 
-        Assert.Equal(WorkbenchEventKitTelemetryReadStatus.Rejected, result.Status);
+        Assert.Equal(WorkbenchTelemetryReadStatus.Rejected, result.Status);
         Assert.Null(result.State);
         Assert.True(result.HasCursor);
         Assert.Equal(SEQUENCE, result.Sequence);
