@@ -86,9 +86,9 @@ public sealed class ProjectCapabilityDescriptorTests
         Assert.All(descriptor.Kit.Commands, command => Assert.Equal(sKnownEngineKinds, command.EngineKinds));
     }
 
-    /// <summary>验证 EventKit 只声明 state 和唯一只读 Workbench 快照命令。</summary>
+    /// <summary>验证 EventKit 声明 state、只读 Workbench 快照和用户触发的跟踪开关。</summary>
     [Fact]
-    public void EventKitDescriptorContainsOnlyWorkbenchSnapshotCommand()
+    public void EventKitDescriptorMatchesRuntimeInteractionContract()
     {
         var descriptor = ReadDescriptor("Core/Editor/EventKit/Capabilities/capability.json");
 
@@ -96,11 +96,21 @@ public sealed class ProjectCapabilityDescriptorTests
         Assert.Equal("EventKit", descriptor.Kit.Kit);
         Assert.Equal(new[] { "state" }, descriptor.Kit.SnapshotNames);
         Assert.Equal(new[] { "state" }, descriptor.Kit.TelemetryNames);
-        ProjectCapabilityCommand command = Assert.Single(descriptor.Kit.Commands);
-        Assert.Equal("get_workbench_snapshot", command.Action);
-        Assert.Equal("ReadOnly", command.Kind);
-        Assert.Equal(sKnownEngineKinds, command.EngineKinds);
-        Assert.Equal("eventkit-read-only", command.VerifyRecipe);
+        Assert.Equal(
+            new[] { "get_workbench_snapshot", "set_tracking" },
+            descriptor.Kit.Commands.Select(command => command.Action));
+
+        ProjectCapabilityCommand readOnly = descriptor.Kit.Commands[0];
+        Assert.Equal("ReadOnly", readOnly.Kind);
+        Assert.Empty(readOnly.SideEffects);
+        Assert.Equal("eventkit-read-only", readOnly.VerifyRecipe);
+
+        // set_tracking 是 EventKitInteractionProvider 暴露的唯一变更命令，必须保持 UserAction 且声明副作用。
+        ProjectCapabilityCommand userAction = descriptor.Kit.Commands[1];
+        Assert.Equal("UserAction", userAction.Kind);
+        Assert.NotEmpty(userAction.SideEffects);
+        Assert.Equal("eventkit-user-action", userAction.VerifyRecipe);
+        Assert.All(descriptor.Kit.Commands, command => Assert.Equal(sKnownEngineKinds, command.EngineKinds));
     }
 
     /// <summary>验证 ResKit 只发布唯一 state、六个只读诊断和两个显式 UserAction。</summary>
@@ -207,6 +217,87 @@ public sealed class ProjectCapabilityDescriptorTests
             Assert.Equal(new[] { "Unity" }, command.EngineKinds);
         });
         AssertSourceHash(descriptor.Kit);
+    }
+
+    /// <summary>
+    /// 验证每个 descriptor 声明的 action 都真实存在于某个非测试包内源码中。
+    /// sourceHash 只锁定单一文件，System 与 Validation 的 action 分散在多个文件，
+    /// 因此哈希无法发现"action 被删除但声明保留"的漂移。
+    /// </summary>
+    [Fact]
+    public void EveryDeclaredActionExistsInPackageSource()
+    {
+        var packageRoot = FindPackageRoot();
+        var descriptorPaths = EnumerateDescriptorPaths(packageRoot);
+        var sources = ReadNonTestSources(packageRoot);
+
+        Assert.NotEmpty(descriptorPaths);
+        Assert.NotEmpty(sources);
+
+        List<string> missing = new();
+        foreach (var descriptorPath in descriptorPaths)
+        {
+            var descriptor = ProjectCapabilityDescriptor.FromJson(File.ReadAllText(descriptorPath));
+            foreach (var command in descriptor.Kit.Commands)
+            {
+                // 只认带引号的字面量，避免注释或说明文字造成误判。
+                var literal = "\"" + command.Action + "\"";
+                if (!sources.Any(source => source.Contains(literal, StringComparison.Ordinal)))
+                {
+                    missing.Add(descriptor.Kit.Kit + "/" + command.Action);
+                }
+            }
+        }
+
+        Assert.True(
+            missing.Count == 0,
+            "以下能力声明的 action 在任何非测试包内源码中都不存在: " + string.Join(", ", missing.OrderBy(static item => item, StringComparer.Ordinal)));
+    }
+
+    /// <summary>枚举包内全部 capability descriptor。</summary>
+    /// <param name="packageRoot">YokiFrame 包根。</param>
+    /// <returns>按路径排序的描述符文件。</returns>
+    private static IReadOnlyList<string> EnumerateDescriptorPaths(string packageRoot)
+    {
+        return Directory
+            .EnumerateFiles(Path.Combine(packageRoot, "Core"), "capability.json", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(packageRoot, "Tools"), "capability.json", SearchOption.AllDirectories))
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 一次性读取包内全部非测试 C# 源文本；测试目录不参与匹配，避免测试自身满足声明。
+    /// </summary>
+    /// <param name="packageRoot">YokiFrame 包根。</param>
+    /// <returns>源文件文本集合。</returns>
+    private static IReadOnlyList<string> ReadNonTestSources(string packageRoot)
+    {
+        List<string> sources = new();
+        foreach (var path in Directory.EnumerateFiles(packageRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            if (IsUnderTestsDirectory(packageRoot, path))
+            {
+                continue;
+            }
+
+            sources.Add(File.ReadAllText(path));
+        }
+
+        return sources;
+    }
+
+    /// <summary>判断源文件是否位于任意以 Tests 结尾的路径段之下。</summary>
+    /// <param name="packageRoot">YokiFrame 包根。</param>
+    /// <param name="path">待判断的源文件绝对路径。</param>
+    /// <returns>位于测试目录下时返回 true。</returns>
+    private static bool IsUnderTestsDirectory(string packageRoot, string path)
+    {
+        var relative = Path.GetRelativePath(packageRoot, path);
+        return relative
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(static segment => string.Equals(segment, "Tests", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(segment, "tests", StringComparison.Ordinal));
     }
 
     /// <summary>
