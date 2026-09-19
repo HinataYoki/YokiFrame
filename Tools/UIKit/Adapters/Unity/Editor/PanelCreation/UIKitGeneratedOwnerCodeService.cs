@@ -98,7 +98,7 @@ namespace YokiFrame
         }
 
         /// <summary>解析 owner 所属 Prefab，并记录相对根的确定 sibling-index 路径。</summary>
-        private static void ResolvePrefab(
+        internal static void ResolvePrefab(
             Component owner,
             out GameObject scanRoot,
             out string prefabPath,
@@ -191,7 +191,7 @@ namespace YokiFrame
         }
 
         /// <summary>根据 owner kind 从标准脚本路径恢复现有 Panel 布局。</summary>
-        private static UIKitPanelCodeLayout CreateLayout(
+        internal static UIKitPanelCodeLayout CreateLayout(
             Type ownerType,
             UIKitGeneratedOwnerKind ownerKind,
             string scriptPath,
@@ -206,10 +206,13 @@ namespace YokiFrame
                 ConfigureElementLayout(request, ownerType, scriptDirectory);
             else
                 ConfigureComponentLayout(request, ownerType, scriptDirectory);
-            return new UIKitPanelCodeLayout(request);
+            UIKitPanelCodeLayout layout = new(request);
+            bool componentScope = ownerKind == UIKitGeneratedOwnerKind.Component
+                || GetAssetDirectory(GetAssetDirectory(scriptDirectory)).EndsWith("/" + COMPONENT_FOLDER, StringComparison.Ordinal);
+            return componentScope ? layout.ForComponent(request.panelName) : layout;
         }
 
-        /// <summary>从 `<Panel>/UIElement` 目录和命名空间后缀恢复 Element 布局。</summary>
+        /// <summary>从 Panel 或 Component 的 UIElement 目录恢复作用域，独立 Prefab 不依赖场景祖先。</summary>
         private static void ConfigureElementLayout(
             UIKitPanelGenerationRequest request,
             Type ownerType,
@@ -222,13 +225,15 @@ namespace YokiFrame
                 || segment.Length == ELEMENT_NAMESPACE_SUFFIX.Length
                 || separator <= 0
                 || !scriptDirectory.EndsWith("/" + ELEMENT_FOLDER, StringComparison.Ordinal))
-                throw new InvalidOperationException("UIElement 脚本不在标准 Panel/UIElement 生成布局中。");
+                throw new InvalidOperationException("UIElement 脚本不在标准 owner/UIElement 生成布局中。");
             string panelName = segment.Substring(0, segment.Length - ELEMENT_NAMESPACE_SUFFIX.Length);
             string panelFolder = GetAssetDirectory(scriptDirectory);
             if (!panelFolder.EndsWith("/" + panelName, StringComparison.Ordinal))
                 throw new InvalidOperationException("UIElement 目录与命名空间中的 Panel 名不一致。");
             request.panelName = panelName;
             request.scriptFolder = GetAssetDirectory(panelFolder);
+            if (request.scriptFolder.EndsWith("/" + COMPONENT_FOLDER, StringComparison.Ordinal))
+                request.scriptFolder = GetAssetDirectory(request.scriptFolder);
             request.scriptNamespace = namespaceName.Substring(0, separator);
         }
 

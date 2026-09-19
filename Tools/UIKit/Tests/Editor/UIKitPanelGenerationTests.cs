@@ -377,9 +377,9 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证独立 UIComponent 根继续拒绝直接 Element 子绑定。</summary>
+        /// <summary>验证独立 UIComponent 根接受局部 Element 子绑定。</summary>
         [Test]
-        public void StandaloneComponentScanRejectsElementChild()
+        public void StandaloneComponentScanAcceptsElementChild()
         {
             GameObject root = new("ComponentRoot", typeof(RectTransform), typeof(UIKitStandaloneComponentTest));
             GameObject child = new("NestedElement", typeof(RectTransform), typeof(Bind));
@@ -394,8 +394,8 @@ namespace YokiFrame.Tests
                 UIKitBindScanResult scan = UIKitBindScanner.ScanOwner(
                     root,
                     UIKitGeneratedOwnerKind.Component);
-                Assert.IsTrue(scan.HasErrors);
-                StringAssert.Contains("Component 下不能定义 Element", scan.Diagnostics[0].Message);
+                Assert.IsFalse(scan.HasErrors);
+                Assert.AreEqual(1, scan.Nodes.Count);
             }
             finally
             {

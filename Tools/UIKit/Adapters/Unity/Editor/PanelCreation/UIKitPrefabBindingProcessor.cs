@@ -133,6 +133,7 @@ namespace YokiFrame
                 error = BuildDiagnostics(scan);
                 return UIKitPrefabBindingStatus.Failed;
             }
+            if (ownerKind == UIKitGeneratedOwnerKind.Component) layout = layout.ForComponent(ownerType.Name);
             return AssignOwner(layout, owner, scan.Nodes, out error);
         }
 
@@ -180,8 +181,14 @@ namespace YokiFrame
             Component owner = current.GetComponent(ownerType);
             if (owner == default)
             {
-                error = "Prefab 层级路径缺少绑定 owner: " + normalizedPath;
-                return default;
+                AbstractBind bind = current.GetComponent<AbstractBind>();
+                BindType kind = typeof(UIComponent).IsAssignableFrom(ownerType) ? BindType.Component : BindType.Element;
+                if (bind == default || bind.Bind != kind || UIKitBindCodeService.GetTypeName(bind) != ownerType.Name)
+                {
+                    error = "待回填节点已改变，未挂载生成脚本: " + normalizedPath;
+                    return default;
+                }
+                owner = current.gameObject.AddComponent(ownerType);
             }
             error = string.Empty;
             return owner;
@@ -250,7 +257,7 @@ namespace YokiFrame
                     return UIKitPrefabBindingStatus.Failed;
                 if (target is Component childOwner && node.Strategy.CanContainChildren)
                 {
-                    status = AssignOwner(layout, childOwner, node.Children, out error);
+                    status = AssignOwner(layout.ForChildren(node), childOwner, node.Children, out error);
                     if (status != UIKitPrefabBindingStatus.Success) return status;
                 }
             }
@@ -275,21 +282,20 @@ namespace YokiFrame
                 return target == default ? UIKitPrefabBindingStatus.Failed : UIKitPrefabBindingStatus.Success;
             }
 
-            string namespaceName = node.Strategy.OutputKind == UIKitBindOutputKind.Element
-                ? layout.GetElementNamespace()
-                : layout.ScriptNamespace;
-            Type generatedType = ResolveType(namespaceName + "." + node.TypeName, layout.AssemblyName);
+            string fullName = layout.GetFullTypeName(node.Strategy.OutputKind, node.TypeName);
+            Type generatedType = ResolveType(fullName, layout.AssemblyName);
             if (generatedType == null)
             {
                 target = default;
-                error = "等待 Bind 生成类型完成编译: " + namespaceName + "." + node.TypeName;
+                error = "等待 Bind 生成类型完成编译: " + fullName;
                 return UIKitPrefabBindingStatus.Pending;
             }
 
             Type expectedBase = node.Strategy.OutputKind == UIKitBindOutputKind.Element
                 ? typeof(UIElement)
                 : typeof(UIComponent);
-            if (!expectedBase.IsAssignableFrom(generatedType) || generatedType.IsAbstract)
+            if (!expectedBase.IsAssignableFrom(generatedType) || generatedType.IsAbstract
+                || (node.Strategy.OutputKind == UIKitBindOutputKind.Element && typeof(UIComponent).IsAssignableFrom(generatedType)))
             {
                 target = default;
                 error = "生成类型基类不匹配: " + generatedType.FullName;

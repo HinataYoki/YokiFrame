@@ -38,6 +38,7 @@ namespace YokiFrame
         private Button mToElementButton;
         private Button mToComponentButton;
         private Button mJumpToCodeButton;
+        private Button mGenerateCodeButton;
 
         /// <summary>缓存兼容字段，并收集当前节点可绑定的组件。</summary>
         private void OnEnable()
@@ -73,6 +74,8 @@ namespace YokiFrame
             mValidationContainer = new VisualElement();
             panel.Add(mValidationContainer);
             panel.Add(CreateJumpButton());
+            mGenerateCodeButton = InspectorKitUi.CreateActionButton("生成代码", GenerateBindingCode, InspectorActionStyle.Primary);
+            panel.Add(InspectorKitUi.CreateButtonRow(mGenerateCodeButton));
             RefreshInspectorState();
             return root;
         }
@@ -83,8 +86,7 @@ namespace YokiFrame
             mBindTypeField = new EnumField(CurrentBindType());
             mBindTypeField.RegisterValueChangedCallback(evt =>
             {
-                ApplyBindType((BindType)evt.newValue);
-                RefreshInspectorState();
+                ConvertTo((BindType)evt.newValue);
             });
             return InspectorKitUi.CreateStackedFieldRow("绑定类型", mBindTypeField);
         }

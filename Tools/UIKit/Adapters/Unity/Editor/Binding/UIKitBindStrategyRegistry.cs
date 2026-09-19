@@ -134,12 +134,6 @@ namespace YokiFrame
             /// <inheritdoc />
             public bool TryValidateChild(BindType childType, out string error)
             {
-                if (LegacyType == BindType.Component && childType == BindType.Element)
-                {
-                    error = "Component 下不能定义 Element；Element 必须归属于 Panel。";
-                    return false;
-                }
-
                 error = string.Empty;
                 return true;
             }

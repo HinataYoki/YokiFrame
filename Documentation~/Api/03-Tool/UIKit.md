@@ -305,10 +305,26 @@ UIKit.ClosePanel(panel);
 | owner | 生成位置 | 用途 |
 | --- | --- | --- |
 | `UIPanel` | Panel Prefab 根 | 生成 Panel 用户脚本、Designer 和绑定数据 |
-| `UIElement` | Element 节点 | 生成 Panel 内部可复用元素 |
+| `UIElement` | Element 节点 | 生成所属 Panel 或 Component 内部可复用元素 |
 | `UIComponent` | Component 节点 | 生成可复用 UI 组件 |
 
 一个节点只挂一个 `Bind`。用户 partial 与 Designer 分开保存，重新生成不会覆盖用户 partial。Designer 文件会带有 `YokiFrame UIKit` 自动生成头部，请勿直接修改其中内容。
+
+Element 归属最近的 Panel 或 Component。嵌套 Element 继续使用同一类型作用域；嵌套 Component 为自己的子 Element 建立新作用域。不同 Component 可以各自定义 `ItemRow`，代码和 Prefab 回填按完整类型名与程序集区分。同一 Component 放入不同 Panel 后，内部 Element 的类型保持一致。
+
+生成目录以项目配置的脚本目录为根：
+
+| 类型 | 用户脚本相对路径 | 命名空间 |
+| --- | --- | --- |
+| Panel Element | `<Panel>/UIElement/<Element>.cs` | `<项目命名空间>.<Panel>UIElement` |
+| 公共 Component | `UIComponent/<Component>.cs` | `<项目命名空间>` |
+| Component Element | `UIComponent/<Component>/UIElement/<Element>.cs` | `<项目命名空间>.<Component>UIElement` |
+
+Bind Inspector 在 Element/Component 模式下提供“生成 UIElement 代码”或“生成 UIComponent 代码”，首次生成不需要预先挂载用户脚本。编译后自动挂载当前 owner 并回填子字段。已生成类型也可以从自身 Inspector 的绑定树生成；独立 Element Prefab 从脚本位置恢复其所属作用域。
+
+快速转换按钮和绑定类型下拉共用转换流程。已有 Element/Component 互转时会迁移用户 partial、Designer、受影响的子 Element 和代码类型引用，保留脚本 `.meta` GUID 及 Prefab 序列化引用；编译或回填验证失败时恢复原源码和 Prefab。普通升级、生成不会自动转换旧 Component。
+
+转换要求用户 partial 保持单 namespace、单类，并直接继承 `UIElement` 或 `UIComponent`。目标文件已存在、跨程序集移动或类型仍被其它 Prefab/绑定子树共享时，转换会在写入前拒绝，不合并两份业务代码。转换不改写注释或字符串中的类型名；使用字符串反射定位类型的业务需要同步检查该约定。Member 转换保留原组件和源码。
 
 ## 生命周期与错误边界
 

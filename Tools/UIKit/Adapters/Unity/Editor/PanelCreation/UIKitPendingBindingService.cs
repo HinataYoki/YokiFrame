@@ -15,7 +15,15 @@ namespace YokiFrame
         private const string SESSION_KEY = "YokiFrame.UIKit.PendingBindings";
         private const int MAX_ATTEMPTS = 20;
         private const int PANEL_OWNER_KIND = 0;
+        private const double RETRY_INTERVAL_SECONDS = 0.25;
         private static bool sProcessScheduled;
+        private static double sNextProcessTime;
+
+        /// <summary>保存迁移前的延迟回填队列，失败时不会保留指向新类型的请求。</summary>
+        internal static string CaptureQueue() => SessionState.GetString(SESSION_KEY, string.Empty);
+
+        /// <summary>恢复迁移前的延迟回填队列，仅供源码迁移事务回滚使用。</summary>
+        internal static void RestoreQueue(string json) => SessionState.SetString(SESSION_KEY, json);
 
         /// <summary>注册 Domain Reload 后的延迟处理入口。</summary>
         static UIKitPendingBindingService()
@@ -46,7 +54,7 @@ namespace YokiFrame
         }
 
         /// <summary>按 Prefab 路径替换或追加一个稳定待回填条目。</summary>
-        private static void QueueCore(
+        internal static void QueueCore(
             UIKitPanelCodeLayout layout,
             string ownerTypeName,
             string ownerAssemblyName,
@@ -88,6 +96,7 @@ namespace YokiFrame
         /// <summary>在 Editor 空闲时处理全部待回填项，并保留仍等待编译的条目。</summary>
         internal static void Process()
         {
+            EditorApplication.update -= ProcessWhenReady;
             sProcessScheduled = false;
             if (EditorApplication.isCompiling || EditorApplication.isUpdating)
             {
@@ -121,6 +130,7 @@ namespace YokiFrame
 
             collection.items = remaining;
             Save(collection);
+            ScheduleProcess();
         }
 
         /// <summary>处理单条回填请求，避免单个损坏条目中断整个队列。</summary>
@@ -157,7 +167,16 @@ namespace YokiFrame
         {
             if (sProcessScheduled) return;
             sProcessScheduled = true;
-            EditorApplication.delayCall += Process;
+            sNextProcessTime = EditorApplication.timeSinceStartup + RETRY_INTERVAL_SECONDS;
+            EditorApplication.update += ProcessWhenReady;
+        }
+
+        /// <summary>等待编译和导入真正结束后处理一次，避免后台 Editor 的 delayCall 延迟导致回填停滞。</summary>
+        private static void ProcessWhenReady()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating
+                || EditorApplication.timeSinceStartup < sNextProcessTime) return;
+            Process();
         }
 
         /// <summary>从稳定 SessionState JSON 读取待处理集合。</summary>
@@ -189,6 +208,7 @@ namespace YokiFrame
             return new PendingEntry
             {
                 panelName = layout.PanelName,
+                elementComponentName = layout.ElementComponentName,
                 prefabFolder = layout.PrefabFolder,
                 scriptFolder = layout.ScriptFolder,
                 scriptNamespace = layout.ScriptNamespace,
@@ -230,7 +250,7 @@ namespace YokiFrame
                 assemblyName = entry.assemblyName,
                 codeTemplate = entry.codeTemplate,
                 prefabPath = entry.prefabPath,
-            });
+            }, entry.elementComponentName);
         }
 
         /// <summary>JsonUtility 可序列化的待处理集合。</summary>
@@ -245,6 +265,7 @@ namespace YokiFrame
         private sealed class PendingEntry
         {
             public string panelName;
+            public string elementComponentName;
             public string prefabFolder;
             public string scriptFolder;
             public string scriptNamespace;

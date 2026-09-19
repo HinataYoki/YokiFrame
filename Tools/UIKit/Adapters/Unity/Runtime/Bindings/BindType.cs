@@ -12,7 +12,7 @@ namespace YokiFrame
         [InspectorName("成员")]
         Member = 0,
 
-        /// <summary>生成面板内部可复用的嵌套 UIElement 类型。</summary>
+        /// <summary>生成所属 Panel 或 Component 内部复用的 UIElement 类型。</summary>
         [InspectorName("元素")]
         Element = 1,
 

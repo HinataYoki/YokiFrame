@@ -93,26 +93,36 @@ namespace YokiFrame
             return mComponents[mComponents.Count - 1];
         }
 
-        /// <summary>应用 BindType 并同步当前语义的最终类型字段。</summary>
-        private void ApplyBindType(BindType bindType)
-        {
-            serializedObject.Update();
-            mBind.enumValueIndex = (int)bindType;
-            if (bindType == BindType.Member)
-                EnsureMemberType();
-            else if (bindType == BindType.Element || bindType == BindType.Component)
-                mType.stringValue = ResolveGeneratedType();
-            else
-                mType.stringValue = string.Empty;
-            serializedObject.ApplyModifiedProperties();
-        }
-
         /// <summary>执行快捷转换，并同步下拉字段与动态内容。</summary>
         private void ConvertTo(BindType bindType)
         {
-            ApplyBindType(bindType);
-            mBindTypeField.SetValueWithoutNotify(bindType);
+            try
+            {
+                UIKitBindConversion.Convert(target as AbstractBind, bindType);
+                serializedObject.Update();
+                if (bindType == BindType.Member) EnsureMemberType();
+                serializedObject.ApplyModifiedProperties();
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("转换失败", exception.Message, "确定");
+            }
+            mBindTypeField.SetValueWithoutNotify(CurrentBindType());
             RefreshInspectorState();
+        }
+
+        /// <summary>从 Bind 直接生成 Element/Component，包括首次创建用户脚本和编译后挂载。</summary>
+        private void GenerateBindingCode()
+        {
+            try
+            {
+                UIKitBindCodeService.Generate(target as AbstractBind);
+                RefreshInspectorState();
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("生成失败", exception.Message, "确定");
+            }
         }
 
         /// <summary>写入生成类型文本，并在对应 BindType 下同步最终类型。</summary>
@@ -157,6 +167,16 @@ namespace YokiFrame
             mToMemberButton.SetEnabled(!isLeaf && !isMember);
             mToElementButton.SetEnabled(!isLeaf && bindType != BindType.Element);
             mToComponentButton.SetEnabled(!isLeaf && bindType != BindType.Component);
+            if (serializedObject.isEditingMultipleObjects)
+            {
+                mBindTypeField.SetEnabled(false);
+                mToMemberButton.SetEnabled(false);
+                mToElementButton.SetEnabled(false);
+                mToComponentButton.SetEnabled(false);
+            }
+            mGenerateCodeButton.style.display = isGenerated ? DisplayStyle.Flex : DisplayStyle.None;
+            mGenerateCodeButton.text = bindType == BindType.Component ? "生成 UIComponent 代码" : "生成 UIElement 代码";
+            mGenerateCodeButton.SetEnabled(!serializedObject.isEditingMultipleObjects && !EditorApplication.isCompiling);
             mPathLabel.text = GetBindPath(target as AbstractBind);
             mCodePreviewLabel.text = isLeaf ? "// Leaf 节点不生成代码" : BuildCodePreview();
             RefreshSuggestion(bindType);
@@ -262,6 +282,16 @@ namespace YokiFrame
         private string GetGeneratedCodePath()
         {
             AbstractBind bind = target as AbstractBind;
+            if (bind != default && (bind.Bind == BindType.Element || bind.Bind == BindType.Component))
+            {
+                try
+                {
+                    UIKitPanelCodeLayout resolved = UIKitBindCodeService.ResolveLayout(bind);
+                    return UIKitBindCodeService.GetScriptPath(resolved, bind.Bind, UIKitBindCodeService.GetTypeName(bind), true);
+                }
+                catch (InvalidOperationException) { return string.Empty; }
+                catch (ArgumentException) { return string.Empty; }
+            }
             string panelName = GetPanelName(bind);
             if (string.IsNullOrEmpty(panelName))
                 return string.Empty;

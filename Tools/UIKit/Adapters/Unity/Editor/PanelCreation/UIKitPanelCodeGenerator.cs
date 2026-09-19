@@ -8,7 +8,7 @@ namespace YokiFrame
     /// <summary>
     /// 使用 CodeGenKit 生成 UIKit 用户脚本和 Designer partial，并保证用户脚本不被覆盖。
     /// </summary>
-    internal static class UIKitPanelCodeGenerator
+    internal static partial class UIKitPanelCodeGenerator
     {
         private const string AUTO_GENERATED_HEADER =
             "//------------------------------------------------------------------------------\n"
@@ -64,6 +64,7 @@ namespace YokiFrame
             if (scan == null) throw new ArgumentNullException(nameof(scan));
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
             ValidateGeneratedOwnerType(ownerKind, ownerType);
+            if (ownerKind == UIKitGeneratedOwnerKind.Component) layout = layout.ForComponent(ownerType.Name);
             string assetPath = RequireDesignerPath(designerPath);
             string namespaceName = CodeGenKit.RequireQualifiedName(
                 ownerType.Namespace,
@@ -288,7 +289,7 @@ namespace YokiFrame
                                 node.Strategy.OutputKind.ToString(),
                                 node.Strategy.OutputKind.ToString()),
                             BuildGeneratedDesignerSource(layout, node)));
-                    AddNodeSources(layout, node.Children, sources, template);
+                    AddNodeSources(layout.ForChildren(node), node.Children, sources, template);
                 }
                 else
                 {
@@ -321,7 +322,7 @@ namespace YokiFrame
                 ? layout.GetElementNamespace()
                 : layout.ScriptNamespace;
             return BuildBindingOwnerDesignerSource(
-                layout,
+                layout.ForChildren(node),
                 namespaceName,
                 node.TypeName,
                 node.Children);
@@ -464,9 +465,8 @@ namespace YokiFrame
                 case UIKitBindOutputKind.Member:
                     return node.TypeName;
                 case UIKitBindOutputKind.Element:
-                    return layout.GetElementNamespace() + "." + node.TypeName;
                 case UIKitBindOutputKind.Component:
-                    return layout.ScriptNamespace + "." + node.TypeName;
+                    return layout.GetFullTypeName(node.Strategy.OutputKind, node.TypeName);
                 default:
                     return string.Empty;
             }
@@ -494,19 +494,6 @@ namespace YokiFrame
             sources[assetPath] = source;
         }
 
-        /// <summary>把扫描错误转换为包含路径的异常。</summary>
-        private static InvalidOperationException CreateDiagnosticException(UIKitBindScanResult scan)
-        {
-            List<string> errors = new();
-            for (var index = 0; index < scan.Diagnostics.Count; index++)
-            {
-                UIKitBindDiagnostic diagnostic = scan.Diagnostics[index];
-                if (diagnostic.Severity == UIKitBindDiagnosticSeverity.Error)
-                    errors.Add(diagnostic.Path + ": " + diagnostic.Message);
-            }
-
-            return new InvalidOperationException("UIKit Bind 扫描失败: " + string.Join(" | ", errors));
-        }
     }
 }
 #endif

@@ -14,7 +14,7 @@ namespace YokiFrame.Tests
             UIKitBindStrategyRegistry.ResetForTests();
         }
 
-        /// <summary>验证 Member 显式 Target 优先于旧类型文本，组件层级拒绝 Element。</summary>
+        /// <summary>验证 Member 显式 Target 优先于旧类型文本，Component 允许局部 Element。</summary>
         [Test]
         public void BuiltInsPreferExplicitTargetAndValidateComponentChildren()
         {
@@ -30,8 +30,8 @@ namespace YokiFrame.Tests
 
                 bind.Bind = BindType.Component;
                 Assert.IsTrue(UIKitBindStrategyRegistry.TryGet(bind, out IUIKitBindStrategy component, out _));
-                Assert.IsFalse(component.TryValidateChild(BindType.Element, out error));
-                StringAssert.Contains("Component", error);
+                Assert.IsTrue(component.TryValidateChild(BindType.Element, out error));
+                Assert.IsEmpty(error);
             }
             finally
             {

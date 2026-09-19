@@ -11,7 +11,7 @@ namespace YokiFrame
     internal sealed class UIKitPanelCodeLayout
     {
         /// <summary>验证请求并构造不可变输出布局。</summary>
-        internal UIKitPanelCodeLayout(UIKitPanelGenerationRequest request)
+        internal UIKitPanelCodeLayout(UIKitPanelGenerationRequest request, string elementComponentName = null)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             request.ApplyDefaults();
@@ -26,6 +26,8 @@ namespace YokiFrame
             PrefabPath = string.IsNullOrWhiteSpace(request.prefabPath)
                 ? CombineAssetPath(PrefabFolder, PanelName + ".prefab")
                 : RequireAssetFile(request.prefabPath, ".prefab", nameof(request.prefabPath));
+            ElementComponentName = string.IsNullOrEmpty(elementComponentName) ? string.Empty
+                : CodeGenKit.RequireIdentifier(elementComponentName, nameof(elementComponentName));
         }
 
         internal string PanelName { get; }
@@ -35,6 +37,7 @@ namespace YokiFrame
         internal string AssemblyName { get; }
         internal string CodeTemplate { get; }
         internal string PrefabPath { get; }
+        internal string ElementComponentName { get; }
         internal string PanelFolder => CombineAssetPath(ScriptFolder, PanelName);
         internal string PanelScriptPath => CombineAssetPath(PanelFolder, PanelName + ".cs");
         internal string PanelDesignerPath => CombineAssetPath(PanelFolder, PanelName + ".Designer.cs");
@@ -43,7 +46,9 @@ namespace YokiFrame
         internal string GetElementPath(string typeName, bool designer)
         {
             string fileName = typeName + (designer ? ".Designer.cs" : ".cs");
-            return CombineAssetPath(PanelFolder, "UIElement/" + fileName);
+            string ownerFolder = ElementComponentName.Length == 0 ? PanelFolder
+                : CombineAssetPath(ScriptFolder, "UIComponent/" + ElementComponentName);
+            return CombineAssetPath(ownerFolder, "UIElement/" + fileName);
         }
 
         /// <summary>获取 Component 用户或 Designer 文件路径。</summary>
@@ -56,7 +61,31 @@ namespace YokiFrame
         /// <summary>获取 Element 类型命名空间。</summary>
         internal string GetElementNamespace()
         {
-            return ScriptNamespace + "." + PanelName + "UIElement";
+            return ScriptNamespace + "." + (ElementComponentName.Length == 0
+                ? PanelName : ElementComponentName) + "UIElement";
+        }
+
+        /// <summary>进入公共 Component 的子绑定作用域；返回新布局，避免兄弟节点受到递归状态污染。</summary>
+        internal UIKitPanelCodeLayout ForComponent(string typeName)
+        {
+            return new UIKitPanelCodeLayout(new UIKitPanelGenerationRequest
+            {
+                panelName = PanelName, prefabFolder = PrefabFolder, scriptFolder = ScriptFolder,
+                scriptNamespace = ScriptNamespace, assemblyName = AssemblyName,
+                codeTemplate = CodeTemplate, prefabPath = PrefabPath,
+            }, typeName);
+        }
+
+        /// <summary>只在 Component 节点建立新类型作用域，Element 继续复用所属 Panel 或 Component 的作用域。</summary>
+        internal UIKitPanelCodeLayout ForChildren(UIKitBindNode node)
+        {
+            return node.Strategy.OutputKind == UIKitBindOutputKind.Component ? ForComponent(node.TypeName) : this;
+        }
+
+        /// <summary>取得节点生成类型的完整名称，供代码字段、迁移和 Prefab 挂载共同使用。</summary>
+        internal string GetFullTypeName(UIKitBindOutputKind kind, string typeName)
+        {
+            return (kind == UIKitBindOutputKind.Element ? GetElementNamespace() : ScriptNamespace) + "." + typeName;
         }
 
         /// <summary>把 Assets 相对路径转换为当前项目绝对路径。</summary>

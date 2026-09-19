@@ -144,6 +144,8 @@ CLI 会在分派前执行命令级 schema：未知选项、缺失必填项、非
 
 `LogKit set_settings`、`PoolKit set_tracking`、`ActionKit set_stack_trace` 与 UIKit Editor action 使用严格 payload。需要 payload 字段时读取对应 Provider/handler 源码，或先由 Workbench 执行同一操作；不要猜测、补齐或复用旧 payload。AudioKit 不发布 Runtime UserAction。
 
+UIKit 的 `generate_code_for_selection` 仍只接受 Panel Prefab。局部 Element、公共 Component 的首次生成和已有类型转换使用 Unity Bind Inspector；Component 内部 Element 的生成作用域不会随宿主 Panel 改变。本次能力不增加 CLI action，也不允许 AI 通过改 Bind 枚举绕过源码迁移事务。
+
 ## 专用命令示例
 
 ```powershell

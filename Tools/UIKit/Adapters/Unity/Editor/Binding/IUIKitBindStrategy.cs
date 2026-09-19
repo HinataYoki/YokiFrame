@@ -11,7 +11,7 @@ namespace YokiFrame
         /// <summary>在当前 owner 上生成一个对象引用字段。</summary>
         Member,
 
-        /// <summary>生成面板内部的 UIElement partial 类型。</summary>
+        /// <summary>生成所属 Panel 或 Component 内部的 UIElement partial 类型。</summary>
         Element,
 
         /// <summary>生成跨面板复用的 UIComponent partial 类型。</summary>
