@@ -47,7 +47,7 @@ Architecture 没有独立 Workbench 页面；Runtime API、Interaction 和 CLI �
 | UIKit | 只在 Unity engine 下可用；Root 配置由 Prefab Variant 与 `UIKit.SetRootPrefab` 管理，不在 Workbench 设置 |
 | TableKit | 未生成项目没有 Runtime TableKit 类型；页面是离线生成入口。主 `Luban.dll` 是验证/生成前提，`Luban.Agent`、`Luban.Mcp` 和 Skill 路径是可选发现项，缺失不阻断旧版 Luban。官方 Skill/Agent/MCP 由 Luban 自己负责，Workbench 只负责发现、保存和路径校验 |
 | LocalizationKit | 页面消费 Application 强类型 catalog，不解析 wire JSON；发现已注册 XML 后 Luban 失败不得伪装为 standalone JSON |
-| SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；`${persistentDataPath}` 和 `${userDataDir}` 可能只能显示运行时解析状态 |
+| SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；页面用下拉框选择 Unity `Application.persistentDataPath`、Godot `OS.GetUserDataDir()`、项目目录或自定义绝对路径；右上角提供打开目录和刷新，项目/自定义路径会先创建再打开，宿主用户目录需 Runtime 解析 |
 
 ## Workbench 运行
 

@@ -77,6 +77,7 @@ public sealed record WorkbenchToolPageDependencies(
     SaveKitWorkbenchSettingsService? SaveKitSettingsService = null,
     IInstallerFolderPicker? SaveKitFolderPicker = null,
     Func<string, Task>? SaveKitOpenDirectoryAsync = null,
+    Func<string, CancellationToken, Task<string?>>? SaveKitResolveRuntimeRootAsync = null,
     TableKitApplicationService? TableKitApplicationService = null,
     ITableKitLubanFilePicker? TableKitLubanFilePicker = null,
     Func<WorkbenchUIKitEditorAction, WorkbenchUIKitPanelGenerationRequest?, CancellationToken, Task<WorkbenchUIKitEditorResult>>? UIKitEditorActionAsync = null,

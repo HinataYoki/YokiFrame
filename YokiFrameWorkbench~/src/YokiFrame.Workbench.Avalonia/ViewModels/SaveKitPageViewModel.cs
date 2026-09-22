@@ -12,12 +12,15 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     private readonly SaveKitWorkbenchSettingsService? mService;
     private readonly IInstallerFolderPicker? mFolderPicker;
     private readonly Func<string, Task>? mOpenDirectoryAsync;
+    private readonly Func<string, CancellationToken, Task<string?>>? mResolveRuntimeRootAsync;
     private readonly CancellationTokenSource mLifetimeCancellation = new();
     private IReadOnlyList<WorkbenchSaveKitFile> mFilteredFiles = Array.Empty<WorkbenchSaveKitFile>();
     private WorkbenchSaveKitProjectSettings? mBaseline;
     private string mEngineId = string.Empty;
     private string mEngineLabel = GetString(NotConnectedKey, "未连接");
     private string mStoragePath = string.Empty;
+    private string mSelectedStorageRoot = STORAGE_ROOT_RUNTIME;
+    private string mStorageSubPath = "YokiFrame/Saves";
     private string mFileExtension = ".yoki";
     private string mResolvedStoragePath = string.Empty;
     private string mConfigPath = string.Empty;
@@ -35,6 +38,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     private int mGlobalCount;
     /// <summary>当前状态文本是否处于“等待项目配置”占位；仅占位随语言切换重投影。</summary>
     private bool mIsWaitingProjectConfigStatus = true;
+    private bool mUpdatingStorageDraft;
 
     /// <summary>创建设计时可用的空 SaveKit 页面。</summary>
     public SaveKitPageViewModel() : this(null, null, null)
@@ -48,11 +52,13 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
     public SaveKitPageViewModel(
         SaveKitWorkbenchSettingsService? service,
         IInstallerFolderPicker? folderPicker,
-        Func<string, Task>? openDirectoryAsync = null)
+        Func<string, Task>? openDirectoryAsync = null,
+        Func<string, CancellationToken, Task<string?>>? resolveRuntimeRootAsync = null)
     {
         mService = service;
         mFolderPicker = folderPicker;
         mOpenDirectoryAsync = openDirectoryAsync;
+        mResolveRuntimeRootAsync = resolveRuntimeRootAsync;
         // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
         WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
         SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
@@ -63,6 +69,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
         SelectAllCommand = new RelayCommand(() => Filter = FILTER_ALL);
         SelectSlotCommand = new RelayCommand(() => Filter = "Slot");
         SelectGlobalCommand = new RelayCommand(() => Filter = "Global");
+        RefreshStorageRootOptions();
     }
 
     /// <summary>存档文件元信息集合。</summary>
@@ -119,7 +126,41 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref mStoragePath, value))
             {
                 ResolvedStoragePath = mService?.ResolveStoragePath(value) ?? string.Empty;
+                if (!mUpdatingStorageDraft)
+                {
+                    ProjectStorageDraft(value);
+                }
                 MarkDirty();
+            }
+        }
+    }
+
+    /// <summary>可选的存档根目录类型；选项由当前 Unity/Godot engine 决定。</summary>
+    public ObservableCollection<string> StorageRootOptions { get; } = new();
+
+    /// <summary>当前存档根目录类型：运行时用户目录、项目目录或自定义目录。</summary>
+    public string SelectedStorageRoot
+    {
+        get => GetStorageRootDisplay(mSelectedStorageRoot);
+        set
+        {
+            string normalized = NormalizeStorageRoot(value);
+            if (SetProperty(ref mSelectedStorageRoot, normalized))
+            {
+                ComposeStorageDraft();
+            }
+        }
+    }
+
+    /// <summary>根目录下的相对存档目录，或自定义根目录选项下的绝对目录。</summary>
+    public string StorageSubPath
+    {
+        get => mStorageSubPath;
+        set
+        {
+            if (SetProperty(ref mStorageSubPath, value ?? string.Empty))
+            {
+                ComposeStorageDraft();
             }
         }
     }
@@ -278,13 +319,14 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
         mBaseline = settings;
         EngineLabel = settings.EngineLabel;
         IsSupported = settings.IsSupported;
+        OpenDirectoryCommand.RaiseCanExecuteChanged();
         ConfigPath = settings.ConfigPath;
         Fingerprint = settings.Fingerprint;
         ResolvedStoragePath = settings.ResolvedStoragePath;
         DirectoryExists = settings.DirectoryExists;
         if (replaceDraft)
         {
-            StoragePath = settings.StoragePath;
+            ApplyStoragePath(settings.StoragePath);
             FileExtension = settings.FileExtension;
         }
 
@@ -416,6 +458,7 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
 
         // Runtime 派生文本由分部实现按缓存状态重投影。
         OnRuntimeCultureChanged();
+        RefreshStorageRootOptions();
     }
 
     /// <summary>写入状态文本并维护“等待项目配置”占位标记。</summary>
@@ -435,6 +478,111 @@ public sealed partial class SaveKitPageViewModel : ViewModelBase, IDisposable
 
     /// <summary>项目配置尚未加载时状态文本的资源 key。</summary>
     private const string WaitingProjectConfigKey = "String.SaveKit.WaitingProjectConfig";
+    internal const string STORAGE_ROOT_RUNTIME = "runtime";
+    internal const string STORAGE_ROOT_PROJECT = "project";
+    internal const string STORAGE_ROOT_CUSTOM = "custom";
+
+    /// <summary>按当前 engine 生成跨 Unity/Godot 的根目录候选。</summary>
+    private void RefreshStorageRootOptions()
+    {
+        string runtimeLabel = EngineId.Contains("godot", StringComparison.OrdinalIgnoreCase)
+            ? GetString("String.SaveKit.GodotUserData", "Godot 用户目录 (OS.GetUserDataDir)")
+            : GetString("String.SaveKit.UnityPersistentData", "Unity 持久化目录 (Application.persistentDataPath)");
+        string projectLabel = GetString("String.SaveKit.ProjectDirectory", "项目目录");
+        string customLabel = GetString("String.SaveKit.CustomDirectory", "自定义绝对路径");
+        StorageRootOptions.Clear();
+        StorageRootOptions.Add(runtimeLabel);
+        StorageRootOptions.Add(projectLabel);
+        StorageRootOptions.Add(customLabel);
+        OnPropertyChanged(nameof(StorageRootOptions));
+        OnPropertyChanged(nameof(SelectedStorageRoot));
+    }
+
+    /// <summary>把已保存的完整路径拆成下拉根类型和用户可编辑部分。</summary>
+    private void ProjectStorageDraft(string value)
+    {
+        string runtimeToken = EngineId.Contains("godot", StringComparison.OrdinalIgnoreCase)
+            ? "${userDataDir}"
+            : "${persistentDataPath}";
+        if (value.StartsWith(runtimeToken, StringComparison.Ordinal))
+        {
+            mSelectedStorageRoot = STORAGE_ROOT_RUNTIME;
+            mStorageSubPath = TrimStorageSeparator(value[runtimeToken.Length..]);
+        }
+        else if (!Path.IsPathRooted(value))
+        {
+            mSelectedStorageRoot = STORAGE_ROOT_PROJECT;
+            mStorageSubPath = TrimStorageSeparator(value);
+        }
+        else
+        {
+            mSelectedStorageRoot = STORAGE_ROOT_CUSTOM;
+            mStorageSubPath = value;
+        }
+        OnPropertyChanged(nameof(SelectedStorageRoot));
+        OnPropertyChanged(nameof(StorageSubPath));
+    }
+
+    /// <summary>应用磁盘配置并同步下拉框草稿。</summary>
+    private void ApplyStoragePath(string value)
+    {
+        mUpdatingStorageDraft = true;
+        try
+        {
+            StoragePath = value;
+        }
+        finally
+        {
+            mUpdatingStorageDraft = false;
+        }
+        ProjectStorageDraft(value);
+    }
+
+    /// <summary>按当前根类型重新组合持久化路径。</summary>
+    private void ComposeStorageDraft()
+    {
+        if (mUpdatingStorageDraft || string.IsNullOrWhiteSpace(EngineId)) return;
+        string value = mSelectedStorageRoot switch
+        {
+            STORAGE_ROOT_PROJECT => TrimStorageSeparator(mStorageSubPath),
+            STORAGE_ROOT_CUSTOM => mStorageSubPath.Trim(),
+            _ => (EngineId.Contains("godot", StringComparison.OrdinalIgnoreCase) ? "${userDataDir}" : "${persistentDataPath}")
+                 + "/" + TrimStorageSeparator(mStorageSubPath)
+        };
+        mUpdatingStorageDraft = true;
+        try { StoragePath = value; }
+        finally { mUpdatingStorageDraft = false; }
+    }
+
+    /// <summary>将下拉框展示文本转换为稳定的内部根类型。</summary>
+    private string NormalizeStorageRoot(string? value)
+    {
+        int index = StorageRootOptions.IndexOf(value ?? string.Empty);
+        return index switch
+        {
+            1 => STORAGE_ROOT_PROJECT,
+            2 => STORAGE_ROOT_CUSTOM,
+            _ => STORAGE_ROOT_RUNTIME
+        };
+    }
+
+    /// <summary>获取当前根类型在当前语言下的下拉框展示文本。</summary>
+    private string GetStorageRootDisplay(string root)
+    {
+        int index = root switch
+        {
+            STORAGE_ROOT_PROJECT => 1,
+            STORAGE_ROOT_CUSTOM => 2,
+            _ => 0
+        };
+        return index < StorageRootOptions.Count ? StorageRootOptions[index] : string.Empty;
+    }
+
+    /// <summary>规范化根目录拼接所需的分隔符。</summary>
+    private static string TrimStorageSeparator(string value)
+    {
+        return value.Trim().Trim('/', '\\');
+    }
 
     /// <summary>从当前语言资源读取 SaveKit 文案，保留测试与无资源环境的中文兜底。</summary>
     private static string GetString(string key, string fallback)

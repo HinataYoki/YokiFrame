@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Documentation;
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Tooling.Application.Models.AudioKit;
@@ -79,6 +80,7 @@ public sealed partial class WorkbenchWindow
                     : new SaveKitWorkbenchSettingsService(mDashboardService.ProjectSettingsStore),
                 folderPicker,
                 OpenExistingDirectoryAsync,
+                ResolveSaveKitRuntimeRootAsync,
                 string.IsNullOrWhiteSpace(projectRoot)
                     ? null
                     : new TableKitApplicationService(),
@@ -157,6 +159,43 @@ public sealed partial class WorkbenchWindow
             UseShellExecute = true
         });
         return Task.CompletedTask;
+    }
+
+    /// <summary>从当前宿主环境查询 SaveKit Runtime 用户目录，不猜测平台路径。</summary>
+    /// <param name="engineId">当前连接的 engine 标识。</param>
+    /// <param name="cancellationToken">查询取消令牌。</param>
+    /// <returns>Unity persistentDataPath；宿主未提供环境信息时返回空值。</returns>
+    private async Task<string?> ResolveSaveKitRuntimeRootAsync(
+        string engineId,
+        CancellationToken cancellationToken)
+    {
+        var result = await mDashboardService.SendSystemCommandAsync(
+            engineId,
+            "get_environment",
+            cancellationToken).ConfigureAwait(false);
+        if (!result.Ok || string.IsNullOrWhiteSpace(result.ResultJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(result.ResultJson);
+            string propertyName = engineId.Contains("godot", StringComparison.OrdinalIgnoreCase)
+                ? "userDataDir"
+                : "persistentDataPath";
+            if (document.RootElement.TryGetProperty(propertyName, out JsonElement path)
+                && path.ValueKind == JsonValueKind.String)
+            {
+                return path.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     /// <summary>在用户进入 EventKit 页面后再创建扫描器，扫描路径无效时只让该页降级。</summary>

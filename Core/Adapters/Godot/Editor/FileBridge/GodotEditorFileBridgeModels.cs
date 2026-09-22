@@ -139,6 +139,13 @@ namespace YokiFrame
         public string FastChannel { get; set; } = "filebridge-only";
     }
 
+    /// <summary>表示 Godot Editor 返回的 System/get_environment 结果。</summary>
+    internal sealed class GodotEditorEnvironmentResult
+    {
+        /// <summary>获取当前 Godot 项目的用户数据根目录。</summary>
+        public string UserDataDir { get; set; } = string.Empty;
+    }
+
     /// <summary>
     /// 表示 Editor engine 协议目录的只读存储统计。
     /// </summary>

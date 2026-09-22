@@ -210,10 +210,10 @@
                    <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
                  </Button>
                  <Button IsVisible="{CompiledBinding IsSaveKitPage}"
-                         Command="{CompiledBinding SaveKitPage.ResetCommand}"
+                         Command="{CompiledBinding SaveKitPage.RefreshCommand}"
                          Classes="secondary icon"
-                          ToolTip.Tip="{DynamicResource String.SaveKit.ResetTooltip}"
-                          AutomationProperties.Name="{DynamicResource String.SaveKit.ResetAutomationName}">
+                          ToolTip.Tip="{DynamicResource String.Common.Refresh}"
+                          AutomationProperties.Name="{DynamicResource String.Common.Refresh}">
                    <PathIcon Data="{StaticResource Icon.RotateCcw}" Width="14" Height="14" />
                  </Button>
                  <StackPanel IsVisible="{CompiledBinding IsPoolKitPage}"

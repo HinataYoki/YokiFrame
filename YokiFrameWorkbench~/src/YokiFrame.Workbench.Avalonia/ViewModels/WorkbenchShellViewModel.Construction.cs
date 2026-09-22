@@ -134,7 +134,8 @@ public sealed partial class WorkbenchShellViewModel
         SaveKitPage = new SaveKitPageViewModel(
             toolPageDependencies?.SaveKitSettingsService,
             toolPageDependencies?.SaveKitFolderPicker,
-            toolPageDependencies?.SaveKitOpenDirectoryAsync);
+            toolPageDependencies?.SaveKitOpenDirectoryAsync,
+            toolPageDependencies?.SaveKitResolveRuntimeRootAsync);
         DocumentationPage = new DocumentationPageViewModel(
             sourcePackageRoot,
             meta?.DocumentationService,

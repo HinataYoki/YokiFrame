@@ -4,7 +4,7 @@ using System;
 namespace YokiFrame
 {
     /// <summary>
-    /// 把 Godot Editor 的三个 System 只读命令接入共享 dispatcher。
+    /// 把 Godot Editor 的 System 只读命令接入共享 dispatcher。
     /// </summary>
     internal sealed class GodotEditorSystemCommandHandler : YokiFrameKitCommandHandler
     {
@@ -13,12 +13,14 @@ namespace YokiFrame
         {
             new("System", "ping", YokiFrameCommandKind.ReadOnly),
             new("System", "bridge_status", YokiFrameCommandKind.ReadOnly),
-            new("System", "list_commands", YokiFrameCommandKind.ReadOnly)
+            new("System", "list_commands", YokiFrameCommandKind.ReadOnly),
+            new("System", "get_environment", YokiFrameCommandKind.ReadOnly)
         };
 
         private readonly Func<string> mCreateBridgeStatusJson;
         private readonly Func<string> mCreateCommandCatalogJson;
         private readonly Func<string> mCreatePingJson;
+        private readonly Func<string> mCreateEnvironmentJson;
 
         /// <summary>
         /// 创建 Godot Editor 的 System action handler。
@@ -26,10 +28,12 @@ namespace YokiFrame
         /// <param name="createPingJson">创建 ping JSON 的回调。</param>
         /// <param name="createBridgeStatusJson">创建 bridge_status JSON 的回调。</param>
         /// <param name="createCommandCatalogJson">创建 list_commands JSON 的回调。</param>
+        /// <param name="createEnvironmentJson">创建 get_environment JSON 的回调。</param>
         public GodotEditorSystemCommandHandler(
             Func<string> createPingJson,
             Func<string> createBridgeStatusJson,
-            Func<string> createCommandCatalogJson)
+            Func<string> createCommandCatalogJson,
+            Func<string> createEnvironmentJson)
             : base("System", CommandDescriptors)
         {
             mCreatePingJson = createPingJson ?? throw new ArgumentNullException(nameof(createPingJson));
@@ -37,6 +41,8 @@ namespace YokiFrame
                 ?? throw new ArgumentNullException(nameof(createBridgeStatusJson));
             mCreateCommandCatalogJson = createCommandCatalogJson
                 ?? throw new ArgumentNullException(nameof(createCommandCatalogJson));
+            mCreateEnvironmentJson = createEnvironmentJson
+                ?? throw new ArgumentNullException(nameof(createEnvironmentJson));
         }
 
         /// <summary>
@@ -59,6 +65,11 @@ namespace YokiFrame
             if (request.Action == "list_commands")
             {
                 return YokiFrameCommandResult.Success(mCreateCommandCatalogJson());
+            }
+
+            if (request.Action == "get_environment")
+            {
+                return YokiFrameCommandResult.Success(mCreateEnvironmentJson());
             }
 
             return YokiFrameCommandResult.Error("UnknownCommand", "Unsupported Godot Editor System command.");

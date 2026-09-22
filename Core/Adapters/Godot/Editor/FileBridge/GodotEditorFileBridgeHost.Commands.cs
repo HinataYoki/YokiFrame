@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using Godot;
 
 namespace YokiFrame
 {
@@ -78,7 +79,8 @@ namespace YokiFrame
                     new GodotEditorSystemCommandHandler(
                         CreatePingResultJson,
                         CreateBridgeStatusResultJson,
-                        () => CreateCommandCatalogJson(policy.AllowedCommands))
+                        () => CreateCommandCatalogJson(policy.AllowedCommands),
+                        CreateEnvironmentResultJson)
                 });
         }
 
@@ -242,6 +244,16 @@ namespace YokiFrame
                 BackpressureActive = mCommandCoordinator.LastBatchWasLimited,
                 LastPollLimitReason = mCommandCoordinator.LastBatchLimitReason,
                 LastError = mLastError
+            });
+        }
+
+        /// <summary>创建 Godot Editor 当前用户数据目录环境结果。</summary>
+        /// <returns>供 Workbench 解析的 Godot 用户数据根目录。</returns>
+        private static string CreateEnvironmentResultJson()
+        {
+            return GodotEditorFileBridgeJson.Serialize(new GodotEditorEnvironmentResult
+            {
+                UserDataDir = OS.GetUserDataDir()
             });
         }
 

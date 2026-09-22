@@ -15,6 +15,7 @@ public sealed partial class SaveKitPageViewModel
         }
 
         EngineId = engineId ?? string.Empty;
+        RefreshStorageRootOptions();
         ResetRuntimeState();
         _ = RefreshAsync();
     }
@@ -122,7 +123,7 @@ public sealed partial class SaveKitPageViewModel
 
         string? selected = await mFolderPicker.PickFolderAsync(
             GetString("String.SaveKit.PickFolderTitle", "选择 SaveKit 存档目录"),
-            mLifetimeCancellation.Token, ResolvedStoragePath);
+            mLifetimeCancellation.Token, GetFolderPickerStartPath());
         if (!string.IsNullOrWhiteSpace(selected))
         {
             StoragePath = selected;
@@ -137,9 +138,27 @@ public sealed partial class SaveKitPageViewModel
             return;
         }
 
+        string directory = ResolvedStoragePath;
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = await ResolveRuntimeDirectoryAsync();
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                SetStatus(GetString(
+                    "String.SaveKit.RuntimeDirectoryUnavailable",
+                    "当前根目录需要宿主环境提供实际路径；也可以切换到项目目录或自定义绝对路径。"));
+                return;
+            }
+
+            ResolvedStoragePath = directory;
+        }
+
         try
         {
-            await mOpenDirectoryAsync(ResolvedStoragePath);
+            // 配置目录可能尚未产生首个存档；先创建目录，保证快捷入口对新项目也可用。
+            Directory.CreateDirectory(directory);
+            DirectoryExists = true;
+            await mOpenDirectoryAsync(directory);
         }
         catch (Exception exception)
         {
@@ -188,13 +207,48 @@ public sealed partial class SaveKitPageViewModel
         return !mIsDisposed
                && !IsBusy
                && mOpenDirectoryAsync != null
-               && !string.IsNullOrWhiteSpace(ResolvedStoragePath)
-               && Directory.Exists(ResolvedStoragePath);
+               && IsSupported;
+    }
+
+    /// <summary>为目录选择器提供当前配置目录或其最近存在的父目录。</summary>
+    private string GetFolderPickerStartPath()
+    {
+        string path = ResolvedStoragePath;
+        while (!string.IsNullOrWhiteSpace(path) && !Directory.Exists(path))
+        {
+            string? parent = Directory.GetParent(path)?.FullName;
+            if (string.Equals(parent, path, StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            path = parent ?? string.Empty;
+        }
+
+        return path;
     }
 
     /// <summary>判断恢复默认命令是否可执行。</summary>
     private bool CanReset()
     {
         return !mIsDisposed && mBaseline != null;
+    }
+
+    /// <summary>通过当前引擎环境解析 Runtime 用户目录并拼接 SaveKit 相对目录。</summary>
+    private async Task<string> ResolveRuntimeDirectoryAsync()
+    {
+        if (mResolveRuntimeRootAsync == null || string.IsNullOrWhiteSpace(EngineId))
+        {
+            return string.Empty;
+        }
+
+        string? runtimeRoot = await mResolveRuntimeRootAsync(EngineId, mLifetimeCancellation.Token);
+        if (string.IsNullOrWhiteSpace(runtimeRoot))
+        {
+            return string.Empty;
+        }
+
+        string relativePath = string.IsNullOrWhiteSpace(StorageSubPath) ? "YokiFrame/Saves" : StorageSubPath;
+        return Path.GetFullPath(Path.Combine(runtimeRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
     }
 }
