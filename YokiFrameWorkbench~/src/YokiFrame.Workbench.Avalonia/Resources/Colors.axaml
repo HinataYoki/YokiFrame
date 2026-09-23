@@ -45,6 +45,7 @@
       <SolidColorBrush x:Key="Brush.Icon.ResKit" Color="#FFB300" />
       <SolidColorBrush x:Key="Brush.Icon.SingletonKit" Color="#EA4335" />
       <SolidColorBrush x:Key="Brush.Icon.ActionKit" Color="#FBBC04" />
+      <SolidColorBrush x:Key="Brush.Icon.Star" Color="#EAB308" />
       <SolidColorBrush x:Key="Brush.ActionKit.Sequence" Color="#7950C7" />
       <SolidColorBrush x:Key="Brush.ActionKit.Parallel" Color="#247A68" />
       <SolidColorBrush x:Key="Brush.ActionKit.Repeat" Color="#A46100" />
@@ -124,6 +125,7 @@
       <SolidColorBrush x:Key="Brush.Icon.ResKit" Color="#FFD60A" />
       <SolidColorBrush x:Key="Brush.Icon.SingletonKit" Color="#FF6961" />
       <SolidColorBrush x:Key="Brush.Icon.ActionKit" Color="#FFD60A" />
+      <SolidColorBrush x:Key="Brush.Icon.Star" Color="#FFD60A" />
       <SolidColorBrush x:Key="Brush.ActionKit.Sequence" Color="#B18CFF" />
       <SolidColorBrush x:Key="Brush.ActionKit.Parallel" Color="#58D4B7" />
       <SolidColorBrush x:Key="Brush.ActionKit.Repeat" Color="#FFB84D" />

@@ -21,6 +21,7 @@
   <StreamGeometry x:Key="Icon.Crosshair">M22 12H18M6 12H2M12 6V2M12 22V18M16 12A4 4 0 1 1 8 12A4 4 0 0 1 16 12Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.TriangleAlert">M21.7 18 13.7 4A2 2 0 0 0 10.3 4L2.3 18A2 2 0 0 0 4 21H20A2 2 0 0 0 21.7 18ZM12 9V13M12 17H12.01</StreamGeometry>
   <StreamGeometry x:Key="Icon.GitHub">M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.3-.4 6.8-1.6 6.8-7A5.4 5.4 0 0 0 19.4 4 5 5 0 0 0 19.3 1S18.2.6 15 2.5a13.4 13.4 0 0 0-7 0C4.8.6 3.7 1 3.7 1A5 5 0 0 0 3.6 4a5.4 5.4 0 0 0-1.4 3.7c0 5.4 3.5 6.6 6.8 7-.7.6-1 1.4-1 2.2v4M9 18c-4.5 2-5-2-7-2</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Star">M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9L12 3.5Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Navigation.Framework">M7 5.5H17A2.5 2.5 0 0 1 19.5 8V16A2.5 2.5 0 0 1 17 18.5H7A2.5 2.5 0 0 1 4.5 16V8A2.5 2.5 0 0 1 7 5.5ZM9 18.5H15</StreamGeometry>
   <StreamGeometry x:Key="Icon.Navigation.Docs">M7 5.5H17.5A2 2 0 0 1 19.5 7.5V18.5H9A2 2 0 0 0 7 20.5V7.5A2 2 0 0 1 9 5.5ZM9.5 9H15.5M9.5 12H15.5M9.5 15H14</StreamGeometry>
   <StreamGeometry x:Key="Icon.Navigation.CodeGenKit">M8.5 7 4 12 8.5 17M15.5 7 20 12 15.5 17M12 8.2 13.2 10.8 15.8 12 13.2 13.2 12 15.8 10.8 13.2 8.2 12 10.8 10.8Z</StreamGeometry>

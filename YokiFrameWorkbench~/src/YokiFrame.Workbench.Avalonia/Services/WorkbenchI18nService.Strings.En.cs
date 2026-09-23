@@ -514,6 +514,8 @@ public sealed partial class WorkbenchI18nService
         ["String.Nav.LocalizationKit"] = "LocalizationKit",
         ["String.Nav.LogKit"] = "LogKit",
         ["String.Nav.OpenGitHub"] = "Open YokiFrame GitHub repository",
+        ["String.Nav.StarGitHub"] = "Star YokiFrame on GitHub",
+        ["String.Nav.StarHint"] = "If Workbench helps, please leave a Star",
         ["String.Nav.PoolKit"] = "PoolKit",
         ["String.Nav.ResKit"] = "ResKit",
         ["String.Nav.SaveKit"] = "SaveKit",

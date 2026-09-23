@@ -14,7 +14,7 @@ public sealed class WorkbenchPackageMetadataContractTests
     [Fact]
     public async Task ShellProjectsPackageMetadataAndOpensRepository()
     {
-        Uri? openedUri = null;
+        var openedUris = new List<Uri>();
         var metadata = new YokiFramePackageMetadata(
             "2.0.0-test",
             new Uri("https://github.com/HinataYoki/YokiFrame"));
@@ -25,15 +25,17 @@ public sealed class WorkbenchPackageMetadataContractTests
             metadata,
             uri =>
             {
-                openedUri = uri;
+                openedUris.Add(uri);
                 return Task.CompletedTask;
             });
 
         await viewModel.OpenRepositoryCommand.ExecuteAsync();
+        await viewModel.OpenRepositoryCommand.ExecuteAsync();
 
         Assert.Equal("v2.0.0-test", viewModel.VersionText);
         Assert.Equal(metadata.RepositoryUri.AbsoluteUri, viewModel.RepositoryUrl);
-        Assert.Equal(metadata.RepositoryUri, openedUri);
+        Assert.Equal(metadata.RepositoryUri, openedUris[0]);
+        Assert.Equal(metadata.RepositoryUri, openedUris[1]);
     }
 
     /// <summary>

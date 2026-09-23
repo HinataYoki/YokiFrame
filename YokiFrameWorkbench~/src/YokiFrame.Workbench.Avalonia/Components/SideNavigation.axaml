@@ -70,6 +70,7 @@
                       Spacing="7">
             <shapes:Path Width="16"
                          Height="16"
+                         VerticalAlignment="Center"
                          Data="{StaticResource Icon.GitHub}"
                          Stroke="{DynamicResource Brush.Text.Primary}"
                          StrokeThickness="1.6"
@@ -81,8 +82,20 @@
                        FontSize="{DynamicResource FontSize.Body}"
                        VerticalAlignment="Center"
                        TextAlignment="Center" />
+            <shapes:Path Width="16"
+                         Height="16"
+                         VerticalAlignment="Center"
+                         Data="{StaticResource Icon.Star}"
+                         Fill="{DynamicResource Brush.Icon.Star}"
+                         Stretch="Uniform"
+                         IsHitTestVisible="False" />
           </StackPanel>
         </Button>
+        <TextBlock Text="{DynamicResource String.Nav.StarHint}"
+                   Classes="muted"
+                   FontSize="{DynamicResource FontSize.Xs}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center" />
       </StackPanel>
     </Border>
   </Grid>
