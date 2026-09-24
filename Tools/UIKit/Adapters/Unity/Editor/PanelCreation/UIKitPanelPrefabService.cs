@@ -146,9 +146,12 @@ namespace YokiFrame
             ValidateExistingPanelCodeOwnership(layout, prefab);
             UIKitBindScanResult scan = UIKitBindScanner.Scan(prefab);
             if (scan.HasErrors) throw CreateScanException(scan);
+            System.Collections.Generic.Dictionary<string, string> relocations =
+                new(StringComparer.OrdinalIgnoreCase);
+            System.Collections.Generic.List<string> deletions = new();
             System.Collections.Generic.Dictionary<string, string> sources =
-                UIKitPanelCodeGenerator.BuildSources(layout, scan);
-            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources);
+                UIKitPanelCodeGenerator.BuildSources(layout, scan, relocations, deletions);
+            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
             AssetDatabase.SaveAssets();
             UIKitPendingBindingService.Queue(layout);
             if (scriptsChanged) AssetDatabase.Refresh();
@@ -179,7 +182,10 @@ namespace YokiFrame
             string assemblyName = panelType.Assembly.GetName().Name;
             if (string.Equals(panelType.Name, layout.PanelName, StringComparison.Ordinal)
                 && string.Equals(namespaceName, layout.ScriptNamespace, StringComparison.Ordinal)
-                && string.Equals(assemblyName, layout.AssemblyName, StringComparison.Ordinal)) return;
+                && string.Equals(assemblyName, layout.AssemblyName, StringComparison.Ordinal))
+            {
+                return;
+            }
             throw new InvalidOperationException(
                 "Panel 已由用户脚本 " + panelType.FullName + " [" + assemblyName + "] 持有，"
                 + "当前生成配置目标为 " + layout.ScriptNamespace + "." + layout.PanelName

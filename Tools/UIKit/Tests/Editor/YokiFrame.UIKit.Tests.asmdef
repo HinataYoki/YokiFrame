@@ -9,7 +9,9 @@
         "YokiFrame.UIKit.Unity",
         "YokiFrame.UIKit.Unity.Editor",
         "YokiFrame.UIKit.PlayMode.Tests",
-        "UniTask"
+        "UniTask",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

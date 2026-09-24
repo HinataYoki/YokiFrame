@@ -115,18 +115,21 @@ namespace YokiFrame
             return false;
         }
 
-        /// <summary>兼容相对与绝对 source path，判断源码是否属于当前 Unity 项目的 Assets 目录。</summary>
+        /// <summary>兼容相对与绝对 source path，判断源码是否属于当前 Unity 项目的可发布资源根。</summary>
         /// <param name="sourcePath">CompilationPipeline 提供的源码路径。</param>
-        /// <returns>路径属于项目 Assets 时返回 true。</returns>
+        /// <returns>路径属于项目 Assets 或 Packages 时返回 true。</returns>
         private static bool IsProjectAssetPath(string sourcePath)
         {
             if (string.IsNullOrWhiteSpace(sourcePath)) return false;
-            string normalizedSourcePath = sourcePath.Replace('\\', '/');
-            if (normalizedSourcePath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) return true;
-            string normalizedDataPath = Application.dataPath.Replace('\\', '/').TrimEnd('/');
-            return normalizedSourcePath.StartsWith(
-                normalizedDataPath + "/",
-                StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                string projectPath = UIKitPanelCodeLayout.ToAssetPath(sourcePath);
+                return UIKitPanelCodeLayout.IsUnityAssetPath(projectPath);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         /// <summary>确保默认程序集保持首位，其余候选使用 ordinal 顺序稳定排列。</summary>

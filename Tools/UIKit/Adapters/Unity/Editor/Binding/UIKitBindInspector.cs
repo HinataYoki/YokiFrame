@@ -133,7 +133,7 @@ namespace YokiFrame
                     InspectorInfoBoxType.Warning));
             }
 
-            mCustomTypeField = new TextField { value = mCustomType.stringValue };
+            mCustomTypeField = new TextField { value = mCustomType.stringValue, isDelayed = true };
             mCustomTypeField.RegisterValueChangedCallback(evt =>
             {
                 WriteGeneratedType(evt.newValue);

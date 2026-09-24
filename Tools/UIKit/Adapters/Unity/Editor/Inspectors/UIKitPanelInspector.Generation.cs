@@ -35,27 +35,18 @@ namespace YokiFrame
         /// <summary>打开当前 Prefab 对应的用户 Panel 脚本。</summary>
         private void OpenPanelScript()
         {
-            if (!TryResolvePrefabContext(out _, out GameObject prefab, out string prefabPath))
+            if (!TryResolvePrefabContext(out _, out GameObject prefab, out _))
                 return;
-            UIKitPanelCodeLayout layout = CreateCodeLayout(prefab, prefabPath);
-            UnityEngine.Object script = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(layout.PanelScriptPath);
-            if (script != default)
-            {
-                AssetDatabase.OpenAsset(script);
-                return;
-            }
-            EditorUtility.DisplayDialog(
-                "脚本不存在",
-                "尚未找到脚本文件：\n" + layout.PanelScriptPath,
-                "确定");
+            UIPanel panel = prefab.GetComponent<UIPanel>();
+            if (panel != default) UIKitGeneratedOwnerCodeService.OpenScript(panel);
         }
 
-        /// <summary>使用当前默认设置和真实 Prefab 路径创建安全代码布局。</summary>
+        /// <summary>以具体 Panel 脚本恢复输出根，项目默认值变化不能隐式搬移用户代码。</summary>
         private static UIKitPanelCodeLayout CreateCodeLayout(GameObject prefab, string prefabPath)
         {
-            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault(prefab.name);
-            request.prefabPath = prefabPath;
-            return new UIKitPanelCodeLayout(request);
+            UIPanel panel = prefab.GetComponent<UIPanel>();
+            return UIKitPanelCodeLayout.FromScript(panel.GetType(),
+                UIKitGeneratedOwnerCodeService.GetScriptPath(panel), prefabPath);
         }
 
         /// <summary>解析 Prefab Stage、Prefab 资产或场景 Prefab 实例的扫描根和资产路径。</summary>

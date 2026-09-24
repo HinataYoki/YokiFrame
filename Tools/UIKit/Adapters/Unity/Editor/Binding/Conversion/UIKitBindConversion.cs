@@ -16,7 +16,7 @@ namespace YokiFrame
         internal static void Convert(AbstractBind bind, BindType targetKind)
         {
             if (bind == default || bind.Bind == targetKind) return;
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating || UIKitConversionTransaction.IsPending)
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || UIKitConversionTransaction.IsPending || UIKitCodeLayoutMigrationTransaction.IsPending)
                 throw new InvalidOperationException("请等待当前生成或转换完成。");
             if (EditorUtility.scriptCompilationFailed)
                 throw new InvalidOperationException("请先修复项目编译错误，再转换绑定类型。");
@@ -33,7 +33,7 @@ namespace YokiFrame
             if (!string.IsNullOrWhiteSpace(bind.CustomType) && bind.CustomType != typeName)
                 throw new InvalidOperationException("现有脚本类型与 Bind 类名称不一致，请先恢复类名称: " + typeName);
             string oldPath = UIKitBindCodeService.GetScriptPath(previous, oldKind, typeName, false);
-            if (!File.Exists(oldPath)) { SetKind(bind, targetKind); return; }
+            if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(oldPath))) { SetKind(bind, targetKind); return; }
             List<TypeMove> moves = new();
             AddMove(moves, previous, next, oldKind, targetKind, typeName);
             CollectChildren(bind, previous, next, oldKind, targetKind, typeName, moves);
@@ -44,7 +44,7 @@ namespace YokiFrame
             try
             {
                 bind.Bind = targetKind;
-                foreach (var source in UIKitPanelCodeGenerator.BuildBindSources(next, bind))
+                foreach (var source in UIKitPanelCodeGenerator.BuildBindSources(next, bind, relocations))
                     if (!sources.ContainsKey(source.Key)) sources.Add(source.Key, source.Value);
             }
             finally { bind.Bind = saved; }
@@ -65,6 +65,56 @@ namespace YokiFrame
                 current = current.parent;
             }
             throw new InvalidOperationException("转为 Element 前，请把该 Component 放入所属 Panel 或 Component 的绑定层级。");
+        }
+
+        /// <summary>迁移当前 Element/Component 的类型名称、命名空间引用和 partial 文件，并保留脚本 GUID。</summary>
+        internal static void RenameGeneratedType(AbstractBind bind, string newTypeName)
+        {
+            if (bind == default || !IsGenerated(bind.Bind)) return;
+            newTypeName = CodeGenKit.RequireIdentifier(newTypeName, nameof(newTypeName));
+            UIElement owner = bind.GetComponent<UIElement>();
+            if (owner == default || string.Equals(owner.GetType().Name, newTypeName, StringComparison.Ordinal))
+            {
+                SetGeneratedType(bind, newTypeName);
+                return;
+            }
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || UIKitConversionTransaction.IsPending)
+                throw new InvalidOperationException("请等待当前生成或转换完成。");
+            UIKitPanelCodeLayout layout = UIKitBindCodeService.ResolveLayout(bind);
+            string oldName = owner.GetType().Name;
+            string oldPath = UIKitBindCodeService.GetScriptPath(layout, bind.Bind, oldName, false);
+            string newPath = UIKitBindCodeService.GetScriptPath(layout, bind.Bind, newTypeName, false);
+            if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(oldPath)))
+            {
+                SetGeneratedType(bind, newTypeName);
+                return;
+            }
+            if (File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(newPath)) || File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(newPath + ".meta")))
+                throw new InvalidOperationException("目标类型脚本已存在，不会覆盖: " + newPath);
+            string oldFullName = layout.GetFullTypeName(UIKitBindCodeService.GetOutputKind(bind.Bind), oldName);
+            string newFullName = layout.GetFullTypeName(UIKitBindCodeService.GetOutputKind(bind.Bind), newTypeName);
+            List<TypeMove> moves = new()
+            {
+                new TypeMove
+                {
+                    OldPath = oldPath, NewPath = newPath,
+                    OldName = oldFullName, NewName = newFullName,
+                    NewBase = bind.Bind == BindType.Element ? "UIElement" : "UIComponent",
+                },
+            };
+            RequireUnsharedBindings(bind, layout, moves);
+            Dictionary<string, string> relocations = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> sources = BuildSources(moves, relocations);
+            UIKitConversionTransaction.Execute(bind, bind.Bind, layout, newFullName, relocations, sources, newTypeName);
+        }
+
+        /// <summary>写入生成类型名称并同步 Bind 的兼容字段。</summary>
+        internal static void SetGeneratedType(AbstractBind bind, string typeName)
+        {
+            if (bind == default) return;
+            bind.CustomType = CodeGenKit.RequireIdentifier(typeName, nameof(typeName));
+            bind.Type = bind.CustomType;
+            EditorUtility.SetDirty(bind);
         }
 
         /// <summary>更新绑定类型及对应类型字段；Member 转换保留原脚本组件，不删除业务逻辑。</summary>
@@ -110,10 +160,10 @@ namespace YokiFrame
         {
             string oldPath = UIKitBindCodeService.GetScriptPath(previous, oldKind, typeName, false);
             string newPath = UIKitBindCodeService.GetScriptPath(next, newKind, typeName, false);
-            if (oldPath == newPath || !File.Exists(oldPath)) return;
+            if (oldPath == newPath || !File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(oldPath))) return;
             foreach (TypeMove existing in moves)
                 if (existing.OldPath == oldPath) return;
-            if (File.Exists(newPath) || File.Exists(newPath + ".meta"))
+            if (File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(newPath)) || File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(newPath + ".meta")))
                 throw new InvalidOperationException("转换目标已存在，不会覆盖用户代码: " + newPath);
             string oldAssembly = CompilationPipeline.GetAssemblyNameFromScriptPath(oldPath);
             string newAssembly = CompilationPipeline.GetAssemblyNameFromScriptPath(newPath);
@@ -132,7 +182,7 @@ namespace YokiFrame
         private static void RequireUnsharedBindings(AbstractBind selected, UIKitPanelCodeLayout layout, List<TypeMove> moves)
         {
             UIKitGeneratedOwnerCodeService.ResolvePrefab(selected, out _, out _, out string ownerPath);
-            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab"))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -166,15 +216,20 @@ namespace YokiFrame
             }
             foreach (string path in AssetDatabase.GetAllAssetPaths())
             {
-                if (!path.StartsWith("Assets/", StringComparison.Ordinal) || !path.EndsWith(".cs", StringComparison.Ordinal)) continue;
-                string source = File.ReadAllText(path);
+                if (!UIKitPanelCodeLayout.IsUnityAssetPath(path)
+                    || !path.EndsWith(".cs", StringComparison.Ordinal)) continue;
+                string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(path);
+                if (!File.Exists(absolutePath)) continue;
+                string source = File.ReadAllText(absolutePath);
                 TypeMove declaration = FindDeclaration(source, moves);
                 string rewritten = UIKitConversionSource.Rewrite(source, moves, declaration, NamespaceRemains);
                 string destination = path;
                 if (declaration != null)
                 {
-                    destination = Path.GetDirectoryName(declaration.NewPath).Replace('\\', '/') + "/" + Path.GetFileName(path);
-                    if (File.Exists(destination) || File.Exists(destination + ".meta"))
+                    destination = Path.GetDirectoryName(declaration.NewPath).Replace('\\', '/') + "/"
+                        + RelocateFileName(Path.GetFileName(path), declaration);
+                    if (File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(destination))
+                        || File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(destination + ".meta")))
                         throw new InvalidOperationException("转换目标已存在: " + destination);
                     relocations.Add(path, destination);
                 }
@@ -184,6 +239,18 @@ namespace YokiFrame
                 if (!relocations.ContainsKey(move.OldPath))
                     throw new InvalidOperationException("无法解析原用户 partial，未执行转换: " + move.OldPath);
             return sources;
+        }
+
+        /// <summary>改名时同步替换主脚本、Designer 和以旧类型名开头的 partial 文件名。</summary>
+        private static string RelocateFileName(string fileName, TypeMove move)
+        {
+            string oldType = move.Name;
+            string newType = move.NewName.Substring(move.NewName.LastIndexOf('.') + 1);
+            if (string.Equals(fileName, oldType + ".cs", StringComparison.OrdinalIgnoreCase))
+                return newType + ".cs";
+            if (fileName.StartsWith(oldType + ".", StringComparison.OrdinalIgnoreCase))
+                return newType + fileName.Substring(oldType.Length);
+            return fileName;
         }
 
         /// <summary>定位属于待迁移类型的所有 partial，包括用户自行拆分但名称不同的 partial 文件。</summary>

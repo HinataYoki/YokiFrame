@@ -28,8 +28,8 @@ namespace YokiFrame.Tests
                 Assert.That(sources[layout.GetComponentPath("InventoryView", true)], Does.Contain("ScopeTests.InventoryViewUIElement.ItemRow"));
                 Assert.That(sources[layout.GetComponentPath("ShopView", true)], Does.Contain("ScopeTests.ShopViewUIElement.ItemRow"));
                 Assert.That(sources[layout.PanelDesignerPath], Does.Contain("ScopeTests.ScopePanelUIElement.ItemRow"));
-                Assert.IsTrue(sources.ContainsKey("Assets/__ScopeTests__/Scripts/UIComponent/InventoryView/UIElement/ItemRow.cs"));
-                Assert.IsTrue(sources.ContainsKey("Assets/__ScopeTests__/Scripts/ScopePanel/UIElement/ItemRow.cs"));
+                Assert.IsTrue(sources.ContainsKey("Assets/__ScopeTests__/Scripts/Component/InventoryView/Element/ItemRow.cs"));
+                Assert.IsTrue(sources.ContainsKey("Assets/__ScopeTests__/Scripts/Panel/ScopePanel/Element/ItemRow.cs"));
             }
             finally { Object.DestroyImmediate(root); }
         }
@@ -97,7 +97,7 @@ namespace YokiFrame.Tests
         {
             UIKitPanelCodeLayout layout = UIKitGeneratedOwnerCodeService.CreateLayout(
                 typeof(ScopeTests.InventoryViewUIElement.ItemRow), UIKitGeneratedOwnerKind.Element,
-                "Assets/__ScopeTests__/Scripts/UIComponent/InventoryView/UIElement/ItemRow.cs", "Assets/ItemRow.prefab");
+                "Assets/__ScopeTests__/Scripts/Component/InventoryView/Element/ItemRow.cs", "Assets/ItemRow.prefab");
             Assert.AreEqual("InventoryView", layout.ElementComponentName);
             Assert.AreEqual("ScopeTests.InventoryViewUIElement", layout.GetElementNamespace());
             Assert.AreEqual("Assets/__ScopeTests__/Scripts", layout.ScriptFolder);

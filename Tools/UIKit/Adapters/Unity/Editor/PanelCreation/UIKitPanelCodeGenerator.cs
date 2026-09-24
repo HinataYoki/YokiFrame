@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor;
 
 namespace YokiFrame
 {
@@ -22,17 +23,26 @@ namespace YokiFrame
         /// </summary>
         internal static Dictionary<string, string> BuildSources(
             UIKitPanelCodeLayout layout,
-            UIKitBindScanResult scan)
+            UIKitBindScanResult scan,
+            Dictionary<string, string> relocations = null,
+            List<string> deletions = null)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             if (scan == null) throw new ArgumentNullException(nameof(scan));
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
+            relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            deletions ??= new List<string>();
+            UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, null, null, relocations, deletions);
 
+            ValidateTypeLocation(layout.ScriptNamespace + "." + layout.PanelName, layout.AssemblyName,
+                layout.PanelScriptPath, layout.ScriptFolder + "/" + layout.PanelName + "/" + layout.PanelName + ".cs", relocations);
+            ValidateNodeOwnership(layout, scan.Nodes, relocations);
             IUIKitCodeTemplate template = UIKitCodeTemplateRegistry.Require(layout.CodeTemplate);
             Dictionary<string, string> sources = new(StringComparer.OrdinalIgnoreCase);
             AddIfMissing(
                 sources,
                 layout.PanelScriptPath,
+                relocations,
                 ApplyTemplate(
                     template,
                     UIKitCodeTemplatePart.PanelUser,
@@ -46,7 +56,7 @@ namespace YokiFrame
                     UIKitCodeTemplatePart.PanelDesigner,
                     CreateTemplateContext(layout, layout.PanelName, "Panel", string.Empty),
                     BuildPanelDesignerSource(layout, scan.Nodes)));
-            AddNodeSources(layout, scan.Nodes, sources, template);
+            AddNodeSources(layout, scan.Nodes, sources, template, relocations);
             return sources;
         }
 
@@ -58,13 +68,19 @@ namespace YokiFrame
             UIKitBindScanResult scan,
             UIKitGeneratedOwnerKind ownerKind,
             Type ownerType,
-            string designerPath)
+            string designerPath,
+            Dictionary<string, string> relocations = null,
+            List<string> deletions = null)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             if (scan == null) throw new ArgumentNullException(nameof(scan));
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
+            relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            deletions ??= new List<string>();
             ValidateGeneratedOwnerType(ownerKind, ownerType);
             if (ownerKind == UIKitGeneratedOwnerKind.Component) layout = layout.ForComponent(ownerType.Name);
+            UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, ownerKind, ownerType.Name, relocations, deletions);
+            ValidateNodeOwnership(layout, scan.Nodes, relocations);
             string assetPath = RequireDesignerPath(designerPath);
             string namespaceName = CodeGenKit.RequireQualifiedName(
                 ownerType.Namespace,
@@ -81,26 +97,45 @@ namespace YokiFrame
                     UIKitCodeTemplatePart.BindingDesigner,
                     CreateTemplateContext(layout, typeName, ownerKind.ToString(), ownerKind.ToString()),
                     BuildBindingOwnerDesignerSource(layout, namespaceName, typeName, scan.Nodes)));
-            AddNodeSources(layout, scan.Nodes, sources, template);
+            AddNodeSources(layout, scan.Nodes, sources, template, relocations);
             return sources;
         }
 
         /// <summary>以文件集事务提交生成源码，任一文件失败时恢复本次已修改文件。</summary>
         internal static bool CommitSources(
-            Dictionary<string, string> sources)
+            Dictionary<string, string> sources,
+            Dictionary<string, string> relocations = null,
+            List<string> deletions = null)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            List<SourceFileSnapshot> snapshots = CaptureSnapshots(sources);
+            relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            deletions ??= new List<string>();
+            List<SourceFileSnapshot> snapshots = CaptureSnapshots(sources, relocations, deletions);
             bool changed = false;
             try
             {
-                for (var index = 0; index < snapshots.Count; index++)
+                AssetDatabase.StartAssetEditing();
+                foreach (KeyValuePair<string, string> relocation in relocations)
                 {
-                    SourceFileSnapshot snapshot = snapshots[index];
-                    CodeGenerationFileResult result = CodeGenKit.WriteTextToFile(snapshot.AbsolutePath, snapshot.Source);
+                    EnsureFolder(UIKitPanelCodeLayout.AssetDirectory(relocation.Value));
+                    string error = AssetDatabase.MoveAsset(relocation.Key, relocation.Value);
+                    if (!string.IsNullOrEmpty(error)) throw new IOException(relocation.Key + " -> " + relocation.Value + ": " + error);
+                    changed = true;
+                }
+                foreach (KeyValuePair<string, string> source in sources)
+                {
+                    string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(source.Key);
+                    CodeGenerationFileResult result = CodeGenKit.WriteTextToFile(absolutePath, source.Value);
                     changed |= result != CodeGenerationFileResult.Unchanged;
                 }
-
+                foreach (string deletion in deletions)
+                {
+                    if (relocations.ContainsKey(deletion)) continue;
+                    if (File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(deletion))
+                        && !AssetDatabase.DeleteAsset(deletion))
+                        throw new IOException("无法删除 UIKit 遗留文件: " + deletion);
+                    changed = true;
+                }
                 return changed;
             }
             catch (Exception exception)
@@ -108,38 +143,60 @@ namespace YokiFrame
                 try
                 {
                     RestoreSnapshots(snapshots);
+                    AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
                 }
                 catch (Exception rollbackException)
                 {
                     throw new AggregateException("UIKit 代码生成失败且回滚也失败。", exception, rollbackException);
                 }
-
                 throw;
             }
+            finally { AssetDatabase.StopAssetEditing(); }
         }
 
-        /// <summary>按稳定路径顺序读取本次提交涉及的文件旧内容。</summary>
-        private static List<SourceFileSnapshot> CaptureSnapshots(Dictionary<string, string> sources)
+        /// <summary>创建生成、迁移和清理共同使用的文件快照。</summary>
+        private static List<SourceFileSnapshot> CaptureSnapshots(
+            Dictionary<string, string> sources,
+            Dictionary<string, string> relocations,
+            List<string> deletions)
         {
-            List<string> paths = new(sources.Keys);
-            paths.Sort(StringComparer.OrdinalIgnoreCase);
-            List<SourceFileSnapshot> snapshots = new(paths.Count);
-            for (var index = 0; index < paths.Count; index++)
+            HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string path in sources.Keys) paths.Add(path);
+            foreach (KeyValuePair<string, string> relocation in relocations)
             {
-                string assetPath = paths[index];
+                paths.Add(relocation.Key);
+                paths.Add(relocation.Value);
+                paths.Add(relocation.Key + ".meta");
+                paths.Add(relocation.Value + ".meta");
+            }
+            foreach (string path in deletions)
+            {
+                paths.Add(path);
+                paths.Add(path + ".meta");
+            }
+            List<string> ordered = new(paths);
+            ordered.Sort(StringComparer.OrdinalIgnoreCase);
+            List<SourceFileSnapshot> snapshots = new(ordered.Count);
+            foreach (string assetPath in ordered)
+            {
                 string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(assetPath);
                 bool existed = File.Exists(absolutePath);
-                snapshots.Add(new SourceFileSnapshot(
-                    absolutePath,
-                    sources[assetPath],
-                    existed,
-                    existed ? File.ReadAllText(absolutePath) : string.Empty));
+                string source = sources.TryGetValue(assetPath, out string generated) ? generated : string.Empty;
+                snapshots.Add(new SourceFileSnapshot(absolutePath, source, existed,
+                    existed ? File.ReadAllBytes(absolutePath) : Array.Empty<byte>()));
             }
-
             return snapshots;
         }
 
-        /// <summary>恢复文件集事务前的存在状态和原始文本。</summary>
+        /// <summary>确保迁移目标目录存在。</summary>
+        private static void EnsureFolder(string path)
+        {
+            if (AssetDatabase.IsValidFolder(path)) return;
+            EnsureFolder(UIKitPanelCodeLayout.AssetDirectory(path));
+            AssetDatabase.CreateFolder(UIKitPanelCodeLayout.AssetDirectory(path), Path.GetFileName(path));
+        }
+
+        /// <summary>恢复生成、迁移和清理事务前的文件状态。</summary>
         private static void RestoreSnapshots(List<SourceFileSnapshot> snapshots)
         {
             for (var index = snapshots.Count - 1; index >= 0; index--)
@@ -147,11 +204,10 @@ namespace YokiFrame
                 SourceFileSnapshot snapshot = snapshots[index];
                 if (snapshot.Existed)
                 {
-                    CodeGenKit.WriteTextToFile(snapshot.AbsolutePath, snapshot.OriginalSource);
-                    continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(snapshot.AbsolutePath));
+                    File.WriteAllBytes(snapshot.AbsolutePath, snapshot.OriginalBytes);
                 }
-
-                if (File.Exists(snapshot.AbsolutePath)) File.Delete(snapshot.AbsolutePath);
+                else if (File.Exists(snapshot.AbsolutePath)) File.Delete(snapshot.AbsolutePath);
             }
         }
 
@@ -159,18 +215,18 @@ namespace YokiFrame
         private sealed class SourceFileSnapshot
         {
             /// <summary>创建文件事务快照。</summary>
-            internal SourceFileSnapshot(string absolutePath, string source, bool existed, string originalSource)
+            internal SourceFileSnapshot(string absolutePath, string source, bool existed, byte[] originalBytes)
             {
                 AbsolutePath = absolutePath;
                 Source = source;
                 Existed = existed;
-                OriginalSource = originalSource;
+                OriginalBytes = originalBytes;
             }
 
             internal string AbsolutePath { get; }
             internal string Source { get; }
             internal bool Existed { get; }
-            internal string OriginalSource { get; }
+            internal byte[] OriginalBytes { get; }
         }
 
         /// <summary>为每个 UIKit 生成文件统一导入 Unity UI 与框架常用命名空间。</summary>
@@ -251,7 +307,8 @@ namespace YokiFrame
             UIKitPanelCodeLayout layout,
             List<UIKitBindNode> nodes,
             Dictionary<string, string> sources,
-            IUIKitCodeTemplate template)
+            IUIKitCodeTemplate template,
+            Dictionary<string, string> relocations = null)
         {
             for (var index = 0; index < nodes.Count; index++)
             {
@@ -268,6 +325,7 @@ namespace YokiFrame
                     AddIfMissing(
                         sources,
                         userPath,
+                        relocations,
                         ApplyTemplate(
                             template,
                             UIKitCodeTemplatePart.BindingUser,
@@ -289,11 +347,11 @@ namespace YokiFrame
                                 node.Strategy.OutputKind.ToString(),
                                 node.Strategy.OutputKind.ToString()),
                             BuildGeneratedDesignerSource(layout, node)));
-                    AddNodeSources(layout.ForChildren(node), node.Children, sources, template);
+                    AddNodeSources(layout.ForChildren(node), node.Children, sources, template, relocations);
                 }
                 else
                 {
-                    AddNodeSources(layout, node.Children, sources, template);
+                    AddNodeSources(layout, node.Children, sources, template, relocations);
                 }
             }
         }
@@ -401,34 +459,6 @@ namespace YokiFrame
                 || part == UIKitCodeTemplatePart.BindingDesigner;
         }
 
-        /// <summary>校验独立 owner 类型与生成 kind 一致。</summary>
-        private static void ValidateGeneratedOwnerType(
-            UIKitGeneratedOwnerKind ownerKind,
-            Type ownerType)
-        {
-            if (ownerType == null) throw new ArgumentNullException(nameof(ownerType));
-            bool valid = ownerKind == UIKitGeneratedOwnerKind.Element
-                ? typeof(UIElement).IsAssignableFrom(ownerType)
-                    && !typeof(UIComponent).IsAssignableFrom(ownerType)
-                : ownerKind == UIKitGeneratedOwnerKind.Component
-                    && typeof(UIComponent).IsAssignableFrom(ownerType);
-            if (!valid || ownerType.IsAbstract)
-                throw new ArgumentException("生成 owner 类型与 kind 不匹配: " + ownerType.FullName);
-        }
-
-        /// <summary>验证独立 Designer 位于 Assets 且使用固定文件后缀。</summary>
-        private static string RequireDesignerPath(string designerPath)
-        {
-            string normalized = string.IsNullOrWhiteSpace(designerPath)
-                ? string.Empty
-                : designerPath.Trim().Replace('\\', '/');
-            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal)
-                || !normalized.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase)
-                || normalized.IndexOf("../", StringComparison.Ordinal) >= 0)
-                throw new ArgumentException("Designer 路径必须位于 Assets: " + designerPath);
-            return normalized;
-        }
-
         /// <summary>把节点字段写入 owner class，重复生成类型不创建第二个引用字段。</summary>
         private static void AppendFields(
             ICodeScope scope,
@@ -476,8 +506,12 @@ namespace YokiFrame
         private static void AddIfMissing(
             Dictionary<string, string> sources,
             string assetPath,
+            Dictionary<string, string> relocations,
             string source)
         {
+            if (relocations != null)
+                foreach (string destination in relocations.Values)
+                    if (string.Equals(destination, assetPath, StringComparison.OrdinalIgnoreCase)) return;
             if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(assetPath)))
                 AddSource(sources, assetPath, source);
         }

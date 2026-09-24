@@ -128,11 +128,31 @@ namespace YokiFrame
         /// <summary>写入生成类型文本，并在对应 BindType 下同步最终类型。</summary>
         private void WriteGeneratedType(string value)
         {
-            serializedObject.Update();
-            mCustomType.stringValue = value ?? string.Empty;
+            string next = (value ?? string.Empty).Trim();
             BindType bindType = CurrentBindType();
             if (bindType == BindType.Element || bindType == BindType.Component)
-                mType.stringValue = ResolveGeneratedType();
+            {
+                try
+                {
+                    CodeGenKit.RequireIdentifier(next, nameof(value));
+                    UIKitBindConversion.RenameGeneratedType(target as AbstractBind, next);
+                }
+                catch (ArgumentException)
+                {
+                    mCustomTypeField.SetValueWithoutNotify(mCustomType.stringValue);
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    mCustomTypeField.SetValueWithoutNotify(mCustomType.stringValue);
+                    EditorUtility.DisplayDialog("类型改名失败", exception.Message, "确定");
+                    return;
+                }
+            }
+            serializedObject.Update();
+            mCustomType.stringValue = next;
+            if (bindType == BindType.Element || bindType == BindType.Component)
+                mType.stringValue = next;
             serializedObject.ApplyModifiedProperties();
         }
 

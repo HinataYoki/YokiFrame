@@ -27,7 +27,7 @@ namespace YokiFrame
 
         /// <summary>提交预构建文件集、保留 Unity GUID 移动脚本，并保存精确绑定的转换配置。</summary>
         internal static void Execute(AbstractBind bind, BindType kind, UIKitPanelCodeLayout layout, string fullName,
-            Dictionary<string, string> relocations, Dictionary<string, string> sources)
+            Dictionary<string, string> relocations, Dictionary<string, string> sources, string customTypeName = null)
         {
             Record record = Capture(layout, fullName, kind, relocations, sources);
             string bindJson = EditorJsonUtility.ToJson(bind);
@@ -50,6 +50,8 @@ namespace YokiFrame
                         if (!string.IsNullOrEmpty(error)) throw new IOException(move.Key + " -> " + move.Value + ": " + error);
                     }
                     UIKitPanelCodeGenerator.CommitSources(sources);
+                    if (!string.IsNullOrEmpty(customTypeName))
+                        UIKitBindConversion.SetGeneratedType(bind, customTypeName);
                     UIKitBindConversion.SetKind(bind, kind);
                     UIKitBindCodeService.SaveAndQueue(bind, layout);
                 }
@@ -142,8 +144,10 @@ namespace YokiFrame
         /// <summary>按原始字节备份源码或资产，保留编码、换行和 Unity 序列化内容。</summary>
         private static FileRecord Snapshot(string path)
         {
-            return new FileRecord { path = path, existed = File.Exists(path),
-                bytes = File.Exists(path) ? System.Convert.ToBase64String(File.ReadAllBytes(path)) : string.Empty };
+            string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(path);
+            return new FileRecord { path = path, existed = File.Exists(absolutePath),
+                bytes = File.Exists(absolutePath)
+                    ? System.Convert.ToBase64String(File.ReadAllBytes(absolutePath)) : string.Empty };
         }
 
         /// <summary>收集本次编译错误；任何编译失败都使迁移回滚，避免交付引用已失效的半转换状态。</summary>
@@ -234,8 +238,13 @@ namespace YokiFrame
             // 批量导入失败时 AssetDatabase 的移动缓存可能尚未提交，按原始文件及 .meta 快照恢复。
             foreach (FileRecord file in record.files)
             {
-                if (file.existed) File.WriteAllBytes(file.path, System.Convert.FromBase64String(file.bytes));
-                else if (File.Exists(file.path)) File.Delete(file.path);
+                string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(file.path);
+                if (file.existed)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(absolutePath));
+                    File.WriteAllBytes(absolutePath, System.Convert.FromBase64String(file.bytes));
+                }
+                else if (File.Exists(absolutePath)) File.Delete(absolutePath);
             }
             UIKitPendingBindingService.RestoreQueue(record.pendingBindings);
             var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();

@@ -11,22 +11,23 @@ namespace YokiFrame
     /// <summary>编排 UIElement/UIComponent Inspector 的独立代码生成与延迟回填。</summary>
     internal static class UIKitGeneratedOwnerCodeService
     {
-        private const string ELEMENT_FOLDER = "UIElement";
-        private const string COMPONENT_FOLDER = "UIComponent";
-        private const string ELEMENT_NAMESPACE_SUFFIX = "UIElement";
-
         /// <summary>为当前具体 owner 生成 Designer 与内部绑定类型。</summary>
         internal static void Generate(Component owner, UIKitGeneratedOwnerKind ownerKind)
         {
+            UIKitCodeLayoutMigration.RequireIdle();
             UIKitGeneratedOwnerContext context = ResolveContext(owner, ownerKind);
             UIKitBindScanResult scan = UIKitBindScanner.ScanOwner(context.ScanRoot, ownerKind);
+            Dictionary<string, string> relocations = new(StringComparer.OrdinalIgnoreCase);
+            List<string> deletions = new();
             Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildOwnerSources(
                 context.Layout,
                 scan,
                 ownerKind,
                 context.OwnerType,
-                context.DesignerPath);
-            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources);
+                context.DesignerPath,
+                relocations,
+                deletions);
+            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
             AssetDatabase.SaveAssets();
             UIKitPendingBindingService.QueueOwner(
                 context.Layout,
@@ -185,8 +186,8 @@ namespace YokiFrame
             if (script == default)
                 throw new InvalidOperationException("无法解析绑定 owner 的 MonoScript。");
             string path = AssetDatabase.GetAssetPath(script);
-            if (string.IsNullOrEmpty(path) || !path.StartsWith("Assets/", StringComparison.Ordinal))
-                throw new InvalidOperationException("绑定 owner 脚本必须位于当前项目 Assets。");
+            if (string.IsNullOrEmpty(path) || !UIKitPanelCodeLayout.IsUnityAssetPath(path))
+                throw new InvalidOperationException("绑定 owner 脚本必须位于当前 Unity 项目的 Assets 或 Packages 路径。");
             return script;
         }
 
@@ -197,73 +198,16 @@ namespace YokiFrame
             string scriptPath,
             string prefabPath)
         {
-            string scriptDirectory = GetAssetDirectory(scriptPath);
-            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault();
-            request.prefabFolder = GetAssetDirectory(prefabPath);
-            request.prefabPath = prefabPath;
-            request.assemblyName = ownerType.Assembly.GetName().Name;
-            if (ownerKind == UIKitGeneratedOwnerKind.Element)
-                ConfigureElementLayout(request, ownerType, scriptDirectory);
-            else
-                ConfigureComponentLayout(request, ownerType, scriptDirectory);
-            UIKitPanelCodeLayout layout = new(request);
-            bool componentScope = ownerKind == UIKitGeneratedOwnerKind.Component
-                || GetAssetDirectory(GetAssetDirectory(scriptDirectory)).EndsWith("/" + COMPONENT_FOLDER, StringComparison.Ordinal);
-            return componentScope ? layout.ForComponent(request.panelName) : layout;
-        }
-
-        /// <summary>从 Panel 或 Component 的 UIElement 目录恢复作用域，独立 Prefab 不依赖场景祖先。</summary>
-        private static void ConfigureElementLayout(
-            UIKitPanelGenerationRequest request,
-            Type ownerType,
-            string scriptDirectory)
-        {
-            string namespaceName = ownerType.Namespace ?? string.Empty;
-            int separator = namespaceName.LastIndexOf('.');
-            string segment = separator < 0 ? namespaceName : namespaceName.Substring(separator + 1);
-            if (!segment.EndsWith(ELEMENT_NAMESPACE_SUFFIX, StringComparison.Ordinal)
-                || segment.Length == ELEMENT_NAMESPACE_SUFFIX.Length
-                || separator <= 0
-                || !scriptDirectory.EndsWith("/" + ELEMENT_FOLDER, StringComparison.Ordinal))
-                throw new InvalidOperationException("UIElement 脚本不在标准 owner/UIElement 生成布局中。");
-            string panelName = segment.Substring(0, segment.Length - ELEMENT_NAMESPACE_SUFFIX.Length);
-            string panelFolder = GetAssetDirectory(scriptDirectory);
-            if (!panelFolder.EndsWith("/" + panelName, StringComparison.Ordinal))
-                throw new InvalidOperationException("UIElement 目录与命名空间中的 Panel 名不一致。");
-            request.panelName = panelName;
-            request.scriptFolder = GetAssetDirectory(panelFolder);
-            if (request.scriptFolder.EndsWith("/" + COMPONENT_FOLDER, StringComparison.Ordinal))
-                request.scriptFolder = GetAssetDirectory(request.scriptFolder);
-            request.scriptNamespace = namespaceName.Substring(0, separator);
-        }
-
-        /// <summary>从 `UIComponent` 目录和具体类型命名空间恢复 Component 布局。</summary>
-        private static void ConfigureComponentLayout(
-            UIKitPanelGenerationRequest request,
-            Type ownerType,
-            string scriptDirectory)
-        {
-            if (!scriptDirectory.EndsWith("/" + COMPONENT_FOLDER, StringComparison.Ordinal))
-                throw new InvalidOperationException("UIComponent 脚本不在标准 UIComponent 生成目录中。");
-            request.panelName = ownerType.Name;
-            request.scriptFolder = GetAssetDirectory(scriptDirectory);
-            request.scriptNamespace = ownerType.Namespace ?? string.Empty;
-        }
-
-        /// <summary>返回 Assets 文件或目录的父目录。</summary>
-        private static string GetAssetDirectory(string assetPath)
-        {
-            string normalized = assetPath.Replace('\\', '/').TrimEnd('/');
-            int separator = normalized.LastIndexOf('/');
-            if (separator <= 0)
-                throw new InvalidOperationException("无法解析 Asset 父目录: " + assetPath);
-            return normalized.Substring(0, separator);
+            bool component = typeof(UIComponent).IsAssignableFrom(ownerType);
+            if ((ownerKind == UIKitGeneratedOwnerKind.Component) != component)
+                throw new InvalidOperationException("生成 kind 与脚本类型不一致: " + ownerType.FullName);
+            return UIKitPanelCodeLayout.FromScript(ownerType, scriptPath, prefabPath);
         }
 
         /// <summary>在保持目录不变的情况下替换 Asset 文件名。</summary>
         private static string ReplaceFileName(string assetPath, string fileName)
         {
-            return UIKitPanelCodeLayout.CombineAssetPath(GetAssetDirectory(assetPath), fileName);
+            return UIKitPanelCodeLayout.CombineAssetPath(UIKitPanelCodeLayout.AssetDirectory(assetPath), fileName);
         }
 
         /// <summary>保存一次独立 owner 生成需要的不可变上下文。</summary>

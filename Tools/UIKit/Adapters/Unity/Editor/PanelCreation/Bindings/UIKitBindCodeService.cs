@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,10 +12,13 @@ namespace YokiFrame
         /// <summary>从当前绑定创建代码并登记编译后挂载；不依赖当前选择或已存在的生成组件。</summary>
         internal static void Generate(AbstractBind bind)
         {
+            UIKitCodeLayoutMigration.RequireIdle();
             RequireGeneratedBind(bind);
             UIKitPanelCodeLayout layout = ResolveLayout(bind);
-            Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildBindSources(layout, bind);
-            bool changed = UIKitPanelCodeGenerator.CommitSources(sources);
+            Dictionary<string, string> relocations = new(StringComparer.OrdinalIgnoreCase);
+            List<string> deletions = new();
+            Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildBindSources(layout, bind, relocations, deletions);
+            bool changed = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
             SaveAndQueue(bind, layout);
             if (changed) AssetDatabase.Refresh();
             else UIKitPendingBindingService.Process();
@@ -61,7 +63,10 @@ namespace YokiFrame
                 if (panel != default) return CreatePanelLayout(panel, prefabPath, componentName);
                 current = current.parent;
             }
-            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault(Path.GetFileNameWithoutExtension(prefabPath));
+            if (componentName == null && (bind.Bind != BindType.Component || !includeSelf))
+                throw new InvalidOperationException("Element 缺少所属 Panel 或 Component；请先放入明确的 owner 层级，不能根据 Prefab 名猜测归属。");
+            string ownerName = componentName ?? GetTypeName(bind);
+            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault(ownerName);
             request.prefabPath = prefabPath;
             return new UIKitPanelCodeLayout(request, componentName);
         }
@@ -69,14 +74,9 @@ namespace YokiFrame
         /// <summary>从 Panel 实际脚本恢复自定义输出根，避免 Inspector 回退到其它项目默认目录。</summary>
         private static UIKitPanelCodeLayout CreatePanelLayout(UIPanel panel, string prefabPath, string componentName)
         {
-            Type type = panel.GetType();
-            string script = AssetDatabase.GetAssetPath(MonoScript.FromMonoBehaviour(panel));
-            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault(type.Name);
-            request.scriptFolder = Path.GetDirectoryName(Path.GetDirectoryName(script)).Replace('\\', '/');
-            request.scriptNamespace = type.Namespace;
-            request.assemblyName = type.Assembly.GetName().Name;
-            request.prefabPath = prefabPath;
-            return new UIKitPanelCodeLayout(request, componentName);
+            UIKitPanelCodeLayout layout = UIKitPanelCodeLayout.FromScript(panel.GetType(),
+                UIKitGeneratedOwnerCodeService.GetScriptPath(panel), prefabPath);
+            return componentName == null ? layout : layout.ForComponent(componentName);
         }
 
         /// <summary>返回已有或待生成绑定类型的 Designer 路径，供跳转和转换共用。</summary>

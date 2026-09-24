@@ -316,13 +316,25 @@ Element 归属最近的 Panel 或 Component。嵌套 Element 继续使用同一�
 
 | 类型 | 用户脚本相对路径 | 命名空间 |
 | --- | --- | --- |
-| Panel Element | `<Panel>/UIElement/<Element>.cs` | `<项目命名空间>.<Panel>UIElement` |
-| 公共 Component | `UIComponent/<Component>.cs` | `<项目命名空间>` |
-| Component Element | `UIComponent/<Component>/UIElement/<Element>.cs` | `<项目命名空间>.<Component>UIElement` |
+| Panel | `Panel/<Panel>/<Panel>.cs` | `<项目命名空间>` |
+| Panel Element | `Panel/<Panel>/Element/<Element>.cs` | `<项目命名空间>.<Panel>UIElement` |
+| 公共 Component | `Component/<Component>/<Component>.cs` | `<项目命名空间>` |
+| Component Element | `Component/<Component>/Element/<Element>.cs` | `<项目命名空间>.<Component>UIElement` |
 
 Bind Inspector 在 Element/Component 模式下提供“生成 UIElement 代码”或“生成 UIComponent 代码”，首次生成不需要预先挂载用户脚本。编译后自动挂载当前 owner 并回填子字段。已生成类型也可以从自身 Inspector 的绑定树生成；独立 Element Prefab 从脚本位置恢复其所属作用域。
 
-快速转换按钮和绑定类型下拉共用转换流程。已有 Element/Component 互转时会迁移用户 partial、Designer、受影响的子 Element 和代码类型引用，保留脚本 `.meta` GUID 及 Prefab 序列化引用；编译或回填验证失败时恢复原源码和 Prefab。普通升级、生成不会自动转换旧 Component。
+`ScriptFolder` 是 Panel 与 Component 分类目录的共同根；Designer 与对应用户脚本同目录。公共子 Component 始终进入共同根下的 `Component/<名称>`，不会写入使用它的 Panel/Component 内。目录调整不改变类名、命名空间后缀 `UIElement` 或程序集。
+
+已有 Element 的独立生成优先使用实际 MonoScript 路径、命名空间和程序集恢复归属，因此保存成独立 Prefab 后仍能生成。首次 Element 必须位于明确的 Panel、Component Bind 或已生成 Element 作用域内；无法确定归属时拒绝生成，不按 Prefab 名猜测 Panel。普通生成拒绝已挂载脚本身份变化、旧目录与重复类型，不隐式移动文件或覆盖业务代码。
+
+### 遗留生成代码检查
+
+
+生成、改名或 Element/Component 转换时，UIKit 会在同一事务中识别旧目录并自动迁移可确认归属的用户脚本、Designer、partial 和 `.meta` GUID；同时会把候选遗留文件按仍被 Prefab 使用、仍被源码引用、包含用户业务代码、脚本身份不完整和可安全清理分类，仅自动删除同时满足“无 Prefab 使用、无源码引用、无业务代码”的孤立模板文件。目标冲突、共享引用、业务代码或无法确认归属的文件会保留并报告。需要整体整理共同脚本根时，仍可从 `Edit/UIKit/Migrate Code Layout` 手动预览并执行目录迁移。
+
+迁移保留源码原始字节、脚本 GUID、命名空间和程序集；编译与脚本身份验证失败会由现有生成/转换事务逆序回滚。目标占用、只读文件、待移动的 asmdef/asmref、跨程序集或无法确认归属的文件会阻断，不会按文件名前缀猜归属。
+
+快速转换按钮和绑定类型下拉共用转换流程。已有 Element/Component 互转时会迁移用户 partial、Designer、受影响的子 Element 和代码类型引用，保留脚本 `.meta` GUID 及 Prefab 序列化引用；编译或回填验证失败时恢复原源码和 Prefab。普通生成会自动处理旧目录和安全遗留文件，但不会擅自把旧 Component 转换成 Element，类型转换仍由已有转换入口触发。
 
 转换要求用户 partial 保持单 namespace、单类，并直接继承 `UIElement` 或 `UIComponent`。目标文件已存在、跨程序集移动或类型仍被其它 Prefab/绑定子树共享时，转换会在写入前拒绝，不合并两份业务代码。转换不改写注释或字符串中的类型名；使用字符串反射定位类型的业务需要同步检查该约定。Member 转换保留原组件和源码。
 
