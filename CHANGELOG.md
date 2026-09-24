@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+
+- UIKit 代码生成与目录迁移能力完善。
+
+
 ## 2.0.1
 
 - TableKit 支持发现并校验新版 Luban 可选 Agent、MCP 与官方 Skill 路径，旧版 Luban 缺少这些路径时仍可验证和生成。
