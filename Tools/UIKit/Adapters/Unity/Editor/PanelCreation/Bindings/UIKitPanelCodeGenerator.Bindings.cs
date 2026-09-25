@@ -23,7 +23,7 @@ namespace YokiFrame
             node.Children.AddRange(scan.Nodes);
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, kind, typeName, relocations);
-            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(GetCleanupRoot(layout, kind, typeName), expected, !Application.isBatchMode);
             ValidateNodeOwnership(layout, new List<UIKitBindNode> { node }, relocations);
             Dictionary<string, string> sources = new(StringComparer.OrdinalIgnoreCase);
             AddNodeSources(layout, new List<UIKitBindNode> { node }, sources,

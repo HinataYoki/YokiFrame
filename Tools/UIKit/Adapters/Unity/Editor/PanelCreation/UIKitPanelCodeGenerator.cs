@@ -32,7 +32,7 @@ namespace YokiFrame
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, null, null, relocations);
-            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout.PanelFolder, expected, !Application.isBatchMode);
 
             ValidateTypeLocation(layout.ScriptNamespace + "." + layout.PanelName, layout.AssemblyName,
                 layout.PanelScriptPath, layout.ScriptFolder + "/" + layout.PanelName + "/" + layout.PanelName + ".cs", relocations);
@@ -78,7 +78,7 @@ namespace YokiFrame
             ValidateGeneratedOwnerType(ownerKind, ownerType);
             if (ownerKind == UIKitGeneratedOwnerKind.Component) layout = layout.ForComponent(ownerType.Name);
             HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, ownerKind, ownerType.Name, relocations);
-            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(GetCleanupRoot(layout, ownerKind, ownerType.Name), expected, !Application.isBatchMode);
             ValidateNodeOwnership(layout, scan.Nodes, relocations);
             string assetPath = RequireDesignerPath(designerPath);
             string namespaceName = CodeGenKit.RequireQualifiedName(

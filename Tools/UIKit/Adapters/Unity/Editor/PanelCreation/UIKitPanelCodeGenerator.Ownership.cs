@@ -70,6 +70,14 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>清理只看当前 Panel 或 Component 目录，避免把其它仍在使用的 UI 脚本报成遗留文件。</summary>
+        private static string GetCleanupRoot(UIKitPanelCodeLayout layout, UIKitGeneratedOwnerKind ownerKind, string typeName)
+        {
+            return ownerKind == UIKitGeneratedOwnerKind.Component
+                ? UIKitPanelCodeLayout.AssetDirectory(layout.GetComponentPath(typeName, false))
+                : layout.PanelFolder;
+        }
+
         /// <summary>按当前作用域计算唯一旧路径，Component 子 Element 使用所属 Component 名而不是空的 Panel 名。</summary>
         private static string GetLegacyOwnerPath(UIKitPanelCodeLayout layout, UIKitBindOutputKind kind, string typeName)
         {

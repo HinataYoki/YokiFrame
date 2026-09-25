@@ -330,7 +330,7 @@ Bind Inspector 在 Element/Component 模式下提供“生成 UIElement 代码�
 ### 遗留生成代码检查
 
 
-生成、改名或 Element/Component 转换时，UIKit 会在同一事务中识别旧目录并自动迁移可确认归属的用户脚本、Designer、partial 和 `.meta` GUID。没有挂载身份证明其已改名或换位的孤立模板，会在删除前弹出确认；仍被 Prefab 使用、仍被源码引用、包含业务代码或脚本身份不完整的文件只报告，不进入删除列表。取消确认不会删除任何文件。需要整体整理共同脚本根时，仍可从 `Edit/UIKit/Migrate Code Layout` 手动预览并执行目录迁移。
+生成、改名或 Element/Component 转换时，UIKit 会在同一事务中识别旧目录并自动迁移可确认归属的用户脚本、Designer、partial 和 `.meta` GUID。没有挂载身份证明其已改名或换位的孤立模板，只会在当前 Panel 或 Component 目录内检查，并在删除前弹出确认。其它 Panel、Component 和仍被使用的脚本不会被报成遗留文件。仍被 Prefab 使用、仍被源码引用、包含业务代码或脚本身份不完整的文件只报告，不进入删除列表。取消确认不会删除任何文件。需要整体整理共同脚本根时，仍可从 `Edit/UIKit/Migrate Code Layout` 手动预览并执行目录迁移。
 
 迁移保留源码原始字节、脚本 GUID、命名空间和程序集；编译与脚本身份验证失败会由现有生成/转换事务逆序回滚。目标占用、只读文件、待移动的 asmdef/asmref、跨程序集或无法确认归属的文件会阻断，不会按文件名前缀猜归属。
 

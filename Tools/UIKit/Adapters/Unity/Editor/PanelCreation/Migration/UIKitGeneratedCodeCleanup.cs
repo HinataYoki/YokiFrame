@@ -45,11 +45,11 @@ namespace YokiFrame
         /// <param name="expected">本次生成仍需要的脚本路径。</param>
         /// <param name="interactive">为 false 时只返回候选，供测试和批处理预览。</param>
         /// <returns>用户确认并已删除的项目相对路径。</returns>
-        internal static List<string> ConfirmAndDelete(UIKitPanelCodeLayout layout, HashSet<string> expected, bool interactive)
+        internal static List<string> ConfirmAndDelete(string root, HashSet<string> expected, bool interactive)
         {
-            if (layout == null) throw new ArgumentNullException(nameof(layout));
+            if (string.IsNullOrWhiteSpace(root)) throw new ArgumentException("清理目录不能为空。", nameof(root));
             if (expected == null) throw new ArgumentNullException(nameof(expected));
-            List<UIKitGeneratedCleanupCandidate> candidates = Collect(layout, expected, out List<string> blocked);
+            List<UIKitGeneratedCleanupCandidate> candidates = Collect(root, expected, out List<string> blocked);
             ReportBlocked(blocked);
             if (candidates.Count == 0 || !interactive) return new List<string>();
             if (!EditorUtility.DisplayDialog(
@@ -79,18 +79,18 @@ namespace YokiFrame
 
         /// <summary>收集当前共同根内、且不在本次期望路径中的孤立模板。</summary>
         internal static List<UIKitGeneratedCleanupCandidate> Collect(
-            UIKitPanelCodeLayout layout,
+            string root,
             HashSet<string> expected,
             out List<string> blocked)
         {
-            if (layout == null) throw new ArgumentNullException(nameof(layout));
+            if (string.IsNullOrWhiteSpace(root)) throw new ArgumentException("清理目录不能为空。", nameof(root));
             if (expected == null) throw new ArgumentNullException(nameof(expected));
             blocked = new List<string>();
             List<UIKitGeneratedCleanupCandidate> candidates = new();
             HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase);
-            string root = UIKitPanelCodeLayout.ToAbsolutePath(layout.ScriptFolder);
-            if (!Directory.Exists(root)) return candidates;
-            foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+            string absoluteRoot = UIKitPanelCodeLayout.ToAbsolutePath(root);
+            if (!Directory.Exists(absoluteRoot)) return candidates;
+            foreach (string file in Directory.GetFiles(absoluteRoot, "*.cs", SearchOption.AllDirectories))
             {
                 string path = UIKitPanelCodeLayout.ToAssetPath(file);
                 if (!visited.Add(path) || expected.Contains(path)) continue;
@@ -119,7 +119,7 @@ namespace YokiFrame
             string assetPath = UIKitPanelCodeLayout.ToAssetPath(path);
             incomplete = string.Empty;
             userPath = assetPath.EndsWith(DESIGNER_SUFFIX, StringComparison.OrdinalIgnoreCase)
-                ? assetPath.Substring(0, assetPath.Length - ".Designer".Length)
+                ? assetPath.Substring(0, assetPath.Length - DESIGNER_SUFFIX.Length) + ".cs"
                 : assetPath;
             designerPath = userPath.Substring(0, userPath.Length - ".cs".Length) + DESIGNER_SUFFIX;
             if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(userPath)))
