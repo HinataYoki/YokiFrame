@@ -6,7 +6,7 @@ namespace YokiFrame.Protocol.Tests.Architecture;
 public sealed class CoreRuntimeNullableCompatibilityTests
 {
     /// <summary>
-    /// 验证 FastChannel 请求队列在 Core 项目关闭 Nullable 时不使用引用类型可空注解，保持 Unity 和 Godot 的 C# 9 编译兼容。
+    /// 验证 FastChannel 请求队列在 Core 关闭 Nullable 时用 default! 表达空槽位，保持 Unity 和 Godot 的 C# 9 编译兼容。
     /// </summary>
     [Fact]
     public void FastChannelRequestQueueAvoidsNullableReferenceAnnotationsWhenCoreDisablesNullable()
@@ -15,8 +15,8 @@ public sealed class CoreRuntimeNullableCompatibilityTests
         var queueSource = ReadWorkspaceFile("Assets/YokiFrame/Core/Editor/CommandBridge/FastChannel/Queue/YokiFrameFastChannelRequestQueue.cs");
 
         Assert.Contains("<Nullable>disable</Nullable>", projectSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("PendingRequest?", queueSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("pendingRequest = null;", queueSource, StringComparison.Ordinal);
+        Assert.Contains("sealed class PendingRequest", queueSource, StringComparison.Ordinal);
+        Assert.Contains("pendingRequest = default!;", queueSource, StringComparison.Ordinal);
     }
 
     /// <summary>

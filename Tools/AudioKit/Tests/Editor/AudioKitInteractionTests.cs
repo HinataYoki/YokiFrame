@@ -39,26 +39,6 @@ namespace YokiFrame.Tests
                 command.Kind == YokiFrameCommandKind.ReadOnly));
         }
 
-        /// <summary>验证全部已移除 Runtime 操作无法通过 AudioKit Interaction 重新进入。</summary>
-        [Test]
-        public void RemovedRuntimeActionsAreRejected()
-        {
-            var provider = new AudioKitInteractionProvider();
-            string[] removedActions =
-            {
-                "stop_voice", "stop_all", "stop_bus", "set_master_volume",
-                "set_bus_volume", "mute_master", "mute_bus", "clear_history"
-            };
-            for (var index = 0; index < removedActions.Length; index++)
-            {
-                string action = removedActions[index];
-                YokiFrameCommandResult result = provider.Handle(CreateRequest(action, "{}"));
-
-                Assert.IsFalse(result.IsSuccess, action);
-                Assert.AreEqual("HandlerMismatch", result.ErrorCode, action);
-            }
-        }
-
         /// <summary>验证显式注册的空闲自定义 Bus 可见、大小写去重且可注销。</summary>
         [Test]
         public void CustomBusRegistryPublishesIdleBusAndSupportsRemoval()

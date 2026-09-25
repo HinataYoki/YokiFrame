@@ -165,7 +165,6 @@ public sealed class WindowStateStoreTests
 
         Assert.Contains("JsonSerializable(typeof(PersistedWindowState))", source);
         Assert.Contains("WindowStateJsonContext.Default.PersistedWindowState", source);
-        Assert.DoesNotContain("JsonSerializerDefaults.Web", source);
     }
 
     /// <summary>

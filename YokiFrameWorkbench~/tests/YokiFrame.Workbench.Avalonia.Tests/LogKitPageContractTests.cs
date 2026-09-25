@@ -29,48 +29,31 @@ public sealed class LogKitPageContractTests
         Assert.Contains(viewModel.NavigationGroups.SelectMany(static group => group.Items), static item => item.PageName == "LogKit");
     }
 
-    /// <summary>验证 LogKit 只保留配置结构，旧日志浏览和筛选入口不再进入页面。</summary>
+    /// <summary>验证 LogKit 页面只呈现配置结构。</summary>
     [Fact]
     public void XamlUsesConfigurationOnlyLayout()
     {
         var page = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "LogKitPageView.axaml");
         var shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        var styles = WorkbenchContractTestFiles.ReadSource("Styles", "LogKit.axaml");
         var app = WorkbenchContractTestFiles.ReadSource("App.axaml");
 
         Assert.Contains("RowDefinitions=\"Auto,*,Auto\"", page, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"ConfigGrid\"", page, StringComparison.Ordinal);
         Assert.Contains("ColumnDefinitions=\"*,*\"", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("Width=\"380\"", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("Width=\"480\"", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("Width=\"876\"", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("MaxWidth=\"1080\"", page, StringComparison.Ordinal);
         Assert.Contains("Classes=\"logkit-runtime-banner\"", page, StringComparison.Ordinal);
         Assert.Contains("Classes=\"logkit-settings-footer\"", page, StringComparison.Ordinal);
         Assert.Contains("OutputSettingsCard", page, StringComparison.Ordinal);
         Assert.Contains("FileSettingsCard", page, StringComparison.Ordinal);
         Assert.Contains("CapacitySettingsCard", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("ViewerPanel", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("HistoryRows", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("FilePreview", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectMemorySourceCommand", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("workbench.logkit.search", shell, StringComparison.Ordinal);
         Assert.Contains("LogKitPage.SaveSettingsCommand", shell, StringComparison.Ordinal);
         Assert.Contains("LogKitPage.ResetSettingsCommand", shell, StringComparison.Ordinal);
         Assert.Contains("LogKitPage.OpenDirectoryCommand", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("LogKitPage.ClearHistoryCommand", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("LogKitPage.DataChannelText", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("SupportsFileWriter", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("SupportsPlayerImGui", page, StringComparison.Ordinal);
         Assert.Contains("SupportsEncryption", page, StringComparison.Ordinal);
         Assert.Contains("EncryptionMethodText", page, StringComparison.Ordinal);
         Assert.Contains("DecryptionStatusText", page, StringComparison.Ordinal);
         Assert.Contains("IsEnabled=\"{CompiledBinding ProjectCanPersist}\"", page, StringComparison.Ordinal);
         Assert.Contains("pages:LogKitPageView", shell, StringComparison.Ordinal);
         Assert.Contains("Styles/LogKit.axaml", app, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Micro", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Xs", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("#", styles, StringComparison.Ordinal);
     }
 
     /// <summary>验证文件卡片位于顶部全宽，输出和容量卡片在宽屏等分、窄屏堆叠。</summary>

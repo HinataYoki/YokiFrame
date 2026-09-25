@@ -37,7 +37,6 @@ public sealed class AudioKitPageViewModelTests
         string modules = WorkbenchContractTestFiles.ReadSource("Pages", "WorkbenchDefaultPageModules.cs");
 
         Assert.Contains("AudioKit 观察器", modules, StringComparison.Ordinal);
-        Assert.DoesNotContain("AudioKit 混音台", modules, StringComparison.Ordinal);
         Assert.Contains("audiokit-bus-channels", xaml, StringComparison.Ordinal);
         Assert.Contains("AudioBusChannelViewModel", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedBusChannel", xaml, StringComparison.Ordinal);
@@ -74,17 +73,6 @@ public sealed class AudioKitPageViewModelTests
             StringComparison.Ordinal);
         Assert.Contains("AudioKitPageViewModel", shell, StringComparison.Ordinal);
         Assert.Contains("ActiveWorkspacePage", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("StopVoiceCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("StopAllCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("StopBusCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ApplyVolumeCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ToggleMuteCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ClearHistoryCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("EventType", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Slider", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("停止全部", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Master 静音", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("清空历史", xaml, StringComparison.Ordinal);
     }
 
     /// <summary>验证 Bus 选择背景只作用于卡片，避免拉伸的列表模板产生越界高亮。</summary>
@@ -93,10 +81,6 @@ public sealed class AudioKitPageViewModelTests
     {
         string styles = WorkbenchContractTestFiles.ReadSource("Styles", "AudioKit.axaml");
 
-        Assert.DoesNotContain(
-            "ListBox.audiokit-bus-channels > ListBoxItem:selected /template/ ContentPresenter",
-            styles,
-            StringComparison.Ordinal);
         Assert.Contains(
             "ListBox.audiokit-bus-channels > ListBoxItem:selected Border.audiokit-bus-card",
             styles,

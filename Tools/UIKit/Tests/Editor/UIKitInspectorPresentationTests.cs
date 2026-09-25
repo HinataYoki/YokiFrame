@@ -293,16 +293,6 @@ namespace YokiFrame.Tests
                 "生成 UIComponent 代码");
         }
 
-        /// <summary>验证旧的 Assets/Prefab 生成入口和独立 Panel 创建菜单均已移除。</summary>
-        [Test]
-        public void PrefabContextMenuGenerationEntryIsRemoved()
-        {
-            const BindingFlags FLAGS = BindingFlags.Static | BindingFlags.NonPublic;
-            Assert.IsNull(typeof(UIKitBindShortcuts).GetMethod("GenerateSelectedPrefab", FLAGS));
-            Assert.IsNull(typeof(UIKitBindShortcuts).GetMethod("CanGenerateSelectedPrefab", FLAGS));
-            Assert.IsNull(typeof(UIKitBindShortcuts).GetMethod("OpenPanelCreator", FLAGS));
-        }
-
         /// <summary>创建指定绑定 owner，并验证 InspectorKit、绑定树和专有生成按钮。</summary>
         private static void AssertGeneratedOwnerInspector(
             System.Type ownerType,

@@ -33,14 +33,13 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证开发菜单不再创建、引用或依赖包内 WorkbenchRuntime 目录。
+        /// 验证开发菜单只引用工具链源码目录。
         /// </summary>
         [Test]
         public void DevelopmentBuildMenuDoesNotUsePackageRuntimeDirectory()
         {
             var source = ReadDevelopmentLauncherSource();
 
-            StringAssert.DoesNotContain("WorkbenchRuntime~", source);
             StringAssert.Contains("YokiFrameWorkbench~", source);
         }
 

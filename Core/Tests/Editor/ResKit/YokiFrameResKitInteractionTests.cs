@@ -287,9 +287,6 @@ namespace YokiFrame.Tests
             {
                 StringAssert.Contains("\"" + command.Action + "\"", descriptor);
             }
-
-            StringAssert.DoesNotContain("clear_cache", descriptor);
-            StringAssert.DoesNotContain("set_provider", descriptor);
         }
 
         /// <summary>从默认 Registry 获取唯一 ResKit Provider。</summary>

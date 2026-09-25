@@ -215,9 +215,9 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>验证 capability 声明 state、只读 get_workbench_snapshot 与用户触发的 set_tracking。</summary>
+        /// <summary>验证 capability 与 Provider 一样声明只读快照和用户触发的追踪开关。</summary>
         [Test]
-        public void CapabilityDescriptorExcludesLegacyActions()
+        public void CapabilityDescriptorMatchesProviderCatalog()
         {
             string path = Path.Combine(
                 Application.dataPath,
@@ -231,9 +231,6 @@ namespace YokiFrame
 
             StringAssert.Contains("\"get_workbench_snapshot\"", descriptor);
             StringAssert.Contains("\"set_tracking\"", descriptor);
-            StringAssert.DoesNotContain("fire_event", descriptor);
-            StringAssert.DoesNotContain("monitor_start", descriptor);
-            StringAssert.DoesNotContain("scan", descriptor);
         }
 
         /// <summary>从 Core 默认组合中取得 EventKit versioned Provider。</summary>

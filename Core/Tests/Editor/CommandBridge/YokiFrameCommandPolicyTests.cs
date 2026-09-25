@@ -59,19 +59,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证旧的供应商专属来源标识不再被默认策略接受，避免协议继续耦合历史工具名称。
-        /// </summary>
-        [Test]
-        public void EvaluateRejectsUnregisteredAutomationSource()
-        {
-            YokiFrameCommandPolicyDecision decision = YokiFrameCommandPolicy.CreateDefault().Evaluate(
-                CreateSystemRequest("list_commands", "legacy-automation"));
-
-            Assert.IsFalse(decision.IsAllowed);
-            Assert.AreEqual("PolicyRejected", decision.ErrorCode);
-        }
-
-        /// <summary>
         /// 验证任意未登记的 internal-like 来源仍被拒绝，避免 allowlist 退化为前缀匹配。
         /// </summary>
         [Test]

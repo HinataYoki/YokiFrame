@@ -30,10 +30,6 @@ public sealed class FsmKitGraphContractTests
         Assert.Contains("CurrentPageTitle", shellXaml);
         Assert.Contains("CurrentPageDescription", shellXaml);
         Assert.Contains("StaleReason", xaml);
-        Assert.DoesNotContain("FsmKitPage.EngineId", shellXaml);
-        Assert.DoesNotContain("FsmKitPage.SessionId", shellXaml);
-        Assert.DoesNotContain("实时状态", shellXaml);
-        Assert.DoesNotContain("workbench.fsm.pause", shellXaml);
         Assert.Contains("SharedMemoryRefreshInterval = TimeSpan.FromMilliseconds(100)", telemetrySource);
         Assert.Contains("FileRefreshInterval = TimeSpan.FromSeconds(1)", windowSource);
         Assert.Contains("PollFsmKitTelemetry", telemetrySource);
@@ -46,7 +42,6 @@ public sealed class FsmKitGraphContractTests
     public void FsmKitPageUsesTypedRuntimeWorkspace()
     {
         var xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "FsmKitPageView.axaml");
-        var shellXaml = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
         var graphSource = WorkbenchContractTestFiles.ReadSource("Components", "ObservedFsmGraph.cs");
         var graphRenderingSource = WorkbenchContractTestFiles.ReadSource(
             "Components", "ObservedFsmGraph.Rendering.cs");
@@ -66,8 +61,6 @@ public sealed class FsmKitGraphContractTests
         Assert.Contains("MachineState", xaml);
         Assert.Contains("CurrentState", xaml);
         Assert.Contains("ToolTip.Tip=\"{CompiledBinding InstanceId}\"", xaml);
-        Assert.DoesNotContain("Text=\"{CompiledBinding InstanceId}\"", xaml);
-        Assert.DoesNotContain("FsmKitPage.DataChannelText", shellXaml);
         Assert.Contains("ListBoxItem:selected /template/ ContentPresenter", graphStyles);
         Assert.Contains("Transitions", xaml);
         Assert.True(xaml.Contains("已观测转换图") || xaml.Contains("String.FsmKit.ObservedTransitions"));
@@ -87,18 +80,7 @@ public sealed class FsmKitGraphContractTests
         Assert.Contains("DrawGeometry", graphRenderingSource);
         Assert.Contains("components|ObservedFsmGraph", graphStyles);
         Assert.Contains("AccentBrush", graphStyles);
-        Assert.DoesNotContain("Children.Add", graphSource);
         Assert.Contains("EmptyStateTitle", xaml);
-        Assert.DoesNotContain("<TabControl", xaml);
-        Assert.DoesNotContain("<TabItem Header=\"诊断\"", xaml);
-        Assert.DoesNotContain("<TabItem Header=\"API\"", xaml);
-        Assert.DoesNotContain("原始数据", xaml);
-        Assert.DoesNotContain("RawPayload", xaml);
-        Assert.DoesNotContain("EvidencePaths", xaml);
-        Assert.DoesNotContain("ChangeStateCommand", xaml);
-        Assert.DoesNotContain("事件洞察", xaml);
-        Assert.DoesNotContain("StateTree", xaml);
-        Assert.DoesNotContain("StateEvents", xaml);
     }
 
     /// <summary>

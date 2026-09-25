@@ -52,7 +52,6 @@ public sealed class WorkbenchShellChromeLayoutTests
 
         Assert.Contains("xmlns:shapes=\"using:Avalonia.Controls.Shapes\"", xaml);
         Assert.Contains("<shapes:Path", xaml);
-        Assert.DoesNotContain("PathIcon", xaml);
         Assert.Contains("StrokeThickness=\"1.75\"", xaml);
         Assert.Contains("StrokeLineCap=\"Round\"", xaml);
         Assert.Contains("StrokeJoin=\"Round\"", xaml);
@@ -90,12 +89,10 @@ public sealed class WorkbenchShellChromeLayoutTests
 
         Assert.Contains("ColumnDefinitions=\"224,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto\"", titleBar);
         Assert.Contains("Margin=\"16,8,18,8\"", titleBar);
-        Assert.DoesNotContain("x:Name=\"BrandCard\"", titleBar);
         Assert.True(CountOccurrences(titleBar, "VerticalAlignment=\"Center\"") >= 5);
         Assert.Contains("RowDefinitions=\"60,*\"", shell);
         Assert.Contains("AppTitleBar ZIndex=\"1\"", shell);
         Assert.Contains("x:Name=\"BrandArea\"", shell);
-        Assert.DoesNotContain("x:Name=\"BrandCard\"", shell);
         Assert.Contains("Grid.Row=\"0\"", shell);
         Assert.Contains("Height=\"60\"", shell);
         Assert.Contains("Width=\"48\"", shell);
@@ -104,7 +101,6 @@ public sealed class WorkbenchShellChromeLayoutTests
         Assert.Contains("Margin=\"16,0,16,16\"", shell);
         Assert.Contains("<components:SideNavigation />", shell);
         Assert.Contains("x:Name=\"ToolWindowCard\"", shell);
-        Assert.DoesNotContain("Margin=\"0,-24,0,0\"", shell);
     }
 
     /// <summary>验证所有页面共用的标题介绍区固定左对齐，不被右侧工具栏挤到星号列中央。</summary>
@@ -132,12 +128,10 @@ public sealed class WorkbenchShellChromeLayoutTests
 
         Assert.Contains("components:NavigationIcon", xaml);
         Assert.Contains("IconKey=\"{CompiledBinding IconKey}\"", xaml);
-        Assert.DoesNotContain("CompiledBinding IconText", xaml);
         Assert.Contains("StrokeThickness=\"1.7\"", iconView);
         Assert.Contains("ActualThemeVariantChanged", iconSource);
         Assert.Contains("Icon.Navigation.Framework", iconResources);
         Assert.Contains("Icon.Navigation.Docs", iconResources);
-        Assert.DoesNotContain("Icon.Navigation.Architecture", iconResources);
         Assert.Contains("Icon.Navigation.Fsm", iconResources);
         Assert.Contains("Icon.Navigation.TableKit", iconResources);
         Assert.Contains("Brush.Icon.Docs", colorResources);

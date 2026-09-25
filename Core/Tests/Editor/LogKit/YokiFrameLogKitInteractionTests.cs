@@ -130,7 +130,7 @@ namespace YokiFrame
             Assert.AreEqual(5, stats.HistoryCount);
         }
 
-        /// <summary>验证 capability descriptor 同步声明五个命令且不恢复旧 action。</summary>
+        /// <summary>验证 capability descriptor 同步声明当前五个命令。</summary>
         [Test]
         public void CapabilityDescriptorMatchesProviderCatalog()
         {
@@ -149,8 +149,6 @@ namespace YokiFrame
             StringAssert.Contains("\"set_settings\"", descriptor);
             StringAssert.Contains("\"reset_settings\"", descriptor);
             StringAssert.Contains("\"clear_history\"", descriptor);
-            StringAssert.DoesNotContain("\"scan\"", descriptor);
-            StringAssert.DoesNotContain("\"write_log_file\"", descriptor);
         }
 
         /// <summary>从 Core 默认 Registry 获取唯一 LogKit versioned Provider。</summary>

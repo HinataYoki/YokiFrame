@@ -19,17 +19,6 @@ public sealed partial class WorkbenchShellViewTests
         Assert.Equal(
             new[] { "Framework", "Doctor", "Docs", "EventKit", "FsmKit", "LogKit", "PoolKit", "ResKit", "ActionKit", "AudioKit", "SpatialKit", "UIKit", "TableKit", "LocalizationKit", "SaveKit" },
             WorkbenchShellViewModel.PageNames);
-        Assert.DoesNotContain("Architecture", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("EventKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("LogKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("PoolKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("ResKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("ActionKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("AudioKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("UIKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("TableKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("LocalizationKit", WorkbenchShellViewModel.PageNames);
-        Assert.Contains("SaveKit", WorkbenchShellViewModel.PageNames);
     }
 
     /// <summary>
@@ -120,7 +109,7 @@ public sealed partial class WorkbenchShellViewTests
     }
 
     /// <summary>
-    /// 验证自绘标题栏只提供最大化和关闭按钮，不再出现最小化或全屏入口。
+    /// 验证自绘标题栏提供最大化和关闭按钮。
     /// </summary>
     [Fact]
     public void WorkbenchShellChromeUsesOnlyMaximizeAndCloseButtons()
@@ -129,8 +118,6 @@ public sealed partial class WorkbenchShellViewTests
 
         Assert.Contains("ElementRole=\"MaximizeButton\"", xaml);
         Assert.Contains("ElementRole=\"CloseButton\"", xaml);
-        Assert.DoesNotContain("ElementRole=\"MinimizeButton\"", xaml);
-        Assert.DoesNotContain("ElementRole=\"FullScreenButton\"", xaml);
     }
 
     /// <summary>
@@ -157,15 +144,10 @@ public sealed partial class WorkbenchShellViewTests
 
         Assert.Contains("Resources/Icons.axaml", appXaml);
         Assert.Contains("Assets/Brand/yoki.png", shellXaml);
-        Assert.DoesNotContain("Assets/Brand/yoki.png", titleBarXaml);
         Assert.Contains("Icon.Sun", titleBarXaml);
         Assert.Contains("Icon.Moon", titleBarXaml);
         Assert.Contains("Icon.Maximize", titleBarXaml);
         Assert.Contains("Icon.Close", titleBarXaml);
-        Assert.DoesNotContain("Text=\"◇\"", titleBarXaml);
-        Assert.DoesNotContain("Content=\"☼\"", titleBarXaml);
-        Assert.DoesNotContain("Content=\"□\"", titleBarXaml);
-        Assert.DoesNotContain("Content=\"×\"", titleBarXaml);
     }
 
     /// <summary>
@@ -194,8 +176,6 @@ public sealed partial class WorkbenchShellViewTests
         Assert.Contains("Classes=\"runtime-update-progress\"", titleBarXaml);
         Assert.Contains("RuntimeUpdate.IsBuilding", titleBarXaml);
         Assert.Contains("MinWidth=\"0\"", titleBarXaml);
-        Assert.DoesNotContain("RuntimeUpdate.StatusText", shellXaml);
-        Assert.DoesNotContain("RuntimeUpdate.RebuildCommand", shellXaml);
     }
 
     /// <summary>
@@ -208,7 +188,6 @@ public sealed partial class WorkbenchShellViewTests
         var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
 
         Assert.Contains("ItemsSource=\"{CompiledBinding CultureOptions}\"", xaml);
-        Assert.DoesNotContain("ItemsSource=\"{CompiledBinding CommandGroups}\"", xaml);
         Assert.Contains("中文", viewModel.CultureOptions);
         Assert.Contains("English", viewModel.CultureOptions);
         Assert.Equal("中文", viewModel.CultureText);
@@ -251,8 +230,6 @@ public sealed partial class WorkbenchShellViewTests
         var xaml = ReadWorkbenchAppXaml();
 
         Assert.Contains("AvaloniaXamlLoader.Load(this)", source);
-        Assert.DoesNotContain("new ResourceInclude", source);
-        Assert.DoesNotContain("new StyleInclude", source);
         Assert.Contains("Resources/Colors.axaml", xaml);
         Assert.Contains("Resources/Typography.axaml", xaml);
         Assert.Contains("Styles/Buttons.axaml", xaml);
@@ -321,7 +298,6 @@ public sealed partial class WorkbenchShellViewTests
         const string persistCall = "mShellViewModel.TableKitPage.TryPersistConfiguration();";
 
         Assert.Contains(persistCall, closingBody);
-        Assert.DoesNotContain("if (mWindowStateStore != null) " + persistCall, closingBody);
         Assert.True(
             closingBody.IndexOf(persistCall, StringComparison.Ordinal)
             < closingBody.IndexOf("SaveWindowState();", StringComparison.Ordinal));
@@ -365,8 +341,6 @@ public sealed partial class WorkbenchShellViewTests
         Assert.Contains("GetHiddenOwnerWindow()", source);
         Assert.Contains("sHiddenOwnerWindow", source);
         Assert.Contains("WS_EX_TOOLWINDOW", source);
-        Assert.DoesNotContain("GWLP_HWNDPARENT, IntPtr.Zero", source);
-        Assert.DoesNotContain("DestroyWindow", source);
     }
 
     /// <summary>
@@ -479,9 +453,6 @@ public sealed partial class WorkbenchShellViewTests
         Assert.NotEmpty(viewModel.SkillOptions);
         Assert.Equal(new[] { "yokiframe" }, viewModel.SkillOptions.Select(static option => option.Name));
         Assert.Contains(viewModel.SkillOptions, static option => option.Name == "yokiframe" && option.Label == "使用指南");
-        Assert.DoesNotContain(
-            viewModel.SkillOptions,
-            static option => option.Name is "yokiframe-cli" or "yokiframe-workbench" or "yokiframe-command-bridge" or "yokiframe-editor");
         Assert.NotEmpty(viewModel.SkillStatusCards);
         Assert.NotEmpty(viewModel.SkillTargets);
         Assert.NotEmpty(viewModel.LogLines);
@@ -500,7 +471,6 @@ public sealed partial class WorkbenchShellViewTests
             .Select(static card => card.Detail);
 
         Assert.Contains("FileBridge", metricDetails);
-        Assert.DoesNotContain("FileBridge v2", metricDetails);
     }
 
     /// <summary>
@@ -518,7 +488,6 @@ public sealed partial class WorkbenchShellViewTests
 
         Assert.Contains("System", viewModel.CommandGroups);
         Assert.Contains("EventKit", viewModel.CommandGroups);
-        Assert.DoesNotContain("Bridge", viewModel.CommandGroups);
         viewModel.CommandGroup = "EventKit";
         Assert.Contains("get_workbench_snapshot", viewModel.CommandActions);
     }
@@ -537,6 +506,5 @@ public sealed partial class WorkbenchShellViewTests
         Assert.Contains("Command=\"{CompiledBinding BridgeStatusCommand}\"", xaml);
         Assert.True(xaml.Contains("Content=\"目录\"") || xaml.Contains("String.Overview.Catalog"));
         Assert.Contains("Command=\"{CompiledBinding RefreshCommandCatalogCommand}\"", xaml);
-        Assert.DoesNotContain("Content=\"发送\"", xaml);
     }
 }

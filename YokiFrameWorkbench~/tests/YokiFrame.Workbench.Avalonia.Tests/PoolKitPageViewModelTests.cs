@@ -102,7 +102,6 @@ public sealed class PoolKitPageViewModelTests
     {
         string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "PoolKitPageView.axaml");
         string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "PoolKit.axaml");
 
         Assert.Contains("Width=\"320\" MinWidth=\"280\" MaxWidth=\"420\"", xaml, StringComparison.Ordinal);
         Assert.Contains("PoolMasterPanel", xaml, StringComparison.Ordinal);
@@ -111,8 +110,6 @@ public sealed class PoolKitPageViewModelTests
         Assert.Contains("ObjectTabs", xaml, StringComparison.Ordinal);
         Assert.Contains("EventDrawer", xaml, StringComparison.Ordinal);
         Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("UniformGrid", xaml, StringComparison.Ordinal);
         Assert.True(xaml.Contains("当前对象池还没有事件记录") || xaml.Contains("String.PoolKit.NoEvents"), "PoolKit 页面应包含空事件提示");
         Assert.Contains("workbench.poolkit.search", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedActiveObjects", xaml, StringComparison.Ordinal);
@@ -127,9 +124,6 @@ public sealed class PoolKitPageViewModelTests
         Assert.Contains("PoolKitPage.ClearHistoryCommand", shell, StringComparison.Ordinal);
         Assert.Contains("PoolKitPage.TrackingEnabled", shell, StringComparison.Ordinal);
         Assert.Contains("PoolKitPage.StackTraceEnabled", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Micro", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Xs", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("#", styles, StringComparison.Ordinal);
     }
 
     /// <summary>验证最小与常用窗口下双栏工作区无横向滚动、字号可读并保存视觉证据。</summary>

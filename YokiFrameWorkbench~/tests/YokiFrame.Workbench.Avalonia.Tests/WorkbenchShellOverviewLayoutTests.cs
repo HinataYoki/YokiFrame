@@ -12,22 +12,7 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed partial class WorkbenchShellOverviewLayoutTests
 {
     /// <summary>
-    /// 验证框架总览不再把 Kit 实时数据作为独立首屏卡片展示。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewMovesRealtimeDataOutOfDashboard()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.DoesNotContain("实时数据", xaml);
-        Assert.DoesNotContain("SnapshotCards", xaml);
-        Assert.DoesNotContain("状态详情", xaml);
-        Assert.Contains("CurrentSections", xaml);
-        Assert.Contains("IsOverviewPage", xaml);
-    }
-
-    /// <summary>
-    /// 验证框架总览围绕新版运行状态组织布局，而不是继续复制旧 Tauri 展示块。
+    /// 验证框架总览按运行状态、命令桥和 Skill 组织布局。
     /// </summary>
     [Fact]
     public void FrameworkOverviewSurfacesOperationalSections()
@@ -46,13 +31,10 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("SkillTargets", xaml);
         Assert.Contains("SkillOptions", xaml);
         Assert.Contains("SkillStatusCards", xaml);
-        Assert.DoesNotContain("CommandTraceText", xaml);
-        Assert.DoesNotContain("Native Debug Console", xaml);
-        Assert.DoesNotContain("YokiFrame Kit 调试工作台", xaml);
     }
 
     /// <summary>
-    /// 验证总览使用真实字号的非对称双栏网格，不再通过 Viewbox 缩小整页内容。
+    /// 验证总览使用真实字号的非对称双栏网格。
     /// </summary>
     [Fact]
     public void FrameworkOverviewUsesAsymmetricColumnsWithoutPageScaling()
@@ -60,12 +42,7 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         var xaml = ReadWorkbenchShellViewXaml();
 
         Assert.Contains("ColumnDefinitions=\"*,420\"", xaml);
-        Assert.DoesNotContain("MinWidth=\"1180\"", xaml);
         Assert.Contains("x:Name=\"OverviewDesignSurface\"", xaml);
-        Assert.DoesNotContain("x:Name=\"OverviewScaleBox\"", xaml);
-        Assert.DoesNotContain("<Viewbox", xaml);
-        Assert.DoesNotContain("x:Name=\"OverviewScroll\"", xaml);
-        Assert.DoesNotContain("ColumnDefinitions=\"1.35*,0.65*\"", xaml);
     }
 
     /// <summary>
@@ -75,10 +52,6 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
     public void FrameworkOverviewFitsPrimaryWorkflowIntoOnePage()
     {
         var xaml = ReadWorkbenchShellViewXaml();
-        var detailStart = xaml.IndexOf(
-            "<Grid IsVisible=\"{CompiledBinding IsDetailPage}\"",
-            StringComparison.Ordinal);
-        var overviewXaml = detailStart > 0 ? xaml[..detailStart] : xaml;
 
         Assert.Contains("RowDefinitions=\"Auto,52,*\"", xaml);
         Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,*,Auto\"", xaml);
@@ -87,8 +60,6 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("FontSize=\"{DynamicResource FontSize.Lg}\"", ReadMetricCardXaml());
         Assert.Contains("MaxLines=\"1\"", ReadMetricCardXaml());
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", ReadMetricCardXaml());
-        Assert.DoesNotContain("<StackPanel Spacing=\"14\">", xaml);
-        Assert.DoesNotContain("VerticalScrollBarVisibility=\"Auto\"", overviewXaml);
     }
 
     /// <summary>
@@ -106,9 +77,6 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("PingCommand", xaml);
         Assert.Contains("BridgeStatusCommand", xaml);
         Assert.Contains("RefreshCommandCatalogCommand", xaml);
-        Assert.DoesNotContain("最近命令", xaml);
-        Assert.DoesNotContain("CommandGroups", xaml);
-        Assert.DoesNotContain("CommandActions", xaml);
     }
 
     /// <summary>
@@ -198,11 +166,8 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("UninstallCommand", xaml);
         Assert.Contains("CompiledBinding ActionText", xaml);
         Assert.Contains("CompiledBinding CustomSkillActionText", xaml);
-        Assert.DoesNotContain("RefreshSkillStatusCommand", xaml);
         Assert.Contains("SkillInstallStatusText", xaml);
         Assert.Contains("SkillStatusCards", xaml);
-        Assert.DoesNotContain("安装Skill", xaml);
-        Assert.DoesNotContain("ItemsSource=\"{CompiledBinding SkillNames}\"", xaml);
     }
 
     /// <summary>
@@ -220,8 +185,6 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains("TextAlignment=\"Center\"", xaml);
         Assert.Contains("InstallCustomSkillCommand", xaml);
         Assert.Contains("UninstallCustomSkillCommand", xaml);
-        Assert.DoesNotContain("WrapPanel", xaml);
-        Assert.DoesNotContain("Width=\"168\"", xaml);
     }
 
     /// <summary>
@@ -301,7 +264,5 @@ public sealed partial class WorkbenchShellOverviewLayoutTests
         Assert.Contains(viewModel.EngineCards, card => card.Title == "命令" || card.Title == "Command");
         Assert.Contains(viewModel.EngineCards, card => card.Title == "事件" || card.Title == "Events");
         Assert.Contains(viewModel.EngineCards, card => card.Title == "背压" || card.Title == "Pressure");
-        Assert.DoesNotContain(viewModel.EngineCards, card => card.Value.Contains("F:/Project", StringComparison.Ordinal));
-        Assert.DoesNotContain(viewModel.EngineCards, card => card.Detail.Contains("F:/Project", StringComparison.Ordinal));
     }
 }

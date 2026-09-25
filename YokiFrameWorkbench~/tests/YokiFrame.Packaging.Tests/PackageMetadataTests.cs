@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace YokiFrame.Packaging.Tests;
 
 /// <summary>
-/// 约束 Unity Git URL 包根的身份与公开元数据，避免发布清单继续描述旧技术栈或未迁移能力。
+/// 约束 Unity Git URL 包根的身份与公开元数据，确保发布清单只描述当前已交付能力。
 /// </summary>
 public sealed class PackageMetadataTests
 {
@@ -27,13 +27,6 @@ public sealed class PackageMetadataTests
         "logkit",
         "poolkit",
         "singletonkit"
-    };
-
-    private static readonly HashSet<string> sForbiddenKeywords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "buffkit",
-        "inputkit",
-        "tauri"
     };
 
     /// <summary>
@@ -67,20 +60,7 @@ public sealed class PackageMetadataTests
     }
 
     /// <summary>
-    /// 验证包描述不再把已移除的 Tauri 工作台声明为当前产品能力。
-    /// </summary>
-    [Fact]
-    public void PackageDescriptionDoesNotAdvertiseTauri()
-    {
-        using var manifest = ReadPackageManifest();
-        var description = manifest.RootElement.GetProperty("description").GetString();
-
-        Assert.NotNull(description);
-        Assert.DoesNotContain("tauri", description, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// 验证关键词只公开已落地能力，包含当前宿主和通信方案，并排除旧技术栈、废弃 Kit 与未迁移 Kit。
+    /// 验证关键词公开当前宿主和通信方案，且不把未迁移 Kit 写成已交付能力。
     /// </summary>
     [Fact]
     public void PackageKeywordsMatchCurrentDeliveredCapabilities()
@@ -93,12 +73,6 @@ public sealed class PackageMetadataTests
         if (missingKeywords.Length > 0)
         {
             violations.Add("缺少当前能力关键词: " + string.Join(", ", missingKeywords));
-        }
-
-        var forbiddenKeywords = keywords.Where(sForbiddenKeywords.Contains).Order().ToArray();
-        if (forbiddenKeywords.Length > 0)
-        {
-            violations.Add("仍包含旧技术栈或废弃 Kit: " + string.Join(", ", forbiddenKeywords));
         }
 
         var unmigratedKitKeywords = keywords

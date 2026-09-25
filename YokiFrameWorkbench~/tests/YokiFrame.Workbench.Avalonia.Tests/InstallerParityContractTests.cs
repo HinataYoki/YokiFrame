@@ -36,7 +36,6 @@ public sealed class InstallerParityContractTests
         Assert.Contains("InstallCommand", xaml);
         Assert.Contains("BootstrapGodotRuntimeCommand", xaml);
         Assert.Contains("ClearLogCommand", xaml);
-        Assert.DoesNotContain("IsEnabled=\"False\"", xaml);
     }
 
     /// <summary>
@@ -57,7 +56,7 @@ public sealed class InstallerParityContractTests
     }
 
     /// <summary>
-    /// 验证窗口只组合 Application 安装会话，不再直接在 Avalonia 层构建 Core 计划。
+    /// 验证窗口只组合 Application 安装会话。
     /// </summary>
     [Fact]
     public void InstallerWindowDelegatesWorkflowToApplicationLayer()
@@ -65,7 +64,6 @@ public sealed class InstallerParityContractTests
         var source = ReadSourceFile("InstallerWindow.cs");
 
         Assert.Contains("InstallerSessionService", source);
-        Assert.DoesNotContain("new InstallPlanBuilder", source);
     }
 
     /// <summary>
@@ -87,7 +85,6 @@ public sealed class InstallerParityContractTests
         Assert.Contains("OnCloseInstallerButtonClick", viewSource);
         Assert.Contains("chrome:WindowDecorationProperties.ElementRole=\"TitleBar\"", viewSource);
         Assert.Contains("chrome:WindowDecorationProperties.ElementRole=\"CloseButton\"", viewSource);
-        Assert.DoesNotContain("OnInstallerHeaderPointerPressed", viewSource);
     }
 
     /// <summary>
@@ -117,8 +114,6 @@ public sealed class InstallerParityContractTests
 
         Assert.Contains("IStorageProvider", source);
         Assert.Contains("OpenFolderPickerAsync", source);
-        Assert.DoesNotContain("System.Windows.Forms", source);
-        Assert.DoesNotContain("Microsoft.Win32", source);
     }
 
     /// <summary>

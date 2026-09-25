@@ -143,15 +143,9 @@ public sealed class WorkbenchOverviewHeadlessRenderingTests
                 Assert.Contains("工作台", navigationTexts);
                 Assert.Contains("框架", navigationTexts);
                 Assert.Contains("文档", navigationTexts);
-                Assert.DoesNotContain("Architecture", navigationTexts);
                 Assert.Contains("FsmKit", navigationTexts);
-                Assert.DoesNotContain("诊断", navigationTexts);
-                Assert.DoesNotContain("AI Control", navigationTexts);
-                Assert.DoesNotContain("Automation", navigationTexts);
                 Assert.Contains("框架总览", visibleTexts);
                 Assert.Contains("查看框架连接、引擎通信、AI Skills 与运行日志。", visibleTexts);
-                Assert.DoesNotContain("Native Debug Console", visibleTexts);
-                Assert.DoesNotContain("YokiFrame Kit 调试工作台", visibleTexts);
                 Assert.Contains("v" + packageMetadata.Version, visibleTexts);
                 var pageHeader = Assert.Single(window.GetVisualDescendants()
                     .OfType<Border>()

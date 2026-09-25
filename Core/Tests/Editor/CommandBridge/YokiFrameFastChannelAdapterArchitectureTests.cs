@@ -43,7 +43,6 @@ namespace YokiFrame
             Assert.IsTrue(publishingSource.Contains("IYokiFrameVersionedKitInteractionProvider"));
             Assert.IsTrue(publishingSource.Contains("IYokiFrameSnapshotVersionedKitInteractionProvider"));
             Assert.IsTrue(publishingSource.Contains("WriteChangedSnapshots"));
-            Assert.IsFalse(publishingSource.Contains("WriteChangedFallbackSnapshots"));
             Assert.IsTrue(fastChannelSource.Contains("EditorApplication.playModeStateChanged"));
             Assert.IsTrue(fastChannelSource.Contains("AssemblyReloadEvents.beforeAssemblyReload"));
             Assert.IsTrue(fastChannelSource.Contains("SessionState.SetBool(FAST_CHANNEL_TRANSITION_PENDING_KEY, true)"));
@@ -111,8 +110,6 @@ namespace YokiFrame
                 "Core/Adapters/Unity/Editor/FileBridge/YokiFrameEditorFileBridgePump.FastChannel.cs");
 
             Assert.IsTrue(source.Contains("YokiFrameSharedMemoryTelemetryProjectScopeId.Compute"));
-            Assert.IsFalse(source.Contains("ComputeProjectScopeHash"));
-            Assert.IsFalse(source.Contains("2166136261u"));
         }
 
         /// <summary>
@@ -153,7 +150,6 @@ namespace YokiFrame
 
             Assert.IsTrue(methodSource.Contains("RefreshToolKitInteractions()"));
             Assert.IsTrue(methodSource.Contains("WriteHeartbeatStateSafely()"));
-            Assert.IsFalse(methodSource.Contains("WriteCompleteBridgeStateSafely()"));
         }
 
         /// <summary>

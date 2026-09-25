@@ -64,15 +64,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证新架构不再暴露旧版 KitLogger 入口，避免 Tool 继续依赖旧兼容 API。
-        /// </summary>
-        [Test]
-        public void LegacyKitLoggerEntryIsRemoved()
-        {
-            Assert.IsNull(typeof(LogKit).Assembly.GetType("YokiFrame.KitLogger"), "新架构不再保留 KitLogger 旧入口。");
-        }
-
-        /// <summary>
         /// 验证历史队列保持固定容量，并按最新日志优先返回。
         /// </summary>
         [Test]

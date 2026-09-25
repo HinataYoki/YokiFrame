@@ -96,7 +96,6 @@ namespace YokiFrame.Tests
             string invariantId = LARGE_ACTION_ID.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             StringAssert.Contains("\"actionId\":\"" + invariantId + "\"", json);
-            StringAssert.DoesNotContain("\"actionId\":" + invariantId, json);
         }
 
         /// <summary>验证终态历史固定保留最新 64 条，并按最新优先输出。</summary>

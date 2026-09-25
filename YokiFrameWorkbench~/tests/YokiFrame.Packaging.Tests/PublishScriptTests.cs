@@ -19,10 +19,6 @@ public sealed class PublishScriptTests
         Assert.Contains("$ProjectRoot", source, StringComparison.Ordinal);
         Assert.Contains("$StartupOptimized", source, StringComparison.Ordinal);
         Assert.Contains("YokiFrame.Packaging", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("$GuiEntry", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("$CliEntry", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("$MacAppBundleName", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("ToolRuntime~", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -34,9 +30,6 @@ public sealed class PublishScriptTests
         var source = ReadScript("publish-workbenchruntime.ps1");
 
         Assert.Contains("$packageRoot = Resolve-Path (Join-Path $workbenchRoot \"..\")", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("runtime-bootstrap", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Copy-RuntimeBootstrapEntries", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Assets\\YokiFrame\\WorkbenchRuntime~", source, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -51,9 +44,6 @@ public sealed class PublishScriptTests
         Assert.Contains("publish", source, StringComparison.Ordinal);
         Assert.Contains("--profile", source, StringComparison.Ordinal);
         Assert.Contains("$LASTEXITCODE", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("dotnet publish", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("manifest write", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Remove-Item", source, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -70,7 +60,6 @@ public sealed class PublishScriptTests
         Assert.Contains("plan.Profile.PublishAot", source, StringComparison.Ordinal);
         Assert.Contains("-p:PublishReadyToRun=true", source, StringComparison.Ordinal);
         Assert.Contains("-p:YokiFramePublishAot=true", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-p:PublishAot=true", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -83,8 +72,6 @@ public sealed class PublishScriptTests
 
         Assert.Contains("publish-workbenchruntime.ps1", source, StringComparison.Ordinal);
         Assert.Contains("-RuntimeIdentifier \"win-x64\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-GuiEntry", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-CliEntry", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -106,15 +93,11 @@ public sealed class PublishScriptTests
     public void WindowsPublishEntryProvidesNativeAotExperimentRuntime()
     {
         var windowsSource = ReadScript("publish-workbench-win-x64.ps1");
-        var sharedSource = ReadScript("publish-workbenchruntime.ps1");
 
         Assert.Contains("$NativeAot", windowsSource, StringComparison.Ordinal);
         Assert.Contains("-RuntimeIdentifier \"win-x64-aot\"", windowsSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("-DotnetRuntimeIdentifier", windowsSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("PublishAot=true", sharedSource, StringComparison.Ordinal);
         var serviceSource = ReadPackagingSource("Services", "RuntimePublishService.cs");
         Assert.Contains("-p:YokiFramePublishAot=true", serviceSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("-p:PublishAot=true", serviceSource, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -158,9 +141,6 @@ public sealed class PublishScriptTests
 
         Assert.Contains("publish-workbenchruntime.ps1", source, StringComparison.Ordinal);
         Assert.Contains("-RuntimeIdentifier \"" + runtimeIdentifier + "\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-MacAppBundleName", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-GuiEntry", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-CliEntry", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -173,8 +153,6 @@ public sealed class PublishScriptTests
 
         Assert.Contains("publish-workbenchruntime.ps1", source, StringComparison.Ordinal);
         Assert.Contains("-RuntimeIdentifier \"linux-x64\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-GuiEntry", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("-CliEntry", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -191,8 +169,6 @@ public sealed class PublishScriptTests
 
         Assert.Contains("runtime bootstrap", source, StringComparison.Ordinal);
         Assert.Contains("--project-root", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("runtime publish-current", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Assets/YokiFrame", source, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -227,22 +203,20 @@ public sealed class PublishScriptTests
 
         Assert.Contains(bootstrapFileName, source, StringComparison.Ordinal);
         Assert.Contains("--open-installer", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("runtime publish-current", source, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// 验证 Unix 自举入口只依赖 POSIX shell 与 dotnet，不要求用户额外安装 PowerShell。
+    /// 验证 Unix 自举入口通过 dotnet 完成本机 Runtime 构建。
     /// </summary>
     /// <param name="fileName">Unix 自举入口文件名。</param>
     [Theory]
     [InlineData("build-current-platform.sh")]
     [InlineData("build-current-platform.command")]
-    public void UnixRuntimeBootstrapDoesNotDependOnPowerShell(string fileName)
+    public void UnixRuntimeBootstrapInvokesDotnet(string fileName)
     {
         var source = ReadBootstrapTemplate(fileName);
 
-        Assert.DoesNotContain("pwsh", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("powershell", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dotnet", source, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

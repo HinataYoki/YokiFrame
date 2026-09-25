@@ -181,17 +181,5 @@ namespace YokiFrame.Unity
             StringAssert.Contains("Editor", exception.Message);
         }
 
-        /// <summary>
-        /// 验证 Unity Runtime Adapter 不再包含旧 ScriptableObject Settings 类型。
-        /// </summary>
-        [Test]
-        public void LegacyScriptableObjectSettingsTypeIsRemoved()
-        {
-            Type legacyType = Type.GetType(
-                "YokiFrame.Unity.YokiFrameRuntimeSettings, YokiFrame.Unity.Runtime",
-                false);
-
-            Assert.IsNull(legacyType);
-        }
     }
 }

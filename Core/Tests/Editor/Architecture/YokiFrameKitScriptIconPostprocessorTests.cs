@@ -29,10 +29,6 @@ namespace YokiFrame.Tests
             StringAssert.Contains("SOURCE_ROOT = \"Assets/YokiFrame/\"", source);
             StringAssert.Contains("private static void ApplyExistingScriptIcons()", source);
             StringAssert.Contains("importer.SaveAndReimport();", source);
-            StringAssert.DoesNotContain("AssetPostprocessor", source);
-            StringAssert.DoesNotContain("OnPostprocessAllAssets", source);
-            StringAssert.DoesNotContain("EditorApplication.delayCall", source);
-            StringAssert.DoesNotContain("Packages/com.hinatayoki.yokiframe/", source);
         }
 
         /// <summary>

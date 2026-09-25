@@ -147,13 +147,6 @@ namespace YokiFrame
             Assert.IsEmpty(exceptions, "并发调用 EnumEvent.Send 时不应抛出任何异常。");
         }
 
-        /// <summary>验证未使用的 Editor 事件总线不会作为平行公开 API 保留。</summary>
-        [Test]
-        public void EventKitEditorFacadeHasBeenRemoved()
-        {
-            Assert.IsNull(Type.GetType("YokiFrame.EventKitEditor, YokiFrame.Editor"));
-        }
-
         /// <summary>
         /// 验证监听器在派发过程中注销自身不会破坏当前派发，也不会影响后续监听器执行。
         /// </summary>

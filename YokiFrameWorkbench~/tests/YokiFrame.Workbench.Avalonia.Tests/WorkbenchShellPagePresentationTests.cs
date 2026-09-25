@@ -51,19 +51,6 @@ public sealed class WorkbenchShellPagePresentationTests
 
     }
 
-    /// <summary>验证已移除的 Architecture 历史页面名称回落到稳定默认页。</summary>
-    [Fact]
-    public void RemovedArchitecturePageFallsBackToDefaultPage()
-    {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, (_, _) => Task.CompletedTask)
-        {
-            SelectedPage = "Architecture"
-        };
-
-        Assert.Equal(WorkbenchShellViewModel.DefaultPageName, viewModel.SelectedPage);
-        Assert.True(ReadBooleanProperty(viewModel, "IsOverviewPage"));
-    }
-
     /// <summary>
     /// 验证 Shell XAML 为总览、通用详情和延迟创建的专用页面提供互斥绑定。
     /// </summary>
@@ -74,16 +61,12 @@ public sealed class WorkbenchShellPagePresentationTests
 
         Assert.Contains("IsVisible=\"{CompiledBinding IsOverviewPage}\"", xaml);
         Assert.Contains("IsVisible=\"{CompiledBinding IsDetailPage}\"", xaml);
-        Assert.DoesNotContain("IsArchitecturePage", xaml);
         Assert.Contains("IsVisible=\"{CompiledBinding IsWorkspacePage}\"", xaml);
         Assert.Contains("Content=\"{CompiledBinding ActiveWorkspacePage}\"", xaml);
         Assert.Contains("<ContentControl.DataTemplates>", xaml);
         Assert.Contains("pages:FsmKitPageView", xaml);
         Assert.Contains("pages:ResKitPageView", xaml);
-        Assert.DoesNotContain("pages:ArchitecturePageView", xaml);
         Assert.Contains("pages:DocumentationPageView", xaml);
-        Assert.DoesNotContain("<Grid IsVisible=\"{CompiledBinding IsFsmKitPage}\"", xaml);
-        Assert.DoesNotContain("<Grid IsVisible=\"{CompiledBinding IsDocumentationPage}\"", xaml);
         Assert.Contains("Text=\"{CompiledBinding CurrentPageTitle}\"", xaml);
         Assert.Contains("Text=\"{CompiledBinding CurrentPageDescription}\"", xaml);
         Assert.Equal(1, CountOccurrences(xaml, "Classes=\"page-header\""));

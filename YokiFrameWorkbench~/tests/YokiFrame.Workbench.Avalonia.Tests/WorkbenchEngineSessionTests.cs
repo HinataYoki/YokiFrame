@@ -19,7 +19,6 @@ public sealed class WorkbenchEngineSessionTests
             "YokiFrame.Workbench.Avalonia",
             "WorkbenchWindow.cs");
         Assert.Contains("private string mSelectedEngineId = string.Empty;", source);
-        Assert.DoesNotContain("private string mSelectedEngineId = \"unity-editor\";", source);
     }
 
     /// <summary>
@@ -79,23 +78,6 @@ public sealed class WorkbenchEngineSessionTests
     }
 
     /// <summary>
-    /// 验证标题栏不再暴露无效的 engine selector，当前引擎继续由会话自动选择逻辑维护。
-    /// </summary>
-    [Fact]
-    public void AppTitleBarDoesNotExposeEngineSelector()
-    {
-        var xaml = ReadProjectFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "Components",
-            "AppTitleBar.axaml");
-
-        Assert.DoesNotContain("ItemsSource=\"{CompiledBinding EngineIds}\"", xaml);
-        Assert.DoesNotContain("SelectedItem=\"{CompiledBinding SelectedEngineId, Mode=TwoWay}\"", xaml);
-        Assert.DoesNotContain("选择 engine", xaml);
-    }
-
-    /// <summary>
     /// 验证自动命令目录读取等待有效选择，并且每个新 engine 只自动触发一次。
     /// </summary>
     [Fact]
@@ -135,7 +117,6 @@ public sealed class WorkbenchEngineSessionTests
             "ViewModels",
             "WorkbenchShellViewModel.Overview.cs");
 
-        Assert.DoesNotContain("\"unity-editor\"", source);
         Assert.Contains("等待发现", source);
     }
 

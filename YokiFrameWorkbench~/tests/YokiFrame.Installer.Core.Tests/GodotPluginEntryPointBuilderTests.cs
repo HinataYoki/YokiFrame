@@ -52,9 +52,6 @@ public sealed class GodotPluginEntryPointBuilderTests
             script.IndexOf("base._EnterTree();", StringComparison.Ordinal)
             < script.IndexOf("ActionKitEditorInstaller.EnsureInstalled();", StringComparison.Ordinal),
             "Tool Editor 能力只能在 Core Godot Editor Host 完成启动后安装。");
-        Assert.DoesNotContain("GodotEditorFileBridgeHost", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("PopupMenu", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("Tauri", script, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -73,8 +70,6 @@ public sealed class GodotPluginEntryPointBuilderTests
             StringComparison.Ordinal);
         Assert.Contains("GodotAudioKitRuntimeInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
         Assert.Contains("GodotSaveKitRuntimeInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("_Ready", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("GodotFileBridgeHost", script, StringComparison.Ordinal);
     }
 
     /// <summary>

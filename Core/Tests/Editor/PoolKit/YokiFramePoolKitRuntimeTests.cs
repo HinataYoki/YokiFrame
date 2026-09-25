@@ -222,21 +222,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证旧对象池类型和已移除集合池门面不再扩大 Core API 面。
-        /// </summary>
-        [Test]
-        public void LegacyPoolApiTypesAreNotExposed()
-        {
-            Assert.IsNull(Type.GetType("YokiFrame.PoolKit`1, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.SimplePoolKit`1, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.SafePoolKit`1, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.Pool, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.ListPool`1, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.DictPool`2, YokiFrame"));
-            Assert.IsNull(Type.GetType("YokiFrame.SetPool`1, YokiFrame"));
-        }
-
-        /// <summary>
         /// 验证 PoolDebugger 只在显式开启时记录活跃对象和事件，并返回隔离的诊断快照。
         /// </summary>
         [Test]

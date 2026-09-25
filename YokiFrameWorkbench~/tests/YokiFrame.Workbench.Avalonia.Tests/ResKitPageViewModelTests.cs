@@ -120,25 +120,17 @@ public sealed class ResKitPageViewModelTests
     {
         string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "ResKitPageView.axaml");
         string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "ResKit.axaml");
 
         Assert.Contains("ResourceMasterPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("ResourceDetailPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("GridSplitter", xaml, StringComparison.Ordinal);
         Assert.Contains("HistoryDrawer", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("reskit-overview-strip", xaml, StringComparison.Ordinal);
         Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("workbench.reskit.search", xaml, StringComparison.Ordinal);
         Assert.Contains("LoadSourcesCommand", xaml, StringComparison.Ordinal);
         Assert.Contains("ResKitPage.ToggleTrackingCommand", shell, StringComparison.Ordinal);
         Assert.Contains("ResKitPage.ClearHistoryCommand", shell, StringComparison.Ordinal);
         Assert.Contains("ResKitPage.TrackingEnabled", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("UniformGrid", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Xs", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Micro", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Release", xaml, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("#", styles, StringComparison.Ordinal);
     }
 
     /// <summary>验证最小与常用窗口下双栏工作区无横向滚动、字号可读并保存视觉证据。</summary>

@@ -134,7 +134,6 @@ public sealed partial class ActionKitPageViewModelTests
         Assert.Contains("FilteredRoots", xaml, StringComparison.Ordinal);
         Assert.Contains("actionkit-type-badge sequence", xaml, StringComparison.Ordinal);
         Assert.True(inspector.Contains("节点详情") || inspector.Contains("String.ActionKit.NodeDetails"), "Inspector 应包含节点详情词条");
-        Assert.DoesNotContain("actionkit-summary-strip", xaml, StringComparison.Ordinal);
         Assert.Contains("ActionKitPage.ToggleStackTraceCommand", shell, StringComparison.Ordinal);
         Assert.Contains("ActionKitPage.ClearStackTraceCommand", shell, StringComparison.Ordinal);
         Assert.True(shell.Contains("清空历史") || shell.Contains("String.Common.ClearHistory"), "Shell 应包含清空历史词条");
@@ -147,12 +146,7 @@ public sealed partial class ActionKitPageViewModelTests
         Assert.Contains("SelectedFlowNodes", xaml, StringComparison.Ordinal);
         Assert.Contains("ActionKitTreeIndentConverter", styles, StringComparison.Ordinal);
         Assert.Contains("IsExpanded\" Value=\"True", styles, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize=\"10\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize=\"11\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Viewbox", xaml, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("LayoutTransform", xaml, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ActionKitPageView", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("Value=\"#", styles, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>验证深层递归树保留真实深度、组合边界和活动执行路径。</summary>

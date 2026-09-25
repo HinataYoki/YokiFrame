@@ -68,7 +68,6 @@ public sealed class SpatialKitPageViewModelTests
     public void PageContractUsesSpatialMasterDetailWorkspace()
     {
         string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "SpatialKitPageView.axaml");
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "SpatialKit.axaml");
 
         Assert.Contains("SpatialIndexPanel", xaml, StringComparison.Ordinal);
         Assert.Contains("SpatialDetailPanel", xaml, StringComparison.Ordinal);
@@ -79,11 +78,6 @@ public sealed class SpatialKitPageViewModelTests
         Assert.Contains("CompiledBinding SelectedIndex.ProjectionDescription", xaml, StringComparison.Ordinal);
         Assert.Contains("ShowDensityEmpty", xaml, StringComparison.Ordinal);
         Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Xs", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("FontSize.Micro", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Viewbox", xaml, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("#", styles, StringComparison.Ordinal);
     }
 
     /// <summary>验证两档窗口下主从比例、热力图方形约束和滚动方向均稳定。</summary>

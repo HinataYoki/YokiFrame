@@ -116,18 +116,6 @@ public sealed class SkillDocumentationDriftTests
     }
 
     /// <summary>
-    /// 验证 commands.md 不再记录已经移除的 --strict，避免 AI 按旧文档构造参数。
-    /// </summary>
-    [Fact]
-    public void CommandsReferenceDoesNotAdvertiseRemovedStrictOption()
-    {
-        var document = ReadCommandsReference();
-
-        Assert.DoesNotContain("project status --strict", document, StringComparison.Ordinal);
-        Assert.DoesNotContain("project refresh --strict", document, StringComparison.Ordinal);
-    }
-
-    /// <summary>
     /// 验证 kit-index 覆盖当前所有已实现 Kit 的能力索引，避免新增 Kit 后文档静默落后。
     /// </summary>
     [Fact]

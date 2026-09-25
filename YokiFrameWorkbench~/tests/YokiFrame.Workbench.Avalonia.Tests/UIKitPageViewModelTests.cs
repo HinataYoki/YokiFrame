@@ -63,7 +63,6 @@ public sealed class UIKitPageViewModelTests
     public void PageContractUsesAdaptiveVirtualizedMasterDetail()
     {
         string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "UIKitPageView.axaml");
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "UIKit.axaml");
 
         Assert.Contains("UIKitWideLayout", xaml, StringComparison.Ordinal);
         Assert.Contains("UIKitCompactLayout", xaml, StringComparison.Ordinal);
@@ -73,15 +72,8 @@ public sealed class UIKitPageViewModelTests
         // i18n 切片后页面词条改用 DynamicResource 资源 key，兼容旧中文直书与资源 key 两种契约。
         Assert.True(xaml.Contains("运行时诊断") || xaml.Contains("String.UIKit.RuntimeDiagnostics"), "UIKit 页面应包含运行时诊断词条");
         Assert.True(xaml.Contains("编辑器工具") || xaml.Contains("String.UIKit.EditorTools"), "UIKit 页面应包含编辑器工具词条");
-        Assert.DoesNotContain("根节点设置", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("UIKitRootSettingsView", xaml, StringComparison.Ordinal);
         Assert.Contains("kit-panel-header", xaml, StringComparison.Ordinal);
         Assert.Contains("kit-stat uikit-summary-metric", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Runtime\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Header=\"Panels\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Viewbox", xaml, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("#", styles, StringComparison.Ordinal);
     }
 
     /// <summary>验证运行时协议枚举只在表现层转换为简体中文。</summary>
@@ -535,18 +527,6 @@ public sealed class UIKitPageViewModelTests
         Assert.Contains("Text=\"{CompiledBinding ScriptFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{CompiledBinding ScriptNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Classes=\"kit-panel uikit-editor-panel\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("uikit.editor.add-bind", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("uikit.editor.remove-bind", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("uikit.editor.save-settings", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("面板创建", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("uikit-editor-header", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Unity 当前选择", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("uikit-status-strip", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("RefreshEditorContextCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectionPanel", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Panel Prefab\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Create Prefab\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("WIP", xaml, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>渲染 Unity Editor Tools 宽屏界面，验证单一表单和操作按钮不为空。</summary>

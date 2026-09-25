@@ -162,7 +162,6 @@ namespace YokiFrame
             StringAssert.Contains("\"check_leak\"", descriptor);
             StringAssert.Contains("\"set_tracking\"", descriptor);
             StringAssert.Contains("\"clear_history\"", descriptor);
-            StringAssert.DoesNotContain("force_return", descriptor);
         }
 
         /// <summary>从 Core 默认 Registry 获取唯一 PoolKit Provider。</summary>

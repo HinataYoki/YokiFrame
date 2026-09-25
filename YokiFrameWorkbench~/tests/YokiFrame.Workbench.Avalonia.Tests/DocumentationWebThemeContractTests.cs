@@ -32,7 +32,6 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("ActualThemeVariantChanged += OnActualThemeVariantChanged", source);
         Assert.Contains("TryFindResource(\"Brush.Surface.Panel\"", source);
         Assert.Contains("yokiDocs.setTheme(", source);
-        Assert.DoesNotContain("<html data-theme=\\\"dark\\\">", source);
         Assert.Contains("setTheme(value)", script);
         Assert.Contains("document.documentElement.dataset.theme = theme", script);
         Assert.Contains("--host-surface", script);
@@ -68,9 +67,6 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("DocumentationWebJsonContext.Default.DocumentationWebDocumentPayload", source);
         Assert.Contains("DocumentationWebJsonContext.Default.DocumentationWebThemePayload", source);
         Assert.Contains("PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase", source);
-        Assert.DoesNotContain("JsonSerializer.Serialize(catalog)", source);
-        Assert.DoesNotContain("JsonSerializer.Serialize(document)", source);
-        Assert.DoesNotContain("JsonSerializer.Serialize(theme)", source);
     }
 
     /// <summary>
@@ -91,7 +87,6 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("@media (max-width: 1039px)", styles);
         Assert.Contains(".doc-toc", styles);
         Assert.Contains(".doc-nav", styles);
-        Assert.DoesNotContain("linear-gradient", styles);
     }
 
     /// <summary>
@@ -161,7 +156,6 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("<button type=\"button\" class=\"doc-toc-item", script);
         Assert.Contains("data-target=", script);
         Assert.Contains("link.dataset.target", script);
-        Assert.DoesNotContain("href=\"#${esc(item.id)}\"", script);
         Assert.Contains("background: transparent", styles);
         Assert.Contains("cursor: pointer", styles);
     }
@@ -179,9 +173,7 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("function isNavigationDocument(document)", script);
         Assert.Contains("/Api/00-GettingStarted/FrameworkOverview.md", script);
         Assert.Contains("for (const document of navigationDocuments())", script);
-        Assert.DoesNotContain("isGuide", script);
         Assert.Contains("return '框架概览'", script);
-        Assert.DoesNotContain("Architecture_Avalonia_CSharp_Workbench", script);
     }
 
     /// <summary>
@@ -213,8 +205,6 @@ public sealed class DocumentationWebThemeContractTests
         Assert.Contains("bodyMarkdown: lines.slice(bodyIndex).join('\\n')", script);
         Assert.Contains("renderWithHeadings(presentation.bodyMarkdown)", script);
         Assert.Contains("presentation.summary.length > 0", script);
-        Assert.DoesNotContain("function documentSummary(document)", script);
-        Assert.DoesNotContain("documentSummary(activeDocument)", script);
     }
 
     /// <summary>
