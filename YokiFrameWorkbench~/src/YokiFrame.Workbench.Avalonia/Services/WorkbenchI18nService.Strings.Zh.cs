@@ -746,6 +746,8 @@ public sealed partial class WorkbenchI18nService
         ["String.SaveKit.AutoSave"] = "自动保存",
         ["String.SaveKit.ConfigFile"] = "配置文件",
         ["String.SaveKit.Configured"] = "已配置",
+        ["String.SaveKit.DirectoryMissing"] = "存档目录尚不存在，保存时会自动创建。",
+        ["String.SaveKit.DirectoryScanned"] = "已读取存档目录元信息。",
         ["String.SaveKit.Encryption"] = "加密",
         ["String.SaveKit.EngineNotSupported"] = "当前 engine 尚未提供 SaveKit 配置适配。",
         ["String.SaveKit.FileExtension"] = "文件扩展名",

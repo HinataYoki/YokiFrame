@@ -1,3 +1,4 @@
+using YokiFrame.Tooling.Application.Models.SaveKit;
 using YokiFrame.Workbench.Avalonia.Services;
 
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
@@ -47,7 +48,15 @@ public sealed partial class SaveKitPageViewModel
         OnPropertyChanged(nameof(HasError));
         try
         {
-            ApplySettings(await Task.Run(() => mService.Load(EngineId), mLifetimeCancellation.Token), true);
+            WorkbenchSaveKitProjectSettings settings = await Task.Run(
+                () => mService.Load(EngineId),
+                mLifetimeCancellation.Token);
+            ApplySettings(settings, true);
+            // 配置含宿主用户目录变量时，Load 不会扫描；刷新时向已连接 Editor 取真实根再扫一次。
+            if (settings.IsSupported && ContainsRuntimeStorageToken(settings.StoragePath))
+            {
+                await ScanRuntimeFilesAsync(settings.FileExtension);
+            }
         }
         catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
         {
@@ -234,6 +243,71 @@ public sealed partial class SaveKitPageViewModel
         return !mIsDisposed && mBaseline != null;
     }
 
+    /// <summary>
+    /// 用宿主环境解析运行时存档根并扫描 slots/global。
+    /// 未连接或宿主未返回路径时保留“启动后解析”状态，不猜测平台目录。
+    /// </summary>
+    /// <param name="fileExtension">当前配置的存档扩展名。</param>
+    private async Task ScanRuntimeFilesAsync(string fileExtension)
+    {
+        if (mService == null)
+        {
+            return;
+        }
+
+        string directory = await ResolveRuntimeDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return;
+        }
+
+        IReadOnlyList<WorkbenchSaveKitFile> files = await Task.Run(
+            () => mService.ScanResolvedFiles(directory, fileExtension),
+            mLifetimeCancellation.Token);
+        ResolvedStoragePath = directory;
+        DirectoryExists = Directory.Exists(directory);
+        ReplaceScannedFiles(files);
+        SetStatus(DirectoryExists
+            ? GetString("String.SaveKit.DirectoryScanned", "已读取存档目录元信息。")
+            : GetString("String.SaveKit.DirectoryMissing", "存档目录尚不存在，保存时会自动创建。"));
+    }
+
+    /// <summary>用一次扫描结果替换文件列表，并同步 Slot/Global 计数。</summary>
+    /// <param name="files">已按扩展名过滤的文件元信息。</param>
+    private void ReplaceScannedFiles(IReadOnlyList<WorkbenchSaveKitFile> files)
+    {
+        Files.Clear();
+        mSlotCount = 0;
+        mGlobalCount = 0;
+        foreach (WorkbenchSaveKitFile file in files)
+        {
+            Files.Add(file);
+            if (file.Kind == "Slot")
+            {
+                mSlotCount++;
+            }
+            else if (file.Kind == "Global")
+            {
+                mGlobalCount++;
+            }
+        }
+
+        RebuildFilteredFiles();
+        OnPropertyChanged(nameof(SlotCount));
+        OnPropertyChanged(nameof(GlobalCount));
+        OnPropertyChanged(nameof(FileCount));
+        OnPropertyChanged(nameof(FileSummaryText));
+    }
+
+    /// <summary>判断配置路径是否使用只能由宿主环境替换的用户目录变量。</summary>
+    /// <param name="storagePath">当前存档目录配置。</param>
+    /// <returns>包含 persistentDataPath 或 userDataDir 变量时为 true。</returns>
+    private static bool ContainsRuntimeStorageToken(string storagePath)
+    {
+        return storagePath.Contains("${persistentDataPath}", StringComparison.Ordinal)
+               || storagePath.Contains("${userDataDir}", StringComparison.Ordinal);
+    }
+
     /// <summary>通过当前引擎环境解析 Runtime 用户目录并拼接 SaveKit 相对目录。</summary>
     private async Task<string> ResolveRuntimeDirectoryAsync()
     {
@@ -243,12 +317,6 @@ public sealed partial class SaveKitPageViewModel
         }
 
         string? runtimeRoot = await mResolveRuntimeRootAsync(EngineId, mLifetimeCancellation.Token);
-        if (string.IsNullOrWhiteSpace(runtimeRoot))
-        {
-            return string.Empty;
-        }
-
-        string relativePath = string.IsNullOrWhiteSpace(StorageSubPath) ? "YokiFrame/Saves" : StorageSubPath;
-        return Path.GetFullPath(Path.Combine(runtimeRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        return mService?.ResolveRuntimeStoragePath(StoragePath, runtimeRoot) ?? string.Empty;
     }
 }

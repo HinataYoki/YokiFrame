@@ -746,6 +746,8 @@ public sealed partial class WorkbenchI18nService
         ["String.SaveKit.AutoSave"] = "Auto Save",
         ["String.SaveKit.ConfigFile"] = "Config File",
         ["String.SaveKit.Configured"] = "Configured",
+        ["String.SaveKit.DirectoryMissing"] = "Save directory does not exist yet and will be created on save.",
+        ["String.SaveKit.DirectoryScanned"] = "Save directory metadata loaded.",
         ["String.SaveKit.Encryption"] = "Encryption",
         ["String.SaveKit.EngineNotSupported"] = "The current engine does not support SaveKit configuration adaptation yet.",
         ["String.SaveKit.FileExtension"] = "File Extension",

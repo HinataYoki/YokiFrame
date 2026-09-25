@@ -299,7 +299,7 @@ SaveKit.SetStorage(storage);
 
 Workbench 可以显示存档目录、扩展名、文件元信息和容器摘要；保存配置会写入当前引擎的 Runtime Settings，Unity Runtime 与 Godot Runtime 会在首次创建默认后端时读取同一份路径和扩展名。Workbench 不会读取存档内容，也不提供远程 Save、Load 或 Delete。对于已经解析为本地路径但尚未创建的目录，SaveKit 页面右侧的打开目录按钮会先创建目录再交给系统文件管理器；包含 `${persistentDataPath}` 或 `${userDataDir}` 的路径必须等宿主 Runtime 解析后才能打开。
 
-Unity 的默认保存目录位于 `Application.persistentDataPath/YokiFrame/Saves`，Godot 位于 `OS.GetUserDataDir()/YokiFrame/Saves`。Workbench 的 SaveKit 页面用下拉框选择宿主用户目录、项目目录或自定义绝对路径，再填写根目录下的相对目录；保存后仍由 Runtime Settings 把最终路径和扩展名传给对应宿主。宿主用户目录在 Workbench 外部运行时才有最终物理路径，项目目录和自定义绝对路径可以直接扫描、创建和打开。
+Unity 的默认保存目录位于 `Application.persistentDataPath/YokiFrame/Saves`，Godot 位于 `OS.GetUserDataDir()/YokiFrame/Saves`。Workbench 的 SaveKit 页面用下拉框选择宿主用户目录、项目目录或自定义绝对路径，再填写根目录下的相对目录；保存后仍由 Runtime Settings 把最终路径和扩展名传给对应宿主。宿主用户目录在 Editor 已连接时通过 `System/get_environment` 解析真实路径后扫描 slots/global；未连接时不猜测平台目录。项目目录和自定义绝对路径可以直接扫描、创建和打开。
 
 Nino 是可选序列化后端。启用后由项目显式选择 serializer；SaveKit 不会自动把旧 JSON 存档转换为 Nino 格式。
 ## 限制与相关资料

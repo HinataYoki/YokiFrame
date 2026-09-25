@@ -70,6 +70,34 @@ public sealed class SaveKitWorkbenchSettingsServiceTests
         finally { DeleteRoot(root); }
     }
 
+    /// <summary>宿主返回用户目录后，才能扫描 ${persistentDataPath} 下已有的 slots 文件。</summary>
+    [Fact]
+    public void ScansRuntimeRootAfterHostResolvesPersistentDataPath()
+    {
+        string root = CreateRoot();
+        string runtimeRoot = CreateRoot();
+        try
+        {
+            string saveRoot = Path.Combine(runtimeRoot, "YokiFrame", "Saves");
+            Directory.CreateDirectory(Path.Combine(saveRoot, "slots"));
+            File.WriteAllBytes(Path.Combine(saveRoot, "slots", "save_0.yoki"), new byte[4]);
+            var service = new SaveKitWorkbenchSettingsService(root);
+            string resolved = service.ResolveRuntimeStoragePath(
+                "${persistentDataPath}/YokiFrame/Saves",
+                runtimeRoot);
+            var files = service.ScanResolvedFiles(resolved, ".yoki");
+            Assert.Equal(Path.Combine(runtimeRoot, "YokiFrame", "Saves"), resolved);
+            Assert.Single(files);
+            Assert.Equal("Slot", files[0].Kind);
+            Assert.Equal("0", files[0].Name);
+        }
+        finally
+        {
+            DeleteRoot(root);
+            DeleteRoot(runtimeRoot);
+        }
+    }
+
     /// <summary>Godot 保存仅维护 yokiframe/runtime section 并保留其它项目设置。</summary>
     [Fact]
     public async Task PatchesGodotRuntimeSection()

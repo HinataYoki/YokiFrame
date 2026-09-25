@@ -52,6 +52,38 @@ public sealed class SaveKitWorkbenchSettingsService
         return ContainsRuntimeToken(storagePath) ? string.Empty : ResolveWorkbenchPath(storagePath);
     }
 
+    /// <summary>
+    /// 用宿主已返回的用户目录替换运行时变量，得到可扫描的绝对存档根。
+    /// 宿主未提供根目录时返回空字符串，不猜测平台路径。
+    /// </summary>
+    /// <param name="storagePath">含 ${persistentDataPath} 或 ${userDataDir} 的配置路径。</param>
+    /// <param name="runtimeRoot">宿主 System/get_environment 返回的用户目录。</param>
+    /// <returns>绝对存档根；无法解析时为空字符串。</returns>
+    public string ResolveRuntimeStoragePath(string storagePath, string? runtimeRoot)
+    {
+        if (string.IsNullOrWhiteSpace(runtimeRoot) || !ContainsRuntimeToken(storagePath ?? string.Empty))
+        {
+            return string.Empty;
+        }
+
+        string resolved = ReplaceRuntimeToken(storagePath ?? string.Empty, runtimeRoot);
+        return Path.IsPathRooted(resolved) ? Path.GetFullPath(resolved) : string.Empty;
+    }
+
+    /// <summary>按已解析的绝对根目录扫描 slots/global，不读取 payload。</summary>
+    /// <param name="resolvedRoot">已由 Workbench 或宿主环境解析出的绝对存档根。</param>
+    /// <param name="fileExtension">存档扩展名。</param>
+    /// <returns>文件元信息；目录不存在时返回空列表。</returns>
+    public IReadOnlyList<WorkbenchSaveKitFile> ScanResolvedFiles(string resolvedRoot, string fileExtension)
+    {
+        if (string.IsNullOrWhiteSpace(resolvedRoot) || !Directory.Exists(resolvedRoot))
+        {
+            return Array.Empty<WorkbenchSaveKitFile>();
+        }
+
+        return ScanFiles(resolvedRoot, NormalizeExtension(fileExtension));
+    }
+
     /// <summary>校验 revision 后通过统一 Store 保存 SaveKit 配置。</summary>
     /// <param name="engineId">engine 标识。</param>
     /// <param name="storagePath">存档目录，可使用宿主运行时变量。</param>
@@ -242,5 +274,13 @@ public sealed class SaveKitWorkbenchSettingsService
     {
         return value.Contains("${persistentDataPath}", StringComparison.Ordinal)
                || value.Contains("${userDataDir}", StringComparison.Ordinal);
+    }
+
+    /// <summary>用宿主用户目录替换已知运行时变量，其余文本保持原样。</summary>
+    private static string ReplaceRuntimeToken(string value, string runtimeRoot)
+    {
+        return value
+            .Replace("${persistentDataPath}", runtimeRoot, StringComparison.Ordinal)
+            .Replace("${userDataDir}", runtimeRoot, StringComparison.Ordinal);
     }
 }
