@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace YokiFrame
 {
@@ -8,7 +9,7 @@ namespace YokiFrame
     {
         /// <summary>为尚未编译的 Bind owner 生成完整用户脚本和 Designer；复用递归生成与冲突校验。</summary>
         internal static Dictionary<string, string> BuildBindSources(UIKitPanelCodeLayout layout, AbstractBind bind,
-            Dictionary<string, string> relocations = null, List<string> deletions = null)
+            Dictionary<string, string> relocations = null)
         {
             UIKitGeneratedOwnerKind kind = bind.Bind == BindType.Element
                 ? UIKitGeneratedOwnerKind.Element : UIKitGeneratedOwnerKind.Component;
@@ -21,8 +22,8 @@ namespace YokiFrame
             UIKitBindNode node = new(bind, strategy, bind.name, bind.Name, typeName, default, 0);
             node.Children.AddRange(scan.Nodes);
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            deletions ??= new List<string>();
-            UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, kind, typeName, relocations, deletions);
+            HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, kind, typeName, relocations);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
             ValidateNodeOwnership(layout, new List<UIKitBindNode> { node }, relocations);
             Dictionary<string, string> sources = new(StringComparer.OrdinalIgnoreCase);
             AddNodeSources(layout, new List<UIKitBindNode> { node }, sources,

@@ -148,10 +148,9 @@ namespace YokiFrame
             if (scan.HasErrors) throw CreateScanException(scan);
             System.Collections.Generic.Dictionary<string, string> relocations =
                 new(StringComparer.OrdinalIgnoreCase);
-            System.Collections.Generic.List<string> deletions = new();
             System.Collections.Generic.Dictionary<string, string> sources =
-                UIKitPanelCodeGenerator.BuildSources(layout, scan, relocations, deletions);
-            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
+                UIKitPanelCodeGenerator.BuildSources(layout, scan, relocations);
+            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations);
             AssetDatabase.SaveAssets();
             UIKitPendingBindingService.Queue(layout);
             if (scriptsChanged) AssetDatabase.Refresh();

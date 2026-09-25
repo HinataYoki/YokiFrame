@@ -2,29 +2,25 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using UnityEditor;
-using UnityEngine;
 
 namespace YokiFrame
 {
-    /// <summary>把旧生成文件的处理并入现有生成事务，避免用户额外执行扫描或清理命令。</summary>
+    /// <summary>把可确认归属的旧布局移动并入现有生成事务；删除候选由独立确认流程处理。</summary>
     internal static class UIKitGeneratedCodeMigration
     {
-        private const string DESIGNER_SUFFIX = ".Designer.cs";
         private const string PANEL_FOLDER = "Panel";
         private const string COMPONENT_FOLDER = "Component";
         private const string ELEMENT_FOLDER = "Element";
 
-        /// <summary>准备旧布局迁移和当前作用域中可安全清理的遗留文件。</summary>
-        internal static void Prepare(UIKitPanelCodeLayout layout, List<UIKitBindNode> nodes,
+        /// <summary>准备旧布局迁移，并返回本次生成仍需要保留的脚本路径。</summary>
+        internal static HashSet<string> Prepare(UIKitPanelCodeLayout layout, List<UIKitBindNode> nodes,
             UIKitGeneratedOwnerKind? rootKind, string rootTypeName,
-            Dictionary<string, string> relocations, List<string> deletions)
+            Dictionary<string, string> relocations)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             if (nodes == null) throw new ArgumentNullException(nameof(nodes));
             if (relocations == null) throw new ArgumentNullException(nameof(relocations));
-            if (deletions == null) throw new ArgumentNullException(nameof(deletions));
             HashSet<string> expected = new(StringComparer.OrdinalIgnoreCase);
             if (rootKind == null)
             {
@@ -43,7 +39,7 @@ namespace YokiFrame
             }
             CollectExpected(layout, nodes, expected);
             CollectLegacyMoves(layout, expected, relocations);
-            CollectStaleFiles(layout, expected, deletions);
+            return expected;
         }
 
         /// <summary>递归收集当前绑定树需要的脚本路径。</summary>
@@ -71,7 +67,7 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>把旧 UIComponent/UIElement 文件登记到新目录，目标存在时交给所有权校验阻断。</summary>
+        /// <summary>把当前期望文件对应的旧布局路径登记为移动，不按目录包含关系猜测其它同名文件。</summary>
         private static void CollectLegacyMoves(UIKitPanelCodeLayout layout, HashSet<string> expected,
             Dictionary<string, string> relocations)
         {
@@ -79,25 +75,35 @@ namespace YokiFrame
             {
                 if (!destination.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) continue;
                 string fileName = Path.GetFileName(destination);
-                string legacy = destination;
-                string normalized = destination.Replace('\\', '/');
-                if (normalized.Contains("/" + COMPONENT_FOLDER + "/"))
-                {
-                    legacy = normalized.Contains("/" + ELEMENT_FOLDER + "/")
-                        ? layout.ScriptFolder + "/UIComponent/" + layout.ElementComponentName + "/UIElement/" + fileName
-                        : layout.ScriptFolder + "/UIComponent/" + fileName;
-                }
-                else if (normalized.Contains("/" + PANEL_FOLDER + "/") && normalized.Contains("/" + ELEMENT_FOLDER + "/"))
-                {
-                    legacy = layout.ScriptFolder + "/" + layout.PanelName + "/UIElement/" + fileName;
-                }
-                else if (string.Equals(destination, layout.PanelScriptPath, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(destination, layout.PanelDesignerPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    legacy = layout.ScriptFolder + "/" + layout.PanelName + "/" + fileName;
-                }
+                string legacy = GetLegacyPath(layout, destination, fileName);
+                if (string.IsNullOrEmpty(legacy)) continue;
                 MoveFileIfNeeded(legacy, destination, relocations);
             }
+        }
+
+        /// <summary>按目标路径的精确目录段计算唯一旧路径，避免兄弟 Component 的同名 Element 被一起搬走。</summary>
+        private static string GetLegacyPath(UIKitPanelCodeLayout layout, string destination, string fileName)
+        {
+            string normalized = destination.Replace('\\', '/');
+            string componentRoot = layout.ScriptFolder + "/" + COMPONENT_FOLDER + "/";
+            string panelRoot = layout.ScriptFolder + "/" + PANEL_FOLDER + "/" + layout.PanelName + "/";
+            if (normalized.StartsWith(componentRoot, StringComparison.Ordinal))
+            {
+                string relative = normalized.Substring(componentRoot.Length);
+                int separator = relative.IndexOf('/');
+                string ownerName = separator < 0 ? Path.GetFileNameWithoutExtension(fileName) : relative.Substring(0, separator);
+                bool element = separator >= 0 && relative.Substring(separator + 1).StartsWith(ELEMENT_FOLDER + "/", StringComparison.Ordinal);
+                return element
+                    ? layout.ScriptFolder + "/UIComponent/" + ownerName + "/UIElement/" + fileName
+                    : layout.ScriptFolder + "/UIComponent/" + fileName;
+            }
+
+            if (normalized.StartsWith(panelRoot + ELEMENT_FOLDER + "/", StringComparison.Ordinal))
+                return layout.ScriptFolder + "/" + layout.PanelName + "/UIElement/" + fileName;
+            if (string.Equals(destination, layout.PanelScriptPath, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(destination, layout.PanelDesignerPath, StringComparison.OrdinalIgnoreCase))
+                return layout.ScriptFolder + "/" + layout.PanelName + "/" + fileName;
+            return string.Empty;
         }
 
         /// <summary>登记单文件移动，不覆盖目标文件或其 Unity 元数据。</summary>
@@ -119,95 +125,6 @@ namespace YokiFrame
             relocations.Add(source, destination);
         }
 
-        /// <summary>扫描当前生成作用域，找出无使用、无引用且没有业务代码的旧 owner 文件。</summary>
-        private static void CollectStaleFiles(UIKitPanelCodeLayout layout, HashSet<string> expected,
-            List<string> deletions)
-        {
-            List<string> roots = new() { layout.PanelFolder, layout.ScriptFolder + "/" + COMPONENT_FOLDER };
-            HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase);
-            foreach (string root in roots)
-            {
-                string absolute = UIKitPanelCodeLayout.ToAbsolutePath(root);
-                if (!Directory.Exists(absolute)) continue;
-                foreach (string file in Directory.GetFiles(absolute, "*.cs", SearchOption.AllDirectories))
-                {
-                    string path = UIKitPanelCodeLayout.ToAssetPath(file);
-                    if (!visited.Add(path) || expected.Contains(path)) continue;
-                    if (!TryGetGeneratedPair(path, out string userPath, out string designerPath)) continue;
-                    if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(userPath)) || !IsSafeToDelete(userPath)) continue;
-                    AddDeletion(userPath, deletions);
-                    AddDeletion(designerPath, deletions);
-                }
-            }
-        }
-
-        /// <summary>将用户脚本和 Designer 配成一组，避免只删除一半生成结果。</summary>
-        private static bool TryGetGeneratedPair(string path, out string userPath, out string designerPath)
-        {
-            string assetPath = UIKitPanelCodeLayout.ToAssetPath(path);
-            userPath = assetPath.EndsWith(DESIGNER_SUFFIX, StringComparison.OrdinalIgnoreCase)
-                ? assetPath.Substring(0, assetPath.Length - ".Designer".Length) : assetPath;
-            designerPath = userPath.Substring(0, userPath.Length - ".cs".Length) + DESIGNER_SUFFIX;
-            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(userPath);
-            if (script == default) return false;
-            Type type = script.GetClass();
-            return type != null && (typeof(UIElement).IsAssignableFrom(type) || typeof(UIComponent).IsAssignableFrom(type));
-        }
-
-        /// <summary>只允许删除模板空类，并确认类型没有被其它 Prefab 或源码使用。</summary>
-        private static bool IsSafeToDelete(string userPath)
-        {
-            string source = File.ReadAllText(UIKitPanelCodeLayout.ToAbsolutePath(userPath));
-            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(userPath);
-            Type type = script == default ? null : script.GetClass();
-            if (type == null || HasUserCode(source, type.Name)) return false;
-            string fullName = type.FullName;
-            foreach (string guid in AssetDatabase.FindAssets("t:Prefab"))
-            {
-                string path = UIKitPanelCodeLayout.ToAssetPath(AssetDatabase.GUIDToAssetPath(guid));
-                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab == default) continue;
-                foreach (UIElement owner in prefab.GetComponentsInChildren<UIElement>(true))
-                {
-                    if (owner == default || owner.GetType().FullName != fullName) continue;
-                    AbstractBind bind = owner.GetComponent<AbstractBind>();
-                    if (bind != default && (bind.Bind == BindType.Element || bind.Bind == BindType.Component)) return false;
-                }
-            }
-            foreach (string path in AssetDatabase.GetAllAssetPaths())
-            {
-                if (!UIKitPanelCodeLayout.IsUnityAssetPath(path)) continue;
-                string assetPath = UIKitPanelCodeLayout.ToAssetPath(path);
-                if (!assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || assetPath == userPath
-                    || assetPath.EndsWith(DESIGNER_SUFFIX, StringComparison.OrdinalIgnoreCase)) continue;
-                string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(assetPath);
-                if (!File.Exists(absolutePath)) continue;
-                string candidate = File.ReadAllText(absolutePath);
-                if (candidate.IndexOf(fullName, StringComparison.Ordinal) >= 0) return false;
-            }
-            return true;
-        }
-
-        /// <summary>判断用户脚本类体是否包含模板之外的业务成员。</summary>
-        private static bool HasUserCode(string source, string typeName)
-        {
-            int declaration = source.IndexOf("class " + typeName, StringComparison.Ordinal);
-            int open = declaration < 0 ? -1 : source.IndexOf('{', declaration);
-            int close = source.LastIndexOf('}');
-            if (open < 0 || close <= open) return true;
-            string body = Regex.Replace(source.Substring(open + 1, close - open - 1), @"//.*$", string.Empty, RegexOptions.Multiline);
-            body = Regex.Replace(body, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
-            return !string.IsNullOrWhiteSpace(body);
-        }
-
-        /// <summary>登记待删除文件并去重。</summary>
-        private static void AddDeletion(string path, List<string> deletions)
-        {
-            if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(path))) return;
-            for (var index = 0; index < deletions.Count; index++)
-                if (string.Equals(deletions[index], path, StringComparison.OrdinalIgnoreCase)) return;
-            deletions.Add(path);
-        }
     }
 }
 #endif

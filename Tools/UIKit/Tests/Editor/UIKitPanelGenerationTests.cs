@@ -438,6 +438,26 @@ namespace YokiFrame.Tests
             }
         }
 
+        /// <summary>验证非交互清理只返回空结果，不因为扫描到候选就删除文件。</summary>
+        [Test]
+        public void CleanupConfirmationIsRequiredBeforeDeletion()
+        {
+            UIKitPanelCodeLayout layout = CreateLayout("CleanupPanel");
+            string stale = layout.ScriptFolder + "/Panel/CleanupPanel/Element/OldIcon.cs";
+            Directory.CreateDirectory(Path.GetDirectoryName(UIKitPanelCodeLayout.ToAbsolutePath(stale)));
+            File.WriteAllText(UIKitPanelCodeLayout.ToAbsolutePath(stale), "class OldIcon {}");
+            HashSet<string> expected = new() { layout.PanelScriptPath, layout.PanelDesignerPath };
+
+            List<string> deleted = UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, false);
+
+            Assert.AreEqual(0, deleted.Count);
+            Assert.IsTrue(File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(stale)));
+            List<UIKitGeneratedCleanupCandidate> candidates = UIKitGeneratedCodeCleanup.Collect(
+                layout, expected, out List<string> blocked);
+            Assert.AreEqual(0, candidates.Count);
+            Assert.IsNotEmpty(blocked);
+        }
+
         /// <summary>创建使用测试专属 Assets 路径的生成布局。</summary>
         private static UIKitPanelCodeLayout CreateLayout(
             string panelName,

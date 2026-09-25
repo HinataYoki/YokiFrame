@@ -14,11 +14,11 @@ namespace YokiFrame
         {
             UIKitCodeLayoutMigration.RequireIdle();
             RequireGeneratedBind(bind);
+            if (TryMigrateMountedIdentity(bind)) return;
             UIKitPanelCodeLayout layout = ResolveLayout(bind);
             Dictionary<string, string> relocations = new(StringComparer.OrdinalIgnoreCase);
-            List<string> deletions = new();
-            Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildBindSources(layout, bind, relocations, deletions);
-            bool changed = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
+            Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildBindSources(layout, bind, relocations);
+            bool changed = UIKitPanelCodeGenerator.CommitSources(sources, relocations);
             SaveAndQueue(bind, layout);
             if (changed) AssetDatabase.Refresh();
             else UIKitPendingBindingService.Process();
@@ -40,6 +40,45 @@ namespace YokiFrame
                     ? UIKitGeneratedOwnerKind.Element : UIKitGeneratedOwnerKind.Component), ownerPath);
         }
 
+        /// <summary>
+        /// 用节点上唯一旧脚本和本次 Bind 对比。
+        /// 类名变化走改名，Element/Component 变化走换位，两者都变时先改名再换位。
+        /// </summary>
+        private static bool TryMigrateMountedIdentity(AbstractBind bind)
+        {
+            UIKitMountedOwner.RequireSingle(bind, out UIElement owner);
+            if (owner == default) return false;
+            bool mountedComponent = owner is UIComponent;
+            bool requestedComponent = bind.Bind == BindType.Component;
+            string requestedName = GetTypeName(bind);
+            bool renamed = !string.Equals(owner.GetType().Name, requestedName, StringComparison.Ordinal);
+            bool relocated = mountedComponent != requestedComponent;
+            if (!renamed && !relocated) return false;
+            if (Application.isBatchMode) return false;
+            if (!ConfirmIdentityChange(owner, requestedName, requestedComponent, renamed, relocated)) return true;
+            if (renamed)
+            {
+                bind.Bind = mountedComponent ? BindType.Component : BindType.Element;
+                UIKitBindConversion.RenameGeneratedType(bind, requestedName);
+            }
+
+            if (relocated) UIKitBindConversion.Convert(bind, requestedComponent ? BindType.Component : BindType.Element);
+            return true;
+        }
+
+        /// <summary>让用户确认节点身份变化，取消后不写文件，也不回退成普通生成。</summary>
+        private static bool ConfirmIdentityChange(UIElement owner, string requestedName, bool requestedComponent,
+            bool renamed, bool relocated)
+        {
+            string currentKind = owner is UIComponent ? "Component" : "Element";
+            string nextKind = requestedComponent ? "Component" : "Element";
+            string change = renamed && relocated ? "改名并换位" : renamed ? "改名" : "换位";
+            string message = "节点当前脚本是 " + currentKind + " " + owner.GetType().Name
+                + "，本次生成是 " + nextKind + " " + requestedName
+                + "。\n\n这会被当作" + change + "，保留脚本 GUID，并更新继承、命名空间和目录。未挂载的旧文件不会据此删除。";
+            return EditorUtility.DisplayDialog("确认 UIKit 类型迁移", message, "迁移", "取消");
+        }
+
         /// <summary>优先恢复已编译 owner 的真实脚本布局，否则沿祖先绑定确定作用域和项目输出位置。</summary>
         internal static UIKitPanelCodeLayout ResolveLayout(AbstractBind bind, bool includeSelf = true)
         {
@@ -48,7 +87,7 @@ namespace YokiFrame
             string componentName = null;
             while (current != default)
             {
-                UIElement owner = current.GetComponent<UIElement>();
+                UIKitMountedOwner.RequireSingle(current.GetComponent<AbstractBind>(), out UIElement owner);
                 if (owner != default)
                 {
                     UIKitPanelCodeLayout layout = UIKitGeneratedOwnerCodeService.CreateLayout(owner.GetType(),

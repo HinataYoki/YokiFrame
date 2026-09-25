@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEngine;
 
 namespace YokiFrame
 {
@@ -24,15 +25,14 @@ namespace YokiFrame
         internal static Dictionary<string, string> BuildSources(
             UIKitPanelCodeLayout layout,
             UIKitBindScanResult scan,
-            Dictionary<string, string> relocations = null,
-            List<string> deletions = null)
+            Dictionary<string, string> relocations = null)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             if (scan == null) throw new ArgumentNullException(nameof(scan));
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            deletions ??= new List<string>();
-            UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, null, null, relocations, deletions);
+            HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, null, null, relocations);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
 
             ValidateTypeLocation(layout.ScriptNamespace + "." + layout.PanelName, layout.AssemblyName,
                 layout.PanelScriptPath, layout.ScriptFolder + "/" + layout.PanelName + "/" + layout.PanelName + ".cs", relocations);
@@ -69,17 +69,16 @@ namespace YokiFrame
             UIKitGeneratedOwnerKind ownerKind,
             Type ownerType,
             string designerPath,
-            Dictionary<string, string> relocations = null,
-            List<string> deletions = null)
+            Dictionary<string, string> relocations = null)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             if (scan == null) throw new ArgumentNullException(nameof(scan));
             if (scan.HasErrors) throw CreateDiagnosticException(scan);
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            deletions ??= new List<string>();
             ValidateGeneratedOwnerType(ownerKind, ownerType);
             if (ownerKind == UIKitGeneratedOwnerKind.Component) layout = layout.ForComponent(ownerType.Name);
-            UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, ownerKind, ownerType.Name, relocations, deletions);
+            HashSet<string> expected = UIKitGeneratedCodeMigration.Prepare(layout, scan.Nodes, ownerKind, ownerType.Name, relocations);
+            UIKitGeneratedCodeCleanup.ConfirmAndDelete(layout, expected, !Application.isBatchMode);
             ValidateNodeOwnership(layout, scan.Nodes, relocations);
             string assetPath = RequireDesignerPath(designerPath);
             string namespaceName = CodeGenKit.RequireQualifiedName(
@@ -104,13 +103,11 @@ namespace YokiFrame
         /// <summary>以文件集事务提交生成源码，任一文件失败时恢复本次已修改文件。</summary>
         internal static bool CommitSources(
             Dictionary<string, string> sources,
-            Dictionary<string, string> relocations = null,
-            List<string> deletions = null)
+            Dictionary<string, string> relocations = null)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
             relocations ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            deletions ??= new List<string>();
-            List<SourceFileSnapshot> snapshots = CaptureSnapshots(sources, relocations, deletions);
+            List<SourceFileSnapshot> snapshots = CaptureSnapshots(sources, relocations);
             bool changed = false;
             try
             {
@@ -127,14 +124,6 @@ namespace YokiFrame
                     string absolutePath = UIKitPanelCodeLayout.ToAbsolutePath(source.Key);
                     CodeGenerationFileResult result = CodeGenKit.WriteTextToFile(absolutePath, source.Value);
                     changed |= result != CodeGenerationFileResult.Unchanged;
-                }
-                foreach (string deletion in deletions)
-                {
-                    if (relocations.ContainsKey(deletion)) continue;
-                    if (File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(deletion))
-                        && !AssetDatabase.DeleteAsset(deletion))
-                        throw new IOException("无法删除 UIKit 遗留文件: " + deletion);
-                    changed = true;
                 }
                 return changed;
             }
@@ -157,8 +146,7 @@ namespace YokiFrame
         /// <summary>创建生成、迁移和清理共同使用的文件快照。</summary>
         private static List<SourceFileSnapshot> CaptureSnapshots(
             Dictionary<string, string> sources,
-            Dictionary<string, string> relocations,
-            List<string> deletions)
+            Dictionary<string, string> relocations)
         {
             HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
             foreach (string path in sources.Keys) paths.Add(path);
@@ -168,11 +156,6 @@ namespace YokiFrame
                 paths.Add(relocation.Value);
                 paths.Add(relocation.Key + ".meta");
                 paths.Add(relocation.Value + ".meta");
-            }
-            foreach (string path in deletions)
-            {
-                paths.Add(path);
-                paths.Add(path + ".meta");
             }
             List<string> ordered = new(paths);
             ordered.Sort(StringComparer.OrdinalIgnoreCase);

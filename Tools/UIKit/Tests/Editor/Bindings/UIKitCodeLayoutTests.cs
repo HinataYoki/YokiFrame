@@ -95,7 +95,7 @@ namespace YokiFrame.Tests
             { panelName = "OldPanel", scriptFolder = TEST_ROOT, scriptNamespace = "LayoutLegacyTests" });
             Dictionary<string, string> relocations = new();
             Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildSources(layout,
-                new UIKitBindScanResult("OldPanel"), relocations, new List<string>());
+                new UIKitBindScanResult("OldPanel"), relocations);
             Assert.IsTrue(relocations.ContainsKey(TEST_ROOT + "/OldPanel/OldPanel.cs"));
             Assert.IsTrue(relocations.ContainsValue(layout.PanelScriptPath));
             Assert.IsTrue(sources.ContainsKey(layout.PanelDesignerPath));

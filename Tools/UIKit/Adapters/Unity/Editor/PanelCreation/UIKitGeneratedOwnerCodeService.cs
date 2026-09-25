@@ -18,16 +18,14 @@ namespace YokiFrame
             UIKitGeneratedOwnerContext context = ResolveContext(owner, ownerKind);
             UIKitBindScanResult scan = UIKitBindScanner.ScanOwner(context.ScanRoot, ownerKind);
             Dictionary<string, string> relocations = new(StringComparer.OrdinalIgnoreCase);
-            List<string> deletions = new();
             Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildOwnerSources(
                 context.Layout,
                 scan,
                 ownerKind,
                 context.OwnerType,
                 context.DesignerPath,
-                relocations,
-                deletions);
-            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations, deletions);
+                relocations);
+            bool scriptsChanged = UIKitPanelCodeGenerator.CommitSources(sources, relocations);
             AssetDatabase.SaveAssets();
             UIKitPendingBindingService.QueueOwner(
                 context.Layout,

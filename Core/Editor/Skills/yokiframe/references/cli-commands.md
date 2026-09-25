@@ -144,7 +144,7 @@ CLI 会在分派前执行命令级 schema：未知选项、缺失必填项、非
 
 `LogKit set_settings`、`PoolKit set_tracking`、`ActionKit set_stack_trace` 与 UIKit Editor action 使用严格 payload。需要 payload 字段时读取对应 Provider/handler 源码，或先由 Workbench 执行同一操作；不要猜测、补齐或复用旧 payload。AudioKit 不发布 Runtime UserAction。
 
-UIKit 的 `generate_code_for_selection` 仍只接受 Panel Prefab。`scriptFolder` 表示共同根，生成路径为 `Panel/<Panel>` 与 `Component/<Component>`，各自局部元素位于 `Element`。已有脚本身份或位置不符时拒绝生成；生成、改名和 Element/Component 转换会在现有事务内自动识别并迁移可确认归属的旧目录、用户脚本、Designer、partial 和 `.meta` GUID，同时清理满足安全条件的孤立模板文件；Unity Editor 仍保留 `Edit/UIKit/Migrate Code Layout` 手动目录迁移入口，不新增独立自动扫描、清理或 CLI action。局部 Element、公共 Component 的首次生成和已有类型转换使用 Unity Bind Inspector；Component 内部 Element 的生成作用域不会随宿主 Panel 改变。本次能力不增加 CLI action，也不允许 AI 通过改 Bind 枚举绕过源码迁移事务。
+UIKit 的 `generate_code_for_selection` 仍只接受 Panel Prefab。`scriptFolder` 表示共同根，生成路径为 `Panel/<Panel>` 与 `Component/<Component>`，各自局部元素位于 `Element`。已有脚本身份或位置不符时拒绝生成；生成、改名和 Element/Component 转换会在现有事务内自动识别并迁移可确认归属的旧目录、用户脚本、Designer、partial 和 `.meta` GUID。节点上唯一旧脚本可证明改名、换位或两者兼有，用户确认后才迁移；同一节点多份生成脚本拒绝猜测。孤立模板只在确认后删除，不新增独立自动扫描、清理或 CLI action。Unity Editor 仍保留 `Edit/UIKit/Migrate Code Layout` 手动目录迁移入口。局部 Element、公共 Component 的首次生成和已有类型转换使用 Unity Bind Inspector；Component 内部 Element 的生成作用域不会随宿主 Panel 改变。本次能力不增加 CLI action，也不允许 AI 通过改 Bind 枚举绕过源码迁移事务。
 
 ## 专用命令示例
 

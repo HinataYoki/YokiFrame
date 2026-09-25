@@ -32,7 +32,7 @@
 - 已完成 Workbench 只表示有 Application 强类型 read model 和真实页面，不表示可从 Workbench 修改 Runtime 业务状态
 - TableKit 未生成时不向项目或包宣称存在 Runtime 类型
 - UIKit 只在 Unity 使用；Godot 不发布 UIKit capability、Provider 或占位状态
-- UIKit 生成目录以共同 ScriptFolder 为根：`Panel/<Panel>`、`Component/<Component>`，局部元素放各 owner 的 `Element`。已有 Element 按真实脚本身份恢复归属；首次孤立 Element 拒绝生成。生成、改名和 Element/Component 转换会在现有事务内自动迁移可确认归属的旧布局与配套源码，并安全清理无引用的孤立模板文件；同时保留 `Edit/UIKit/Migrate Code Layout` 手动目录迁移入口，失败时由现有事务回滚。
+- UIKit 生成目录以共同 ScriptFolder 为根：`Panel/<Panel>`、`Component/<Component>`，局部元素放各 owner 的 `Element`。已有 Element 按真实脚本身份恢复归属；首次孤立 Element 拒绝生成。节点上唯一旧脚本可判定改名、Element/Component 换位或两者兼有，确认后走现有迁移事务；多份挂载拒绝猜测。孤立模板只在用户确认后删除，有引用、有业务代码或身份不完整的文件只报告。同时保留 `Edit/UIKit/Migrate Code Layout` 手动目录迁移入口，失败时由现有事务回滚。
 - UIKit Element 归属最近的 Panel/Component，嵌套 Element 共享该作用域；Component 保持公共类型。Bind Inspector 支持首次生成，Element/Component 互转会迁移源码并保留 GUID，冲突或共享绑定会阻断，编译失败会回滚；详见 `Api/03-Tool/UIKit.md`。
 
 ## 核实顺序

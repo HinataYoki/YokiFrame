@@ -21,7 +21,7 @@ namespace YokiFrame
             if (EditorUtility.scriptCompilationFailed)
                 throw new InvalidOperationException("请先修复项目编译错误，再转换绑定类型。");
             BindType oldKind = bind.Bind;
-            UIElement existingOwner = bind.GetComponent<UIElement>();
+            UIKitMountedOwner.RequireSingle(bind, out UIElement existingOwner);
             if (oldKind == BindType.Member && IsGenerated(targetKind) && existingOwner != default)
                 oldKind = existingOwner is UIComponent ? BindType.Component : BindType.Element;
             if (oldKind == targetKind) { SetKind(bind, targetKind); return; }
@@ -31,7 +31,7 @@ namespace YokiFrame
             UIKitPanelCodeLayout next = targetKind == BindType.Component ? previous : ResolveElementParent(bind);
             string typeName = existingOwner != default ? existingOwner.GetType().Name : UIKitBindCodeService.GetTypeName(bind);
             if (!string.IsNullOrWhiteSpace(bind.CustomType) && bind.CustomType != typeName)
-                throw new InvalidOperationException("现有脚本类型与 Bind 类名称不一致，请先恢复类名称: " + typeName);
+                throw new InvalidOperationException("现有脚本类型与 Bind 类名称不一致。请先改名，再执行 Element/Component 换位: " + typeName);
             string oldPath = UIKitBindCodeService.GetScriptPath(previous, oldKind, typeName, false);
             if (!File.Exists(UIKitPanelCodeLayout.ToAbsolutePath(oldPath))) { SetKind(bind, targetKind); return; }
             List<TypeMove> moves = new();
@@ -72,7 +72,7 @@ namespace YokiFrame
         {
             if (bind == default || !IsGenerated(bind.Bind)) return;
             newTypeName = CodeGenKit.RequireIdentifier(newTypeName, nameof(newTypeName));
-            UIElement owner = bind.GetComponent<UIElement>();
+            UIKitMountedOwner.RequireSingle(bind, out UIElement owner);
             if (owner == default || string.Equals(owner.GetType().Name, newTypeName, StringComparison.Ordinal))
             {
                 SetGeneratedType(bind, newTypeName);
@@ -188,15 +188,19 @@ namespace YokiFrame
                 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 foreach (AbstractBind candidate in prefab.GetComponentsInChildren<AbstractBind>(true))
                 {
-                    UIElement component = candidate.GetComponent<UIElement>();
-                    if (component == default || !IsGenerated(candidate.Bind)) continue;
-                    foreach (TypeMove move in moves)
+                    UIElement[] components = candidate.GetComponents<UIElement>();
+                    for (var componentIndex = 0; componentIndex < components.Length; componentIndex++)
                     {
-                        if (component.GetType().FullName != move.OldName) continue;
-                        UIKitGeneratedOwnerCodeService.ResolvePrefabContext(candidate, prefab, path, out _, out _, out string candidatePath);
-                        if (path == layout.PrefabPath && (ownerPath.Length == 0 || candidatePath == ownerPath
-                            || candidatePath.StartsWith(ownerPath + "/", StringComparison.Ordinal))) continue;
-                        throw new InvalidOperationException("类型仍被其它绑定使用，不能直接迁移: " + move.OldName + "，Prefab: " + path);
+                    UIElement component = components[componentIndex];
+                        if (component == default || !IsGenerated(candidate.Bind)) continue;
+                        foreach (TypeMove move in moves)
+                        {
+                            if (component.GetType().FullName != move.OldName) continue;
+                            UIKitGeneratedOwnerCodeService.ResolvePrefabContext(candidate, prefab, path, out _, out _, out string candidatePath);
+                            if (path == layout.PrefabPath && (ownerPath.Length == 0 || candidatePath == ownerPath
+                                || candidatePath.StartsWith(ownerPath + "/", StringComparison.Ordinal))) continue;
+                            throw new InvalidOperationException("类型仍被其它绑定使用，不能直接迁移: " + move.OldName + "，Prefab: " + path);
+                        }
                     }
                 }
             }
