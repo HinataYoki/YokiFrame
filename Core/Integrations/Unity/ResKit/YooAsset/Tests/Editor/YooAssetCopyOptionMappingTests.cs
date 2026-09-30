@@ -5,6 +5,11 @@ using System.Reflection;
 using NUnit.Framework;
 using YokiFrame.Unity;
 using YooAsset.Editor;
+#if YOKIFRAME_YOOASSET_3
+using CopyOption = YooAsset.Editor.EBundledCopyOption;
+#else
+using CopyOption = YooAsset.Editor.EBuildinFileCopyOption;
+#endif
 
 namespace YokiFrame.Unity.Tests
 {
@@ -12,7 +17,7 @@ namespace YokiFrame.Unity.Tests
     /// 守护首包拷贝策略的「下拉索引 == 枚举值」隐含前提。
     /// </summary>
     /// <remarks>
-    /// 该集成把下拉索引经 <c>(EBundledCopyOption)value</c> 直接强转为枚举值，
+    /// 该集成把下拉索引直接强转为当前 YooAsset 版本的拷贝枚举值，
     /// 因此枚举的声明顺序必须与 <c>sCopyOptionNames</c> 的中文标签顺序一一对应；
     /// 若 YooAsset 次版本增删或调整枚举成员，映射会**静默指向错误的拷贝策略**（不抛错、无提示）。
     /// 本测试把该先前只存在于注释里的前提固化为断言，使漂移在编译期后立即可见。
@@ -22,7 +27,7 @@ namespace YokiFrame.Unity.Tests
         /// <summary>下拉标签所在的私有静态字段名。</summary>
         private const string LABELS_FIELD_NAME = "sCopyOptionNames";
 
-        /// <summary>V3 枚举的期望声明顺序（与中文标签顺序对应）。</summary>
+        /// <summary>当前 YooAsset 版本枚举的期望声明顺序（与中文标签顺序对应）。</summary>
         private static readonly string[] EXPECTED_V3_NAMES =
         {
             "None",
@@ -49,13 +54,13 @@ namespace YokiFrame.Unity.Tests
         [Test]
         public void CopyOptionLabelCountMatchesEnumMemberCount()
         {
-            int enumCount = Enum.GetNames(typeof(EBundledCopyOption)).Length;
+            int enumCount = Enum.GetNames(typeof(CopyOption)).Length;
             IList<string> labels = ReadCopyOptionLabels();
 
             Assert.AreEqual(
                 enumCount,
                 labels.Count,
-                "下拉标签数量与 EBundledCopyOption 成员数量不一致，索引映射可能已失效");
+                "下拉标签数量与当前 YooAsset 拷贝枚举成员数量不一致，索引映射可能已失效");
         }
 
         /// <summary>
@@ -66,15 +71,15 @@ namespace YokiFrame.Unity.Tests
         {
             CollectionAssert.AreEqual(
                 EXPECTED_V3_NAMES,
-                Enum.GetNames(typeof(EBundledCopyOption)),
-                "EBundledCopyOption 声明顺序发生变化，必须同步复核下拉标签顺序");
+                Enum.GetNames(typeof(CopyOption)),
+                "YooAsset 拷贝枚举声明顺序发生变化，必须同步复核下拉标签顺序");
         }
 
         /// <summary>校验首个成员必须为 None 且值为 0，保证「不拷贝」映射到默认值。</summary>
         [Test]
         public void FirstCopyOptionIsNoneWithZeroValue()
         {
-            Assert.AreEqual(0, (int)EBundledCopyOption.None, "None 必须为 0，否则下拉默认项含义改变");
+            Assert.AreEqual(0, (int)CopyOption.None, "None 必须为 0，否则下拉默认项含义改变");
         }
     }
 }

@@ -18,6 +18,8 @@ namespace YokiFrame.Unity.Tests
             "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/YooAssetSceneLoadOperation.cs";
         private const string INITIALIZER_OPERATIONS_PATH =
             "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetInitializer.Operations.cs";
+        private const string INITIALIZER_NETWORK_PATH =
+            "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetInitializer.Network.cs";
 
         /// <summary>验证场景加载参数和恢复 API 始终随当前 YooAsset 主版本切换。</summary>
         [Test]
@@ -61,6 +63,22 @@ namespace YokiFrame.Unity.Tests
             StringAssert.Contains("return WebInitializationHandler(package, options);", source);
 #else
             Assert.Pass("YooAsset V2 使用其原生默认 Host/Web 文件系统路径。");
+#endif
+        }
+
+        /// <summary>验证当前 YooAsset 主版本提供了初始化回退所需的销毁入口。</summary>
+        [Test]
+        public void PackageDestroyApiMatchesCurrentYooAssetVersion()
+        {
+            string source = ReadSource(INITIALIZER_NETWORK_PATH);
+            Assert.That(source, Does.Contain("#if YOKIFRAME_YOOASSET_3"));
+            Assert.That(source, Does.Contain("package.DestroyPackageAsync()"));
+            Assert.That(source, Does.Contain("package.DestroyAsync()"));
+
+#if YOKIFRAME_YOOASSET_3
+            Assert.That(typeof(ResourcePackage).GetMethod("DestroyPackageAsync", Type.EmptyTypes), Is.Not.Null);
+#else
+            Assert.That(typeof(ResourcePackage).GetMethod("DestroyAsync", Type.EmptyTypes), Is.Not.Null);
 #endif
         }
 

@@ -110,6 +110,9 @@ namespace YokiFrame.Unity
             container.Add(InspectorKitUi.CreateIntegerRow(
                 property.FindPropertyRelative(nameof(YooAssetInitializationOptions.ManifestTimeoutSeconds)),
                 "清单超时秒数"));
+            container.Add(InspectorKitUi.CreateSwitchRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.AppendTimestampToVersionRequest)),
+                "版本请求附加时间戳"));
             if (!HasHostMode(property))
                 return;
 

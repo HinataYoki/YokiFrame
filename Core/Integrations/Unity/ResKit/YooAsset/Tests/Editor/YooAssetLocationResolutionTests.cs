@@ -59,7 +59,13 @@ namespace YokiFrame.Unity.Tests
                 "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/YooAssetResourceProvider.Scene.cs");
 
             StringAssert.Contains("ResolvePackage(path, out string location)", providerSource);
-            StringAssert.Contains("candidate.IsLocationValid(location)", resolutionSource);
+#if YOKIFRAME_YOOASSET_3
+            StringAssert.Contains("IsLocationValid(candidate, location)", resolutionSource);
+            StringAssert.Contains("return package.IsLocationValid(location);", resolutionSource);
+#else
+            StringAssert.Contains("IsLocationValid(candidate, location)", resolutionSource);
+            StringAssert.Contains("return package.CheckLocationValid(location);", resolutionSource);
+#endif
             StringAssert.Contains("RequirePackage(packageName)", resolutionSource);
             StringAssert.Contains("ResolvePackage(request.SceneName, out string location)", sceneSource);
             StringAssert.DoesNotContain("mPackage.Load", providerSource);

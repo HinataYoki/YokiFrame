@@ -40,7 +40,11 @@ namespace YokiFrame.Unity
                 && !package.PackageValid
                 && !ShouldRunRemoteUpdate(options))
             {
-                await LoadPackageManifestAsync(package, options.GetManifestTimeoutSeconds(), token);
+                await LoadPackageManifestAsync(
+                    package,
+                    options.GetManifestTimeoutSeconds(),
+                    options.AppendTimestampToVersionRequest,
+                    token);
             }
         }
 
@@ -49,6 +53,7 @@ namespace YokiFrame.Unity
         private static async UniTask LoadPackageManifestAsync(
             ResourcePackage package,
             int timeoutSeconds,
+            bool appendTimestamp,
             CancellationToken token,
             string packageVersion = null)
 #else
@@ -56,6 +61,7 @@ namespace YokiFrame.Unity
         private static async Task LoadPackageManifestAsync(
             ResourcePackage package,
             int timeoutSeconds,
+            bool appendTimestamp,
             CancellationToken token,
             string packageVersion = null)
 #endif
@@ -76,10 +82,14 @@ namespace YokiFrame.Unity
             }
 
 #if YOKIFRAME_YOOASSET_3
-            RequestPackageVersionOptions versionOptions = new(true, timeoutSeconds);
+            RequestPackageVersionOptions versionOptions = new(
+                appendTimestamp,
+                timeoutSeconds);
             RequestPackageVersionOperation version = package.RequestPackageVersionAsync(versionOptions);
 #else
-            RequestPackageVersionOperation version = package.RequestPackageVersionAsync(true, timeoutSeconds);
+            RequestPackageVersionOperation version = package.RequestPackageVersionAsync(
+                appendTimestamp,
+                timeoutSeconds);
 #endif
             await YooAssetOperationAwaiter.WaitAsync(version, token);
 

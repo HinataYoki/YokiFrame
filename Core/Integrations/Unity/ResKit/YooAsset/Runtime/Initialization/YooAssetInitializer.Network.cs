@@ -94,17 +94,31 @@ namespace YokiFrame.Unity
             CancellationToken token)
 #endif
         {
-            await LoadPackageManifestAsync(package, options.GetManifestTimeoutSeconds(), token);
+            await LoadPackageManifestAsync(
+                package,
+                options.GetManifestTimeoutSeconds(),
+                options.AppendTimestampToVersionRequest,
+                token);
             if (options.PlayMode == EPlayMode.WebPlayMode)
                 return;
 
+#if YOKIFRAME_YOOASSET_3
             ResourceDownloaderOperation downloader = package.CreateResourceDownloader(
                 new ResourceDownloaderOptions(
                     options.GetDownloadMaximumConcurrency(),
                     options.GetDownloadRetryCount()));
+#else
+            ResourceDownloaderOperation downloader = package.CreateResourceDownloader(
+                options.GetDownloadMaximumConcurrency(),
+                options.GetDownloadRetryCount());
+#endif
             if (downloader.TotalDownloadCount > 0)
             {
+#if YOKIFRAME_YOOASSET_3
                 downloader.StartDownload();
+#else
+                downloader.BeginDownload();
+#endif
                 await YooAssetOperationAwaiter.WaitAsync(downloader, token);
             }
 
@@ -182,9 +196,18 @@ namespace YokiFrame.Unity
             if (string.IsNullOrWhiteSpace(version))
                 throw new InvalidOperationException("No previously completed YooAsset version is recorded.");
 
-            await LoadPackageManifestAsync(package, options.GetManifestTimeoutSeconds(), token, version);
+            await LoadPackageManifestAsync(
+                package,
+                options.GetManifestTimeoutSeconds(),
+                options.AppendTimestampToVersionRequest,
+                token,
+                version);
+#if YOKIFRAME_YOOASSET_3
             ResourceDownloaderOperation downloader = package.CreateResourceDownloader(
                 new ResourceDownloaderOptions(1, 0));
+#else
+            ResourceDownloaderOperation downloader = package.CreateResourceDownloader(1, 0);
+#endif
             if (downloader.TotalDownloadCount > 0)
             {
                 throw new InvalidOperationException(
@@ -220,6 +243,7 @@ namespace YokiFrame.Unity
                 await LoadPackageManifestAsync(
                     offlinePackage,
                     options.GetManifestTimeoutSeconds(),
+                    options.AppendTimestampToVersionRequest,
                     token);
             }
 
@@ -242,7 +266,11 @@ namespace YokiFrame.Unity
             if (package == null)
                 return;
 
+#if YOKIFRAME_YOOASSET_3
             DestroyPackageOperation operation = package.DestroyPackageAsync();
+#else
+            DestroyOperation operation = package.DestroyAsync();
+#endif
             await YooAssetOperationAwaiter.WaitAsync(operation, token);
 #if YOKIFRAME_YOOASSET_3
             YooAssets.RemovePackage(packageName);

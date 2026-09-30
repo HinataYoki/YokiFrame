@@ -75,6 +75,7 @@ namespace YokiFrame.Unity.Tests
 
             Assert.That(ContainsLabel(root, "联网初始化策略"), Is.False);
             Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
+            Assert.That(ContainsLabel(root, "版本请求附加时间戳"), Is.False);
         }
 
         /// <summary>编辑器进入 Host 模式时，即使 Player 保持离线也显示联网配置。</summary>
@@ -101,6 +102,7 @@ namespace YokiFrame.Unity.Tests
 
             Assert.That(ContainsLabel(root, "联网初始化策略"), Is.True);
             Assert.That(ContainsLabel(root, "清单超时秒数"), Is.True);
+            Assert.That(ContainsLabel(root, "版本请求附加时间戳"), Is.True);
             Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
         }
 

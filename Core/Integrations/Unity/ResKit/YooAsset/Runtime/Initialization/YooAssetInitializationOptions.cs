@@ -97,6 +97,10 @@ namespace YokiFrame.Unity
         [Tooltip("版本和 manifest 请求超时时间，单位为秒")]
         public int ManifestTimeoutSeconds = DEFAULT_MANIFEST_TIMEOUT_SECONDS;
 
+        /// <summary>请求远端 package 版本时是否在 URL 末尾附加时间戳，用于绕过缓存。</summary>
+        [Tooltip("请求远端版本时在 URL 末尾附加时间戳；鉴权签名或服务器不接受查询参数时关闭")]
+        public bool AppendTimestampToVersionRequest = true;
+
         /// <summary>Host/Web 模式主资源服务器地址。</summary>
         [Tooltip("Host/Web 模式主资源服务器地址")]
         public string DefaultHostServer;

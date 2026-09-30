@@ -117,7 +117,9 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 | `LoadRawAsync(string path, CancellationToken)` / `LoadRawBytesAsync(...)` | 异步读取 bytes。 |
 | `LoadRawTextAsync(string path, CancellationToken)` | 异步读取文本。 |
 
-YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `ResKit.SetProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一步完成初始化和接入。初始化器不会替项目销毁 package，package 的生命周期仍由项目负责。
+YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `ResKit.SetProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一步完成初始化和接入。初始化器不会在正常流程中替项目销毁 package；只有选择弱网回退到 OfflinePlayMode 时，才会先等待当前联网 package 使用当前 YooAsset 版本的销毁操作完成，再移除并重建同名 package。
+
+当前 Integration 用 `YOKIFRAME_YOOASSET_3` 隔离 YooAsset 3.x API，其它受支持版本按 YooAsset 2.3 API 编译：V2 使用 `InitializeAsync`、`UpdatePackageManifestAsync`、`DestroyAsync` 和 `IRemoteServices`，V3 使用 `InitializePackageAsync`、`LoadPackageManifestAsync`、`DestroyPackageAsync` 和 `IRemoteService`。两代版本共享同一套初始化策略，但不会混用生命周期、清单和远端服务 API；YooAsset 版本范围由 asmdef 的 `[2.3.0,4.0.0)` 约束。
 
 初始化多个 package 时，ResKit 仍只安装一个 Provider。普通路径按 `PackageNames` 的顺序探测，第一个清单包含该 location 的包负责加载；都没有时才由第一包返回失败。同名 location 不会继续向后查找，需要覆盖旧资源时必须把新包排在前面。
 
@@ -142,7 +144,7 @@ YooAsset 的初始化选项可在 Unity Inspector 中配置运行模式、远端
 
 Host 模式的弱网策略会自动配置 YooAsset 官方建议的内置清单复制和 `InstallCleanupMode`。如果项目给沙盒文件系统指定了自定义根目录，同时填写 `CopyBuiltinPackageManifestDestRoot`，保证内置清单复制到同一清单目录。Host 版本只在清单成功且 `ResourceDownloaderOperation` 完整成功后写入 PlayerPrefs；因此远端版本文件可访问但资源下载不完整时不会污染离线回退版本。`WebPlayMode` 只支持 `RemoteOnly`，因为 Web 网络文件系统没有本地 package 回退语义，也不支持 Host 的下载无进度超时参数；Web 模式不会预下载全部资源或记录“完整下载版本”。
 
-`DownloadMaximumConcurrency`、`DownloadRetryCount`、`DownloadMaxRequestPerFrame` 和 `DownloadNoProgressTimeoutSeconds` 分别控制 Host 启动下载并发、单文件重试、每帧请求节流和下载无新数据时的等待时间；Web 模式仍由 YooAsset 的网络文件系统按需加载，Host 专用的复制内置清单、缓存清理和下载参数不会参与 Web 初始化。主备服务器地址由 `IRemoteService`/`IRemoteServices` 负责逐文件选择。需要鉴权、签名或平台专属网络请求时，使用 `HostInitializationHandler` 或 `WebInitializationHandler` 接管文件系统参数。
+`DownloadMaximumConcurrency`、`DownloadRetryCount`、`DownloadMaxRequestPerFrame` 和 `DownloadNoProgressTimeoutSeconds` 分别控制 Host 启动下载并发、单文件重试、每帧请求节流和下载无新数据时的等待时间；`AppendTimestampToVersionRequest` 控制请求远端 package 版本时是否在 URL 末尾追加时间戳，默认开启以绕过 CDN 缓存。服务器鉴权签名覆盖完整 URL、网关拒绝未知查询参数或服务器不接受该格式时关闭此开关；它只影响版本请求，不会移除资源下载地址中的必要参数。Web 模式仍由 YooAsset 的网络文件系统按需加载，Host 专用的复制内置清单、缓存清理和下载参数不会参与 Web 初始化。主备服务器地址由 `IRemoteService`/`IRemoteServices` 负责逐文件选择。需要鉴权、签名或平台专属网络请求时，使用 `HostInitializationHandler` 或 `WebInitializationHandler` 接管文件系统参数。
 
 一键初始化示例：
 
@@ -163,7 +165,7 @@ await YooAssetInitializer.InitializeAsync(new YooAssetInitializationOptions
 var clip = ResKit.Load<UnityEngine.AudioClip>("Audio/Main");
 ```
 
-需要自定义 YooAsset 文件系统时，可通过 `HostInitializationHandler` 或 `WebInitializationHandler` 提供完整初始化回调；如果回调使用自定义沙盒根目录，也要把 `CopyBuiltinPackageManifestDestRoot` 传给内置文件系统参数。项目重新初始化 package 前，先清理上一次初始化登记；package 的生命周期仍由项目负责。弱网回退路径会自行等待 `DestroyPackageAsync` 完成后再调用 `YooAssets.RemovePackage`，不会在同名 package 仍存活时重复创建。
+需要自定义 YooAsset 文件系统时，可通过 `HostInitializationHandler` 或 `WebInitializationHandler` 提供完整初始化回调；如果回调使用自定义沙盒根目录，也要把 `CopyBuiltinPackageManifestDestRoot` 传给内置文件系统参数。项目重新初始化 package 前，先清理上一次初始化登记；package 的生命周期仍由项目负责。弱网回退路径会等待当前版本对应的销毁操作完成后再调用 `YooAssets.RemovePackage`，不会在同名 package 仍存活时重复创建。
 
 ### 场景资源
 

@@ -59,11 +59,21 @@ namespace YokiFrame.Unity
             for (int index = 0; index < mPackages.Length; index++)
             {
                 ResourcePackage candidate = mPackages[index];
-                if (YooAssetPackageReadiness.IsReady(candidate) && candidate.IsLocationValid(location))
+                if (YooAssetPackageReadiness.IsReady(candidate) && IsLocationValid(candidate, location))
                     return candidate;
             }
 
             return mPackages[0];
+        }
+
+        /// <summary>按当前 YooAsset 主版本调用位置校验 API，隔离 V2 与 V3 的命名差异。</summary>
+        private static bool IsLocationValid(ResourcePackage package, string location)
+        {
+#if YOKIFRAME_YOOASSET_3
+            return package.IsLocationValid(location);
+#else
+            return package.CheckLocationValid(location);
+#endif
         }
 
         /// <summary>在构造时固定的探测清单中查找显式 package，缺失时给出稳定错误。</summary>

@@ -69,6 +69,7 @@ namespace YokiFrame.Unity.Tests
             Assert.That(
                 options.InitializationStrategy,
                 Is.EqualTo(YooAssetInitializationStrategy.ManifestOnly));
+            Assert.That(options.AppendTimestampToVersionRequest, Is.True);
             Assert.That(options.GetDownloadMaximumConcurrency(), Is.EqualTo(32));
             Assert.That(options.GetDownloadRetryCount(), Is.EqualTo(0));
             Assert.That(options.GetDownloadMaxRequestPerFrame(), Is.EqualTo(1));
