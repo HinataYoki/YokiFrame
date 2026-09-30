@@ -1,5 +1,7 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using YooAsset;
@@ -50,6 +52,75 @@ namespace YokiFrame.Unity.Tests
 
             options.ManifestTimeoutSeconds = 15;
             Assert.That(options.GetManifestTimeoutSeconds(), Is.EqualTo(15));
+        }
+
+        /// <summary>联网策略默认保持兼容行为，下载参数会被限制到安全范围。</summary>
+        [Test]
+        public void NetworkDefaultsKeepManifestOnlyAndClampDownloadSettings()
+        {
+            YooAssetInitializationOptions options = new()
+            {
+                DownloadMaximumConcurrency = 100,
+                DownloadRetryCount = -1,
+                DownloadMaxRequestPerFrame = 0,
+                DownloadNoProgressTimeoutSeconds = 0
+            };
+
+            Assert.That(
+                options.InitializationStrategy,
+                Is.EqualTo(YooAssetInitializationStrategy.ManifestOnly));
+            Assert.That(options.GetDownloadMaximumConcurrency(), Is.EqualTo(32));
+            Assert.That(options.GetDownloadRetryCount(), Is.EqualTo(0));
+            Assert.That(options.GetDownloadMaxRequestPerFrame(), Is.EqualTo(1));
+            Assert.That(
+                options.GetDownloadNoProgressTimeoutSeconds(),
+                Is.EqualTo(YooAssetInitializationOptions.DEFAULT_DOWNLOAD_NO_PROGRESS_TIMEOUT_SECONDS));
+        }
+
+        /// <summary>联网策略枚举必须保留远端直连、缓存回退和离线回退三个明确分支。</summary>
+        [Test]
+        public void NetworkStrategiesExposeExplicitFallbackModes()
+        {
+            Assert.That(
+                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
+                    YooAssetInitializationStrategy.RemoteOnly),
+                Is.True);
+            Assert.That(
+                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
+                    YooAssetInitializationStrategy.RemoteThenCached),
+                Is.True);
+            Assert.That(
+                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
+                    YooAssetInitializationStrategy.RemoteThenOffline),
+                Is.True);
+        }
+
+        /// <summary>编辑器模拟模式应忽略仅用于 Player 的联网策略，避免正常配置被误判为非法。</summary>
+        [Test]
+        public void EditorSimulationAllowsRuntimeFallbackStrategy()
+        {
+            YooAssetInitializationOptions options = new()
+            {
+                EditorPlayMode = EPlayMode.EditorSimulateMode,
+                InitializationStrategy = YooAssetInitializationStrategy.RemoteThenOffline
+            };
+
+            InvokeStrategyValidation(options);
+        }
+
+        /// <summary>Web 模式不允许复用本地 package 回退，因为其文件系统没有本地缓存语义。</summary>
+        [Test]
+        public void WebModeRejectsLocalFallbackStrategy()
+        {
+            YooAssetInitializationOptions options = new()
+            {
+                EditorPlayMode = EPlayMode.WebPlayMode,
+                InitializationStrategy = YooAssetInitializationStrategy.RemoteThenCached
+            };
+
+            Assert.That(
+                () => InvokeStrategyValidation(options),
+                Throws.TypeOf<TargetInvocationException>());
         }
 
         /// <summary>内置加密方案必须能够映射为当前 YooAsset 主版本的成对服务。</summary>
@@ -112,6 +183,16 @@ namespace YokiFrame.Unity.Tests
             Assert.That(typeof(YooAssetAesEncryptionService).IsPublic, Is.True);
             Assert.That(typeof(YooAssetAesDecryptionService).IsPublic, Is.True);
 #endif
+        }
+
+        /// <summary>通过反射调用初始化器内部策略校验，覆盖不暴露给业务的运行模式分支。</summary>
+        private static void InvokeStrategyValidation(YooAssetInitializationOptions options)
+        {
+            MethodInfo method = typeof(YooAssetInitializer).GetMethod(
+                "ValidateStrategy",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, "YooAssetInitializer 缺少策略校验方法");
+            _ = method.Invoke(null, new object[] { options });
         }
     }
 }

@@ -132,9 +132,10 @@ namespace YokiFrame.Unity
                 throw new ArgumentNullException(nameof(package));
 
             sPackages.Add(package);
-            if (DefaultPackage == null)
+            if (DefaultPackage == null || !YooAssetPackageReadiness.IsReady(DefaultPackage))
                 SetDefaultPackage(package);
             InstallRegisteredProvider(editorSimulateMode);
+            IsInitialized = true;
         }
 
         /// <summary>用当前登记顺序安装统一 Provider，供自动探测和显式包路径共用。</summary>
@@ -263,16 +264,17 @@ namespace YokiFrame.Unity
             DefaultPackage = null;
             DefaultPackageName = null;
 
+            ValidateStrategy(options);
             List<string> packageNames = ResolvePackageNames(options);
             for (int index = 0; index < packageNames.Count; index++)
             {
                 token.ThrowIfCancellationRequested();
-                ResourcePackage package = GetOrCreatePackage(packageNames[index]);
+                string packageName = packageNames[index];
+                ResourcePackage package = GetOrCreatePackage(packageName);
+                package = await InitializePackageWithStrategyAsync(packageName, package, options, token);
+                sPackages.Add(package);
                 if (DefaultPackage == null)
                     SetDefaultPackage(package);
-
-                await InitializePackageAsync(package, options, token);
-                sPackages.Add(package);
             }
         }
 

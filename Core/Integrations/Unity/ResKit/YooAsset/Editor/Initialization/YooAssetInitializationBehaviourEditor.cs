@@ -32,7 +32,7 @@ namespace YokiFrame.Unity
 
             root.Add(InspectorKitUi.CreateInfoBox(
                 "ResKit Provider",
-                "初始化成功后会自动把第一个资源包安装为 ResKit 的 YooAsset Provider。",
+                "初始化成功后会按 package 列表顺序安装统一的 ResKit YooAsset Provider。",
                 InspectorInfoBoxType.Info));
             root.Add(CreateActions());
             return root;

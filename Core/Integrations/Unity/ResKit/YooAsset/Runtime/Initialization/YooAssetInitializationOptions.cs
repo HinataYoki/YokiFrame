@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using YooAsset;
 
 namespace YokiFrame.Unity
@@ -31,6 +32,18 @@ namespace YokiFrame.Unity
         /// <summary>默认文件偏移量。</summary>
         public const int DEFAULT_FILE_OFFSET = 32;
 
+        /// <summary>默认下载并发数。</summary>
+        public const int DEFAULT_DOWNLOAD_MAXIMUM_CONCURRENCY = 10;
+
+        /// <summary>默认下载失败重试次数。</summary>
+        public const int DEFAULT_DOWNLOAD_RETRY_COUNT = 3;
+
+        /// <summary>默认每帧发起的下载请求数。</summary>
+        public const int DEFAULT_DOWNLOAD_MAX_REQUEST_PER_FRAME = 5;
+
+        /// <summary>默认下载无进度超时时间，单位为秒。</summary>
+        public const int DEFAULT_DOWNLOAD_NO_PROGRESS_TIMEOUT_SECONDS = 60;
+
         /// <summary>Unity Editor 中使用的 YooAsset 运行模式。</summary>
         [Tooltip("Unity Editor 中使用的 YooAsset 运行模式")]
         public EPlayMode EditorPlayMode = EPlayMode.EditorSimulateMode;
@@ -46,6 +59,39 @@ namespace YokiFrame.Unity
         /// <summary>package 初始化后是否请求版本并加载 manifest。</summary>
         [Tooltip("package 初始化后请求版本并加载 manifest")]
         public bool LoadManifestAfterInitialization = true;
+
+        /// <summary>控制联网 package 的清单、下载和离线回退流程。</summary>
+        [Tooltip("控制联网 package 的清单、下载和离线回退流程")]
+        public YooAssetInitializationStrategy InitializationStrategy = YooAssetInitializationStrategy.ManifestOnly;
+
+        /// <summary>Host 模式是否把包体内置清单复制到沙盒，供弱网回退使用。</summary>
+        [Tooltip("Host 模式把包体内置清单复制到沙盒，供弱网回退使用")]
+        public bool CopyBuiltinPackageManifest = true;
+
+        /// <summary>内置清单复制到自定义沙盒根目录时使用的目标目录；为空时使用 YooAsset 默认目录。</summary>
+        [Tooltip("自定义沙盒根目录时填写内置清单复制目标目录；为空使用默认目录")]
+        public string CopyBuiltinPackageManifestDestRoot;
+
+        /// <summary>覆盖安装时的清理策略；None 可保留已复制的内置清单。</summary>
+        [Tooltip("覆盖安装时的清理策略")]
+        public YooAssetInstallCleanupMode InstallCleanupMode = YooAssetInstallCleanupMode.None;
+
+        /// <summary>启动阶段下载资源的最大并发数。</summary>
+        [Tooltip("启动阶段下载资源的最大并发数")]
+        public int DownloadMaximumConcurrency = DEFAULT_DOWNLOAD_MAXIMUM_CONCURRENCY;
+
+        /// <summary>单个资源下载失败后的重试次数。</summary>
+        [Tooltip("单个资源下载失败后的重试次数")]
+        public int DownloadRetryCount = DEFAULT_DOWNLOAD_RETRY_COUNT;
+
+        /// <summary>文件系统每帧允许发起的最大下载请求数。</summary>
+        [Tooltip("文件系统每帧允许发起的最大下载请求数")]
+        public int DownloadMaxRequestPerFrame = DEFAULT_DOWNLOAD_MAX_REQUEST_PER_FRAME;
+
+        /// <summary>下载请求持续无新数据时允许等待的时间，单位为秒。</summary>
+        [Tooltip("下载持续无新数据时允许等待的时间，单位为秒")]
+        [FormerlySerializedAs("DownloadWatchdogTimeoutSeconds")]
+        public int DownloadNoProgressTimeoutSeconds = DEFAULT_DOWNLOAD_NO_PROGRESS_TIMEOUT_SECONDS;
 
         /// <summary>版本和 manifest 请求超时时间，非正数使用默认值。</summary>
         [Tooltip("版本和 manifest 请求超时时间，单位为秒")]
@@ -121,6 +167,62 @@ namespace YokiFrame.Unity
                 ? ManifestTimeoutSeconds
                 : DEFAULT_MANIFEST_TIMEOUT_SECONDS;
         }
+
+        /// <summary>获取有效的启动下载并发数。</summary>
+        /// <returns>限制在 YooAsset 支持范围内的并发数。</returns>
+        public int GetDownloadMaximumConcurrency()
+        {
+            return Math.Max(1, Math.Min(32, DownloadMaximumConcurrency));
+        }
+
+        /// <summary>获取有效的下载重试次数。</summary>
+        /// <returns>不小于零的重试次数。</returns>
+        public int GetDownloadRetryCount()
+        {
+            return Math.Max(0, DownloadRetryCount);
+        }
+
+        /// <summary>获取有效的每帧下载请求数。</summary>
+        /// <returns>不小于一的每帧请求数。</returns>
+        public int GetDownloadMaxRequestPerFrame()
+        {
+            return Math.Max(1, DownloadMaxRequestPerFrame);
+        }
+
+        /// <summary>获取有效的下载无进度超时时间。</summary>
+        /// <returns>大于零的超时秒数。</returns>
+        public int GetDownloadNoProgressTimeoutSeconds()
+        {
+            return DownloadNoProgressTimeoutSeconds > 0
+                ? DownloadNoProgressTimeoutSeconds
+                : DEFAULT_DOWNLOAD_NO_PROGRESS_TIMEOUT_SECONDS;
+        }
+    }
+
+    /// <summary>定义 YooAsset package 的联网更新和回退策略。</summary>
+    public enum YooAssetInitializationStrategy
+    {
+        /// <summary>只按原有流程初始化并加载清单，不自动下载资源。</summary>
+        ManifestOnly,
+        /// <summary>远端版本、清单或资源下载失败时直接返回失败。</summary>
+        RemoteOnly,
+        /// <summary>远端失败后优先恢复上一次完整下载版本，再尝试包体内置版本。</summary>
+        RemoteThenCached,
+        /// <summary>远端流程失败后销毁联网 package，改用包体内置 OfflinePlayMode。</summary>
+        RemoteThenOffline
+    }
+
+    /// <summary>定义 Host 模式覆盖安装时的缓存清理策略。</summary>
+    public enum YooAssetInstallCleanupMode
+    {
+        /// <summary>不清理缓存，允许保留复制的内置清单和已有资源。</summary>
+        None,
+        /// <summary>清理全部缓存文件。</summary>
+        ClearAllCacheFiles,
+        /// <summary>只清理缓存资源文件。</summary>
+        ClearAllBundleFiles,
+        /// <summary>只清理缓存清单文件。</summary>
+        ClearAllManifestFiles
     }
 
     /// <summary>YooAsset 资源包运行时解密方案。</summary>

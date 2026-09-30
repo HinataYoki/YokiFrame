@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using YooAsset.Editor;
+using YooAsset;
 
 namespace YokiFrame.Unity.Tests
 {
@@ -61,6 +62,74 @@ namespace YokiFrame.Unity.Tests
                 root.Q<VisualElement>(className: "yoki-editor-inspector__foldout"),
                 Is.Not.Null);
             Assert.That(root.Query<Toggle>().ToList(), Is.Empty);
+        }
+
+        /// <summary>编辑器和 Player 都是本地模式时隐藏联网策略与启动下载参数。</summary>
+        [Test]
+        public void DrawerHidesNetworkSettingsWhenBothModesAreLocal()
+        {
+            mHolder.Options.EditorPlayMode = EPlayMode.EditorSimulateMode;
+            mHolder.Options.RuntimePlayMode = EPlayMode.OfflinePlayMode;
+
+            VisualElement root = CreateOptionsRoot();
+
+            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.False);
+            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
+        }
+
+        /// <summary>编辑器进入 Host 模式时，即使 Player 保持离线也显示联网配置。</summary>
+        [Test]
+        public void DrawerShowsNetworkSettingsWhenEditorUsesRemoteMode()
+        {
+            mHolder.Options.EditorPlayMode = EPlayMode.HostPlayMode;
+            mHolder.Options.RuntimePlayMode = EPlayMode.OfflinePlayMode;
+
+            VisualElement root = CreateOptionsRoot();
+
+            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.True);
+            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.True);
+        }
+
+        /// <summary>Player 进入 Web 模式时，即使编辑器保持模拟也显示联网配置。</summary>
+        [Test]
+        public void DrawerShowsNetworkSettingsWhenPlayerUsesRemoteMode()
+        {
+            mHolder.Options.EditorPlayMode = EPlayMode.EditorSimulateMode;
+            mHolder.Options.RuntimePlayMode = EPlayMode.WebPlayMode;
+
+            VisualElement root = CreateOptionsRoot();
+
+            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.True);
+            Assert.That(ContainsLabel(root, "清单超时秒数"), Is.True);
+            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
+        }
+
+        /// <summary>联网策略下拉框选择四种枚举值时都显示对应的说明标题。</summary>
+        [Test]
+        public void DrawerShowsStrategyExplanationForEachValue()
+        {
+            mHolder.Options.EditorPlayMode = EPlayMode.HostPlayMode;
+            YooAssetInitializationStrategy[] strategies =
+            {
+                YooAssetInitializationStrategy.ManifestOnly,
+                YooAssetInitializationStrategy.RemoteOnly,
+                YooAssetInitializationStrategy.RemoteThenCached,
+                YooAssetInitializationStrategy.RemoteThenOffline
+            };
+            string[] titles =
+            {
+                "Manifest Only（仅清单）",
+                "Remote Only（仅远端）",
+                "Remote Then Cached（远端后缓存）",
+                "Remote Then Offline（远端后离线）"
+            };
+
+            for (int index = 0; index < strategies.Length; index++)
+            {
+                mHolder.Options.InitializationStrategy = strategies[index];
+                VisualElement root = CreateOptionsRoot();
+                Assert.That(ContainsLabel(root, titles[index]), Is.True);
+            }
         }
 
         /// <summary>Drawer 创建时应以 YooAsset 收集器为唯一 package 数据源。</summary>
@@ -166,6 +235,15 @@ namespace YokiFrame.Unity.Tests
             }
 
             return false;
+        }
+
+        /// <summary>创建当前测试宿主的 YooAsset 选项视觉树。</summary>
+        private VisualElement CreateOptionsRoot()
+        {
+            SerializedObject serializedObject = new(mHolder);
+            SerializedProperty property = serializedObject.FindProperty(
+                nameof(YooAssetInitializationOptionsHolder.Options));
+            return new YooAssetInitializationOptionsDrawer().CreatePropertyGUI(property);
         }
 
         /// <summary>从扫描结果中获取指定方案的实现对，缺失时使测试明确失败。</summary>

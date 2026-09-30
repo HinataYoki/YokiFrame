@@ -26,9 +26,19 @@ namespace YokiFrame.Unity
         {
             VisualElement root = InspectorKitUi.CreateRoot();
             VisualElement panel = InspectorKitUi.CreatePanel(property.displayName);
+            Action refreshModeDependent = null;
+            Action refreshBasic = null;
             Action refreshRemote = null;
-            panel.Add(CreateBasicCard(property, () => refreshRemote?.Invoke()));
+            panel.Add(CreateBasicCard(
+                property,
+                () => refreshModeDependent?.Invoke(),
+                out refreshBasic));
             panel.Add(CreateRemoteCard(property, out refreshRemote));
+            refreshModeDependent = () =>
+            {
+                refreshBasic?.Invoke();
+                refreshRemote?.Invoke();
+            };
             VisualElement encryptionCard = CreateEncryptionCard(property);
             if (encryptionCard != null)
                 panel.Add(encryptionCard);
@@ -40,9 +50,11 @@ namespace YokiFrame.Unity
         /// <summary>创建运行模式、package 列表和 manifest 设置卡片。</summary>
         private static VisualElement CreateBasicCard(
             SerializedProperty property,
-            Action refreshRemote)
+            Action onModeChanged,
+            out Action refreshNetwork)
         {
-            return InspectorKitUi.CreateCard(
+            Action refreshNetworkContent = null;
+            VisualElement card = InspectorKitUi.CreateCard(
                 "基础配置",
                 BASIC_CARD_KEY,
                 InspectorCardInitialState.Expanded,
@@ -51,16 +63,151 @@ namespace YokiFrame.Unity
                     body.Add(CreateEnumRow(
                         property.FindPropertyRelative(nameof(YooAssetInitializationOptions.EditorPlayMode)),
                         "编辑器运行模式",
-                        null));
-                    body.Add(CreateRuntimeModeRow(property, refreshRemote));
+                        onModeChanged));
+                    body.Add(CreateRuntimeModeRow(property, onModeChanged));
                     body.Add(CreatePackageList(property));
-                    body.Add(InspectorKitUi.CreateSwitchRow(
-                        property.FindPropertyRelative(nameof(YooAssetInitializationOptions.LoadManifestAfterInitialization)),
-                        "初始化后加载清单"));
-                    body.Add(InspectorKitUi.CreateIntegerRow(
-                        property.FindPropertyRelative(nameof(YooAssetInitializationOptions.ManifestTimeoutSeconds)),
-                        "清单超时秒数"));
+                    VisualElement networkContent = new();
+                    body.Add(networkContent);
+                    refreshNetworkContent = () => InspectorKitUi.Refresh(
+                        networkContent,
+                        target => BuildNetworkContent(target, property));
+                    refreshNetworkContent();
                 });
+            refreshNetwork = () => refreshNetworkContent?.Invoke();
+            return card;
+        }
+
+        /// <summary>仅在编辑器或 Player 至少一个运行模式联网时显示联网初始化和下载参数。</summary>
+        private static void BuildNetworkContent(
+            VisualElement container,
+            SerializedProperty property)
+        {
+            if (!HasNetworkMode(property))
+                return;
+
+            SerializedProperty packages = property.FindPropertyRelative(
+                nameof(YooAssetInitializationOptions.PackageNames));
+            if (packages != null && packages.arraySize > 1)
+            {
+                container.Add(InspectorKitUi.CreateInfoBox(
+                    "多包共用联网策略",
+                    "ResKit 只安装一个 YooAsset Provider，但这个 Provider 可以代理多个 package。当前一键初始化让所有 package 共用编辑器/Player 运行模式、远端地址和回退策略；混合热更包与不热更包时，建议统一选择 Remote Then Offline，让不热更包在远端不存在时回退到包体资源。",
+                    InspectorInfoBoxType.Info));
+            }
+
+            SerializedProperty strategy = property.FindPropertyRelative(
+                nameof(YooAssetInitializationOptions.InitializationStrategy));
+            VisualElement strategyInfo = new();
+            container.Add(CreateEnumRow(
+                strategy,
+                "联网初始化策略",
+                () => RefreshStrategyInfo(strategyInfo, strategy)));
+            container.Add(strategyInfo);
+            RefreshStrategyInfo(strategyInfo, strategy);
+            container.Add(InspectorKitUi.CreateSwitchRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.LoadManifestAfterInitialization)),
+                "初始化后加载清单"));
+            container.Add(InspectorKitUi.CreateIntegerRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.ManifestTimeoutSeconds)),
+                "清单超时秒数"));
+            if (!HasHostMode(property))
+                return;
+
+            container.Add(InspectorKitUi.CreateSwitchRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.CopyBuiltinPackageManifest)),
+                "复制包体内置清单"));
+            container.Add(InspectorKitUi.CreateStringRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.CopyBuiltinPackageManifestDestRoot)),
+                "内置清单复制目标目录"));
+            container.Add(CreateEnumRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.InstallCleanupMode)),
+                "覆盖安装清理策略",
+                null));
+            container.Add(InspectorKitUi.CreateIntegerRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.DownloadMaximumConcurrency)),
+                "启动下载并发数"));
+            container.Add(InspectorKitUi.CreateIntegerRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.DownloadRetryCount)),
+                "下载失败重试次数"));
+            container.Add(InspectorKitUi.CreateIntegerRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.DownloadMaxRequestPerFrame)),
+                "每帧下载请求数"));
+            container.Add(InspectorKitUi.CreateIntegerRow(
+                property.FindPropertyRelative(nameof(YooAssetInitializationOptions.DownloadNoProgressTimeoutSeconds)),
+                "下载无进度超时秒数"));
+        }
+
+        /// <summary>按当前策略重建蓝色说明框，让回退范围和 Web 限制在选择后立即可见。</summary>
+        private static void RefreshStrategyInfo(
+            VisualElement container,
+            SerializedProperty strategy)
+        {
+            InspectorKitUi.Refresh(container, target =>
+            {
+                YooAssetInitializationStrategy value = strategy == null
+                    ? YooAssetInitializationStrategy.ManifestOnly
+                    : (YooAssetInitializationStrategy)strategy.enumValueIndex;
+                string title;
+                string message;
+                switch (value)
+                {
+                    case YooAssetInitializationStrategy.RemoteOnly:
+                        title = "Remote Only（仅远端）";
+                        message = "必须访问远端；Host 会下载缺失资源，Web 按需请求资源。远端失败直接返回失败，不切换到旧缓存或包体内置版本。";
+                        break;
+                    case YooAssetInitializationStrategy.RemoteThenCached:
+                        title = "Remote Then Cached（远端后缓存）";
+                        message = "先执行远端更新；远端失败后优先使用上一次完整下载成功的缓存，缓存不可用时再尝试包体内置资源。仅适用于 HostPlayMode。";
+                        break;
+                    case YooAssetInitializationStrategy.RemoteThenOffline:
+                        title = "Remote Then Offline（远端后离线）";
+                        message = "先执行远端更新；失败后销毁联网 package，改用 OfflinePlayMode 加载包体内置资源。仅适用于 HostPlayMode。";
+                        break;
+                    default:
+                        title = "Manifest Only（仅清单）";
+                        message = "只初始化 package 并加载当前模式对应的清单，不自动下载整包；适合先检查更新，再由项目自行控制下载。";
+                        break;
+                }
+
+                target.Add(InspectorKitUi.CreateInfoBox(
+                    title,
+                    message,
+                    InspectorInfoBoxType.Info));
+            });
+        }
+
+        /// <summary>判断编辑器或 Player 是否至少有一个 Host/Web 联网运行模式。</summary>
+        private static bool HasNetworkMode(SerializedProperty property)
+        {
+            return HasHostMode(property) || HasWebMode(property);
+        }
+
+        /// <summary>判断编辑器或 Player 是否至少有一个 Host 运行模式。</summary>
+        private static bool HasHostMode(SerializedProperty property)
+        {
+            return IsPlayMode(property.FindPropertyRelative(
+                       nameof(YooAssetInitializationOptions.EditorPlayMode)),
+                       EPlayMode.HostPlayMode)
+                || IsPlayMode(property.FindPropertyRelative(
+                    nameof(YooAssetInitializationOptions.RuntimePlayMode)),
+                    EPlayMode.HostPlayMode);
+        }
+
+        /// <summary>判断编辑器或 Player 是否至少有一个 Web 运行模式。</summary>
+        private static bool HasWebMode(SerializedProperty property)
+        {
+            return IsPlayMode(property.FindPropertyRelative(
+                       nameof(YooAssetInitializationOptions.EditorPlayMode)),
+                       EPlayMode.WebPlayMode)
+                || IsPlayMode(property.FindPropertyRelative(
+                    nameof(YooAssetInitializationOptions.RuntimePlayMode)),
+                    EPlayMode.WebPlayMode);
+        }
+
+        /// <summary>比较序列化枚举值与 YooAsset 运行模式。</summary>
+        private static bool IsPlayMode(SerializedProperty property, EPlayMode mode)
+        {
+            return property != null && property.enumValueIndex == (int)mode;
         }
 
         /// <summary>创建只在 Host/Web 模式有实际输入的远端地址卡片。</summary>
@@ -107,24 +254,19 @@ namespace YokiFrame.Unity
             VisualElement container,
             SerializedProperty property)
         {
-            SerializedProperty mode = property.FindPropertyRelative(
-                nameof(YooAssetInitializationOptions.RuntimePlayMode));
-            bool usesRemote = mode != null
-                && (mode.enumValueIndex == (int)EPlayMode.HostPlayMode
-                    || mode.enumValueIndex == (int)EPlayMode.WebPlayMode);
-            if (!usesRemote)
+            if (!HasNetworkMode(property))
             {
                 container.Add(InspectorKitUi.CreateInfoBox(
                     "当前模式无需远端地址",
-                    "OfflinePlayMode 和 CustomPlayMode 由本地文件系统或项目初始化回调提供资源。",
+                    "编辑器和 Player 都是 OfflinePlayMode 或 CustomPlayMode，由本地文件系统或项目初始化回调提供资源。",
                     InspectorInfoBoxType.Info));
                 return;
             }
 
             container.Add(InspectorKitUi.CreateInfoBox(
-                "Host / Web",
-                "YooAsset V2 可直接使用主备地址；V3 由 HostInitializationHandler 或 WebInitializationHandler 创建文件系统。",
-                InspectorInfoBoxType.Info));
+                    "Host / Web",
+                    "Host 模式支持远端更新、弱网回退和下载节流；Web 模式仅支持远端更新。自定义文件系统仍可通过初始化回调接管。",
+                    InspectorInfoBoxType.Info));
             container.Add(InspectorKitUi.CreateStringRow(
                 property.FindPropertyRelative(nameof(YooAssetInitializationOptions.DefaultHostServer)),
                 "主资源服务器"));

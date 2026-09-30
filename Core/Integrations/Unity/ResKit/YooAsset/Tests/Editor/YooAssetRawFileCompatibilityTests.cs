@@ -24,7 +24,7 @@ namespace YokiFrame.Unity.Tests
             string editorSource = ReadSource(EDITOR_PATH);
 
             StringAssert.Contains("UseEditorTextAsset(path", providerSource);
-            StringAssert.Contains("LoadAssetSync<TextAsset>(path)", providerSource);
+            StringAssert.Contains("package.LoadAssetSync<TextAsset>(location)", providerSource);
             StringAssert.Contains(
                 "options.PlayMode == EPlayMode.EditorSimulateMode",
                 initializerSource);
