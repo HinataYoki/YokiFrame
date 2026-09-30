@@ -40,7 +40,7 @@ namespace YokiFrame.Unity
         public EPlayMode RuntimePlayMode = EPlayMode.OfflinePlayMode;
 
         /// <summary>需要初始化的 package 快照；Unity Editor 由 YooAsset 收集器自动同步。</summary>
-        [Tooltip("由 YooAsset 收集器自动同步，第一项作为 ResKit 默认 package")]
+        [Tooltip("由 YooAsset 收集器自动同步；ResKit 按此顺序自动探测，第一项是起点")]
         public List<string> PackageNames = new() { DEFAULT_PACKAGE_NAME };
 
         /// <summary>package 初始化后是否请求版本并加载 manifest。</summary>

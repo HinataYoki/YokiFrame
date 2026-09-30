@@ -119,6 +119,10 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 
 YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `ResKit.SetProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一步完成初始化和接入。初始化器不会替项目销毁 package，package 的生命周期仍由项目负责。
 
+初始化多个 package 时，ResKit 仍只安装一个 Provider。普通路径按 `PackageNames` 的顺序探测，第一个清单包含该 location 的包负责加载；都没有时才由第一包返回失败。同名 location 不会继续向后查找，需要覆盖旧资源时必须把新包排在前面。
+
+需要固定某个包时，在路径前加 `package:{包名}/`，例如 `package:DLC/Prefabs/Enemy`。显式包不存在或不包含该 location 时直接失败，不会改走自动探测。显式路径和普通路径是不同缓存键。包内依赖不会跨包补齐，场景重名时也应显式指定包。
+
 YooAsset 的初始化选项可在 Unity Inspector 中配置远端、加密和打包参数。资源包列表由 YooAsset 收集器提供；项目仍负责 package 的创建和销毁。
 
 一键初始化示例：

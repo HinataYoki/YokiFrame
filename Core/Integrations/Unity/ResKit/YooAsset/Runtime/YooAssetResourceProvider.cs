@@ -15,7 +15,10 @@ using YooSceneHandle = YooAsset.SceneHandle;
 
 namespace YokiFrame.Unity
 {
-    /// <summary>把已经初始化成功的 YooAsset 2.3+ 或 3.x ResourcePackage 接入 ResKit。</summary>
+    /// <summary>
+    /// 把已经初始化成功的 YooAsset 2.3+ 或 3.x package 接入 ResKit。
+    /// 未指定包时按构造顺序探测 location；显式路径只查询指定包。
+    /// </summary>
     public sealed partial class YooAssetResourceProvider :
         IResourceProvider,
         IRawResourceProvider,
@@ -23,7 +26,7 @@ namespace YokiFrame.Unity
         IResourceProviderCapabilities
     {
         private readonly object mLock = new();
-        private readonly ResourcePackage mPackage;
+        private readonly ResourcePackage[] mPackages;
         private readonly bool mEditorSimulateMode;
         private readonly Dictionary<object, Stack<AssetHandle>> mHandles =
             new(ReferenceEqualityComparer.Instance);
@@ -47,12 +50,22 @@ namespace YokiFrame.Unity
         /// <param name="package">已经完成初始化并加载有效 manifest 的 YooAsset 资源包。</param>
         /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
         public YooAssetResourceProvider(ResourcePackage package, bool editorSimulateMode)
+            : this(new[] { package }, editorSimulateMode)
         {
-            mPackage = package ?? throw new ArgumentNullException(nameof(package));
+        }
+
+        /// <summary>
+        /// 创建按给定顺序探测多个资源包的 Provider。
+        /// 第一项是自动探测起点；同名 location 不会继续向后查找。
+        /// </summary>
+        /// <param name="packages">已经完成初始化并加载有效 manifest 的资源包，顺序即探测顺序。</param>
+        /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
+        public YooAssetResourceProvider(IReadOnlyList<ResourcePackage> packages, bool editorSimulateMode)
+        {
+            mPackages = CopyReadyPackages(packages);
             mEditorSimulateMode = editorSimulateMode;
-            EnsurePackageReady();
 #if UNITY_EDITOR
-            ProviderName = "YooAsset:" + package.PackageName;
+            ProviderName = "YooAsset:" + mPackages[0].PackageName;
 #endif
         }
 
@@ -77,7 +90,8 @@ namespace YokiFrame.Unity
         public T Load<T>(string path) where T : class
         {
             EnsureLoadRequest<T>(path);
-            AssetHandle handle = mPackage.LoadAssetSync(path, typeof(T));
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetSync(location, typeof(T));
             try
             {
                 return CompleteAssetLoad<T>(path, handle);
@@ -98,7 +112,8 @@ namespace YokiFrame.Unity
 #endif
         {
             EnsureLoadRequest<T>(path);
-            AssetHandle handle = mPackage.LoadAssetAsync(path, typeof(T));
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetAsync(location, typeof(T));
             try
             {
                 await WaitForCompletion(handle, token);
@@ -186,23 +201,6 @@ namespace YokiFrame.Unity
 #endif
         }
 
-        /// <summary>校验 YooAsset 全局状态和当前资源包 manifest 均已可用。</summary>
-        private void EnsurePackageReady()
-        {
-#if YOKIFRAME_YOOASSET_3
-            bool initialized = YooAssets.IsInitialized;
-            bool succeeded = mPackage.InitializeStatus == EOperationStatus.Succeeded;
-#else
-            bool initialized = YooAssets.Initialized;
-            bool succeeded = mPackage.InitializeStatus == EOperationStatus.Succeed;
-#endif
-            if (!initialized || !succeeded || !mPackage.PackageValid)
-            {
-                throw new InvalidOperationException(
-                    "YooAsset ResourcePackage must be initialized successfully before installing the ResKit provider.");
-            }
-        }
-
         /// <summary>校验路径和类型，避免把无效请求交给 YooAsset。</summary>
         private void EnsureLoadRequest<T>(string path) where T : class
         {
@@ -213,10 +211,15 @@ namespace YokiFrame.Unity
             }
         }
 
-        /// <summary>校验资源包状态和 location，确保同步与异步入口使用相同前置条件。</summary>
+        /// <summary>校验探测清单和 location，确保同步与异步入口使用相同前置条件。</summary>
         private void EnsureRequestPath(string path)
         {
-            EnsurePackageReady();
+            if (mPackages.Length == 0 || !YooAssetPackageReadiness.IsReady(mPackages[0]))
+            {
+                throw new InvalidOperationException(
+                    "YooAsset ResourcePackage must be initialized successfully before installing the ResKit provider.");
+            }
+
             if (string.IsNullOrWhiteSpace(path))
             {
                 throw new ArgumentException("Resource path cannot be empty.", nameof(path));
@@ -297,7 +300,8 @@ namespace YokiFrame.Unity
         private TResult UseEditorTextAsset<TResult>(string path, Func<TextAsset, TResult> selector)
         {
             EnsureRequestPath(path);
-            AssetHandle handle = mPackage.LoadAssetSync<TextAsset>(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetSync<TextAsset>(location);
             try
             {
                 EnsureHandleSucceeded(path, handle, true);
@@ -324,7 +328,8 @@ namespace YokiFrame.Unity
             CancellationToken token)
         {
             EnsureRequestPath(path);
-            AssetHandle handle = mPackage.LoadAssetAsync<TextAsset>(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetAsync<TextAsset>(location);
             try
             {
                 await WaitForCompletion(handle, token);
@@ -345,7 +350,8 @@ namespace YokiFrame.Unity
         private TResult UseRawFile<TResult>(string path, Func<RawFileObject, TResult> selector)
         {
             EnsureRequestPath(path);
-            AssetHandle handle = mPackage.LoadAssetSync<RawFileObject>(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetSync<RawFileObject>(location);
             try
             {
                 EnsureHandleSucceeded(path, handle, true);
@@ -375,7 +381,8 @@ namespace YokiFrame.Unity
             CancellationToken token)
         {
             EnsureRequestPath(path);
-            AssetHandle handle = mPackage.LoadAssetAsync<RawFileObject>(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            AssetHandle handle = package.LoadAssetAsync<RawFileObject>(location);
             try
             {
                 await WaitForCompletion(handle, token);
@@ -398,7 +405,8 @@ namespace YokiFrame.Unity
         private TResult UseRawFile<TResult>(string path, Func<RawFileHandle, TResult> selector)
         {
             EnsureRequestPath(path);
-            RawFileHandle handle = mPackage.LoadRawFileSync(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            RawFileHandle handle = package.LoadRawFileSync(location);
             try
             {
                 EnsureHandleSucceeded(path, handle, true);
@@ -422,7 +430,8 @@ namespace YokiFrame.Unity
             CancellationToken token)
         {
             EnsureRequestPath(path);
-            RawFileHandle handle = mPackage.LoadRawFileAsync(path);
+            ResourcePackage package = ResolvePackage(path, out string location);
+            RawFileHandle handle = package.LoadRawFileAsync(location);
             try
             {
                 await WaitForCompletion(handle, token);

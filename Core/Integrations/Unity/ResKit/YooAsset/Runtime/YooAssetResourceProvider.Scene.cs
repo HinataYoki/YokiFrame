@@ -25,6 +25,7 @@ namespace YokiFrame.Unity
             }
 
             EnsureRequestPath(request.SceneName);
+            ResourcePackage package = ResolvePackage(request.SceneName, out string location);
             LoadSceneMode mode = request.Mode == ResSceneLoadMode.Single
                 ? LoadSceneMode.Single
                 : LoadSceneMode.Additive;
@@ -32,12 +33,12 @@ namespace YokiFrame.Unity
 #if YOKIFRAME_YOOASSET_3
             // V3 的第四个参数改为 allowSceneActivation，与 V2 的 suspendLoad 含义相反。
             bool allowSceneActivation = !shouldSuspend;
-            YooSceneHandle handle = mPackage.LoadSceneAsync(
-                request.SceneName, mode, LocalPhysicsMode.None, allowSceneActivation);
+            YooSceneHandle handle = package.LoadSceneAsync(
+                location, mode, LocalPhysicsMode.None, allowSceneActivation);
 #else
             bool suspendLoad = shouldSuspend;
-            YooSceneHandle handle = mPackage.LoadSceneAsync(
-                request.SceneName, mode, LocalPhysicsMode.None, suspendLoad);
+            YooSceneHandle handle = package.LoadSceneAsync(
+                location, mode, LocalPhysicsMode.None, suspendLoad);
 #endif
             var operation = new YooAssetSceneLoadOperation(
                 handle, request.SuspendAtProgress, onProgress, onSuspended);

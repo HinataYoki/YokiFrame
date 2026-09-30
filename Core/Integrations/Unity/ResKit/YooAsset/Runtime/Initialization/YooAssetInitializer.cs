@@ -27,11 +27,11 @@ namespace YokiFrame.Unity
 
     /// <summary>
     /// YooAsset 一键初始化门面。
-    /// 它负责创建并初始化 package，初始化成功后把默认 package 接入 ResKit；package 销毁仍由项目生命周期负责。
+    /// 它负责按配置顺序创建并初始化 package，成功后把全部已登记 package 接入同一个 ResKit Provider；package 销毁仍由项目生命周期负责。
     /// </summary>
     public static partial class YooAssetInitializer
     {
-        private static readonly Dictionary<string, ResourcePackage> sPackages = new(StringComparer.Ordinal);
+        private static readonly YooAssetPackageRegistry sPackages = new();
         private static bool sIsInitializing;
 
         /// <summary>获取 YooAsset 初始化是否已成功完成。</summary>
@@ -40,14 +40,14 @@ namespace YokiFrame.Unity
         /// <summary>获取当前是否有一项初始化任务正在执行。</summary>
         public static bool IsInitializing => sIsInitializing;
 
-        /// <summary>获取初始化后选为 ResKit 默认 package 的实例。</summary>
+        /// <summary>获取登记顺序中的首个 package，也是自动探测的起点。</summary>
         public static ResourcePackage DefaultPackage { get; private set; }
 
         /// <summary>获取默认 package 名称。</summary>
         public static string DefaultPackageName { get; private set; }
 
-        /// <summary>获取本次初始化登记的 package 集合。</summary>
-        public static IReadOnlyDictionary<string, ResourcePackage> Packages => sPackages;
+        /// <summary>按登记顺序获取本次初始化的 package；第一项是自动探测的起点。</summary>
+        public static IReadOnlyList<ResourcePackage> Packages => sPackages.Copy();
 
         /// <summary>为 CustomPlayMode 提供 package 初始化回调。</summary>
         public static YooAssetPackageInitializationHandler CustomInitializationHandler { get; set; }
@@ -72,14 +72,14 @@ namespace YokiFrame.Unity
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        /// <summary>按指定参数初始化全部 package，并把首个有效 package 接入 ResKit。</summary>
+        /// <summary>按指定参数初始化全部 package，并把登记顺序接入同一个 ResKit Provider。</summary>
         /// <param name="options">初始化参数。</param>
         /// <param name="token">取消令牌。</param>
         public static async UniTask InitializeAsync(
             YooAssetInitializationOptions options,
             CancellationToken token = default)
 #else
-        /// <summary>按指定参数初始化全部 package，并把首个有效 package 接入 ResKit。</summary>
+        /// <summary>按指定参数初始化全部 package，并把登记顺序接入同一个 ResKit Provider。</summary>
         /// <param name="options">初始化参数。</param>
         /// <param name="token">取消令牌。</param>
         public static async Task InitializeAsync(
@@ -102,7 +102,7 @@ namespace YokiFrame.Unity
                 if (DefaultPackage == null)
                     throw new InvalidOperationException("No valid YooAsset package was initialized.");
 
-                InstallProvider(DefaultPackage, options.PlayMode == EPlayMode.EditorSimulateMode);
+                InstallRegisteredProvider(options.PlayMode == EPlayMode.EditorSimulateMode);
                 IsInitialized = true;
             }
             finally
@@ -112,7 +112,8 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 将已初始化的 package 直接接入 ResKit，适合项目自行管理非 EditorSimulate 的 YooAsset 初始化流程。
+        /// 将已初始化的 package 登记并接入 ResKit。
+        /// 只传入一个 package 时，它既是默认包，也是自动探测的唯一候选。
         /// </summary>
         /// <param name="package">已经完成初始化并加载有效 manifest 的 package。</param>
         public static void InstallProvider(ResourcePackage package)
@@ -121,7 +122,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 将已初始化的 package 直接接入 ResKit，并传递当前是否为 EditorSimulateMode。
+        /// 将已初始化的 package 登记并接入 ResKit，同时保留此前已登记的其它 package。
         /// </summary>
         /// <param name="package">已经完成初始化并加载有效 manifest 的 package。</param>
         /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
@@ -130,10 +131,21 @@ namespace YokiFrame.Unity
             if (package == null)
                 throw new ArgumentNullException(nameof(package));
 
-            DefaultPackage = package;
-            DefaultPackageName = package.PackageName;
-            sPackages[package.PackageName] = package;
-            ResKit.SetProvider(new YooAssetResourceProvider(package, editorSimulateMode));
+            sPackages.Add(package);
+            if (DefaultPackage == null)
+                SetDefaultPackage(package);
+            InstallRegisteredProvider(editorSimulateMode);
+        }
+
+        /// <summary>用当前登记顺序安装统一 Provider，供自动探测和显式包路径共用。</summary>
+        /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
+        private static void InstallRegisteredProvider(bool editorSimulateMode)
+        {
+            ResourcePackage[] packages = sPackages.Copy();
+            if (packages.Length == 0)
+                throw new InvalidOperationException("No valid YooAsset package was registered.");
+
+            ResKit.SetProvider(new YooAssetResourceProvider(packages, editorSimulateMode));
         }
 
         /// <summary>按名称获取已登记 package。</summary>
@@ -144,7 +156,7 @@ namespace YokiFrame.Unity
             if (string.IsNullOrWhiteSpace(packageName))
                 return null;
 
-            return sPackages.TryGetValue(packageName, out ResourcePackage package)
+            return sPackages.TryGet(packageName, out ResourcePackage package)
                 ? package
                 : null;
         }
@@ -161,7 +173,7 @@ namespace YokiFrame.Unity
                 return false;
             }
 
-            return sPackages.TryGetValue(packageName, out package);
+            return sPackages.TryGet(packageName, out package);
         }
 
         /// <summary>
@@ -236,12 +248,12 @@ namespace YokiFrame.Unity
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        /// <summary>顺序初始化有效 package，确保首个 package 成为 ResKit 默认 package。</summary>
+        /// <summary>按配置顺序初始化 package，首个成功项作为自动探测起点。</summary>
         private static async UniTask InitializePackagesAsync(
             YooAssetInitializationOptions options,
             CancellationToken token)
 #else
-        /// <summary>顺序初始化有效 package，确保首个 package 成为 ResKit 默认 package。</summary>
+        /// <summary>按配置顺序初始化 package，首个成功项作为自动探测起点。</summary>
         private static async Task InitializePackagesAsync(
             YooAssetInitializationOptions options,
             CancellationToken token)
@@ -260,7 +272,7 @@ namespace YokiFrame.Unity
                     SetDefaultPackage(package);
 
                 await InitializePackageAsync(package, options, token);
-                sPackages[package.PackageName] = package;
+                sPackages.Add(package);
             }
         }
 

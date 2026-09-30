@@ -26,6 +26,7 @@
 
 ## 使用约束
 
+- YooAsset 多包由同一个 ResKit Provider 按登记顺序探测；固定包使用 `package:{包名}/{location}`，失败不回退。细节见 `Api/02-Core/ResKit.md`。
 - Runtime API 已实现不代表在线 Provider、CLI action 或 Workbench 页面存在
 - 上表 `command send` 与 `kit status` 都需要宿主在线；每个命令的实际形态以 `harness catalog --refresh-commands` 观察到的 action 为准，本表只给一条可用入口
 - Runtime state、capability catalog、snapshot、telemetry 和 command 统一通过 `yoki` CLI 核实，命令见 [cli-commands.md](cli-commands.md)
