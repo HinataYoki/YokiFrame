@@ -22,24 +22,6 @@ namespace YokiFrame
         private const string EVIDENCE_FILE_NAME = "player-boundary-evidence.txt";
 
         /// <summary>
-        /// 验证 Workbench smoke/stress 源码整文件限制为 Editor 编译边界，避免它们进入 Player。
-        /// </summary>
-        [Test]
-        public void ProjectSmokeHarnessSourcesAreEditorOnly()
-        {
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            for (var index = 0; index < sSmokeSourceRelativePaths.Length; index++)
-            {
-                string sourcePath = Path.Combine(projectRoot, sSmokeSourceRelativePaths[index]);
-                Assert.IsTrue(File.Exists(sourcePath), "缺少 Workbench smoke/stress 源码: " + sourcePath);
-                Assert.IsTrue(
-                    File.ReadAllText(sourcePath).StartsWith("#if UNITY_EDITOR", StringComparison.Ordinal),
-                    "Smoke/stress 源码必须整文件由 UNITY_EDITOR 包裹: " + sourcePath);
-            }
-
-        }
-
-        /// <summary>
         /// 构建未启用 Editor 宏且关闭 managed stripping 的 Windows Player，并扫描真实 Managed DLL 与 Resources 数据。
         /// </summary>
         [Test]

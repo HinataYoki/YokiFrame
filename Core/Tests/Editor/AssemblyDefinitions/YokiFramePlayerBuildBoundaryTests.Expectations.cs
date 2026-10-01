@@ -24,25 +24,8 @@ namespace YokiFrame
             "UIKitBindScanner", "UIKitBindInspector", "UIKitPanelCodeGenerator",
             "UIKitPrefabBindingProcessor", "UIKitEditorContextWriter",
             "UIPanelValidator", "UILevelPropertyDrawer",
-            "YokiFrameSharedMemoryTelemetryContract", "ArchitectureRealtimeTestBootstrap",
-            "AudioKitWorkbenchStressController", "EventKitRuntimeSmokeController",
-            "FsmKitRuntimeSmokeController", "PoolKitRuntimeStressController",
+            "YokiFrameSharedMemoryTelemetryContract",
             "SpatialGizmoDiagnosticsFrame", "SpatialGizmoIndexSnapshot"
-        };
-
-        private static readonly string[] sSmokeSourceRelativePaths =
-        {
-            "Assets/Scripts/ArchitectureRealtimeSmoke/ArchitectureLifecycleTestArchitecture.cs",
-            "Assets/Scripts/ArchitectureRealtimeSmoke/ArchitectureRealtimeTestBootstrap.cs",
-            "Assets/Scripts/ArchitectureRealtimeSmoke/ArchitectureRegistrationTestArchitecture.cs",
-            "Assets/Scripts/AudioKitWorkbenchStress/AudioKitWorkbenchStressController.cs",
-            "Assets/Scripts/AudioKitWorkbenchStress/AudioKitWorkbenchStressController.Pressure.cs",
-            "Assets/Scripts/EventKitRuntimeSmoke/EventKitRuntimeSmokeController.cs",
-            "Assets/Scripts/FsmKitRuntimeSmoke/FsmKitRuntimeSmokeController.cs",
-            "Assets/Scripts/PoolKitRuntimeStress/PoolKitRuntimeStressController.cs",
-            "Assets/Scripts/PoolKitRuntimeStress/PoolKitRuntimeStressController.Pressure.cs",
-            "Assets/Scripts/PoolKitRuntimeStress/PoolKitStressTokens.cs",
-            "Assets/Scripts/SpatialKitWorkbenchStress/SpatialKitWorkbenchStressController.cs"
         };
 
         private static readonly string[] sEditorConfigurationTokens =

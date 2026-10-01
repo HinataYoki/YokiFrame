@@ -46,9 +46,21 @@ namespace YokiFrame
                     json,
                     out var editorStore,
                     out errorMessage)) return false;
+            CopyEditorOnlyLogKitFields(editorStore, runtimeStore);
+            return true;
+        }
+
+        /// <summary>
+        /// 只把 LogKit 的 Editor 文件字段叠进工具会话，避免 Editor 配置里的 Player 字段覆盖 Resources。
+        /// </summary>
+        /// <param name="editorStore">已解析的 Editor 项目配置。</param>
+        /// <param name="runtimeStore">Resources 解析结果，作为叠加目标。</param>
+        internal static void CopyEditorOnlyLogKitFields(
+            YokiFrameRuntimeSettingsStore editorStore,
+            YokiFrameRuntimeSettingsStore runtimeStore)
+        {
             CopySetting(editorStore, runtimeStore, LogKitSettings.SAVE_LOG_IN_EDITOR_KEY);
             CopySetting(editorStore, runtimeStore, LogKitSettings.EDITOR_FILE_NAME_KEY);
-            return true;
         }
 
         /// <summary>

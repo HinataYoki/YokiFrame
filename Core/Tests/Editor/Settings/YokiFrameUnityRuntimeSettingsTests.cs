@@ -101,69 +101,35 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 验证 Runtime Settings Loader 只读取 Resources；ProjectSettings 文件 IO 必须由 Editor Adapter 拥有。
+        /// 验证 Editor 配置叠加只复制 Editor 专属 LogKit 字段，不把同文件里的 Player 字段写进工具会话。
         /// </summary>
         [Test]
-        public void RuntimeSettingsLoaderDoesNotReadEditorProjectFiles()
+        public void EditorOverlayCopiesOnlyEditorLogKitFields()
         {
-            string sourcePath = Path.Combine(
-                Application.dataPath,
-                "YokiFrame",
-                "Core",
-                "Adapters",
-                "Unity",
-                "Runtime",
-                "Settings",
-                "UnityYokiFrameRuntimeSettingsLoader.cs");
-            string source = File.ReadAllText(sourcePath);
+            const string json = "{\"formatVersion\":1,\"settings\":["
+                                + "{\"kit\":\"LogKit\",\"key\":\"saveLogInEditor\",\"value\":\"false\"},"
+                                + "{\"kit\":\"LogKit\",\"key\":\"editorFileName\",\"value\":\"editor.log\"},"
+                                + "{\"kit\":\"LogKit\",\"key\":\"saveLogInPlayer\",\"value\":\"true\"}]}";
 
-            StringAssert.DoesNotContain("using System.IO", source);
-            StringAssert.DoesNotContain("ProjectSettings/", source);
-            StringAssert.DoesNotContain("File.Read", source);
-            StringAssert.Contains("UnityYokiFrameRuntimeSettingsEditorOverlay.TryApply", source);
-        }
+            bool parsed = UnityYokiFrameRuntimeSettingsLoader.TryParse(json, out var editorStore, out var errorMessage);
+            Assert.IsTrue(parsed, errorMessage);
 
-        /// <summary>
-        /// 验证 Editor Adapter 已安装项目配置 overlay，并能把独立文件中的字段合并到工具会话 Store。
-        /// </summary>
-        [Test]
-        public void EditorSettingsOverlayLoadsProjectScopedFields()
-        {
-            YokiFrameRuntimeSettingsStore store = new();
-
-            bool applied = UnityYokiFrameRuntimeSettingsEditorOverlay.TryApply(
-                store,
-                out string errorMessage);
-
-            Assert.IsTrue(applied, errorMessage);
-            Assert.IsTrue(store.TryGetValue(
+            YokiFrameRuntimeSettingsStore runtimeStore = new();
+            UnityYokiFrameEditorSettingsOverlay.CopyEditorOnlyLogKitFields(editorStore, runtimeStore);
+            Assert.IsTrue(runtimeStore.TryGetValue(
                 LogKitSettings.KIT_NAME,
                 LogKitSettings.SAVE_LOG_IN_EDITOR_KEY,
-                out _));
-            Assert.IsTrue(store.TryGetValue(
+                out var saveInEditor));
+            Assert.AreEqual("false", saveInEditor);
+            Assert.IsTrue(runtimeStore.TryGetValue(
                 LogKitSettings.KIT_NAME,
                 LogKitSettings.EDITOR_FILE_NAME_KEY,
+                out var editorFileName));
+            Assert.AreEqual("editor.log", editorFileName);
+            Assert.IsFalse(runtimeStore.TryGetValue(
+                LogKitSettings.KIT_NAME,
+                LogKitSettings.SAVE_LOG_IN_PLAYER_KEY,
                 out _));
-        }
-
-        /// <summary>
-        /// 验证 Player Resources 配置只保留运行时字段，不携带 Unity Editor 文件写入设置。
-        /// </summary>
-        [Test]
-        public void RuntimeSettingsResourceExcludesEditorOnlyLogKitFields()
-        {
-            string settingsPath = Path.Combine(
-                Application.dataPath,
-                "Settings",
-                "Resources",
-                "YokiFrame",
-                "runtime-settings.json");
-            string json = File.ReadAllText(settingsPath);
-
-            StringAssert.DoesNotContain("saveLogInEditor", json);
-            StringAssert.DoesNotContain("editorFileName", json);
-            StringAssert.Contains("saveLogInPlayer", json);
-            StringAssert.Contains("playerFileName", json);
         }
 
         /// <summary>

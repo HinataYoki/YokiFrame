@@ -97,6 +97,8 @@ namespace YokiFrame
         [Test]
         public void HandleOpenCodeLocationUsesValidatedProjectFileAndLine()
         {
+            const string relativePath =
+                "Assets/YokiFrame/Core/Adapters/Unity/Editor/FileBridge/YokiFrameEditorFileBridgePump.Commands.cs";
             string openedPath = string.Empty;
             int openedLine = 0;
             IYokiFrameCommandHandler handler = CreateEditorSystemHandler(
@@ -111,7 +113,7 @@ namespace YokiFrame
                 "workbench",
                 "System",
                 "open_code_location",
-                "{\"filePath\":\"Assets/Scripts/EventKitRuntimeSmoke/EventKitRuntimeSmokeController.cs\",\"line\":66}",
+                "{\"filePath\":\"" + relativePath + "\",\"line\":1}",
                 YokiFrameCommandPolicy.COMMAND_TIMEOUT_MIN_MS,
                 0L);
 
@@ -120,10 +122,11 @@ namespace YokiFrame
                 YokiFrameEditorFileBridgeJson.FromJson<YokiFrameEditorOpenCodeLocationResult>(result.ResultJson);
 
             Assert.IsTrue(result.IsSuccess);
-            Assert.AreEqual(66, openedLine);
+            Assert.AreEqual(1, openedLine);
+            Assert.AreEqual(relativePath, payload.filePath);
             Assert.AreEqual(NormalizePath(Path.Combine(
                 YokiFrameEditorFileBridgePaths.GetProjectRoot(),
-                payload.filePath)), NormalizePath(openedPath));
+                relativePath)), NormalizePath(openedPath));
             Assert.IsTrue(payload.opened);
         }
 
