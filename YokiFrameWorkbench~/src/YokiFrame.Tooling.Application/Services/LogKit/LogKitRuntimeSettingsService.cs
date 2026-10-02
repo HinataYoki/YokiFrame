@@ -7,6 +7,7 @@ namespace YokiFrame.Tooling.Application.Services.LogKit;
 public sealed class LogKitRuntimeSettingsService
 {
     private const string LOG_KIT = "LogKit";
+    private const string GODOT_LOG_KIT = "log_kit";
     private readonly YokiFrameProjectSettingsStore mSettingsStore;
 
     /// <summary>创建绑定当前项目根的 LogKit 设置服务。</summary>
@@ -34,10 +35,31 @@ public sealed class LogKitRuntimeSettingsService
     /// <returns>项目设置；文件缺失时返回 Core 默认值。</returns>
     public WorkbenchLogKitProjectSettings LoadUnitySettings(string engineId)
     {
-        YokiFrameProjectSettingsSnapshot snapshot = mSettingsStore.Read(
-            YokiFrameProjectSettingsTarget.UnityRuntime,
-            YokiFrameProjectSettingsTarget.UnityEditor);
-        return CreateProjectSettings(engineId, snapshot, ReadSettings(snapshot));
+        return LoadSettings(engineId, "Unity", YokiFrameProjectSettingsTarget.UnityRuntime, YokiFrameProjectSettingsTarget.UnityEditor);
+    }
+
+    /// <summary>读取当前 Godot 项目的 LogKit 设置；Runtime 来自 project.godot，编辑器字段来自 .yokiframe。</summary>
+    /// <param name="engineId">当前 Godot engine 标识。</param>
+    /// <returns>项目设置；两边都缺失时返回 Core 默认值。</returns>
+    public WorkbenchLogKitProjectSettings LoadGodotSettings(string engineId)
+    {
+        return LoadSettings(engineId, "Godot", YokiFrameProjectSettingsTarget.GodotRuntime, YokiFrameProjectSettingsTarget.GodotEditor);
+    }
+
+    /// <summary>按宿主目标读取 Runtime 与 Editor 两份文档，并组合成一个 LogKit 设置。</summary>
+    /// <param name="engineId">当前 engine 标识。</param>
+    /// <param name="engine">宿主显示名称。</param>
+    /// <param name="runtimeTarget">运行时配置目标。</param>
+    /// <param name="editorTarget">编辑器配置目标。</param>
+    /// <returns>项目设置；文件缺失时返回 Core 默认值。</returns>
+    private WorkbenchLogKitProjectSettings LoadSettings(
+        string engineId,
+        string engine,
+        YokiFrameProjectSettingsTarget runtimeTarget,
+        YokiFrameProjectSettingsTarget editorTarget)
+    {
+        YokiFrameProjectSettingsSnapshot snapshot = mSettingsStore.Read(runtimeTarget, editorTarget);
+        return CreateProjectSettings(engineId, engine, snapshot, ReadSettings(snapshot, runtimeTarget, editorTarget), runtimeTarget, editorTarget);
     }
 
     /// <summary>校验 revision 后通过统一 Store 批次保存完整 LogKit Runtime/Editor 设置。</summary>
@@ -59,27 +81,21 @@ public sealed class LogKitRuntimeSettingsService
             throw new ArgumentException(validationError, nameof(settings));
         }
 
-        YokiFrameProjectSettingsUpdate update = YokiFrameProjectSettingsUpdate.RequireRevision(
+        YokiFrameProjectSettingsUpdate update = CreateSaveUpdate(
             expectedFingerprint,
-            YokiFrameProjectSettingsPatch.ReplaceOwner(
-                YokiFrameProjectSettingsTarget.UnityRuntime,
-                LOG_KIT,
-                CreateValues(WorkbenchLogKitSettingsJson.CreateRuntimeStringValues(settings))),
-            YokiFrameProjectSettingsPatch.ReplaceOwner(
-                YokiFrameProjectSettingsTarget.UnityEditor,
-                LOG_KIT,
-                CreateValues(WorkbenchLogKitSettingsJson.CreateEditorStringValues(settings))));
+            YokiFrameProjectSettingsTarget.UnityRuntime,
+            YokiFrameProjectSettingsTarget.UnityEditor,
+            settings);
         YokiFrameProjectSettingsWriteResult result = await mSettingsStore.WriteAsync(update, cancellationToken)
             .ConfigureAwait(false);
         WorkbenchLogKitProjectSettings projectSettings = CreateProjectSettings(
-            engineId, result.Snapshot, ReadSettings(result.Snapshot));
-        return new WorkbenchLogKitSettingsSaveResult(
-            result.Saved,
-            false,
-            result.ConflictDetected,
-            projectSettings,
-            null,
-            result.ConflictDetected ? "Runtime settings changed after they were loaded. Reload before saving." : string.Empty);
+            engineId,
+            "Unity",
+            result.Snapshot,
+            ReadSettings(result.Snapshot, YokiFrameProjectSettingsTarget.UnityRuntime, YokiFrameProjectSettingsTarget.UnityEditor),
+            YokiFrameProjectSettingsTarget.UnityRuntime,
+            YokiFrameProjectSettingsTarget.UnityEditor);
+        return CreateSaveResult(result, projectSettings);
     }
 
     /// <summary>校验 Runtime 路径仍位于当前项目 Assets 内，保留既有测试和调用方契约。</summary>
@@ -102,13 +118,123 @@ public sealed class LogKitRuntimeSettingsService
         return candidate;
     }
 
-    /// <summary>把 Store 条目转换为当前 LogKit 的强类型设置。</summary>
-    private static WorkbenchLogKitSettings ReadSettings(YokiFrameProjectSettingsSnapshot snapshot)
+    /// <summary>
+    /// 校验 revision 后保存 Godot LogKit 设置。运行时键写入 project.godot，编辑器键写入 .yokiframe。
+    /// </summary>
+    /// <param name="engineId">当前 Godot engine 标识。</param>
+    /// <param name="settings">要保存的完整设置。</param>
+    /// <param name="expectedFingerprint">页面加载时观察到的组合 revision。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>项目保存结果；Runtime 应用由 Dashboard 单独处理。</returns>
+    public async Task<WorkbenchLogKitSettingsSaveResult> SaveGodotSettingsAsync(
+        string engineId,
+        WorkbenchLogKitSettings settings,
+        string expectedFingerprint,
+        CancellationToken cancellationToken)
     {
-        IReadOnlyDictionary<string, string> runtime = snapshot
-            .GetDocument(YokiFrameProjectSettingsTarget.UnityRuntime).GetValues(LOG_KIT);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedFingerprint);
+        if (!WorkbenchLogKitSettingsJson.TryValidate(settings, out string validationError))
+        {
+            throw new ArgumentException(validationError, nameof(settings));
+        }
+
+        YokiFrameProjectSettingsUpdate update = CreateSaveUpdate(
+            expectedFingerprint,
+            YokiFrameProjectSettingsTarget.GodotRuntime,
+            YokiFrameProjectSettingsTarget.GodotEditor,
+            settings,
+            UseGodotRuntimeKeys(WorkbenchLogKitSettingsJson.CreateRuntimeStringValues(settings)),
+            GODOT_LOG_KIT);
+        YokiFrameProjectSettingsWriteResult result = await mSettingsStore.WriteAsync(update, cancellationToken)
+            .ConfigureAwait(false);
+        WorkbenchLogKitProjectSettings projectSettings = CreateProjectSettings(
+            engineId,
+            "Godot",
+            result.Snapshot,
+            ReadSettings(result.Snapshot, YokiFrameProjectSettingsTarget.GodotRuntime, YokiFrameProjectSettingsTarget.GodotEditor),
+            YokiFrameProjectSettingsTarget.GodotRuntime,
+            YokiFrameProjectSettingsTarget.GodotEditor);
+        return CreateSaveResult(result, projectSettings);
+    }
+
+    /// <summary>按宿主目标创建 Runtime 与 Editor 的组合更新。</summary>
+    /// <param name="expectedFingerprint">页面加载时观察到的组合 revision。</param>
+    /// <param name="runtimeTarget">运行时配置目标。</param>
+    /// <param name="editorTarget">编辑器配置目标。</param>
+    /// <param name="settings">已校验的完整设置。</param>
+    /// <param name="runtimeValues">运行时字符串值；缺省使用 Unity camelCase 键。</param>
+    /// <returns>要求 revision 匹配的两文档更新。</returns>
+    private static YokiFrameProjectSettingsUpdate CreateSaveUpdate(
+        string expectedFingerprint,
+        YokiFrameProjectSettingsTarget runtimeTarget,
+        YokiFrameProjectSettingsTarget editorTarget,
+        WorkbenchLogKitSettings settings,
+        IReadOnlyList<KeyValuePair<string, string>>? runtimeValues = null,
+        string runtimeOwner = LOG_KIT)
+    {
+        return YokiFrameProjectSettingsUpdate.RequireRevision(
+            expectedFingerprint,
+            YokiFrameProjectSettingsPatch.ReplaceOwner(
+                runtimeTarget,
+                runtimeOwner,
+                CreateValues(runtimeValues ?? WorkbenchLogKitSettingsJson.CreateRuntimeStringValues(settings))),
+            YokiFrameProjectSettingsPatch.ReplaceOwner(
+                editorTarget,
+                LOG_KIT,
+                CreateValues(WorkbenchLogKitSettingsJson.CreateEditorStringValues(settings))));
+    }
+
+    /// <summary>把 Godot ProjectSettings 使用的 snake_case 键映射到统一保存值。</summary>
+    /// <param name="values">Unity 风格的运行时键值。</param>
+    /// <returns>Godot Runtime section 可直接写入的键值。</returns>
+    private static IReadOnlyList<KeyValuePair<string, string>> UseGodotRuntimeKeys(
+        IReadOnlyList<KeyValuePair<string, string>> values)
+    {
+        KeyValuePair<string, string>[] result = new KeyValuePair<string, string>[values.Count];
+        for (int index = 0; index < values.Count; index++)
+        {
+            result[index] = new KeyValuePair<string, string>(
+                ToGodotRuntimeKey(values[index].Key),
+                values[index].Value);
+        }
+
+        return result;
+    }
+
+    /// <summary>把 LogKit Runtime 键转换为 Godot ProjectSettings 已有绑定使用的键。</summary>
+    /// <param name="key">Unity JSON 使用的 camelCase 键。</param>
+    /// <returns>Godot Runtime section 使用的 snake_case 键。</returns>
+    private static string ToGodotRuntimeKey(string key)
+    {
+        return key switch
+        {
+            "minimumLevel" => "minimum_level",
+            "saveLogInPlayer" => "save_log_in_player",
+            "enableIMGUIInPlayer" => "enable_imgui_in_player",
+            "enableEncryption" => "enable_encryption",
+            "maxQueueSize" => "max_queue_size",
+            "maxSameLogCount" => "max_same_log_count",
+            "maxRetentionDays" => "max_retention_days",
+            "maxFileSizeMB" => "max_file_size_mb",
+            "imguiMaxLogCount" => "imgui_max_log_count",
+            "logDirectory" => "log_directory",
+            "playerFileName" => "player_file_name",
+            _ => key
+        };
+    }
+
+    /// <summary>把 Store 条目转换为当前 LogKit 的强类型设置。</summary>
+    private static WorkbenchLogKitSettings ReadSettings(
+        YokiFrameProjectSettingsSnapshot snapshot,
+        YokiFrameProjectSettingsTarget runtimeTarget,
+        YokiFrameProjectSettingsTarget editorTarget)
+    {
+        string runtimeOwner = runtimeTarget == YokiFrameProjectSettingsTarget.GodotRuntime ? GODOT_LOG_KIT : LOG_KIT;
+        IReadOnlyDictionary<string, string> runtime = NormalizeRuntimeKeys(snapshot
+            .GetDocument(runtimeTarget).GetValues(runtimeOwner));
         IReadOnlyDictionary<string, string> editor = snapshot
-            .GetDocument(YokiFrameProjectSettingsTarget.UnityEditor).GetValues(LOG_KIT);
+            .GetDocument(editorTarget).GetValues(LOG_KIT);
         WorkbenchLogKitSettings defaults = WorkbenchLogKitSettings.CreateDefault();
         WorkbenchLogKitSettings settings = defaults with
         {
@@ -137,22 +263,71 @@ public sealed class LogKitRuntimeSettingsService
     }
 
     /// <summary>创建 Workbench LogKit 项目 read model。</summary>
-    private WorkbenchLogKitProjectSettings CreateProjectSettings(
+    private static WorkbenchLogKitProjectSettings CreateProjectSettings(
         string engineId,
+        string engine,
         YokiFrameProjectSettingsSnapshot snapshot,
-        WorkbenchLogKitSettings settings)
+        WorkbenchLogKitSettings settings,
+        YokiFrameProjectSettingsTarget runtimeTarget,
+        YokiFrameProjectSettingsTarget editorTarget)
     {
-        YokiFrameProjectSettingsDocument runtime = snapshot.GetDocument(YokiFrameProjectSettingsTarget.UnityRuntime);
-        bool exists = runtime.Exists || snapshot.GetDocument(YokiFrameProjectSettingsTarget.UnityEditor).Exists;
+        YokiFrameProjectSettingsDocument runtime = snapshot.GetDocument(runtimeTarget);
+        bool exists = runtime.Exists || snapshot.GetDocument(editorTarget).Exists;
         return new WorkbenchLogKitProjectSettings(
             engineId,
-            "Unity",
+            engine,
             true,
             exists,
             runtime.Path,
             snapshot.Revision,
             settings,
             exists ? "Project runtime settings loaded." : "Project runtime settings file is missing; Core defaults are active.");
+    }
+
+    /// <summary>把统一写入结果转换为 LogKit 页面使用的保存结果。</summary>
+    private static WorkbenchLogKitSettingsSaveResult CreateSaveResult(
+        YokiFrameProjectSettingsWriteResult result,
+        WorkbenchLogKitProjectSettings projectSettings)
+    {
+        return new WorkbenchLogKitSettingsSaveResult(
+            result.Saved,
+            false,
+            result.ConflictDetected,
+            projectSettings,
+            null,
+            result.ConflictDetected ? "Runtime settings changed after they were loaded. Reload before saving." : string.Empty);
+    }
+
+    /// <summary>把 Godot snake_case Runtime 键归一成 Workbench 读取使用的 camelCase 键。</summary>
+    private static IReadOnlyDictionary<string, string> NormalizeRuntimeKeys(IReadOnlyDictionary<string, string> values)
+    {
+        Dictionary<string, string> normalized = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> pair in values)
+        {
+            normalized[FromGodotRuntimeKey(pair.Key)] = pair.Value;
+        }
+
+        return normalized;
+    }
+
+    /// <summary>把 Godot Runtime 键还原为 Workbench LogKit 模型键；未知键保持原样。</summary>
+    private static string FromGodotRuntimeKey(string key)
+    {
+        return key switch
+        {
+            "minimum_level" => "minimumLevel",
+            "save_log_in_player" => "saveLogInPlayer",
+            "enable_imgui_in_player" => "enableIMGUIInPlayer",
+            "enable_encryption" => "enableEncryption",
+            "max_queue_size" => "maxQueueSize",
+            "max_same_log_count" => "maxSameLogCount",
+            "max_retention_days" => "maxRetentionDays",
+            "max_file_size_mb" => "maxFileSizeMB",
+            "imgui_max_log_count" => "imguiMaxLogCount",
+            "log_directory" => "logDirectory",
+            "player_file_name" => "playerFileName",
+            _ => key
+        };
     }
 
     /// <summary>把 LogKit 的字符串键值转换为统一 Store patch 参数。</summary>

@@ -23,14 +23,17 @@ public sealed partial class WorkbenchDashboardService
     {
         var requestedEngineId = engineId ?? string.Empty;
         var projectEngine = DetectProjectEngine(requestedEngineId);
+        if (string.Equals(projectEngine, "Godot", StringComparison.OrdinalIgnoreCase))
+        {
+            return mLogKitRuntimeSettingsService.LoadGodotSettings(requestedEngineId);
+        }
+
         if (!string.Equals(projectEngine, "Unity", StringComparison.OrdinalIgnoreCase))
         {
             return CreateReadOnlyProjectSettings(
                 requestedEngineId,
                 projectEngine,
-                string.Equals(projectEngine, "Godot", StringComparison.OrdinalIgnoreCase)
-                    ? "Godot LogKit settings are read-only in this release."
-                    : "The current project type could not be confirmed.",
+                "The current project type could not be confirmed.",
                 ReadEffectiveLogKitSettings(requestedEngineId));
         }
 
@@ -56,11 +59,18 @@ public sealed partial class WorkbenchDashboardService
                 false, false, false, projectSettings, null, projectSettings.StatusMessage);
         }
 
-        var saved = await mLogKitRuntimeSettingsService.SaveUnitySettingsAsync(
-            engineId ?? string.Empty,
-            settings,
-            fingerprint,
-            cancellationToken).ConfigureAwait(false);
+        bool isGodot = string.Equals(projectSettings.Engine, "Godot", StringComparison.OrdinalIgnoreCase);
+        var saved = isGodot
+            ? await mLogKitRuntimeSettingsService.SaveGodotSettingsAsync(
+                engineId ?? string.Empty,
+                settings,
+                fingerprint,
+                cancellationToken).ConfigureAwait(false)
+            : await mLogKitRuntimeSettingsService.SaveUnitySettingsAsync(
+                engineId ?? string.Empty,
+                settings,
+                fingerprint,
+                cancellationToken).ConfigureAwait(false);
         if (!saved.ProjectSaved)
         {
             return saved;
@@ -267,8 +277,8 @@ public sealed partial class WorkbenchDashboardService
         }
     }
 
-    /// <summary>验证当前 registry 是同项目 Unity Host。</summary>
-    private string ValidateWritableUnityRegistry(Protocol.FileBridge.EngineRegistryEntry? registry)
+    /// <summary>验证当前 registry 是同项目且支持 LogKit 持久化的 Host。</summary>
+    private string ValidateWritableSettingsRegistry(Protocol.FileBridge.EngineRegistryEntry? registry)
     {
         var identityError = ValidateProjectIdentity(registry);
         if (!string.IsNullOrWhiteSpace(identityError))
@@ -277,8 +287,9 @@ public sealed partial class WorkbenchDashboardService
         }
 
         return string.Equals(registry!.Engine, "Unity", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(registry.Engine, "Godot", StringComparison.OrdinalIgnoreCase)
             ? string.Empty
-            : "Godot LogKit settings are read-only in this release.";
+            : "The selected host does not support LogKit settings.";
     }
 
     /// <summary>按项目文件和同项目 registry 识别当前宿主类型，不要求 Host 在线。</summary>
@@ -330,18 +341,18 @@ public sealed partial class WorkbenchDashboardService
         if (string.IsNullOrWhiteSpace(requestedEngineId))
         {
             var candidates = registries
-                .Where(entry => string.IsNullOrWhiteSpace(ValidateWritableUnityRegistry(entry)))
+                .Where(entry => string.IsNullOrWhiteSpace(ValidateWritableSettingsRegistry(entry)))
                 .ToArray();
             registry = candidates.Length == 1 ? candidates[0] : null;
             if (candidates.Length > 1)
             {
                 selectedEngineId = string.Empty;
-                errorMessage = "Multiple Unity hosts are available; select one before applying settings.";
+                errorMessage = "Multiple hosts are available; select one before applying settings.";
                 return false;
             }
         }
 
-        errorMessage = ValidateWritableUnityRegistry(registry);
+        errorMessage = ValidateWritableSettingsRegistry(registry);
         selectedEngineId = string.IsNullOrWhiteSpace(errorMessage) ? registry!.EngineId : string.Empty;
         return string.IsNullOrWhiteSpace(errorMessage);
     }

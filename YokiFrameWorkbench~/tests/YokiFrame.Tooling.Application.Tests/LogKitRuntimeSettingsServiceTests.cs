@@ -130,6 +130,42 @@ public sealed class LogKitRuntimeSettingsServiceTests
         Assert.Equal(directory, result.ProjectSettings.Settings.LogDirectory);
     }
 
+    /// <summary>验证 Godot 运行时写入 project.godot，编辑器字段写入 .yokiframe，不创建 Unity 目录。</summary>
+    [Fact]
+    public async Task GodotSaveSplitsRuntimeAndEditorDocuments()
+    {
+        string root = CreateProjectRoot();
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "project.godot"), "[application]\nconfig/name=\"Game\"\n");
+        LogKitRuntimeSettingsService service = new(root);
+        WorkbenchLogKitProjectSettings loaded = service.LoadGodotSettings("godot-editor");
+        WorkbenchLogKitSettings settings = loaded.Settings with
+        {
+            MinimumLevel = "Warning",
+            SaveLogInEditor = true,
+            EditorFileName = "godot-editor.log"
+        };
+
+        WorkbenchLogKitSettingsSaveResult result = await service.SaveGodotSettingsAsync(
+            "godot-editor", settings, loaded.Fingerprint, CancellationToken.None);
+        WorkbenchLogKitProjectSettings reloaded = service.LoadGodotSettings("godot-editor");
+        string projectSettings = File.ReadAllText(Path.Combine(root, "project.godot"));
+        string editorSettings = projectSettings;
+
+        Assert.True(result.ProjectSaved);
+        Assert.Equal("Warning", reloaded.Settings.MinimumLevel);
+        Assert.True(reloaded.Settings.SaveLogInEditor);
+        Assert.Equal("godot-editor.log", reloaded.Settings.EditorFileName);
+        Assert.Contains("[application]", projectSettings, StringComparison.Ordinal);
+        Assert.Contains("[yokiframe/runtime]", projectSettings, StringComparison.Ordinal);
+        Assert.Contains("[yokiframe/editor]", projectSettings, StringComparison.Ordinal);
+        Assert.Contains("log_kit/minimum_level=\"Warning\"", projectSettings, StringComparison.Ordinal);
+        Assert.Contains("LogKit/saveLogInEditor=\"true\"", editorSettings, StringComparison.Ordinal);
+        Assert.DoesNotContain("saveLogInEditor", ExtractGodotSection(projectSettings, "[yokiframe/runtime]"), StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(root, "ProjectSettings")));
+        Assert.False(Directory.Exists(Path.Combine(root, "Assets")));
+    }
+
     /// <summary>验证路径策略拒绝绝对路径和越出当前项目的相对路径。</summary>
     [Fact]
     public void ResolveContainedPathRejectsPathEscape()
@@ -140,6 +176,15 @@ public sealed class LogKitRuntimeSettingsServiceTests
             LogKitRuntimeSettingsService.ResolveContainedPath(root, "../outside.json"));
         Assert.Throws<ArgumentException>(() =>
             LogKitRuntimeSettingsService.ResolveContainedPath(root, Path.GetFullPath("outside.json")));
+    }
+
+    /// <summary>截取一个 Godot section，供断言编辑器字段没有进入运行时 section。</summary>
+    private static string ExtractGodotSection(string content, string section)
+    {
+        int start = content.IndexOf(section, StringComparison.Ordinal);
+        if (start < 0) return string.Empty;
+        int next = content.IndexOf("\n[", start + section.Length, StringComparison.Ordinal);
+        return next < 0 ? content[start..] : content[start..next];
     }
 
     /// <summary>创建唯一测试项目根。</summary>

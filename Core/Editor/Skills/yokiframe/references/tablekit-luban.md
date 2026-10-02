@@ -11,7 +11,7 @@
 ## 配置在哪里
 
 1. 找到游戏项目根：Unity 项目含 `ProjectSettings`，Godot 项目含 `project.godot`。
-2. 读取 `ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json`。
+2. Unity 读取 `ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json`。Godot 读取 `project.godot` 的 `[yokiframe/editor]` 中 `tablekit/document`。
 3. 使用其中的 `LubanConfigPath`、`LubanWorkDir`、`LubanExecutablePath`、`LubanSkillsPath`、`LubanAgentExecutablePath`、`LubanMcpExecutablePath`。
 4. 相对路径按项目根解析。`LubanSkillsPath` 可以是 `Luban.Skill` 根目录，也可以是其中的 `skills` 子目录，以该目录下存在 `*/SKILL.md` 为准。
 

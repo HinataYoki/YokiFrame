@@ -115,11 +115,23 @@ public sealed partial class YokiFrameProjectSettingsStore
             && !string.Equals(current.Fingerprint, expectedRevision, StringComparison.Ordinal))
             return new YokiFrameProjectOwnedDocumentWriteResult(false, true, current);
 
+        string committed = CreateOwnedDocumentContent(target, current, content);
+        // Godot 把 project.godot 的时间戳变化视为外部修改。内容未变时不能进入 File.Replace。
+        if (File.Exists(current.Path)
+            && string.Equals(committed, File.ReadAllText(current.Path), StringComparison.Ordinal))
+        {
+            return new YokiFrameProjectOwnedDocumentWriteResult(true, false, current);
+        }
+
+        bool tracksWholeProject = !string.Equals(committed, content, StringComparison.Ordinal);
+        string fingerprint = tracksWholeProject && File.Exists(current.Path)
+            ? ComputeFingerprint(File.ReadAllBytes(current.Path))
+            : current.Fingerprint;
         LoadedSettingsDocument document = new(
-            target, current.Path, current.Exists, current.Fingerprint, current.Content,
+            target, current.Path, current.Exists || tracksWholeProject, fingerprint, current.Content,
             new List<YokiFrameProjectSetting>());
         PreparedSettingsFile prepared = PreparedSettingsFile.Create(
-            document, content, Guid.NewGuid().ToString("N"));
+            document, committed, Guid.NewGuid().ToString("N"));
         try
         {
             if (!prepared.MatchesOriginal())
@@ -140,6 +152,38 @@ public sealed partial class YokiFrameProjectSettingsStore
         {
             prepared.Cleanup();
         }
+    }
+
+    /// <summary>
+    /// 生成 owned-document 的最终文本。Godot 草稿只替换 project.godot 中自己的键，不能覆盖整份项目设置。
+    /// </summary>
+    /// <param name="target">owned-document 目标。</param>
+    /// <param name="current">当前读取快照。</param>
+    /// <param name="content">调用方提交的完整草稿。</param>
+    /// <returns>可原子替换的最终文件文本。</returns>
+    private string CreateOwnedDocumentContent(
+        YokiFrameProjectSettingsTarget target,
+        YokiFrameProjectOwnedDocumentSnapshot current,
+        string content)
+    {
+        if (ResolveBackend(target) is not HostOwnedDocumentBackend
+            || !string.Equals(Path.GetFileName(current.Path), "project.godot", StringComparison.OrdinalIgnoreCase))
+        {
+            return content;
+        }
+
+        string project = File.Exists(current.Path) ? File.ReadAllText(current.Path) : string.Empty;
+        return SerializeGodotBackendDocument(
+            project,
+            GODOT_EDITOR_SECTION,
+            new[]
+            {
+                YokiFrameProjectSettingsPatch.ReplaceKeys(
+                    target,
+                    target.DocumentId,
+                    new[] { "document" },
+                    new YokiFrameProjectSettingValue("document", content))
+            });
     }
 
     /// <summary>优先使用后端的原始字节指纹，缺失时按 UTF-8 原文计算。</summary>

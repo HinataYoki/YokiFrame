@@ -26,6 +26,7 @@ namespace YokiFrame
         /// </summary>
         public override void _EnterTree()
         {
+            GodotYokiFrameEditorSettingsFile.Register();
             RegisterWorkbenchMenu();
             StartEditorHost();
             SetProcess(true);

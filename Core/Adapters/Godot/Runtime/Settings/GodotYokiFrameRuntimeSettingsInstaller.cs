@@ -19,7 +19,24 @@ namespace YokiFrame
         /// <summary>供 Godot Bootstrap 在场景树进入时重新确认默认 Store 工厂。</summary>
         internal static void EnsureInstalled()
         {
-            KitSettings.RegisterDefaultStoreFactory(GodotYokiFrameRuntimeSettingsLoader.Load);
+            KitSettings.RegisterDefaultStoreFactory(CreateStore);
+        }
+
+        /// <summary>
+        /// 创建当前项目的 Runtime Store。Tools 构建再由已注册的 Editor 回调叠加编辑器配置。
+        /// </summary>
+        /// <returns>仅包含当前项目覆盖值的 Store。</returns>
+        private static YokiFrameRuntimeSettingsStore CreateStore()
+        {
+            YokiFrameRuntimeSettingsStore store = GodotYokiFrameRuntimeSettingsLoader.Load();
+#if GODOT && TOOLS
+            string errorMessage;
+            if (!GodotYokiFrameEditorSettingsOverlay.TryApply(store, out errorMessage))
+            {
+                Godot.GD.PushWarning(errorMessage);
+            }
+#endif
+            return store;
         }
     }
 }

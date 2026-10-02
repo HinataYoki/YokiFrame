@@ -45,7 +45,7 @@ public sealed partial class YokiFrameProjectSettingsStore
     {
         ArgumentNullException.ThrowIfNull(target);
         IYokiFrameProjectSettingsBackend backend = ResolveBackend(target);
-        return ResolveInside(backend.GetRelativePath(target));
+        return ResolveInside(backend.GetRelativePath(target, mProjectRoot));
     }
 
     /// <summary>读取一个或多个目标，返回同一项目锁保护下的结构化快照。</summary>
@@ -127,6 +127,15 @@ public sealed partial class YokiFrameProjectSettingsStore
         foreach (LoadedSettingsDocument document in documents)
         {
             ApplyPatches(document, patches[document.Target]);
+        }
+
+        // 内容未变化时不替换文件。Godot 会把 project.godot 的时间戳变化当成外部修改。
+        if (documents.All(document => string.Equals(
+                SerializeDocument(document, patches[document.Target]),
+                document.OriginalText,
+                StringComparison.Ordinal)))
+        {
+            return new WriteAttemptResult(true, false, current, null);
         }
 
         if (!MatchOriginalFingerprints(documents))

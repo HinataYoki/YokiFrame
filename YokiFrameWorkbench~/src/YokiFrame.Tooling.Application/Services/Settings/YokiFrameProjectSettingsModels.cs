@@ -102,10 +102,11 @@ public interface IYokiFrameProjectSettingsBackend
         YokiFrameProjectSettingsBackendDocument document,
         IReadOnlyList<YokiFrameProjectSettingsPatch> patches);
 
-    /// <summary>根据目标计算物理配置项目相对路径。</summary>
+    /// <summary>根据目标和当前项目根计算物理配置项目相对路径。</summary>
     /// <param name="target">目标标识。</param>
+    /// <param name="projectRoot">已规范化的当前项目根，供后端区分 Unity 与 Godot 布局。</param>
     /// <returns>项目内相对路径。</returns>
-    string GetRelativePath(YokiFrameProjectSettingsTarget target);
+    string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot);
 }
 
 /// <summary>

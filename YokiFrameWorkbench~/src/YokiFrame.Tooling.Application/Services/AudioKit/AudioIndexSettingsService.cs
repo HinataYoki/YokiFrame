@@ -42,8 +42,8 @@ public sealed class AudioIndexSettingsService
         mLegacySettingsPath = ResolveProjectSettingsPath(mProjectRoot, LEGACY_SETTINGS_RELATIVE_PATH);
     }
 
-    /// <summary>获取 YokiFrame 统一 Editor Settings 绝对路径。</summary>
-    public string SettingsPath => mSettingsStore.GetPath(YokiFrameProjectSettingsTarget.UnityEditor);
+    /// <summary>获取当前宿主的 Editor Settings 绝对路径；Godot 使用 .yokiframe，不创建 Unity 目录。</summary>
+    public string SettingsPath => mSettingsStore.GetPath(EditorTarget);
 
     /// <summary>获取待自动迁移的历史独立配置路径。</summary>
     internal string LegacySettingsPath => mLegacySettingsPath;
@@ -52,9 +52,9 @@ public sealed class AudioIndexSettingsService
     /// <returns>已校验的项目配置。</returns>
     public AudioIndexSettings Load()
     {
-        YokiFrameProjectSettingsSnapshot snapshot = mSettingsStore.Read(YokiFrameProjectSettingsTarget.UnityEditor);
+        YokiFrameProjectSettingsSnapshot snapshot = mSettingsStore.Read(EditorTarget);
         IReadOnlyDictionary<string, string> values = snapshot
-            .GetDocument(YokiFrameProjectSettingsTarget.UnityEditor).GetValues(AUDIO_KIT);
+            .GetDocument(EditorTarget).GetValues(AUDIO_KIT);
         if (TryCreateSettings(values, out AudioIndexSettings settings))
         {
             DeleteLegacySettings();
@@ -109,10 +109,10 @@ public sealed class AudioIndexSettingsService
     }
 
     /// <summary>创建只替换 AudioKit 索引字段的统一 Store patch。</summary>
-    private static YokiFrameProjectSettingsPatch CreatePatch(AudioIndexSettings settings)
+    private YokiFrameProjectSettingsPatch CreatePatch(AudioIndexSettings settings)
     {
         return YokiFrameProjectSettingsPatch.ReplaceKeys(
-            YokiFrameProjectSettingsTarget.UnityEditor,
+            EditorTarget,
             AUDIO_KIT,
             sOwnedKeys,
             new YokiFrameProjectSettingValue(SCAN_FOLDER_KEY, settings.ScanFolder.Trim()),
@@ -207,6 +207,12 @@ public sealed class AudioIndexSettingsService
         if (bytes.Length > MAX_LEGACY_SETTINGS_BYTES) throw new InvalidDataException("Legacy AudioKit Settings exceed 1 MiB.");
         return bytes;
     }
+
+    /// <summary>按项目根选择 Editor 文档；存在 project.godot 时不使用 Unity Editor Settings。</summary>
+    private YokiFrameProjectSettingsTarget EditorTarget =>
+        YokiFrameProjectHostLayout.IsGodotProject(mProjectRoot)
+            ? YokiFrameProjectSettingsTarget.GodotEditor
+            : YokiFrameProjectSettingsTarget.UnityEditor;
 
     /// <summary>删除已经被统一 Store 接管的历史独立配置。</summary>
     private void DeleteLegacySettings()

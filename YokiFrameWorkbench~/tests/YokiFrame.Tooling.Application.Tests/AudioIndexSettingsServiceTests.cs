@@ -112,6 +112,69 @@ public sealed class AudioIndexSettingsServiceTests
         Assert.False(File.Exists(service.LegacySettingsPath));
     }
 
+    /// <summary>验证 Godot 项目把索引配置写入 .yokiframe，不创建 Unity ProjectSettings。</summary>
+    [Fact]
+    public async Task GodotProjectWritesEditorSettingsOutsideUnityDirectories()
+    {
+        using TestProject project = new();
+        File.WriteAllText(Path.Combine(project.Root, "project.godot"), "config_version=5\n");
+        AudioIndexSettingsService service = new(project.Root);
+
+        await service.SaveAsync(AudioIndexSettings.CreateDefault(), CancellationToken.None);
+
+        Assert.Equal(Path.Combine(project.Root, "project.godot"), service.SettingsPath);
+        string text = File.ReadAllText(service.SettingsPath);
+        Assert.Contains("[yokiframe/editor]", text, StringComparison.Ordinal);
+        Assert.Contains("AudioKit/index.namespaceName=\"GameAudio\"", text, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(project.Root, "ProjectSettings")));
+    }
+
+    /// <summary>验证重复保存相同 Godot 设置时不改写 project.godot。</summary>
+    [Fact]
+    public async Task UnchangedGodotSettingsDoNotRewriteProjectFile()
+    {
+        using TestProject project = new();
+        string path = Path.Combine(project.Root, "project.godot");
+        File.WriteAllText(path, "config_version=5\n");
+        AudioIndexSettingsService service = new(project.Root);
+        await service.SaveAsync(AudioIndexSettings.CreateDefault(), CancellationToken.None);
+        DateTime timestamp = new(2002, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(path, timestamp);
+
+        await service.SaveAsync(AudioIndexSettings.CreateDefault(), CancellationToken.None);
+
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+    }
+
+    /// <summary>验证 Godot 改写过的 TableKit 草稿不会被 AudioKit 无改动保存重排。</summary>
+    [Fact]
+    public async Task UnchangedAudioSaveKeepsGodotEscapedDraftInPlace()
+    {
+        using TestProject project = new();
+        string path = Path.Combine(project.Root, "project.godot");
+        const string original = """
+            config_version=5
+
+            [yokiframe/editor]
+            AudioKit/index.scanFolder="Assets/Art/Audio"
+            AudioKit/index.outputPath="Assets/Scripts/Generated/AudioIds.cs"
+            AudioKit/index.manifestPath="Assets/Settings/YokiFrame/audio-index.json"
+            AudioKit/index.namespaceName="GameAudio"
+            AudioKit/index.className="AudioIds"
+            AudioKit/index.startId="1001"
+            tablekit/document="{\r\n  \u0022ProjectRoot\u0022: \u0022.\u0022\r\n}"
+            """;
+        File.WriteAllText(path, original.Replace("\r\n", "\n", StringComparison.Ordinal) + "\n");
+        DateTime timestamp = new(2002, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(path, timestamp);
+        AudioIndexSettingsService service = new(project.Root);
+
+        await service.SaveAsync(service.Load(), CancellationToken.None);
+
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+        Assert.Contains("tablekit/document=\"{\\r\\n  \\u0022ProjectRoot\\u0022:", File.ReadAllText(path), StringComparison.Ordinal);
+    }
+
     /// <summary>创建和清理一个隔离测试项目根。</summary>
     private sealed class TestProject : IDisposable
     {

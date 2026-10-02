@@ -24,19 +24,22 @@ public static class YokiFrameProjectSettingsBackendRegistry
     {
         lock (sLock)
         {
-            IYokiFrameProjectSettingsBackend[] result = new IYokiFrameProjectSettingsBackend[5 + sRegistered.Count];
+            IYokiFrameProjectSettingsBackend[] result = new IYokiFrameProjectSettingsBackend[6 + sRegistered.Count];
             result[0] = new UnityJsonProjectSettingsBackend();
             result[1] = new GodotRuntimeProjectSettingsBackend();
-            result[2] = new GodotEditorJsonProjectSettingsBackend();
-            result[3] = new SharedWorkbenchOwnedDocumentBackend(
+            result[2] = new GodotEditorProjectSettingsBackend();
+            result[3] = new GodotEditorUserJsonProjectSettingsBackend();
+            result[4] = new HostOwnedDocumentBackend(
                 YokiFrameProjectSettingsTarget.TableKitDraft,
                 "ProjectSettings/Packages/com.hinatayoki.yokiframe/tablekit-settings.json",
+                "project.godot",
                 "TableKit");
-            result[4] = new SharedWorkbenchOwnedDocumentBackend(
+            result[5] = new HostOwnedDocumentBackend(
                 YokiFrameProjectSettingsTarget.LocalizationKitDraft,
                 "ProjectSettings/Packages/com.hinatayoki.yokiframe/localizationkit-settings.json",
+                "project.godot",
                 "LocalizationKit");
-            sRegistered.CopyTo(result, 5);
+            sRegistered.CopyTo(result, 6);
             return result;
         }
     }
@@ -80,8 +83,9 @@ internal abstract class JsonProjectSettingsBackendBase : IYokiFrameProjectSettin
 
     /// <summary>返回 Unity/Godot 各配置域的稳定项目相对路径。</summary>
     /// <param name="target">配置目标。</param>
+    /// <param name="projectRoot">当前项目根；JSON 路径由目标自身决定，不依赖项目根探测。</param>
     /// <returns>项目相对路径。</returns>
-    public string GetRelativePath(YokiFrameProjectSettingsTarget target)
+    public string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot)
     {
         if (target.EngineId == "unity" && target.Scope == YokiFrameProjectSettingsScope.Runtime)
             return "Assets/Settings/Resources/YokiFrame/runtime-settings.json";
@@ -90,9 +94,9 @@ internal abstract class JsonProjectSettingsBackendBase : IYokiFrameProjectSettin
         if (target.EngineId == "unity" && target.Scope == YokiFrameProjectSettingsScope.EditorUser)
             return "UserSettings/YokiFrame/unity-user-settings.json";
         if (target.EngineId == "godot" && target.Scope == YokiFrameProjectSettingsScope.EditorProject)
-            return "ProjectSettings/Packages/com.hinatayoki.yokiframe/godot-editor-settings.json";
+            return "project.godot";
         if (target.EngineId == "godot" && target.Scope == YokiFrameProjectSettingsScope.EditorUser)
-            return "UserSettings/YokiFrame/godot-user-settings.json";
+            return ".yokiframe/settings/godot-user-settings.json";
         throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported JSON settings target.");
     }
 
@@ -114,17 +118,68 @@ internal sealed class UnityJsonProjectSettingsBackend : JsonProjectSettingsBacke
     protected override bool CanHandleScope(YokiFrameProjectSettingsScope scope) => true;
 }
 
-/// <summary>提供 Godot Editor Project/User JSON 后端；Runtime 仍由 project.godot 后端负责。</summary>
-internal sealed class GodotEditorJsonProjectSettingsBackend : JsonProjectSettingsBackendBase
+/// <summary>保存 Godot 本机用户设置。该文件属于缓存，不进入 Git。</summary>
+internal sealed class GodotEditorUserJsonProjectSettingsBackend : JsonProjectSettingsBackendBase
 {
     /// <summary>获取 Godot 引擎标识。</summary>
     public override string EngineId => "godot";
 
-    /// <summary>Godot JSON 后端只支持 Editor Project/User 域。</summary>
+    /// <summary>本机 JSON 后端只处理 Editor User 域。</summary>
     /// <param name="scope">待判断配置域。</param>
-    /// <returns>非 Runtime 域时返回 true。</returns>
+    /// <returns>是本机用户域时返回 true。</returns>
     protected override bool CanHandleScope(YokiFrameProjectSettingsScope scope) =>
-        scope != YokiFrameProjectSettingsScope.Runtime;
+        scope == YokiFrameProjectSettingsScope.EditorUser;
+}
+
+/// <summary>提供 Godot Editor Project 的 project.godot section 后端；本机用户设置仍使用 JSON。</summary>
+internal sealed class GodotEditorProjectSettingsBackend : IYokiFrameProjectSettingsBackend
+{
+    /// <summary>获取 Godot 引擎标识。</summary>
+    public string EngineId => "godot";
+
+    /// <summary>仅匹配 Godot Editor Project 的 settings 文档。</summary>
+    /// <param name="target">待判断目标。</param>
+    /// <returns>匹配时返回 true。</returns>
+    public bool CanHandle(YokiFrameProjectSettingsTarget target)
+    {
+        return target.EngineId == EngineId
+               && target.Scope == YokiFrameProjectSettingsScope.EditorProject
+               && target.DocumentId == "settings";
+    }
+
+    /// <summary>读取 project.godot 的 YokiFrame Editor section。</summary>
+    /// <param name="target">Godot Editor 目标。</param>
+    /// <param name="path">project.godot 绝对路径。</param>
+    /// <returns>保留完整原文的结构化文档。</returns>
+    public YokiFrameProjectSettingsBackendDocument Read(
+        YokiFrameProjectSettingsTarget target,
+        string path)
+    {
+        return YokiFrameProjectSettingsStore.LoadGodotBackendDocument(
+            target,
+            path,
+            YokiFrameProjectSettingsStore.GODOT_EDITOR_SECTION);
+    }
+
+    /// <summary>只更新 YokiFrame Editor section，并保留其它 project.godot 原文。</summary>
+    /// <param name="document">原始 Godot 文档。</param>
+    /// <param name="patches">Editor owner patch。</param>
+    /// <returns>保留其它 section 的完整文本。</returns>
+    public string Serialize(
+        YokiFrameProjectSettingsBackendDocument document,
+        IReadOnlyList<YokiFrameProjectSettingsPatch> patches)
+    {
+        return YokiFrameProjectSettingsStore.SerializeGodotBackendDocument(
+            document.OriginalText,
+            YokiFrameProjectSettingsStore.GODOT_EDITOR_SECTION,
+            patches);
+    }
+
+    /// <summary>返回 Godot 项目配置文件相对路径。</summary>
+    /// <param name="target">Godot Editor 目标。</param>
+    /// <param name="projectRoot">当前项目根。</param>
+    /// <returns>固定 project.godot 路径。</returns>
+    public string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot) => "project.godot";
 }
 
 /// <summary>处理 Godot `project.godot` 中的 YokiFrame Runtime section。</summary>
@@ -151,7 +206,10 @@ internal sealed class GodotRuntimeProjectSettingsBackend : IYokiFrameProjectSett
         YokiFrameProjectSettingsTarget target,
         string path)
     {
-        return YokiFrameProjectSettingsStore.LoadGodotBackendDocument(target, path);
+        return YokiFrameProjectSettingsStore.LoadGodotBackendDocument(
+            target,
+            path,
+            YokiFrameProjectSettingsStore.GODOT_RUNTIME_SECTION);
     }
 
     /// <summary>只更新 YokiFrame Runtime section 并保留其它 project.godot 原文。</summary>
@@ -162,33 +220,44 @@ internal sealed class GodotRuntimeProjectSettingsBackend : IYokiFrameProjectSett
         YokiFrameProjectSettingsBackendDocument document,
         IReadOnlyList<YokiFrameProjectSettingsPatch> patches)
     {
-        return YokiFrameProjectSettingsStore.SerializeGodotBackendDocument(document.OriginalText, patches);
+        return YokiFrameProjectSettingsStore.SerializeGodotBackendDocument(
+            document.OriginalText,
+            YokiFrameProjectSettingsStore.GODOT_RUNTIME_SECTION,
+            patches);
     }
 
     /// <summary>返回 Godot 项目配置文件相对路径。</summary>
     /// <param name="target">Godot Runtime 目标。</param>
+    /// <param name="projectRoot">当前项目根；Runtime 始终写入 project.godot。</param>
     /// <returns>固定 project.godot 路径。</returns>
-    public string GetRelativePath(YokiFrameProjectSettingsTarget target) => "project.godot";
+    public string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot) => "project.godot";
 }
 
-/// <summary>处理跨引擎 Workbench 独占草稿；内容只通过 owned-document Gateway 读写。</summary>
-internal sealed class SharedWorkbenchOwnedDocumentBackend : IYokiFrameProjectOwnedDocumentBackend
+/// <summary>
+/// 处理跨引擎 Workbench 独占草稿；内容只通过 owned-document Gateway 读写。
+/// Unity 保留独立 JSON，Godot 共享草稿写入 project.godot，避免制造 Unity 目录或不可同步缓存。
+/// </summary>
+internal sealed class HostOwnedDocumentBackend : IYokiFrameProjectOwnedDocumentBackend
 {
     private readonly YokiFrameProjectSettingsTarget mTarget;
-    private readonly string mRelativePath;
+    private readonly string mUnityRelativePath;
+    private readonly string mGodotRelativePath;
     private readonly string mDisplayName;
 
-    /// <summary>创建绑定单一 Workbench 文档的通用 owned-document 后端。</summary>
+    /// <summary>创建按宿主选择物理路径的 owned-document 后端。</summary>
     /// <param name="target">后端唯一拥有的配置目标。</param>
-    /// <param name="relativePath">项目内稳定文档路径。</param>
+    /// <param name="unityRelativePath">Unity 项目内稳定文档路径。</param>
+    /// <param name="godotRelativePath">Godot 项目内稳定文档路径。</param>
     /// <param name="displayName">用于错误诊断的 Kit 名称。</param>
-    public SharedWorkbenchOwnedDocumentBackend(
+    public HostOwnedDocumentBackend(
         YokiFrameProjectSettingsTarget target,
-        string relativePath,
+        string unityRelativePath,
+        string godotRelativePath,
         string displayName)
     {
         mTarget = target ?? throw new ArgumentNullException(nameof(target));
-        mRelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
+        mUnityRelativePath = unityRelativePath ?? throw new ArgumentNullException(nameof(unityRelativePath));
+        mGodotRelativePath = godotRelativePath ?? throw new ArgumentNullException(nameof(godotRelativePath));
         mDisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
     }
 
@@ -201,14 +270,15 @@ internal sealed class SharedWorkbenchOwnedDocumentBackend : IYokiFrameProjectOwn
     public bool CanHandle(YokiFrameProjectSettingsTarget target) =>
         target != null && string.Equals(target.Id, mTarget.Id, StringComparison.Ordinal);
 
-    /// <summary>读取原始 Workbench JSON，不把领域草稿压平为 Runtime 字符串条目。</summary>
+    /// <summary>读取原始 Workbench 草稿；Godot 从 project.godot 的对应键取出 JSON 原文。</summary>
     /// <param name="target">当前草稿目标。</param>
     /// <param name="path">草稿绝对路径。</param>
-    /// <returns>包含完整 JSON 原文的 owned-document。</returns>
+    /// <returns>包含完整草稿原文的 owned-document。</returns>
     public YokiFrameProjectSettingsBackendDocument Read(
         YokiFrameProjectSettingsTarget target,
         string path)
     {
+        if (UsesGodotProject(path)) return ReadGodotDraft(target, path);
         if (!File.Exists(path))
         {
             return new YokiFrameProjectSettingsBackendDocument(
@@ -226,19 +296,67 @@ internal sealed class SharedWorkbenchOwnedDocumentBackend : IYokiFrameProjectOwn
             YokiFrameProjectSettingsStore.ComputeFingerprint(bytes));
     }
 
-    /// <summary>Workbench 草稿禁止使用标量 patch API，调用方必须使用 owned-document Gateway。</summary>
-    /// <param name="document">不会被消费的草稿文档。</param>
-    /// <param name="patches">不允许提交的标量 patch。</param>
-    /// <returns>该方法始终抛出异常，不返回文本。</returns>
+    /// <summary>从 Godot Editor section 读取一个草稿键，文件存在但键缺失时返回空草稿。</summary>
+    private YokiFrameProjectSettingsBackendDocument ReadGodotDraft(
+        YokiFrameProjectSettingsTarget target,
+        string path)
+    {
+        if (!File.Exists(path))
+        {
+            return new YokiFrameProjectSettingsBackendDocument(
+                target, path, false, string.Empty, Array.Empty<YokiFrameProjectSetting>());
+        }
+
+        byte[] bytes = YokiFrameProjectSettingsStore.ReadBoundedFile(path);
+        string project = System.Text.Encoding.UTF8.GetString(bytes);
+        bool hasValue = YokiFrameProjectSettingsStore.TryReadGodotValue(
+            project,
+            YokiFrameProjectSettingsStore.GODOT_EDITOR_SECTION,
+            mTarget.DocumentId,
+            "document",
+            out string content);
+        return new YokiFrameProjectSettingsBackendDocument(
+            target,
+            path,
+            hasValue,
+            hasValue ? content : string.Empty,
+            Array.Empty<YokiFrameProjectSetting>(),
+            YokiFrameProjectSettingsStore.ComputeFingerprint(bytes));
+    }
+
+    /// <summary>把 owned-document Gateway 提交的完整草稿写回 Godot Editor section 的单键。</summary>
+    /// <param name="document">当前 project.godot 原文。</param>
+    /// <param name="patches">只允许包含一个 document 键的草稿 patch。</param>
+    /// <returns>只更新目标键后的完整 project.godot。</returns>
     public string Serialize(
         YokiFrameProjectSettingsBackendDocument document,
         IReadOnlyList<YokiFrameProjectSettingsPatch> patches)
     {
-        throw new InvalidOperationException(mDisplayName + " draft must be written through the owned-document Gateway.");
+        if (!UsesGodotProject(document.Path))
+        {
+            throw new InvalidOperationException(mDisplayName + " draft must be written through the owned-document Gateway.");
+        }
+
+        return YokiFrameProjectSettingsStore.SerializeGodotBackendDocument(
+            document.OriginalText,
+            YokiFrameProjectSettingsStore.GODOT_EDITOR_SECTION,
+            patches);
     }
 
-    /// <summary>返回当前 Workbench 草稿的稳定项目相对路径。</summary>
+    /// <summary>判断当前物理路径是否是 Godot 项目设置，而不是 Unity JSON。</summary>
+    private static bool UsesGodotProject(string path)
+    {
+        return string.Equals(Path.GetFileName(path), "project.godot", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>按项目根已有的宿主标记选择草稿路径；Godot 优先于 Unity。</summary>
     /// <param name="target">当前草稿目标。</param>
-    /// <returns>项目内稳定草稿路径。</returns>
-    public string GetRelativePath(YokiFrameProjectSettingsTarget target) => mRelativePath;
+    /// <param name="projectRoot">已规范化的当前项目根。</param>
+    /// <returns>当前宿主下的稳定草稿路径。</returns>
+    public string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot)
+    {
+        return YokiFrameProjectHostLayout.IsGodotProject(projectRoot)
+            ? mGodotRelativePath
+            : mUnityRelativePath;
+    }
 }

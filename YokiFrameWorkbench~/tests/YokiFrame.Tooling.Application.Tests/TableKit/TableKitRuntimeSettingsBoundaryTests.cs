@@ -150,6 +150,46 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
             Assert.Contains("table_kit/runtime_path_pattern=\"res://Data/Tables/{0}\"", projectSettings, StringComparison.Ordinal);
             Assert.Contains("table_kit/use_raw_resource_loading=\"true\"", projectSettings, StringComparison.Ordinal);
             Assert.DoesNotContain("table_kit/use_async_loading", projectSettings, StringComparison.Ordinal);
+            Assert.Contains("tablekit/document=", projectSettings, StringComparison.Ordinal);
+            Assert.DoesNotContain(".yokiframe", projectSettings, StringComparison.Ordinal);
+            Assert.False(Directory.Exists(Path.Combine(root, "ProjectSettings")));
+            Assert.False(Directory.Exists(Path.Combine(root, "Assets")));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>验证 Godot 改写过的相同 TableKit 草稿不会再次替换 project.godot。</summary>
+    [Fact]
+    public void UnchangedGodotDraftDoesNotTouchProjectFile()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-unchanged-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root);
+            string projectPath = Path.Combine(root, "project.godot");
+            File.WriteAllText(projectPath, "config_version=5\n");
+            TableKitSettingsService service = new();
+            TableKitOptions options = new()
+            {
+                ProjectRoot = root,
+                LubanConfigPath = "Luban/MiniTemplate/luban.conf",
+                OutputDataDir = "Assets/Resources/Art/Table/",
+                UseRawResourceLoading = true
+            };
+            service.Save(root, options);
+            // 只模拟 Godot 重写 JSON 内部引号，保留 project.godot 字符串自己的外层引号。
+            string escaped = File.ReadAllText(projectPath).Replace("\\\"", "\\u0022", StringComparison.Ordinal);
+            File.WriteAllText(projectPath, escaped);
+            DateTime timestamp = new(2002, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(projectPath, timestamp);
+
+            service.Save(root, service.Load(root, options));
+
+            Assert.Equal(escaped, File.ReadAllText(projectPath));
+            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(projectPath));
         }
         finally
         {

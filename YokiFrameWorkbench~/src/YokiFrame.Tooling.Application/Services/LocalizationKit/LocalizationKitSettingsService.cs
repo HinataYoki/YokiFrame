@@ -53,10 +53,18 @@ public sealed class LocalizationKitSettingsService
     public void Save(string projectRoot, LocalizationKitWorkbenchSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        YokiFrameProjectSettingsStore store = GetStore(projectRoot);
+        // 默认空草稿没有用户选择。Godot 项目尚无该键时不能为了关闭窗口新增一行。
+        if (string.IsNullOrWhiteSpace(settings.LubanWorkDir)
+            && string.IsNullOrWhiteSpace(store.ReadOwnedDocument(YokiFrameProjectSettingsTarget.LocalizationKitDraft).Content))
+        {
+            return;
+        }
+
         string json = JsonSerializer.Serialize(
             settings,
             LocalizationKitSettingsJsonContext.Default.LocalizationKitWorkbenchSettings);
-        YokiFrameProjectOwnedDocumentWriteResult result = GetStore(projectRoot)
+        YokiFrameProjectOwnedDocumentWriteResult result = store
             .WriteOwnedDocumentAsync(
                 YokiFrameProjectSettingsTarget.LocalizationKitDraft,
                 json,

@@ -163,9 +163,14 @@ public sealed class YokiFrameProjectSettingsStoreTests
         using TestProject project = new();
         YokiFrameProjectSettingsStore store = new(project.Root);
 
-        Assert.EndsWith("godot-editor-settings.json", store.GetPath(YokiFrameProjectSettingsTarget.GodotEditor));
-        Assert.EndsWith("godot-user-settings.json", store.GetPath(YokiFrameProjectSettingsTarget.GodotEditorUser));
+        Assert.EndsWith("project.godot", store.GetPath(YokiFrameProjectSettingsTarget.GodotEditor));
+        Assert.EndsWith(
+            Path.Combine(".yokiframe", "settings", "godot-user-settings.json"),
+            store.GetPath(YokiFrameProjectSettingsTarget.GodotEditorUser));
         Assert.EndsWith("project.godot", store.GetPath(YokiFrameProjectSettingsTarget.GodotRuntime));
+        Assert.EndsWith(
+            Path.Combine(".yokiframe", "settings", "godot-user-settings.json"),
+            store.GetPath(YokiFrameProjectSettingsTarget.GodotEditorUser));
     }
 
     /// <summary>验证等待跨进程 Mutex 时取消不会泄漏项目内锁，后续同项目读取仍能完成。</summary>
@@ -259,7 +264,7 @@ public sealed class YokiFrameProjectSettingsStoreTests
         }
 
         /// <summary>返回测试引擎的项目内配置路径。</summary>
-        public string GetRelativePath(YokiFrameProjectSettingsTarget target) =>
+        public string GetRelativePath(YokiFrameProjectSettingsTarget target, string projectRoot) =>
             "Config/stride-runtime-settings.txt";
     }
 

@@ -162,12 +162,7 @@ public sealed class TableKitSettingsServiceTests
                 IsAddressable = true,
                 RuntimePathPattern = string.Empty
             });
-            string settingsJson = File.ReadAllText(Path.Combine(
-                root,
-                "ProjectSettings",
-                "Packages",
-                "com.hinatayoki.yokiframe",
-                "tablekit-settings.json"));
+            string settingsJson = File.ReadAllText(GetDraftPath(root));
             Assert.Contains("\"IsAddressable\": true", settingsJson, StringComparison.Ordinal);
             Assert.Contains("\"RuntimePathPattern\": \"\"", settingsJson, StringComparison.Ordinal);
             Assert.DoesNotContain("UseAsyncLoading", settingsJson, StringComparison.Ordinal);
@@ -206,12 +201,7 @@ public sealed class TableKitSettingsServiceTests
         try
         {
             TableKitOptions defaults = CreateOptions(root);
-            string settingsPath = Path.Combine(
-                root,
-                "ProjectSettings",
-                "Packages",
-                "com.hinatayoki.yokiframe",
-                "tablekit-settings.json");
+            string settingsPath = GetDraftPath(root);
             Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
             File.WriteAllText(settingsPath, """
                 {
@@ -277,10 +267,10 @@ public sealed class TableKitSettingsServiceTests
     private static string GetDraftPath(string root)
     {
         return Path.Combine(
-            root,
-            "ProjectSettings",
-            "Packages",
-            "com.hinatayoki.yokiframe",
-            "tablekit-settings.json");
+                root,
+                "ProjectSettings",
+                "Packages",
+                "com.hinatayoki.yokiframe",
+                "tablekit-settings.json");
     }
 }

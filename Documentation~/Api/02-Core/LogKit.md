@@ -67,6 +67,8 @@ Unity Runtime 权威配置文件为：
 Assets/Settings/Resources/YokiFrame/runtime-settings.json
 ```
 
+Godot Runtime 不创建该文件。需要进入游戏的覆盖值写入 `project.godot` 的 `[yokiframe/runtime]`，团队共享的编辑器覆盖值写入同一文件的 `[yokiframe/editor]`。本机缓存仍只放在 `.yokiframe/`，不使用 Unity 的 `ProjectSettings` 或 `Assets/Settings` 目录。
+
 `LogKitSettings` 的公共入口如下：
 
 | API | 说明 |

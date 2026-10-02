@@ -57,6 +57,7 @@ public sealed partial class YokiFrameProjectSettingsStore
         CancellationToken cancellationToken)
     {
         string transactionId = Guid.NewGuid().ToString("N");
+        documents = MergeSharedGodotDocuments(documents, patches);
         List<PreparedSettingsFile> prepared = PrepareDocuments(documents, patches, transactionId);
         try
         {
@@ -79,6 +80,40 @@ public sealed partial class YokiFrameProjectSettingsStore
         {
             foreach (PreparedSettingsFile item in prepared) item.Cleanup();
         }
+    }
+
+    /// <summary>
+    /// 把指向同一 project.godot 的 Runtime 与 Editor 文档合并成一次写入。
+    /// 后写文档以先写结果为原文，避免两份临时文件互相覆盖并误报冲突。
+    /// </summary>
+    private LoadedSettingsDocument[] MergeSharedGodotDocuments(
+        IReadOnlyList<LoadedSettingsDocument> documents,
+        IReadOnlyDictionary<YokiFrameProjectSettingsTarget, IReadOnlyList<YokiFrameProjectSettingsPatch>> patches)
+    {
+        List<LoadedSettingsDocument> result = new();
+        Dictionary<string, int> indexes = new(StringComparer.OrdinalIgnoreCase);
+        foreach (LoadedSettingsDocument document in documents)
+        {
+            if (!string.Equals(Path.GetFileName(document.Path), "project.godot", StringComparison.OrdinalIgnoreCase)
+                || !indexes.TryGetValue(document.Path, out int index))
+            {
+                indexes[document.Path] = result.Count;
+                result.Add(document);
+                continue;
+            }
+
+            LoadedSettingsDocument previous = result[index];
+            string merged = SerializeDocument(previous, patches[previous.Target]);
+            result[index] = new LoadedSettingsDocument(
+                document.Target,
+                document.Path,
+                document.Exists,
+                document.Fingerprint,
+                merged,
+                document.Settings);
+        }
+
+        return result.ToArray();
     }
 
     /// <summary>为每个目标序列化并创建已 flush 的同目录临时文件。</summary>
