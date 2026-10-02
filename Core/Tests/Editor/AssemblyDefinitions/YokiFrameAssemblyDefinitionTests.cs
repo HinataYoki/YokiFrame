@@ -23,7 +23,6 @@ namespace YokiFrame
         private const string GODOT_RUNTIME_ADAPTER_PATH_FRAGMENT = "/Assets/YokiFrame/Core/Adapters/Godot/Runtime/";
         private const string UNITY_ADAPTER_DEFINE = "#if UNITY_5_3_OR_NEWER";
         private const string UNITY_EDITOR_ADAPTER_DEFINE = "#if UNITY_EDITOR";
-        private const string SHARED_RUNTIME_CACHE_DEFINE = "#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING";
         private const string UNITY_EDITOR_WINDOWS_ADAPTER_DEFINE = "#if UNITY_EDITOR_WIN";
         private const string GODOT_ADAPTER_DEFINE = "#if GODOT";
         private const string EDITOR_CONTEXT_DEFINE = "#if UNITY_EDITOR || (GODOT && TOOLS)";
@@ -164,9 +163,7 @@ namespace YokiFrame
                 string normalizedPath = NormalizePath(sourcePath);
                 string expectedDefine = normalizedPath.IndexOf("/FastChannel/", System.StringComparison.Ordinal) >= 0
                     ? UNITY_EDITOR_WINDOWS_ADAPTER_DEFINE
-                    : normalizedPath.IndexOf("/WorkbenchLauncher/RuntimeCache/", System.StringComparison.Ordinal) >= 0
-                        ? SHARED_RUNTIME_CACHE_DEFINE
-                        : UNITY_EDITOR_ADAPTER_DEFINE;
+                    : UNITY_EDITOR_ADAPTER_DEFINE;
                 AssertWholeFileGuard(sourcePath, expectedDefine);
             }
         }
