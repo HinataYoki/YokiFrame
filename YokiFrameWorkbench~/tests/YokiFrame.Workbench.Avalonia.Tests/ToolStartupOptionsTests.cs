@@ -95,7 +95,7 @@ public sealed class ToolStartupOptionsTests
     }
 
     /// <summary>
-    /// 验证直接从源码包根启动 Installer 时回推源包和 Unity 项目路径。
+    /// 验证直接从源码包根启动 Installer 时识别源包，但不把承载源码的开发项目当作默认目标。
     /// </summary>
     [Fact]
     public void FromArgsSelectsInstallerModeWhenOpenedFromSourcePackageRoot()
@@ -109,7 +109,8 @@ public sealed class ToolStartupOptionsTests
 
         Assert.Equal(ToolStartupMode.Installer, options.Mode);
         Assert.Equal(Path.Combine(projectRoot, "Assets", "YokiFrame"), options.SourcePackageRoot);
-        Assert.Equal(projectRoot, options.TargetProjectRoot);
+        Assert.Equal(string.Empty, options.TargetProjectRoot);
+        Assert.Equal(Path.GetFullPath(packageRoot), options.ProjectRoot);
     }
 
     /// <summary>
@@ -129,6 +130,46 @@ public sealed class ToolStartupOptionsTests
 
         Assert.Equal(ToolStartupMode.Installer, options.Mode);
         Assert.Equal(Path.GetFullPath(packageRoot), options.SourcePackageRoot);
+        Assert.Equal(string.Empty, options.TargetProjectRoot);
+        Assert.Equal(Path.GetFullPath(appBaseDirectory), options.ProjectRoot);
+    }
+
+    /// <summary>
+    /// 验证从开发包启动时，当前目录若是另一个项目，仍可作为默认目标。
+    /// </summary>
+    [Fact]
+    public void FromArgsUsesExternalCurrentDirectoryWhenDevelopmentProjectContainsSource()
+    {
+        var developmentRoot = CreateTempRoot("development-host");
+        var packageRoot = Path.Combine(developmentRoot, "Assets", "YokiFrame");
+        var appBaseDirectory = Path.Combine(packageRoot, "bin");
+        var consumerRoot = CreateTempRoot("consumer");
+        Directory.CreateDirectory(Path.Combine(packageRoot, "Documentation~"));
+        Directory.CreateDirectory(appBaseDirectory);
+        File.WriteAllText(Path.Combine(packageRoot, "package.json"), "{\"name\":\"com.hinatayoki.yokiframe\"}");
+
+        var options = ToolStartupOptions.FromArgs(Array.Empty<string>(), consumerRoot, appBaseDirectory);
+
+        Assert.Equal(Path.GetFullPath(packageRoot), options.SourcePackageRoot);
+        Assert.Equal(Path.GetFullPath(consumerRoot), options.TargetProjectRoot);
+    }
+
+    /// <summary>
+    /// 验证显式 target 即使指向源码所在开发项目也会保留，随后由安装计划拒绝。
+    /// </summary>
+    [Fact]
+    public void FromArgsKeepsExplicitTargetThatContainsSourcePackage()
+    {
+        var projectRoot = CreateTempRoot("explicit-development");
+        var packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
+        Directory.CreateDirectory(Path.Combine(packageRoot, "Documentation~"));
+        File.WriteAllText(Path.Combine(packageRoot, "package.json"), "{\"name\":\"com.hinatayoki.yokiframe\"}");
+
+        var options = ToolStartupOptions.FromArgs(
+            new[] { "--target", projectRoot },
+            packageRoot,
+            packageRoot);
+
         Assert.Equal(Path.GetFullPath(projectRoot), options.TargetProjectRoot);
     }
 

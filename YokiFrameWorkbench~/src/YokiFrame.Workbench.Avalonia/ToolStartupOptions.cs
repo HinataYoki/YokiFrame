@@ -1,5 +1,6 @@
 using System.Globalization;
 using YokiFrame.Tooling.Application.CommandLine;
+using YokiFrame.Tooling.Application.Installer;
 
 namespace YokiFrame.Workbench.Avalonia;
 
@@ -61,7 +62,10 @@ public sealed class ToolStartupOptions
         Mode = mode;
         ProjectRoot = Path.GetFullPath(projectRoot);
         SourcePackageRoot = Path.GetFullPath(sourcePackageRoot);
-        TargetProjectRoot = Path.GetFullPath(targetProjectRoot);
+        // 开发项目不能作为默认安装目标，允许留空并要求用户显式选择其他项目。
+        TargetProjectRoot = string.IsNullOrWhiteSpace(targetProjectRoot)
+            ? string.Empty
+            : Path.GetFullPath(targetProjectRoot);
         ParentWindowHandle = parentWindowHandle;
     }
 
@@ -119,12 +123,29 @@ public sealed class ToolStartupOptions
         }
 
         var detectedPackageRoot = DetectPackageRoot(appBaseDirectory, currentDirectory);
-        var targetRoot = ResolveInstallerTargetRoot(commandLine, currentDirectory, detectedPackageRoot);
-        var sourceRoot = ReadOption(commandLine, "source");
-        var resolvedSourceRoot = string.IsNullOrWhiteSpace(sourceRoot)
-            ? detectedPackageRoot ?? Path.Combine(targetRoot, "Assets", "YokiFrame")
-            : Path.GetFullPath(sourceRoot);
-        return new ToolStartupOptions(ToolStartupMode.Installer, targetRoot, resolvedSourceRoot, targetRoot, parentWindowHandle);
+        var explicitSource = ReadOption(commandLine, "source");
+        var knownSource = string.IsNullOrWhiteSpace(explicitSource)
+            ? detectedPackageRoot
+            : Path.GetFullPath(explicitSource);
+        var targetRoot = ResolveInstallerTargetRoot(
+            commandLine,
+            currentDirectory,
+            knownSource ?? string.Empty,
+            detectedPackageRoot);
+        var sourceFallbackRoot = string.IsNullOrWhiteSpace(targetRoot)
+            ? Path.GetFullPath(currentDirectory)
+            : targetRoot;
+        var resolvedSourceRoot = knownSource
+            ?? Path.Combine(sourceFallbackRoot, "Assets", "YokiFrame");
+        var projectRootForInstaller = string.IsNullOrWhiteSpace(targetRoot)
+            ? Path.GetFullPath(currentDirectory)
+            : targetRoot;
+        return new ToolStartupOptions(
+            ToolStartupMode.Installer,
+            projectRootForInstaller,
+            resolvedSourceRoot,
+            targetRoot,
+            parentWindowHandle);
     }
 
     /// <summary>
@@ -165,15 +186,17 @@ public sealed class ToolStartupOptions
     }
 
     /// <summary>
-    /// 解析 Installer 默认目标项目根；显式 target 优先，其次从包根回推项目根。
+    /// 解析 Installer 默认目标项目根。显式 target 保持原样；源码所在的开发项目不会被自动选中。
     /// </summary>
-    /// <param name="args">命令行参数。</param>
+    /// <param name="commandLine">已解析命令行。</param>
     /// <param name="currentDirectory">当前工作目录。</param>
+    /// <param name="sourcePackageRoot">已解析的源包根。</param>
     /// <param name="detectedPackageRoot">从应用目录识别出的包根。</param>
-    /// <returns>目标项目根。</returns>
+    /// <returns>可用的目标项目根；只能回推到开发项目自身时返回空字符串。</returns>
     private static string ResolveInstallerTargetRoot(
         ToolCommandLineOptions commandLine,
         string currentDirectory,
+        string sourcePackageRoot,
         string? detectedPackageRoot)
     {
         var targetRoot = ReadOption(commandLine, "target");
@@ -182,7 +205,44 @@ public sealed class ToolStartupOptions
             return Path.GetFullPath(targetRoot);
         }
 
-        return ResolveProjectRootFromPackageRoot(detectedPackageRoot) ?? Path.GetFullPath(currentDirectory);
+        var current = Path.GetFullPath(currentDirectory);
+        var inferredProjectRoot = ResolveProjectRootFromPackageRoot(detectedPackageRoot);
+        if (IsDevelopmentHostTarget(inferredProjectRoot, sourcePackageRoot, current))
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(inferredProjectRoot)
+            && !InstallerSourceTargetRules.Overlaps(inferredProjectRoot, sourcePackageRoot))
+        {
+            return inferredProjectRoot;
+        }
+
+        return InstallerSourceTargetRules.Overlaps(current, sourcePackageRoot)
+            ? string.Empty
+            : current;
+    }
+
+    /// <summary>
+    /// 判断当前启动位置是否就在承载源码包的开发项目内。
+    /// </summary>
+    /// <param name="inferredProjectRoot">从 Assets/YokiFrame 回推出的项目根。</param>
+    /// <param name="sourcePackageRoot">源包根。</param>
+    /// <param name="currentDirectory">当前工作目录。</param>
+    /// <returns>回推项目包含源码且当前目录也在该项目内时返回 true。</returns>
+    private static bool IsDevelopmentHostTarget(
+        string? inferredProjectRoot,
+        string sourcePackageRoot,
+        string currentDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(inferredProjectRoot)
+            || !InstallerSourceTargetRules.Overlaps(inferredProjectRoot, sourcePackageRoot))
+        {
+            return false;
+        }
+
+        return InstallerSourceTargetRules.Overlaps(inferredProjectRoot, currentDirectory)
+            || InstallerSourceTargetRules.Overlaps(currentDirectory, sourcePackageRoot);
     }
 
     /// <summary>

@@ -42,6 +42,7 @@ public sealed class UnityInstallService
     public UnityInstallPlan CreatePlan(UnityInstallRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        InstallerSourceTargetGuard.RejectIfSourceOverlapsTarget(request.SourcePackageRoot, request.ProjectRoot);
         var target = DetectUnityTarget(request.ProjectRoot);
         var manifest = mManifestStore.Read(target.ProjectRoot);
         var ownership = mOwnershipInspector.Inspect(target.PackageRoot);

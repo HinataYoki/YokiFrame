@@ -28,7 +28,9 @@ public sealed partial class InstallerShellViewModel
         }
         SessionStatusText = mIsGodotRuntimeBootstrapRunning
             ? GetBootstrapStatusText(mIsGodotRuntimeBootstrapOpeningInstaller)
-            : GetSessionStatusText(state.Status);
+            : mRejectsOverlappingSource
+                ? GetOverlappingSourceStatusText()
+                : GetSessionStatusText(state.Status);
         ApplyPlanSummary(state.Plan);
         ApplyCompletionSummary(state);
         ApplyOutcomeDetails(state);
@@ -103,7 +105,9 @@ public sealed partial class InstallerShellViewModel
             TargetStatusText = state.Plan.PackageTarget;
         }
 
-        SessionStatusText = GetSessionStatusText(state.Status);
+        SessionStatusText = mRejectsOverlappingSource
+            ? GetOverlappingSourceStatusText()
+            : GetSessionStatusText(state.Status);
         ApplyPlanSummary(state.Plan);
         ApplyProgress(state);
         ApplyCompletionSummary(state);

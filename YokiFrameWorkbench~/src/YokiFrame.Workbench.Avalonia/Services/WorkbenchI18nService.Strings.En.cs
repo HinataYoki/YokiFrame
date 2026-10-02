@@ -343,6 +343,7 @@ public sealed partial class WorkbenchI18nService
         ["String.Installer.SourceDirectory"] = "YokiFrame source directory",
         ["String.Installer.SourceDirectoryPickerTitle"] = "Choose YokiFrame source directory",
         ["String.Installer.SourceDirectoryPlaceholder"] = "Choose the YokiFrame package root",
+        ["String.Installer.SourceInsideTarget"] = "The target project contains the YokiFrame source directory and cannot be the development project itself.",
         ["String.Installer.Step.BackupReplaceVerify"] = "Backup, replace, verify",
         ["String.Installer.Step.ConfigureSource"] = "Configure source",
         ["String.Installer.Step.LocalOrGit"] = "Local or Git",

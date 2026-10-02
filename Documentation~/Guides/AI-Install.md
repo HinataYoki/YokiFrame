@@ -6,7 +6,7 @@
 
 ## 执行契约
 
-1. 先识别源码包根和目标项目根，确认路径没有指向 `addons/yokiframe`、`.yokiframe` 或构建缓存。
+1. 先识别源码包根和目标项目根，确认路径没有指向 `addons/yokiframe`、`.yokiframe` 或构建缓存。源码包所在的开发项目不能作为目标；源目录与目标项目相同或互相包含时，Installer 会拒绝计划。
 2. 源码包没有预编译的 Workbench 和 `yoki`。图形 Installer 在首次 Godot 计划发现 Runtime 缓存缺失或失配时会自动执行 bootstrap；无交互 CLI 安装仍需先手动 bootstrap。
 3. 先运行 `installer plan`，检查目标路径、动作、warning 和冲突；确认计划可接受后再运行同参数的 `installer apply`。
 4. 不直接复制 `addons/yokiframe`，不手工修改 `.yokiframe`，不在发现用户修改时静默覆盖。

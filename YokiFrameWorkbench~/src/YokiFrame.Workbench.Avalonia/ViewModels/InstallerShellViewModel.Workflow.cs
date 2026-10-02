@@ -389,6 +389,12 @@ public sealed partial class InstallerShellViewModel
     /// <returns>有效输入；目标无效时返回 null。</returns>
     private InstallerInstallOptions? TryCreateInstallOptions()
     {
+        if (string.IsNullOrWhiteSpace(TargetProjectRoot))
+        {
+            ApplyMissingTarget();
+            return null;
+        }
+
         InstallerTargetInfo target;
         try
         {
@@ -396,6 +402,7 @@ public sealed partial class InstallerShellViewModel
         }
         catch (Exception exception)
         {
+            ClearOverlappingSourceRejection();
             ApplyDetectionFailure(exception.Message);
             return null;
         }
@@ -403,9 +410,27 @@ public sealed partial class InstallerShellViewModel
         ApplyTargetInfo(target);
         if (!target.IsRecognized)
         {
+            ClearOverlappingSourceRejection();
             return null;
         }
 
+        if (InstallerSourceTargetRules.Overlaps(SourcePackageRoot, target.ProjectRoot))
+        {
+            ApplyOverlappingSourceRejection();
+            return null;
+        }
+
+        ClearOverlappingSourceRejection();
+        return CreateInstallOptions(target);
+    }
+
+    /// <summary>
+    /// 按当前模式创建 Application 安装输入。调用前必须已确认目标有效且不包含源目录。
+    /// </summary>
+    /// <param name="target">已识别的目标项目。</param>
+    /// <returns>与页面模式一致的安装输入。</returns>
+    private InstallerInstallOptions CreateInstallOptions(InstallerTargetInfo target)
+    {
         var policy = ConfirmLegacyTakeover
             ? InstallerLegacyPackagePolicy.TakeOverConfirmed
             : InstallerLegacyPackagePolicy.Reject;
@@ -504,7 +529,9 @@ public sealed partial class InstallerShellViewModel
     /// <returns>目标已识别且会话不忙时返回 true。</returns>
     private bool CanPreviewPlan()
     {
-        return mTargetKind != InstallerTargetKind.Unknown && !IsSessionBusy();
+        return mTargetKind != InstallerTargetKind.Unknown
+            && !mRejectsOverlappingSource
+            && !IsSessionBusy();
     }
 
     /// <summary>

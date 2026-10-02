@@ -177,6 +177,7 @@ public sealed class GodotInstallService
     /// <returns>可进入完整 add-on 事务的稳定输入。</returns>
     private GodotInstallPlan PrepareInstall(GodotInstallRequest request)
     {
+        InstallerSourceTargetGuard.RejectIfSourceOverlapsTarget(request.SourcePackageRoot, request.ProjectRoot);
         var fullProjectRoot = RequireProjectRoot(request.ProjectRoot);
         var projectSettingsPath = RequireProjectSettings(fullProjectRoot);
         var projectSettings = File.ReadAllText(projectSettingsPath);

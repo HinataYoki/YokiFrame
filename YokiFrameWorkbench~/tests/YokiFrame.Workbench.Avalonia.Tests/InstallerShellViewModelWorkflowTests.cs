@@ -311,4 +311,42 @@ public sealed partial class InstallerShellViewModelWorkflowTests
             fixture.ViewModel.LogEntries,
             entry => entry.Message.Contains("正在从选定 YokiFrame 源码包构建", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// 验证源目录位于目标项目内时不生成计划，并禁用安装与预览。
+    /// </summary>
+    [Fact]
+    public async Task RefreshPlanRejectsTargetThatContainsSourcePackage()
+    {
+        using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateUnity();
+        await fixture.ViewModel.InitializeAsync();
+        var installedSource = fixture.Gateway.LastOptions?.SourcePackageRoot;
+        fixture.ViewModel.SourcePackageRoot = Path.Combine(fixture.TargetRoot, "Assets", "YokiFrame");
+
+        await fixture.ViewModel.RefreshPlanAsync();
+
+        Assert.Equal("Unity", fixture.ViewModel.EngineStatusText);
+        Assert.Contains("开发项目", fixture.ViewModel.SessionStatusText, StringComparison.Ordinal);
+        Assert.False(fixture.ViewModel.InstallCommand.CanExecute(null));
+        Assert.False(fixture.ViewModel.PreviewCommand.CanExecute(null));
+        Assert.Equal(installedSource, fixture.Gateway.LastOptions?.SourcePackageRoot);
+    }
+
+    /// <summary>
+    /// 验证目标为空时保持等待选择，而不是把空路径报成检测异常。
+    /// </summary>
+    [Fact]
+    public async Task RefreshPlanKeepsEmptyTargetWaitingForSelection()
+    {
+        using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateUnity();
+        await fixture.ViewModel.InitializeAsync();
+
+        fixture.ViewModel.TargetProjectRoot = string.Empty;
+        await fixture.ViewModel.RefreshPlanAsync();
+
+        Assert.Equal("等待选择目录", fixture.ViewModel.TargetStatusText);
+        Assert.Equal("安装器已就绪", fixture.ViewModel.SessionStatusText);
+        Assert.False(fixture.ViewModel.InstallCommand.CanExecute(null));
+        Assert.DoesNotContain("empty", fixture.ViewModel.SessionStatusText, StringComparison.OrdinalIgnoreCase);
+    }
 }
