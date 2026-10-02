@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.3
+
+- ResKit 的 YooAsset 集成支持多包自动探测：普通路径按登记顺序查找，`package:{包名}/{location}` 显式指定且失败不回退。
+- YooAsset 联网初始化支持 RemoteOnly、RemoteThenCached、RemoteThenOffline，并兼容 V2/V3。远端版本请求可由 `AppendTimestampToVersionRequest` 控制是否追加时间戳，默认开启以绕过 CDN 缓存；鉴权签名覆盖完整 URL 或网关拒绝未知查询参数时关闭。
+- UIKit 按挂载身份确认类型迁移与遗留删除，遗留代码检查限定在当前生成目录。
+- SaveKit 刷新时解析宿主用户目录并扫描存档文件。
+- Godot 安装后的插件可以正常编译；共享设置写入 `project.godot`，内容没有变化时不重写。
+- Installer 优化安装目标选择。Godot 宿主按需注册，FileBridge 时钟与引擎页面保持一致。
+
 ## 2.0.2
 
 - UIKit 代码生成与目录迁移能力完善。
