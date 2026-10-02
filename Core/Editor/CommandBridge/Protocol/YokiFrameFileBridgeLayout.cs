@@ -70,6 +70,21 @@ namespace YokiFrame
         /// terminal response 文件名后缀。
         /// </summary>
         public const string RESPONSE_FILE_SUFFIX = "-response.json";
+
+        /// <summary>
+        /// 同一项目、同一 engine Host 的 admission 锁文件名。
+        /// </summary>
+        public const string ADMISSION_LOCK_FILE_NAME = "host.lock";
+
+        /// <summary>
+        /// deadletter 诊断文件名后缀。
+        /// </summary>
+        public const string DEADLETTER_INFO_FILE_SUFFIX = "-deadletter.json";
+
+        /// <summary>
+        /// deadletter 原始请求证据文件名后缀。
+        /// </summary>
+        public const string DEADLETTER_REQUEST_FILE_SUFFIX = "-request.json";
     }
 }
 #endif

@@ -185,7 +185,9 @@ namespace YokiFrame
         /// <summary>获取同一项目和 unity-editor Host 的 admission 锁路径。</summary>
         public static string GetAdmissionLockPath()
         {
-            return EnsureSafeProjectPath(Path.Combine(GetEngineRoot(), "host.lock"));
+            return EnsureSafeProjectPath(Path.Combine(
+                GetEngineRoot(),
+                YokiFrameFileBridgeLayout.ADMISSION_LOCK_FILE_NAME));
         }
 
         /// <summary>
@@ -238,7 +240,7 @@ namespace YokiFrame
             EnsureSafeId(deadletterId, nameof(deadletterId));
             return EnsureSafePathBelowVerifiedRoot(
                 GetDeadletterRoot(),
-                Path.Combine(GetDeadletterRoot(), deadletterId + "-deadletter.json"));
+                Path.Combine(GetDeadletterRoot(), deadletterId + YokiFrameFileBridgeLayout.DEADLETTER_INFO_FILE_SUFFIX));
         }
 
         /// <summary>
@@ -251,7 +253,7 @@ namespace YokiFrame
             EnsureSafeId(deadletterId, nameof(deadletterId));
             return EnsureSafePathBelowVerifiedRoot(
                 GetDeadletterRoot(),
-                Path.Combine(GetDeadletterRoot(), deadletterId + "-request.json"));
+                Path.Combine(GetDeadletterRoot(), deadletterId + YokiFrameFileBridgeLayout.DEADLETTER_REQUEST_FILE_SUFFIX));
         }
 
         /// <summary>

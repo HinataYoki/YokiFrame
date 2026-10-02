@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
+using YokiFrame.RuntimeCache;
 
 namespace YokiFrame
 {
@@ -228,6 +229,35 @@ namespace YokiFrame
             }
 
             return new[] { platform };
+        }
+
+        /// <summary>
+        /// 按启动优先级选择结构可信的 Runtime profile。
+        /// Unity 启动保持快速校验，不读取全部二进制；完整哈希规则仍由共享校验器维护。
+        /// </summary>
+        /// <param name="manifestPath">Runtime manifest 完整路径。</param>
+        /// <param name="runtimeRoot">当前源码指纹对应的 Runtime 根。</param>
+        /// <param name="runtimePlatforms">按优先级排列的平台 profile。</param>
+        /// <param name="executablePath">验证成功后的 GUI 入口完整路径。</param>
+        /// <param name="error">验证失败原因。</param>
+        /// <returns>缓存结构与入口可信时返回 true。</returns>
+        private static bool TryValidateRuntimeManifest(
+            string manifestPath,
+            string runtimeRoot,
+            string[] runtimePlatforms,
+            out string executablePath,
+            out string error)
+        {
+            var valid = RuntimeManifestIntegrityValidator.TrySelectProfile(
+                manifestPath,
+                runtimeRoot,
+                runtimePlatforms,
+                false,
+                false,
+                out var profile,
+                out error);
+            executablePath = valid ? profile.GuiPath : string.Empty;
+            return valid;
         }
 
         /// <summary>

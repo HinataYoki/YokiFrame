@@ -53,7 +53,7 @@ namespace YokiFrame
             mCommandCoordinator = new YokiFrameHostCommandCoordinator(
                 new YokiFrameFileBridgeHostStore(
                     mPaths,
-                    (path, json) => GodotEditorFileBridgeJson.WriteAtomic(path, json),
+                    (path, json) => GodotFileBridgeJson.WriteAtomic(path, json),
                     SerializeDeadletterInfo,
                     () => TryPruneStorage(),
                     () => TryPruneStorage(),
@@ -218,9 +218,9 @@ namespace YokiFrame
                 RegisteredAtUtc = DateTimeOffset.UtcNow.ToString("O"),
                 Capabilities = sCapabilities
             };
-            GodotEditorFileBridgeJson.WriteAtomic(
+            GodotFileBridgeJson.WriteAtomic(
                 mPaths.RegistryPath,
-                GodotEditorFileBridgeJson.Serialize(registry));
+                GodotFileBridgeJson.Serialize(registry));
         }
 
         /// <summary>
@@ -229,8 +229,9 @@ namespace YokiFrame
         private void WriteHeartbeat()
         {
             var nowUtc = DateTimeOffset.UtcNow.ToString("O");
-            GodotEditorHeartbeat heartbeat = new GodotEditorHeartbeat
+            YokiFrameFileBridgeHeartbeat heartbeat = new YokiFrameFileBridgeHeartbeat
             {
+                EngineId = ENGINE_ID,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Mode = EDITOR_MODE,
@@ -238,9 +239,9 @@ namespace YokiFrame
                 CreatedAtUtc = nowUtc,
                 WrittenAtUtc = nowUtc
             };
-            GodotEditorFileBridgeJson.WriteAtomic(
+            GodotFileBridgeJson.WriteAtomic(
                 mPaths.HeartbeatPath,
-                GodotEditorFileBridgeJson.Serialize(heartbeat));
+                GodotFileBridgeJson.Serialize(heartbeat));
         }
 
         /// <summary>
@@ -272,7 +273,7 @@ namespace YokiFrame
         {
             try
             {
-                var registry = GodotEditorFileBridgeJson.Deserialize<GodotEditorEngineRegistry>(File.ReadAllText(path));
+                var registry = GodotFileBridgeJson.Deserialize<GodotEditorEngineRegistry>(File.ReadAllText(path));
                 return registry != null
                     && registry.SessionId == mSessionId
                     && registry.Generation == mGeneration;
@@ -290,7 +291,7 @@ namespace YokiFrame
         {
             try
             {
-                var heartbeat = GodotEditorFileBridgeJson.Deserialize<GodotEditorHeartbeat>(File.ReadAllText(path));
+                var heartbeat = GodotFileBridgeJson.Deserialize<YokiFrameFileBridgeHeartbeat>(File.ReadAllText(path));
                 return heartbeat != null
                     && heartbeat.SessionId == mSessionId
                     && heartbeat.Generation == mGeneration;

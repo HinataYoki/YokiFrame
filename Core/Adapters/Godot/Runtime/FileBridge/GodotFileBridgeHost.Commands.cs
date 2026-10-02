@@ -93,28 +93,28 @@ namespace YokiFrame
         /// <returns>可写入 terminal response 的命令目录 JSON。</returns>
         private string CreateCommandCatalogJson(IReadOnlyList<YokiFrameCommandDescriptor> commands)
         {
-            var groups = new Dictionary<string, List<GodotCommandCatalogAction>>(StringComparer.Ordinal);
+            var groups = new Dictionary<string, List<YokiFrameFileBridgeCommandCatalogAction>>(StringComparer.Ordinal);
             for (var index = 0; index < commands.Count; index++)
             {
                 var command = commands[index];
                 if (!groups.TryGetValue(command.Kit, out var actions))
                 {
-                    actions = new List<GodotCommandCatalogAction>();
+                    actions = new List<YokiFrameFileBridgeCommandCatalogAction>();
                     groups.Add(command.Kit, actions);
                 }
 
-                actions.Add(new GodotCommandCatalogAction
+                actions.Add(new YokiFrameFileBridgeCommandCatalogAction
                 {
                     Action = command.Action,
                     Kind = command.Kind.ToString()
                 });
             }
 
-            List<GodotCommandCatalogKit> kits = new List<GodotCommandCatalogKit>();
+            List<YokiFrameFileBridgeCommandCatalogKit> kits = new List<YokiFrameFileBridgeCommandCatalogKit>();
             foreach (var group in groups)
             {
                 group.Value.Sort(static (left, right) => string.CompareOrdinal(left.Action, right.Action));
-                kits.Add(new GodotCommandCatalogKit
+                kits.Add(new YokiFrameFileBridgeCommandCatalogKit
                 {
                     Kit = group.Key,
                     Actions = group.Value.ToArray()
@@ -122,7 +122,7 @@ namespace YokiFrame
             }
 
             kits.Sort(static (left, right) => string.CompareOrdinal(left.Kit, right.Kit));
-            return GodotFileBridgeJson.Serialize(new GodotCommandCatalogResult
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeCommandCatalogResult
             {
                 EngineId = ENGINE_ID,
                 Mode = RUNTIME_MODE,
@@ -138,7 +138,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="commandPath">命令文件完整路径。</param>
         /// <returns>已校验命令信封。</returns>
-        private static GodotCommandEnvelope ReadCommandEnvelope(string commandPath)
+        private static YokiFrameFileBridgeCommandEnvelope ReadCommandEnvelope(string commandPath)
         {
             FileInfo fileInfo = new FileInfo(commandPath);
             if (fileInfo.Length > YokiFrameFileBridgeContract.COMMAND_FILE_MAX_BYTES)
@@ -146,7 +146,7 @@ namespace YokiFrame
                 throw new InvalidDataException("Command file exceeds the Runtime FileBridge byte limit.");
             }
 
-            var envelope = GodotFileBridgeJson.Deserialize<GodotCommandEnvelope>(File.ReadAllText(commandPath));
+            var envelope = GodotFileBridgeJson.Deserialize<YokiFrameFileBridgeCommandEnvelope>(File.ReadAllText(commandPath));
             ValidateEnvelope(envelope);
             if (!string.Equals(
                     Path.GetFileNameWithoutExtension(commandPath),
@@ -163,7 +163,7 @@ namespace YokiFrame
         /// 校验命令信封的共享协议字段和路径标识，并拒绝损坏 payload JSON。
         /// </summary>
         /// <param name="envelope">待校验命令信封。</param>
-        private static void ValidateEnvelope(GodotCommandEnvelope envelope)
+        private static void ValidateEnvelope(YokiFrameFileBridgeCommandEnvelope envelope)
         {
             var error = YokiFrameCommandEnvelopeValidator.Validate(
                 envelope.ProtocolVersion,
@@ -188,7 +188,7 @@ namespace YokiFrame
         /// <param name="envelope">已校验命令信封。</param>
         /// <param name="commandFileBytes">命令文件字节数。</param>
         /// <returns>terminal response。</returns>
-        private GodotCommandResponse ExecuteCommand(GodotCommandEnvelope envelope, long commandFileBytes)
+        private YokiFrameFileBridgeCommandResponse ExecuteCommand(YokiFrameFileBridgeCommandEnvelope envelope, long commandFileBytes)
         {
             YokiFrameCommandRequest request = new YokiFrameCommandRequest(
                 envelope.Source,
@@ -230,8 +230,10 @@ namespace YokiFrame
         /// <returns>ping 结果 JSON。</returns>
         private string CreatePingResultJson()
         {
-            return GodotFileBridgeJson.Serialize(new GodotPingResult
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgePingResult
             {
+                EngineId = ENGINE_ID,
+                Mode = RUNTIME_MODE,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence
@@ -245,8 +247,10 @@ namespace YokiFrame
         private string CreateBridgeStatusResultJson()
         {
             var storage = GodotFileBridgeJson.ReadStorageDiagnostics(mPaths.EngineRoot);
-            return GodotFileBridgeJson.Serialize(new GodotBridgeStatusResult
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeStatusResult
             {
+                EngineId = ENGINE_ID,
+                Mode = RUNTIME_MODE,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence,
@@ -270,10 +274,11 @@ namespace YokiFrame
         /// <param name="requestId">请求标识。</param>
         /// <param name="resultJson">业务结果 JSON。</param>
         /// <returns>成功 terminal response。</returns>
-        private static GodotCommandResponse CreateSuccessResponse(string requestId, string resultJson)
+        private static YokiFrameFileBridgeCommandResponse CreateSuccessResponse(string requestId, string resultJson)
         {
-            return new GodotCommandResponse
+            return new YokiFrameFileBridgeCommandResponse
             {
+                EngineId = ENGINE_ID,
                 RequestId = requestId,
                 Status = "Success",
                 ResultJson = resultJson,
@@ -288,13 +293,14 @@ namespace YokiFrame
         /// <param name="errorCode">错误码。</param>
         /// <param name="errorMessage">错误说明。</param>
         /// <returns>错误 terminal response。</returns>
-        private static GodotCommandResponse CreateErrorResponse(
+        private static YokiFrameFileBridgeCommandResponse CreateErrorResponse(
             string requestId,
             string errorCode,
             string errorMessage)
         {
-            return new GodotCommandResponse
+            return new YokiFrameFileBridgeCommandResponse
             {
+                EngineId = ENGINE_ID,
                 RequestId = requestId,
                 Status = "Error",
                 ErrorCode = errorCode,
@@ -304,14 +310,17 @@ namespace YokiFrame
         }
 
         /// <summary>
-
-        /// <summary>
         /// 序列化与既有 wire 格式一致的 deadletter 诊断 JSON，供共享命令存储写入证据。
         /// </summary>
+        /// <param name="sourcePath">无法消费的原始命令路径。</param>
+        /// <param name="errorCode">拒绝原因错误码。</param>
+        /// <param name="errorMessage">拒绝原因说明。</param>
+        /// <returns>deadletter 诊断 JSON。</returns>
         private static string SerializeDeadletterInfo(string sourcePath, string errorCode, string errorMessage)
         {
-            return GodotFileBridgeJson.Serialize(new GodotDeadletterInfo
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeDeadletterInfo
             {
+                EngineId = ENGINE_ID,
                 SourcePath = sourcePath,
                 ErrorCode = errorCode,
                 ErrorMessage = errorMessage,

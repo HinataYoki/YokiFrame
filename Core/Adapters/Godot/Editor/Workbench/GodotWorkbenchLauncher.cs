@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Godot;
+using YokiFrame.RuntimeCache;
 
 namespace YokiFrame
 {
@@ -72,6 +73,35 @@ namespace YokiFrame
             }
 
             return executablePath;
+        }
+
+        /// <summary>
+        /// 按启动优先级选择完整校验通过的 Runtime profile。
+        /// 校验规则只存在于共享 RuntimeManifestIntegrityValidator，本方法只保留 Godot 的完整哈希语义。
+        /// </summary>
+        /// <param name="manifestPath">Runtime manifest 完整路径。</param>
+        /// <param name="runtimeRoot">当前源码指纹对应的 Runtime 根。</param>
+        /// <param name="runtimeIds">按优先级排列的平台 profile。</param>
+        /// <param name="executablePath">验证成功后的 GUI 入口完整路径。</param>
+        /// <param name="error">验证失败原因。</param>
+        /// <returns>缓存完整且入口可信时返回 true。</returns>
+        private static bool TryValidateRuntimeManifest(
+            string manifestPath,
+            string runtimeRoot,
+            string[] runtimeIds,
+            out string executablePath,
+            out string error)
+        {
+            var valid = RuntimeManifestIntegrityValidator.TrySelectProfile(
+                manifestPath,
+                runtimeRoot,
+                runtimeIds,
+                false,
+                true,
+                out var profile,
+                out error);
+            executablePath = valid ? profile.GuiPath : string.Empty;
+            return valid;
         }
 
         /// <summary>

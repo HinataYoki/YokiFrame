@@ -125,7 +125,7 @@ namespace YokiFrame
 
             try
             {
-                var envelope = GodotFileBridgeJson.Deserialize<GodotCommandEnvelope>(request.PayloadJson);
+                var envelope = GodotFileBridgeJson.Deserialize<YokiFrameFileBridgeCommandEnvelope>(request.PayloadJson);
                 ValidateEnvelope(envelope);
                 if (!IsFastChannelReadOnlyCommand(envelope.Kit, envelope.Action))
                 {

@@ -1,6 +1,11 @@
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 
-namespace YokiFrame.RuntimeCache;
+namespace YokiFrame.RuntimeCache
+{
 
 /// <summary>
 /// 验证项目 Runtime 缓存 manifest 的版本、目标平台与入口，供 Packaging 与 Installer 共用。
@@ -38,6 +43,58 @@ public static class RuntimeManifestIntegrityValidator
             validateContentHashes: true,
             out profile,
             out error);
+    }
+
+    /// <summary>
+    /// 按启动优先级选择第一个可信 profile。
+    /// 调用方决定是否读取全部二进制哈希，启动器自身不再复制校验规则。
+    /// </summary>
+    /// <param name="manifestPath">Runtime manifest 完整路径。</param>
+    /// <param name="runtimeRoot">源码指纹对应的 Runtime 根目录。</param>
+    /// <param name="runtimeProfiles">按优先级排列的平台 profile。</param>
+    /// <param name="requireCli">是否要求 CLI 入口存在。</param>
+    /// <param name="validateContentHashes">是否读取文件内容并校验 SHA-256。</param>
+    /// <param name="profile">选择成功后返回可信入口。</param>
+    /// <param name="error">全部候选失败时返回最后一次失败原因。</param>
+    /// <returns>找到可信 profile 时返回 true。</returns>
+    public static bool TrySelectProfile(
+        string manifestPath,
+        string runtimeRoot,
+        string[] runtimeProfiles,
+        bool requireCli,
+        bool validateContentHashes,
+        out RuntimeManifestProfileValidation profile,
+        out string error)
+    {
+        profile = RuntimeManifestProfileValidation.Empty;
+        error = "Runtime profile candidates are empty.";
+        if (runtimeProfiles == null || runtimeProfiles.Length == 0)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < runtimeProfiles.Length; index++)
+        {
+            var runtimeProfile = runtimeProfiles[index];
+            if (string.IsNullOrWhiteSpace(runtimeProfile))
+            {
+                continue;
+            }
+
+            if (TryValidateProfile(
+                    manifestPath,
+                    runtimeRoot,
+                    runtimeProfile,
+                    requireCli,
+                    validateContentHashes,
+                    out profile,
+                    out error))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -176,7 +233,7 @@ public static class RuntimeManifestIntegrityValidator
             || !RuntimeManifestJson.TryReadInt32(root, "manifestVersion", out var manifestVersion)
             || manifestVersion != MANIFEST_VERSION
             || !RuntimeManifestJson.TryReadInt32(root, "layoutVersion", out layoutVersion)
-            || layoutVersion is not (LEGACY_LAYOUT_VERSION or DUAL_ENTRY_LAYOUT_VERSION)
+            || layoutVersion != LEGACY_LAYOUT_VERSION && layoutVersion != DUAL_ENTRY_LAYOUT_VERSION
             || !RuntimeManifestJson.TryReadString(root, "runtimeRoot", out var runtimeRoot)
             || !string.Equals(runtimeRoot, ".", StringComparison.Ordinal))
         {
@@ -288,7 +345,7 @@ public static class RuntimeManifestIntegrityValidator
     private static bool TryValidateEntries(
         JsonElement platform,
         string runtimeRoot,
-        IReadOnlySet<string> files,
+        ISet<string> files,
         int layoutVersion,
         bool requireCli,
         out RuntimeManifestProfileValidation profile,
@@ -302,7 +359,7 @@ public static class RuntimeManifestIntegrityValidator
         }
 
         var cliEntry = RuntimeManifestJson.ReadOptionalString(platform, "cliEntry");
-        string? cliPath = null;
+        string cliPath = string.Empty;
         if (!TryResolveListedEntry(runtimeRoot, guiEntry, files, out var guiPath)
             || requireCli && string.IsNullOrWhiteSpace(cliEntry)
             || !string.IsNullOrWhiteSpace(cliEntry) && layoutVersion != DUAL_ENTRY_LAYOUT_VERSION
@@ -331,7 +388,7 @@ public static class RuntimeManifestIntegrityValidator
     private static bool TryResolveListedEntry(
         string runtimeRoot,
         string entry,
-        IReadOnlySet<string> files,
+        ISet<string> files,
         out string fullPath)
     {
         return RuntimeManifestPathPolicy.TryResolveFileInside(runtimeRoot, entry, out fullPath)
@@ -424,8 +481,27 @@ public static class RuntimeManifestJson
 /// </summary>
 /// <param name="GuiPath">可信 GUI 入口完整路径。</param>
 /// <param name="CliPath">可信 CLI 入口完整路径；未发布时为空。</param>
-public sealed record RuntimeManifestProfileValidation(string GuiPath, string CliPath)
+public sealed class RuntimeManifestProfileValidation
 {
+    /// <summary>
+    /// 创建经过文件集合验证的平台入口。
+    /// </summary>
+    /// <param name="guiPath">可信 GUI 入口完整路径。</param>
+    /// <param name="cliPath">可信 CLI 入口完整路径；未发布时为空。</param>
+    public RuntimeManifestProfileValidation(string guiPath, string cliPath)
+    {
+        GuiPath = guiPath ?? string.Empty;
+        CliPath = cliPath ?? string.Empty;
+    }
+
     /// <summary>获取验证失败时使用的空结果。</summary>
-    public static RuntimeManifestProfileValidation Empty { get; } = new(string.Empty, string.Empty);
+    public static RuntimeManifestProfileValidation Empty { get; } = new RuntimeManifestProfileValidation(string.Empty, string.Empty);
+
+    /// <summary>获取可信 GUI 入口完整路径。</summary>
+    public string GuiPath { get; }
+
+    /// <summary>获取可信 CLI 入口完整路径；未发布时为空。</summary>
+    public string CliPath { get; }
 }
+}
+#endif

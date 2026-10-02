@@ -1,13 +1,13 @@
 #if GODOT && TOOLS
 using System;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace YokiFrame
 {
     /// <summary>
-    /// 提供 Godot Runtime FileBridge 的 JSON、原子写入和存储诊断能力。
+    /// 提供 Godot Runtime 与 Godot Editor 共用的 FileBridge JSON 能力。
+    /// Editor 通过源码链接编译同一文件，序列化配置和空结果拒绝只存在这一处。
     /// </summary>
     internal static class GodotFileBridgeJson
     {
@@ -58,12 +58,7 @@ namespace YokiFrame
         /// <returns>JSON 文件数量。</returns>
         public static int CountJsonFiles(string directoryPath)
         {
-            return Directory.Exists(directoryPath)
-                ? Directory.GetFiles(
-                    directoryPath,
-                    "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
-                    SearchOption.TopDirectoryOnly).Length
-                : 0;
+            return YokiFrameFileBridgeStorageDiagnostics.CountJsonFiles(directoryPath);
         }
 
         /// <summary>
@@ -71,23 +66,9 @@ namespace YokiFrame
         /// </summary>
         /// <param name="engineRoot">engine 协议根。</param>
         /// <returns>协议存储诊断。</returns>
-        public static GodotProtocolStorageInfo ReadStorageDiagnostics(string engineRoot)
+        public static YokiFrameFileBridgeStorageInfo ReadStorageDiagnostics(string engineRoot)
         {
-            GodotProtocolStorageInfo info = new GodotProtocolStorageInfo();
-            if (!Directory.Exists(engineRoot))
-            {
-                return info;
-            }
-
-            foreach (var path in Directory.EnumerateFiles(
-                         engineRoot,
-                         "*" + YokiFrameFileBridgeLayout.JSON_EXTENSION,
-                         SearchOption.AllDirectories))
-            {
-                AddStorageFile(info, path);
-            }
-
-            return info;
+            return YokiFrameFileBridgeStorageDiagnostics.Read(engineRoot);
         }
 
         /// <summary>
@@ -103,25 +84,6 @@ namespace YokiFrame
                 WriteIndented = false
             };
         }
-
-        /// <summary>
-        /// 把单个 JSON 文件计入协议存储诊断。
-        /// </summary>
-        /// <param name="info">待更新诊断。</param>
-        /// <param name="path">JSON 文件路径。</param>
-        private static void AddStorageFile(GodotProtocolStorageInfo info, string path)
-        {
-            FileInfo fileInfo = new FileInfo(path);
-            info.FileCount++;
-            info.TotalBytes += fileInfo.Length;
-            var lastWriteUtc = fileInfo.LastWriteTimeUtc.ToString("O");
-            if (string.IsNullOrEmpty(info.OldestFileUtc)
-                || string.CompareOrdinal(lastWriteUtc, info.OldestFileUtc) < 0)
-            {
-                info.OldestFileUtc = lastWriteUtc;
-            }
-        }
-
     }
 }
 #endif

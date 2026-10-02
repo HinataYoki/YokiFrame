@@ -35,7 +35,7 @@ namespace YokiFrame
             var response = ExecuteCommand(envelope, new FileInfo(commandPath).Length);
             return new YokiFrameHostCommandExecution(
                 envelope.RequestId,
-                GodotEditorFileBridgeJson.Serialize(response));
+                GodotFileBridgeJson.Serialize(response));
         }
 
 
@@ -91,10 +91,10 @@ namespace YokiFrame
         /// <returns>命令目录 JSON。</returns>
         private string CreateCommandCatalogJson(IReadOnlyList<YokiFrameCommandDescriptor> commands)
         {
-            List<GodotEditorCommandCatalogAction> actions = new List<GodotEditorCommandCatalogAction>();
+            List<YokiFrameFileBridgeCommandCatalogAction> actions = new List<YokiFrameFileBridgeCommandCatalogAction>();
             for (var index = 0; index < commands.Count; index++)
             {
-                actions.Add(new GodotEditorCommandCatalogAction
+                actions.Add(new YokiFrameFileBridgeCommandCatalogAction
                 {
                     Action = commands[index].Action,
                     Kind = commands[index].Kind.ToString()
@@ -102,14 +102,16 @@ namespace YokiFrame
             }
 
             actions.Sort(static (left, right) => string.CompareOrdinal(left.Action, right.Action));
-            return GodotEditorFileBridgeJson.Serialize(new GodotEditorCommandCatalogResult
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeCommandCatalogResult
             {
+                EngineId = ENGINE_ID,
+                Mode = EDITOR_MODE,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence,
                 Kits = new[]
                 {
-                    new GodotEditorCommandCatalogKit { Kit = "System", Actions = actions.ToArray() }
+                    new YokiFrameFileBridgeCommandCatalogKit { Kit = "System", Actions = actions.ToArray() }
                 }
             });
         }
@@ -119,7 +121,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="commandPath">命令完整路径。</param>
         /// <returns>已校验命令信封。</returns>
-        private static GodotEditorCommandEnvelope ReadCommandEnvelope(string commandPath)
+        private static YokiFrameFileBridgeCommandEnvelope ReadCommandEnvelope(string commandPath)
         {
             FileInfo fileInfo = new FileInfo(commandPath);
             if (fileInfo.Length > YokiFrameFileBridgeContract.COMMAND_FILE_MAX_BYTES)
@@ -127,7 +129,7 @@ namespace YokiFrame
                 throw new InvalidDataException("Command file exceeds the Editor FileBridge byte limit.");
             }
 
-            var envelope = GodotEditorFileBridgeJson.Deserialize<GodotEditorCommandEnvelope>(
+            var envelope = GodotFileBridgeJson.Deserialize<YokiFrameFileBridgeCommandEnvelope>(
                 File.ReadAllText(commandPath));
             ValidateEnvelope(envelope);
             if (!string.Equals(
@@ -145,7 +147,7 @@ namespace YokiFrame
         /// 校验协议、engine、SafeId 与 payload JSON，不接受 Runtime engine 命令。
         /// </summary>
         /// <param name="envelope">待校验信封。</param>
-        private static void ValidateEnvelope(GodotEditorCommandEnvelope envelope)
+        private static void ValidateEnvelope(YokiFrameFileBridgeCommandEnvelope envelope)
         {
             var error = YokiFrameCommandEnvelopeValidator.Validate(
                 envelope.ProtocolVersion,
@@ -170,8 +172,8 @@ namespace YokiFrame
         /// <param name="envelope">已校验命令。</param>
         /// <param name="commandFileBytes">命令文件字节数。</param>
         /// <returns>terminal response。</returns>
-        private GodotEditorCommandResponse ExecuteCommand(
-            GodotEditorCommandEnvelope envelope,
+        private YokiFrameFileBridgeCommandResponse ExecuteCommand(
+            YokiFrameFileBridgeCommandEnvelope envelope,
             long commandFileBytes)
         {
             YokiFrameCommandRequest request = new YokiFrameCommandRequest(
@@ -214,8 +216,10 @@ namespace YokiFrame
         /// <returns>ping 结果 JSON。</returns>
         private string CreatePingResultJson()
         {
-            return GodotEditorFileBridgeJson.Serialize(new GodotEditorPingResult
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgePingResult
             {
+                EngineId = ENGINE_ID,
+                Mode = EDITOR_MODE,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence
@@ -228,22 +232,25 @@ namespace YokiFrame
         /// <returns>bridge_status 结果 JSON。</returns>
         private string CreateBridgeStatusResultJson()
         {
-            var storage = GodotEditorFileBridgeJson.ReadStorageDiagnostics(mPaths.EngineRoot);
-            return GodotEditorFileBridgeJson.Serialize(new GodotEditorBridgeStatusResult
+            var storage = GodotFileBridgeJson.ReadStorageDiagnostics(mPaths.EngineRoot);
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeStatusResult
             {
+                EngineId = ENGINE_ID,
+                Mode = EDITOR_MODE,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence,
-                Pending = GodotEditorFileBridgeJson.CountJsonFiles(mPaths.CommandsRoot),
-                Archive = GodotEditorFileBridgeJson.CountJsonFiles(mPaths.ArchiveRoot),
-                Deadletter = GodotEditorFileBridgeJson.CountJsonFiles(mPaths.DeadletterRoot),
-                Results = GodotEditorFileBridgeJson.CountJsonFiles(mPaths.ResultsRoot),
+                Pending = GodotFileBridgeJson.CountJsonFiles(mPaths.CommandsRoot),
+                Archive = GodotFileBridgeJson.CountJsonFiles(mPaths.ArchiveRoot),
+                Deadletter = GodotFileBridgeJson.CountJsonFiles(mPaths.DeadletterRoot),
+                Results = GodotFileBridgeJson.CountJsonFiles(mPaths.ResultsRoot),
                 ProtocolFileCount = storage.FileCount,
                 ProtocolBytes = storage.TotalBytes,
                 OldestProtocolFileUtc = storage.OldestFileUtc,
                 BackpressureActive = mCommandCoordinator.LastBatchWasLimited,
                 LastPollLimitReason = mCommandCoordinator.LastBatchLimitReason,
-                LastError = mLastError
+                LastError = mLastError,
+                FastChannel = "filebridge-only"
             });
         }
 
@@ -251,7 +258,7 @@ namespace YokiFrame
         /// <returns>供 Workbench 解析的 Godot 用户数据根目录。</returns>
         private static string CreateEnvironmentResultJson()
         {
-            return GodotEditorFileBridgeJson.Serialize(new GodotEditorEnvironmentResult
+            return GodotFileBridgeJson.Serialize(new GodotEditorEnvironmentResult
             {
                 UserDataDir = OS.GetUserDataDir()
             });
@@ -263,12 +270,13 @@ namespace YokiFrame
         /// <param name="requestId">请求标识。</param>
         /// <param name="resultJson">业务结果 JSON。</param>
         /// <returns>成功响应。</returns>
-        private static GodotEditorCommandResponse CreateSuccessResponse(
+        private static YokiFrameFileBridgeCommandResponse CreateSuccessResponse(
             string requestId,
             string resultJson)
         {
-            return new GodotEditorCommandResponse
+            return new YokiFrameFileBridgeCommandResponse
             {
+                EngineId = ENGINE_ID,
                 RequestId = requestId,
                 Status = "Success",
                 ResultJson = resultJson,
@@ -283,13 +291,14 @@ namespace YokiFrame
         /// <param name="errorCode">错误码。</param>
         /// <param name="errorMessage">错误说明。</param>
         /// <returns>错误响应。</returns>
-        private static GodotEditorCommandResponse CreateErrorResponse(
+        private static YokiFrameFileBridgeCommandResponse CreateErrorResponse(
             string requestId,
             string errorCode,
             string errorMessage)
         {
-            return new GodotEditorCommandResponse
+            return new YokiFrameFileBridgeCommandResponse
             {
+                EngineId = ENGINE_ID,
                 RequestId = requestId,
                 Status = "Error",
                 ErrorCode = errorCode,
@@ -299,13 +308,17 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// <summary>
         /// 序列化与既有 wire 格式一致的 deadletter 诊断 JSON，供共享命令存储写入证据。
         /// </summary>
+        /// <param name="sourcePath">无法消费的原始命令路径。</param>
+        /// <param name="errorCode">拒绝原因错误码。</param>
+        /// <param name="errorMessage">拒绝原因说明。</param>
+        /// <returns>deadletter 诊断 JSON。</returns>
         private static string SerializeDeadletterInfo(string sourcePath, string errorCode, string errorMessage)
         {
-            return GodotEditorFileBridgeJson.Serialize(new GodotEditorDeadletterInfo
+            return GodotFileBridgeJson.Serialize(new YokiFrameFileBridgeDeadletterInfo
             {
+                EngineId = ENGINE_ID,
                 SourcePath = sourcePath,
                 ErrorCode = errorCode,
                 ErrorMessage = errorMessage,

@@ -99,7 +99,7 @@ public sealed class GodotEditorFileBridgeHostTests
     }
 
     /// <summary>
-    /// 验证 Editor Host 只接受三个 System 只读命令，并为 ping 写入与当前身份一致的 terminal response。
+    /// 验证 Editor Host 返回权威 System 命令清单，并为 ping 写入与当前身份一致的 terminal response。
     /// </summary>
     [Fact]
     public void ProcessPendingCommandsReturnsEditorPingAndCatalog()
@@ -131,7 +131,7 @@ public sealed class GodotEditorFileBridgeHostTests
         var actions = catalog?["kits"]?[0]?["actions"]?.AsArray();
         var actionNames = (actions ?? new JsonArray()).Select(
             static action => action?["action"]?.GetValue<string>() ?? string.Empty).ToArray();
-        Assert.Equal(["bridge_status", "list_commands", "ping"], actionNames);
+        Assert.Equal(["bridge_status", "get_environment", "list_commands", "ping"], actionNames);
         Assert.All(actions ?? new JsonArray(), static action =>
             Assert.Equal("ReadOnly", action?["kind"]?.GetValue<string>()));
     }

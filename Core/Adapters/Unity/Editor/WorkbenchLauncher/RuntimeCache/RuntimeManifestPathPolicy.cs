@@ -1,4 +1,11 @@
-namespace YokiFrame.RuntimeCache;
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+using System;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+
+namespace YokiFrame.RuntimeCache
+{
 
 /// <summary>
 /// 统一 Runtime manifest 的跨平台路径 containment、载荷过滤与符号链接策略。
@@ -8,7 +15,7 @@ public static class RuntimeManifestPathPolicy
     private const string RUNTIME_STATE_DIRECTORY_NAME = ".yokiframe";
 
     /// <summary>获取与当前宿主文件系统一致的路径集合比较器。</summary>
-    public static StringComparer PathComparer { get; } = OperatingSystem.IsWindows()
+    public static StringComparer PathComparer { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
 
@@ -60,7 +67,7 @@ public static class RuntimeManifestPathPolicy
     public static bool IsRuntimeStateDirectory(string path)
     {
         return string.Equals(
-            Path.GetFileName(Path.TrimEndingDirectorySeparator(path)),
+            Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
             RUNTIME_STATE_DIRECTORY_NAME,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -73,7 +80,8 @@ public static class RuntimeManifestPathPolicy
     /// <returns>候选位于根目录内时返回 true。</returns>
     public static bool IsInside(string root, string path)
     {
-        var prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
+        var prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
         return Path.GetFullPath(path).StartsWith(prefix, GetPathComparison());
     }
 
@@ -158,7 +166,7 @@ public static class RuntimeManifestPathPolicy
             return false;
         }
 
-        return relativePath[..lastSeparator]
+        return relativePath.Substring(0, lastSeparator)
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Any(segment => string.Equals(segment, directoryName, StringComparison.OrdinalIgnoreCase));
     }
@@ -173,7 +181,7 @@ public static class RuntimeManifestPathPolicy
         return Path.IsPathRooted(path)
             || path.StartsWith("/", StringComparison.Ordinal)
             || path.StartsWith("\\", StringComparison.Ordinal)
-            || path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':';
+            || path.Length >= 2 && IsAsciiLetter(path[0]) && path[1] == ':';
     }
 
     /// <summary>
@@ -190,8 +198,24 @@ public static class RuntimeManifestPathPolicy
     /// 获取当前文件系统的路径比较规则。
     /// </summary>
     /// <returns>Windows 忽略大小写，其它宿主区分大小写。</returns>
+    /// <summary>
+    /// 判断字符是否为 ASCII 字母，避免依赖 Unity 当前 API 面没有的 char.IsAsciiLetter。
+    /// </summary>
+    /// <param name="value">待判断字符。</param>
+    /// <returns>属于 A-Z 或 a-z 时返回 true。</returns>
+    private static bool IsAsciiLetter(char value)
+    {
+        return value >= 'A' && value <= 'Z' || value >= 'a' && value <= 'z';
+    }
+
+    /// <summary>
+    /// 获取当前文件系统的路径比较规则。
+    /// </summary>
+    /// <returns>Windows 忽略大小写，其它宿主区分大小写。</returns>
     private static StringComparison GetPathComparison()
     {
-        return OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
     }
 }
+}
+#endif

@@ -1,7 +1,13 @@
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace YokiFrame.RuntimeCache;
+namespace YokiFrame.RuntimeCache
+{
 
 /// <summary>
 /// 校验 Runtime manifest 文件摘要、逐文件哈希与平台目录物理文件集合。
@@ -116,7 +122,7 @@ public static class RuntimeManifestFileSetValidator
     /// <returns>物理载荷集合完全一致时返回 true。</returns>
     private static bool TryValidateActualFileSet(
         string platformRoot,
-        IReadOnlySet<string> manifestFiles,
+        ISet<string> manifestFiles,
         out string error)
     {
         if (!TryCollectActualFiles(platformRoot, out var actualFiles, out error))
@@ -201,7 +207,13 @@ public static class RuntimeManifestFileSetValidator
     /// <returns>小写 SHA-256。</returns>
     private static string ComputeSha256(string path)
     {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+        using (var stream = File.OpenRead(path))
+        using (var algorithm = SHA256.Create())
+        {
+            var hash = algorithm.ComputeHash(stream);
+            return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        }
     }
 }
+}
+#endif

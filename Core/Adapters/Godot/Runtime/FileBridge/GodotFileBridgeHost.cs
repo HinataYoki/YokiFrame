@@ -267,8 +267,9 @@ namespace YokiFrame
         private void WriteHeartbeat()
         {
             var nowUtc = DateTimeOffset.UtcNow.ToString("O");
-            GodotHeartbeat heartbeat = new GodotHeartbeat
+            YokiFrameFileBridgeHeartbeat heartbeat = new YokiFrameFileBridgeHeartbeat
             {
+                EngineId = ENGINE_ID,
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Mode = RUNTIME_MODE,
@@ -455,7 +456,7 @@ namespace YokiFrame
         {
             try
             {
-                var heartbeat = GodotFileBridgeJson.Deserialize<GodotHeartbeat>(File.ReadAllText(path));
+                var heartbeat = GodotFileBridgeJson.Deserialize<YokiFrameFileBridgeHeartbeat>(File.ReadAllText(path));
                 return heartbeat != null
                     && heartbeat.SessionId == mSessionId
                     && heartbeat.Generation == mGeneration;

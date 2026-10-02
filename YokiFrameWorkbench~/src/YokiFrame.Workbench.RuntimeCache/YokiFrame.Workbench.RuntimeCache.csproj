@@ -8,9 +8,9 @@
     Pruner 三文件已随 Player 剔除整改迁入 Core/Editor，需 YOKIFRAME_TOOLING 宏激活其编译。
   -->
   <ItemGroup>
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestIntegrityValidator.cs" Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestFileSetValidator.cs" Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeManifestPathPolicy.cs" Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
+    <Compile Include="..\..\..\Core\Adapters\Unity\Editor\WorkbenchLauncher\RuntimeCache\RuntimeManifestIntegrityValidator.cs" Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
+    <Compile Include="..\..\..\Core\Adapters\Unity\Editor\WorkbenchLauncher\RuntimeCache\RuntimeManifestFileSetValidator.cs" Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
+    <Compile Include="..\..\..\Core\Adapters\Unity\Editor\WorkbenchLauncher\RuntimeCache\RuntimeManifestPathPolicy.cs" Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
     <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs" Link="RuntimeCache\RuntimeCachePruner.cs" />
     <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs" Link="RuntimeCache\RuntimeCacheLease.cs" />
     <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgeCleanupOptions.cs" Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
