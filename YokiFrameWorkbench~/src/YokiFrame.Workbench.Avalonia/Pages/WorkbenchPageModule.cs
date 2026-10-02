@@ -41,6 +41,7 @@ public sealed class WorkbenchPageModule
         Presentation = presentation;
         NavigationVisibility = navigationVisibility;
         mSectionFactory = sectionFactory;
+        SupportedEngineKinds = Array.Empty<string>();
     }
 
     /// <summary>
@@ -82,6 +83,44 @@ public sealed class WorkbenchPageModule
     /// 获取页面是否进入用户可见的一级导航。
     /// </summary>
     public WorkbenchPageNavigationVisibility NavigationVisibility { get; }
+
+    /// <summary>
+    /// 获取页面支持的引擎种类。空列表表示 Unity 与 Godot 都显示。
+    /// </summary>
+    public IReadOnlyList<string> SupportedEngineKinds { get; init; }
+
+    /// <summary>
+    /// 判断当前 engine 是否应显示该页面。未选择 engine 时保留页面，避免连接前闪空导航。
+    /// </summary>
+    /// <param name="engineId">当前 engine 标识，例如 unity-editor 或 godot-runtime。</param>
+    /// <returns>页面可在该 engine 下显示时返回 true。</returns>
+    public bool SupportsEngine(string? engineId)
+    {
+        if (SupportedEngineKinds == null || SupportedEngineKinds.Count == 0 || string.IsNullOrWhiteSpace(engineId))
+        {
+            return true;
+        }
+
+        var kind = engineId.Contains("godot", StringComparison.OrdinalIgnoreCase)
+            ? "Godot"
+            : engineId.Contains("unity", StringComparison.OrdinalIgnoreCase)
+                ? "Unity"
+                : string.Empty;
+        if (kind.Length == 0)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < SupportedEngineKinds.Count; index++)
+        {
+            if (string.Equals(SupportedEngineKinds[index], kind, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// 使用当前模块的投影函数创建详情段落。

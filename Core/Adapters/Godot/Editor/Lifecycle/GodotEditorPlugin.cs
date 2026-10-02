@@ -12,14 +12,10 @@ namespace YokiFrame
     {
         private const string MENU_ITEM = "YokiFrame";
         private const int WORKBENCH_SHORTCUT_ID = 1;
-        private const double COMMAND_POLL_INTERVAL_SECONDS = 0.1d;
-        // 心跳仅承担低频 FileBridge 存活证明；Runtime Telemetry 不经过磁盘。
-        private const double HEARTBEAT_INTERVAL_SECONDS = 5d;
 
         private GodotEditorFileBridgeHost mFileBridgeHost;
         private PopupMenu mWorkbenchShortcutMenu;
-        private double mCommandPollElapsed;
-        private double mHeartbeatElapsed;
+        private YokiFrameFileBridgePumpSchedule mPumpSchedule;
 
         /// <summary>
         /// 插件进入 Godot Editor tree 时注册菜单并建立独占 Editor Host 会话。
@@ -33,23 +29,20 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 在编辑器帧循环中按 100ms 消费命令，并按 5 秒刷新在线心跳。
+        /// 按共享 FileBridge 时钟刷新心跳并消费命令，间隔与 Unity Editor、Godot Runtime 一致。
         /// </summary>
         /// <param name="delta">当前 Editor 帧间隔秒数。</param>
         public override void _Process(double delta)
         {
-            mCommandPollElapsed += delta;
-            mHeartbeatElapsed += delta;
-            if (mCommandPollElapsed >= COMMAND_POLL_INTERVAL_SECONDS)
+            YokiFrameFileBridgePumpSchedule.Due due = mPumpSchedule.Advance(delta);
+            if (due.RefreshHeartbeat)
             {
-                mCommandPollElapsed = 0d;
-                ProcessPendingCommands();
+                RefreshHeartbeat();
             }
 
-            if (mHeartbeatElapsed >= HEARTBEAT_INTERVAL_SECONDS)
+            if (due.PollCommands)
             {
-                mHeartbeatElapsed = 0d;
-                RefreshHeartbeat();
+                ProcessPendingCommands();
             }
         }
 

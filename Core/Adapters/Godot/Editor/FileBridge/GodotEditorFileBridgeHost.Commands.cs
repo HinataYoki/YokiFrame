@@ -60,7 +60,7 @@ namespace YokiFrame
                 mLastError = "Godot Editor FileBridge storage cleanup failed: " + exception.Message;
             }
 
-            mNextStorageCleanupUtc = nowUtc.AddMinutes(5.0d);
+            mNextStorageCleanupUtc = nowUtc.AddSeconds(YokiFrameFileBridgePumpSchedule.STORAGE_CLEANUP_INTERVAL_SECONDS);
         }
 
         /// <summary>

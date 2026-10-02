@@ -68,8 +68,8 @@ public sealed class GodotPluginEntryPointBuilderTests
             "public partial class YokiFrameGodotBootstrap : GodotBootstrap",
             script,
             StringComparison.Ordinal);
-        Assert.Contains("GodotAudioKitRuntimeInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.Contains("GodotSaveKitRuntimeInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
+        Assert.Contains("_ = typeof(GodotAudioKitRuntimeInstaller);", script, StringComparison.Ordinal);
+        Assert.Contains("_ = typeof(GodotSaveKitRuntimeInstaller);", script, StringComparison.Ordinal);
     }
 
     /// <summary>

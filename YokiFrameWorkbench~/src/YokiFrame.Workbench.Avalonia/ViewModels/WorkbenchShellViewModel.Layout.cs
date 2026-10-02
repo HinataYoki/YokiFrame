@@ -200,8 +200,7 @@ public sealed partial class WorkbenchShellViewModel
     /// </summary>
     private void OnCultureChanged()
     {
-        NavigationGroups = CreatePageNavigationGroups();
-        RefreshNavigationSelection();
+        RefreshEngineNavigation();
         RefreshWorkbenchLayout();
         UpdateCurrentPage();
         var switchMsg = WorkbenchI18nService.Instance.CurrentCultureName == "en-US"

@@ -92,7 +92,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Godot Bootstrap 只注册各 Kit 默认工厂，Runtime Settings 由 Adapter 从当前项目读取。
+        /// 验证 Runtime Settings 工厂由 Adapter 模块初始化注册，Bootstrap 不再点名 Kit。
         /// </summary>
         [Test]
         public void GodotBootstrapRegistersLazyProjectSettingsBackend()
@@ -100,9 +100,11 @@ namespace YokiFrame
             string bootstrapSource = ReadRequiredSource("../GodotBootstrap.cs");
             string loaderSource = ReadRequiredSource("../Settings/GodotYokiFrameRuntimeSettingsLoader.cs");
 
-            Assert.IsTrue(
+            Assert.IsFalse(
                 bootstrapSource.Contains("GodotYokiFrameRuntimeSettingsInstaller.EnsureInstalled()"),
-                "Godot Bootstrap 必须注册 ProjectSettings Store 工厂。");
+                "Settings 工厂必须由 Adapter ModuleInitializer 注册，不能再写进 Bootstrap。");
+            string installerSource = ReadRequiredSource("../Settings/GodotYokiFrameRuntimeSettingsInstaller.cs");
+            Assert.IsTrue(installerSource.Contains("ModuleInitializer"), "Godot Settings 必须在程序集加载时注册工厂。");
             Assert.IsFalse(bootstrapSource.Contains("YokiFrameKit.Initialize"), "Godot Bootstrap 不应要求全局初始化入口。");
             Assert.IsTrue(loaderSource.Contains("ProjectSettings.HasSetting"), "Godot 配置必须复用项目自身 ProjectSettings。");
             Assert.IsTrue(loaderSource.Contains("yokiframe/runtime/"), "Godot 配置必须使用隔离的 yokiframe/runtime 命名空间。");

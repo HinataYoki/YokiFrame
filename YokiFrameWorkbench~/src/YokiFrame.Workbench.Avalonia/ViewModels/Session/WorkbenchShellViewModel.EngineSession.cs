@@ -52,6 +52,7 @@ public sealed partial class WorkbenchShellViewModel
         EngineIds = engineIds;
         SelectedEngineId = state.SelectedEngineId;
         mIsUpdatingEngines = false;
+        RefreshEngineNavigation();
     }
 
     /// <summary>

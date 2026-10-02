@@ -30,9 +30,10 @@ public sealed class GodotBootstrapArchitectureTests
         Assert.Contains("partial class GodotBootstrap : Node", source, StringComparison.Ordinal);
         Assert.Contains("GodotFileBridgeHost", source, StringComparison.Ordinal);
         Assert.Contains("override void _Ready()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResKit.RegisterDefaultProviderFactory", source, StringComparison.Ordinal);
         Assert.Contains(
-            "ResKit.RegisterDefaultProviderFactory(CreateDefaultResourceProvider);",
-            source,
+            "ModuleInitializer",
+            ReadPackageSource("Core/Adapters/Godot/Runtime/ResKit/GodotResKitRuntimeInstaller.cs"),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
             "ResKit.TrySetDefaultProvider(new GodotResourceProvider())",

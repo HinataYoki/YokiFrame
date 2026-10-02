@@ -105,23 +105,26 @@ public sealed class WorkbenchPageModuleCatalog
     /// </summary>
     /// <returns>稳定排序的导航分组。</returns>
     public IReadOnlyList<WorkbenchNavigationGroup> CreateNavigationGroups() =>
-        CreateLocalizedNavigationGroups(null, null);
+        CreateLocalizedNavigationGroups(null, null, null);
 
     /// <summary>
     /// 按模块首次出现的分组顺序创建新的可变导航项，并支持自定义本地化函数。
     /// </summary>
     /// <param name="groupNameLocalizer">可选的分组名称本地化函数。</param>
     /// <param name="itemNameLocalizer">可选的导航项名称本地化函数。</param>
+    /// <param name="engineId">当前 engine。为空时保留全部页面；非空时隐藏该引擎不支持的 Kit。</param>
     /// <returns>稳定排序的导航分组。</returns>
     public IReadOnlyList<WorkbenchNavigationGroup> CreateLocalizedNavigationGroups(
         Func<string, string>? groupNameLocalizer,
-        Func<string, string, string>? itemNameLocalizer)
+        Func<string, string, string>? itemNameLocalizer,
+        string? engineId = null)
     {
         Dictionary<string, List<WorkbenchNavigationItem>> itemsByGroup = new(StringComparer.Ordinal);
         List<string> groupOrder = new();
         foreach (var module in Modules)
         {
-            if (module.NavigationVisibility != WorkbenchPageNavigationVisibility.Primary)
+            if (module.NavigationVisibility != WorkbenchPageNavigationVisibility.Primary
+                || !module.SupportsEngine(engineId))
             {
                 continue;
             }

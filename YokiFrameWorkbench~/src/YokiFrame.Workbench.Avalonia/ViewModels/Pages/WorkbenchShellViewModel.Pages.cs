@@ -403,7 +403,7 @@ public sealed partial class WorkbenchShellViewModel
     /// 根据 Catalog 创建新的导航项集合，避免多个 Shell 共享选中态。
     /// </summary>
     /// <returns>左侧导航分组。</returns>
-    private static IReadOnlyList<WorkbenchNavigationGroup> CreatePageNavigationGroups()
+    private IReadOnlyList<WorkbenchNavigationGroup> CreatePageNavigationGroups()
     {
         return sPageCatalog.CreateLocalizedNavigationGroups(
             static group => group switch
@@ -411,6 +411,23 @@ public sealed partial class WorkbenchShellViewModel
                 "工作台" => WorkbenchI18nService.Instance.GetString("String.Nav.Workspace", "工作台"),
                 _ => group
             },
-            static (pageName, displayName) => WorkbenchI18nService.Instance.GetString("String.Nav." + pageName, displayName));
+            static (pageName, displayName) => WorkbenchI18nService.Instance.GetString("String.Nav." + pageName, displayName),
+            SelectedEngineId);
+    }
+
+    /// <summary>
+    /// 按当前 engine 重建导航。当前页不被该引擎支持时回到框架总览。
+    /// </summary>
+    private void RefreshEngineNavigation()
+    {
+        NavigationGroups = CreatePageNavigationGroups();
+        WorkbenchPageModule? module = sPageCatalog.Find(SelectedPage);
+        if (module != null && !module.SupportsEngine(SelectedEngineId))
+        {
+            SelectedPage = DefaultPageName;
+            return;
+        }
+
+        RefreshNavigationSelection();
     }
 }

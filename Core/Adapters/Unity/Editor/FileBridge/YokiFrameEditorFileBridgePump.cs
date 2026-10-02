@@ -15,10 +15,6 @@ namespace YokiFrame
     [InitializeOnLoad]
     internal static partial class YokiFrameEditorFileBridgePump
     {
-        // 心跳仅承担低频 FileBridge 存活证明；实时 Kit 状态由 Shared Memory 承载，避免机械盘被高频写入。
-        private const double HEARTBEAT_INTERVAL_SECONDS = 5.0d;
-        private const double COMMAND_POLL_INTERVAL_SECONDS = 0.2d;
-        private const double STORAGE_CLEANUP_INTERVAL_SECONDS = 300.0d;
         private static readonly TimeSpan PROCESSING_LEASE = TimeSpan.FromSeconds(60);
         private static readonly string[] sHostStateKits = { "System" };
         private static long sToolProviderRevision;
@@ -38,9 +34,8 @@ namespace YokiFrame
 #endif
         private static YokiFrameHostAdmissionLease sAdmissionLease;
         private static string sFastChannelStartError = string.Empty;
-        private static double sNextHeartbeatTime;
-        private static double sNextCommandPollTime;
-        private static double sNextStorageCleanupTime;
+        private static YokiFrameFileBridgePumpSchedule sPumpSchedule;
+        private static double sLastPumpTime;
         private static long sSequence;
         private static YokiFrameHostCommandCoordinator sCommandCoordinator;
 
@@ -86,7 +81,7 @@ namespace YokiFrame
             RegisterFastChannelLifecycleHooks();
             EnsureBridgeDirectories();
             TryPruneProjectStorage();
-            sNextStorageCleanupTime = EditorApplication.timeSinceStartup + STORAGE_CLEANUP_INTERVAL_SECONDS;
+            sLastPumpTime = EditorApplication.timeSinceStartup;
             if (IsFastChannelTransitionPending())
             {
                 PublishDisconnectedState();
@@ -95,7 +90,6 @@ namespace YokiFrame
             {
                 StartFastChannelHost();
                 WriteCompleteBridgeState();
-                sNextHeartbeatTime = EditorApplication.timeSinceStartup + HEARTBEAT_INTERVAL_SECONDS;
                 ProcessPendingCommands();
             }
         }
@@ -117,25 +111,24 @@ namespace YokiFrame
         {
             RefreshToolKitInteractions();
             ProcessFastChannelRequestsSafely();
-            var now = EditorApplication.timeSinceStartup;
-            if (now >= sNextHeartbeatTime)
+            double now = EditorApplication.timeSinceStartup;
+            double delta = now - sLastPumpTime;
+            sLastPumpTime = now;
+            YokiFrameFileBridgePumpSchedule.Due due = sPumpSchedule.Advance(delta);
+            WriteChangedKitInteractionTelemetrySafely();
+            if (due.RefreshHeartbeat)
             {
                 WriteHeartbeatStateSafely();
-                sNextHeartbeatTime = now + HEARTBEAT_INTERVAL_SECONDS;
             }
 
-            WriteChangedKitInteractionTelemetrySafely();
-
-            if (now >= sNextStorageCleanupTime)
+            if (due.PruneStorage)
             {
                 TryPruneProjectStorage();
-                sNextStorageCleanupTime = now + STORAGE_CLEANUP_INTERVAL_SECONDS;
             }
 
-            if (now >= sNextCommandPollTime)
+            if (due.PollCommands)
             {
                 ProcessPendingCommandsSafely();
-                sNextCommandPollTime = now + COMMAND_POLL_INTERVAL_SECONDS;
             }
         }
 

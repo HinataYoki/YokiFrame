@@ -9,40 +9,24 @@ namespace YokiFrame
     /// </summary>
     public partial class GodotBootstrap : Node
     {
-#if GODOT && TOOLS
-        private const double COMMAND_POLL_INTERVAL_SECONDS = 0.2d;
-        // 心跳仅承担低频 FileBridge 存活证明；Runtime Telemetry 通过 Shared Memory 发布。
-        private const double HEARTBEAT_INTERVAL_SECONDS = 5.0d;
-#endif
         private const double MICROSECONDS_PER_SECOND = 1000000.0d;
 
 #if GODOT && TOOLS
         private GodotFileBridgeHost mFileBridgeHost;
-        private double mCommandPollElapsed;
-        private double mStateRefreshElapsed;
+        private YokiFrameFileBridgePumpSchedule mPumpSchedule;
 #endif
         private ulong mLastFrameTimestampMicroseconds;
         private bool mHasFrameTimestamp;
         private bool mClockFailureReported;
 
         /// <summary>
-        /// 进入 autoload 场景树时只注册 Godot 默认资源工厂，不提前创建或覆盖 Provider。
+        /// 进入场景树时只准备 Tools 日志环境。Kit 默认工厂由各 Adapter 的 ModuleInitializer 注册。
         /// </summary>
         public override void _EnterTree()
         {
-            ResKit.RegisterDefaultProviderFactory(CreateDefaultResourceProvider);
-            GodotYokiFrameRuntimeSettingsInstaller.EnsureInstalled();
-            GodotLogKitRuntimeInstaller.EnsureInstalled();
 #if GODOT && TOOLS
             ConfigureToolingLogKitEnvironment();
 #endif
-        }
-
-        /// <summary>仅在 ResKit 首次真实资源调用时构造 Godot 默认 Provider。</summary>
-        /// <returns>新的 Godot ResourceLoader Provider。</returns>
-        private static IResourceProvider CreateDefaultResourceProvider()
-        {
-            return new GodotResourceProvider();
         }
 
         /// <summary>
@@ -96,7 +80,7 @@ namespace YokiFrame
 #endif
 
         /// <summary>
-        /// 按固定间隔驱动命令轮询和状态刷新，不在 Node 中实现协议解析或业务 handler。
+        /// 先驱动 Runtime 帧，再按共享 FileBridge 时钟刷新心跳和命令。不在 Node 中实现协议解析。
         /// </summary>
         /// <param name="delta">本帧秒数。</param>
         public override void _Process(double delta)
@@ -112,20 +96,17 @@ namespace YokiFrame
                 return;
             }
 
+            YokiFrameFileBridgePumpSchedule.Due due = mPumpSchedule.Advance(delta);
             ProcessFastChannelRequestsSafely(mFileBridgeHost);
             RefreshChangedTelemetrySafely(mFileBridgeHost);
-            mCommandPollElapsed += delta;
-            if (mCommandPollElapsed >= COMMAND_POLL_INTERVAL_SECONDS)
+            if (due.RefreshHeartbeat)
             {
-                mCommandPollElapsed = 0d;
-                ProcessPendingCommandsSafely(mFileBridgeHost);
+                RefreshHeartbeatSafely(mFileBridgeHost);
             }
 
-            mStateRefreshElapsed += delta;
-            if (mStateRefreshElapsed >= HEARTBEAT_INTERVAL_SECONDS)
+            if (due.PollCommands)
             {
-                mStateRefreshElapsed = 0d;
-                RefreshHeartbeatSafely(mFileBridgeHost);
+                ProcessPendingCommandsSafely(mFileBridgeHost);
             }
 #endif
         }

@@ -37,7 +37,7 @@ public static class WorkbenchDefaultPageModules
             CreateSpecializedModule("ActionKit", "ActionKit", "ActionKit 动作调度", "观察活动动作树、生命周期终态与按需调用堆栈。", "Tools", "actionkit", WorkbenchPagePresentation.ActionKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("AudioKit", "AudioKit", "AudioKit 观察器", "按 Bus 观察当前播放、进度与播放历史。", "Tools", "audiokit", WorkbenchPagePresentation.AudioKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("SpatialKit", "SpatialKit", "SpatialKit 空间索引", "查看运行中的索引实例、分区和单位疏密。", "Tools", "spatialkit", WorkbenchPagePresentation.SpatialKit, WorkbenchPageNavigationVisibility.Primary),
-            CreateSpecializedModule("UIKit", "UIKit", "UIKit 运行时诊断", "观察 Unity 面板生命周期、命名栈、缓存和模态状态。", "Tools", "uikit", WorkbenchPagePresentation.UIKit, WorkbenchPageNavigationVisibility.Primary),
+            CreateSpecializedModule("UIKit", "UIKit", "UIKit 运行时诊断", "观察 Unity 面板生命周期、命名栈、缓存和模态状态。", "Tools", "uikit", WorkbenchPagePresentation.UIKit, WorkbenchPageNavigationVisibility.Primary, new[] { "Unity" }),
             CreateSpecializedModule("TableKit", "TableKit", "TableKit 数据生成", "读取 Luban 配置、验证 target 并一键生成表代码与数据。", "Tools", "tablekit", WorkbenchPagePresentation.TableKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("LocalizationKit", "LocalizationKit", "LocalizationKit 本地化", "预览、搜索本地化文本并检查语言缺失。", "Tools", "localization", WorkbenchPagePresentation.LocalizationKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("SaveKit", "SaveKit", "SaveKit 存档工作台", "配置存档目录、扩展名并浏览槽位与 Global 文件。", "Tools", "savekit", WorkbenchPagePresentation.SaveKit, WorkbenchPageNavigationVisibility.Primary),
@@ -103,7 +103,8 @@ public static class WorkbenchDefaultPageModules
         string groupName,
         string iconKey,
         WorkbenchPagePresentation presentation,
-        WorkbenchPageNavigationVisibility navigationVisibility)
+        WorkbenchPageNavigationVisibility navigationVisibility,
+        IReadOnlyList<string>? supportedEngineKinds = null)
     {
         return new WorkbenchPageModule(
             pageName,
@@ -115,7 +116,8 @@ public static class WorkbenchDefaultPageModules
             static _ => Array.Empty<WorkbenchDisplaySection>())
         {
             PageTitle = pageTitle,
-            Description = description
+            Description = description,
+            SupportedEngineKinds = supportedEngineKinds ?? Array.Empty<string>()
         };
     }
 }

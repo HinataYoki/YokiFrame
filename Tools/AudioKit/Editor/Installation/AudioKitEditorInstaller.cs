@@ -7,7 +7,10 @@ namespace YokiFrame
         private static readonly AudioKitInteractionProvider sProvider = new();
 
         /// <summary>幂等注册 AudioKit Provider。</summary>
-        public static void EnsureInstalled() => YokiFrameToolKitInteractionCatalog.Register(sProvider);
+        public static void EnsureInstalled()
+        {
+            YokiFrameToolKitInteractionCatalog.Register(sProvider);
+        }
     }
 }
 #endif

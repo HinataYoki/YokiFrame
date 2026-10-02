@@ -69,6 +69,24 @@ public sealed class WorkbenchPageModuleCatalogTests
             static item => item.PageName is "Doctor" or "Architecture" or "Automation");
     }
 
+    /// <summary>验证 UIKit 是 Unity 专属页面，Godot engine 下不进入导航。</summary>
+    [Fact]
+    public void GodotEngineHidesUnityOnlyPages()
+    {
+        var catalog = ReadDefaultCatalog();
+        var groups = Invoke<IReadOnlyList<WorkbenchNavigationGroup>>(
+            catalog,
+            "CreateLocalizedNavigationGroups",
+            null!,
+            null!,
+            "godot-editor");
+        var pageNames = groups.SelectMany(static group => group.Items).Select(static item => item.PageName);
+
+        Assert.DoesNotContain("UIKit", pageNames);
+        Assert.Contains("ResKit", pageNames);
+        Assert.Contains("SaveKit", pageNames);
+    }
+
     /// <summary>
     /// 验证 Doctor module 使用诊断报告创建结构化段落，而不是落入通用 Kit missing 页面。
     /// </summary>
