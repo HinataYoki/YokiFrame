@@ -1,62 +1,24 @@
-# Workbench 页面参考
+# Workbench 怎么用
 
-本文件记录当前真实导航和 AI 可据此说明的页面边界。页面可见不等于能修改 Runtime 业务状态；wire JSON 由 `Tooling.Application` 解析，Avalonia 不直接读取 `.yokiframe`。
+Unity 项目按 `Ctrl+E` 打开当前项目的 Workbench。已经打开的窗口会切到前台。页头出现「有新版可编译」时，用这个按钮构建新的 Runtime。
 
-## 当前导航
+Godot 的编辑器连接选择 `godot-editor`，游戏运行态选择 `godot-runtime`。页面通过 telemetry 和 snapshot 刷新。列表带有 truncated 标记时，用更具体的查询条件继续查看。
 
-| 分组 | 页面 | 可见事实 | 显式写入或 action |
-|---|---|---|---|
-| 工作台 | 框架 | 项目、engine、heartbeat、Doctor、命令桥、Skill 与运行日志 | 命令桥只用于真实链路验证；Skill 目标可安装、更新（整目录替换）或卸载 |
-| 工作台 | 文档 | 包内离线 Markdown、目录、关键词全文搜索的摘要、正文高亮与首个命中定位 | 无 |
-| Core | EventKit | 静态事件关系、Runtime 监听数和时间线 | 无事件触发或监控开关 |
-| Core | FsmKit | 实例、当前状态、已观测转换和历史 | 只读 |
-| Core | LogKit | 项目 Runtime 配置、会话状态、内存历史和按需文件尾读 | 显式保存项目配置；可对当前会话发送已声明设置 action |
-| Core | PoolKit | 池压力、对象明细、事件和借出候选 | 跟踪、堆栈、历史和泄漏检查均为显式操作 |
-| Core | ResKit | Provider、资源、Lease 来源和卸载历史 | 只允许已声明跟踪/历史 action；不清缓存、不释放资源、不切换 Provider |
-| Tools | ActionKit | 活动根、动作树、终态和调用帧 | 仅显式开关或清空堆栈 |
-| Tools | AudioKit | 按 Bus 查看 active voice、播放进度、播放历史和稳定音频索引 | Runtime 只读；仅索引生成写项目代码与 manifest |
-| Tools | SpatialKit | 索引、分区、投影密度、热点和分析 | 只读；不修改实体 |
-| Tools | UIKit | Unity Runtime 诊断、Panel Prefab、Bind 和代码生成工具 | 仅 Unity Editor 用户 action；不远程控制 Runtime UI |
-| Tools | TableKit | Luban 配置校验、生成、临时预览，以及新版 Luban 可选 Agent/MCP/Skill 路径发现与校验 | 显式生成项目代码；AI 伴随路径只保存并校验，不复制提示词 |
-| Tools | LocalizationKit | standalone JSON 或 Luban 单表 Excel 的目录、搜索、语言和缺失项 | 配置项目内 Luban 工作目录、打开 Excel 作者目录、显式创建 XML/Excel 模板；预览只写项目 Temp |
-| Tools | SaveKit | 存档路径/扩展名、文件元信息与 Runtime 后端/自动保存/容器头摘要 | 保存配置；不读取或发布真实 payload |
+| 要看或要改的内容 | 打开 | 怎么做 |
+|---|---|---|
+| 项目、engine、心跳、诊断、命令桥、Skill | 框架 | 命令桥用来核对一条真实命令。Skill 在这里安装、整目录更新或卸载；来源是包根 `Core/Editor/Skills/yokiframe`，目标放在项目根内，并排除 `.meta` |
+| API 和指南 | 文档 | 搜索包内 `Documentation~/Api` 与 `Documentation~/Guides` |
+| 事件关系和监听 | EventKit | 分别查看静态扫描和 Runtime 时间线 |
+| 状态机实例 | FsmKit | 用 `instanceId` 区分同名实例。图上显示的是已经发生的转换 |
+| 日志配置和当前会话 | LogKit | 保存项目配置，或把已声明设置发到当前会话。文件正文在需要时读取 |
+| 对象池压力和借出 | PoolKit | 查看池、对象和借出候选。需要跟踪、堆栈、历史或泄漏检查时执行对应操作 |
+| 资源 Provider 和 handle | ResKit | 查看 Provider、资源和卸载历史。跟踪和历史使用页面上的已声明操作 |
+| 正在运行的动作 | ActionKit | 查看活动根、动作树和终态。堆栈开关作用于之后启动的根动作 |
+| 正在播放的音频和音频 ID | AudioKit | 按 Bus 查看 voice、进度和 `play_started` 历史。生成稳定 ID 时使用索引生成，写入项目代码和 manifest |
+| 空间索引 | SpatialKit | 查看索引、分区和热点。Octree 密度按 XZ 投影显示 |
+| Unity 面板和绑定 | UIKit | 在 Unity Editor 里查看诊断、Prefab、Bind 和代码生成。定制 Root 时，在游戏代码里对 Prefab Variant 调用 `UIKit.SetRootPrefab` |
+| Luban 表 | TableKit | 校验配置、预览并生成项目代码。Agent、MCP 和 Skill 路径也在这里选择；旧版 Luban 只完成校验和生成 |
+| 本地化文本 | LocalizationKit | 搜索 standalone JSON 或 Luban 单表，打开 Excel，创建模板。预览写入项目 Temp。已注册 XML 时，以 Luban 结果为准 |
+| 存档位置和槽位摘要 | SaveKit | 选择持久化目录、项目目录或自定义路径并保存配置，同时查看已有后端和容器头。宿主目录在 Editor 连上后解析 |
 
-Architecture 没有独立 Workbench 页面；Runtime API、Interaction 和 CLI 只读诊断仍保留。未完成 Kit 不显示通用 missing 占位页。
-
-## 页面通用规则
-
-- 先选择唯一或显式目标 engine；Godot 配置/连接通常使用 `godot-editor`，游戏 Runtime 观察使用 `godot-runtime`
-- 周期刷新只读取 registry、heartbeat、telemetry 和 snapshot；不周期发送 command
-- telemetry 无法接受时回落 snapshot；详情查询和 UserAction 必须是用户显式操作
-- 页面必须保留 loading、empty、offline、stale、error 和 truncated 状态；不要把截断结果当完整目录
-- Doctor 是框架总览的诊断详情，不代替外部 Unity 自动化验证
-- 离线 Docs 只读取包内 `Documentation~/Api` 与 `Documentation~/Guides`
-
-## 页面特例
-
-| 页面 | 不可误报的事实 |
-|---|---|
-| FsmKit | 同名 FSM 以 `instanceId` 区分；图仅表示已观测转换 |
-| EventKit | 静态关系扫描与 Runtime 时间线可独立存在；页面不发送事件 |
-| LogKit | 项目配置保存与当前 Runtime 应用是两个结果；文件正文只按需读取 |
-| PoolKit | 仍有借出对象只是候选，不是内存泄漏结论 |
-| ResKit | 来源详情需显式查询；页面不提供远程资源释放或缓存清理 |
-| ActionKit | 空活动根合法；堆栈默认关闭且只影响后续根动作 |
-| AudioKit | 总线目录可能裁剪；播放历史只投影 `play_started`，页面没有 Runtime 操作入口 |
-| SpatialKit | Octree 密度是 XZ 投影并沿 Y 聚合，不是三维节点图 |
-| UIKit | 只在 Unity engine 下可用；Root 配置由 Prefab Variant 与 `UIKit.SetRootPrefab` 管理，不在 Workbench 设置 |
-| TableKit | 未生成项目没有 Runtime TableKit 类型；页面是离线生成入口。主 `Luban.dll` 是验证/生成前提，`Luban.Agent`、`Luban.Mcp` 和 Skill 路径是可选发现项，缺失不阻断旧版 Luban。官方 Skill/Agent/MCP 由 Luban 自己负责，Workbench 只负责发现、保存和路径校验 |
-| LocalizationKit | 页面消费 Application 强类型 catalog，不解析 wire JSON；发现已注册 XML 后 Luban 失败不得伪装为 standalone JSON |
-| SaveKit | Runtime state 只显示已存在后端、自动保存和有界容器头；页面用下拉框选择 Unity `Application.persistentDataPath`、Godot `OS.GetUserDataDir()`、项目目录或自定义绝对路径；右上角提供打开目录和刷新，项目/自定义路径会先创建再打开；宿主用户目录在 Editor 已连接时经 `get_environment` 解析后扫描，未连接不猜测路径 |
-
-## Workbench 运行
-
-- Unity 的 `Ctrl+E` 优先激活同一项目已打开的 Workbench；已有可用 Runtime 时直接打开
-- Workbench 会后台检查源码指纹，发现新版后由页头「有新版可编译」按钮触发显式构建；窗口关闭必须取消检查和构建，旧进程占用的 Runtime 目录延迟清理
-- 运行期间可能持有当前 fingerprint 的 `.runtime.lease`；用户项目 AI 不主动清理 Runtime 缓存，遇到占用或目录未能删除时向用户报告
-
-## Skill 安装
-
-- 只安装包根 `Core/Editor/Skills` 下的 `yokiframe`；目标必须在项目根内，并排除 Unity `.meta`
-- 目标已存在时显示「更新」，会删除旧 Skill 目录后整份替换
-- 不恢复旧身份 `yokiframe-command-bridge` 与 `yokiframe-editor`
+Architecture、SingletonKit、ToolClass、CodeGenKit、InspectorKit 和 SceneKit 的用法在对应 API 主页面。

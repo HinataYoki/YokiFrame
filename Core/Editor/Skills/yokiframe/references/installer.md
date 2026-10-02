@@ -1,37 +1,13 @@
-# Installer 参考
+# 安装、更新、回滚
 
-本文件面向用户游戏项目中的 AI：只在用户明确安装、更新、接管或回滚 YokiFrame 时进入 apply；一般状态查询只做 detect 或 plan。不要把 Installer 当成框架源码开发入口。
+查看将要发生的变化时运行 `installer plan`。用户确认安装、更新、接管或回滚后，用相同参数运行 `installer apply`。
 
-## 安装模式
-
-| 模式 | 目标 | 关键约束 |
+| 方式 | 装到哪里 | 怎么选 |
 |---|---|---|
-| Unity local | `Packages/com.hinatayoki.yokiframe` | 与 Git URL 来源互斥 |
-| Unity Git URL | `Packages/manifest.json` | 只接受显式绝对 `file:`、`https:` 或 `git:` URI |
-| Godot local | `addons/yokiframe` | 先验证项目 Runtime 缓存，再完整替换受控 add-on |
+| `unity-local` | `Packages/com.hinatayoki.yokiframe` | 项目内一份本地包，与 Git URL 二选一 |
+| `unity-git` | `Packages/manifest.json` | `--git-url` 使用绝对的 `file:`、`https:` 或 `git:` 地址 |
+| `godot-local` | `addons/yokiframe` | 备份现有 add-on 后整份替换 |
 
-## 事务流程
+Unity 包由 Installer 维护。计划列出用户改过的受管文件时，先把覆盖内容和用户确认下来。接管旧目录时，计划给出冲突文件、行号和 Kit。
 
-1. 生成稳定 install plan 和目标 manifest/hash 清单。
-2. Unity 检测受管文件用户修改；Godot 扫描 legacy Kit 引用和来源前置条件。
-3. 将候选内容写入 staging，验证路径、内容、版本和 hash；Unity embedded 更新在此阶段保留旧包目录可见。
-4. 备份当前安装并原子替换正式目标；Unity 仅在依赖或程序集图发生变化时刷新 manifest，普通脚本更新不强制全量 UPM resolve。
-5. 从正式目标重新读取并执行 post-verify，外部 manifest 验证失败时仍使用同一事务 backup 回滚。
-6. 失败时恢复备份，保留 rollback 和 evidence 结论。
-
-## 所有权
-
-- Unity Installer 管理的包目录是不可编辑交付物；发现修改时停止，不静默覆盖。仅 `YokiFrameWorkbench~/.artifacts*` 是 `Ctrl+E` 的可再生构建缓存，不计为用户修改且不会投影到下一版受管包。
-- Godot `addons/yokiframe` 由 Installer 全权拥有；更新时不做文件级 diff、merge 或用户修改冲突阻断，而是备份后完整替换。
-- Installer 是 Godot `plugin.cfg`、薄 `YokiFrameGodotEditorPlugin.cs`、`YokiFrameGodotBootstrap.cs`、YokiFrame `.uid` 与 `project.godot` 安装项的唯一写入 owner。
-- 更新旧安装时，plan 以完整 add-on 替换表达 `plugin.gd`/UID 清理；apply 将新 C# EditorPlugin、旧入口删除和失败恢复放在同一事务。
-- Runtime/Editor Adapter 不修复安装状态。
-- Godot 投影默认排除 `YokiFrameWorkbench~`、Tests、`.git`、Unity `.meta`、构建缓存和任何包内 Runtime 残留。
-
-## 操作规则
-
-- 查看或讨论安装状态时只读 detect/plan，不自动 apply。
-- 用户明确要求安装、更新或接管后才能执行 apply。
-- legacy takeover 必须先报告冲突文件、行号和 Kit，再由用户确认。
-- `BuffKit` 与 `InputKit` 始终不可接管。
-- 失败后先检查 rollbackSucceeded、conflicts、logs 和 evidence，不重复覆盖目标目录。
+执行后阅读返回的 rollback、conflicts、logs 和 evidence。需要重做时，先使用这次事务的回滚结果，再重新 plan。

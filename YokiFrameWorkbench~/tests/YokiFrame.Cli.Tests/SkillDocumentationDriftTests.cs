@@ -116,28 +116,26 @@ public sealed class SkillDocumentationDriftTests
     }
 
     /// <summary>
-    /// 验证 kit-index 覆盖当前所有已实现 Kit 的能力索引，避免新增 Kit 后文档静默落后。
+    /// 验证框架概览覆盖当前所有已发布 Tool Kit，避免新增 Kit 后用户文档静默落后。
     /// </summary>
     [Fact]
-    public void KitIndexCoversEveryShippedKit()
+    public void FrameworkOverviewCoversEveryShippedKit()
     {
         var packageRoot = CliTestHelpers.GetPackageRoot();
-        var kitIndex = File.ReadAllText(Path.Combine(
+        var overview = File.ReadAllText(Path.Combine(
             packageRoot,
-            "Core",
-            "Editor",
-            "Skills",
-            "yokiframe",
-            "references",
-            "kit-index.md"));
+            "Documentation~",
+            "Api",
+            "00-GettingStarted",
+            "FrameworkOverview.md"));
 
         var toolsRoot = Path.Combine(packageRoot, "Tools");
         foreach (var directory in Directory.EnumerateDirectories(toolsRoot))
         {
             var kitName = Path.GetFileName(directory);
             Assert.True(
-                kitIndex.Contains(kitName, StringComparison.Ordinal),
-                "kit-index.md 缺少 Kit：" + kitName);
+                overview.Contains(kitName, StringComparison.Ordinal),
+                "FrameworkOverview.md 缺少 Kit：" + kitName);
         }
     }
 
