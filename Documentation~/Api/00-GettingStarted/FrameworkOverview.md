@@ -86,6 +86,7 @@ Workbench 页面存在不代表可以修改 Runtime；Runtime API 已实现也�
 - 事件订阅、资源 handle、状态机、动作 controller 和异步工作都需要明确 owner；owner 退出时必须注销、释放或取消。
 - 业务代码应在宿主生命周期中主动驱动状态机和动作 tick；框架不会替项目猜测业务生命周期。
 - 显式注入的 Provider 或 Backend 始终优先；默认实现只在第一次真实业务调用时按需创建，读取和诊断不应隐式创建业务后端。
+- 运行会话由 `YokiFrameSession.Begin()` 换代。Unity 在全部 `SubsystemRegistration` 之后调用一次，Godot 在进入和离开运行树时调用一次。事件订阅、架构、单例、资源缓存、场景、音频、存档、本地化和日志历史都在这一次里按固定顺序关闭。进程级只读数据和 Editor 命令注册表不参与。业务代码不需要手动调用。
 - SceneKit 只有 Runtime API，不提供 Interaction、CLI action 或 Workbench 页面。
 - TableKit 是离线生成入口；项目尚未生成代码时，不存在对应的 Runtime 类型。
 - AudioKit 和 SaveKit 的 Interaction 以只读观察为主，不提供会改变运行时业务状态的控制操作。

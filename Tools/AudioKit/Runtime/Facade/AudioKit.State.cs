@@ -24,6 +24,12 @@ namespace YokiFrame
         private static bool sFrameListenerRegistered;
         private static bool sBackendTransitionActive;
 
+        /// <summary>类型第一次使用时登记会话重置。宿主工厂在更晚的恢复阶段重新登记。</summary>
+        static AudioKit()
+        {
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "audiokit", Reset);
+        }
+
         /// <summary>获取当前已创建后端名称；默认工厂尚未使用时返回 None。</summary>
         public static string BackendName
         {

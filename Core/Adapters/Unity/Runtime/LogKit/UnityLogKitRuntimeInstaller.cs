@@ -31,14 +31,19 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 在新 Unity 子系统会话中清理静态状态并重新注册惰性宿主工厂。
+        /// 登记日志覆盖层清理和工厂恢复。LogKit 与 KitSettings 本体由会话统一重置。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetAndRegisterDefaultFactories()
+        private static void RegisterSessionParticipants()
         {
-            UnityLogKitPlayerOverlay.Reset();
-            KitSettings.Reset();
-            LogKit.Reset();
+            YokiFrameSession.Register(
+                YokiFrameSession.RELEASE_HOSTS_ORDER,
+                "unity-log-overlay",
+                UnityLogKitPlayerOverlay.Reset);
+            YokiFrameSession.Register(
+                YokiFrameSession.RESTORE_FACTORIES_ORDER,
+                "unity-log-factory",
+                RegisterDefaultFactories);
             RegisterDefaultFactories();
         }
 

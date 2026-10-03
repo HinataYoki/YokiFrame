@@ -21,9 +21,20 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// Unity 新子系统会话开始时重置版本；同一会话内 Root 创建和销毁只允许递增。
+        /// 把诊断版本重置登记到统一会话，避免和其他 Kit 在同一阶段抢顺序。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterDiagnosticReset()
+        {
+            YokiFrameSession.Register(
+                YokiFrameSession.CLEAR_DIAGNOSTICS_ORDER,
+                "uikit-diagnostics",
+                ResetDiagnosticVersion);
+        }
+
+        /// <summary>
+        /// 新会话开始时重置版本；同一会话内 Root 创建和销毁只允许递增。
+        /// </summary>
         private static void ResetDiagnosticVersion()
         {
             sDiagnosticVersion = 0;

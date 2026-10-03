@@ -24,6 +24,12 @@ namespace YokiFrame
         private static float sAutoSaveIntervalSeconds;
         private static float sAutoSaveElapsedSeconds;
 
+        /// <summary>类型第一次使用时登记会话重置。默认工厂由宿主安装器另行登记，重置不会清掉工厂。</summary>
+        static SaveKit()
+        {
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "savekit", Reset);
+        }
+
         /// <summary>设置当前模块序列化器。</summary>
         /// <param name="saveSerializer">序列化器。</param>
         public static void SetSerializer(ISaveSerializer saveSerializer)

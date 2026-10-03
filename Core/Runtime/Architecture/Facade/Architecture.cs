@@ -178,6 +178,7 @@ namespace YokiFrame
                 }
             }
 
+            ArchitectureLifetime.Unregister(this);
             DisposeInstance();
             GC.SuppressFinalize(this);
         }
@@ -215,6 +216,7 @@ namespace YokiFrame
                 }
 
                 sArchitecture.EnsureInitialized();
+                ArchitectureLifetime.Register(sArchitecture);
                 return sArchitecture;
             }
         }

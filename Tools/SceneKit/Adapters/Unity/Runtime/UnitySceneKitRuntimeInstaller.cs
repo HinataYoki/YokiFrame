@@ -9,7 +9,7 @@ namespace YokiFrame.Unity
     public static class UnitySceneKitRuntimeInstaller
     {
         /// <summary>
-        /// 在进入新 Player 子系统时释放上一会话的场景缓存、已加载列表与激活 Handler。
+        /// 在子系统登记阶段把 SceneKit 加入统一会话重置。
         /// </summary>
         /// <remarks>
         /// 必要性：关闭 Domain Reload（Enter Play Mode Options）后静态字段会跨 Play 会话存活，
@@ -26,9 +26,9 @@ namespace YokiFrame.Unity
         /// </para>
         /// </remarks>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetSceneKitState()
+        private static void RegisterSceneKitReset()
         {
-            SceneKit.Reset();
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "scenekit", SceneKit.Reset);
         }
     }
 }

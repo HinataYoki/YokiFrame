@@ -30,7 +30,7 @@ namespace YokiFrame.Unity.Tests
             Assert.AreEqual(
                 RuntimeInitializeLoadType.SubsystemRegistration,
                 attribute!.loadType,
-                "钩子必须注册在 SubsystemRegistration 阶段，才能在新会话最早时机清除上一会话状态");
+                "钩子必须先在 SubsystemRegistration 阶段登记，统一会话才能在之后清除上一会话状态");
         }
 
         /// <summary>
@@ -43,6 +43,7 @@ namespace YokiFrame.Unity.Tests
             Assert.IsTrue(YooAssetInitializer.IsInitialized, "前置：测试需要先注入上一会话的已初始化状态");
 
             InvokeHook();
+            YokiFrameSession.Begin();
 
             Assert.IsFalse(
                 YokiFrame.Unity.YooAssetInitializer.IsInitialized,
@@ -68,6 +69,7 @@ namespace YokiFrame.Unity.Tests
             try
             {
                 InvokeHook();
+                YokiFrameSession.Begin();
 
                 Assert.AreSame(handler, YooAssetInitializer.CustomInitializationHandler, "钩子不得清除 CustomInitializationHandler");
                 Assert.AreSame(handler, YooAssetInitializer.HostInitializationHandler, "钩子不得清除 HostInitializationHandler");

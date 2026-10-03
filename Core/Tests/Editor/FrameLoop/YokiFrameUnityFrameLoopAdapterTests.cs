@@ -52,26 +52,31 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证宿主入口使用两个 Unity 时间源，并在 SubsystemRegistration 阶段通知 Core 清理上一代状态。
+        /// 验证宿主入口使用两个 Unity 时间源，并由统一会话在程序集加载完成后重置上一代监听者。
         /// </summary>
         [Test]
         public void InstallerDispatchesUnityTimesAndResetsRuntimeListeners()
         {
-            string sourcePath = Path.Combine(
+            string installerPath = Path.Combine(
                 Application.dataPath,
                 "YokiFrame", "Core", "Adapters", "Unity", "Runtime", "FrameLoop",
                 "UnityFrameLoopInstaller.cs");
-            string source = File.ReadAllText(sourcePath);
+            string installerSource = File.ReadAllText(installerPath);
+            string sessionHostPath = Path.Combine(
+                Application.dataPath,
+                "YokiFrame", "Core", "Adapters", "Unity", "Runtime", "Hosting",
+                "UnityYokiFrameSessionHost.cs");
+            string sessionSource = File.ReadAllText(sessionHostPath);
 
-            StringAssert.StartsWith("#if UNITY_5_3_OR_NEWER", source.TrimStart());
+            StringAssert.StartsWith("#if UNITY_5_3_OR_NEWER", installerSource.TrimStart());
             StringAssert.Contains(
                 "YokiFrameUpdateDispatcher.Tick(Time.deltaTime, Time.unscaledDeltaTime);",
-                source);
+                installerSource);
+            StringAssert.EndsWith("#endif", installerSource.TrimEnd());
             StringAssert.Contains(
-                "RuntimeInitializeLoadType.SubsystemRegistration",
-                source);
-            StringAssert.Contains("YokiFrameUpdateDispatcher.ResetListeners();", source);
-            StringAssert.EndsWith("#endif", source.TrimEnd());
+                "RuntimeInitializeLoadType.AfterAssembliesLoaded",
+                sessionSource);
+            StringAssert.Contains("YokiFrameSession.Begin();", sessionSource);
         }
 
         /// <summary>

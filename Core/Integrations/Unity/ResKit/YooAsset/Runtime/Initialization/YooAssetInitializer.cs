@@ -193,7 +193,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>
-        /// 在进入新 Player 子系统时释放上一会话的登记状态。
+        /// 在子系统登记阶段加入统一会话重置，真正清理要等全部登记完成之后。
         /// </summary>
         /// <remarks>
         /// 必要性：关闭 Domain Reload（Enter Play Mode Options）后静态字段会跨 Play 会话存活，
@@ -201,15 +201,23 @@ namespace YokiFrame.Unity
         /// <c>if (IsInitialized) return;</c> 会因此静默提前返回 —— 结果是第二次进入 Play Mode 时
         /// 既不初始化 package、也不执行 <see cref="InstallProvider(ResourcePackage, bool)"/>，
         /// ResKit 静默退回 Unity Resources 加载资源（不抛异常、不打日志）。
-        /// 本钩子让每个会话都从干净状态重新初始化。
         /// <para>
-        /// 刻意只重置会话状态而**不清除三个初始化回调**：它们是项目配置，而 Unity 对同一
-        /// <c>SubsystemRegistration</c> 阶段多个钩子的调用顺序不作保证；若项目的注册钩子先于本钩子执行，
-        /// 清除会永久丢失项目配置。回调由项目在每次会话自行注册，无需框架代为清理。
+        /// 刻意只重置会话状态而**不清除三个初始化回调**：它们是项目配置。回调由项目在每次会话自行注册。
         /// </para>
         /// </remarks>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRegistrationOnSubsystemRegistration()
+        {
+            YokiFrameSession.Register(
+                YokiFrameSession.RELEASE_HOSTS_ORDER,
+                "yooasset",
+                ResetForSession);
+        }
+
+        /// <summary>
+        /// 清除上一会话的 YooAsset 门面状态。初始化进行中时不打断当前流程。
+        /// </summary>
+        private static void ResetForSession()
         {
             if (sIsInitializing)
             {

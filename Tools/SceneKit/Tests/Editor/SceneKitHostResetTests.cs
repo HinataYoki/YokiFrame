@@ -13,7 +13,7 @@ namespace YokiFrame.Tests
     public sealed class SceneKitHostResetTests
     {
         /// <summary>宿主钩子的方法名，反射断言与调用共用。</summary>
-        private const string HOOK_METHOD_NAME = "ResetSceneKitState";
+        private const string HOOK_METHOD_NAME = "RegisterSceneKitReset";
 
         /// <summary>
         /// 验证 Unity 适配器存在且注册在 SubsystemRegistration 阶段。
@@ -31,7 +31,7 @@ namespace YokiFrame.Tests
             Assert.AreEqual(
                 RuntimeInitializeLoadType.SubsystemRegistration,
                 attribute!.loadType,
-                "钩子必须注册在 SubsystemRegistration 阶段，才能在新会话最早时机清理上一会话状态");
+                "钩子必须先在 SubsystemRegistration 阶段登记，统一会话才能在之后清理上一会话状态");
         }
 
         /// <summary>
@@ -46,6 +46,7 @@ namespace YokiFrame.Tests
             Assert.AreSame(backend, SceneKit.GetBackend(), "前置：显式后端应已生效");
 
             InvokeHook();
+            YokiFrameSession.Begin();
 
             Assert.AreNotSame(
                 backend,

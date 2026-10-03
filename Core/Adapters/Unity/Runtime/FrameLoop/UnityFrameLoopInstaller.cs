@@ -21,17 +21,8 @@ namespace YokiFrame.Unity
         internal static Type UpdateSystemType => typeof(YokiFrameUpdateSystem);
 
         /// <summary>
-        /// 进入新 Unity 子系统代际前通知全部 Runtime 监听者清理活动状态。
-        /// 无 Domain Reload 重进 Play Mode 时监听注册仍保留，下一代可直接继续接收帧。
-        /// </summary>
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetForSubsystemRegistration()
-        {
-            YokiFrameUpdateDispatcher.ResetListeners();
-        }
-
-        /// <summary>
         /// 场景加载前确保 YokiFrame Update 节点存在；重复进入时不会累加节点。
+        /// 监听者的上一代状态由 YokiFrameSession 统一重置，不在这里单独清理。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InstallBeforeSceneLoad()

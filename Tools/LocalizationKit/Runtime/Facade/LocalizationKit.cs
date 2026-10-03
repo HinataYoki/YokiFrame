@@ -20,6 +20,12 @@ namespace YokiFrame
         /// <summary>语言成功切换后触发。</summary>
         public static event Action<LanguageId> OnLanguageChanged;
 
+        /// <summary>类型第一次使用时登记会话重置，避免自定义语言和缓存跨会话残留。</summary>
+        static LocalizationKit()
+        {
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "localization", Reset);
+        }
+
         /// <summary>设置 Provider，并清理旧 Provider 产生的缓存。</summary>
         /// <param name="localizationProvider">不得为空的 Provider。</param>
         public static void SetProvider(ILocalizationProvider localizationProvider)
@@ -223,6 +229,7 @@ namespace YokiFrame
             sPluralCache.Clear();
             sBinders.Clear();
             OnLanguageChanged = null;
+            PluralRuleFactory.ResetRules();
         }
 
         /// <summary>按语言读取普通文本，并执行默认语言 fallback。</summary>

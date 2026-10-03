@@ -2,6 +2,7 @@
     "name": "YokiFrame.Unity.ResKit.YooAsset.Tests",
     "rootNamespace": "YokiFrame.Unity.Tests",
     "references": [
+        "YokiFrame",
         "YokiFrame.Unity.ResKit.YooAsset",
         "YokiFrame.Unity.ResKit.YooAsset.Editor",
         "YokiFrame.Unity.Inspector.Runtime",

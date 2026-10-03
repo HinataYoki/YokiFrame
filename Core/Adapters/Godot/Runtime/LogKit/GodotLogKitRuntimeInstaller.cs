@@ -32,6 +32,20 @@ namespace YokiFrame
         /// <summary>供 Godot Bootstrap 重新确认默认 logger 工厂，避免覆盖显式 logger。</summary>
         public static void EnsureInstalled()
         {
+            YokiFrameSession.Register(
+                YokiFrameSession.RELEASE_HOSTS_ORDER,
+                "godot-log-overlay",
+                Shutdown);
+            YokiFrameSession.Register(
+                YokiFrameSession.RESTORE_FACTORIES_ORDER + 10,
+                "godot-log-factory",
+                RegisterLoggerFactory);
+            RegisterLoggerFactory();
+        }
+
+        /// <summary>重新登记日志工厂和设置应用回调。调用方必须已经把覆盖层释放放到更早的会话阶段。</summary>
+        private static void RegisterLoggerFactory()
+        {
             LogKit.RegisterDefaultLoggerFactory(CreateDefaultLogger);
             LogKitSettings.RuntimeSettingsApplied -= ApplyPlayerOverlaySettings;
             LogKitSettings.RuntimeSettingsApplied += ApplyPlayerOverlaySettings;

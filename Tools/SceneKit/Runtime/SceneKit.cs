@@ -19,6 +19,12 @@ namespace YokiFrame
         private static IResSceneProvider sDefaultProvider;
         private static SceneHandler sActiveSceneHandler;
 
+        /// <summary>类型第一次使用时登记会话重置。未使用过的 SceneKit 没有可残留的会话状态。</summary>
+        static SceneKit()
+        {
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "scenekit", Reset);
+        }
+
         /// <summary>设置显式 SceneKit 后端；显式后端优先于当前 ResKit Provider。</summary>
         /// <param name="backend">要使用的场景后端。</param>
         public static void SetBackend(ISceneBackend backend)

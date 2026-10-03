@@ -19,6 +19,16 @@ namespace YokiFrame
         /// <summary>供 Godot Bootstrap 在场景树进入时重新确认默认 Store 工厂。</summary>
         internal static void EnsureInstalled()
         {
+            YokiFrameSession.Register(
+                YokiFrameSession.RESTORE_FACTORIES_ORDER,
+                "godot-settings-factory",
+                RegisterStoreFactory);
+            RegisterStoreFactory();
+        }
+
+        /// <summary>重新登记设置 Store 工厂。会话重置会清掉上一轮工厂。</summary>
+        private static void RegisterStoreFactory()
+        {
             KitSettings.RegisterDefaultStoreFactory(CreateStore);
         }
 

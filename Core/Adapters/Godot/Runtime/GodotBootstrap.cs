@@ -41,6 +41,7 @@ namespace YokiFrame
             }
 #endif
 
+            YokiFrameSession.Begin();
             ResetFrameClock();
             GodotLogKitRuntimeInstaller.AttachPlayerOverlay(this);
 #if GODOT && TOOLS
@@ -192,12 +193,8 @@ namespace YokiFrame
             LogKitHostEnvironment.Reset();
 #endif
 
-            YokiFrameUpdateDispatcher.ResetListeners();
+            YokiFrameSession.Begin();
             ClearFrameClock();
-            GodotLogKitRuntimeInstaller.Shutdown();
-            ResKit.ResetRuntimeDefaults();
-            LogKit.Reset();
-            KitSettings.Reset();
         }
 
         /// <summary>

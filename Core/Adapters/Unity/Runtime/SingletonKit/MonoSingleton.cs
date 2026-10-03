@@ -17,6 +17,14 @@ namespace YokiFrame
         private bool mSingletonInitialized;
 
         /// <summary>
+        /// 把当前 MonoSingleton 封闭类型登记到会话释放表，避免关闭 Domain Reload 后继续引用上一代对象。
+        /// </summary>
+        static MonoSingleton()
+        {
+            SingletonLifetime.Register(Dispose);
+        }
+
+        /// <summary>
         /// 获取单例实例；不存在时优先查找场景实例，仍不存在则自动创建 GameObject。
         /// </summary>
         public static T Instance
@@ -391,12 +399,12 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// Unity 子系统注册阶段重置退出状态。
+        /// 在子系统登记阶段加入会话重置。真正清旗标要等全部登记结束后的换代，不能在这里抢跑。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetForSubsystemRegistration()
+        private static void RegisterSessionReset()
         {
-            ResetForTests();
+            YokiFrameSession.Register(YokiFrameSession.PREPARE_HOST_ORDER, "mono-singleton-exit", ResetForTests);
         }
     }
 }

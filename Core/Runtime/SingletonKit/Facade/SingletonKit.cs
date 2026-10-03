@@ -15,6 +15,14 @@ namespace YokiFrame
         private static T sConstructing;
 
         /// <summary>
+        /// 把当前封闭类型登记到会话释放表。类型尚未使用时没有实例，不需要提前登记。
+        /// </summary>
+        static SingletonKit()
+        {
+            SingletonLifetime.Register(Dispose);
+        }
+
+        /// <summary>
         /// 使用线程安全懒初始化获取单例实例；实例仅在初始化完成后对锁外线程可见。
         /// </summary>
         public static T Instance
