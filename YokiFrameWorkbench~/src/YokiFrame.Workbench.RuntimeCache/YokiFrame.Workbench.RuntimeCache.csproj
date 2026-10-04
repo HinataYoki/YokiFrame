@@ -6,18 +6,14 @@
     Core/Editor/CommandBridge/Storage（协议证据清理）与 Core/Editor/Tooling/RuntimeCache 同时被
     Packaging 与 Installer.Core 使用——统一经本程序集链接编译，消除此前多工程重复编译导致的类型身份分裂。
     Pruner 三文件已随 Player 剔除整改迁入 Core/Editor，需 YOKIFRAME_TOOLING 宏激活其编译。
+    以下目录全部源文件都有 YOKIFRAME_TOOLING 守卫，或本身就是工具链独占文件。
+    使用目录通配后，同目录新增或改名不再需要同步逐文件链接。
   -->
   <ItemGroup>
-    <Compile Include="..\..\..\Core\Adapters\Godot\Editor\RuntimeCache\RuntimeManifestIntegrityValidator.cs" Link="RuntimeCache\RuntimeManifestIntegrityValidator.cs" />
-    <Compile Include="..\..\..\Core\Adapters\Godot\Editor\RuntimeCache\RuntimeManifestFileSetValidator.cs" Link="RuntimeCache\RuntimeManifestFileSetValidator.cs" />
-    <Compile Include="..\..\..\Core\Adapters\Godot\Editor\RuntimeCache\RuntimeManifestPathPolicy.cs" Link="RuntimeCache\RuntimeManifestPathPolicy.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCachePruner.cs" Link="RuntimeCache\RuntimeCachePruner.cs" />
-    <Compile Include="..\Shared\RuntimeCache\RuntimeCacheLease.cs" Link="RuntimeCache\RuntimeCacheLease.cs" />
-    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgeCleanupOptions.cs" Link="Storage\YokiFrameFileBridgeCleanupOptions.cs" />
-    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgeCleanupReport.cs" Link="Storage\YokiFrameFileBridgeCleanupReport.cs" />
-    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\YokiFrameFileBridgePruner.cs" Link="Storage\YokiFrameFileBridgePruner.cs" />
-    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchRuntimeCacheLayout.cs" Link="RuntimeCacheLayout\YokiFrameWorkbenchRuntimeCacheLayout.cs" />
-    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\YokiFrameWorkbenchSourceFingerprint.cs" Link="RuntimeCacheLayout\YokiFrameWorkbenchSourceFingerprint.cs" />
+    <Compile Include="..\..\..\Core\Editor\RuntimeCache\**\*.cs" Link="RuntimeCache\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\RuntimeCache\**\*.cs" Link="RuntimeCache\Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\**\*.cs" Link="Storage\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\**\*.cs" Link="RuntimeCacheLayout\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

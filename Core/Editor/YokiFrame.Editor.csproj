@@ -22,4 +22,12 @@
       <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
+
+  <!--
+    Runtime manifest 校验器已收敛到本共享程序集，Godot 工具构建需要 System.Text.Json。
+    Unity 由 asmdef 决定程序集引用，此 PackageReference 不进入 Unity 编译。
+  -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
 </Project>
