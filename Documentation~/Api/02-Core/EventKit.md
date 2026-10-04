@@ -29,7 +29,7 @@ link.UnRegister();
 
 static void OnDamageTaken(DamageTaken value)
 {
-    LogKit.Info("damage=" + value.Amount);
+    LogKit.Log("damage=" + value.Amount);
 }
 ```
 
@@ -103,7 +103,7 @@ link.UnRegister();
 | `EasyEvents.Clear()` / `GetAllEvents()` | 清空或读取容器 | — | — |
 | `IEasyEvent.UnRegisterAll()` / `ListenerCount` | 清理契约；监听数 | — | — |
 
-`IUnRegister.UnRegister()` 是统一注销入口。`LinkUnRegister`、`LinkUnRegister<T>` 与 `CustomUnRegister(Action)` 支持重复调用且不重复执行注销逻辑。
+`IUnRegister.UnRegister()` 是统一注销入口。`LinkUnRegister` 与 `LinkUnRegister<T>` 支持重复调用且不重复执行注销逻辑。`CustomUnRegister(Action)` 已过时，新代码不要使用。
 
 注销令牌可以重复调用而不会重复执行清理。监听器由事件对象持有，订阅方退出时仍必须主动注销；不要依赖底层存储实现来管理业务对象生命周期。
 

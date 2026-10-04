@@ -239,10 +239,7 @@ namespace YokiFrame
         private static void ValidateQuery(YokiVector3 center, float radius, List<T> results)
         {
             SpatialMath.ValidatePosition(center, nameof(center));
-            if (float.IsNaN(radius) || float.IsInfinity(radius) || radius < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(radius), "Radius must be finite and non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeFinite(radius, nameof(radius));
 
             if (results == null)
             {
@@ -253,10 +250,7 @@ namespace YokiFrame
         /// <summary>验证最近邻最大距离。</summary>
         private static void ValidateDistance(float distance)
         {
-            if (float.IsNaN(distance) || distance < 0f || float.IsNegativeInfinity(distance))
-            {
-                throw new ArgumentOutOfRangeException(nameof(distance), "Maximum distance must be non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeOrPositiveInfinity(distance, nameof(distance));
         }
     }
 }

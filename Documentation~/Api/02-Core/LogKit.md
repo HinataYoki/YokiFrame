@@ -13,7 +13,7 @@ LogKit 可直接用于 Unity 与 Godot .NET Runtime。控制台输出由当前�
 ```csharp
 using YokiFrame;
 
-LogKit.Info("Player ready");
+LogKit.Log("Player ready");
 LogKit.Warning("Profile fallback used");
 LogKit.Error("Profile load failed");
 

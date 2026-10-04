@@ -315,7 +315,7 @@ TableLocalizationProvider(
 
 其余 API 与 `ILocalizationProvider` 一致：`GetSupportedLanguages`、`TryGetText`、`TryGetPluralText`、`GetLanguageInfo`、`PreloadLanguage`、`UnloadLanguage`、`IsLanguageLoaded`。初始支持语言均标记为已加载。
 
-使用 Luban 或 TableKit 时，把生成表的查询委托传给 `TableKitLocalizationProvider` 即可；生成的表类型由项目自己维护，不需要让 LocalizationKit 直接依赖 Luban。
+使用 Luban 或 TableKit 时，把生成表的查询委托传给 `TableKitLocalizationProvider` 即可。它继承 `TableLocalizationProvider`，只提供稳定构造入口；生成的表类型由项目自己维护，不需要让 LocalizationKit 直接依赖 Luban。
 
 ## 生命周期与错误边界
 

@@ -61,6 +61,22 @@ namespace YokiFrame.Tests
 
             Assert.IsFalse(SingletonKit<YokiFrameSessionProbeSingleton>.HasInstance);
         }
+
+        /// <summary>验证换代释放全局共享池，但不影响调用方持有的局部池。</summary>
+        [Test]
+        public void BeginClearsSharedPoolsOnly()
+        {
+            ObjectPool<YokiFrameSessionProbePoolItem> shared = PoolKit.Shared.Register<YokiFrameSessionProbePoolItem>();
+            ObjectPool<YokiFrameSessionProbePoolItem> local = PoolKit.Create<YokiFrameSessionProbePoolItem>();
+            YokiFrameSessionProbePoolItem sharedItem = shared.Allocate();
+            YokiFrameSessionProbePoolItem localItem = local.Allocate();
+
+            YokiFrameSession.Begin();
+
+            Assert.IsFalse(PoolKit.Shared.TryGet(out ObjectPool<YokiFrameSessionProbePoolItem> _));
+            Assert.DoesNotThrow(() => local.Recycle(localItem));
+            sharedItem.TouchCount = 1;
+        }
     }
 
     /// <summary>只给会话测试使用的空架构。</summary>
@@ -90,6 +106,23 @@ namespace YokiFrame.Tests
     /// <summary>只给会话测试使用的事件负载。</summary>
     public readonly struct YokiFrameSessionProbeEvent
     {
+    }
+
+    /// <summary>只给共享池会话测试使用的可池化对象。</summary>
+    public sealed class YokiFrameSessionProbePoolItem : IPoolable
+    {
+        /// <summary>释放后仍可读写，用来证明局部对象没有被共享池清理连带销毁。</summary>
+        public int TouchCount;
+
+        /// <summary>测试对象借出时没有额外初始化。</summary>
+        public void OnAllocated()
+        {
+        }
+
+        /// <summary>测试对象归还时没有额外清理。</summary>
+        public void OnRecycled()
+        {
+        }
     }
 }
 #endif

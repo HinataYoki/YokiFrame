@@ -128,6 +128,7 @@ namespace YokiFrame
         {
             Register(STOP_RUNTIME_ORDER, "frame", YokiFrameUpdateDispatcher.ResetListeners);
             Register(RELEASE_HOSTS_ORDER, "reskit", ResKit.ResetRuntimeDefaults);
+            Register(RELEASE_HOSTS_ORDER, "poolkit-shared", PoolKit.Shared.Clear);
             Register(CLEAR_BUSES_ORDER, "events", EventKit.Clear);
             Register(RELEASE_SERVICES_ORDER, "architecture", ArchitectureLifetime.DisposeAll);
             Register(RELEASE_SERVICES_ORDER + 10, "singleton", SingletonLifetime.DisposeAll);

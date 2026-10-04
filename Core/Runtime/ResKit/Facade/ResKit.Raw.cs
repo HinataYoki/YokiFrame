@@ -16,12 +16,13 @@ namespace YokiFrame
         public static byte[] LoadRaw(string path)
         {
             EnsurePath(path);
-            return EnsureRawProvider().LoadRaw(path);
+            return EnsureRawProvider(false).LoadRaw(path);
         }
 
-        /// <summary>作为 <see cref="LoadRaw"/> 的语义化别名同步读取二进制内容。</summary>
+        /// <summary>作为 <see cref="LoadRaw"/> 的兼容别名同步读取二进制内容。</summary>
         /// <param name="path">Provider 可识别的 raw 资源路径。</param>
         /// <returns>二进制内容；未找到时由 Provider 返回 null。</returns>
+        [Obsolete("请改用 ResKit.LoadRaw。LoadRawBytes 不提供额外能力。")]
         public static byte[] LoadRawBytes(string path) => LoadRaw(path);
 
         /// <summary>通过当前 Provider 的可选 raw capability 同步读取文本。</summary>
@@ -30,7 +31,7 @@ namespace YokiFrame
         public static string LoadRawText(string path)
         {
             EnsurePath(path);
-            return EnsureRawProvider().LoadRawText(path);
+            return EnsureRawProvider(true).LoadRawText(path);
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -48,20 +49,22 @@ namespace YokiFrame
 #endif
         {
             EnsurePath(path);
-            return EnsureRawProvider().LoadRawAsync(path, token);
+            return EnsureRawProvider(false).LoadRawAsync(path, token);
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
-        /// <summary>作为 <see cref="LoadRawAsync"/> 的语义化别名异步读取二进制内容。</summary>
+        /// <summary>作为 <see cref="LoadRawAsync"/> 的兼容别名异步读取二进制内容。</summary>
         /// <param name="path">Provider 可识别的 raw 资源路径。</param>
         /// <param name="token">约束本次 raw 读取的取消令牌。</param>
         /// <returns>二进制内容；未找到时由 Provider 返回 null。</returns>
+        [Obsolete("请改用 ResKit.LoadRawAsync。LoadRawBytesAsync 不提供额外能力。")]
         public static UniTask<byte[]> LoadRawBytesAsync(string path, CancellationToken token = default)
 #else
-        /// <summary>作为 <see cref="LoadRawAsync"/> 的语义化别名异步读取二进制内容。</summary>
+        /// <summary>作为 <see cref="LoadRawAsync"/> 的兼容别名异步读取二进制内容。</summary>
         /// <param name="path">Provider 可识别的 raw 资源路径。</param>
         /// <param name="token">约束本次 raw 读取的取消令牌。</param>
         /// <returns>二进制内容；未找到时由 Provider 返回 null。</returns>
+        [Obsolete("请改用 ResKit.LoadRawAsync。LoadRawBytesAsync 不提供额外能力。")]
         public static Task<byte[]> LoadRawBytesAsync(string path, CancellationToken token = default)
 #endif
         {
@@ -83,27 +86,30 @@ namespace YokiFrame
 #endif
         {
             EnsurePath(path);
-            return EnsureRawProvider().LoadRawTextAsync(path, token);
+            return EnsureRawProvider(true).LoadRawTextAsync(path, token);
         }
 
         /// <summary>获取当前 Provider 的 raw capability，不支持时抛出明确异常。</summary>
-        private static IRawResourceProvider EnsureRawProvider()
+        private static IRawResourceProvider EnsureRawProvider(bool text)
         {
             IResourceProvider provider;
+            bool supported;
             lock (sLock)
             {
                 provider = EnsureProviderLocked();
+                supported = text ? sSupportsRawText : sSupportsRawBytes;
             }
 
-            if (provider is IRawResourceProvider rawProvider)
+            if (supported && provider is IRawResourceProvider rawProvider)
             {
                 return rawProvider;
             }
 
             Type providerType = provider.GetType();
             string providerName = providerType.FullName ?? providerType.Name;
+            string capability = text ? "raw text" : "raw bytes";
             throw new NotSupportedException(
-                "ResKit provider '" + providerName + "' does not support raw resources.");
+                "ResKit provider '" + providerName + "' does not support " + capability + ".");
         }
 
         /// <summary>校验调用路径非空，所有普通与 raw API 共用同一参数约束。</summary>

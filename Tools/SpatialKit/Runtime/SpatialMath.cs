@@ -137,6 +137,15 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>验证半径或距离非负；正无穷表示无上限，NaN 与负无穷仍拒绝。</summary>
+        internal static void ValidateNonNegativeOrPositiveInfinity(float value, string parameterName)
+        {
+            if (float.IsNaN(value) || value < 0f || float.IsNegativeInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(parameterName, "Value must be non-negative.");
+            }
+        }
+
         /// <summary>验证位置坐标全部为有限值，避免生成不可追踪的分区。</summary>
         internal static void ValidatePosition(YokiVector3 position, string parameterName)
         {

@@ -88,7 +88,7 @@ public sealed class SpawnState : AbstractState<PlayerState, object, int>
 
     protected override void OnEnter(int level)
     {
-        LogKit.Info("spawn level=" + level);
+        LogKit.Log("spawn level=" + level);
     }
 }
 

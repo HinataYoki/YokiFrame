@@ -6,7 +6,7 @@ namespace YokiFrame
 {
     /// <summary>通过委托访问任意配置表的通用本地化 Provider。</summary>
     /// <remarks>TableKit/Luban 生成代码通过 Integration 层把查询委托接入此 Provider。</remarks>
-    public sealed class TableLocalizationProvider : ILocalizationProvider
+    public class TableLocalizationProvider : ILocalizationProvider
     {
         private readonly Func<LanguageId, int, string> mTextGetter;
         private readonly Func<LanguageId, int, PluralCategory, string> mPluralTextGetter;

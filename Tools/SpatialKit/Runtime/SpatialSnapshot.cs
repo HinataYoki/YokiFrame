@@ -216,10 +216,7 @@ namespace YokiFrame
         private static void ValidateRadiusQuery(YokiVector3 center, float radius, List<T> results)
         {
             SpatialMath.ValidatePosition(center, nameof(center));
-            if (float.IsNaN(radius) || radius < 0f || float.IsNegativeInfinity(radius))
-            {
-                throw new ArgumentOutOfRangeException(nameof(radius), "Radius must be non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeOrPositiveInfinity(radius, nameof(radius));
 
             if (results == null)
             {
@@ -230,10 +227,7 @@ namespace YokiFrame
         /// <summary>验证最近邻距离。</summary>
         private static void ValidateDistance(float distance)
         {
-            if (float.IsNaN(distance) || distance < 0f || float.IsNegativeInfinity(distance))
-            {
-                throw new ArgumentOutOfRangeException(nameof(distance), "Maximum distance must be non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeOrPositiveInfinity(distance, nameof(distance));
         }
 
         /// <summary>验证批量查询输入和一一对应的结果列表。</summary>

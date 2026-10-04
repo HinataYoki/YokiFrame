@@ -204,6 +204,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="message">日志内容。</param>
         /// <param name="context">宿主上下文对象。</param>
+        [Obsolete("请改用 LogKit.Log。Info 与 Log 写入同一级别，不提供额外能力。")]
         public static void Info(object message, object context = null)
         {
             Write(LogLevel.Info, message, context, null);

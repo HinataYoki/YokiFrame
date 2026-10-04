@@ -16,6 +16,7 @@ namespace YokiFrame
     /// <summary>
     /// 基于自定义委托的注销令牌，用于适配非 EventKit 的释放逻辑。
     /// </summary>
+    [Obsolete("当前没有生产调用方。请直接使用 LinkUnRegister，或在业务侧保存自己的注销委托。")]
     public struct CustomUnRegister : IUnRegister
     {
         private Action mUnRegisterAction;

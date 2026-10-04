@@ -112,9 +112,9 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 
 | API | 说明 |
 |---|---|
-| `LoadRaw(string path)` / `LoadRawBytes(string path)` | 同步读取 bytes；后者是语义别名。 |
+| `LoadRaw(string path)` | 同步读取 bytes。`LoadRawBytes` 是兼容别名，新代码不要使用。 |
 | `LoadRawText(string path)` | 同步读取文本。 |
-| `LoadRawAsync(string path, CancellationToken)` / `LoadRawBytesAsync(...)` | 异步读取 bytes。 |
+| `LoadRawAsync(string path, CancellationToken)` | 异步读取 bytes。`LoadRawBytesAsync` 是兼容别名，新代码不要使用。 |
 | `LoadRawTextAsync(string path, CancellationToken)` | 异步读取文本。 |
 
 YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `ResKit.SetProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一步完成初始化和接入。初始化器不会在正常流程中替项目销毁 package；只有选择弱网回退到 OfflinePlayMode 时，才会先等待当前联网 package 使用当前 YooAsset 版本的销毁操作完成，再移除并重建同名 package。

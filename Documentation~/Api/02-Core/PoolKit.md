@@ -80,11 +80,11 @@ pool.Dispose();
 | `Remove<T>()` | 移除并释放指定类型池，返回是否找到。 |
 | `Clear()` | 移除并释放全部共享池。 |
 
-同一类型只能注册一个共享池。重复注册会释放新建池并抛出 `InvalidOperationException`。共享池的注册 owner 应固定在初始化阶段；模块结束时由同一 owner 调用 `Remove` 或 `Clear`。
+同一类型只能注册一个共享池。重复注册会释放新建池并抛出 `InvalidOperationException`。共享池的注册 owner 应固定在初始化阶段；模块结束时由同一 owner 调用 `Remove` 或 `Clear`。`YokiFrameSession.Begin` 会释放全部共享池，调用方通过 `PoolKit.Create` 持有的局部池不受影响，下一会话需要时重新注册共享池。
 
 ## 生命周期与错误边界
 
-- 池的 owner 必须负责 `Dispose`；全局共享池由注册表 owner 负责 `Remove` 或 `Clear`。
+- 池的 owner 必须负责 `Dispose`；全局共享池由注册表 owner 负责 `Remove` 或 `Clear`，宿主会话重置也会清空共享池。
 - 不要把同一对象同时交给两个池；池使用引用相等判断重复回收。
 - 工厂返回 null、生命周期回调抛异常或池已释放都会中断当前操作，不应在业务层静默吞掉异常。
 - Unity 对象的 `Destroy`、场景归属和组件生命周期仍由宿主 Adapter 或业务 owner 管理。

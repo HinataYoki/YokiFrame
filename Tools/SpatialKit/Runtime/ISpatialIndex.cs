@@ -31,9 +31,10 @@ namespace YokiFrame
 
         /// <summary>
         /// 查询半径内实体。HashGrid/Quadtree 使用构造时选择的二维投影平面，Octree 使用完整三维距离。
+        /// HashGrid 接受正无穷半径并返回全部实体；Quadtree 与 Octree 只接受有限非负半径。
         /// </summary>
         /// <param name="center">查询中心。</param>
-        /// <param name="radius">非负查询半径。</param>
+        /// <param name="radius">非负查询半径。HashGrid 额外接受正无穷。</param>
         /// <param name="results">接收结果的列表。</param>
         void QueryRadius(YokiVector3 center, float radius, List<T> results);
 

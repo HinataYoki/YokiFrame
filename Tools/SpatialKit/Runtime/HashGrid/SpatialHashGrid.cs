@@ -325,10 +325,7 @@ namespace YokiFrame
         private static void ValidateQuery(YokiVector3 center, float radius, List<T> results)
         {
             SpatialMath.ValidatePosition(center, nameof(center));
-            if (float.IsNaN(radius) || radius < 0f || float.IsNegativeInfinity(radius))
-            {
-                throw new ArgumentOutOfRangeException(nameof(radius), "Radius must be non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeOrPositiveInfinity(radius, nameof(radius));
             if (results == null)
             {
                 throw new ArgumentNullException(nameof(results));
@@ -337,10 +334,7 @@ namespace YokiFrame
         /// <summary>验证最近邻距离允许有限值或正无穷。</summary>
         private static void ValidateDistance(float distance)
         {
-            if (float.IsNaN(distance) || distance < 0f || float.IsNegativeInfinity(distance))
-            {
-                throw new ArgumentOutOfRangeException(nameof(distance), "Maximum distance must be non-negative.");
-            }
+            SpatialMath.ValidateNonNegativeOrPositiveInfinity(distance, nameof(distance));
         }
         /// <summary>把所有实体按投影距离过滤到结果列表。</summary>
         private void AppendAllWithinProjectedRadius(YokiVector3 center, float radius, List<T> results)
