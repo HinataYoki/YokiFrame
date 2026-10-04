@@ -8,12 +8,29 @@ namespace YokiFrame.Tooling.Application.Services.TableKit;
 public sealed class TableKitApplicationService
 {
     private readonly LubanConfigParser mConfigParser = new();
-    private readonly LubanProcessService mProcessService = new();
+    private readonly LubanProcessService mProcessService;
+    private readonly Func<LubanConfigurationReader> mConfigurationReaderFactory;
+    private readonly Func<LubanProjectDiscoveryService> mDiscoveryFactory;
     private readonly TableKitCodeGenerationService mCodeGenerationService = new();
     private readonly TableKitResourceLocationResolver mResourceLocationResolver = new();
     /// <summary>创建 TableKit Workbench 用例；Runtime 门面使用统一的表名路径模板 Loader。</summary>
     public TableKitApplicationService()
+        : this(new LubanProcessService(), static () => new LubanConfigurationReader(), static () => new LubanProjectDiscoveryService())
     {
+    }
+
+    /// <summary>创建可替换 Luban 进程、配置读取和工具发现依赖的 TableKit 用例。</summary>
+    /// <param name="processService">负责生成和预览进程的服务。</param>
+    /// <param name="configurationReaderFactory">每次读取 luban.conf 时创建读取器的工厂。</param>
+    /// <param name="discoveryFactory">每次发现工具时创建发现服务的工厂。</param>
+    public TableKitApplicationService(
+        LubanProcessService processService,
+        Func<LubanConfigurationReader> configurationReaderFactory,
+        Func<LubanProjectDiscoveryService> discoveryFactory)
+    {
+        mProcessService = processService ?? throw new ArgumentNullException(nameof(processService));
+        mConfigurationReaderFactory = configurationReaderFactory ?? throw new ArgumentNullException(nameof(configurationReaderFactory));
+        mDiscoveryFactory = discoveryFactory ?? throw new ArgumentNullException(nameof(discoveryFactory));
     }
 
     /// <summary>读取 luban.conf 声明的去重 target 名称；wire 解析保持在应用层，VM 只消费强类型结果。</summary>
@@ -21,7 +38,49 @@ public sealed class TableKitApplicationService
     /// <returns>按配置顺序排列的稳定 target 名称。</returns>
     public IReadOnlyList<string> ReadLubanTargetNames(string configPath)
     {
-        return new LubanConfigurationReader().Read(configPath).TargetNames;
+        return mConfigurationReaderFactory().Read(configPath).TargetNames;
+    }
+
+    /// <summary>检查 Luban 主配置和可执行文件是否已经存在。</summary>
+    /// <param name="configPath">luban.conf 绝对路径。</param>
+    /// <param name="executablePath">Luban 工具绝对路径。</param>
+    /// <returns>配置文件与可执行文件的存在状态。</returns>
+    public (bool ConfigExists, bool ExecutableExists) InspectEnvironmentPaths(string configPath, string executablePath)
+    {
+        return (File.Exists(configPath), File.Exists(executablePath));
+    }
+
+    /// <summary>统计已经配置且真实存在的 Agent、MCP 和官方 Skill 路径。</summary>
+    /// <param name="agentPath">Agent 工具绝对路径。</param>
+    /// <param name="mcpPath">MCP 工具绝对路径。</param>
+    /// <param name="skillsPath">Skill 根目录绝对路径。</param>
+    /// <returns>可用路径数量，最大为 3。</returns>
+    public int CountExistingOptionalTools(string agentPath, string mcpPath, string skillsPath)
+    {
+        int count = 0;
+        if (File.Exists(agentPath)) count++;
+        if (File.Exists(mcpPath)) count++;
+        if (!string.IsNullOrWhiteSpace(LubanProjectDiscoveryService.ResolveOfficialSkillsRoot(skillsPath))) count++;
+        return count;
+    }
+
+    /// <summary>优先返回 Luban Datas 子目录；不存在时回落到工作目录。</summary>
+    /// <param name="workDirectory">Luban 工作目录绝对路径。</param>
+    /// <returns>实际可打开的目录；两者都不存在时返回空字符串。</returns>
+    public string ResolveConfigDirectory(string workDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(workDirectory))
+        {
+            return string.Empty;
+        }
+
+        string datasDirectory = Path.Combine(workDirectory, "Datas");
+        if (Directory.Exists(datasDirectory))
+        {
+            return datasDirectory;
+        }
+
+        return Directory.Exists(workDirectory) ? workDirectory : string.Empty;
     }
 
     /// <summary>发现当前项目的主 Luban 工具及可选 Agent、MCP、Skills 伴随工具。</summary>
@@ -30,7 +89,7 @@ public sealed class TableKitApplicationService
     /// <returns>主工具发现结果；可选伴随工具缺失不会导致主工具发现失败。</returns>
     public LubanToolDiscoveryResult DiscoverLubanTools(string projectRoot, string lubanWorkDir = "")
     {
-        return new LubanProjectDiscoveryService().Discover(projectRoot, lubanWorkDir);
+        return mDiscoveryFactory().Discover(projectRoot, lubanWorkDir);
     }
 
     /// <summary>只解析当前 Luban 配置，不启动外部进程。</summary>

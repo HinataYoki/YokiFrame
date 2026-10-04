@@ -438,11 +438,11 @@ public sealed class TableKitPageViewTests
 
     /// <summary>验证成功结果会自动进入数据任务，并选中首表首记录。</summary>
     [Fact]
-    public void SuccessfulValidationSelectsFirstTableAndRecord()
+    public async Task SuccessfulValidationSelectsFirstTableAndRecord()
     {
         TableKitPageViewModel viewModel = new();
         viewModel.IsConsoleExpanded = true;
-        viewModel.ApplyOperationResult(CreateSuccessfulResult(), true);
+        await viewModel.ApplyOperationResultAsync(CreateSuccessfulResult(), true);
 
         Assert.Equal(1, viewModel.SelectedWorkspaceIndex);
         Assert.False(viewModel.IsConsoleExpanded);
@@ -461,10 +461,10 @@ public sealed class TableKitPageViewTests
     public async Task DataTaskRendersThreeLevelBrowser(double width, double height)
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await Dispatcher.UIThread.InvokeAsync(async () =>
         {
             TableKitPageViewModel viewModel = new();
-            viewModel.ApplyOperationResult(CreateSuccessfulResult(), true);
+            await viewModel.ApplyOperationResultAsync(CreateSuccessfulResult(), true);
             TableKitPageView view = new() { DataContext = viewModel };
             Window window = new() { Width = width, Height = height, Content = view };
             try
@@ -524,10 +524,10 @@ public sealed class TableKitPageViewTests
     public async Task TableKitShellRendersSuccessfulDataLayout()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await Dispatcher.UIThread.InvokeAsync(async () =>
         {
             WorkbenchShellViewModel viewModel = CreateShellViewModel();
-            viewModel.TableKitPage.ApplyOperationResult(CreateSuccessfulResult(), true);
+            await viewModel.TableKitPage.ApplyOperationResultAsync(CreateSuccessfulResult(), true);
             Window window = new() { Width = 1556, Height = 1000, Content = new WorkbenchShellView(viewModel) };
             try
             {

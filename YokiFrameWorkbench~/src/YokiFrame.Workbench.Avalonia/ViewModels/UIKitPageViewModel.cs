@@ -249,6 +249,11 @@ public sealed partial class UIKitPageViewModel : ViewModelBase, IDisposable
     /// <param name="state">本轮 UIKit 强类型状态；为空时清空页面。</param>
     public void ApplyPeriodicState(WorkbenchUIKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         string selectedPanelKey = CreatePanelKey(SelectedPanel);
         string selectedStackKey = SelectedStack?.Name ?? string.Empty;
         mState = state;

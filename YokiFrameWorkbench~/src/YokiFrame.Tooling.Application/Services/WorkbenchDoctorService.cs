@@ -14,6 +14,7 @@ public sealed class WorkbenchDoctorService
 {
     private readonly IEngineStateReader mStateReader;
     private readonly EngineSelectionService mEngineSelectionService;
+    private readonly Func<IEngineStateReader, EngineSelectionService> mEngineSelectionFactory;
 
     /// <summary>
     /// 获取 heartbeat stale 判定阈值。
@@ -43,9 +44,22 @@ public sealed class WorkbenchDoctorService
     /// </summary>
     /// <param name="stateReader">引擎状态读取端口。</param>
     public WorkbenchDoctorService(IEngineStateReader stateReader)
+        : this(stateReader, reader => new EngineSelectionService(reader))
     {
-        mStateReader = stateReader;
-        mEngineSelectionService = new EngineSelectionService(stateReader);
+    }
+
+    /// <summary>
+    /// 使用可替换 engine 选择工厂创建 doctor 服务，避免诊断用例在方法内临时构造依赖。
+    /// </summary>
+    /// <param name="stateReader">引擎状态读取端口。</param>
+    /// <param name="engineSelectionFactory">根据状态端口创建 engine 选择服务的工厂。</param>
+    public WorkbenchDoctorService(
+        IEngineStateReader stateReader,
+        Func<IEngineStateReader, EngineSelectionService> engineSelectionFactory)
+    {
+        mStateReader = stateReader ?? throw new ArgumentNullException(nameof(stateReader));
+        mEngineSelectionFactory = engineSelectionFactory ?? throw new ArgumentNullException(nameof(engineSelectionFactory));
+        mEngineSelectionService = mEngineSelectionFactory(mStateReader);
     }
 
     /// <summary>

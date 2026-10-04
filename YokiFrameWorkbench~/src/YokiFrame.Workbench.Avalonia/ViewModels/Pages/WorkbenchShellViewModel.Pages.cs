@@ -277,6 +277,7 @@ public sealed partial class WorkbenchShellViewModel
         IsSaveKitPage = module.Presentation == WorkbenchPagePresentation.SaveKit;
         IsDocumentationPage = module.Presentation == WorkbenchPagePresentation.Documentation;
         ActiveWorkspacePage = ResolveActiveWorkspacePage(module.Presentation);
+        UpdateWorkspacePageActivation();
         ApplyActiveWorkspaceState();
         if (IsDocumentationPage)
         {
@@ -288,8 +289,21 @@ public sealed partial class WorkbenchShellViewModel
             TrackPageTask(LocalizationKitPage.EnsureLoadedAsync());
         }
 
+    }
+
+    /// <summary>先更新页面可见性，再投影状态，避免隐藏页门控丢弃即将显示的数据。</summary>
+    private void UpdateWorkspacePageActivation()
+    {
         EventKitPage.SetPageActive(IsEventKitPage);
+        FsmKitPage.SetPageActive(IsFsmKitPage);
         LogKitPage.SetPageActive(IsLogKitPage);
+        PoolKitPage.SetPageActive(IsPoolKitPage);
+        ResKitPage.SetPageActive(IsResKitPage);
+        ActionKitPage.SetPageActive(IsActionKitPage);
+        AudioKitPage.SetPageActive(IsAudioKitPage);
+        SpatialKitPage.SetPageActive(IsSpatialKitPage);
+        UIKitPage.SetPageActive(IsUIKitPage);
+        SaveKitPage.SetPageActive(IsSaveKitPage);
     }
 
     /// <summary>

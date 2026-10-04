@@ -9,12 +9,12 @@ public sealed class TableKitPreviewViewModelTests
 {
     /// <summary>成功验证未产出预览表时清除旧选择，避免页面继续展示过期数据。</summary>
     [Fact]
-    public void SuccessfulValidationWithoutTablesClearsPreviousPreview()
+    public async Task SuccessfulValidationWithoutTablesClearsPreviousPreview()
     {
         TableKitPageViewModel viewModel = new();
-        viewModel.ApplyOperationResult(CreateSuccessfulResult("[{\"id\":1}]"), true);
+        await viewModel.ApplyOperationResultAsync(CreateSuccessfulResult("[{\"id\":1}]"), true);
 
-        viewModel.ApplyOperationResult(
+        await viewModel.ApplyOperationResultAsync(
             new TableKitOperationResult
             {
                 Succeeded = true,

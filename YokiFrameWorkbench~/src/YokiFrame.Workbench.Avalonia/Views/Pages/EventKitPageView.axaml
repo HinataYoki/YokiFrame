@@ -78,7 +78,7 @@
 
       <ListBox Grid.Row="1"
                IsVisible="{CompiledBinding HasEvents}"
-               Classes="eventkit-relation-list kit-selection-list rich"
+               Classes="eventkit-relation-list kit-selection-list rich kit-virtual-list"
                ItemsSource="{CompiledBinding Events}"
                SelectedItem="{CompiledBinding SelectedEvent, Mode=TwoWay}"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -391,7 +391,7 @@
                          VerticalAlignment="Center" />
             </Grid>
             <ListBox Grid.Row="1"
-                     Classes="eventkit-timeline kit-timeline-list"
+                     Classes="eventkit-timeline kit-timeline-list kit-virtual-list"
                      ItemsSource="{CompiledBinding SelectedActivities}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      AutomationProperties.Name="{DynamicResource String.EventKit.RuntimeTimelineAutomationName}">

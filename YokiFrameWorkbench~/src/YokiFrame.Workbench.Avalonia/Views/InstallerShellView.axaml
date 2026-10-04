@@ -401,7 +401,7 @@
                 Height="124"
                 IsVisible="{Binding IsChecked, ElementName=LogDrawerToggle}">
           <ListBox x:Name="InstallerLogList"
-                   Classes="installer-log"
+                   Classes="installer-log kit-virtual-list"
                    ItemsSource="{CompiledBinding LogEntries}"
                     AutomationProperties.Name="{DynamicResource String.Installer.LogName}"
                    AutomationProperties.LiveSetting="Polite">

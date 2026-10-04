@@ -11,6 +11,7 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     private readonly Func<string, bool, CancellationToken, Task<WorkbenchActionKitState>>? mSetStackTraceAsync;
     private readonly Func<string, CancellationToken, Task<WorkbenchActionKitState>>? mClearStackTraceAsync;
     private readonly CancellationTokenSource mLifetimeCancellation = new();
+    private WorkbenchActionKitState? mPendingPeriodicState;
     private ActionKitRootViewModel? mSelectedRoot;
     private ActionKitNodeViewModel? mSelectedNode;
     private string mEngineId = string.Empty;
@@ -181,6 +182,13 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
     /// <param name="state">本轮 ActionKit 强类型状态。</param>
     public void ApplyPeriodicState(WorkbenchActionKitState? state)
     {
+        if (!IsPageActive)
+        {
+            CachePeriodicState(state, ref mPendingPeriodicState, ApplyPeriodicState);
+            return;
+        }
+
+        mPendingPeriodicState = null;
         if (state == null)
         {
             ResetRuntimeState();
@@ -201,6 +209,16 @@ public sealed partial class ActionKitPageViewModel : ViewModelBase, IDisposable
         }
 
         ApplyState(state);
+    }
+
+    /// <summary>页面重新可见时重放隐藏期间缓存的最后一帧。</summary>
+    /// <param name="isActive">变化后的激活状态。</param>
+    protected override void OnPageActiveChanged(bool isActive)
+    {
+        if (isActive)
+        {
+            ReplayPeriodicState(ref mPendingPeriodicState, ApplyPeriodicState);
+        }
     }
 
     /// <summary>取消页面仍在执行的诊断操作。</summary>

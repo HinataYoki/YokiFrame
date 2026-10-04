@@ -129,7 +129,7 @@
             <Grid Grid.Row="2">
               <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.Voices}"
                        ItemTemplate="{StaticResource AudioVoiceRowTemplate}"
-                       Classes="audiokit-detail-list kit-data-list" />
+                       Classes="audiokit-detail-list kit-data-list kit-virtual-list" />
               <TextBlock Text="{DynamicResource String.AudioKit.NoActiveVoices}"
                          IsVisible="{CompiledBinding SelectedBusChannel.IsVoiceEmpty}"
                          Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -155,7 +155,7 @@
             <Grid Grid.Row="2">
               <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.History}"
                        ItemTemplate="{StaticResource AudioHistoryRowTemplate}"
-                       Classes="audiokit-detail-list kit-timeline-list" />
+                       Classes="audiokit-detail-list kit-timeline-list kit-virtual-list" />
               <TextBlock Text="{DynamicResource String.AudioKit.NoPlaybackHistory}"
                          IsVisible="{CompiledBinding SelectedBusChannel.IsHistoryEmpty}"
                          Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -180,7 +180,7 @@
           <Grid Grid.Row="2">
             <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.Voices}"
                      ItemTemplate="{StaticResource AudioVoiceRowTemplate}"
-                     Classes="audiokit-detail-list kit-data-list" />
+                     Classes="audiokit-detail-list kit-data-list kit-virtual-list" />
             <TextBlock Text="{DynamicResource String.AudioKit.NoActiveVoices}"
                        IsVisible="{CompiledBinding SelectedBusChannel.IsVoiceEmpty}"
                        Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -203,7 +203,7 @@
           <Grid Grid.Row="2">
             <ListBox ItemsSource="{CompiledBinding SelectedBusChannel.History}"
                      ItemTemplate="{StaticResource AudioHistoryRowTemplate}"
-                     Classes="audiokit-detail-list kit-timeline-list" />
+                     Classes="audiokit-detail-list kit-timeline-list kit-virtual-list" />
             <TextBlock Text="{DynamicResource String.AudioKit.NoPlaybackHistory}"
                        IsVisible="{CompiledBinding SelectedBusChannel.IsHistoryEmpty}"
                        Classes="audiokit-empty-text" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -299,7 +299,7 @@
               <TextBlock Grid.Column="2" Text="ID" Classes="audiokit-index-label" HorizontalAlignment="Right" />
             </Grid>
             <Grid Grid.Row="1">
-              <ListBox ItemsSource="{CompiledBinding IndexEntries}" Classes="audiokit-detail-list kit-data-list"
+              <ListBox ItemsSource="{CompiledBinding IndexEntries}" Classes="audiokit-detail-list kit-data-list kit-virtual-list"
                        ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                        AutomationProperties.AutomationId="audiokit.index-preview">
                 <ListBox.ItemTemplate>

@@ -97,7 +97,7 @@
           </Border>
           <ListBox x:Name="LocalizationEntryList"
                    Grid.Row="1"
-                   Classes="localization-entry-list kit-selection-list"
+                   Classes="localization-entry-list kit-selection-list kit-virtual-list"
                    ItemsSource="{CompiledBinding Entries}"
                    SelectedItem="{CompiledBinding SelectedEntry, Mode=TwoWay}"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"

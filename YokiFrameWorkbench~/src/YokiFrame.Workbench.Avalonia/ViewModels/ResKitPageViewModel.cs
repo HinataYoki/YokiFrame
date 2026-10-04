@@ -133,6 +133,11 @@ public sealed partial class ResKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>应用低频 dashboard 状态并拒绝同宿主旧版本。</summary>
     public void ApplyPeriodicState(WorkbenchResKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         if (state == null) { ResetRuntimeState(); return; }
         if (MatchesIdentity(state) && state.Version < mVersion)
         {

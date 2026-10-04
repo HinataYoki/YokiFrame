@@ -22,6 +22,7 @@ public sealed class CommandExecutionService
     private readonly ICommandTransport mCommandTransport;
     private readonly IFastChannelCommandTransport? mFastChannelTransport;
     private readonly EngineSelectionService mEngineSelectionService;
+    private readonly Func<IEngineStateReader, EngineSelectionService> mEngineSelectionFactory;
     private readonly object mFastChannelHealthGate = new();
     private readonly Dictionary<string, FastChannelHealth> mFastChannelHealth = new(StringComparer.Ordinal);
 
@@ -46,7 +47,24 @@ public sealed class CommandExecutionService
         mStateReader = stateReader;
         mCommandTransport = commandTransport;
         mFastChannelTransport = commandTransport as IFastChannelCommandTransport;
-        mEngineSelectionService = new EngineSelectionService(stateReader);
+        mEngineSelectionFactory = reader => new EngineSelectionService(reader);
+        mEngineSelectionService = mEngineSelectionFactory(stateReader);
+    }
+
+    /// <summary>
+    /// 使用可替换 engine 选择工厂创建命令执行用例。
+    /// </summary>
+    /// <param name="stateReader">引擎状态读取端口。</param>
+    /// <param name="commandTransport">命令传输端口。</param>
+    /// <param name="engineSelectionFactory">根据状态端口创建 engine 选择服务的工厂。</param>
+    public CommandExecutionService(
+        IEngineStateReader stateReader,
+        ICommandTransport commandTransport,
+        Func<IEngineStateReader, EngineSelectionService> engineSelectionFactory)
+        : this(stateReader, commandTransport)
+    {
+        mEngineSelectionFactory = engineSelectionFactory ?? throw new ArgumentNullException(nameof(engineSelectionFactory));
+        mEngineSelectionService = mEngineSelectionFactory(stateReader);
     }
 
     /// <summary>

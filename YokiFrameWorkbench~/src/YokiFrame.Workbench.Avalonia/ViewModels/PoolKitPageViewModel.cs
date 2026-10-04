@@ -137,6 +137,11 @@ public sealed partial class PoolKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>应用低频 dashboard 状态并拒绝同宿主旧版本。</summary>
     public void ApplyPeriodicState(WorkbenchPoolKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         if (state == null)
         {
             ResetRuntimeState();

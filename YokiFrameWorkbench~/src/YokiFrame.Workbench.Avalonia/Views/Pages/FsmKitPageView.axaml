@@ -49,7 +49,7 @@
                      AutomationProperties.Name="{DynamicResource String.FsmKit.SearchAutomationName}"
                      AutomationProperties.AutomationId="workbench.fsm.search" />
             <ListBox Grid.Row="2"
-                     Classes="fsm-instance-list kit-selection-list"
+                     Classes="fsm-instance-list kit-selection-list kit-virtual-list"
                      ItemsSource="{CompiledBinding Machines}"
                      SelectedItem="{CompiledBinding SelectedMachine, Mode=TwoWay}"
                      AutomationProperties.Name="{DynamicResource String.FsmKit.InstancesAutomationName}"
@@ -184,7 +184,7 @@
               <TextBlock Text="{CompiledBinding HistoryCountText}" Classes="muted mono" FontSize="11" />
             </StackPanel>
             <ListBox Grid.Row="1"
-                     Classes="kit-timeline-list"
+                     Classes="kit-timeline-list kit-virtual-list"
                      ItemsSource="{CompiledBinding Transitions}"
                      AutomationProperties.Name="{DynamicResource String.FsmKit.TransitionHistoryAutomationName}">
               <ListBox.ItemTemplate>

@@ -125,7 +125,8 @@ public sealed partial class WorkbenchShellViewModel
             toolPageDependencies?.TableKitApplicationService ?? new TableKitApplicationService(),
             callbacks.CopyTextAsync,
             toolPageDependencies?.SaveKitFolderPicker,
-            toolPageDependencies?.TableKitLubanFilePicker);
+            toolPageDependencies?.TableKitLubanFilePicker,
+            toolPageDependencies?.SaveKitOpenDirectoryAsync);
         LocalizationKitPage = new LocalizationKitPageViewModel(
             projectRoot,
             new YokiFrame.Tooling.Application.Services.LocalizationKit.LocalizationKitApplicationService(),

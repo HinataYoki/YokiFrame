@@ -22,6 +22,8 @@ public sealed class CapabilityCatalogService
     private readonly IYokiFrameClient mClient;
     private readonly EngineSelectionService mEngineSelectionService;
     private readonly TimeProvider mTimeProvider;
+    private readonly Func<ProjectModelService> mProjectModelFactory;
+    private readonly Func<CommandExecutionService> mCommandExecutionFactory;
 
     /// <summary>
     /// 使用系统时间创建能力目录服务。
@@ -38,10 +40,32 @@ public sealed class CapabilityCatalogService
     /// <param name="client">统一 YokiFrame Client。</param>
     /// <param name="timeProvider">当前时间源。</param>
     public CapabilityCatalogService(IYokiFrameClient client, TimeProvider timeProvider)
+        : this(
+            client,
+            timeProvider,
+            () => new ProjectModelService(client, timeProvider),
+            () => new CommandExecutionService(client))
+    {
+    }
+
+    /// <summary>
+    /// 创建可替换 Project Model 和命令执行依赖的能力目录服务。
+    /// </summary>
+    /// <param name="client">统一 YokiFrame Client。</param>
+    /// <param name="timeProvider">当前时间源。</param>
+    /// <param name="projectModelFactory">Project Model 检查工厂；每次检查创建独立实例。</param>
+    /// <param name="commandExecutionFactory">命令目录刷新工厂；每次刷新创建独立实例。</param>
+    public CapabilityCatalogService(
+        IYokiFrameClient client,
+        TimeProvider timeProvider,
+        Func<ProjectModelService> projectModelFactory,
+        Func<CommandExecutionService> commandExecutionFactory)
     {
         mClient = client ?? throw new ArgumentNullException(nameof(client));
-        mEngineSelectionService = new EngineSelectionService(client);
         mTimeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        mProjectModelFactory = projectModelFactory ?? throw new ArgumentNullException(nameof(projectModelFactory));
+        mCommandExecutionFactory = commandExecutionFactory ?? throw new ArgumentNullException(nameof(commandExecutionFactory));
+        mEngineSelectionService = new EngineSelectionService(client);
     }
 
     /// <summary>
@@ -154,7 +178,7 @@ public sealed class CapabilityCatalogService
     {
         try
         {
-            return new ProjectModelService(mClient, mTimeProvider).Inspect();
+            return mProjectModelFactory().Inspect();
         }
         catch (Exception exception)
         {
@@ -331,7 +355,7 @@ public sealed class CapabilityCatalogService
     {
         try
         {
-            var result = await new CommandExecutionService(mClient).ExecuteAsync(
+            var result = await mCommandExecutionFactory().ExecuteAsync(
                 before.EngineId,
                 "System",
                 "list_commands",

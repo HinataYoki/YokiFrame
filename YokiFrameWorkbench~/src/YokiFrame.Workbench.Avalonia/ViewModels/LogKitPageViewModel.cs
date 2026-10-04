@@ -9,7 +9,7 @@ namespace YokiFrame.Workbench.Avalonia.ViewModels;
 /// <summary>
 /// 把 LogKit 项目设置、运行统计、按需文件尾部和高频内存历史投影到单页工作台。
 /// </summary>
-public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
+public sealed partial class LogKitPageViewModel : KitPageViewModel, IDisposable
 {
     private const string MEMORY_SOURCE = "memory";
     private const string EDITOR_SOURCE = "editor";
@@ -22,7 +22,6 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     private readonly Func<string, WorkbenchLogKitSettings, string, CancellationToken, Task<WorkbenchLogKitSettingsSaveResult>>? mSaveSettingsAsync;
     private readonly Func<string, CancellationToken, Task<WorkbenchLogKitState>>? mClearHistoryAsync;
     private readonly Func<string, string, CancellationToken, Task<WorkbenchLogKitFilePreview>>? mReadFileAsync;
-    private readonly CancellationTokenSource mLifetimeCancellation = new();
     private CancellationTokenSource mIdentityCancellation = new();
     private Func<string, Task>? mOpenDirectoryAsync;
     private string mEngineId = string.Empty;
@@ -43,8 +42,6 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     private bool mSupportsFileWriter;
     private bool mSupportsPlayerImGui;
     private bool mSupportsEncryption;
-    private bool mIsPageActive;
-    private bool mIsDisposed;
 
     /// <summary>创建不具备 Application 写操作的设计时页面。</summary>
     public LogKitPageViewModel()
@@ -237,17 +234,33 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>通知页面是否激活；文件读取只在激活和显式切换时发生。</summary>
-    internal void SetPageActive(bool isActive)
+    /// <summary>保留既有内部激活入口，并转发到统一页面激活门控。</summary>
+    /// <param name="isActive">当前 LogKit 页面是否可见。</param>
+    internal new void SetPageActive(bool isActive)
     {
-        if (mIsDisposed || mIsPageActive == isActive)
+        base.SetPageActive(isActive);
+    }
+
+    /// <summary>页面隐藏时取消文件读取，重新显示时恢复当前文件预览。</summary>
+    /// <param name="isActive">当前 LogKit 页面是否可见。</param>
+    protected override void OnPageActiveChanged(bool isActive)
+    {
+        if (IsDisposed)
         {
             return;
         }
 
-        mIsPageActive = isActive;
         if (!isActive)
         {
             CancelFilePreview();
+        }
+    }
+
+    /// <summary>每次显式激活都补做项目配置和当前文件预览；重复激活由各自方法自行去重。</summary>
+    protected override void OnPageActivated()
+    {
+        if (IsDisposed)
+        {
             return;
         }
 
@@ -258,19 +271,17 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>取消页面全部异步操作并解除草稿事件。</summary>
     public void Dispose()
     {
-        if (mIsDisposed)
-        {
-            return;
-        }
+        DisposePageResources();
+    }
 
-        mIsDisposed = true;
+    /// <summary>取消页面身份操作并解除草稿事件；生命周期取消由共享基类统一处理。</summary>
+    protected override void OnDisposing()
+    {
         WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
         SettingsDraft.Changed -= OnSettingsDraftChanged;
-        mLifetimeCancellation.Cancel();
         mIdentityCancellation.Cancel();
         CancelFilePreview();
         mIdentityCancellation.Dispose();
-        mLifetimeCancellation.Dispose();
     }
 
     /// <summary>提交状态元数据、能力、文件和稳定历史。</summary>
@@ -345,7 +356,7 @@ public sealed partial class LogKitPageViewModel : ViewModelBase, IDisposable
         var engineChanged = !string.Equals(EngineId, engineId, StringComparison.Ordinal);
         mIdentityCancellation.Cancel();
         mIdentityCancellation.Dispose();
-        mIdentityCancellation = CancellationTokenSource.CreateLinkedTokenSource(mLifetimeCancellation.Token);
+        mIdentityCancellation = CancellationTokenSource.CreateLinkedTokenSource(LifetimeCancellationToken);
         CancelFilePreview();
         if (engineChanged)
         {

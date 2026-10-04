@@ -249,7 +249,7 @@ public sealed partial class LogKitPageViewModel
     /// <summary>判断当前是否具备清空 Runtime 历史的稳定身份和 Application 用例。</summary>
     private bool CanClearHistory()
     {
-        return !mIsDisposed && mClearHistoryAsync != null && !string.IsNullOrWhiteSpace(EngineId);
+        return !IsDisposed && mClearHistoryAsync != null && !string.IsNullOrWhiteSpace(EngineId);
     }
 
     /// <summary>在历史数量变化后刷新清空命令状态。</summary>

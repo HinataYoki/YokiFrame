@@ -7,7 +7,7 @@ using YokiFrame.Workbench.Avalonia.Services;
 namespace YokiFrame.Workbench.Avalonia.ViewModels;
 
 /// <summary>承载 TableKit Luban 配置、控制台、验证预览和生成操作。</summary>
-public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
+public sealed partial class TableKitPageViewModel : KitPageViewModel, IDisposable
 {
     private readonly string mProjectRoot;
     private readonly TableKitApplicationService mService;
@@ -16,6 +16,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     private readonly Func<string, Task>? mCopyTextAsync;
     private readonly IInstallerFolderPicker? mFolderPicker;
     private readonly ITableKitLubanFilePicker? mLubanFilePicker;
+    private readonly Func<string, Task>? mOpenDirectoryAsync;
     private readonly TableKitOptions mDefaultOptions;
     private string mConfigPath = string.Empty;
     private string mLubanExecutablePath = string.Empty;
@@ -37,7 +38,6 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     private bool mGenerateExternalTypeUtil;
     private bool mUseAssemblyDefinition;
     private string mAssemblyName = string.Empty;
-    private string mStatusText = GetString(WaitingValidateKey, "等待验证");
     private string mStatusDetailText = GetString(CheckEnvironmentHintKey, "检查 Luban 环境后即可开始生成。");
     private string mLubanStatusText = "Luban OFF";
     private string mEnvironmentMessage = GetString(EnvironmentNotCheckedKey, "尚未检查当前项目的 Luban 工具路径。");
@@ -71,13 +71,15 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         TableKitApplicationService service,
         Func<string, Task>? copyTextAsync = null,
         IInstallerFolderPicker? folderPicker = null,
-        ITableKitLubanFilePicker? lubanFilePicker = null)
+        ITableKitLubanFilePicker? lubanFilePicker = null,
+        Func<string, Task>? openDirectoryAsync = null)
     {
         mProjectRoot = Path.GetFullPath(string.IsNullOrWhiteSpace(projectRoot) ? Directory.GetCurrentDirectory() : projectRoot);
         mService = service ?? throw new ArgumentNullException(nameof(service));
         mCopyTextAsync = copyTextAsync;
         mFolderPicker = folderPicker;
         mLubanFilePicker = lubanFilePicker;
+        mOpenDirectoryAsync = openDirectoryAsync;
         mDefaultOptions = CreateDefaultOptions();
         TargetOptions = new ObservableCollection<string>(new[] { "client", "server", "all" });
         CodeTargetOptions = new ObservableCollection<string>(new[] { "cs-bin", "cs-simple-json", "cs-dotnet-json", "cs-newtonsoft-json" });
@@ -94,9 +96,10 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         PreviewTables = new ObservableCollection<TableKitPreviewTableViewModel>();
         PreviewTables.CollectionChanged += OnPreviewTablesChanged;
         ApplyOptions(mSettingsService.Load(mProjectRoot, mDefaultOptions));
-        ValidateCommand = new AsyncRelayCommand(ValidateAsync);
-        GenerateCommand = new AsyncRelayCommand(GenerateAsync);
-        RefreshConfigCommand = new RelayCommand(RefreshConfiguration);
+        StatusText = GetString(WaitingValidateKey, "等待验证");
+        ValidateCommand = new AsyncRelayCommand(ValidateAsync, () => !IsBusy);
+        GenerateCommand = new AsyncRelayCommand(GenerateAsync, () => !IsBusy);
+        RefreshConfigCommand = new AsyncRelayCommand(RefreshConfigurationAsync);
         SaveCommand = new RelayCommand(SaveConfiguration);
         ResetCommand = new RelayCommand(ResetConfiguration);
         AddExtraOutputCommand = new RelayCommand(AddExtraOutput);
@@ -113,13 +116,36 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         OpenConfigDirectoryCommand = new AsyncRelayCommand(OpenConfigDirectoryAsync);
         // 订阅全局语言切换；对应解除订阅在 Dispose，由 WorkbenchWindow 关闭流程统一调用。
         WorkbenchI18nService.Instance.CultureChanged += OnCultureChanged;
-        RefreshEnvironment();
+        _ = RefreshEnvironmentAsync();
     }
 
-    /// <summary>解除语言事件订阅，避免窗口关闭后静态服务继续持有页面状态。</summary>
+    /// <summary>取消页面操作并解除语言和集合事件订阅。</summary>
     public void Dispose()
     {
+        DisposePageResources();
+    }
+
+    /// <summary>解除语言和集合事件订阅，避免窗口关闭后静态服务或残留集合继续持有页面状态。</summary>
+    protected override void OnDisposing()
+    {
+        ConsoleEntries.CollectionChanged -= OnConsoleEntriesChanged;
+        PreviewTables.CollectionChanged -= OnPreviewTablesChanged;
         WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
+    }
+
+    /// <summary>忙碌状态变化时同步禁用验证和生成，避免重复启动 Luban 进程。</summary>
+    /// <param name="isBusy">变化后的忙碌状态。</param>
+    protected override void OnIsBusyChanged(bool isBusy)
+    {
+        ValidateCommand.RaiseCanExecuteChanged();
+        GenerateCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>状态变化时刷新由状态、预览和日志组成的控制台摘要。</summary>
+    /// <param name="statusText">变化后的状态文本。</param>
+    protected override void OnStatusTextChanged(string statusText)
+    {
+        OnPropertyChanged(nameof(ConsoleSummaryText));
     }
 
     /// <summary>按当前语言重新投影计算型摘要文本；操作结果状态保持产出时语言。</summary>
@@ -153,9 +179,9 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     public ObservableCollection<TableKitPreviewTableViewModel> PreviewTables { get; }
 
     /// <summary>获取或设置 luban.conf 路径。</summary>
-    public string ConfigPath { get => mConfigPath; set { if (SetProperty(ref mConfigPath, value)) RefreshEnvironment(); } }
+    public string ConfigPath { get => mConfigPath; set { if (SetProperty(ref mConfigPath, value)) _ = RefreshEnvironmentAsync(); } }
     /// <summary>获取或设置 Luban 可执行文件或 DLL 路径。</summary>
-    public string LubanExecutablePath { get => mLubanExecutablePath; set { if (SetProperty(ref mLubanExecutablePath, value)) RefreshEnvironment(); } }
+    public string LubanExecutablePath { get => mLubanExecutablePath; set { if (SetProperty(ref mLubanExecutablePath, value)) _ = RefreshEnvironmentAsync(); } }
     /// <summary>获取自动发现的可选 Luban.Agent CLI 路径。</summary>
     public string LubanAgentExecutablePath
     {
@@ -186,7 +212,7 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         }
     }
     /// <summary>获取或设置 Luban 工作目录。</summary>
-    public string LubanWorkDir { get => mLubanWorkDir; set { if (SetProperty(ref mLubanWorkDir, value)) RefreshEnvironment(); } }
+    public string LubanWorkDir { get => mLubanWorkDir; set { if (SetProperty(ref mLubanWorkDir, value)) _ = RefreshEnvironmentAsync(); } }
     /// <summary>获取或设置 Luban target 名称。</summary>
     public string TargetName { get => mTargetName; set => SetProperty(ref mTargetName, value); }
     /// <summary>获取或设置 Luban code target。</summary>
@@ -260,15 +286,6 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
     public bool UseAssemblyDefinition { get => mUseAssemblyDefinition; set => SetProperty(ref mUseAssemblyDefinition, value); }
     /// <summary>获取或设置 Unity asmdef 或 Godot csproj 使用的程序集名称。</summary>
     public string AssemblyName { get => mAssemblyName; set => SetProperty(ref mAssemblyName, value); }
-    /// <summary>获取最近操作状态。</summary>
-    public string StatusText
-    {
-        get => mStatusText;
-        private set
-        {
-            if (SetProperty(ref mStatusText, value)) OnPropertyChanged(nameof(ConsoleSummaryText));
-        }
-    }
     /// <summary>获取最近操作的补充说明。</summary>
     public string StatusDetailText { get => mStatusDetailText; private set => SetProperty(ref mStatusDetailText, value); }
     /// <summary>获取 Luban ON/OFF 状态文本。</summary>
@@ -397,41 +414,6 @@ public sealed partial class TableKitPageViewModel : ViewModelBase, IDisposable
         : mLoaderSummary;
     /// <summary>获取当前可选 Luban AI 路径的校验摘要。</summary>
     public string OptionalLubanToolsSummary => CreateOptionalLubanToolsSummary();
-
-    /// <summary>读取 Luban 配置并显示临时 JSON 预览。</summary>
-    public AsyncRelayCommand ValidateCommand { get; }
-    /// <summary>执行 Luban 正式生成。</summary>
-    public AsyncRelayCommand GenerateCommand { get; }
-    /// <summary>重新读取 target 列表和环境状态。</summary>
-    public ICommand RefreshConfigCommand { get; }
-    /// <summary>保存 Workbench-only 配置。</summary>
-    public ICommand SaveCommand { get; }
-    /// <summary>还原当前项目默认配置。</summary>
-    public ICommand ResetCommand { get; }
-    /// <summary>添加额外导出目标。</summary>
-    public ICommand AddExtraOutputCommand { get; }
-    /// <summary>复制控制台日志。</summary>
-    public AsyncRelayCommand CopyConsoleCommand { get; }
-    /// <summary>清空控制台日志。</summary>
-    public ICommand ClearConsoleCommand { get; }
-    /// <summary>选择 Luban 工作目录。</summary>
-    public AsyncRelayCommand BrowseLubanWorkDirCommand { get; }
-    /// <summary>选择实际 Luban.dll 文件。</summary>
-    public AsyncRelayCommand BrowseLubanExecutableCommand { get; }
-    /// <summary>选择可选 Luban.Agent 文件。</summary>
-    public AsyncRelayCommand BrowseLubanAgentCommand { get; }
-    /// <summary>选择可选 Luban.Mcp 文件。</summary>
-    public AsyncRelayCommand BrowseLubanMcpCommand { get; }
-    /// <summary>选择可选 Luban Skill 目录。</summary>
-    public AsyncRelayCommand BrowseLubanSkillsCommand { get; }
-    /// <summary>选择数据输出目录。</summary>
-    public AsyncRelayCommand BrowseOutputDataCommand { get; }
-    /// <summary>选择代码输出目录。</summary>
-    public AsyncRelayCommand BrowseOutputCodeCommand { get; }
-    /// <summary>选择编辑器数据目录。</summary>
-    public AsyncRelayCommand BrowseEditorDataCommand { get; }
-    /// <summary>在系统文件管理器中打开配置表目录。</summary>
-    public AsyncRelayCommand OpenConfigDirectoryCommand { get; }
 
     /// <summary>等待首次验证占位资源 key。</summary>
     private const string WaitingValidateKey = "String.TableKit.WaitingValidate";

@@ -90,6 +90,11 @@ public sealed partial class SaveKitPageViewModel
     /// <param name="state">当前已由 Application 验证和解析的 SaveKit 状态。</param>
     public void ApplyPeriodicState(WorkbenchSaveKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         if (state == null)
         {
             ResetRuntimeState();

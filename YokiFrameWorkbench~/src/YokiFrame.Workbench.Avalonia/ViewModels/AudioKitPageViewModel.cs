@@ -38,6 +38,7 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
     private readonly Func<string, AudioIndexSettings>? mLoadIndexSettings;
     private readonly Func<string, AudioIndexSettings, CancellationToken, Task>? mSaveIndexSettingsAsync;
     private readonly CancellationTokenSource mLifetimeCancellation = new();
+    private WorkbenchAudioKitState? mPendingPeriodicState;
     private AudioBusChannelViewModel? mSelectedBusChannel;
     private string mEngineId = string.Empty;
     private string mSessionId = string.Empty;
@@ -189,6 +190,13 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>应用低频 dashboard 状态并拒绝同宿主旧版本。</summary>
     public void ApplyPeriodicState(WorkbenchAudioKitState? state)
     {
+        if (!IsPageActive)
+        {
+            CachePeriodicState(state, ref mPendingPeriodicState, ApplyPeriodicState);
+            return;
+        }
+
+        mPendingPeriodicState = null;
         if (state == null)
         {
             ResetRuntimeState();
@@ -208,6 +216,16 @@ public sealed partial class AudioKitPageViewModel : ViewModelBase, IDisposable
         }
 
         ApplyState(state);
+    }
+
+    /// <summary>页面重新可见时重放隐藏期间缓存的最后一帧。</summary>
+    /// <param name="isActive">变化后的激活状态。</param>
+    protected override void OnPageActiveChanged(bool isActive)
+    {
+        if (isActive)
+        {
+            ReplayPeriodicState(ref mPendingPeriodicState, ApplyPeriodicState);
+        }
     }
 
     /// <summary>取消页面仍在执行的索引任务。</summary>

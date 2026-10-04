@@ -16,15 +16,29 @@ public sealed class FastChannelStatusService
     private const string FALLBACK_SOURCE = "fallback";
     private readonly IYokiFrameClient mClient;
     private readonly EngineSelectionService mEngineSelectionService;
+    private readonly Func<IYokiFrameClient, EngineSelectionService> mEngineSelectionFactory;
 
     /// <summary>
     /// 使用统一 Client 创建 FastChannel 状态用例，避免入口层重复解析 registry 和 fallback。
     /// </summary>
     /// <param name="client">统一 YokiFrame Client。</param>
     public FastChannelStatusService(IYokiFrameClient client)
+        : this(client, current => new EngineSelectionService(current))
     {
-        mClient = client;
-        mEngineSelectionService = new EngineSelectionService(client);
+    }
+
+    /// <summary>
+    /// 使用可替换 engine 选择工厂创建 FastChannel 状态用例。
+    /// </summary>
+    /// <param name="client">统一 YokiFrame Client。</param>
+    /// <param name="engineSelectionFactory">根据 Client 创建 engine 选择服务的工厂。</param>
+    public FastChannelStatusService(
+        IYokiFrameClient client,
+        Func<IYokiFrameClient, EngineSelectionService> engineSelectionFactory)
+    {
+        mClient = client ?? throw new ArgumentNullException(nameof(client));
+        mEngineSelectionFactory = engineSelectionFactory ?? throw new ArgumentNullException(nameof(engineSelectionFactory));
+        mEngineSelectionService = mEngineSelectionFactory(mClient);
     }
 
     /// <summary>

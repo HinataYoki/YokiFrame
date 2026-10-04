@@ -155,7 +155,7 @@ public sealed partial class LogKitPageViewModel
     /// <summary>判断当前是否具备平台回调且日志目录已经存在。</summary>
     private bool CanOpenDirectory()
     {
-        return !mIsDisposed
+        return !IsDisposed
             && mOpenDirectoryAsync != null
             && HasLogDirectory;
     }
@@ -164,7 +164,7 @@ public sealed partial class LogKitPageViewModel
     private void QueueSelectedFilePreview()
     {
         RefreshFileCommand.RaiseCanExecuteChanged();
-        if (mIsPageActive && IsFileSource && CanRefreshFile())
+        if (IsPageActive && IsFileSource && CanRefreshFile())
         {
             _ = RefreshSelectedFileAsync();
         }
@@ -266,8 +266,8 @@ public sealed partial class LogKitPageViewModel
     /// <summary>判断当前文件来源是否允许调用 Application 按需读取。</summary>
     private bool CanRefreshFile()
     {
-        return !mIsDisposed
-            && mIsPageActive
+        return !IsDisposed
+            && IsPageActive
             && IsFileSource
             && SupportsFilePreview
             && mReadFileAsync != null

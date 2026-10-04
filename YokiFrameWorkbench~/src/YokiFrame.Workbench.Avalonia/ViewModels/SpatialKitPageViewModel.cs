@@ -177,6 +177,11 @@ public sealed class SpatialKitPageViewModel : ViewModelBase, IDisposable
     /// <summary>应用 dashboard 周期状态并拒绝旧宿主版本。</summary>
     public void ApplyPeriodicState(WorkbenchSpatialKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         if (state == null)
         {
             ResetState();

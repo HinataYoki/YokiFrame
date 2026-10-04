@@ -35,7 +35,7 @@ public sealed partial class LogKitPageViewModel
     /// <summary>页面激活后按项目根读取一次小型配置，不依赖 Runtime 在线，也不参与周期 telemetry。</summary>
     private void EnsureProjectSettingsLoaded()
     {
-        if (mIsDisposed
+        if (IsDisposed
             || mProjectSettingsLoaded
             || mLoadProjectSettings == null)
         {
@@ -107,7 +107,7 @@ public sealed partial class LogKitPageViewModel
         }
 
         var context = CaptureSettingsSaveContext();
-        var token = mLifetimeCancellation.Token;
+        var token = LifetimeCancellationToken;
         IsSavingSettings = true;
         SetSettingsStatus(GetString("String.LogKit.SavingConfig", "正在保存项目配置..."));
         try
@@ -226,7 +226,7 @@ public sealed partial class LogKitPageViewModel
     /// <summary>判断当前草稿是否允许写入项目。</summary>
     private bool CanSaveSettings()
     {
-        return !mIsDisposed
+        return !IsDisposed
             && !IsSavingSettings
             && mSaveSettingsAsync != null
             && ProjectCanPersist

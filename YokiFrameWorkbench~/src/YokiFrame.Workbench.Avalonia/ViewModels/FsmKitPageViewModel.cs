@@ -144,6 +144,11 @@ public sealed partial class FsmKitPageViewModel : ViewModelBase, IDisposable
     /// <param name="state">Application 已解析的 FsmKit 状态。</param>
     public void ApplyPeriodicState(WorkbenchFsmKitState? state)
     {
+        if (!IsPageActive)
+        {
+            return;
+        }
+
         InvalidateQueryForHostChange(state);
         if (state == null)
         {

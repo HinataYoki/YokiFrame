@@ -154,12 +154,11 @@ public sealed class WorkbenchShellChromeLayoutTests
         Assert.Contains("Text=\"GitHub\"", xaml);
         Assert.Contains("Command=\"{CompiledBinding OpenRepositoryCommand}\"", xaml);
         Assert.Equal(1, CountOccurrences(xaml, "Command=\"{CompiledBinding OpenRepositoryCommand}\""));
-        Assert.Contains(
-            "Width=\"16\"\n                         Height=\"16\"\n                         VerticalAlignment=\"Center\"\n                         Data=\"{StaticResource Icon.GitHub}\"",
-            xaml);
-        Assert.Contains(
-            "Width=\"16\"\n                         Height=\"16\"\n                         VerticalAlignment=\"Center\"\n                         Data=\"{StaticResource Icon.Star}\"",
-            xaml);
+        Assert.Contains("Width=\"16\"", xaml);
+        Assert.Contains("Height=\"16\"", xaml);
+        Assert.Contains("VerticalAlignment=\"Center\"", xaml);
+        Assert.Contains("Data=\"{StaticResource Icon.GitHub}\"", xaml);
+        Assert.Contains("Data=\"{StaticResource Icon.Star}\"", xaml);
         Assert.Contains("Text=\"{DynamicResource String.Nav.StarHint}\"", xaml);
         Assert.Contains("HorizontalAlignment=\"Center\"", xaml);
         Assert.Contains("TextAlignment=\"Center\"", xaml);

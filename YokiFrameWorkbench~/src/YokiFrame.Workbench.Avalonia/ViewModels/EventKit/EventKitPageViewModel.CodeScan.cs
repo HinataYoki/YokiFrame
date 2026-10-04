@@ -11,7 +11,6 @@ public sealed partial class EventKitPageViewModel : IDisposable
     private string mProjectRoot = string.Empty;
     private string mScanStatusText = WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingPage");
     private bool mExcludeEditor = true;
-    private bool mIsPageActive;
     private bool mIsScanning;
     private long mScanGeneration;
     private int mScannedFileCount;
@@ -25,7 +24,7 @@ public sealed partial class EventKitPageViewModel : IDisposable
         {
             if (SetProperty(ref mExcludeEditor, value))
             {
-                if (mIsPageActive)
+                if (IsPageActive)
                 {
                     _ = ScanCodeAsync();
                 }
@@ -70,21 +69,23 @@ public sealed partial class EventKitPageViewModel : IDisposable
             ? WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingProject")
             : WorkbenchI18nService.Instance.GetString("String.EventKit.Scan.WaitingPage");
         NotifyScanProperties();
-        if (mIsPageActive)
+        if (IsPageActive)
         {
             _ = ScanCodeAsync();
         }
     }
 
-    /// <summary>同步页面激活状态；每次重新进入自动扫描，周期刷新不会重复启动扫描。</summary>
-    internal void SetPageActive(bool isActive)
+    /// <summary>保留既有内部激活入口，并转发到统一页面激活门控。</summary>
+    /// <param name="isActive">当前 EventKit 页面是否可见。</param>
+    internal new void SetPageActive(bool isActive)
     {
-        if (mIsPageActive == isActive)
-        {
-            return;
-        }
+        base.SetPageActive(isActive);
+    }
 
-        mIsPageActive = isActive;
+    /// <summary>同步页面激活状态；每次重新进入自动扫描，周期刷新不会重复启动扫描。</summary>
+    /// <param name="isActive">当前 EventKit 页面是否可见。</param>
+    protected override void OnPageActiveChanged(bool isActive)
+    {
         if (isActive)
         {
             _ = ScanCodeAsync();

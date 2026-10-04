@@ -10,7 +10,7 @@ public sealed partial class SaveKitPageViewModel
     /// <param name="engineId">新的 engine 标识。</param>
     public void SetEngine(string engineId)
     {
-        if (mIsDisposed || string.Equals(EngineId, engineId, StringComparison.Ordinal))
+        if (IsDisposed || string.Equals(EngineId, engineId, StringComparison.Ordinal))
         {
             return;
         }
@@ -21,18 +21,16 @@ public sealed partial class SaveKitPageViewModel
         _ = RefreshAsync();
     }
 
-    /// <summary>释放页面异步资源。</summary>
+    /// <summary>取消页面操作并解除语言订阅。</summary>
     public void Dispose()
     {
-        if (mIsDisposed)
-        {
-            return;
-        }
+        DisposePageResources();
+    }
 
-        mIsDisposed = true;
+    /// <summary>释放页面语言订阅；生命周期取消由共享基类统一处理。</summary>
+    protected override void OnDisposing()
+    {
         WorkbenchI18nService.Instance.CultureChanged -= OnCultureChanged;
-        mLifetimeCancellation.Cancel();
-        mLifetimeCancellation.Dispose();
     }
 
     /// <summary>重新加载磁盘配置和目录元信息。</summary>
@@ -43,14 +41,12 @@ public sealed partial class SaveKitPageViewModel
             return;
         }
 
-        IsBusy = true;
-        ErrorText = string.Empty;
-        OnPropertyChanged(nameof(HasError));
+        BeginOperation();
         try
         {
             WorkbenchSaveKitProjectSettings settings = await Task.Run(
                 () => mService.Load(EngineId),
-                mLifetimeCancellation.Token);
+                LifetimeCancellationToken);
             ApplySettings(settings, true);
             // 配置含宿主用户目录变量时，Load 不会扫描；刷新时向已连接 Editor 取真实根再扫一次。
             if (settings.IsSupported && ContainsRuntimeStorageToken(settings.StoragePath))
@@ -58,15 +54,16 @@ public sealed partial class SaveKitPageViewModel
                 await ScanRuntimeFilesAsync(settings.FileExtension);
             }
         }
-        catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (LifetimeCancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
+            FailOperation(
+                exception,
+                GetString("String.SaveKit.LoadFailedShort", "配置读取失败"));
             ErrorText = string.Format(
                 GetString("String.SaveKit.LoadFailedTemplate", "读取 SaveKit 配置失败: {0}"), exception.Message);
-            OnPropertyChanged(nameof(HasError));
-            SetStatus(GetString("String.SaveKit.LoadFailedShort", "配置读取失败"));
         }
         finally
         {
@@ -82,18 +79,14 @@ public sealed partial class SaveKitPageViewModel
             return;
         }
 
-        IsBusy = true;
-        ErrorText = string.Empty;
-        OnPropertyChanged(nameof(HasError));
-        SetStatus(GetString("String.SaveKit.Saving", "正在保存 SaveKit 配置..."));
+        BeginOperation(GetString("String.SaveKit.Saving", "正在保存 SaveKit 配置..."));
         try
         {
-            var result = await mService.SaveAsync(EngineId, StoragePath, FileExtension, Fingerprint, mLifetimeCancellation.Token);
+            var result = await mService.SaveAsync(EngineId, StoragePath, FileExtension, Fingerprint, LifetimeCancellationToken);
             if (result.Conflict)
             {
                 ApplySettings(result.Settings, false);
                 ErrorText = result.ErrorMessage;
-                OnPropertyChanged(nameof(HasError));
                 SetStatus(GetString("String.SaveKit.SaveConflict", "保存冲突，草稿已保留"));
             }
             else if (result.Saved)
@@ -104,17 +97,16 @@ public sealed partial class SaveKitPageViewModel
             else
             {
                 ErrorText = result.ErrorMessage;
-                OnPropertyChanged(nameof(HasError));
             }
         }
-        catch (OperationCanceledException) when (mLifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (LifetimeCancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
+            FailOperation(exception, GetString("String.SaveKit.SaveFailedShort", "保存失败"));
             ErrorText = string.Format(
                 GetString("String.SaveKit.SaveFailedTemplate", "保存 SaveKit 配置失败: {0}"), exception.Message);
-            OnPropertyChanged(nameof(HasError));
         }
         finally
         {
@@ -132,7 +124,7 @@ public sealed partial class SaveKitPageViewModel
 
         string? selected = await mFolderPicker.PickFolderAsync(
             GetString("String.SaveKit.PickFolderTitle", "选择 SaveKit 存档目录"),
-            mLifetimeCancellation.Token, GetFolderPickerStartPath());
+            LifetimeCancellationToken, GetFolderPickerStartPath());
         if (!string.IsNullOrWhiteSpace(selected))
         {
             StoragePath = selected;
@@ -195,7 +187,7 @@ public sealed partial class SaveKitPageViewModel
     /// <summary>判断刷新命令是否可执行。</summary>
     private bool CanRefresh()
     {
-        return !mIsDisposed && !IsBusy && mService != null && !string.IsNullOrWhiteSpace(EngineId);
+        return !IsDisposed && !IsBusy && mService != null && !string.IsNullOrWhiteSpace(EngineId);
     }
 
     /// <summary>判断保存命令是否可执行。</summary>
@@ -207,13 +199,13 @@ public sealed partial class SaveKitPageViewModel
     /// <summary>判断目录选择命令是否可执行。</summary>
     private bool CanBrowseFolder()
     {
-        return !mIsDisposed && !IsBusy && mFolderPicker != null;
+        return !IsDisposed && !IsBusy && mFolderPicker != null;
     }
 
     /// <summary>判断当前是否可以打开已经解析且存在的存档目录。</summary>
     private bool CanOpenDirectory()
     {
-        return !mIsDisposed
+        return !IsDisposed
                && !IsBusy
                && mOpenDirectoryAsync != null
                && IsSupported;
@@ -240,7 +232,7 @@ public sealed partial class SaveKitPageViewModel
     /// <summary>判断恢复默认命令是否可执行。</summary>
     private bool CanReset()
     {
-        return !mIsDisposed && mBaseline != null;
+        return !IsDisposed && mBaseline != null;
     }
 
     /// <summary>
@@ -263,7 +255,7 @@ public sealed partial class SaveKitPageViewModel
 
         IReadOnlyList<WorkbenchSaveKitFile> files = await Task.Run(
             () => mService.ScanResolvedFiles(directory, fileExtension),
-            mLifetimeCancellation.Token);
+            LifetimeCancellationToken);
         ResolvedStoragePath = directory;
         DirectoryExists = Directory.Exists(directory);
         ReplaceScannedFiles(files);
@@ -316,7 +308,7 @@ public sealed partial class SaveKitPageViewModel
             return string.Empty;
         }
 
-        string? runtimeRoot = await mResolveRuntimeRootAsync(EngineId, mLifetimeCancellation.Token);
+        string? runtimeRoot = await mResolveRuntimeRootAsync(EngineId, LifetimeCancellationToken);
         return mService?.ResolveRuntimeStoragePath(StoragePath, runtimeRoot) ?? string.Empty;
     }
 }
