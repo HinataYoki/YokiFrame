@@ -1,4 +1,4 @@
-#if (GODOT && TOOLS) || YOKIFRAME_TOOLING
+#if UNITY_EDITOR || (GODOT && TOOLS)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,9 +12,6 @@ namespace YokiFrame.RuntimeCache
 /// </summary>
 public static class RuntimeManifestIntegrityValidator
 {
-    private const int MANIFEST_VERSION = 1;
-    private const int LEGACY_LAYOUT_VERSION = 1;
-    private const int DUAL_ENTRY_LAYOUT_VERSION = 2;
     private const long MAX_MANIFEST_BYTES = 16L * 1024L * 1024L;
 
     /// <summary>
@@ -231,9 +228,9 @@ public static class RuntimeManifestIntegrityValidator
         error = string.Empty;
         if (root.ValueKind != JsonValueKind.Object
             || !RuntimeManifestJson.TryReadInt32(root, "manifestVersion", out var manifestVersion)
-            || manifestVersion != MANIFEST_VERSION
+            || manifestVersion != RuntimeManifestContract.MANIFEST_VERSION
             || !RuntimeManifestJson.TryReadInt32(root, "layoutVersion", out layoutVersion)
-            || layoutVersion != LEGACY_LAYOUT_VERSION && layoutVersion != DUAL_ENTRY_LAYOUT_VERSION
+            || layoutVersion != RuntimeManifestContract.LEGACY_LAYOUT_VERSION && layoutVersion != RuntimeManifestContract.DUAL_ENTRY_LAYOUT_VERSION
             || !RuntimeManifestJson.TryReadString(root, "runtimeRoot", out var runtimeRoot)
             || !string.Equals(runtimeRoot, ".", StringComparison.Ordinal))
         {
@@ -362,7 +359,7 @@ public static class RuntimeManifestIntegrityValidator
         string cliPath = string.Empty;
         if (!TryResolveListedEntry(runtimeRoot, guiEntry, files, out var guiPath)
             || requireCli && string.IsNullOrWhiteSpace(cliEntry)
-            || !string.IsNullOrWhiteSpace(cliEntry) && layoutVersion != DUAL_ENTRY_LAYOUT_VERSION
+            || !string.IsNullOrWhiteSpace(cliEntry) && layoutVersion != RuntimeManifestContract.DUAL_ENTRY_LAYOUT_VERSION
             || !string.IsNullOrWhiteSpace(cliEntry)
                 && !TryResolveListedEntry(runtimeRoot, cliEntry, files, out cliPath))
         {

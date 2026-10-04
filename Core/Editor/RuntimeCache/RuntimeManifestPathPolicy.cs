@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || (GODOT && TOOLS)
 using System;
 using System.IO;
 using System.Linq;
@@ -12,7 +12,6 @@ namespace YokiFrame.RuntimeCache
 /// </summary>
 public static class RuntimeManifestPathPolicy
 {
-    private const string RUNTIME_STATE_DIRECTORY_NAME = ".yokiframe";
 
     /// <summary>获取与当前宿主文件系统一致的路径集合比较器。</summary>
     public static StringComparer PathComparer { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
@@ -56,7 +55,7 @@ public static class RuntimeManifestPathPolicy
     public static bool IsRuntimePayloadFile(string platformRoot, string path)
     {
         return !string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase)
-            && !ContainsRelativeDirectory(platformRoot, path, RUNTIME_STATE_DIRECTORY_NAME);
+            && !ContainsRelativeDirectory(platformRoot, path, RuntimeManifestContract.RUNTIME_STATE_DIRECTORY_NAME);
     }
 
     /// <summary>
@@ -68,7 +67,7 @@ public static class RuntimeManifestPathPolicy
     {
         return string.Equals(
             Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
-            RUNTIME_STATE_DIRECTORY_NAME,
+            RuntimeManifestContract.RUNTIME_STATE_DIRECTORY_NAME,
             StringComparison.OrdinalIgnoreCase);
     }
 
@@ -194,10 +193,6 @@ public static class RuntimeManifestPathPolicy
         return path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
     }
 
-    /// <summary>
-    /// 获取当前文件系统的路径比较规则。
-    /// </summary>
-    /// <returns>Windows 忽略大小写，其它宿主区分大小写。</returns>
     /// <summary>
     /// 判断字符是否为 ASCII 字母，避免依赖 Unity 当前 API 面没有的 char.IsAsciiLetter。
     /// </summary>

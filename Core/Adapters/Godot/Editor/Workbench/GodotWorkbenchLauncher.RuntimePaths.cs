@@ -7,7 +7,6 @@ namespace YokiFrame
 {
     internal static partial class GodotWorkbenchLauncher
     {
-        private const string RUNTIME_STATE_DIRECTORY_NAME = ".yokiframe";
 
         private static readonly StringComparer sRuntimePathComparer = Path.DirectorySeparatorChar == '\\'
             ? StringComparer.OrdinalIgnoreCase
@@ -250,7 +249,7 @@ namespace YokiFrame
         private static bool IsRuntimePayloadFile(string platformRoot, string path)
         {
             return !string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase)
-                && !ContainsRelativeDirectory(platformRoot, path, RUNTIME_STATE_DIRECTORY_NAME);
+                && !ContainsRelativeDirectory(platformRoot, path, RuntimeCache.RuntimeManifestContract.RUNTIME_STATE_DIRECTORY_NAME);
         }
 
         /// <summary>
@@ -262,7 +261,7 @@ namespace YokiFrame
         {
             return string.Equals(
                 Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
-                RUNTIME_STATE_DIRECTORY_NAME,
+                RuntimeCache.RuntimeManifestContract.RUNTIME_STATE_DIRECTORY_NAME,
                 StringComparison.OrdinalIgnoreCase);
         }
 

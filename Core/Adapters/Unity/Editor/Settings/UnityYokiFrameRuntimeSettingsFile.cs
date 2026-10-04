@@ -14,7 +14,7 @@ namespace YokiFrame
     public static class UnityYokiFrameRuntimeSettingsFile
     {
         /// <summary>Unity 项目内运行时配置的稳定 Asset 路径。</summary>
-        public const string ASSET_PATH = "Assets/Settings/Resources/YokiFrame/runtime-settings.json";
+        public const string ASSET_PATH = UnityYokiFrameRuntimeSettingsPaths.ASSET_PATH;
 
         /// <summary>
         /// 尝试读取当前项目 Runtime Settings 原文；文件不存在时返回 false，不自动创建默认文件。

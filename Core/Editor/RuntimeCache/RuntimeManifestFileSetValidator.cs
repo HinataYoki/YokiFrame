@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || (GODOT && TOOLS)
 using System;
 using System.Collections.Generic;
 using System.IO;

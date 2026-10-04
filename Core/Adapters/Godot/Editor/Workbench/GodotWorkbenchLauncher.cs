@@ -16,8 +16,6 @@ namespace YokiFrame
         private const string WINDOWS_MANAGED_RUNTIME_ID = "win-x64";
         private const string WINDOWS_NATIVE_AOT_RUNTIME_ID = "win-x64-aot";
 
-        private const int RUNTIME_CACHE_LAYOUT_VERSION = 1;
-
         private static readonly string[] sPackageRelativeSegments =
         {
             "addons",
@@ -127,7 +125,7 @@ namespace YokiFrame
 
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(pointerPath));
             var root = document.RootElement;
-            if (ReadInt32(root, "layoutVersion") != RUNTIME_CACHE_LAYOUT_VERSION)
+            if (ReadInt32(root, "layoutVersion") != RuntimeCache.RuntimeManifestContract.RUNTIME_CACHE_LAYOUT_VERSION)
             {
                 throw new InvalidDataException("Workbench Runtime cache pointer layout is unsupported.");
             }

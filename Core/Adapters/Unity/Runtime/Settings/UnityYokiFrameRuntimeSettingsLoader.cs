@@ -10,7 +10,7 @@ namespace YokiFrame.Unity
     internal static class UnityYokiFrameRuntimeSettingsLoader
     {
         internal const int FORMAT_VERSION = 1;
-        internal const string RESOURCE_PATH = "YokiFrame/runtime-settings";
+        internal const string RESOURCE_PATH = UnityYokiFrameRuntimeSettingsPaths.RESOURCES_PATH;
 
         /// <summary>
         /// 加载当前项目的运行时配置；文件不存在时返回空 Store，使各 Kit 使用代码默认值。

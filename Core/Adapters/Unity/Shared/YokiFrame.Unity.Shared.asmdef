@@ -1,11 +1,7 @@
 {
-    "name": "YokiFrame.Unity.Runtime",
+    "name": "YokiFrame.Unity.Shared",
     "rootNamespace": "YokiFrame.Unity",
-    "references": [
-        "GUID:224151c835b786a4f8efadaa1799380d",
-        "YokiFrame.Unity.Shared",
-        "UniTask"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

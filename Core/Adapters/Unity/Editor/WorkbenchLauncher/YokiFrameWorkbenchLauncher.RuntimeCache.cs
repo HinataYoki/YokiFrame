@@ -16,7 +16,6 @@ namespace YokiFrame
     /// </summary>
     internal static partial class YokiFrameWorkbenchLauncher
     {
-        private const int RUNTIME_CACHE_LAYOUT_VERSION = 1;
         private const string PACKAGING_PROJECT_RELATIVE_PATH =
             "YokiFrameWorkbench~/src/YokiFrame.Packaging/YokiFrame.Packaging.csproj";
         private const string RUNTIME_BOOTSTRAP_PROGRESS_TITLE = "YokiFrame Workbench";
@@ -73,7 +72,7 @@ namespace YokiFrame
 
             var pointer = JsonUtility.FromJson<YokiFrameWorkbenchRuntimePointer>(File.ReadAllText(pointerPath));
             if (pointer == null
-                || pointer.layoutVersion != RUNTIME_CACHE_LAYOUT_VERSION
+                || pointer.layoutVersion != RuntimeCache.RuntimeManifestContract.RUNTIME_CACHE_LAYOUT_VERSION
                 || string.IsNullOrWhiteSpace(pointer.sourceFingerprint))
             {
                 return string.Empty;
