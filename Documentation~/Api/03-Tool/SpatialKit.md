@@ -2,7 +2,7 @@
 
 ## 适用场景
 
-SpatialKit 是纯 C# 空间索引 Tool Kit，用于维护带稳定 Id 和位置的实体，并快速执行半径、包围盒、最近邻和批量空间查询。它提供三种数据结构：无固定边界的 HashGrid、固定二维边界的 Quadtree，以及固定三维边界的 Octree。
+SpatialKit 是纯 C# 空间索引 Tool Kit，用于维护带稳定 Id 和位置的实体，并快速执行半径、包围盒、最近邻和批量空间查询。它提供三种数据结构：无固定边界的 `SpatialHashGrid<T>`、固定二维边界的 `Quadtree<T>`，以及固定三维边界的 `Octree<T>`。诊断字符串里的 `HashGrid` 不是类型名。
 
 适合以下场景：
 

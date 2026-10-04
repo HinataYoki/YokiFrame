@@ -6,13 +6,13 @@
 
 | 要做的事 | 怎么做 | 主页面 |
 |---|---|---|
-| 加载资源 | 第一次资源调用前注入 Provider，之后使用返回的 handle，并由 owner 释放 | `Api/02-Core/ResKit.md` |
+| 加载资源 | 引擎默认资源直接 `Load` 或 `LoadAsset`。只有自定义或 YooAsset 来源才在第一次调用前 `SetProvider`。handle 由 owner 释放 | `Api/02-Core/ResKit.md` |
 | 切换场景 | 用 SceneKit 编排加载、切换和卸载 | `Api/03-Tool/SceneKit.md` |
 | 切换状态 | 先 `Add` 目标并启动状态机，目标 `Condition()` 为 true 后再 `Change`。业务在宿主生命周期里 Tick | `Api/02-Core/FsmKit.md` |
 | 复用对象 | 从一个池借出，还给同一个池。池的 owner 调用 `Dispose` | `Api/02-Core/PoolKit.md` |
-| 编排一段流程 | 在宿主线程上 Start、Tick、暂停和恢复。其它线程结束流程时调用 `Cancel()` | `Api/03-Tool/ActionKit.md` |
+| 编排一段流程 | 宿主线程上 `Start`，时间由宿主 FrameLoop 推进。暂停、恢复和 `Cancel()` 也从业务 owner 调用 | `Api/03-Tool/ActionKit.md` |
 | 订阅事件 | 保存 `Register` 返回的 link，owner 停用时注销 | `Api/02-Core/EventKit.md` |
-| 读写存档 | 玩家进度用 `SaveTarget.Slot(n)`，全局设置用 `SaveTarget.Global`。区分空档和损坏时用 `TryLoad` | `Api/03-Tool/SaveKit.md` |
+| 读写存档 | 玩家进度用 `SaveTarget.Slot(n)`，全局设置用 `SaveTarget.Global("settings")`，key 必填。区分空档和损坏时用 `TryLoad` | `Api/03-Tool/SaveKit.md` |
 | 播放音频 | 保存完整的 `AudioVoiceHandle`。自定义 Bus 先注册再播放 | `Api/03-Tool/AudioKit.md` |
 | 打开 Unity 面板 | 每种 Panel 类型保留一个实例。定制根节点时做 Prefab Variant，并在第一次打开前调用 `UIKit.SetRootPrefab` | `Api/03-Tool/UIKit.md` |
 

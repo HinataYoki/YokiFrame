@@ -99,7 +99,7 @@ NaN、Infinity、负 pitch 和未知枚举值会抛参数异常；音量、时�
 
 实现自定义后端时，实现 `IAudioBackend` 的播放、停止、暂停、预加载和释放能力，并通过 `AudioBackendCapabilities` 声明实际支持的功能。后端不支持的选项应返回失败或使用后端默认行为，不要在业务层假设所有宿主能力都存在。
 
-`IAudioResourceLoader` 提供 `LoaderName`、`Load<T>`、`LoadAsync<T>` 和 `Release(object)`。默认 `ResKitAudioResourceLoader` 共享 ResKit；`DelegateAudioResourceLoader` 适合项目接入自有同步/异步资源函数。AudioKit 不再静默回退 Unity `Resources.Load`、Godot `ResourceLoader.Load` 或拼接 `Audio/{id}`。
+`IAudioResourceLoader` 提供 `LoaderName`、`Load<T>`、`LoadAsync<T>(string path, CancellationToken token)` 和 `Release(object)`。`LoadAsync` 的 `token` 没有默认值。默认 `ResKitAudioResourceLoader` 共享 ResKit；`DelegateAudioResourceLoader` 适合项目接入自有同步/异步资源函数。AudioKit 不再静默回退 Unity `Resources.Load`、Godot `ResourceLoader.Load` 或拼接 `Audio/{id}`。
 
 ## 生命周期与错误边界
 

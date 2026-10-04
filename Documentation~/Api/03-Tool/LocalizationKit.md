@@ -315,7 +315,7 @@ TableLocalizationProvider(
 
 其余 API 与 `ILocalizationProvider` 一致：`GetSupportedLanguages`、`TryGetText`、`TryGetPluralText`、`GetLanguageInfo`、`PreloadLanguage`、`UnloadLanguage`、`IsLanguageLoaded`。初始支持语言均标记为已加载。
 
-使用 Luban 或 TableKit 时，把生成表的查询委托传给 `TableKitLocalizationProvider` 即可。它继承 `TableLocalizationProvider`，只提供稳定构造入口；生成的表类型由项目自己维护，不需要让 LocalizationKit 直接依赖 Luban。
+使用 Luban 或 TableKit 时，把生成表的查询委托传给 `TableKitLocalizationProvider` 构造函数。它不会自动发现生成表，也不能直接传入表管理器实例。它继承 `TableLocalizationProvider`，只提供稳定构造入口；生成的表类型由项目自己维护，不需要让 LocalizationKit 直接依赖 Luban。
 
 ## 生命周期与错误边界
 
@@ -351,7 +351,7 @@ string tagged = formatter.ProcessTags("A<b:ok>C");
 | `string Format(string template, IReadOnlyDictionary<string, object> namedArgs)` | 处理 `{name}`、`{count:F1}` 等命名占位符 |
 | `string ProcessTags(string text)` | 处理 `<tag:argument>` 标签 |
 
-索引和命名格式化支持 `{{`/`}}` 转义；参数缺失或占位符无法解析时保留原文。带格式说明的值使用 `CultureInfo.CurrentCulture`。未知标签保持原标签文本；没有闭合 `>` 的文本保持原文。标签回调在内部锁释放后执行，不应依赖 Formatter 的锁状态。
+索引和命名格式化支持 `{{`/`}}` 转义；参数缺失或占位符无法解析时保留原文。带格式说明的值默认使用 `CultureInfo.InvariantCulture`，需要当前区域时再设置 `formatter.Culture`。未知标签保持原标签文本；没有闭合 `>` 的文本保持原文。标签回调在内部锁释放后执行，不应依赖 Formatter 的锁状态。
 
 ### `PluralRuleFactory`
 

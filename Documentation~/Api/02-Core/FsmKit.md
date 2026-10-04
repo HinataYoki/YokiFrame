@@ -55,7 +55,7 @@ fsm.Dispose();
 
 | API | 说明 |
 |---|---|
-| `FSM<TEnum>(string name = null)` | 创建空状态机；可选名称用于日志和排查。 |
+| `FSM<TEnum>(string name = null)` | 创建空状态机。可选名称只在 Editor 或 Godot Tools 中保存，用于日志和排查；Player 不保存该字段。 |
 | `CurState` / `CurEnum` | 当前状态实例和当前/最近选择的枚举值。 |
 | `MachineState` | 当前为 `End`、`Suspend` 或 `Running`。 |
 | `Get(TEnum id, out IState state)` | 查询状态，不存在时输出空值。 |

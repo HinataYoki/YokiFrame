@@ -100,7 +100,8 @@ link.UnRegister();
 | `EasyEvent<T>` | 带 payload 的局部事件 | API 对称：`Register`/`UnRegister`/`Trigger(T)` 等 | — |
 | `EasyEvents.GetEvent<T>()` | 查询已存在容器 | **不创建** | 不存在则按实现返回 |
 | `EasyEvents.GetOrAddEvent<T>()` | 获取或创建 `IEasyEvent` | `T : new()` | — |
-| `EasyEvents.Clear()` / `GetAllEvents()` | 清空或读取容器 | — | — |
+| `EasyEvents.Clear()` | 清空容器 | — | — |
+| `EasyEvents.GetAllEvents()` | 读取已注册容器 | 只在 Editor 或 Godot Tools 中编译 | Player 中不存在 |
 | `IEasyEvent.UnRegisterAll()` / `ListenerCount` | 清理契约；监听数 | — | — |
 
 `IUnRegister.UnRegister()` 是统一注销入口。`LinkUnRegister` 与 `LinkUnRegister<T>` 支持重复调用且不重复执行注销逻辑。`CustomUnRegister(Action)` 已过时，新代码不要使用。

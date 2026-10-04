@@ -73,7 +73,7 @@ IActionController controller = ActionKitUniTask
 
 ```csharp
 IActionController controller = ActionKitUnityCoroutine
-    .From(LoadWithUnityYield)
+    .From(() => LoadWithUnityYield())
     .Start();
 
 IEnumerator LoadWithUnityYield()
@@ -97,7 +97,7 @@ IEnumerator LoadWithUnityYield()
 | `ISequence.Append(IAction action)` | 追加尚未被其它父容器或 controller 拥有的 Action。 |
 | `IParallel.Append(IAction action)` | 追加并行子 Action 并返回 `IParallel`。 |
 | `ISequence.Sequence(Action<ISequence> configure = null)` | 创建并追加嵌套顺序容器。 |
-| `ISequence.Parallel(Action<ISequence> configure, bool waitAll = true)` | 创建并追加嵌套并行容器。 |
+| `ISequence.Parallel(Action<ISequence> configure, bool waitAll = true)` | 创建并追加嵌套并行容器。回调实际收到 `IParallel`，分支用 `Append` 追加。 |
 | `ISequence.Repeat(Action<IRepeat> configure, int count = -1, Func<bool> condition = null)` | 创建并追加嵌套重复容器。 |
 | `ISequence.Delay` / `DelayFrame` / `NextFrame` | 追加时间或帧等待。 |
 | `ISequence.Callback` / `Condition` / `Lerp` / `Lerp01` | 追加回调、条件和插值节点。 |
@@ -113,7 +113,7 @@ IEnumerator LoadWithUnityYield()
 | API | 说明 |
 |---|---|
 | `ActionID` | 当前执行租约的非零 ID；自定义 `IAction` 不继承 `ActionBase` 时必须自行提供。 |
-| `ActionState` | `NotStart`、`Started`、`Finished`。取消和故障由 controller 表达。 |
+| `ActionState` | 类型是 `ActionStatus`，值为 `NotStart`、`Started`、`Finished`。取消和故障由 controller 表达。 |
 | `Paused` / `Deinited` | 当前节点是否暂停、是否已经释放。 |
 | `OnInit()` | 根启动或 Repeat 新一轮前重置状态。 |
 | `OnStart()` | 当前轮首次推进时调用。 |
@@ -156,7 +156,7 @@ public sealed class WaitForFlag : ActionBase
 | `Finish` | 仅正常完成时调用的 controller 回调。 |
 | `Cancel()` | 可从任意线程请求取消；宿主线程会同步清理仍在准备队列的 controller，其它情况由 Scheduler Tick 串行终结。 |
 
-扩展 `Start(onFinish)` 会同步执行一次 dt=0 首推。`IAction.Update(dt)` 是脱离调度器时的手动推进入口，不能和 scheduler 同时持有。扩展 `Finish()` 只标记正常完成。`Pause`、`Resume` 和 `UpdateMode` 修改要求宿主线程。
+扩展 `Start(onFinish)` 会同步执行一次 dt=0 首推。`action.Update(dt)` 是 `IAction` 的扩展方法，不是接口成员；它用于脱离调度器的手动推进，不能和 scheduler 同时持有。扩展 `Finish()` 只标记正常完成。`Pause`、`Resume` 和 `UpdateMode` 修改要求宿主线程。
 
 ### 内置节点语义
 

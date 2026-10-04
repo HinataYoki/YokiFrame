@@ -26,13 +26,19 @@ finally
 }
 ```
 
-需要明确一份独立所有权时使用 handle：
+需要明确一份独立所有权时使用 handle。`ResHandle<T>` 是引用类型，Runtime 使用 C# 9，不能写成 `using` 声明：
 
 ```csharp
-using ResHandle<ConfigAsset> handle =
+ResHandle<ConfigAsset> handle =
     ResKit.LoadAsset<ConfigAsset>("Configs/Main");
-
-Use(handle.Asset);
+try
+{
+    Use(handle.Asset);
+}
+finally
+{
+    handle.Dispose();
+}
 ```
 
 项目自定义 Provider 必须在第一次资源调用前显式注入：
@@ -52,7 +58,7 @@ ResKit.SetProvider(new ProjectResourceProvider());
 | `Load<T>(string path)` | 同步加载引用类型资源；未找到返回 `null`。 |
 | `LoadAsync<T>(string path, CancellationToken token)` | 异步加载；安装 UniTask 时编译为 `UniTask<T>`，否则为 `Task<T>`。 |
 | `Release(object asset)` | 释放由该 Provider 创建并交给 ResKit 的底层资源。 |
-| `ProviderName` | 当前 Provider 的名称。 |
+| `ProviderName` | 当前 Provider 的名称。只在 Editor 或 Godot Tools 中编译。 |
 
 Provider 的 `path` 是宿主定义的 location，不由 ResKit 改写成 `Resources` 路径。Provider 未找到资源时不得把空对象伪装成成功缓存。
 
@@ -75,7 +81,7 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 |---|---|
 | `SetProvider(IResourceProvider provider)` | 显式替换资源来源，并清理旧来源的缓存和进行中的加载。空值抛 `ArgumentNullException`。 |
 | `GetProvider()` | 获取当前已使用的资源来源；尚未加载资源时返回 `null`。 |
-| `ProviderName` | 在编辑器或工具中查看当前资源来源名称。 |
+| `ProviderName` | 查看当前资源来源名称。只在 Editor 或 Godot Tools 中编译，读取不会创建默认后端。 |
 | `ClearAll()` | 撤销全部缓存和进行中的加载。 |
 
 更换资源来源或调用 `ClearAll` 后，旧异步请求会失效，不能写入新的缓存。已经返回的旧资源仍由原资源来源负责释放。
@@ -103,10 +109,11 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 | `Asset` | 当前资源；释放或 `ClearAll` 后为 `null`。 |
 | `IsDone` | 当前 lease 是否仍有已完成资源。 |
 | `Release()` / `Dispose()` | 幂等释放一次引用。 |
-| `ProviderName` | 创建共享条目的 Provider 名称。 |
-| `RefCount` | 当前共享条目总引用数。 |
+| `ProviderName` | 创建共享条目的 Provider 名称。只在 Editor 或 Godot Tools 中编译。 |
+| `Source` / `SourceFile` / `SourceLine` | 本次获取的调用来源。只在 Editor 或 Godot Tools 中编译。 |
+| `RefCount` | 当前共享条目总引用数。只在 Editor 或 Godot Tools 中编译。 |
 
-推荐使用 `using` 管理短生命周期 handle；不要把 handle 跨 Provider 切换长期保存。
+短生命周期 handle 用显式 `try/finally` 调用 `Dispose()`。Player 代码不要访问 `ProviderName`、`Source`、`SourceFile`、`SourceLine` 或 `RefCount`，也不要把 handle 跨 Provider 切换长期保存。
 
 ### Raw API
 

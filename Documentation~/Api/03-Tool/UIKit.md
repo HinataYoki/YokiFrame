@@ -288,7 +288,7 @@ private void Awake()
 
 1. 准备 Panel Prefab 和项目自己的 Prefab Variant。
 2. 在首次调用 UIKit 前注册项目 Root Prefab。
-3. 用 `UIKit.OpenPanel<TPanel>()`、`UIKit.ClosePanel<TPanel>()` 管理面板生命周期。
+3. 用 `UIKit.OpenPanel<PausePanel>()`、`UIKit.ClosePanel<PausePanel>()` 管理面板生命周期。泛型参数必须是具体的 `UIPanel` 子类。
 4. 需要动画或对话框时，使用 Panel 的公开 API；不要从 Workbench 远程控制 Runtime UI。
 5. 需要绑定代码时，在 Unity Inspector 中选择 Panel、Element 或 Component owner，再生成 Designer。
 

@@ -139,20 +139,38 @@ Unity Editor 会自动扫描 UniTask、YooAsset、DOTween、Luban、Nino、ZStri
 
 ### 命名怎么读
 
-API 名称按职责拆开，不使用 `Manager`、`Helper` 或编号后缀：
+API 名称按职责拆开，不使用 `Manager`、`Helper` 或编号后缀。日常玩法直接从对应 Kit 进入：
 
-| 名称 | 含义 | 例子 |
-|------|------|------|
-| `Kit` | 一组独立能力及其静态入口 | `EventKit`、`SaveKit`、`AudioKit` |
-| `Type` / `Enum` | 同一入口下的不同路由方式 | `EventKit.Type`、`EventKit.Enum` |
-| `Register` / `Send` | 订阅与发布 | `Register<T>()`、`Send(message)` |
-| `LinkUnRegister` | 订阅所有权，由订阅方释放 | `link.UnRegister()` |
-| `Sequence` / `Delay` / `Callback` | 动作编排的步骤 | `ActionKit.Sequence().Delay(0.5f)` |
-| `FSM` / `State` | 状态机与单个状态 | `FSM<GameState>`、`IdleState` |
-| `Provider` / `Backend` | 可替换的能力实现 | `ResKit.SetProvider(...)` |
-| `Adapter` | 某个引擎的接入层 | Unity Adapter、Godot Adapter |
+```csharp
+AudioVoiceHandle hit = AudioKit.PlaySfx("Audio/Hit");
+AudioKit.PlayMusic("Audio/Bgm", loop: true);
 
-看到 `Kit` 就是能力入口，看到 `Register` 就是建立关系，看到 `Provider` 才是在替换默认实现。业务代码通常只接触前两类名称。
+SaveData progress = SaveKit.CreateSaveData();
+progress.RegisterModule(new PlayerProgress());
+SaveKit.Save(SaveTarget.Slot(0), progress);
+
+InventoryPanel bag = UIKit.OpenPanel<InventoryPanel>();
+SceneKit.LoadSceneAsync("Town", onComplete: _ => LogKit.Info("Entered town"));
+LocalizationKit.SetLanguage(LanguageId.English);
+string title = LocalizationKit.Get(1001);
+```
+
+`PlaySfx` 和 `PlayMusic` 使用引擎默认音频后端。存档第一次写入时创建默认存储。`OpenPanel` 是 Unity UI 入口，Godot 项目继续使用 Godot 自己的界面。场景名和本地化文本来源需要项目自己提供；本地化在查询前还要先 `SetProvider`。
+
+| 名称 | 含义 | 日常例子 |
+|------|------|----------|
+| `Kit` | 一组独立能力及其静态入口 | `AudioKit.PlaySfx`、`SaveKit.Save`、`UIKit.OpenPanel` |
+| `Play` / `Load` / `Open` | 开始一次播放、加载或打开 | `PlayMusic`、`ResKit.Load<T>`、`OpenPanel<T>` |
+| `Handle` | 这一次播放或加载的所有权 | `AudioVoiceHandle`、`ResHandle<T>`、`SceneHandler` |
+| `Stop` / `Release` / `Close` | 结束对应的所有权 | `AudioKit.Stop(hit)`、`handle.Release()`、`UIKit.ClosePanel<T>()` |
+| `Save` / `Load` / `Slot` | 存档写入、读取和槽位 | `SaveTarget.Slot(0)`、`SaveKit.TryLoad` |
+| `Get` / `SetLanguage` | 取文本和切换语言 | `LocalizationKit.Get`、`SetLanguage` |
+| `Register` / `Send` | 建立订阅和发布事件 | `EventKit.Type.Register<T>`、`EventKit.Type.Send` |
+| `Sequence` / `Delay` / `Callback` | 把等待和回调串成一段流程 | `ActionKit.Sequence().Delay(0.5f).Callback(...)` |
+| `Allocate` / `Recycle` | 从对象池借出和归还 | `pool.Allocate()`、`pool.Recycle(bullet)` |
+| `Provider` | 替换资源或音频来源，或安装本地化文本来源 | `ResKit.SetProvider(...)`、`LocalizationKit.SetProvider(...)` |
+
+看到 `Kit` 就是能力入口，看到 `Play`、`Load`、`Open`、`Save` 就是在做这件事，看到 `Handle` 就要由创建它的模块负责结束。资源、音频和存档的普通调用碰不到 `Provider`；本地化没有默认文本来源，查询前要先安装。
 
 ---
 

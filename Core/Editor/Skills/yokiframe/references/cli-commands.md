@@ -24,7 +24,7 @@
 | 看静态能力 | `harness status` |
 | 看项目模型、能力、心跳和在线 action | `harness catalog`。在线 action 加 `--refresh-commands` |
 | 看项目模型 | `project status` |
-| 重建项目模型 | `project refresh`，带 `--package`。先加 `--dry-run` 查看 `writes[]` |
+| 重建项目模型 | `project refresh`。`--package` 可选，只在需要指定包根时使用。先加 `--dry-run` 查看 `writes[]` |
 | 列出 engine | `engine list` |
 | 看某个 Kit | `kit status` |
 | 直接读共享内存 | `telemetry read` |
