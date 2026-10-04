@@ -15,15 +15,20 @@
 
 ## 📖 简介
 
-**YokiFrame** 是一套用同一份 C# 业务代码同时支撑 **Unity 2022.3+** 与 **Godot .NET** 的跨引擎游戏框架。它把游戏开发中最常见的基础工作拆成一组可独立组合的 Kit：组织业务服务、传递事件、管理状态、编排流程、加载资源、播放音频、保存数据、处理本地化和搭建 Unity UI。业务规则写在纯 C# Core 中，引擎 API、生命周期与默认后端由各自的宿主 Adapter 提供，因此换引擎不换业务代码。
+**YokiFrame** 是一套装进 Unity 或 Godot .NET 后就能直接调用的跨引擎 C# 游戏框架。它没有必须安装的第三方库，也不需要先搭建运行时上下文：安装并完成编译后，直接使用 `EventKit`、`LogKit`、`ActionKit` 等 Kit API。
+
+它把游戏开发中最常见的基础工作拆成一组可独立组合的 Kit：组织业务服务、传递事件、管理状态、编排流程、加载资源、播放音频、保存数据、处理本地化和搭建 Unity UI。业务规则写在纯 C# Core 中，引擎 API、生命周期与默认后端由各自的宿主 Adapter 提供，因此换引擎不换业务代码。
 
 ### ✨ 核心特性
 
+- 📦 **开箱即用** - 安装到引擎后直接调用，不需要手写启动器或注册模块
+- 🪶 **无必须依赖** - 包本身不依赖第三方库；Unity 会自动发现已安装的可选库，并用宏切换对应 API
+- 🧹 **非必要无初始化仪式** - 没有全局初始化入口；默认后端在第一次真实业务调用时创建
+- ✨ **API 简单直接** - `EventKit.Type.Send`、`ActionKit.Sequence()`、`LogKit.Info`，名称即用途
+- 🏷️ **命名一致** - 能力统一以 `Kit` 结尾，入口、状态和动作都使用同一套短名称
 - 🚀 **跨引擎** - 同一套 C# 业务代码，Unity 与 Godot .NET 通用，宿主差异由 Adapter 隔离
-- 🧩 **Kit 即插即用** - 每个 Kit 可独立引入、组合或移除，按需取用
+- 🧩 **小巧灵活** - 每个 Kit 可单独使用或自由组合，不需要一次启用整套框架
 - 🛠️ **统一工具链** - Avalonia Workbench 可视化观测、`yoki` CLI 脚本化操作、Installer 一键安装
-- ⚙️ **可选依赖解耦** - UniTask、YooAsset、DOTween、Luban、Nino 等按需接入，不引入不依赖
-- 🧹 **零初始化仪式** - 无全局初始化入口，默认后端在第一次真实调用时惰性创建
 - 🔍 **可观测性** - FileBridge 命令协议与共享内存遥测，为编辑器与 AI 工具提供可靠的诊断通道
 
 ---
@@ -31,6 +36,7 @@
 ## 📚 目录
 
 - [快速开始](#-快速开始)
+- [为什么容易上手](#-为什么容易上手)
 - [核心模块](#-核心模块)
 - [工具链](#-工具链)
 - [项目结构](#-项目结构)
@@ -78,47 +84,75 @@ Linux / macOS 使用同目录下的 `install-godot.sh` 或 `install-godot.comman
 
 不想手动操作时，直接把本仓库地址（或本地源码包目录）和“安装 YokiFrame”一起交给 AI 即可。AI 会自动完成编译、Runtime 构建、安装计划与结果校验，详细流程见 [AI 安装指引](Documentation~/Guides/AI-Install.md)。
 
-### 写一个流程
+### 直接调用
 
-用一个例子串联起框架最常见的四件事：定义架构、注册服务、发布/订阅事件、编排异步流程。
+安装完成后不需要任何启动代码。日志、事件和动作流程可以直接调用：
 
 ```csharp
 using YokiFrame;
 
-// 1. 定义架构并注册业务服务
+LogKit.Info("Ready");
+EventKit.Type.Send(new SessionStarted());
+
+IActionController flow = ActionKit.Sequence()
+    .Delay(0.5f)
+    .Callback(() => LogKit.Info("Loaded"))
+    .Start();
+```
+
+`SessionStarted` 是普通的 `readonly struct`，`GameState` 是普通枚举；框架不会要求它们继承特殊基类。订阅事件时保存返回的 `LinkUnRegister<T>`，模块停用时调用 `UnRegister()`。仍在运行的动作由创建它的业务 owner 调用 `Cancel()`。
+
+需要组合多个业务服务时，再使用 Architecture。它同样没有全局启动器，第一次访问 `GameArchitecture.Interface` 时才创建：
+
+```csharp
 public sealed class GameArchitecture : Architecture<GameArchitecture>
 {
     protected override void OnInit() => Register<SessionService>(new SessionService());
 }
 
-public readonly struct SessionStarted
-{
-}
-
-// 2. 业务服务通过 EventKit 发布事件
-public sealed class SessionService : AbstractService
-{
-    public void StartSession() => EventKit.Type.Send(new SessionStarted());
-}
-
-// 3. 在业务入口调用服务
-GameArchitecture.Interface
-    .GetService<SessionService>()
-    .StartSession();
-
-// 4. 订阅事件；返回的 link 用于在模块停用时注销
-LinkUnRegister<SessionStarted> link =
-    EventKit.Type.Register<SessionStarted>(_ => LogKit.Info("Session started"));
-
-// 5. 用 ActionKit 编排异步流程
-IActionController flow = ActionKit.Sequence()
-    .Callback(() => LogKit.Info("Loading"))
-    .Delay(0.5f)
-    .Callback(() => LogKit.Info("Ready"))
-    .Start();
+GameArchitecture.Interface.GetService<SessionService>().StartSession();
 ```
 
-`GameArchitecture.Interface` 第一次访问时创建架构并初始化服务。事件订阅由订阅方注销；仍在运行的动作由创建它的业务 owner 调用 `Cancel()`。更多生命周期约定见 [生命周期与所有权](Documentation~/Guides/Lifecycle-and-Ownership.md)。
+更多生命周期约定见 [生命周期与所有权](Documentation~/Guides/Lifecycle-and-Ownership.md)。
+
+---
+
+## ✨ 为什么容易上手
+
+### 没有启动仪式
+
+直接调用 Kit API 即可。宿主 Adapter 随包安装进入引擎，会话换代由 Unity 或 Godot 生命周期自动完成。日志、事件、状态机、对象池和动作编排都不需要预先安装第三方库。
+
+Unity Editor 会自动扫描 UniTask、YooAsset、DOTween、Luban、Nino、ZString 和 Input System。库存在时自动添加对应宏，移除后自动清除；异步入口等 API 随之在 `UniTask` 与普通 `Task` 之间切换，业务代码不需要手写条件编译或注册接入层。Godot 项目保持纯 C# API，不使用这套 Unity 宏。
+
+默认资源与音频后端也在第一次真实加载或播放时创建。只有项目主动替换实现，或使用没有默认数据来源的能力时，才需要提前配置：
+
+| 场景 | 需要做什么 |
+|------|------------|
+| 使用引擎默认资源或音频 | 无需配置，直接调用 |
+| 使用自己的资源、音频或 YooAsset | 第一次调用前 `SetProvider` |
+| 查询本地化文本 | 先 `LocalizationKit.SetProvider` |
+| 定制 Unity UI 根节点 | 第一次打开面板前 `UIKit.SetRootPrefab` |
+| 读取 Luban 数据表 | 先用 TableKit 生成项目代码 |
+
+诊断和 Workbench 读取不会因为“看一眼”而创建这些业务后端。
+
+### 命名怎么读
+
+API 名称按职责拆开，不使用 `Manager`、`Helper` 或编号后缀：
+
+| 名称 | 含义 | 例子 |
+|------|------|------|
+| `Kit` | 一组独立能力及其静态入口 | `EventKit`、`SaveKit`、`AudioKit` |
+| `Type` / `Enum` | 同一入口下的不同路由方式 | `EventKit.Type`、`EventKit.Enum` |
+| `Register` / `Send` | 订阅与发布 | `Register<T>()`、`Send(message)` |
+| `LinkUnRegister` | 订阅所有权，由订阅方释放 | `link.UnRegister()` |
+| `Sequence` / `Delay` / `Callback` | 动作编排的步骤 | `ActionKit.Sequence().Delay(0.5f)` |
+| `FSM` / `State` | 状态机与单个状态 | `FSM<GameState>`、`IdleState` |
+| `Provider` / `Backend` | 可替换的能力实现 | `ResKit.SetProvider(...)` |
+| `Adapter` | 某个引擎的接入层 | Unity Adapter、Godot Adapter |
+
+看到 `Kit` 就是能力入口，看到 `Register` 就是建立关系，看到 `Provider` 才是在替换默认实现。业务代码通常只接触前两类名称。
 
 ---
 
@@ -204,7 +238,7 @@ YokiFrame/                     # 包根（同时是 Unity Git URL 包根）
 
 | 文档 | 描述 |
 |------|------|
-| [框架概览](Documentation~/Api/00-GettingStarted/FrameworkOverview.md) | 新手入口：适用场景、Kit 状态与关键边界 |
+| [框架概览](Documentation~/Api/00-GettingStarted/FrameworkOverview.md) | 新手入口：适用场景、Kit 状态、默认后端与关键边界 |
 | [AI 安装指引](Documentation~/Guides/AI-Install.md) | 安装与 AI 自动化安装的完整流程 |
 | [生命周期与所有权](Documentation~/Guides/Lifecycle-and-Ownership.md) | 事件、资源、动作与异步工作的 owner 约定 |
 | [故障排查](Documentation~/Guides/Troubleshooting.md) | 常见问题与诊断方法 |
