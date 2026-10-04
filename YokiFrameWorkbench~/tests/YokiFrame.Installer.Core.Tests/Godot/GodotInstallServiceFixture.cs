@@ -268,6 +268,9 @@ internal sealed class GodotInstallServiceFixture : IDisposable
     /// </summary>
     private void WriteSourcePackage()
     {
+        WriteSourceFile(
+            "package.json",
+            "{\"name\":\"com.hinatayoki.yokiframe\",\"version\":\"9.9.9-fixture\"}");
         WriteSourceFile("Core/Runtime/CoreMarker.cs", "namespace Fixture; public sealed class CoreMarker { }");
         WriteSourceFile("Core/Runtime/YokiFrame.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         WriteSourceFile("Core/Runtime/ScriptTool.gd", "extends Node");

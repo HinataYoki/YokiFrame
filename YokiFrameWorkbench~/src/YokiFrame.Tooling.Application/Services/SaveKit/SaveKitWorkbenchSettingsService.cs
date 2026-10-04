@@ -8,13 +8,21 @@ public sealed class SaveKitWorkbenchSettingsService
 {
     private const string UNITY_OWNER = "SaveKit";
     private const string GODOT_OWNER = "save_kit";
-    private const string DEFAULT_EXTENSION = ".yoki";
+    private const string DEFAULT_EXTENSION = SaveKitSettings.DEFAULT_FILE_EXTENSION;
     private const int MAX_EXTENSION_LENGTH = 32;
     private const string INVALID_EXTENSION_CHARACTERS = "<>:\"/\\|?*";
     private const string UNITY_DEFAULT_PATH = "${persistentDataPath}/YokiFrame/Saves";
     private const string GODOT_DEFAULT_PATH = "${userDataDir}/YokiFrame/Saves";
-    private static readonly string[] sUnityOwnedKeys = { "storagePath", "fileExtension" };
-    private static readonly string[] sGodotOwnedKeys = { "storage_path", "file_extension" };
+    private static readonly string[] sUnityOwnedKeys =
+    {
+        SaveKitSettings.STORAGE_PATH_KEY,
+        SaveKitSettings.FILE_EXTENSION_KEY
+    };
+    private static readonly string[] sGodotOwnedKeys =
+    {
+        GodotRuntimeSettingKeys.ToSnakeCase(SaveKitSettings.STORAGE_PATH_KEY),
+        GodotRuntimeSettingKeys.ToSnakeCase(SaveKitSettings.FILE_EXTENSION_KEY)
+    };
     private readonly string mProjectRoot;
     private readonly YokiFrameProjectSettingsStore mSettingsStore;
 
@@ -126,8 +134,8 @@ public sealed class SaveKitWorkbenchSettingsService
             : YokiFrameProjectSettingsTarget.UnityRuntime;
         YokiFrameProjectSettingsDocument document = snapshot.GetDocument(target);
         IReadOnlyDictionary<string, string> values = document.GetValues(isGodot ? GODOT_OWNER : UNITY_OWNER);
-        string storageKey = isGodot ? "storage_path" : "storagePath";
-        string extensionKey = isGodot ? "file_extension" : "fileExtension";
+        string storageKey = isGodot ? sGodotOwnedKeys[0] : SaveKitSettings.STORAGE_PATH_KEY;
+        string extensionKey = isGodot ? sGodotOwnedKeys[1] : SaveKitSettings.FILE_EXTENSION_KEY;
         string storagePath = values.TryGetValue(storageKey, out string? configuredPath)
             ? configuredPath : (isGodot ? GODOT_DEFAULT_PATH : UNITY_DEFAULT_PATH);
         string extension = NormalizeExtension(
@@ -172,16 +180,16 @@ public sealed class SaveKitWorkbenchSettingsService
                 target,
                 GODOT_OWNER,
                 sGodotOwnedKeys,
-                new YokiFrameProjectSettingValue("storage_path", storagePath),
-                new YokiFrameProjectSettingValue("file_extension", extension));
+                new YokiFrameProjectSettingValue(sGodotOwnedKeys[0], storagePath),
+                new YokiFrameProjectSettingValue(sGodotOwnedKeys[1], extension));
         }
 
         return YokiFrameProjectSettingsPatch.ReplaceKeys(
             target,
             UNITY_OWNER,
             sUnityOwnedKeys,
-            new YokiFrameProjectSettingValue("storagePath", storagePath),
-            new YokiFrameProjectSettingValue("fileExtension", extension));
+            new YokiFrameProjectSettingValue(SaveKitSettings.STORAGE_PATH_KEY, storagePath),
+            new YokiFrameProjectSettingValue(SaveKitSettings.FILE_EXTENSION_KEY, extension));
     }
 
     /// <summary>扫描 slots/global 下指定扩展名的文件，不读取 payload。</summary>

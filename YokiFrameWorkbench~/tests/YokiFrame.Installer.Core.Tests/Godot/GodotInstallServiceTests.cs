@@ -431,7 +431,7 @@ public sealed class GodotInstallServiceTests
     private static void AssertPluginEntryPoints(GodotInstallServiceFixture fixture)
     {
         GodotPluginEntryPointBuilder builder = new();
-        Assert.Equal(builder.BuildPluginConfig(), File.ReadAllText(fixture.PluginConfigPath));
+        Assert.Equal(builder.BuildPluginConfig(fixture.SourcePackageRoot), File.ReadAllText(fixture.PluginConfigPath));
         Assert.Equal(builder.BuildEditorBootstrapScript(), File.ReadAllText(fixture.PluginScriptPath));
         Assert.Equal(builder.BuildRuntimeBootstrapScript(), File.ReadAllText(fixture.RuntimeBootstrapPath));
         var uidContent = File.ReadAllText(fixture.PluginScriptUidPath);

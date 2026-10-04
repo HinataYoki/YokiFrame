@@ -202,26 +202,12 @@ public sealed class LogKitRuntimeSettingsService
         return result;
     }
 
-    /// <summary>把 LogKit Runtime 键转换为 Godot ProjectSettings 已有绑定使用的键。</summary>
+    /// <summary>把 LogKit Runtime 键转换为 Godot ProjectSettings 使用的键。</summary>
     /// <param name="key">Unity JSON 使用的 camelCase 键。</param>
     /// <returns>Godot Runtime section 使用的 snake_case 键。</returns>
     private static string ToGodotRuntimeKey(string key)
     {
-        return key switch
-        {
-            "minimumLevel" => "minimum_level",
-            "saveLogInPlayer" => "save_log_in_player",
-            "enableIMGUIInPlayer" => "enable_imgui_in_player",
-            "enableEncryption" => "enable_encryption",
-            "maxQueueSize" => "max_queue_size",
-            "maxSameLogCount" => "max_same_log_count",
-            "maxRetentionDays" => "max_retention_days",
-            "maxFileSizeMB" => "max_file_size_mb",
-            "imguiMaxLogCount" => "imgui_max_log_count",
-            "logDirectory" => "log_directory",
-            "playerFileName" => "player_file_name",
-            _ => key
-        };
+        return GodotRuntimeSettingKeys.ToSnakeCase(key);
     }
 
     /// <summary>把 Store 条目转换为当前 LogKit 的强类型设置。</summary>
@@ -310,24 +296,10 @@ public sealed class LogKitRuntimeSettingsService
         return normalized;
     }
 
-    /// <summary>把 Godot Runtime 键还原为 Workbench LogKit 模型键；未知键保持原样。</summary>
+    /// <summary>把 Godot Runtime 键还原为 Workbench LogKit 模型键；没有下划线的键保持原样。</summary>
     private static string FromGodotRuntimeKey(string key)
     {
-        return key switch
-        {
-            "minimum_level" => "minimumLevel",
-            "save_log_in_player" => "saveLogInPlayer",
-            "enable_imgui_in_player" => "enableIMGUIInPlayer",
-            "enable_encryption" => "enableEncryption",
-            "max_queue_size" => "maxQueueSize",
-            "max_same_log_count" => "maxSameLogCount",
-            "max_retention_days" => "maxRetentionDays",
-            "max_file_size_mb" => "maxFileSizeMB",
-            "imgui_max_log_count" => "imguiMaxLogCount",
-            "log_directory" => "logDirectory",
-            "player_file_name" => "playerFileName",
-            _ => key
-        };
+        return GodotRuntimeSettingKeys.ToCamelCase(key);
     }
 
     /// <summary>把 LogKit 的字符串键值转换为统一 Store patch 参数。</summary>

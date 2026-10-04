@@ -28,8 +28,8 @@ namespace YokiFrame.Godot
         /// <summary>读取 Godot ProjectSettings 并创建当前项目的默认存档目录。</summary>
         private static ISaveStorage CreateStorage()
         {
-            string configuredPath = KitSettings.GetString("SaveKit", "storagePath", "");
-            string extension = KitSettings.GetString("SaveKit", "fileExtension", ".yoki");
+            string configuredPath = KitSettings.GetString(SaveKitSettings.KIT_NAME, SaveKitSettings.STORAGE_PATH_KEY, "");
+            string extension = KitSettings.GetString(SaveKitSettings.KIT_NAME, SaveKitSettings.FILE_EXTENSION_KEY, SaveKitSettings.DEFAULT_FILE_EXTENSION);
             string root = string.IsNullOrWhiteSpace(configuredPath)
                 ? Path.Combine(OS.GetUserDataDir(), "YokiFrame", "Saves")
                 : configuredPath.Replace("${userDataDir}", OS.GetUserDataDir());

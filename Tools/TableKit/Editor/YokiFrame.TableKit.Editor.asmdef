@@ -2,6 +2,7 @@
     "name": "YokiFrame.TableKit.Editor",
     "rootNamespace": "YokiFrame",
     "references": [
+        "YokiFrame",
         "YokiFrame.Editor"
     ],
     "includePlatforms": [

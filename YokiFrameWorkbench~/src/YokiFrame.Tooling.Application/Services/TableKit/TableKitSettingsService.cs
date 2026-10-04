@@ -13,11 +13,19 @@ public sealed class TableKitSettingsService
     // 替换范围保留已废弃键，使旧项目在下一次保存时自动清理历史配置。
     private static readonly string[] sUnityRuntimeKeys =
     {
-        "runtimePathPattern", "useAsyncLoading", "useRawResourceLoading", "resourceRoot", "dataExtension"
+        TableKitSettings.RUNTIME_PATH_PATTERN_KEY,
+        TableKitSettings.LEGACY_USE_ASYNC_LOADING_KEY,
+        TableKitSettings.USE_RAW_RESOURCE_LOADING_KEY,
+        TableKitSettings.LEGACY_RESOURCE_ROOT_KEY,
+        TableKitSettings.LEGACY_DATA_EXTENSION_KEY
     };
     private static readonly string[] sGodotRuntimeKeys =
     {
-        "runtime_path_pattern", "use_async_loading", "use_raw_resource_loading", "resource_root", "data_extension"
+        GodotRuntimeSettingKeys.ToSnakeCase(sUnityRuntimeKeys[0]),
+        GodotRuntimeSettingKeys.ToSnakeCase(sUnityRuntimeKeys[1]),
+        GodotRuntimeSettingKeys.ToSnakeCase(sUnityRuntimeKeys[2]),
+        GodotRuntimeSettingKeys.ToSnakeCase(sUnityRuntimeKeys[3]),
+        GodotRuntimeSettingKeys.ToSnakeCase(sUnityRuntimeKeys[4])
     };
     private readonly YokiFrameProjectSettingsStore? mSettingsStore;
     private readonly TableKitResourceLocationResolver mResourceLocationResolver = new();
@@ -292,14 +300,14 @@ public sealed class TableKitSettingsService
                 YokiFrameProjectSettingsTarget.UnityRuntime,
                 UNITY_RUNTIME_OWNER,
                 sUnityRuntimeKeys,
-                new YokiFrameProjectSettingValue("runtimePathPattern", runtimePathPattern),
-                new YokiFrameProjectSettingValue("useRawResourceLoading", ToSettingValue(useRawResourceLoading)))
+                new YokiFrameProjectSettingValue(TableKitSettings.RUNTIME_PATH_PATTERN_KEY, runtimePathPattern),
+                new YokiFrameProjectSettingValue(TableKitSettings.USE_RAW_RESOURCE_LOADING_KEY, ToSettingValue(useRawResourceLoading)))
             : YokiFrameProjectSettingsPatch.ReplaceKeys(
                 YokiFrameProjectSettingsTarget.GodotRuntime,
                 GODOT_RUNTIME_OWNER,
                 sGodotRuntimeKeys,
-                new YokiFrameProjectSettingValue("runtime_path_pattern", runtimePathPattern),
-                new YokiFrameProjectSettingValue("use_raw_resource_loading", ToSettingValue(useRawResourceLoading)));
+                new YokiFrameProjectSettingValue(sGodotRuntimeKeys[0], runtimePathPattern),
+                new YokiFrameProjectSettingValue(sGodotRuntimeKeys[2], ToSettingValue(useRawResourceLoading)));
     }
 
     /// <summary>比较当前文档中 TableKit 自有键，避免相同 Runtime Settings 被重复替换。</summary>

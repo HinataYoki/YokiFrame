@@ -225,7 +225,7 @@ public sealed class GodotInstallService
             request.RepairProjectSettings
                 ? mProjectSettingsPatcher.Patch(projectSettings, request.EnablePlugin)
                 : projectSettings,
-            mPluginBuilder.BuildPluginConfig(),
+            mPluginBuilder.BuildPluginConfig(projection.SourcePackageRoot),
             mPluginBuilder.BuildEditorBootstrapScript(),
             pluginScriptUid.Content,
             mPluginBuilder.BuildRuntimeBootstrapScript(),

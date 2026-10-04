@@ -14,6 +14,10 @@
     <Compile Include="..\..\..\Tools\LocalizationKit\Runtime\Contracts\LocalizationSchema.cs" Link="RuntimeContracts\LocalizationKit\LocalizationSchema.cs" />
     <!-- 原子写单源：复用 CommandBridge 的共享实现，禁止应用层再保留私有原子写原语。 -->
     <Compile Include="..\..\..\Core\Editor\CommandBridge\IO\YokiFrameAtomicFileWriter.cs" Link="EditorContracts\CommandBridge\YokiFrameAtomicFileWriter.cs" />
+    <!-- 设置键单源。这三个文件没有其它 Core 依赖；测试工程引用 Core 时必须排除同名 Compile，避免重复类型。 -->
+    <Compile Include="..\..\..\Core\Runtime\Settings\GodotRuntimeSettingKeys.cs" Link="RuntimeContracts\Settings\GodotRuntimeSettingKeys.cs" />
+    <Compile Include="..\..\..\Core\Runtime\Settings\SaveKitSettings.cs" Link="RuntimeContracts\Settings\SaveKitSettings.cs" />
+    <Compile Include="..\..\..\Core\Runtime\Settings\TableKitSettings.cs" Link="RuntimeContracts\Settings\TableKitSettings.cs" />
 
   </ItemGroup>
 

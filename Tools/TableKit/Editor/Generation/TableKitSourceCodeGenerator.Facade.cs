@@ -63,9 +63,9 @@ namespace YokiFrame
         /// <param name="source">目标逐行生成器。</param>
         private static void AppendFacadeRuntimeSettings(CodeGenLineBuilder source)
         {
-            source.AppendLine("        private const string SETTINGS_KIT = \"TableKit\";")
-                .AppendLine("        private const string RUNTIME_PATH_PATTERN_KEY = \"runtimePathPattern\";")
-                .AppendLine("        private const string USE_RAW_RESOURCE_LOADING_KEY = \"useRawResourceLoading\";")
+            source.AppendLine("        private const string SETTINGS_KIT = \"" + TableKitSettings.KIT_NAME + "\";")
+                .AppendLine("        private const string RUNTIME_PATH_PATTERN_KEY = \"" + TableKitSettings.RUNTIME_PATH_PATTERN_KEY + "\";")
+                .AppendLine("        private const string USE_RAW_RESOURCE_LOADING_KEY = \"" + TableKitSettings.USE_RAW_RESOURCE_LOADING_KEY + "\";")
                 .AppendLine()
                 .AppendLine("        /// <summary>从当前宿主 Runtime Settings 获取传给 Loader 的路径模板。</summary>")
                 .AppendLine("        public static string RuntimePathPattern => KitSettings.GetString(SETTINGS_KIT, RUNTIME_PATH_PATTERN_KEY, string.Empty);")

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace YokiFrame.Installer.Core.Services;
 
 /// <summary>
@@ -6,17 +8,51 @@ namespace YokiFrame.Installer.Core.Services;
 public sealed class GodotPluginEntryPointBuilder
 {
     /// <summary>
-    /// 生成 Godot plugin.cfg 固定元数据。
+    /// 生成 Godot plugin.cfg。版本只读取源包 package.json，避免与 Unity 包版本各写一份。
     /// </summary>
+    /// <param name="sourcePackageRoot">包含 package.json 的 YokiFrame 包根。</param>
     /// <returns>使用 LF 换行的 plugin.cfg。</returns>
-    public string BuildPluginConfig()
+    public string BuildPluginConfig(string sourcePackageRoot)
     {
         return "[plugin]\n"
             + "name=\"YokiFrame\"\n"
             + "description=\"YokiFrame integration for Godot .NET.\"\n"
             + "author=\"YokiFrame\"\n"
-            + "version=\"2.0.3\"\n"
+            + "version=\"" + ReadPackageVersion(sourcePackageRoot) + "\"\n"
             + "script=\"YokiFrameGodotEditorPlugin.cs\"\n";
+    }
+
+    /// <summary>
+    /// 读取 package.json 的 version。字段缺失、空白或 JSON 损坏时直接失败，不回退到写死版本。
+    /// </summary>
+    /// <param name="sourcePackageRoot">YokiFrame 包根。</param>
+    /// <returns>去除首尾空白后的版本。</returns>
+    private static string ReadPackageVersion(string sourcePackageRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePackageRoot);
+        var packagePath = Path.Combine(Path.GetFullPath(sourcePackageRoot), "package.json");
+        if (!File.Exists(packagePath))
+        {
+            throw new FileNotFoundException("YokiFrame package.json 不存在。", packagePath);
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(packagePath);
+            using var document = JsonDocument.Parse(stream);
+            if (!document.RootElement.TryGetProperty("version", out var version)
+                || version.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(version.GetString()))
+            {
+                throw new InvalidDataException("YokiFrame package.json 缺少非空字符串 version: " + packagePath);
+            }
+
+            return version.GetString()!.Trim();
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("YokiFrame package.json JSON 无效: " + packagePath, exception);
+        }
     }
 
     /// <summary>

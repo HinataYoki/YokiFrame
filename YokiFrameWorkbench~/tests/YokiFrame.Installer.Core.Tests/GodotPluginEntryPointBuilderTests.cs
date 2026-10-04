@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Installer.Core.Services;
 
 namespace YokiFrame.Installer.Core.Tests;
@@ -13,13 +14,14 @@ public sealed class GodotPluginEntryPointBuilderTests
     [Fact]
     public void BuildPluginConfigUsesGodotDotnetMetadataAndLocalScript()
     {
-        var config = new GodotPluginEntryPointBuilder().BuildPluginConfig();
+        var packageRoot = FindRepositoryPackageRoot();
+        var config = new GodotPluginEntryPointBuilder().BuildPluginConfig(packageRoot);
         var plugin = ReadSection(config, "plugin");
 
         Assert.Equal("YokiFrame", plugin["name"]);
         Assert.Equal("YokiFrame integration for Godot .NET.", plugin["description"]);
         Assert.Equal("YokiFrame", plugin["author"]);
-        Assert.Equal("2.0.3", plugin["version"]);
+        Assert.Equal(ReadPackageVersion(packageRoot), plugin["version"]);
         Assert.Equal("YokiFrameGodotEditorPlugin.cs", plugin["script"]);
         Assert.Equal(5, plugin.Count);
     }
@@ -70,6 +72,29 @@ public sealed class GodotPluginEntryPointBuilderTests
             StringComparison.Ordinal);
         Assert.Contains("_ = typeof(GodotAudioKitRuntimeInstaller);", script, StringComparison.Ordinal);
         Assert.Contains("_ = typeof(GodotSaveKitRuntimeInstaller);", script, StringComparison.Ordinal);
+    }
+
+    /// <summary>按测试项目固定布局定位仓库包根，避免把版本号再写进测试。</summary>
+    /// <returns>包含 package.json 的 YokiFrame 包根。</returns>
+    private static string FindRepositoryPackageRoot()
+    {
+        var packageRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
+        var packagePath = Path.Combine(packageRoot, "package.json");
+        if (!File.Exists(packagePath))
+        {
+            throw new FileNotFoundException("未找到 YokiFrame package.json。", packagePath);
+        }
+
+        return packageRoot;
+    }
+
+    /// <summary>读取 package.json version，作为 plugin.cfg 的唯一期望值。</summary>
+    /// <param name="packageRoot">YokiFrame 包根。</param>
+    /// <returns>package.json 中的版本。</returns>
+    private static string ReadPackageVersion(string packageRoot)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(packageRoot, "package.json")));
+        return document.RootElement.GetProperty("version").GetString()!;
     }
 
     /// <summary>
