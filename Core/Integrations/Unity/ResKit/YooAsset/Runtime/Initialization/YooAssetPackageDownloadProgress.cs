@@ -5,7 +5,7 @@ namespace YokiFrame.Unity
 {
     /// <summary>
     /// 单个 YooAsset package 的下载进度。
-    /// 字段与 YooAsset 下载器一致，不合成多个 package 的总进度。
+    /// 字段与 YooAsset 下载器一致；多包总进度由 <see cref="YooAssetDownloadProgress"/> 单独提供。
     /// </summary>
     public readonly struct YooAssetPackageDownloadProgress
     {
@@ -99,8 +99,78 @@ namespace YokiFrame.Unity
         public long FileSize { get; }
     }
 
-    /// <summary>接收单个 package 的下载进度。多包由调用方自行累计。</summary>
+    /// <summary>接收单个 package 的下载进度。</summary>
     public delegate void YooAssetPackageDownloadProgressHandler(YooAssetPackageDownloadProgress progress);
+
+    /// <summary>
+    /// 一次多包下载会话的总进度。
+    /// 进度按 package 数量等权累计，不使用尚未开始的后续包字节重算，因此不会因后一个包更大而倒退。
+    /// 文件数和字节数只累计已经创建下载器的 package，不是全部包的最终总量。
+    /// </summary>
+    public readonly struct YooAssetDownloadProgress
+    {
+        /// <summary>创建多包总进度。</summary>
+        /// <param name="currentPackageName">当前正在下载或刚刚完成的 package。</param>
+        /// <param name="packageIndex">当前 package 的 0 基下标。</param>
+        /// <param name="packageCount">本次会话的 package 数。</param>
+        /// <param name="progress">按 package 等权累计的 0 到 1 总进度。</param>
+        /// <param name="totalDownloadCount">已创建下载器的文件数合计。</param>
+        /// <param name="currentDownloadCount">已完成文件数合计。</param>
+        /// <param name="totalDownloadBytes">已创建下载器的字节数合计。</param>
+        /// <param name="currentDownloadBytes">已完成字节数合计。</param>
+        /// <param name="completedPackageCount">已经完成的 package 数。</param>
+        public YooAssetDownloadProgress(
+            string currentPackageName,
+            int packageIndex,
+            int packageCount,
+            float progress,
+            int totalDownloadCount,
+            int currentDownloadCount,
+            long totalDownloadBytes,
+            long currentDownloadBytes,
+            int completedPackageCount)
+        {
+            CurrentPackageName = currentPackageName ?? string.Empty;
+            PackageIndex = packageIndex;
+            PackageCount = packageCount;
+            Progress = progress;
+            TotalDownloadCount = totalDownloadCount;
+            CurrentDownloadCount = currentDownloadCount;
+            TotalDownloadBytes = totalDownloadBytes;
+            CurrentDownloadBytes = currentDownloadBytes;
+            CompletedPackageCount = completedPackageCount;
+        }
+
+        /// <summary>获取当前 package 名称。</summary>
+        public string CurrentPackageName { get; }
+
+        /// <summary>获取当前 package 的 0 基下标。</summary>
+        public int PackageIndex { get; }
+
+        /// <summary>获取本次会话的 package 数。</summary>
+        public int PackageCount { get; }
+
+        /// <summary>获取按 package 等权累计的 0 到 1 总进度。</summary>
+        public float Progress { get; }
+
+        /// <summary>获取已创建下载器的文件数合计。</summary>
+        public int TotalDownloadCount { get; }
+
+        /// <summary>获取已完成文件数合计。</summary>
+        public int CurrentDownloadCount { get; }
+
+        /// <summary>获取已创建下载器的字节数合计。</summary>
+        public long TotalDownloadBytes { get; }
+
+        /// <summary>获取已完成字节数合计。</summary>
+        public long CurrentDownloadBytes { get; }
+
+        /// <summary>获取已经完成的 package 数。</summary>
+        public int CompletedPackageCount { get; }
+    }
+
+    /// <summary>接收一次多包下载会话的总进度。</summary>
+    public delegate void YooAssetDownloadProgressHandler(YooAssetDownloadProgress progress);
 
     /// <summary>接收单个 package 的下载文件错误。</summary>
     public delegate void YooAssetPackageDownloadErrorHandler(YooAssetPackageDownloadError error);

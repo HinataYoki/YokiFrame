@@ -136,7 +136,7 @@ namespace YokiFrame.Unity
 
             YooAssetDownloaderObserver.Attach(
                 downloader,
-                options.OnPackageDownloadProgress,
+                CombinePackageProgress(options),
                 options.OnPackageDownloadError,
                 options.OnPackageDownloadFileBegin);
 #if YOKIFRAME_YOOASSET_3
@@ -145,6 +145,35 @@ namespace YokiFrame.Unity
             downloader.BeginDownload();
 #endif
             await YooAssetOperationAwaiter.WaitAsync(downloader, token);
+        }
+
+        /// <summary>把单包进度同时转发给调用方和当前多包总进度会话。</summary>
+        private static YooAssetPackageDownloadProgressHandler CombinePackageProgress(
+            YooAssetInitializationOptions options)
+        {
+            YooAssetPackageDownloadProgressHandler packageProgress = options.OnPackageDownloadProgress;
+            YooAssetDownloadProgressScope totalProgress = sDownloadProgress;
+            if (totalProgress == null)
+                return packageProgress;
+            if (packageProgress == null)
+                return totalProgress.ReportPackage;
+
+            return progress =>
+            {
+                packageProgress(progress);
+                totalProgress.ReportPackage(progress);
+            };
+        }
+
+        /// <summary>仅在调用方请求总进度时创建会话，避免单包下载产生额外回调。</summary>
+        private static YooAssetDownloadProgressScope CreateDownloadProgress(
+            int packageCount,
+            YooAssetInitializationOptions options)
+        {
+            if (options.OnDownloadProgress == null || packageCount <= 0)
+                return null;
+
+            return new YooAssetDownloadProgressScope(packageCount, options.OnDownloadProgress);
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT

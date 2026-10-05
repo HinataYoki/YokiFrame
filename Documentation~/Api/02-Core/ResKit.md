@@ -132,7 +132,7 @@ YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `Resource
 
 `YooAssetInitializer.InitializeAsync` 按 `PackageNames` 顺序调用单包会话，所有包共用这次传入的运行模式、远端地址和联网回退策略。已接入的包不会被这次调用重新初始化。运行中出现的新包使用 `InitializePackageAsync(packageName, options)`，成功后即可用普通路径或 `package:{包名}/` 加载。`UpdatePackageAsync` 为已接入的包激活新清单；策略不是 `ManifestOnly` 且不是 Web 模式时，还会下载该清单缺失的资源。`DownloadPackageAsync` 只按当前清单下载，可用标签限定范围，不会移除包。`PrefetchPackageAsync` 预下载指定版本，但不激活那份清单。`RemovePackage` 只移出探测名单，不销毁包，也不释放已经加载的资源。要切换运行模式或同名重建，必须调用 `DestroyPackageAsync`，等销毁完成后再 `InitializePackageAsync`。
 
-Host 下载会逐包回调 `OnPackageDownloadProgress`、`OnPackageDownloadError` 和 `OnPackageDownloadFileBegin`。回调携带包名、文件数、字节数和 0–1 进度，多包不合成总进度；没有缺失文件时不会调用。`ManifestOnly` 不自动下载，Web 模式由 YooAsset 按需请求，这两类启动流程也不会触发整包下载回调。
+Host 下载会逐包回调 `OnPackageDownloadProgress`、`OnPackageDownloadError` 和 `OnPackageDownloadFileBegin`。这些回调携带包名、文件数、字节数和当前包的 0–1 进度；没有缺失文件时不会调用。`InitializeAsync` 还可设置 `OnDownloadProgress` 接收本次名单的总进度：每个 package 占相同份额，没有缺失文件的包在该包会话成功后记为完成，因此进度不会因为后一个包字节更大而倒退。总进度里的文件数和字节数只累计已经创建下载器的包。`ManifestOnly` 不自动下载，Web 模式由 YooAsset 按需请求，这两类启动流程也不会触发整包下载回调。
 
 ResKit 全局只安装一个 Provider。多包指这个 Provider 内部代理多个 package，不是安装多个 ResKit Provider。当前不提供同一次批量初始化里的 package 级独立策略；混合热更包与不热更包时，统一使用 HostPlayMode + `RemoteThenOffline`，没有对应远端版本的 package 会回退到包体内置资源。单机 `OfflinePlayMode`/`CustomPlayMode` 不执行远端更新，也不会显示联网处理配置。YooAsset 不提供远端包目录，新包名称仍由项目配置或业务服务下发。
 

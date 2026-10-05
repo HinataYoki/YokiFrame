@@ -103,7 +103,7 @@ namespace YokiFrame.Unity
 
         /// <summary>
         /// Host 启动下载或按需下载的进度回调。
-        /// 每个 package 单独通知，不合成多包总进度；没有实际下载时不会调用。
+        /// 每个 package 单独通知；没有实际下载时不会调用。多包总进度使用 <see cref="OnDownloadProgress"/>。
         /// </summary>
         [NonSerialized]
         public YooAssetPackageDownloadProgressHandler OnPackageDownloadProgress;
@@ -115,6 +115,13 @@ namespace YokiFrame.Unity
         /// <summary>Host 开始下载单个文件时的回调。没有实际下载时不会调用。</summary>
         [NonSerialized]
         public YooAssetPackageDownloadFileHandler OnPackageDownloadFileBegin;
+
+        /// <summary>
+        /// 多包下载总进度。按 package 数量等权累计，不因后续包字节更大而倒退。
+        /// 没有下载内容的 package 会在该包会话成功后把对应份额记为完成。
+        /// </summary>
+        [NonSerialized]
+        public YooAssetDownloadProgressHandler OnDownloadProgress;
 
         /// <summary>Host/Web 模式主资源服务器地址。</summary>
         [Tooltip("Host/Web 模式主资源服务器地址")]

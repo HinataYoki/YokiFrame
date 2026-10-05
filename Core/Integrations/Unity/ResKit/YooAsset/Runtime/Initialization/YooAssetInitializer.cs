@@ -34,6 +34,7 @@ namespace YokiFrame.Unity
     {
         private static readonly YooAssetPackageRegistry sPackages = new();
         private static YooAssetResourceProvider sProvider;
+        private static YooAssetDownloadProgressScope sDownloadProgress;
         private static bool sIsInitializing;
 
         /// <summary>获取是否已经有 package 接入当前 ResKit Provider。</summary>
@@ -102,14 +103,18 @@ namespace YokiFrame.Unity
                 EnsureYooAssetsInitialized();
                 ValidateStrategy(options);
                 List<string> packageNames = ResolvePackageNames(options);
+                sDownloadProgress = CreateDownloadProgress(packageNames.Count, options);
                 for (int index = 0; index < packageNames.Count; index++)
                 {
                     token.ThrowIfCancellationRequested();
+                    sDownloadProgress?.BeginPackage(packageNames[index], index);
                     await InitializeRegisteredPackageAsync(packageNames[index], options, token);
+                    sDownloadProgress?.CompletePackage(packageNames[index], index);
                 }
             }
             finally
             {
+                sDownloadProgress = null;
                 sIsInitializing = false;
             }
         }

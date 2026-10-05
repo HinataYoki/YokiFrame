@@ -56,6 +56,10 @@ namespace YokiFrame.Unity.Tests
             string source = ReadSource(OBSERVER_PATH);
 
             StringAssert.Contains("downloader.TotalDownloadCount <= 0", source);
+            StringAssert.Contains("class YooAssetDownloadProgressScope", ReadSource(
+                "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetDownloadProgressScope.cs"));
+            StringAssert.Contains("OnDownloadProgress", ReadSource(
+                "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetInitializationOptions.cs"));
             StringAssert.Contains("DownloadUpdateCallback", source);
             StringAssert.Contains("DownloadProgressChanged", source);
             StringAssert.Contains("DownloadErrorCallback", source);

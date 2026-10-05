@@ -274,6 +274,36 @@ namespace YokiFrame.Unity
             return package.InitializePackageAsync(runtimeOptions);
         }
 
+        /// <summary>
+        /// 创建不挂内置文件系统的 Host 初始化。
+        /// 纯远端包没有 BuiltinCatalog 时，默认内置文件系统会在版本请求前因 404 失败。
+        /// </summary>
+        /// <param name="package">待初始化 package。</param>
+        /// <param name="options">Host 地址和下载参数。</param>
+        /// <returns>只包含远端沙盒文件系统的初始化操作。</returns>
+        public static InitializePackageOperation CreateRemoteOnlyHostOperation(
+            ResourcePackage package,
+            YooAssetInitializationOptions options)
+        {
+            if (package == null)
+                throw new ArgumentNullException(nameof(package));
+            if (options == null)
+                throw new ArgumentNullException(nameof(options));
+
+            IRemoteService remoteService = CreateRemoteService(options);
+            FileSystemParameters cacheFileSystem =
+                FileSystemParameters.CreateDefaultSandboxFileSystemParameters(remoteService);
+            ApplyBundleDecryptor(cacheFileSystem, options);
+            ApplyDownloadParameters(cacheFileSystem, options);
+            ApplyInstallCleanupMode(cacheFileSystem, options);
+            HostPlayModeOptions runtimeOptions = new()
+            {
+                BuiltinFileSystemParameters = null,
+                CacheFileSystemParameters = cacheFileSystem
+            };
+            return package.InitializePackageAsync(runtimeOptions);
+        }
+
         /// <summary>创建 YooAsset V3 Web 初始化操作，项目回调优先于默认文件系统。</summary>
         private static InitializePackageOperation CreateWebOperation(
             ResourcePackage package,
@@ -424,6 +454,36 @@ namespace YokiFrame.Unity
                         YooAssetEncryptionServices.CreateDecryptionServices(options))
             };
             ApplyBuiltinFallbackParameters(parameters.BuildinFileSystemParameters, options);
+            ApplyDownloadParameters(parameters.CacheFileSystemParameters, options);
+            ApplyInstallCleanupMode(parameters.CacheFileSystemParameters, options);
+            return package.InitializeAsync(parameters);
+        }
+
+        /// <summary>
+        /// 创建不挂内置文件系统的 Host 初始化。
+        /// 纯远端包没有内置清单时，默认内置文件系统会在远端请求前失败。
+        /// </summary>
+        /// <param name="package">待初始化 package。</param>
+        /// <param name="options">Host 地址和下载参数。</param>
+        /// <returns>只包含远端缓存文件系统的初始化操作。</returns>
+        public static InitializationOperation CreateRemoteOnlyHostOperation(
+            ResourcePackage package,
+            YooAssetInitializationOptions options)
+        {
+            if (package == null)
+                throw new ArgumentNullException(nameof(package));
+            if (options == null)
+                throw new ArgumentNullException(nameof(options));
+
+            YooAssetRemoteServices remoteServices = CreateRemoteServices(options);
+            HostPlayModeParameters parameters = new()
+            {
+                BuildinFileSystemParameters = null,
+                CacheFileSystemParameters =
+                    FileSystemParameters.CreateDefaultCacheFileSystemParameters(
+                        remoteServices,
+                        YooAssetEncryptionServices.CreateDecryptionServices(options))
+            };
             ApplyDownloadParameters(parameters.CacheFileSystemParameters, options);
             ApplyInstallCleanupMode(parameters.CacheFileSystemParameters, options);
             return package.InitializeAsync(parameters);
