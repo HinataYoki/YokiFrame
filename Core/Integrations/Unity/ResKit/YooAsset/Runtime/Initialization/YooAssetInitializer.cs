@@ -105,7 +105,7 @@ namespace YokiFrame.Unity
                 for (int index = 0; index < packageNames.Count; index++)
                 {
                     token.ThrowIfCancellationRequested();
-                    await InitializePackageAsync(packageNames[index], options, token);
+                    await InitializeRegisteredPackageAsync(packageNames[index], options, token);
                 }
             }
             finally

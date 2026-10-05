@@ -42,20 +42,41 @@ namespace YokiFrame.Unity
 #endif
         {
             EnsureSessionAvailable(options);
-            packageName = NormalizePackageName(packageName);
             sIsInitializing = true;
             try
             {
-                EnsureYooAssetsInitialized();
-                ResourcePackage package = GetOrCreatePackage(packageName);
-                package = await InitializePackageWithStrategyAsync(packageName, package, options, token);
-                AttachPackage(package, options.PlayMode == EPlayMode.EditorSimulateMode);
-                return package;
+                return await InitializeRegisteredPackageAsync(packageName, options, token);
             }
             finally
             {
                 sIsInitializing = false;
             }
+        }
+
+        /// <summary>
+        /// 准备并接入一个 package。调用方必须已经持有初始化锁，避免批量入口再次抢锁。
+        /// </summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static async UniTask<ResourcePackage> InitializeRegisteredPackageAsync(
+            string packageName,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#else
+        /// <summary>
+        /// 准备并接入一个 package。调用方必须已经持有初始化锁，避免批量入口再次抢锁。
+        /// </summary>
+        private static async Task<ResourcePackage> InitializeRegisteredPackageAsync(
+            string packageName,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#endif
+        {
+            packageName = NormalizePackageName(packageName);
+            EnsureYooAssetsInitialized();
+            ResourcePackage package = GetOrCreatePackage(packageName);
+            package = await InitializePackageWithStrategyAsync(packageName, package, options, token);
+            AttachPackage(package, options.PlayMode == EPlayMode.EditorSimulateMode);
+            return package;
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT

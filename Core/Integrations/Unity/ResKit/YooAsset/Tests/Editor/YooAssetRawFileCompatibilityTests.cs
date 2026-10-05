@@ -11,7 +11,7 @@ namespace YokiFrame.Unity.Tests
         private const string PROVIDER_PATH =
             "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/YooAssetResourceProvider.cs";
         private const string INITIALIZER_PATH =
-            "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetInitializer.cs";
+            "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/Initialization/YooAssetInitializer.Session.cs";
         private const string EDITOR_PATH =
             "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Editor/Initialization/YooAssetInitializationBehaviourEditor.cs";
 

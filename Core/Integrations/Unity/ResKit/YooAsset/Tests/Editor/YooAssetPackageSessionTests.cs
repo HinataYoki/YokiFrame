@@ -24,7 +24,8 @@ namespace YokiFrame.Unity.Tests
             string source = ReadSource(INITIALIZER_PATH);
             string sessionSource = ReadSource(SESSION_PATH);
 
-            StringAssert.Contains("InitializePackageAsync(packageNames[index], options, token)", source);
+            StringAssert.Contains("InitializeRegisteredPackageAsync(packageNames[index], options, token)", source);
+            StringAssert.DoesNotContain("InitializePackageAsync(packageNames[index], options, token)", source);
             StringAssert.Contains("provider.AddPackage(package)", sessionSource);
             StringAssert.Contains("if (provider == null)", sessionSource);
             StringAssert.DoesNotContain("if (IsInitialized)\r\n                return;", source);
