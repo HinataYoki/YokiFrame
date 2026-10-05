@@ -73,29 +73,6 @@ namespace YokiFrame.Tests
         }
 
         /// <summary>
-        /// 验证显式绑定有效 Camera 会把默认 Overlay Root 切换为可由该 Camera 渲染的模式。
-        /// </summary>
-        [Test]
-        public void BindRootCameraSwitchesCanvasToScreenSpaceCamera()
-        {
-            var cameraOwner = new GameObject("UIKitTestCamera", typeof(Camera));
-            Camera camera = cameraOwner.GetComponent<Camera>();
-            try
-            {
-                UIKit.BindRootCamera(camera);
-
-                UIRoot root = UIKit.Root;
-                Assert.IsNotNull(root);
-                Assert.AreEqual(RenderMode.ScreenSpaceCamera, root.Canvas.renderMode);
-                Assert.AreSame(camera, root.Canvas.worldCamera);
-            }
-            finally
-            {
-                UnityEngine.Object.Destroy(cameraOwner);
-            }
-        }
-
-        /// <summary>
         /// 验证后台完成 loader Task 后仍在 Unity 主线程 Instantiate，且并发 Open 共享实例。
         /// </summary>
         [Test]

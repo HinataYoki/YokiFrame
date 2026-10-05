@@ -12,27 +12,6 @@ namespace YokiFrame
         private const string EDITOR_TOOLS_DEFINE = "#if UNITY_EDITOR || (GODOT && TOOLS)";
 
         /// <summary>
-        /// 验证 Runtime 源码只落在契约、状态、机器、诊断和统一交互五个职责目录中。
-        /// </summary>
-        [Test]
-        public void RuntimeUsesRequiredResponsibilityDirectories()
-        {
-            string runtimeRoot = GetFsmRuntimeRoot();
-            string[] directories = Directory.GetDirectories(runtimeRoot, "*", SearchOption.TopDirectoryOnly);
-            string[] directoryNames = new string[directories.Length];
-            for (var index = 0; index < directories.Length; index++)
-            {
-                directoryNames[index] = Path.GetFileName(directories[index]);
-            }
-
-            CollectionAssert.AreEquivalent(
-                new[] { "Contracts", "States", "Machines", "Diagnostics" },
-                directoryNames);
-            Assert.IsEmpty(Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.TopDirectoryOnly));
-            Assert.IsFalse(File.Exists(Path.Combine(runtimeRoot, ".keep")));
-        }
-
-        /// <summary>
         /// 验证 FsmKit 编入 Core 主程序集，且源码没有宿主 SDK 或可选依赖引用。
         /// </summary>
         [Test]

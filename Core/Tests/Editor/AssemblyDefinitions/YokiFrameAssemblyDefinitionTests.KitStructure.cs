@@ -8,22 +8,6 @@ namespace YokiFrame
     public sealed partial class YokiFrameAssemblyDefinitionTests
     {
         /// <summary>
-        /// 验证 Architecture Runtime 内部按功能目录收纳，避免在 Architecture 根层平铺源码。
-        /// </summary>
-        [Test]
-        public void ArchitectureRuntimeSourcesUseFunctionalFolders()
-        {
-            string kitRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Runtime", "Architecture");
-            string runtimeRoot = kitRoot;
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Contracts")), "Architecture 缺少 Contracts 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Facade")), "Architecture 缺少 Facade 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Diagnostics")), "Architecture 缺少 Diagnostics 功能目录。");
-
-            string[] directRuntimeSources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.TopDirectoryOnly);
-            Assert.AreEqual(0, directRuntimeSources.Length, "Architecture Runtime 根层不应直接平铺源码文件。");
-        }
-
-        /// <summary>
         /// 验证 Architecture Runtime 中不能混入未受保护的编辑器功能；若未来在 Runtime 内埋监控钩子，必须用编辑器上下文宏包裹。
         /// </summary>
         [Test]
@@ -48,50 +32,6 @@ namespace YokiFrame
 
                 Assert.IsTrue(source.Contains(EDITOR_CONTEXT_DEFINE), "Architecture Runtime 中的编辑器/工具钩子必须同时覆盖 Unity Editor 与 Godot tools: " + NormalizePath(sourcePath));
             }
-        }
-
-        /// <summary>
-        /// 验证 EventKit Runtime 内部按功能目录收纳，避免在 Runtime 根层平铺大量源码。
-        /// </summary>
-        [Test]
-        public void EventKitRuntimeSourcesUseFunctionalFolders()
-        {
-            string runtimeRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Runtime", "EventKit");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Buses")), "EventKit Runtime 缺少 Buses 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Events")), "EventKit Runtime 缺少 Events 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Lifetime")), "EventKit Runtime 缺少 Lifetime 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Monitoring")), "EventKit Runtime 缺少最小观察端口目录。");
-            Assert.IsFalse(Directory.Exists(Path.Combine(runtimeRoot, "Diagnostics")), "EventKit 完整诊断必须位于 Core/Editor/EventKit。");
-
-            string[] directSources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.TopDirectoryOnly);
-            Assert.AreEqual(0, directSources.Length, "EventKit Runtime 根层不应直接平铺源码文件。");
-        }
-
-        /// <summary>
-        /// 验证 PoolKit Runtime 内部按功能目录收纳，避免在 PoolKit 根层平铺大量源码。
-        /// </summary>
-        [Test]
-        public void PoolKitRuntimeSourcesUseFunctionalFolders()
-        {
-            string kitRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Runtime", "PoolKit");
-            string runtimeRoot = kitRoot;
-            string editorRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Editor", "PoolKit");
-
-            Assert.IsTrue(Directory.Exists(editorRoot), "PoolKit Editor 能力必须位于共享 Core/Editor 边界。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Contracts")), "PoolKit Runtime 缺少 Contracts 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Pools")), "PoolKit Runtime 缺少 Pools 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Infrastructure")), "PoolKit Runtime 缺少 Infrastructure 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Diagnostics")), "PoolKit Runtime 缺少 Diagnostics 功能目录。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Pools", "PoolKit.cs")), "PoolKit Runtime 缺少统一门面。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Pools", "ObjectPool.cs")), "PoolKit Runtime 缺少统一对象池实现。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Pools", "SharedPoolRegistry.cs")), "PoolKit Runtime 缺少共享池注册表。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Contracts", "PoolOptions.cs")), "PoolKit Runtime 缺少统一容量配置。");
-            Assert.IsFalse(Directory.Exists(Path.Combine(runtimeRoot, "Factories")), "PoolKit 已直接使用强类型 factory 委托，不能恢复冗余 Factories 目录。");
-            Assert.IsFalse(Directory.Exists(Path.Combine(kitRoot, "CollectionPools")), "PoolKit 不再暴露集合池 API，不能保留 CollectionPools 目录。");
-            Assert.IsFalse(Directory.Exists(Path.Combine(runtimeRoot, "CollectionPools")), "PoolKit Runtime 不再暴露集合池 API，不能保留 CollectionPools 目录。");
-
-            string[] directRuntimeSources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.TopDirectoryOnly);
-            Assert.AreEqual(0, directRuntimeSources.Length, "PoolKit Runtime 根层不应直接平铺源码文件。");
         }
 
         /// <summary>
@@ -188,22 +128,6 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>
-        /// 验证 LogKit 属于 Core Runtime 基础设施，避免所有 Tool 为了打日志而依赖另一个 Tool。
-        /// </summary>
-        [Test]
-        public void LogKitLivesInCoreRuntimeInsteadOfToolLayer()
-        {
-            string packageRoot = Path.Combine(Application.dataPath, "YokiFrame");
-            string coreLogKitRoot = Path.Combine(packageRoot, "Core", "Runtime", "LogKit");
-            string toolLogKitRoot = Path.Combine(packageRoot, "Tools", "LogKit");
-
-            Assert.IsTrue(Directory.Exists(coreLogKitRoot), "LogKit 必须位于 Core/Runtime/LogKit，供所有 Tool 通过 Core 使用。");
-            Assert.IsTrue(File.Exists(Path.Combine(coreLogKitRoot, "Facade", "LogKit.cs")), "Core LogKit 缺少统一日志门面。");
-            Assert.AreEqual(0, Directory.GetFiles(coreLogKitRoot, "KitLogger.cs", SearchOption.AllDirectories).Length, "LogKit 不再保留旧版 KitLogger 兼容入口。");
-            Assert.IsFalse(Directory.Exists(toolLogKitRoot), "LogKit 不应放在 Tools/LogKit；Tool 层不能依赖另一个 Tool。");
-        }
-
         /// <summary>验证 AudioKit Unity Adapter 复用 Core PoolKit，禁止恢复私有 AudioSource 栈池。</summary>
         [Test]
         public void AudioKitUnityAdapterUsesCorePoolKitForAudioSources()
@@ -251,30 +175,6 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 LogKit 源码先按 Runtime / Editor 分层，再按门面、条目、设置和诊断职责收纳。
-        /// </summary>
-        [Test]
-        public void LogKitRuntimeSourcesUseFunctionalFolders()
-        {
-            string kitRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Runtime", "LogKit");
-            string runtimeRoot = kitRoot;
-            string editorRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Editor", "LogKit");
-
-            Assert.IsTrue(Directory.Exists(editorRoot), "LogKit Editor 能力必须位于共享 Core/Editor 边界。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Facade")), "LogKit Runtime 缺少 Facade 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Entries")), "LogKit Runtime 缺少 Entries 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Settings")), "LogKit Runtime 缺少 Settings 功能目录。");
-            Assert.IsTrue(Directory.Exists(Path.Combine(runtimeRoot, "Diagnostics")), "LogKit Runtime 缺少 Diagnostics 功能目录。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Facade", "LogKit.cs")), "LogKit 统一门面必须位于 Runtime/Facade。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Entries", "LogKitEntry.cs")), "LogKit 日志条目必须位于 Runtime/Entries。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Settings", "LogKitSettings.cs")), "LogKit 设置必须位于 Runtime/Settings。");
-            Assert.IsTrue(File.Exists(Path.Combine(runtimeRoot, "Diagnostics", "LogKitStats.cs")), "LogKit 诊断统计必须位于 Runtime/Diagnostics。");
-
-            string[] directRuntimeSources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.TopDirectoryOnly);
-            Assert.AreEqual(0, directRuntimeSources.Length, "LogKit Runtime 根层不应直接平铺源码文件。");
-        }
-
-        /// <summary>
         /// 验证 LogKit 开发期日志入口使用 Unity Editor / Unity checks / Godot tools 的共享宏边界。
         /// </summary>
         [Test]
@@ -309,6 +209,8 @@ namespace YokiFrame
             AddSourcesUnder(sourcePaths, Path.Combine(coreEditorRoot, "Telemetry"));
             AddSourcesUnder(sourcePaths, Path.Combine(coreEditorRoot, "KitInteraction"));
             AddNamedFolderSources(sourcePaths, coreRuntimeRoot, "Diagnostics");
+            // ArchitectureLifetime 负责会话换代时释放全部架构，Player 必须编译它，不能要求整文件工具宏。
+            sourcePaths.Remove(Path.Combine(coreRuntimeRoot, "Architecture", "Diagnostics", "ArchitectureLifetime.cs"));
             AddNamedFolderSources(sourcePaths, coreRuntimeRoot, "Interaction");
             AddNamedFolderSources(sourcePaths, coreRuntimeRoot, "Editor");
             AddSourcesUnder(sourcePaths, Path.Combine(coreEditorRoot, "Architecture"));

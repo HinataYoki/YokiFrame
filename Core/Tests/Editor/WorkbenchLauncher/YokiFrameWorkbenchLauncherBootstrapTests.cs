@@ -262,21 +262,34 @@ namespace YokiFrame
         /// <returns>标准输出首行会报告子进程 PID 的父进程。</returns>
         private static Process StartWindowsProcessTree()
         {
-            const string script = "$child = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\PING.EXE') "
-                + "-ArgumentList @('127.0.0.1','-t') -PassThru; "
-                + "[Console]::Out.WriteLine($child.Id); [Console]::Out.Flush(); $child.WaitForExit()";
-            return StartWindowsPowerShellProcess(script, false);
+            return StartWindowsPowerShellProcess(BuildPingChildScript(false), false);
         }
 
         /// <summary>启动等待 stdin 信号的 PowerShell 父进程，确保它只在加入 Job 后创建长期子进程。</summary>
         /// <returns>收到任意输入行后创建 ping 子进程并报告 PID 的父进程。</returns>
         private static Process StartWindowsProcessTreeAfterSignal()
         {
-            const string script = "$null = [Console]::In.ReadLine(); "
-                + "$child = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\PING.EXE') "
-                + "-ArgumentList @('127.0.0.1','-t') -PassThru; "
+            return StartWindowsPowerShellProcess(BuildPingChildScript(true), true);
+        }
+
+        /// <summary>
+        /// 组装拉起长期 ping 子进程的脚本。子进程必须由 PowerShell 直接创建并保持句柄，
+        /// 不能使用 Start-Process：后者走 UseShellExecute，会无视父进程的 CreateNoWindow 弹出控制台窗口。
+        /// </summary>
+        /// <param name="waitForSignal">为 true 时先阻塞读取一行 stdin，让调用方控制子进程的创建时机。</param>
+        /// <returns>可交给 powershell.exe -Command 执行的脚本。</returns>
+        private static string BuildPingChildScript(bool waitForSignal)
+        {
+            string signal = waitForSignal ? "$null = [Console]::In.ReadLine(); " : string.Empty;
+            return signal
+                + "$psi = New-Object System.Diagnostics.ProcessStartInfo; "
+                + "$psi.FileName = Join-Path $env:SystemRoot 'System32\\PING.EXE'; "
+                + "$psi.Arguments = '127.0.0.1 -t'; "
+                + "$psi.UseShellExecute = $false; "
+                + "$psi.CreateNoWindow = $true; "
+                + "$psi.RedirectStandardOutput = $true; "
+                + "$child = [System.Diagnostics.Process]::Start($psi); "
                 + "[Console]::Out.WriteLine($child.Id); [Console]::Out.Flush(); $child.WaitForExit()";
-            return StartWindowsPowerShellProcess(script, true);
         }
 
         /// <summary>按测试脚本启动隐藏 PowerShell，并统一配置父子进程观测所需的标准流。</summary>
