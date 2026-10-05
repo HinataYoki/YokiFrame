@@ -16,7 +16,7 @@ Godot 的编辑器连接选择 `godot-editor`，游戏运行态选择 `godot-run
 | 正在运行的动作 | ActionKit | 查看活动根、动作树和终态。堆栈开关作用于之后启动的根动作 |
 | 正在播放的音频和音频 ID | AudioKit | 按 Bus 查看 voice、进度和 `play_started` 历史。生成稳定 ID 时使用索引生成，写入项目代码和 manifest |
 | 空间索引 | SpatialKit | 查看索引、分区和热点。Octree 密度按 XZ 投影显示 |
-| Unity 面板和绑定 | UIKit | 只在 Unity engine 下显示。查看诊断、Prefab、Bind 和代码生成。定制 Root 时，在游戏代码里对 Prefab Variant 调用 `UIKit.SetRootPrefab`。Godot 连接时导航不显示这一页 |
+| Unity 面板和绑定 | UIKit | 只在 Unity engine 下显示。查看诊断、Prefab、Bind 和代码生成。代码模板选“对话”后，创建预制体生成 `UIDialogPanel` 和 `SetupDialog`。定制 Root 时，在游戏代码里对 Prefab Variant 调用 `UIKit.SetRootPrefab`。Godot 连接时导航不显示这一页 |
 | Luban 表 | TableKit | 校验配置、预览并生成项目代码。Agent、MCP 和 Skill 路径也在这里选择；旧版 Luban 只完成校验和生成 |
 | 本地化文本 | LocalizationKit | 搜索 standalone JSON 或 Luban 单表，打开 Excel，创建模板。预览写入项目 Temp。已注册 XML 时，以 Luban 结果为准 |
 | 存档位置和槽位摘要 | SaveKit | 选择持久化目录、项目目录或自定义路径并保存配置，同时查看已有后端和容器头。宿主目录在 Editor 连上后解析 |

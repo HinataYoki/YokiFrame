@@ -11,6 +11,7 @@ namespace YokiFrame
         private DialogConfig mConfig;
         private Action<DialogResultData> mOnResult;
         private bool mResultSent;
+        private bool mDismissRequested;
 
         /// <summary>当前对话框配置；仅在生命周期回调期间有效。</summary>
         protected DialogConfig Config => mConfig;
@@ -26,8 +27,23 @@ namespace YokiFrame
         {
             ApplyDialogData(data);
             mResultSent = false;
+            mDismissRequested = false;
             if (mConfig != null) SetupDialog(mConfig);
             UIKit.SetPanelModal(this, true);
+        }
+
+        /// <summary>显示时清除按钮关闭请求，避免被中断的 Hide 误触发关闭。</summary>
+        protected override void OnWillShow()
+        {
+            mDismissRequested = false;
+        }
+
+        /// <summary>隐藏完成后检查是否由按钮关闭请求；若是则执行延迟关闭。</summary>
+        protected override void OnDidHide()
+        {
+            if (!mDismissRequested) return;
+            mDismissRequested = false;
+            if (State == PanelState.Hide) CloseSelf();
         }
 
         /// <summary>关闭前未提交结果时补发 Cancel，避免异步调用永久等待。</summary>
@@ -95,11 +111,12 @@ namespace YokiFrame
             mOnResult = dialogData.OnResult;
         }
 
-        /// <summary>提交结果并请求 UIKit 关闭当前对话框。</summary>
+        /// <summary>提交结果并请求播放隐藏动画后再关闭对话框。</summary>
         private void SendAndClose(DialogResult result)
         {
             SendResult(result);
-            CloseSelf();
+            mDismissRequested = true;
+            Hide();
         }
     }
 

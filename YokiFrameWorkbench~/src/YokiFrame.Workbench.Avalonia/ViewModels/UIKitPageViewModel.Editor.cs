@@ -22,8 +22,8 @@ public sealed partial class UIKitPageViewModel
     private string mScriptNamespace = "GameUI";
     private string mAssemblyName = "Assembly-CSharp";
     private string mCodeTemplate = "Default";
-    private IReadOnlyList<string> mCodeTemplateNames = new[] { "Default", "Minimal" };
-    private IReadOnlyList<string> mCodeTemplateOptions = new[] { "默认", "精简" };
+    private IReadOnlyList<string> mCodeTemplateNames = new[] { "Default", "Minimal", "Dialog" };
+    private IReadOnlyList<string> mCodeTemplateOptions = new[] { "默认", "精简", "对话" };
     // 说明：模板选项为协议值映射，展示名由 CodeTemplateDisplay 转换，不在此处资源化。
     private bool mCanGenerateCode;
     private long mContextRevision;

@@ -16,6 +16,7 @@ namespace YokiFrame
         internal const string DEFAULT_ASSEMBLY = "Assembly-CSharp";
         internal const string DEFAULT_TEMPLATE = UIKitCodeTemplateRegistry.DEFAULT_TEMPLATE_NAME;
         internal const string MINIMAL_TEMPLATE = UIKitCodeTemplateRegistry.MINIMAL_TEMPLATE_NAME;
+        internal const string DIALOG_TEMPLATE = UIKitCodeTemplateRegistry.DIALOG_TEMPLATE_NAME;
 
         public string panelName;
         public string prefabFolder;
@@ -23,6 +24,7 @@ namespace YokiFrame
         public string scriptNamespace;
         public string assemblyName;
         public string codeTemplate;
+        public string baseClassName;
         public string prefabPath;
         public long expectedContextRevision;
         public string targetGlobalObjectId;

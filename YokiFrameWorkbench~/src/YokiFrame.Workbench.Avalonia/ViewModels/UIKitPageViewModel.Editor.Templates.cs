@@ -6,7 +6,7 @@ public sealed partial class UIKitPageViewModel
     /// <summary>把 Provider 协议模板名转换为稳定排序的界面选项。</summary>
     private void ApplyCodeTemplateOptions(IReadOnlyList<string> templateNames)
     {
-        List<string> names = new() { "Default", "Minimal" };
+        List<string> names = new() { "Default", "Minimal", "Dialog" };
         if (templateNames != null)
         {
             for (var index = 0; index < templateNames.Count; index++)
@@ -52,6 +52,7 @@ public sealed partial class UIKitPageViewModel
     {
         if (string.Equals(templateName, "Default", StringComparison.Ordinal)) return "默认";
         if (string.Equals(templateName, "Minimal", StringComparison.Ordinal)) return "精简";
+        if (string.Equals(templateName, "Dialog", StringComparison.Ordinal)) return "对话";
         return templateName ?? string.Empty;
     }
 
@@ -60,10 +61,11 @@ public sealed partial class UIKitPageViewModel
     {
         if (string.Equals(displayName, "默认", StringComparison.Ordinal)) return "Default";
         if (string.Equals(displayName, "精简", StringComparison.Ordinal)) return "Minimal";
+        if (string.Equals(displayName, "对话", StringComparison.Ordinal)) return "Dialog";
         return string.IsNullOrWhiteSpace(displayName) ? "Default" : displayName.Trim();
     }
 
-    /// <summary>固定 Default、Minimal 在前，其余项目模板按 ordinal 排序。</summary>
+    /// <summary>固定 Default、Minimal、Dialog 在前，其余项目模板按 ordinal 排序。</summary>
     private static int CompareCodeTemplateNames(string left, string right)
     {
         int leftOrder = GetCodeTemplateOrder(left);
@@ -73,12 +75,13 @@ public sealed partial class UIKitPageViewModel
             : string.Compare(left, right, StringComparison.Ordinal);
     }
 
-    /// <summary>返回模板排序分组，项目模板统一排在两个内置项之后。</summary>
+    /// <summary>返回模板排序分组，项目模板统一排在三个内置项之后。</summary>
     private static int GetCodeTemplateOrder(string templateName)
     {
         if (string.Equals(templateName, "Default", StringComparison.Ordinal)) return 0;
         if (string.Equals(templateName, "Minimal", StringComparison.Ordinal)) return 1;
-        return 2;
+        if (string.Equals(templateName, "Dialog", StringComparison.Ordinal)) return 2;
+        return 3;
     }
 
     /// <summary>按区分大小写的协议语义检查模板名是否已经存在。</summary>

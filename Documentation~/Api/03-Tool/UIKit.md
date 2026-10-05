@@ -347,7 +347,7 @@ Bind Inspector 在 Element/Component 模式下提供“生成 UIElement 代码�
 
 ## 在工具中查看
 
-Workbench 可以只读查看 Unity Runtime UI 摘要，并在 Unity Editor 中作为 Panel Prefab 创建与 Panel 代码生成的统一入口提供操作表单。它不会远程打开、关闭或清理 Runtime UI；Element 和 Component 的专属生成入口仍在各自 Inspector，Unity 不再提供独立的 Panel 创建菜单或窗口。
+Workbench 可以只读查看 Unity Runtime UI 摘要，并在 Unity Editor 中作为 Panel Prefab 创建与 Panel 代码生成的统一入口提供操作表单。代码模板选择 `Dialog` 后，创建预制体会生成继承 `UIDialogPanel` 的用户脚本，并包含 `SetupDialog(DialogConfig)` 重写；普通面板仍使用默认或精简模板。它不会远程打开、关闭或清理 Runtime UI；Element 和 Component 的专属生成入口仍在各自 Inspector，Unity 不再提供独立的 Panel 创建菜单或窗口。
 
 ## 限制与相关资料
 

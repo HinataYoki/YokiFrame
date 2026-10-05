@@ -58,10 +58,27 @@ namespace YokiFrame.Tests
             IReadOnlyList<string> names = UIKitCodeTemplateRegistry.GetTemplateNames();
             Assert.AreEqual(UIKitCodeTemplateRegistry.DEFAULT_TEMPLATE_NAME, names[0]);
             Assert.AreEqual(UIKitCodeTemplateRegistry.MINIMAL_TEMPLATE_NAME, names[1]);
+            Assert.AreEqual(UIKitCodeTemplateRegistry.DIALOG_TEMPLATE_NAME, names[2]);
             List<string> orderedNames = new(names);
             Assert.Less(
                 orderedNames.IndexOf(SECOND_CUSTOM_TEMPLATE),
                 orderedNames.IndexOf(THIRD_CUSTOM_TEMPLATE));
+        }
+
+        /// <summary>验证 Dialog 模板生成可编译的 UIDialogPanel 用户脚本，而不是普通 UIPanel。</summary>
+        [Test]
+        public void DialogTemplateImplementsRequiredDialogOverride()
+        {
+            UIKitPanelCodeLayout layout = CreateLayout("ConfirmDialog", UIKitPanelGenerationRequest.DIALOG_TEMPLATE);
+            Dictionary<string, string> sources = UIKitPanelCodeGenerator.BuildSources(
+                layout,
+                new UIKitBindScanResult("ConfirmDialog"));
+
+            string userSource = sources[layout.PanelScriptPath];
+            StringAssert.Contains("UIDialogPanel", userSource);
+            StringAssert.Contains("SetupDialog", userSource);
+            StringAssert.Contains("DialogConfig config", userSource);
+            StringAssert.DoesNotContain(": UIPanel", userSource);
         }
 
         /// <summary>创建指定模板和隔离输出路径的内存生成布局。</summary>

@@ -86,7 +86,7 @@ public sealed class WorkbenchUIKitEditorContext
     /// <summary>
     /// 获取 Unity Editor 当前 Registry 暴露的模板名；缺少该字段的旧 Provider 使用内置两项。
     /// </summary>
-    public IReadOnlyList<string> CodeTemplateOptions { get; init; } = new[] { "Default", "Minimal" };
+    public IReadOnlyList<string> CodeTemplateOptions { get; init; } = new[] { "Default", "Minimal", "Dialog" };
 
     /// <summary>
     /// 获取 Unity Editor 扫描到的可用于生成代码的 Player 程序集；旧 Provider 缺少该字段时保留默认程序集。

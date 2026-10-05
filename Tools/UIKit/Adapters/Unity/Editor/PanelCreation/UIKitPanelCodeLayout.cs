@@ -25,6 +25,7 @@ namespace YokiFrame
                 nameof(request.scriptNamespace));
             AssemblyName = RequireAssemblyName(request.assemblyName);
             CodeTemplate = RequireCodeTemplate(request.codeTemplate);
+            BaseClassName = ResolveBaseClassName(request.baseClassName, CodeTemplate);
             PrefabFolder = RequireAssetFolder(request.prefabFolder, nameof(request.prefabFolder));
             ScriptFolder = RequireAssetFolder(request.scriptFolder, nameof(request.scriptFolder));
             PrefabPath = string.IsNullOrWhiteSpace(request.prefabPath)
@@ -40,6 +41,11 @@ namespace YokiFrame
         internal string ScriptNamespace { get; }
         internal string AssemblyName { get; }
         internal string CodeTemplate { get; }
+        internal string BaseClassName { get; }
+        internal bool IsDialogTemplate => string.Equals(
+            CodeTemplate,
+            UIKitCodeTemplateRegistry.DIALOG_TEMPLATE_NAME,
+            StringComparison.Ordinal);
         internal string PrefabPath { get; }
         internal string ElementComponentName { get; }
         internal string PanelFolder => CombineAssetPath(ScriptFolder, PANEL_FOLDER + "/" + PanelName);
@@ -76,7 +82,7 @@ namespace YokiFrame
             {
                 panelName = PanelName, prefabFolder = PrefabFolder, scriptFolder = ScriptFolder,
                 scriptNamespace = ScriptNamespace, assemblyName = AssemblyName,
-                codeTemplate = CodeTemplate, prefabPath = PrefabPath,
+                codeTemplate = CodeTemplate, baseClassName = BaseClassName, prefabPath = PrefabPath,
             }, typeName);
         }
 
@@ -177,6 +183,19 @@ namespace YokiFrame
             if (string.IsNullOrEmpty(path)) return false;
             return path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal)
                 || path == "Packages" || path.StartsWith("Packages/", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 解析面板基类。Dialog 模板固定继承 UIDialogPanel，避免普通面板模板被请求字段改成对话框。
+        /// </summary>
+        /// <param name="requestedBaseClassName">请求显式指定的基类；可为空。</param>
+        /// <param name="codeTemplate">已验证的稳定模板名。</param>
+        /// <returns>可直接写入生成代码的基类名。</returns>
+        private static string ResolveBaseClassName(string requestedBaseClassName, string codeTemplate)
+        {
+            if (string.Equals(codeTemplate, UIKitCodeTemplateRegistry.DIALOG_TEMPLATE_NAME, StringComparison.Ordinal))
+                return "UIDialogPanel";
+            return string.IsNullOrWhiteSpace(requestedBaseClassName) ? "UIPanel" : requestedBaseClassName.Trim();
         }
 
         /// <summary>验证代码模板只使用受支持的稳定名称。</summary>

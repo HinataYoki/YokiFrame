@@ -163,7 +163,8 @@ public sealed partial class WorkbenchDashboardService
             root,
             "codeTemplateOptions",
             "Default",
-            "Minimal");
+            "Minimal",
+            "Dialog");
         IReadOnlyList<string> assemblyNames = ReadStringArray(
             root,
             "assemblyNames",

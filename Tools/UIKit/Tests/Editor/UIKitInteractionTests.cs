@@ -92,7 +92,7 @@ namespace YokiFrame.Tests
 
             Assert.IsTrue(result.IsSuccess);
             StringAssert.Contains(
-                "\"codeTemplateOptions\":[\"Default\",\"Minimal\"",
+                "\"codeTemplateOptions\":[\"Default\",\"Minimal\",\"Dialog\"",
                 result.ResultJson);
             StringAssert.Contains(
                 "\"assemblyNames\":[\"Assembly-CSharp\"",

@@ -50,7 +50,7 @@ public sealed class WorkbenchUIKitEditorCommandTests
         Assert.NotNull(result.Context);
         Assert.Equal("Assets/Resources/Art/UIPrefab", result.Context!.Defaults.PrefabFolder);
         Assert.Equal("Default", result.Context.Defaults.CodeTemplate);
-        Assert.Equal(new[] { "Default", "Minimal" }, result.Context.CodeTemplateOptions);
+        Assert.Equal(new[] { "Default", "Minimal", "Dialog" }, result.Context.CodeTemplateOptions);
         Assert.Equal(new[] { "Assembly-CSharp" }, result.Context.AssemblyNames);
     }
 

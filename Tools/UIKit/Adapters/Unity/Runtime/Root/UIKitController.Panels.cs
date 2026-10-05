@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace YokiFrame
 {
@@ -76,7 +77,7 @@ namespace YokiFrame
                 return entry.Panel;
             }
             RegisterAtLevel(entry);
-            return CommitShow(entry, generation);
+            return CommitShow(entry, generation, false);
         }
 
         /// <summary>
@@ -106,16 +107,17 @@ namespace YokiFrame
             if (!TryGetOwnedEntry(panel, out PanelEntry entry)
                 || (entry.State != PanelState.Hide && entry.State != PanelState.Hiding)) return false;
             int generation = ++entry.TransitionGeneration;
+            bool wasHiding = entry.State == PanelState.Hiding;
             entry.Panel.StopAnimations();
             entry.State = PanelState.Opening;
-            CommitShow(entry, generation);
+            CommitShow(entry, generation, wasHiding);
             return IsTransitionCurrent(entry, generation);
         }
 
         /// <summary>
         /// 提交同步显示钩子和 active 状态，并拒绝重入产生的旧 generation。
         /// </summary>
-        private UIPanel CommitShow(PanelEntry entry, int generation)
+        private UIPanel CommitShow(PanelEntry entry, int generation, bool wasHiding = false)
         {
             if (!IsTransitionCurrent(entry, generation)) return entry.Panel;
             entry.Panel.gameObject.SetActive(true);
@@ -123,8 +125,20 @@ namespace YokiFrame
             if (!IsTransitionCurrent(entry, generation)) return entry.Panel;
             entry.Panel.InvokeShow();
             if (!IsTransitionCurrent(entry, generation)) return entry.Panel;
-            if (entry.Panel.TryPlayShowAnimation(() => CompleteShow(entry, generation))) return entry.Panel;
-            CompleteShow(entry, generation);
+            
+            bool playedAnimation = false;
+            if (wasHiding && entry.Panel.ShowAnimation is IUIAnimationInternal internalShowAnim)
+            {
+                playedAnimation = TryPlayAnimationFromCurrent(internalShowAnim, entry.Panel.transform as UnityEngine.RectTransform, 
+                    () => CompleteShow(entry, generation));
+            }
+            
+            if (!playedAnimation)
+            {
+                playedAnimation = entry.Panel.TryPlayShowAnimation(() => CompleteShow(entry, generation));
+            }
+            
+            if (!playedAnimation) CompleteShow(entry, generation);
             return entry.Panel;
         }
 
@@ -149,15 +163,44 @@ namespace YokiFrame
             if (!TryGetOwnedEntry(panel, out PanelEntry entry)
                 || (entry.State != PanelState.Open && entry.State != PanelState.Opening)) return false;
             int generation = ++entry.TransitionGeneration;
+            bool wasOpening = entry.State == PanelState.Opening;
             entry.Panel.StopAnimations();
             entry.State = PanelState.Hiding;
             entry.Panel.InvokeWillHide();
             if (!IsTransitionCurrent(entry, generation)) return false;
             entry.Panel.InvokeHide();
             if (!IsTransitionCurrent(entry, generation)) return false;
-            if (entry.Panel.TryPlayHideAnimation(() => CompleteHide(entry, generation))) return true;
-            CompleteHide(entry, generation);
+            
+            bool playedAnimation = false;
+            if (wasOpening && entry.Panel.HideAnimation is IUIAnimationInternal internalHideAnim)
+            {
+                playedAnimation = TryPlayAnimationFromCurrent(internalHideAnim, entry.Panel.transform as UnityEngine.RectTransform,
+                    () => CompleteHide(entry, generation));
+            }
+            
+            if (!playedAnimation)
+            {
+                playedAnimation = entry.Panel.TryPlayHideAnimation(() => CompleteHide(entry, generation));
+            }
+            
+            if (!playedAnimation) CompleteHide(entry, generation);
             return true;
+        }
+
+        /// <summary>使用内部动画接口从当前值续播到目标状态。</summary>
+        private bool TryPlayAnimationFromCurrent(IUIAnimationInternal animation, UnityEngine.RectTransform target, Action onComplete)
+        {
+            if (animation == null || target == default) return false;
+            try
+            {
+                animation.PlayFromCurrent(target, onComplete);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LogKit.Exception(exception, this);
+                return false;
+            }
         }
 
         /// <summary>提交隐藏动画完成后的 inactive 终态。</summary>

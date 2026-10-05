@@ -1,10 +1,11 @@
 #if UNITY_2022_3_OR_NEWER
+using System;
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>对 CanvasGroup alpha 执行淡入淡出动画。</summary>
-    public sealed class FadeAnimation : UIAnimationBase
+    public sealed class FadeAnimation : UIAnimationBase, IUIAnimationInternal
     {
         private readonly float mFromAlpha;
         private readonly float mToAlpha;
@@ -44,11 +45,43 @@ namespace YokiFrame
             mCanvasGroup.alpha = Mathf.Lerp(mFromAlpha, mToAlpha, normalizedTime);
         }
 
+        /// <inheritdoc />
+        protected override void ApplyFromCurrent(RectTransform target, float fromValue, float toValue, float normalizedTime)
+        {
+            if (mCanvasGroup == default) mCanvasGroup = EnsureCanvasGroup(target);
+            mCanvasGroup.alpha = Mathf.Lerp(fromValue, toValue, normalizedTime);
+        }
+
         /// <summary>获取或创建目标上的 CanvasGroup。</summary>
         private static CanvasGroup EnsureCanvasGroup(RectTransform target)
         {
             CanvasGroup group = target.GetComponent<CanvasGroup>();
             return group != default ? group : target.gameObject.AddComponent<CanvasGroup>();
+        }
+
+        /// <inheritdoc />
+        void IUIAnimationInternal.PlayFromCurrent(RectTransform target, Action onComplete)
+        {
+            if (target == default)
+            {
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            mCanvasGroup = EnsureCanvasGroup(target);
+            float currentAlpha = mCanvasGroup.alpha;
+            float distance = Mathf.Abs(mToAlpha - currentAlpha);
+            float totalDistance = Mathf.Abs(mToAlpha - mFromAlpha);
+
+            if (distance < 0.001f || totalDistance < 0.001f)
+            {
+                mCanvasGroup.alpha = mToAlpha;
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            float scaledDuration = Duration * (distance / totalDistance);
+            PlayFromCurrentInternal(target, currentAlpha, mToAlpha, scaledDuration, onComplete);
         }
     }
 }

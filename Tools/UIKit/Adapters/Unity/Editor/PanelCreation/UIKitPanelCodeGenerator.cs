@@ -236,7 +236,7 @@ namespace YokiFrame
                 scope.Class(layout.PanelName + "Data", "IUIData", false, false, data =>
                     data.AsSealed().WithAttribute("System.Serializable"));
                 scope.EmptyLine();
-                scope.Class(layout.PanelName, "UIPanel", true, false, panel =>
+                scope.Class(layout.PanelName, layout.BaseClassName, true, false, panel =>
                 {
                     panel.ProtectedOverrideVoid("OnInit", method => method
                         .WithParameter("IUIData", "data", "null")
@@ -260,6 +260,13 @@ namespace YokiFrame
 
                     panel.EmptyLine();
                     panel.ProtectedOverrideVoid("OnClose", default);
+                    if (layout.IsDialogTemplate)
+                    {
+                        // UIDialogPanel 把内容绑定定义为抽象方法，用户脚本必须生成可编译的重写。
+                        panel.EmptyLine();
+                        panel.ProtectedOverrideVoid("SetupDialog", method => method
+                            .WithParameter("DialogConfig", "config"));
+                    }
                 });
             }));
         }

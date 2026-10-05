@@ -13,7 +13,7 @@ namespace YokiFrame
     }
 
     /// <summary>把多个 IUIAnimation 按并行或顺序方式组合成单个转换。</summary>
-    public sealed class CompositeAnimation : IUIAnimation
+    public sealed class CompositeAnimation : IUIAnimation, IUIAnimationInternal
     {
         private readonly List<IUIAnimation> mAnimations = new(4);
         private PlaybackState mPlayback;
@@ -137,6 +137,52 @@ namespace YokiFrame
             Stop();
             for (var index = 0; index < mAnimations.Count; index++) mAnimations[index].Recycle();
             mAnimations.Clear();
+        }
+
+        /// <inheritdoc />
+        void IUIAnimationInternal.PlayFromCurrent(RectTransform target, Action onComplete)
+        {
+            Stop();
+            if (target == default || mAnimations.Count == 0)
+            {
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            var state = new PlaybackState(++mGeneration, target, onComplete, mAnimations.Count);
+            mPlayback = state;
+            if (Mode == CompositeMode.Parallel) PlayFromCurrentParallel(state);
+            else PlayFromCurrentSequential(state);
+        }
+
+        /// <summary>并行模式下从当前值续播所有子动画。</summary>
+        private void PlayFromCurrentParallel(PlaybackState state)
+        {
+            for (var index = 0; index < mAnimations.Count; index++)
+            {
+                IUIAnimation animation = mAnimations[index];
+                if (animation is IUIAnimationInternal internalAnim)
+                    internalAnim.PlayFromCurrent(state.Target, () => OnParallelChildCompleted(state));
+                else
+                    animation.Play(state.Target, () => OnParallelChildCompleted(state));
+            }
+        }
+
+        /// <summary>顺序模式下从当前值续播下一子动画。</summary>
+        private void PlayFromCurrentSequential(PlaybackState state)
+        {
+            if (!IsCurrent(state)) return;
+            if (state.NextIndex >= mAnimations.Count)
+            {
+                Complete(state);
+                return;
+            }
+
+            IUIAnimation animation = mAnimations[state.NextIndex++];
+            if (animation is IUIAnimationInternal internalAnim)
+                internalAnim.PlayFromCurrent(state.Target, () => PlayFromCurrentSequential(state));
+            else
+                animation.Play(state.Target, () => PlayFromCurrentSequential(state));
         }
 
         /// <summary>计算并行最大时长或顺序累计时长。</summary>

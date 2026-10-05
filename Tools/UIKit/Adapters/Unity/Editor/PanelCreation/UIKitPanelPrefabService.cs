@@ -21,7 +21,9 @@ namespace YokiFrame
 
             UIKitPanelCodeLayout.EnsureAssetFolder(layout.PrefabFolder);
             UIKitPanelCodeLayout.EnsureAssetFolder(layout.PanelFolder);
-            GameObject root = CreatePanelRoot(layout.PanelName);
+            GameObject root = layout.IsDialogTemplate
+                ? CreateDialogRoot(layout.PanelName)
+                : CreatePanelRoot(layout.PanelName);
             try
             {
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, layout.PrefabPath);
@@ -204,6 +206,55 @@ namespace YokiFrame
             image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
             image.type = Image.Type.Sliced;
             image.color = Color.white;
+            return root;
+        }
+
+        /// <summary>创建对话框根节点，包含背景、标题、内容区和按钮区层级结构。</summary>
+        private static GameObject CreateDialogRoot(string panelName)
+        {
+            GameObject root = new(panelName, typeof(RectTransform));
+            Stretch(root.GetComponent<RectTransform>());
+            
+            // 背景面板
+            GameObject panel = new("Panel", typeof(RectTransform));
+            panel.transform.SetParent(root.transform, false);
+            RectTransform panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(600f, 400f);
+            panelRect.anchoredPosition = Vector2.zero;
+            Image bgImage = panel.AddComponent<Image>();
+            bgImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
+            bgImage.type = Image.Type.Sliced;
+            bgImage.color = Color.white;
+            
+            // 标题区
+            GameObject titleArea = new("TitleArea", typeof(RectTransform));
+            titleArea.transform.SetParent(panel.transform, false);
+            RectTransform titleRect = titleArea.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.sizeDelta = new Vector2(0f, 60f);
+            titleRect.anchoredPosition = new Vector2(0f, -30f);
+            
+            // 内容区
+            GameObject contentArea = new("ContentArea", typeof(RectTransform));
+            contentArea.transform.SetParent(panel.transform, false);
+            RectTransform contentRect = contentArea.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 0f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.sizeDelta = new Vector2(-40f, -140f);
+            contentRect.anchoredPosition = new Vector2(0f, 10f);
+            
+            // 按钮区
+            GameObject buttonArea = new("ButtonArea", typeof(RectTransform));
+            buttonArea.transform.SetParent(panel.transform, false);
+            RectTransform buttonRect = buttonArea.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0f, 0f);
+            buttonRect.anchorMax = new Vector2(1f, 0f);
+            buttonRect.sizeDelta = new Vector2(0f, 60f);
+            buttonRect.anchoredPosition = new Vector2(0f, 30f);
+            
             return root;
         }
 

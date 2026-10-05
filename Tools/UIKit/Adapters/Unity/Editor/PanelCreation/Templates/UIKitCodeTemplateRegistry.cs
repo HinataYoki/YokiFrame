@@ -15,6 +15,9 @@ namespace YokiFrame
         /// <summary>内置精简生命周期模板名。</summary>
         public const string MINIMAL_TEMPLATE_NAME = "Minimal";
 
+        /// <summary>内置对话框模板名，生成 UIDialogPanel 及其抽象重写。</summary>
+        public const string DIALOG_TEMPLATE_NAME = "Dialog";
+
         private static readonly Dictionary<string, IUIKitCodeTemplate> sTemplates =
             new(StringComparer.Ordinal);
         private static IReadOnlyList<string> sTemplateNames = Array.AsReadOnly(Array.Empty<string>());
@@ -88,6 +91,9 @@ namespace YokiFrame
             RegisterCore(new UIKitBuiltInCodeTemplate(
                 MINIMAL_TEMPLATE_NAME,
                 "只生成必要生命周期入口。"), true);
+            RegisterCore(new UIKitBuiltInCodeTemplate(
+                DIALOG_TEMPLATE_NAME,
+                "生成继承 UIDialogPanel 的对话框模板，并实现 SetupDialog。"), true);
             DiscoverProjectTemplates();
             RebuildNameSnapshot();
         }
@@ -167,7 +173,8 @@ namespace YokiFrame
         private static bool IsBuiltIn(string templateName)
         {
             return string.Equals(templateName, DEFAULT_TEMPLATE_NAME, StringComparison.Ordinal)
-                || string.Equals(templateName, MINIMAL_TEMPLATE_NAME, StringComparison.Ordinal);
+                || string.Equals(templateName, MINIMAL_TEMPLATE_NAME, StringComparison.Ordinal)
+                || string.Equals(templateName, DIALOG_TEMPLATE_NAME, StringComparison.Ordinal);
         }
 
         /// <summary>重建稳定只读名称快照，避免 UI 枚举可变 Dictionary。</summary>
@@ -193,7 +200,8 @@ namespace YokiFrame
         {
             if (string.Equals(name, DEFAULT_TEMPLATE_NAME, StringComparison.Ordinal)) return 0;
             if (string.Equals(name, MINIMAL_TEMPLATE_NAME, StringComparison.Ordinal)) return 1;
-            return 2;
+            if (string.Equals(name, DIALOG_TEMPLATE_NAME, StringComparison.Ordinal)) return 2;
+            return 3;
         }
     }
 }

@@ -1,10 +1,12 @@
 #if UNITY_2022_3_OR_NEWER
+using System;
+using System.Collections;
 using UnityEngine;
 
 namespace YokiFrame
 {
     /// <summary>对 RectTransform anchoredPosition 执行滑入滑出动画。</summary>
-    public sealed class SlideAnimation : UIAnimationBase
+    public sealed class SlideAnimation : UIAnimationBase, IUIAnimationInternal
     {
         private readonly Vector2 mFromPosition;
         private readonly Vector2 mToPosition;
@@ -86,6 +88,81 @@ namespace YokiFrame
                 case SlideDirection.Right: return endPosition + Vector2.right * mOffset;
                 default: return endPosition;
             }
+        }
+
+        /// <inheritdoc />
+        void IUIAnimationInternal.PlayFromCurrent(RectTransform target, Action onComplete)
+        {
+            if (target == default)
+            {
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            Vector2 currentPosition = target.anchoredPosition;
+            Vector2 targetPosition = mHasRuntimeState ? mRuntimeToPosition : mToPosition;
+            
+            if (mUseDirection && !mHasRuntimeState)
+            {
+                targetPosition = currentPosition;
+            }
+
+            float distance = Vector2.Distance(currentPosition, targetPosition);
+            Vector2 originalFrom = mHasRuntimeState ? mRuntimeFromPosition : mFromPosition;
+            float totalDistance = Vector2.Distance(originalFrom, targetPosition);
+
+            if (distance < 0.001f || totalDistance < 0.001f)
+            {
+                target.anchoredPosition = targetPosition;
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            float scaledDuration = Duration * (distance / totalDistance);
+            PlayFromCurrentVector2(target, currentPosition, targetPosition, scaledDuration, onComplete);
+        }
+
+        /// <summary>从当前位置播放到目标位置。</summary>
+        private void PlayFromCurrentVector2(
+            RectTransform target,
+            Vector2 fromPosition,
+            Vector2 toPosition,
+            float scaledDuration,
+            Action onComplete)
+        {
+            Stop();
+            mOnComplete = onComplete;
+            if (scaledDuration <= 0f)
+            {
+                target.anchoredPosition = toPosition;
+                Complete();
+                return;
+            }
+
+            EnsureRunner();
+            IsPlaying = true;
+            mCoroutine = sRunner.StartCoroutine(PlayVector2Coroutine(target, fromPosition, toPosition, scaledDuration));
+        }
+
+        /// <summary>按缩放时长从当前位置插值到目标位置。</summary>
+        private IEnumerator PlayVector2Coroutine(
+            RectTransform target,
+            Vector2 fromPosition,
+            Vector2 toPosition,
+            float duration)
+        {
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (target == default) yield break;
+                elapsed += Time.unscaledDeltaTime;
+                float normalizedTime = Mathf.Clamp01(elapsed / duration);
+                target.anchoredPosition = Vector2.LerpUnclamped(fromPosition, toPosition, EvaluateCurve(normalizedTime));
+                yield return null;
+            }
+
+            if (target != default) target.anchoredPosition = toPosition;
+            Complete();
         }
     }
 }

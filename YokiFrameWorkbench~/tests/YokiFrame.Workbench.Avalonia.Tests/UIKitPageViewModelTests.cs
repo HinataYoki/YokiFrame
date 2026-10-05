@@ -117,7 +117,7 @@ public sealed class UIKitPageViewModelTests
         Assert.Equal(WorkbenchUIKitEditorAction.RefreshContext, lastAction);
         Assert.Equal("Assets/UI", viewModel.PrefabFolder);
         Assert.Equal("精简", viewModel.CodeTemplateDisplay);
-        Assert.Equal(new[] { "默认", "精简", "TeamTemplate" }, viewModel.CodeTemplateOptions);
+        Assert.Equal(new[] { "默认", "精简", "对话", "TeamTemplate" }, viewModel.CodeTemplateOptions);
         Assert.Equal(new[] { "Assembly-CSharp", "Game.UI" }, viewModel.AssemblyNames);
         Assert.Equal("Game.UI", viewModel.AssemblyName);
         Assert.True(viewModel.CanGenerateCode);
@@ -624,7 +624,7 @@ public sealed class UIKitPageViewModelTests
                 AssemblyName = assemblyName,
                 CodeTemplate = codeTemplate,
             },
-            CodeTemplateOptions = codeTemplateOptions ?? new[] { "Default", "Minimal", "TeamTemplate" },
+            CodeTemplateOptions = codeTemplateOptions ?? new[] { "Default", "Minimal", "Dialog", "TeamTemplate" },
             AssemblyNames = assemblyNames ?? new[] { "Assembly-CSharp", "Game.UI" },
         };
     }

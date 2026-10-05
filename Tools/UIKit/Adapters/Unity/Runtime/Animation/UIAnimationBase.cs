@@ -8,11 +8,11 @@ namespace YokiFrame
     /// <summary>使用 Unity 协程驱动的可取消动画基类。</summary>
     public abstract class UIAnimationBase : IUIAnimation
     {
-        private sealed class AnimationRunner : MonoBehaviour { }
-        private static AnimationRunner sRunner;
+        protected internal sealed class AnimationRunner : MonoBehaviour { }
+        protected static AnimationRunner sRunner;
         private readonly AnimationCurve mCurve;
-        private Coroutine mCoroutine;
-        private Action mOnComplete;
+        protected Coroutine mCoroutine;
+        protected Action mOnComplete;
 
         /// <summary>使用共享协程宿主创建动画基础参数，并保留可选插值曲线。</summary>
         protected UIAnimationBase(float duration, AnimationCurve curve = null)
@@ -25,7 +25,7 @@ namespace YokiFrame
         public float Duration { get; }
 
         /// <inheritdoc />
-        public bool IsPlaying { get; private set; }
+        public bool IsPlaying { get; protected set; }
 
         /// <inheritdoc />
         public void Play(RectTransform target, Action onComplete = null)
@@ -96,7 +96,7 @@ namespace YokiFrame
         }
 
         /// <summary>确保共享协程宿主存在且不会随场景卸载。</summary>
-        private static void EnsureRunner()
+        protected static void EnsureRunner()
         {
             if (sRunner != default) return;
             GameObject host = new("[YokiFrame UIKit Animation]");
@@ -105,13 +105,62 @@ namespace YokiFrame
         }
 
         /// <summary>提交动画终态并执行一次完成回调。</summary>
-        private void Complete()
+        protected void Complete()
         {
             mCoroutine = null;
             IsPlaying = false;
             Action callback = mOnComplete;
             mOnComplete = null;
             if (callback != null) callback();
+        }
+
+        /// <summary>从指定起始值播放到结束值，时长已按剩余距离缩放。</summary>
+        protected void PlayFromCurrentInternal(
+            RectTransform target,
+            float fromValue,
+            float toValue,
+            float scaledDuration,
+            Action onComplete)
+        {
+            Stop();
+            mOnComplete = onComplete;
+            if (scaledDuration <= 0f)
+            {
+                SetToEndState(target);
+                Complete();
+                return;
+            }
+
+            EnsureRunner();
+            IsPlaying = true;
+            mCoroutine = sRunner.StartCoroutine(PlayFromCurrentCoroutine(target, fromValue, toValue, scaledDuration));
+        }
+
+        /// <summary>按缩放时长从当前值插值到目标值。</summary>
+        private IEnumerator PlayFromCurrentCoroutine(
+            RectTransform target,
+            float fromValue,
+            float toValue,
+            float duration)
+        {
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (target == default) yield break;
+                elapsed += Time.unscaledDeltaTime;
+                float normalizedTime = Mathf.Clamp01(elapsed / duration);
+                ApplyFromCurrent(target, fromValue, toValue, EvaluateCurve(normalizedTime));
+                yield return null;
+            }
+
+            if (target != default) SetToEndState(target);
+            Complete();
+        }
+
+        /// <summary>应用从当前值到目标值的单帧插值，由具体动画提供实现。</summary>
+        protected virtual void ApplyFromCurrent(RectTransform target, float fromValue, float toValue, float normalizedTime)
+        {
+            // 默认实现为淡入淡出，Scale 和 Slide 会覆盖
         }
     }
 }
