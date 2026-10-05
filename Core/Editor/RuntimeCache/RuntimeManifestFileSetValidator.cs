@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace YokiFrame.RuntimeCache
 {
@@ -24,8 +23,8 @@ public static class RuntimeManifestFileSetValidator
     /// <param name="files">验证后的文件完整路径集合。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>清单与物理载荷完全一致时返回 true。</returns>
-    public static bool TryValidate(
-        JsonElement platform,
+    internal static bool TryValidate(
+        RuntimeManifestValue platform,
         string runtimeRoot,
         string platformRoot,
         bool validateContentHashes,
@@ -36,14 +35,15 @@ public static class RuntimeManifestFileSetValidator
         error = string.Empty;
         if (!RuntimeManifestJson.TryReadInt32(platform, "fileCount", out var fileCount) || fileCount < 0
             || !RuntimeManifestJson.TryReadInt64(platform, "totalBytes", out var totalBytes) || totalBytes < 0
-            || !platform.TryGetProperty("files", out var records) || records.ValueKind != JsonValueKind.Array)
+            || !RuntimeManifestJson.TryGetProperty(platform, "files", out var records)
+            || records.Kind != RuntimeManifestValueKind.Array)
         {
             error = "Runtime manifest file summary is invalid.";
             return false;
         }
 
         long calculatedBytes = 0;
-        foreach (var record in records.EnumerateArray())
+        foreach (var record in records.Items)
         {
             if (!TryValidateFileRecord(
                     record,
@@ -79,7 +79,7 @@ public static class RuntimeManifestFileSetValidator
     /// <param name="error">失败原因。</param>
     /// <returns>文件记录可信时返回 true。</returns>
     private static bool TryValidateFileRecord(
-        JsonElement record,
+        RuntimeManifestValue record,
         string runtimeRoot,
         string platformRoot,
         bool validateContentHashes,

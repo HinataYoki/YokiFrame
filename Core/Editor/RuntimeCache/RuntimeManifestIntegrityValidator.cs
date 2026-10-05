@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 
 namespace YokiFrame.RuntimeCache
 {
@@ -138,9 +137,9 @@ public static class RuntimeManifestIntegrityValidator
         error = string.Empty;
         try
         {
-            using var document = ReadDocument(manifestPath);
+            var document = ReadDocument(manifestPath);
             return TryValidateDocument(
-                document.RootElement,
+                document,
                 Path.GetFullPath(runtimeRoot),
                 runtimeProfile,
                 requireCli,
@@ -159,8 +158,8 @@ public static class RuntimeManifestIntegrityValidator
     /// 在受限大小内读取 manifest，避免损坏缓存触发无界内存分配。
     /// </summary>
     /// <param name="manifestPath">manifest 完整路径。</param>
-    /// <returns>已解析 JSON 文档。</returns>
-    private static JsonDocument ReadDocument(string manifestPath)
+    /// <returns>已解析 JSON 根对象。</returns>
+    private static RuntimeManifestValue ReadDocument(string manifestPath)
     {
         var info = new FileInfo(manifestPath);
         if (!info.Exists)
@@ -173,8 +172,9 @@ public static class RuntimeManifestIntegrityValidator
             throw new InvalidDataException("Runtime manifest size is invalid.");
         }
 
-        using var stream = new FileStream(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return JsonDocument.Parse(stream, new JsonDocumentOptions { MaxDepth = 64 });
+        // Unity 2022.3 到 6000.4 没有公开 System.Text.Json，manifest 只解析自身契约需要的子集。
+        var json = File.ReadAllText(manifestPath);
+        return RuntimeManifestDocument.ParseObject(json);
     }
 
     /// <summary>
@@ -189,7 +189,7 @@ public static class RuntimeManifestIntegrityValidator
     /// <param name="error">失败原因。</param>
     /// <returns>完整验证成功时返回 true。</returns>
     private static bool TryValidateDocument(
-        JsonElement root,
+        RuntimeManifestValue root,
         string runtimeRoot,
         string runtimeProfile,
         bool requireCli,
@@ -222,11 +222,11 @@ public static class RuntimeManifestIntegrityValidator
     /// <param name="layoutVersion">解析出的布局版本。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>头部结构有效时返回 true。</returns>
-    private static bool TryValidateHeader(JsonElement root, out int layoutVersion, out string error)
+    private static bool TryValidateHeader(RuntimeManifestValue root, out int layoutVersion, out string error)
     {
         layoutVersion = 0;
         error = string.Empty;
-        if (root.ValueKind != JsonValueKind.Object
+        if (root.Kind != RuntimeManifestValueKind.Object
             || !RuntimeManifestJson.TryReadInt32(root, "manifestVersion", out var manifestVersion)
             || manifestVersion != RuntimeManifestContract.MANIFEST_VERSION
             || !RuntimeManifestJson.TryReadInt32(root, "layoutVersion", out layoutVersion)
@@ -250,21 +250,22 @@ public static class RuntimeManifestIntegrityValidator
     /// <param name="error">失败原因。</param>
     /// <returns>恰好存在一个目标平台时返回 true。</returns>
     private static bool TryFindPlatform(
-        JsonElement root,
+        RuntimeManifestValue root,
         string runtimeProfile,
-        out JsonElement platform,
+        out RuntimeManifestValue platform,
         out string error)
     {
-        platform = default;
+        platform = default!;
         error = string.Empty;
-        if (!root.TryGetProperty("platforms", out var platforms) || platforms.ValueKind != JsonValueKind.Array)
+        if (!RuntimeManifestJson.TryGetProperty(root, "platforms", out var platforms)
+            || platforms.Kind != RuntimeManifestValueKind.Array)
         {
             error = "Runtime manifest does not contain a platforms array.";
             return false;
         }
 
         var matchCount = 0;
-        foreach (var candidate in platforms.EnumerateArray())
+        foreach (var candidate in platforms.Items)
         {
             if (RuntimeManifestJson.TryReadString(candidate, "platform", out var name)
                 && string.Equals(name, runtimeProfile, StringComparison.Ordinal))
@@ -296,7 +297,7 @@ public static class RuntimeManifestIntegrityValidator
     /// <param name="error">失败原因。</param>
     /// <returns>平台缓存完整时返回 true。</returns>
     private static bool TryValidatePlatform(
-        JsonElement platform,
+        RuntimeManifestValue platform,
         string runtimeRoot,
         string runtimeProfile,
         int layoutVersion,
@@ -340,7 +341,7 @@ public static class RuntimeManifestIntegrityValidator
     /// <param name="error">失败原因。</param>
     /// <returns>入口均属于文件清单时返回 true。</returns>
     private static bool TryValidateEntries(
-        JsonElement platform,
+        RuntimeManifestValue platform,
         string runtimeRoot,
         ISet<string> files,
         int layoutVersion,
@@ -401,7 +402,7 @@ public static class RuntimeManifestIntegrityValidator
     {
         return exception is IOException
             or UnauthorizedAccessException
-            or JsonException
+            or FormatException
             or InvalidDataException
             or ArgumentException
             or System.Security.Cryptography.CryptographicException
@@ -412,7 +413,7 @@ public static class RuntimeManifestIntegrityValidator
 /// <summary>
 /// 提供 manifest JSON 基础字段的严格类型读取，避免各验证阶段重复弱类型分支。
 /// </summary>
-public static class RuntimeManifestJson
+internal static class RuntimeManifestJson
 {
     /// <summary>
     /// 读取必需字符串属性。
@@ -421,7 +422,7 @@ public static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性存在且为非空字符串时返回 true。</returns>
-    public static bool TryReadString(JsonElement element, string propertyName, out string value)
+    internal static bool TryReadString(RuntimeManifestValue element, string propertyName, out string value)
     {
         value = ReadOptionalString(element, propertyName);
         return !string.IsNullOrWhiteSpace(value);
@@ -433,12 +434,13 @@ public static class RuntimeManifestJson
     /// <param name="element">JSON 对象。</param>
     /// <param name="propertyName">属性名。</param>
     /// <returns>字符串值或空文本。</returns>
-    public static string ReadOptionalString(JsonElement element, string propertyName)
+    internal static string ReadOptionalString(RuntimeManifestValue element, string propertyName)
     {
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out var value)
-            && value.ValueKind == JsonValueKind.String
-                ? value.GetString() ?? string.Empty
+        return element != null
+            && element.Kind == RuntimeManifestValueKind.Object
+            && TryGetProperty(element, propertyName, out var value)
+            && value.Kind == RuntimeManifestValueKind.String
+                ? value.Text ?? string.Empty
                 : string.Empty;
     }
 
@@ -449,12 +451,18 @@ public static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性为有效整数时返回 true。</returns>
-    public static bool TryReadInt32(JsonElement element, string propertyName, out int value)
+    internal static bool TryReadInt32(RuntimeManifestValue element, string propertyName, out int value)
     {
         value = 0;
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out var property)
-            && property.TryGetInt32(out value);
+        if (!TryReadInt64(element, propertyName, out var integer)
+            || integer < int.MinValue
+            || integer > int.MaxValue)
+        {
+            return false;
+        }
+
+        value = (int)integer;
+        return true;
     }
 
     /// <summary>
@@ -464,12 +472,35 @@ public static class RuntimeManifestJson
     /// <param name="propertyName">属性名。</param>
     /// <param name="value">解析值。</param>
     /// <returns>属性为有效整数时返回 true。</returns>
-    public static bool TryReadInt64(JsonElement element, string propertyName, out long value)
+    internal static bool TryReadInt64(RuntimeManifestValue element, string propertyName, out long value)
     {
         value = 0L;
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out var property)
-            && property.TryGetInt64(out value);
+        if (element == null
+            || element.Kind != RuntimeManifestValueKind.Object
+            || !TryGetProperty(element, propertyName, out var property)
+            || property.Kind != RuntimeManifestValueKind.Integer)
+        {
+            return false;
+        }
+
+        value = property.Integer;
+        return true;
+    }
+
+    /// <summary>
+    /// 按名称读取对象属性；重复键在解析阶段已保留最后一个值。
+    /// </summary>
+    /// <param name="element">JSON 对象。</param>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">找到的属性值。</param>
+    /// <returns>属性存在时返回 true。</returns>
+    internal static bool TryGetProperty(RuntimeManifestValue element, string propertyName, out RuntimeManifestValue value)
+    {
+        value = default!;
+        return element != null
+            && element.Kind == RuntimeManifestValueKind.Object
+            && element.Properties != null
+            && element.Properties.TryGetValue(propertyName, out value!);
     }
 }
 
