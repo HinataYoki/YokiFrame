@@ -112,17 +112,39 @@ namespace YokiFrame.Unity
                 options.GetDownloadMaximumConcurrency(),
                 options.GetDownloadRetryCount());
 #endif
-            if (downloader.TotalDownloadCount > 0)
-            {
-#if YOKIFRAME_YOOASSET_3
-                downloader.StartDownload();
-#else
-                downloader.BeginDownload();
-#endif
-                await YooAssetOperationAwaiter.WaitAsync(downloader, token);
-            }
+            await DownloadPackageAsync(downloader, options, token);
 
             SaveSuccessfulVersion(package);
+        }
+
+        /// <summary>有缺失文件时启动下载并转发进度；空下载器只返回，不触发回调。</summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static async UniTask DownloadPackageAsync(
+            ResourceDownloaderOperation downloader,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#else
+        /// <summary>有缺失文件时启动下载并转发进度；空下载器只返回，不触发回调。</summary>
+        private static async Task DownloadPackageAsync(
+            ResourceDownloaderOperation downloader,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#endif
+        {
+            if (downloader.TotalDownloadCount <= 0)
+                return;
+
+            YooAssetDownloaderObserver.Attach(
+                downloader,
+                options.OnPackageDownloadProgress,
+                options.OnPackageDownloadError,
+                options.OnPackageDownloadFileBegin);
+#if YOKIFRAME_YOOASSET_3
+            downloader.StartDownload();
+#else
+            downloader.BeginDownload();
+#endif
+            await YooAssetOperationAwaiter.WaitAsync(downloader, token);
         }
 
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -308,6 +330,92 @@ namespace YokiFrame.Unity
             }
 
             return new InvalidOperationException(message, remoteException);
+        }
+
+        /// <summary>按当前激活清单创建下载器。标签为空时覆盖全部缺失资源。</summary>
+        private static ResourceDownloaderOperation CreateActiveDownloader(
+            ResourcePackage package,
+            YooAssetInitializationOptions options,
+            string[] tags)
+        {
+            bool hasTags = tags != null && tags.Length > 0;
+#if YOKIFRAME_YOOASSET_3
+            ResourceDownloaderOptions downloaderOptions = hasTags
+                ? new ResourceDownloaderOptions(
+                    tags,
+                    options.GetDownloadMaximumConcurrency(),
+                    options.GetDownloadRetryCount())
+                : new ResourceDownloaderOptions(
+                    options.GetDownloadMaximumConcurrency(),
+                    options.GetDownloadRetryCount());
+            return package.CreateResourceDownloader(downloaderOptions);
+#else
+            if (hasTags)
+            {
+                return package.CreateResourceDownloader(
+                    tags,
+                    options.GetDownloadMaximumConcurrency(),
+                    options.GetDownloadRetryCount());
+            }
+
+            return package.CreateResourceDownloader(
+                options.GetDownloadMaximumConcurrency(),
+                options.GetDownloadRetryCount());
+#endif
+        }
+
+        /// <summary>下载当前激活清单的缺失资源，供版本更新在激活清单后使用。</summary>
+#if YOKIFRAME_UNITASK_SUPPORT
+        private static UniTask DownloadActivePackageAsync(
+            ResourcePackage package,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#else
+        /// <summary>下载当前激活清单的缺失资源，供版本更新在激活清单后使用。</summary>
+        private static Task DownloadActivePackageAsync(
+            ResourcePackage package,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#endif
+        {
+            ResourceDownloaderOperation downloader = CreateActiveDownloader(package, options, null);
+            return DownloadPackageAsync(downloader, options, token);
+        }
+
+#if YOKIFRAME_UNITASK_SUPPORT
+        /// <summary>预载指定版本清单并创建下载器，不把该清单设为当前激活清单。</summary>
+        private static async UniTask<ResourceDownloaderOperation> CreatePrefetchDownloaderAsync(
+            ResourcePackage package,
+            string packageVersion,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#else
+        /// <summary>预载指定版本清单并创建下载器，不把该清单设为当前激活清单。</summary>
+        private static async Task<ResourceDownloaderOperation> CreatePrefetchDownloaderAsync(
+            ResourcePackage package,
+            string packageVersion,
+            YooAssetInitializationOptions options,
+            CancellationToken token)
+#endif
+        {
+#if YOKIFRAME_YOOASSET_3
+            PrefetchManifestOptions prefetchOptions = new(packageVersion, options.GetManifestTimeoutSeconds());
+            PrefetchManifestOperation prefetch = package.PrefetchManifestAsync(prefetchOptions);
+#else
+            PreDownloadContentOperation prefetch = package.PreDownloadContentAsync(
+                packageVersion,
+                options.GetManifestTimeoutSeconds());
+#endif
+            await YooAssetOperationAwaiter.WaitAsync(prefetch, token);
+#if YOKIFRAME_YOOASSET_3
+            return prefetch.CreateResourceDownloader(new ResourceDownloaderOptions(
+                options.GetDownloadMaximumConcurrency(),
+                options.GetDownloadRetryCount()));
+#else
+            return prefetch.CreateResourceDownloader(
+                options.GetDownloadMaximumConcurrency(),
+                options.GetDownloadRetryCount());
+#endif
         }
     }
 }

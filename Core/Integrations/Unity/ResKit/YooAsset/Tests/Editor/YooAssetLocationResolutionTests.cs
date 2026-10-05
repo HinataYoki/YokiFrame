@@ -66,8 +66,11 @@ namespace YokiFrame.Unity.Tests
             StringAssert.Contains("IsLocationValid(candidate, location)", resolutionSource);
             StringAssert.Contains("return package.CheckLocationValid(location);", resolutionSource);
 #endif
-            StringAssert.Contains("RequirePackage(packageName)", resolutionSource);
+            StringAssert.Contains("RequirePackage(packages, packageName)", resolutionSource);
             StringAssert.Contains("ResolvePackage(request.SceneName, out string location)", sceneSource);
+            StringAssert.Contains("public void AddPackage", resolutionSource);
+            StringAssert.Contains("public bool RemovePackage", resolutionSource);
+            StringAssert.DoesNotContain("private readonly ResourcePackage[] mPackages", providerSource);
             StringAssert.DoesNotContain("mPackage.Load", providerSource);
         }
 

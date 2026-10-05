@@ -124,13 +124,17 @@ raw 或 scene 能力不存在时抛出 `NotSupportedException`，不会静默回
 | `LoadRawAsync(string path, CancellationToken)` | 异步读取 bytes。`LoadRawBytesAsync` 是兼容别名，新代码不要使用。 |
 | `LoadRawTextAsync(string path, CancellationToken)` | 异步读取文本。 |
 
-YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `ResKit.SetProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一步完成初始化和接入。初始化器不会在正常流程中替项目销毁 package；只有选择弱网回退到 OfflinePlayMode 时，才会先等待当前联网 package 使用当前 YooAsset 版本的销毁操作完成，再移除并重建同名 package。
+YooAsset `[2.3.0,4.0.0)` 是可选接入。项目可以自行初始化 `ResourcePackage` 后调用 `YooAssetInitializer.InstallProvider`，也可以使用 `YooAssetInitializer.InitializeAsync` 一次准备配置中的全部 package。初始化器不会在普通移除时销毁 package；只有选择弱网回退到 OfflinePlayMode，或项目显式调用 `DestroyPackageAsync` 时，才会先等待当前 YooAsset 版本的销毁操作完成，再移除并允许同名重建。
 
 当前 Integration 用 `YOKIFRAME_YOOASSET_3` 隔离 YooAsset 3.x API，其它受支持版本按 YooAsset 2.3 API 编译：V2 使用 `InitializeAsync`、`UpdatePackageManifestAsync`、`DestroyAsync` 和 `IRemoteServices`，V3 使用 `InitializePackageAsync`、`LoadPackageManifestAsync`、`DestroyPackageAsync` 和 `IRemoteService`。两代版本共享同一套初始化策略，但不会混用生命周期、清单和远端服务 API；YooAsset 版本范围由 asmdef 的 `[2.3.0,4.0.0)` 约束。
 
-初始化多个 package 时，ResKit 仍只安装一个 Provider。普通路径按 `PackageNames` 的顺序探测，第一个清单包含该 location 的包负责加载；都没有时才由第一包返回失败。同名 location 不会继续向后查找，需要覆盖旧资源时必须把新包排在前面。
+初始化多个 package 时，ResKit 仍只安装一个 Provider。第一次接入才调用 `ResKit.SetProvider`；之后 `InitializePackageAsync`、`InstallProvider` 和再次调用 `InitializeAsync` 都只把新包追加到同一个 `YooAssetResourceProvider`，不会清理已有缓存。普通路径按接入顺序探测，第一个清单包含该 location 的包负责加载；都没有时才由第一包返回失败。同名 location 不会继续向后查找。YooAsset 的版本更新发生在同一个 package 内，换的是该包的清单，不是用另一个包覆盖同名地址。
 
-`YooAssetInitializer.InitializeAsync` 当前对 `PackageNames` 中的所有 package 使用同一套运行模式、远端地址和联网回退策略。这覆盖了主包与 DLC 都使用 Host/CDN、都使用 Web 远端按需加载，以及“部分 package 热更、部分 package 只随包体发布”的常见方案。ResKit 全局只安装一个 Provider，但 `YooAssetResourceProvider` 可以在这个 Provider 内部代理多个 package；这里的多包指 Provider 内部代理多个 package，不是安装多个 ResKit Provider。当前不提供 package 级独立策略；混合热更包与不热更包时，统一使用 HostPlayMode + `RemoteThenOffline`，没有对应远端版本的 package 会回退到包体内置资源。单机 `OfflinePlayMode`/`CustomPlayMode` 不执行远端更新，也不会显示联网处理配置。
+`YooAssetInitializer.InitializeAsync` 按 `PackageNames` 顺序调用单包会话，所有包共用这次传入的运行模式、远端地址和联网回退策略。已接入的包不会被这次调用重新初始化。运行中出现的新包使用 `InitializePackageAsync(packageName, options)`，成功后即可用普通路径或 `package:{包名}/` 加载。`UpdatePackageAsync` 为已接入的包激活新清单；策略不是 `ManifestOnly` 且不是 Web 模式时，还会下载该清单缺失的资源。`DownloadPackageAsync` 只按当前清单下载，可用标签限定范围，不会移除包。`PrefetchPackageAsync` 预下载指定版本，但不激活那份清单。`RemovePackage` 只移出探测名单，不销毁包，也不释放已经加载的资源。要切换运行模式或同名重建，必须调用 `DestroyPackageAsync`，等销毁完成后再 `InitializePackageAsync`。
+
+Host 下载会逐包回调 `OnPackageDownloadProgress`、`OnPackageDownloadError` 和 `OnPackageDownloadFileBegin`。回调携带包名、文件数、字节数和 0–1 进度，多包不合成总进度；没有缺失文件时不会调用。`ManifestOnly` 不自动下载，Web 模式由 YooAsset 按需请求，这两类启动流程也不会触发整包下载回调。
+
+ResKit 全局只安装一个 Provider。多包指这个 Provider 内部代理多个 package，不是安装多个 ResKit Provider。当前不提供同一次批量初始化里的 package 级独立策略；混合热更包与不热更包时，统一使用 HostPlayMode + `RemoteThenOffline`，没有对应远端版本的 package 会回退到包体内置资源。单机 `OfflinePlayMode`/`CustomPlayMode` 不执行远端更新，也不会显示联网处理配置。YooAsset 不提供远端包目录，新包名称仍由项目配置或业务服务下发。
 
 需要固定某个包时，在路径前加 `package:{包名}/`，例如 `package:DLC/Prefabs/Enemy`。显式包不存在或不包含该 location 时直接失败，不会改走自动探测。显式路径和普通路径是不同缓存键。包内依赖不会跨包补齐，场景重名时也应显式指定包。
 

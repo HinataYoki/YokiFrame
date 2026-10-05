@@ -26,7 +26,7 @@ namespace YokiFrame.Unity
         IResourceProviderCapabilities
     {
         private readonly object mLock = new();
-        private readonly ResourcePackage[] mPackages;
+        private readonly List<ResourcePackage> mPackages;
         private readonly bool mEditorSimulateMode;
         private readonly Dictionary<object, Stack<AssetHandle>> mHandles =
             new(ReferenceEqualityComparer.Instance);
@@ -57,6 +57,7 @@ namespace YokiFrame.Unity
         /// <summary>
         /// 创建按给定顺序探测多个资源包的 Provider。
         /// 第一项是自动探测起点；同名 location 不会继续向后查找。
+        /// 构造后可通过 <see cref="AddPackage"/> 和 <see cref="RemovePackage"/> 改变探测名单，不必更换 ResKit Provider。
         /// </summary>
         /// <param name="packages">已经完成初始化并加载有效 manifest 的资源包，顺序即探测顺序。</param>
         /// <param name="editorSimulateMode">是否使用 Unity Editor 的 EditorSimulateMode。</param>
@@ -214,7 +215,7 @@ namespace YokiFrame.Unity
         /// <summary>校验探测清单和 location，确保同步与异步入口使用相同前置条件。</summary>
         private void EnsureRequestPath(string path)
         {
-            if (mPackages.Length == 0 || !YooAssetPackageReadiness.IsReady(mPackages[0]))
+            if (!HasReadyPackage())
             {
                 throw new InvalidOperationException(
                     "YooAsset ResourcePackage must be initialized successfully before installing the ResKit provider.");
@@ -224,6 +225,21 @@ namespace YokiFrame.Unity
             {
                 throw new ArgumentException("Resource path cannot be empty.", nameof(path));
             }
+        }
+
+        /// <summary>确认探测名单里至少还有一个可加载的 package。</summary>
+        private bool HasReadyPackage()
+        {
+            lock (mLock)
+            {
+                for (int index = 0; index < mPackages.Count; index++)
+                {
+                    if (YooAssetPackageReadiness.IsReady(mPackages[index]))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>验证 handle 状态、取得资源并登记后续释放所需的原生 handle。</summary>

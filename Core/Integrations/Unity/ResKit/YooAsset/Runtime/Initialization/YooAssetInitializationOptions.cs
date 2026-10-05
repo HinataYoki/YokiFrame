@@ -101,6 +101,21 @@ namespace YokiFrame.Unity
         [Tooltip("请求远端版本时在 URL 末尾附加时间戳；鉴权签名或服务器不接受查询参数时关闭")]
         public bool AppendTimestampToVersionRequest = true;
 
+        /// <summary>
+        /// Host 启动下载或按需下载的进度回调。
+        /// 每个 package 单独通知，不合成多包总进度；没有实际下载时不会调用。
+        /// </summary>
+        [NonSerialized]
+        public YooAssetPackageDownloadProgressHandler OnPackageDownloadProgress;
+
+        /// <summary>Host 下载单个文件失败时的回调。没有实际下载时不会调用。</summary>
+        [NonSerialized]
+        public YooAssetPackageDownloadErrorHandler OnPackageDownloadError;
+
+        /// <summary>Host 开始下载单个文件时的回调。没有实际下载时不会调用。</summary>
+        [NonSerialized]
+        public YooAssetPackageDownloadFileHandler OnPackageDownloadFileBegin;
+
         /// <summary>Host/Web 模式主资源服务器地址。</summary>
         [Tooltip("Host/Web 模式主资源服务器地址")]
         public string DefaultHostServer;

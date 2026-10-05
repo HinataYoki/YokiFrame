@@ -69,6 +69,20 @@ namespace YokiFrame.Unity
             return true;
         }
 
+        /// <summary>按名称移除登记。不销毁 package，只停止后续探测。</summary>
+        /// <param name="packageName">package 名称。</param>
+        /// <returns>登记中存在并已移除时返回 true。</returns>
+        public bool Remove(string packageName)
+        {
+            PruneUnavailable();
+            int index = IndexOf(packageName);
+            if (index < 0)
+                return false;
+
+            mPackages.RemoveAt(index);
+            return true;
+        }
+
         /// <summary>清空登记，供会话重置使用。</summary>
         public void Clear()
         {
