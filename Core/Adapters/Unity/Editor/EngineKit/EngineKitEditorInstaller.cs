@@ -61,7 +61,8 @@ namespace YokiFrame
                 var trustedSource = new YokiFrameEngineJsonSettingsSource(
                     ResolveSettingsPath(), "scripts.trustedCSharp", "trustedCSharp");
                 sLivePermission = () => !settingsSource.Read().BlocksExecution && !trustedSource.Read().BlocksExecution;
-                var compiler = new YokiFrameRoslynCompilerLoader(projectRoot);
+                var compiler = new YokiFrameRoslynCompilerLoader(projectRoot,
+                    new[] { ResolvePackageDirectory(YokiFrameRoslynCompilerLoader.PACKAGE_RELATIVE_PATH) });
                 var budget = new YokiFrameRoslynLoadBudget();
                 var liveHost = new UnityLiveCodeHost(projectRoot,
                     (id, method, arguments) => sLiveCode.Invoke(id, method, arguments, () => { }));
@@ -123,17 +124,54 @@ namespace YokiFrame
             if (sLiveCode != null) sLiveCode.Clear(exception => Debug.LogException(exception));
         }
 
+        /// <summary>
+        /// 解析 HarmonyX 补丁负载目录：包内 <c>Dependencies~</c> 优先，
+        /// 独立分发的项目本地回退路径次之（见 Engine-LiveCode-Contract §3）。
+        /// </summary>
+        /// <param name="projectRoot">Unity 工程根。</param>
+        /// <returns>补丁负载目录绝对路径。</returns>
         private static string ResolvePatchBundle(string projectRoot)
         {
-            const string relative = "Core/Adapters/Unity/Editor/EngineKit/Dependencies~/harmonyx-2.16.1";
+            string packaged = ResolvePackageDirectory(
+                "Core/Adapters/Unity/Editor/EngineKit/Dependencies~/harmonyx-2.16.1");
+            if (File.Exists(Path.Combine(packaged, "0Harmony.dll"))) return packaged;
+            return Path.GetFullPath(Path.Combine(projectRoot,
+                ".yokiframe/automation/patches/harmonyx-2.16.1".Replace('/', Path.DirectorySeparatorChar)));
+        }
+
+        /// <summary>
+        /// 解析包内目录的绝对路径；用于定位随包分发的 <c>Dependencies~</c> 负载。
+        /// 找不到包根时回退到工程根下的同相对路径。
+        /// </summary>
+        /// <param name="packageRelativePath">相对包根的路径，使用正斜杠分隔。</param>
+        /// <returns>目录绝对路径。</returns>
+        private static string ResolvePackageDirectory(string packageRelativePath)
+        {
+            string packageRoot = ResolvePackageRoot();
+            return Path.GetFullPath(Path.Combine(packageRoot,
+                packageRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+        }
+
+        /// <summary>
+        /// 通过本脚本自身的 GUID 反查包根；不硬编码 <c>Assets/YokiFrame</c>。
+        /// 包被移动到其它目录或改为只读包缓存时仍能定位。
+        /// </summary>
+        /// <returns>包根绝对路径；解析失败时回退到工程根。</returns>
+        private static string ResolvePackageRoot()
+        {
+            string projectRoot = ResolveProjectRoot();
+            const string suffix = "/Core/Adapters/Unity/Editor/EngineKit/EngineKitEditorInstaller.cs";
             foreach (string guid in AssetDatabase.FindAssets("EngineKitEditorInstaller t:MonoScript"))
             {
                 string script = AssetDatabase.GUIDToAssetPath(guid).Replace('\\', '/');
-                const string suffix = "/Core/Adapters/Unity/Editor/EngineKit/EngineKitEditorInstaller.cs";
                 if (script.EndsWith(suffix, StringComparison.Ordinal))
-                    return Path.Combine(projectRoot, script.Substring(0, script.Length - suffix.Length), relative);
+                {
+                    string packageRelative = script.Substring(0, script.Length - suffix.Length);
+                    return Path.GetFullPath(Path.Combine(projectRoot, packageRelative));
+                }
             }
-            return Path.Combine(projectRoot, ".yokiframe/automation/patches/harmonyx-2.16.1");
+
+            return projectRoot;
         }
 
         /// <summary>

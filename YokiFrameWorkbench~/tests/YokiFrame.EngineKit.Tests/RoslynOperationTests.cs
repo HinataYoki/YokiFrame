@@ -5,6 +5,7 @@ namespace YokiFrame.EngineKit.Tests;
 
 public sealed class RoslynOperationTests
 {
+    private const string COMPILER_ASSEMBLY = "YokiFrame.EngineKit.Roslyn.dll";
     [Theory]
     [InlineData(YokiFrameEngineExecutionTarget.Editor, "editor")]
     [InlineData(YokiFrameEngineExecutionTarget.Runtime, "runtime")]
@@ -44,6 +45,68 @@ public sealed class RoslynOperationTests
         Assert.Equal(1, calls);
         compiler.Dispose();
         Assert.Throws<ObjectDisposedException>(() => compiler.Compile("", Array.Empty<string>(), default, out _, out _));
+    }
+
+    [Fact]
+    public void Compiler_prefers_the_packaged_bundle_over_the_project_local_cache()
+    {
+        using var bed = RunTestBed.Create();
+        string packaged = Path.Combine(Path.GetTempPath(), "yokiframe-compiler-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packaged);
+        File.WriteAllBytes(Path.Combine(packaged, COMPILER_ASSEMBLY), new byte[] { 0 });
+        File.WriteAllBytes(Path.Combine(StageLegacyBundle(bed.Root), COMPILER_ASSEMBLY), new byte[] { 0 });
+        try
+        {
+            var compiler = new YokiFrameRoslynCompilerLoader(
+                bed.Root, new[] { packaged }, loadAssembly: (_, _) => typeof(RoslynOperationTests).Assembly);
+            Assert.True(compiler.Installed);
+            // 两个候选都只有占位 DLL；加载错误必须指向包内目录，证明解析命中了优先候选而非项目本地缓存。
+            Assert.Contains(packaged, CaptureLoadFailure(compiler));
+        }
+        finally
+        {
+            Directory.Delete(packaged, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Compiler_falls_back_to_the_project_local_cache_when_no_packaged_bundle_is_supplied()
+    {
+        using var bed = RunTestBed.Create();
+        string legacy = StageLegacyBundle(bed.Root);
+        File.WriteAllBytes(Path.Combine(legacy, COMPILER_ASSEMBLY), new byte[] { 0 });
+        var compiler = new YokiFrameRoslynCompilerLoader(
+            bed.Root, Array.Empty<string>(), loadAssembly: (_, _) => typeof(RoslynOperationTests).Assembly);
+        Assert.True(compiler.Installed);
+        Assert.Contains(legacy, CaptureLoadFailure(compiler));
+    }
+
+    /// <summary>在工程根建立项目本地编译器目录并返回其绝对路径。</summary>
+    /// <param name="projectRoot">测试工程根。</param>
+    /// <returns>项目本地编译器目录绝对路径。</returns>
+    private static string StageLegacyBundle(string projectRoot)
+    {
+        string legacy = Path.Combine(projectRoot,
+            YokiFrameRoslynCompilerLoader.RELATIVE_PATH.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(legacy);
+        return legacy;
+    }
+
+    /// <summary>触发一次加载并返回失败信息；命中候选目录的占位 DLL 会以加载错误的形式暴露该目录。</summary>
+    /// <param name="compiler">被测加载器。</param>
+    /// <returns>包含被解析目录绝对路径的失败信息。</returns>
+    private static string CaptureLoadFailure(YokiFrameRoslynCompilerLoader compiler)
+    {
+        try
+        {
+            compiler.Compile("", Array.Empty<string>(), default, out _, out _);
+        }
+        catch (Exception exception)
+        {
+            return exception.ToString();
+        }
+
+        throw new Xunit.Sdk.XunitException("Expected compiler load to fail for the placeholder bundle.");
     }
 
     [Fact]
