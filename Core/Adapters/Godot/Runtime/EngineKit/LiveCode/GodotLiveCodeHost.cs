@@ -47,7 +47,7 @@ namespace YokiFrame
             var attachment = new Attachment { Host = host };
             try
             {
-                host.Configure(id, instance, mInvoke);
+                host.Configure(id, instance, mInvoke, owner);
                 owner.AddChild(host);
                 attachment.Invoker = new YokiFrameLiveMethodInvoker(instance);
                 return attachment;

@@ -48,8 +48,10 @@
 - 生成作用域里**没有 `engine`**：`engine.ConsoleLog` 会 `CS0103`。直接日志可用 `UnityEngine.Debug.Log`，需要运行报告关联时由提交脚本读字段后 ConsoleLog。
 - 普通成员方法可以重载；同一作用域的局部函数不能同名。跨原型 Invoke 若多个重载匹配则拒绝，使用唯一方法名或预编译共享接口。
 - 生命周期回调只支持非泛型、无参、返回 `void`：`Awake`、`OnEnable`、`Start`、`Update`、`FixedUpdate`、`LateUpdate`、`OnDisable`、`OnDestroy`。
+- 碰撞与触发器回调同样只按方法名转发，签名固定：`OnCollisionEnter/Stay/Exit(UnityEngine.Collision)`、`OnTriggerEnter/Stay/Exit(UnityEngine.Collider)`、`OnControllerColliderHit(UnityEngine.ControllerColliderHit)`。**宿主必须在编译期实现这些消息，Unity 才会回调**；原型没声明对应方法时委托为空，直接返回。签名写错会在 `Attach` 阶段被拒绝，不会变成运行时静默不触发。目标对象仍需自己具备 Collider / Rigidbody —— 原型不会替它添加物理组件。
 - facade 提供 gameObject、transform、GetComponent/GetComponents、GetComponent(s)InChildren/Parent、Instantiate、Destroy；复数查询支持 includeInactive 和 List 输出，不必自己递归层级。
-- 协程 / `Invoke` / 碰撞回调 / `enabled` / 运行时 `AddComponent<原型>` / Inspector 编辑都**没有**。
+- 延迟调用用 `Delay(float seconds, Action callback)`，返回句柄可用 `CancelDelay(handle)` 取消；宿主停止时统一停止，回调异常按原型故障处理（与 `Update` 同一套）。它不是 MonoBehaviour 的 `Invoke` 重载，语义等价。
+- `enabled` / 运行时 `AddComponent<原型>` / Inspector 编辑 / UnityEvent 目标仍然**没有**，因为原型不是 `Component`。
 - 每个 id 单独编译成一个程序集：**两个原型之间不能互相引用类型**（`CS0246`）。
 
 ### 原型之间怎么互相调用
@@ -212,6 +214,8 @@ Snapshot 的 complete 只覆盖支持字段，不是整个场景。Patch、Fault
 - `--engine godot-editor --target editor` 与 `--engine godot-runtime --target runtime` 分别调用各自进程；没有 Godot play target。上述成员示例、Unity 字段类型、Export/Bind 不直接套用。
 - `project.godot` 的 `yokiframe/engine/operations_enabled` 与 `yokiframe/engine/trusted_csharp` 均为布尔 true；先读 script_status.trustedSetting，不使用 Unity JSON 设置文件。
 - Attach target 是已进入树的 Node，facade 提供 Node/GetNode/CallLive；生命周期为无参 void `_EnterTree`/`_Ready`/`_ExitTree`、void `_Process(double)`/`_PhysicsProcess(double)`。原生信号/Call 不自动转发到 facade。
+- **Godot 碰撞回调是信号式的，和 Unity 名字不同**：`_OnBodyEntered/Exited(Node)`、`_OnAreaEntered/Exited(Area3D)`。宿主是从 `Node` 派生的 sealed 类型，**不是碰撞体**，所以碰撞来源按此顺序解析：目标自身是 `Area3D`/`RigidBody3D` → 接它；目标是 `CharacterBody3D` 等其他 `CollisionObject3D` → 无 `body_entered` 信号，不接；向上找最近的 `CollisionObject3D` 父级 → 接它；都没有 → **创建一个临时 `Area3D` 子节点**（SphereShape3D 半径 0.5）承载检测，宿主停止时回收。临时节点会出现在运行场景层级里。
+- 延迟调用用 `Delay(float seconds, Action callback)`、`CancelDelay()`；基于 `SceneTreeTimer`，宿主停止或故障后不再触发。没有 Unity 那样的句柄，因为 Godot 侧同时只有一个待触发延迟。
 - 声明的 public/[Export] 字段支持标量、枚举、Godot.Vector2/3/4、Quaternion、Color；快照可含 GodotObject 引用，直接 JSON 调参仍不接受引用。向量/颜色 value 是数值数组。
 - live_snapshot/live_set_fields/live_tuning_bind/refresh 显式传当前 editor/runtime target。Snapshot/Restore 所有对象都须 resolver，包括保存场景里的 Node/Resource；还原全部字段后才执行 `_EnterTree`/`_Ready`，不猜 NodePath/旧实例 ID。
 - runtime gameFrame 计真实处理帧，暂停和帧号跳跃不计数；editor 用 editorTick。默认 Bootstrap 随 SceneTree 暂停，CLI/调度也暂停，需游戏逻辑或 processAlways 计时器恢复。

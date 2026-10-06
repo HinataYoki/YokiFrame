@@ -98,8 +98,17 @@ Awake、OnEnable、Start、Update、FixedUpdate、LateUpdate、OnDisable、OnDes
 facade 提供 gameObject、transform、单个/复数 GetComponent 查询、
 GetComponentsInChildren/GetComponentsInParent（含 includeInactive 和 List 输出）、
 Instantiate、Destroy。它不是完整 MonoBehaviour：
-Coroutine、Invoke 定时、碰撞回调、UnityEvent 目标、enabled、动态
-AddComponent<原型>、Inspector 编辑仍不支持。
+UnityEvent 目标、enabled、动态 AddComponent<原型>、Inspector 编辑仍不支持
+（原型不是 Component，这几项原理上无法支持）。
+
+物理与延迟回调按方法名转发，签名固定，都不需要原型自己写轮询：
+`OnCollisionEnter/Stay/Exit(Collision)`、`OnTriggerEnter/Stay/Exit(Collider)`、
+`OnControllerColliderHit(ControllerColliderHit)`；延迟用
+`Delay(float seconds, Action callback)` / `CancelDelay(handle)`。
+物理消息是声明式的，宿主必须**在编译期**实现它们 Unity 才会回调，因此宿主恒定
+实现全部 7 个消息；原型未声明对应方法时委托为空、直接返回。签名不符在 Attach
+阶段拒绝，不会退化成运行时静默不触发。目标对象仍需自己具备 Collider /
+Rigidbody，原型不替它添加物理组件。
 
 **原生 SendMessage/SendMessageUpwards/BroadcastMessage 不转发到 facade。**
 不同原型独立编译，不能直接引用另一个内存程序集的类。改用明确的 ID 调用：
@@ -185,6 +194,8 @@ IsAlive、字段、Invoke、Export/Bind、对象身份和场景事务。
 | 目标 | Play 场景 GameObject | editor/runtime 各自进程内、已进入树的 Node |
 | 临时宿主 | 预编译 MonoBehaviour + facade | 预编译 Node + facade |
 | 帧回调 | Update/FixedUpdate/LateUpdate 等 | `_EnterTree`、`_Ready`、`_Process(double)`、`_PhysicsProcess(double)`、`_ExitTree` |
+| 碰撞回调 | `OnCollision*`、`OnTrigger*`、`OnControllerColliderHit`，按方法名转发 | `_OnBodyEntered/Exited(Node)`、`_OnAreaEntered/Exited(Area3D)`，走信号；宿主为 sealed Node，碰撞体必须来自目标或父级节点 |
+| 延迟调用 | `Delay(seconds, callback)` / `CancelDelay(handle)` | `Delay(seconds, callback)` / `CancelDelay()`，基于 `SceneTreeTimer` |
 | 恢复身份 | GlobalObjectId + 场景路径或显式映射 | 所有 Node/Resource 均显式映射，校验精确类型与原 SceneFilePath |
 | 持久类 | 正常 MonoBehaviour | 正常 C# Node 脚本 |
 | 绑定 | Undo + 场景保存 | 未实现，不隐式保存场景 |
@@ -200,6 +211,8 @@ DLL 取得编译引用。依赖必须先正常构建，不能一边替换该目�
 
 Godot facade 提供 Node、GetNode、CallLive，不是完整 Node；原生信号/Call 不自动转发。
 Suspend/回滚恢复不重跑 `_EnterTree`/`_Ready`，真正新版本会重跑；停止只调用一次退出回调。
+
+**Godot 碰撞与 Unity 不同，必须说清**：Godot 没有"声明式碰撞消息"，碰撞依赖节点类型与信号。宿主 `YokiFrameGodotLiveBehaviourHost` 是从 `Node` 直接派生的 sealed 类型，**永远不是碰撞体**，因此原型声明 `_OnBody*` / `_OnArea*` 时宿主按以下顺序解析碰撞来源：① 目标节点自身是 `Area3D`/`RigidBody3D` → 接它的信号；② 目标是 `CharacterBody3D` 等其他 `CollisionObject3D` → 无 `body_entered` 信号，不接；③ 向上查找最近的 `CollisionObject3D` 父级 → 接它；④ 都没有 → 创建临时 `Area3D` 子节点（含 SphereShape3D，半径 0.5）承载检测，宿主停止时 `QueueFree` 回收。`RigidBody3D` 的 `body_entered` 携带 `Node`、`Area3D` 的携带 `Node3D`，原型统一按 `Node` 绑定以兼容两者；`_OnAreaEntered/Exited` 参数为 `Area3D`。临时 `Area3D` 会出现在运行场景层级里，这是可观察的副作用，不是隐藏行为。
 字段为声明的 public/[Export] 可写字段：标量、枚举、Godot 向量/Quaternion/Color、
 GodotObject 引用；引用仅用于快照/脚本 SetField，直接 JSON 调参仍不接受对象引用。
 所有目标/引用都要求 resolver；不把 NodePath、名称、旧 InstanceId 当成跨进程身份。
