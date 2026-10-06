@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace YokiFrame
 {
@@ -30,6 +32,70 @@ namespace YokiFrame
         private readonly object mLoadLock = new object();
         private bool mResolverInstalled;
         private bool mDisposed;
+        private const int MAX_CACHED_SCRIPTS = 128;
+        private readonly Dictionary<string, CompiledScript> mScripts = new Dictionary<string, CompiledScript>(StringComparer.Ordinal);
+        private readonly Queue<string> mScriptOrder = new Queue<string>();
+        private long mScriptCacheHits;
+        private long mScriptCacheMisses;
+
+        internal sealed class CompiledScript
+        {
+            internal Func<YokiFrameAutomationContext, YokiFrameAutomationAssertions, CancellationToken, Task> Run;
+            internal string Diagnostics;
+        }
+
+        public int CachedScripts { get { lock (mLoadLock) return mScripts.Count; } }
+        public int MaxCachedScripts => MAX_CACHED_SCRIPTS;
+        public long ScriptCacheHits { get { lock (mLoadLock) return mScriptCacheHits; } }
+        public long ScriptCacheMisses { get { lock (mLoadLock) return mScriptCacheMisses; } }
+
+        internal string ScriptKey(string source, string[] references)
+        {
+            // Preserve reference order: it can affect compiler binding. Metadata changes invalidate reuse.
+            var key = new StringBuilder(YokiFrameLiveCodeManager.Hash(source));
+            foreach (string path in references)
+            {
+                var file = new FileInfo(path);
+                key.Append('|').Append(file.FullName.Length).Append(':').Append(file.FullName)
+                    .Append(':').Append(file.Length).Append(':').Append(file.LastWriteTimeUtc.Ticks);
+            }
+            return YokiFrameLiveCodeManager.Hash(key.ToString());
+        }
+
+        internal bool TryGetScript(string key, out CompiledScript script)
+        {
+            lock (mLoadLock)
+            {
+                if (mDisposed) throw new ObjectDisposedException(nameof(YokiFrameRoslynCompilerLoader));
+                if (mScripts.TryGetValue(key, out script)) { mScriptCacheHits++; return true; }
+                mScriptCacheMisses++;
+                return false;
+            }
+        }
+
+        internal CompiledScript LoadScript(string key, byte[] pe, byte[] symbols, string diagnostics, YokiFrameRoslynLoadBudget budget)
+        {
+            lock (mLoadLock)
+            {
+                if (mDisposed) throw new ObjectDisposedException(nameof(YokiFrameRoslynCompilerLoader));
+                // Concurrent first submissions may compile together; only the first loads an assembly.
+                if (mScripts.TryGetValue(key, out var cached)) { mScriptCacheHits++; return cached; }
+                budget.Reserve(pe.LongLength + symbols.LongLength);
+                Assembly assembly = LoadAssembly(pe, symbols);
+                MethodInfo method = assembly.GetType("YokiFrame.Automation.Script", true)
+                    .GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
+                var script = new CompiledScript
+                {
+                    Run = (Func<YokiFrameAutomationContext, YokiFrameAutomationAssertions, CancellationToken, Task>)
+                        Delegate.CreateDelegate(typeof(Func<YokiFrameAutomationContext, YokiFrameAutomationAssertions, CancellationToken, Task>), method),
+                    Diagnostics = diagnostics
+                };
+                if (mScripts.Count == MAX_CACHED_SCRIPTS) mScripts.Remove(mScriptOrder.Dequeue());
+                mScripts.Add(key, script);
+                mScriptOrder.Enqueue(key);
+                return script;
+            }
+        }
         private static readonly string[] sDependencies =
         {
             "Microsoft.CodeAnalysis", "Microsoft.CodeAnalysis.CSharp", "System.Collections.Immutable",
@@ -220,6 +286,8 @@ namespace YokiFrame
                 if (mResolverInstalled) AppDomain.CurrentDomain.AssemblyResolve -= ResolveDependency;
                 mResolverInstalled = false;
                 mCompile = null;
+                mScripts.Clear();
+                mScriptOrder.Clear();
             }
         }
     }

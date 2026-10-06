@@ -199,6 +199,14 @@ namespace YokiFrame.Json
             return value;
         }
 
+        /// <summary>Returns the number of properties; requires a JSON object.</summary>
+        public int GetPropertyCount()
+        {
+            if (mNode == null || mNode.Kind != JsonValueKind.Object)
+                throw new InvalidOperationException("The JSON value is not an object.");
+            return mNode.Members.Count;
+        }
+
         /// <summary>
         /// 读取数组长度；非数组抛出异常。
         /// </summary>

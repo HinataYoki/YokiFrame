@@ -1,7 +1,6 @@
 #if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -52,7 +51,7 @@ namespace YokiFrame
         private readonly YokiFrameAutomationContext mContext;
         private readonly YokiFrameRoslynCompilerLoader mCompiler;
         private readonly YokiFrameRoslynLoadBudget mBudget;
-        private readonly string[] mReferences;
+        private string[] mReferences;
         private string mCode;
 
         public YokiFrameRoslynRunWork(string code, string[] references,
@@ -80,26 +79,32 @@ namespace YokiFrame
                 mContext.Guard();
                 string source = Wrap(mCode);
                 mCode = null;
-                byte[] symbols = null;
-                string[][] diagnostics = null;
-                byte[] pe = await Task.Run(() => mCompiler.Compile(source, mReferences,
-                    mContext.CancellationToken, out symbols, out diagnostics), mContext.CancellationToken);
-                mContext.Guard();
-                result.Note = WriteDiagnostics(diagnostics);
-                if (pe == null)
+                string key = mCompiler.ScriptKey(source, mReferences);
+                if (!mCompiler.TryGetScript(key, out var script))
                 {
-                    result.Status = YokiFrameRunStatus.CompileFailed;
-                    return result;
+                    byte[] symbols = null;
+                    string[][] diagnostics = null;
+                    byte[] pe = await Task.Run(() => mCompiler.Compile(source, mReferences,
+                        mContext.CancellationToken, out symbols, out diagnostics), mContext.CancellationToken);
+                    mContext.Guard();
+                    result.Note = WriteDiagnostics(diagnostics);
+                    if (pe == null)
+                    {
+                        result.Status = YokiFrameRunStatus.CompileFailed;
+                        return result;
+                    }
+                    if (key != mCompiler.ScriptKey(source, mReferences))
+                        throw new InvalidOperationException("Script references changed while compiling; submit again after compilation is idle.");
+                    script = mCompiler.LoadScript(key, pe, symbols, result.Note, mBudget);
+                    pe = null;
+                    symbols = null;
                 }
-                mBudget.Reserve(pe.Length + symbols.Length);
-                Assembly assembly = mCompiler.LoadAssembly(pe, symbols);
-                MethodInfo method = assembly.GetType("YokiFrame.Automation.Script", true)
-                    .GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
-                var run = (Func<YokiFrameAutomationContext, YokiFrameAutomationAssertions, CancellationToken, Task>)
-                    Delegate.CreateDelegate(typeof(Func<YokiFrameAutomationContext,
-                        YokiFrameAutomationAssertions, CancellationToken, Task>), method);
+                result.Note = script.Diagnostics;
+                source = null;
+                mReferences = null;
                 IsCompiling = false;
-                await run(mContext, mContext.Test, mContext.CancellationToken);
+                mContext.Guard();
+                await script.Run(mContext, mContext.Test, mContext.CancellationToken);
                 mContext.CancellationToken.ThrowIfCancellationRequested();
                 result.Status = mContext.Test.HasFailures ? YokiFrameRunStatus.Failed : YokiFrameRunStatus.Passed;
             }
@@ -118,6 +123,8 @@ namespace YokiFrame
             finally
             {
                 IsCompiling = false;
+                mCode = null;
+                mReferences = null;
                 result.Assertions = new List<YokiFrameRunAssertion>(mContext.Test.Records);
                 result.Logs = new List<string>(mContext.Logs);
             }

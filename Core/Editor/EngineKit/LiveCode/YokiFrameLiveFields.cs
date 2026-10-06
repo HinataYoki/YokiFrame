@@ -1,8 +1,10 @@
 #if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using YokiFrame.Json;
 
@@ -63,7 +65,7 @@ namespace YokiFrame
         {
             if (json == null || Encoding.UTF8.GetByteCount(json) > MaxBytes)
                 throw new ArgumentException("Field update payload exceeds 48 KiB.");
-            using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 12 });
+            using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = YokiFrameLiveFieldValues.MaxDepth + 7 });
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("confirmed", out var confirmed)
                 || confirmed.ValueKind != JsonValueKind.True)
@@ -115,6 +117,93 @@ namespace YokiFrame
 
     public static class YokiFrameLiveFieldValues
     {
+        public const int MaxDepth = 8;
+        public const int MaxElements = 256;
+        public const int MaxNodes = 1024;
+        public delegate bool LeafDecoder(Type type, JsonElement json, out object value);
+
+        /// <summary>Builds a detached replacement. Never invokes user constructors or accessors.</summary>
+        public static object Decode(Type type, JsonElement json, Func<Type, IEnumerable<FieldInfo>> fields,
+            LeafDecoder leaf = null)
+        {
+            int nodes = 0;
+            return Decode(type, json, fields, leaf, 0, ref nodes);
+        }
+
+        private static object Decode(Type type, JsonElement json, Func<Type, IEnumerable<FieldInfo>> fields,
+            LeafDecoder leaf, int depth, ref int nodes)
+        {
+            CheckBounds(depth, ++nodes);
+            if (TryDecodeScalar(type, json, out var value)) return value;
+            if (leaf != null && leaf(type, json, out value)) return value;
+            bool collection = TryCollection(type, out Type element);
+            if (!collection) RequireDataType(type);
+            if (json.ValueKind == JsonValueKind.Null && !type.IsValueType) return null;
+            if (collection)
+            {
+                if (json.ValueKind != JsonValueKind.Array || json.GetArrayLength() > MaxElements)
+                    throw new ArgumentException("Collection requires a JSON array of at most 256 elements.");
+                int count = json.GetArrayLength();
+                IList result = type.IsArray ? (IList)Array.CreateInstance(element, count) : (IList)Activator.CreateInstance(type);
+                for (int i = 0; i < count; i++)
+                {
+                    object item = Decode(element, json[i], fields, leaf, depth + 1, ref nodes);
+                    if (type.IsArray) result[i] = item;
+                    else result.Add(item);
+                }
+                return result;
+            }
+            if (json.ValueKind != JsonValueKind.Object) throw new ArgumentException("Data field requires a JSON object.");
+            var members = new List<FieldInfo>(fields(type));
+            if (json.GetPropertyCount() != members.Count)
+                throw new ArgumentException("Data replacement must contain exactly its serializable fields: " + type.FullName);
+            object instance = FormatterServices.GetUninitializedObject(type);
+            foreach (var field in members)
+                field.SetValue(instance, Decode(field.FieldType, json.GetProperty(field.Name), fields, leaf, depth + 1, ref nodes));
+            return instance;
+        }
+
+        public static void CheckBounds(int depth, int nodes)
+        {
+            if (depth > MaxDepth || nodes > MaxNodes)
+                throw new NotSupportedException("Live fields exceed depth 8 or 1024 value nodes.");
+        }
+
+        public static bool TryCollection(Type type, out Type element)
+        {
+            element = null;
+            if (type.IsArray)
+            {
+                if (type.GetArrayRank() != 1 || type != type.GetElementType().MakeArrayType())
+                    throw new NotSupportedException("Only one-dimensional arrays are supported.");
+                element = type.GetElementType();
+            }
+            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+                element = type.GetGenericArguments()[0];
+            if (element == null) return false;
+            if (typeof(IEnumerable).IsAssignableFrom(element) && element != typeof(string))
+                throw new NotSupportedException("Wrap nested collections in a Serializable data class for Unity serialization.");
+            return true;
+        }
+
+        public static void RequireDataType(Type type)
+        {
+            if (!type.IsDefined(typeof(SerializableAttribute), false) || type.IsAbstract || type.IsInterface
+                || type.IsPrimitive || type.IsEnum || type.IsGenericType || type == typeof(object)
+                || typeof(Delegate).IsAssignableFrom(type) || typeof(IEnumerable).IsAssignableFrom(type)
+                || (type.BaseType != typeof(object) && type.BaseType != typeof(ValueType))
+                || type.Namespace == "System" || type.Namespace?.StartsWith("System.", StringComparison.Ordinal) == true)
+                throw new NotSupportedException("Unsupported live data type: " + type.FullName);
+        }
+
+        /// <summary>Persistence identity excludes transient assembly names inside List arguments.</summary>
+        public static string PersistedTypeName(Type type)
+        {
+            if (TryCollection(type, out var element))
+                return type.IsArray ? PersistedTypeName(element) + "[]" : "System.Collections.Generic.List<" + PersistedTypeName(element) + ">";
+            return type.FullName;
+        }
+
         public static bool TryDecodeScalar(Type type, JsonElement json, out object value)
         {
             value = null;

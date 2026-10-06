@@ -457,3 +457,28 @@ Core 263/263、Roslyn 7/7、Godot 31/31 + 96/96，Unity 编译门通过；真实
 6 原型/4 脚本批量、三目标共享、第四目标默认值、代码更新后 GUID/组件/字段/引用保留，
 以及旧记录不改写、脏场景拒绝和纯读查询。详细契约、runId、失败测试暴露的边界见
 [版本化导出契约](Engine-LiveCode-Export-Contract.md)。Godot Export/Bind 仍不支持。
+
+### 14.7 Unity 结构化字段（2026-10-07）
+
+零编译调参扩展到一维数组、List、Serializable 数据 class/struct；整字段替换，不做
+索引路径 patch。重挂、Snapshot/Restore、导出/绑定复用递归字段状态，嵌套引用按路径
+关联对象身份。每集合 256 元素、深度 8、状态 1024 节点；原请求/快照字节限制保留。
+字典、多维/交错数组、直接嵌套集合、多态/继承和循环/共享托管对象明确拒绝。
+数组或 List 的元素若还需集合，用 Serializable 数据类包装。JSON 不写 Unity 对象引用。
+Core 282/282、Godot Runtime 96/96、Unity 编译门通过，实机隔离回归 67/67。
+精确限制、示例、验证范围见 LiveCode 契约和 `Engine-LiveCode-Completion.md`；
+本次不扩展 Godot 字段类型，不宣称已重新完成正式场景导出/编译/绑定/重开验收。
+
+### 14.8 重复脚本复用与空闲调度（2026-10-07）
+
+script_run 增加每 loader 128 项入口缓存，相同源码/引用快照命中后不编译或加载；
+上下文/结果仍逐次创建，静态状态不清零。首次编译加载依赖可能让第二次引用快照改变。
+Roslyn 引用元数据显式 Dispose；包内编译器已同步。script_status 新增缓存统计，并声明
+loadedBytes 仅累计 PE+PDB，不能用于判断进程内存。Attach/Patch/不同源码仍累积，
+缓存淘汰不卸载程序集，不自动重载。
+
+调度认领仅访问本域待执行记录；空闲 tick 不扫历史。最近列表缓存最多 64 条，
+本地写入失效，外部修改约 5 秒刷新；结果对账仍纯读。EngineKit 290/290、Roslyn 7/7、
+Godot Runtime 96/96、Unity 编译门通过。Unity 连续 8 次相同脚本 Passed，加载数
+1/2/2/2/2/2/2/2，后 6 次命中，Mono heap 采样不变。测试证据、内存范围与未完成的
+EditorLoop 性能对照见 `Engine-LiveCode-Completion.md`；不宣称所有内存增长均已消除。

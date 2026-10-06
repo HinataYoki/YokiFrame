@@ -240,6 +240,7 @@ public sealed partial class LiveCodeTests
             ActiveTarget = "play", SessionIdentityAvailable = true, SessionId = "session-1", Generation = 1
         };
         public YokiFrameLiveCodeManager Manager { get; }
+        public YokiFrameRoslynCompilerLoader Compiler { get; }
         public Action Guard { get; } = () => { };
         private readonly object mTarget = new();
 
@@ -250,7 +251,8 @@ public sealed partial class LiveCodeTests
             Directory.CreateDirectory(directory);
             foreach (string file in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
                 File.Copy(file, Path.Combine(directory, Path.GetFileName(file)));
-            Manager = new YokiFrameLiveCodeManager(new YokiFrameRoslynCompilerLoader(Root), Budget,
+            Compiler = new YokiFrameRoslynCompilerLoader(Root);
+            Manager = new YokiFrameLiveCodeManager(Compiler, Budget,
                 new YokiFrameMethodPatchBackend(AppContext.BaseDirectory), Host, () => State, () => Permitted, Root);
         }
 
@@ -280,6 +282,7 @@ public sealed partial class LiveCodeTests
         public void Dispose()
         {
             Manager.Clear(_ => { });
+            Compiler.Dispose();
             Directory.Delete(Root, true);
         }
     }
@@ -370,8 +373,8 @@ public sealed partial class LiveCodeTests
         }
         public object DecodeTunableValue(Type type, YokiFrame.Json.JsonElement value)
         {
-            if (YokiFrameLiveFieldValues.TryDecodeScalar(type, value, out var scalar)) return scalar;
-            throw new NotSupportedException("Unsupported field.");
+            return YokiFrameLiveFieldValues.Decode(type, value,
+                t => t.GetFields(BindingFlags.Public | BindingFlags.Instance));
         }
     }
 }

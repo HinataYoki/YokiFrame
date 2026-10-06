@@ -9,7 +9,7 @@
 | 场景 | 用什么 |
 |---|---|
 | 高频改数值 | `live_set_fields` 或文件绑定，零编译；不必每次提交脚本 |
-| 读状态、截图、断言 | 同次提交内复用 ReadField；新 `yoki script` 仍消耗一个程序集，Godot Capture 不支持 |
+| 读状态、截图、断言 | 同次提交内复用 ReadField；`yoki script` 缓存未命中才加载新程序集，Godot Capture 不支持 |
 | 在 Play 中新增/覆盖行为，边跑边调参 | LiveCode `Attach` + `SetField` |
 | 拦截已有 C# 方法 | LiveCode `Patch`（需 HarmonyX bundle） |
 | 把调好的行为变成永久 MonoBehaviour | 批量 `ExportMany` → `live_export_commit` → 编译 → `Bind`；后续 `Reexport` |
@@ -129,7 +129,8 @@ private void Awake()
 ## 调参循环的工程注意
 
 - **程序集预算**：先读 script_status 的 loadedAssemblies/loadedBytes、maxAssemblies/maxLoadedBytes、remainingAssemblies/remainingBytes。当前开发宿主为 4096 次/64 MiB，但以在线值为准，仍是源码常量。删除记录/handle 不卸载程序集。
-- 每次脚本提交加载占 1，每次 Attach（包括同 ID 重挂）再占 1。SetField 本身不消耗，但外层新脚本仍消耗；一份脚本批量调参能减少额外加载。正常 Unity 编译不占 Roslyn 预算，但可能重置场景。
+- 脚本源码/引用快照命中同一 loader 的 128 项缓存时，不编译、不加载；未命中占 1，每次 Attach（包括同 ID 重挂）再占 1。SetField 本身不消耗，源码中改数值会让外层缓存失效。正常 Unity 编译不占 Roslyn 预算，但可能重置场景。
+- loadedBytes 只是累计 PE+PDB 字节，不是 Unity 进程或托管堆内存。script_status 的 cachedScripts/maxCachedScripts、scriptCacheHits/scriptCacheMisses 可核对复用。冷启动依赖加载可让第二次引用快照变化；每次执行仍有独立上下文/结果，程序集静态状态不清零。淘汰不卸载，不同代码或重挂仍累积。
 - **`WaitFrames(1)` 当前已修复**：gameFrame 等待至少一个后续真实 Update/LateUpdate 完成。暂停不推进；不是渲染/物理精确步进，也不保证恢复时恰好只过一帧。旧宿主用 Time.frameCount 的路径没有这个屏障，不能靠放大参数证明正确。
 - **重复截图**：`await engine.Capture("game", path, autoNumber:true)` 自动编号且返回实际路径；默认不覆盖已有证据。
 - gameFrame 只在 Play 可用；EditMode 用 editorTick。先检查 enterPlayModeOptionsEnabled 和 enterPlayModeOptions，不只看掩码 3；禁用域重载时退出重进 Play 不重置预算，禁用场景重载时不承诺重新读取磁盘层级。
@@ -154,7 +155,20 @@ private void Awake()
 
 必须执行/trusted 双开关，精确字段类型，整批验证；48 KiB、64 行为、总 256 字段上限。
 支持 int/有限 float/bool/string/枚举名字、Unity 向量/Quaternion/Color 数值数组，
-不支持属性、集合或对象引用。不需新脚本，不加载程序集。同 ID 删除重挂 revision 递增。
+Unity 另支持一维 `T[]`、`List<T>`、`[Serializable]` 数据 class/struct 的整字段替换。
+不支持属性或 JSON 对象引用。不需新脚本，不加载程序集。同 ID 删除重挂 revision 递增。
+
+```json
+{"name":"Waypoints","type":"UnityEngine.Vector3[]","value":[[0,0,0],[2,0,1]]}
+{"name":"Weights","type":"System.Collections.Generic.List<System.Single>","value":[0.2,0.8]}
+{"name":"Stats","type":"WeaponBehaviour+StatsData","value":{"Health":100,"Speeds":[1.5,2.0]}}
+```
+
+这些是 `fields` 中的单项；`type` 也接受精确 `Type.FullName`，稳定 List 名避免带临时程序集名。
+对象值须给齐声明的 public/SerializeField 可写字段，遗漏/拼错/多余字段都拒绝。
+对象构造函数、字段初始化器和属性不执行，未序列化字段为默认值；适用于纯数据。
+数组/List/class 可传 null，struct 不可。每集合最多 256 元素、深度 8、单字段解码 1024 节点。
+同一批全部解码成功后写入，非法元素不会留下半批修改。不支持 `Stats.Items[0]` 路径更新。
 
 策划文件放 `.yokiframe/tuning/*.json`，内容为上述载荷。显式 `live_tuning_bind`
 接收 id/path/target=play/confirmed=true，最多 8 个绑定；后续只授权改 value，
@@ -166,7 +180,7 @@ private void Awake()
 
 `script_status`/`live_status` 的 budgetWarning/recoveryHint、Attach 返回 handle.Budget、
 AttachMany 返回 result.Budget 提供主动预警，剩余 3 个程序集或 1 MiB 字节时提示，不自动重载。
-AttachMany 是 N 个行为程序集加 1 个外层脚本，不能声称单程序集或原型类型互引。
+AttachMany 是 N 个行为程序集，外层脚本未命中缓存时另占 1，不能声称单程序集或原型类型互引。
 
 ## 显式快照与恢复
 
@@ -192,7 +206,7 @@ resolver 对临时目标/字段引用提供对象；同一 key 只解析一次�
 持久对象自动反查并校验类型/原场景，需原场景已加载；干净已保存场景的身份清单在进 Play
 前采集并跨域保留，无清单时保守要求映射。项目移动/引擎版本变化会拒绝，v1 不支持迁移。
 
-N 个行为恢复占 N 个程序集，外层新脚本另占 1；先检查全部 hash/数量预算，再内存编译
+N 个行为恢复占 N 个程序集，外层脚本未命中缓存时另占 1；先检查全部 hash/数量预算，再内存编译
 全部 PE/PDB 并检查精确字节，之后才加载/建 host。所有字段恢复后发布全部 ID，再依次 Awake。
 失败报告 Stage/Error/Items，并清理本批 host；不会回滚回调、构造函数或 Awake 的任意副作用。
 Snapshot 的 complete 只覆盖支持字段，不是整个场景。Patch、Faulted/禁用/非激活行为、
@@ -204,7 +218,12 @@ Snapshot 的 complete 只覆盖支持字段，不是整个场景。Patch、Fault
 - Godot 支持本页末节列出的子集；导出 Player / IL2CPP / AOT 不支持。
 - 没有专门的 Workbench LiveCode 编辑界面；走受信任脚本 API 加 `live_status` / `live_remove` / `live_snapshot`。
 - 没有 prefab 资产绑定；`Bind` 只认保存过的场景对象。
-- 字段迁移只覆盖 `int` / `float` / `bool` / `string` / 枚举 / Vector2-4 / Quaternion / Color / Unity 对象引用；数组、集合、嵌套自定义对象和 `SerializeReference` 不支持。
+- Unity 字段迁移、Snapshot/Restore、Export/Bind 支持上述数组/List/数据类及嵌套 Unity 引用，
+  引用按 `Stats.Targets[0]` 路径保存，临时引用仍须 resolver。每行为最多 1024 展开节点，
+  快照仍限 256 根字段/256 引用/64 KiB。旧标量记录可读，新集合记录要求升级后的宿主。
+- 字典、多维/交错数组、直接嵌套集合、SerializeReference、自定义继承/多态、循环/共享
+  托管对象不支持。集合嵌套用 Serializable 数据类包装；同一 Unity 对象的多处引用支持。
+  含引用的非 null 数据对象通过受信任 SetField 设置，JSON 不接受对象引用。
 - 回调异常禁用 host 并报 status=unavailable；手动 enabled=true 不清 Faulted。同 ID Attach 可用修复后源码重建，故障字段不自动迁移；框架不回滚任意副作用。
 - Engine/asset_ops refresh 曾出现未复验的 UnknownCommand；2026-10-06 稳定宿主已通过 FileBridge 复验成功。新故障应记录 requestId、session、在线 catalog 和错误，不据旧记录认定永久不支持，也不自动重放。
 - Unity 与 Godot 均有 Snapshot/Restore、AttachMany、零编译字段、预算预警和文件热载。不自动重载或重放。

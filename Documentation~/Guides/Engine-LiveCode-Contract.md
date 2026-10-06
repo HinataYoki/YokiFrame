@@ -29,7 +29,7 @@ string exportId = await engine.LiveCode.Export(id, "Assets/Weapons/WeaponControl
 - 所有新执行仍需 Engine 操作与 trusted C# 授权、确认、当前 session/target 和宿主主线程。结束一次提交不移除它注册的行为或补丁。
 - ID 和 className 为最多 80 字符的 ASCII 标识符。最多 64 个活动 handle；复用 ID 更新版本，同一行为 ID 不得静默换目标。
 - 调参优先 `live_set_fields` 或显式文件绑定，方法调用优先 Invoke。
-  **通过新 `yoki script` 提交 SetField/Invoke，外层脚本仍消耗一次编译/加载。**
+  **通过 `yoki script` 提交 SetField/Invoke，外层脚本仅在编译缓存未命中时消耗一次加载；数值写进不同源码会使缓存失效。**
 - 稳定代码用正常 .cs/MonoBehaviour 和 Unity 编译流程；LiveCode 用于还没落盘且必须保持 Play 的原型。业务编译不占 Roslyn 预算，但可能触发重载、重置现场，不承诺固定一秒完成。
 
 ## 2. 预算与生命周期
@@ -41,7 +41,8 @@ budgetConfiguration=hostConstants。以在线值为准，不根据文档猜上�
 当前开发源码的上限为 4096 次加载、累计 PE+PDB 64 MiB；历史实现是 64 次加载。
 这是宿主源码常量，不是运行时设置。本轮保留用户改过的值，没有替用户提高或降低预算。
 
-- 一次 `yoki script` 成功编译并加载消耗一个程序集；每次 Attach 成功编译并加载再消耗一个，**同 ID 重挂也一样**；Patch 共用预算。
+- `yoki script` 缓存未命中后成功编译并加载消耗一个程序集；相同源码/引用快照在同一 loader 的 128 项缓存内复用入口，不增加预算。每次 Attach 成功编译并加载再消耗一个，**同 ID 重挂也一样**；Patch 共用预算。冷启动依赖加载可改变引用快照，细则见 [Roslyn 契约](Engine-Roslyn-Automation-Contract.md) §3。
+- loadedBytes 只计累计 PE+PDB，不是 Unity 内存占用；缓存统计由 script_status 的 cachedScripts/maxCachedScripts、scriptCacheHits/scriptCacheMisses 给出。缓存不共享运行上下文，但复用程序集的静态状态，不会卸载旧程序集。
 - Export 编译正式包装作校验但不加载；字段读写、方法调用、Remove 不增加或退还预算。
 - 失败发生在加载之后（如激活异常）也不能退还已经加载的程序集。编译失败未加载则不消耗。
 - 达到任一上限拒绝新加载，错误指向 script_status。不会自动重载、清空计数或重放代码。
@@ -141,7 +142,17 @@ Configure 仅允许一次，不作为清错重启 API。
 字段迁移/导出只覆盖声明的 public 或 SerializeField 非 readonly 字段：
 int/float/bool/string/枚举、Vector2-4、Quaternion、Color、Unity 对象引用。
 SetField 要求精确类型；缺失字段忽略，同名类型变化拒绝，未标记的私有状态重新初始化。
-数组、集合、嵌套自定义对象、SerializeReference 尚未支持。
+Unity 另支持一维 `T[]`、`List<T>`、标记 `[Serializable]` 的无自定义基类 class/struct，
+可递归组合（集合的元素不能直接是集合，须用数据类包装，遵守 Unity 序列化限制）。
+数组/List 元素及数据字段支持上述标量、向量、颜色、枚举和 Unity 对象引用。
+只处理声明的 public / `[SerializeField]` 可写字段，不执行属性访问器；数据实例重建
+不调用用户构造函数，私有非序列化状态为默认值，不适用于依赖构造函数建立不变量的业务对象。
+字典、多维/交错数组、直接嵌套 List、自定义继承、多态、SerializeReference、循环及共享
+托管引用拒绝；多个字段引用同一 Unity 对象仍支持。每个集合最多 256 元素、根值深度 0
+到 8、一次行为字段状态最多 1024 节点。SetField 本身仍接受精确类型；不可持久的对象图
+会在重挂/快照/导出时显式失败，不会静默截断。
+状态采用扁平路径（如 `Stats.Targets[0]`）；List 的持久类型名不含动态程序集身份，
+因此同 ID 重编译可以还原 `List<原型内嵌数据类型>`。旧标量状态保持可读。
 
 ## 5. 等帧、截图与 Play 前提
 
@@ -262,7 +273,7 @@ YokiFrameLiveRestoreResult result = await engine.LiveCode.Restore(
 test.Equal(result.Success, true, result.Stage + ": " + result.Error);
 ```
 
-- Snapshot 自身不加载，但新 `yoki script` 外壳仍加载一次；预算耗尽用直接命令入口。
+- Snapshot 自身不加载，但 `yoki script` 外壳在缓存未命中时加载一次；预算耗尽优先用直接命令入口。
 - sourceProvider/resolver 只由新提交提供，不读取快照里的代码执行。源码按 UTF-8 原文
   SHA-256 比较，换行变化也算改变；没有隐式迁移或 allowMismatch 选项。
 - 自动身份不能仅检查 GlobalObjectId 非零：真机证明运行时新对象也能有可反查的 ID。
@@ -274,7 +285,9 @@ test.Equal(result.Success, true, result.Stage + ": " + result.Error);
   同一对象在整个快照内共享 key。key 是本快照恢复标识，**不是永久业务 ID**；
   调用方在重载前保存 key 到自身业务标识的映射，新域重建全部目标后再映射字段引用。
   不根据 name、层级路径或旧 instanceId 猜测；名称仅供诊断。
-- 第一版不恢复 Patch、Faulted/禁用/非激活行为、临时 host 引用、集合和任意对象图。
+- 不恢复 Patch、Faulted/禁用/非激活行为、临时 host 引用和任意对象图。
+  Unity 支持上文规定的集合和数据类，嵌套引用按字段路径映射并清除所有旧 InstanceID；
+  256 上限指根字段/引用数量，展开节点上限 1024，64 KiB 字段文本限制仍适用。
   这些项记 error；私有非序列化字段、协程、Transform/场景层级本来就不在字段契约内。
   complete 只代表本契约内的记录完整，不代表整个游戏现场。
 - 恢复顺序：验证记录、冲突 ID、全部源码 hash 与数量预算；所有源码编译到内存 PE/PDB
@@ -285,7 +298,7 @@ test.Equal(result.Success, true, result.Stage + ": " + result.Error);
   Status/Error 和 UserCodeMayHaveRun。失败停止整批并清理本轮 host，保留已有无关 ID；
   清理失败逐项标 cleanupFailed。已经加载的预算不可退还，构造函数/sourceProvider/
   resolver/Awake 的任意副作用不可撤销。输入文件/权限等前置错误仍可能直接抛异常。
-- 恢复仍需 N 个行为程序集，外层新脚本另占 1；没有把 N 个行为合成一个程序集。
+- 恢复仍需 N 个行为程序集，外层脚本在缓存未命中时另占 1；没有把 N 个行为合成一个程序集。
   预算预警已实现，但不自动重载。
 - 域重载由外部明确触发，等新 session/generation 和正确 target 后再提交 Restore。
   旧域 Task 不串起重载；未知执行结果按原 runId 对账，绝不自动重放。
@@ -303,9 +316,15 @@ test.Equal(result.Success, true, result.Stage + ": " + result.Error);
 - `live_set_fields` 为 Dangerous，要求 CLI/Workbench、target=play、confirmed:true、执行/
   trusted 双开关。最多 48 KiB/64 行为/总共 256 字段；绑定 sessionId/generation/revision。
   public/SerializeField 可写实例字段白名单，精确 type.FullName，整批验证后写，失败还原
-  已写字段并报告回滚失败。不调用 getter/setter，不加载程序集。引用/集合/属性不支持。
+  已写字段并报告回滚失败。不调用 getter/setter，不加载程序集。JSON 对象引用/属性不支持。
 - 字段支持 int、有限 float、bool、string（可 null）、枚举精确声明名字，以及 Vector2/3/4、
-  Quaternion、Color 的对应长度数值数组。先从 domain_state/live_status 获取上下文：
+  Quaternion、Color 的对应长度数值数组。Unity 还支持上述数组、List 和数据 class/struct，
+  采用整字段替换；数据对象必须给齐全部白名单字段，缺失/多余字段均拒绝，不运行构造函数
+  或字段初始化器。数组/List/class 可用 null，struct 不可；含引用的非 null 数据对象用
+  受信任 SetField。每次解码最多 1024 节点、深度 8、每集合 256 元素；请求外壳不计值深度。
+  `type` 接受精确 FullName 或稳定名（例如 `System.Collections.Generic.List<System.Int32>`），
+  自定义内嵌类型用 `Behaviour+Stats`，不使用 C# 别名。集合长度变化不改变调参授权字段范围。
+  Godot 仍限原有字段类型。先从 domain_state/live_status 获取上下文：
 
 ```json
 {"target":"play","confirmed":true,"sessionId":"<current>","generation":123,

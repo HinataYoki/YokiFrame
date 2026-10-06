@@ -163,6 +163,9 @@ public sealed class RoslynOperationTests
         Assert.True(document.RootElement.GetProperty("remainingAssemblies").TryGetInt32(out int remaining));
         Assert.Equal(YokiFrameRoslynLoadBudget.MaxAssemblies, remaining);
         Assert.Equal("domain", document.RootElement.GetProperty("budgetScope").GetString());
+        Assert.Equal("cumulative-pe-pdb-not-process-memory", document.RootElement.GetProperty("loadedBytesMeaning").GetString());
+        Assert.Equal("0", document.RootElement.GetProperty("cachedScripts").ToString());
+        Assert.Equal("0", document.RootElement.GetProperty("scriptCacheHits").ToString());
     }
 
     private static IYokiFrameEngineOperation[] Create(RunTestBed bed, Func<bool> permitted)

@@ -23,6 +23,18 @@ namespace YokiFrame.EngineKit.Roslyn
             string source, string[] referencePaths, CancellationToken cancellationToken,
             out byte[] symbols, out string[][] diagnostics)
         {
+            var metadata = new List<AssemblyMetadata>();
+            try { return CompileCore(source, referencePaths, cancellationToken, metadata, out symbols, out diagnostics); }
+            finally
+            {
+                // File-backed metadata owns native resources. Release on success, failure and cancellation.
+                foreach (var item in metadata) item.Dispose();
+            }
+        }
+
+        private static byte[] CompileCore(string source, string[] referencePaths, CancellationToken cancellationToken,
+            List<AssemblyMetadata> metadata, out byte[] symbols, out string[][] diagnostics)
+        {
             symbols = Array.Empty<byte>();
             diagnostics = Array.Empty<string[]>();
             cancellationToken.ThrowIfCancellationRequested();
@@ -40,7 +52,11 @@ namespace YokiFrame.EngineKit.Roslyn
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (paths.Add(Path.GetFullPath(path)))
-                        references.Add(MetadataReference.CreateFromFile(path));
+                    {
+                        var image = AssemblyMetadata.CreateFromFile(path);
+                        metadata.Add(image);
+                        references.Add(image.GetReference(filePath: path));
+                    }
                 }
             }
             catch (Exception exception) when (exception is IOException || exception is ArgumentException

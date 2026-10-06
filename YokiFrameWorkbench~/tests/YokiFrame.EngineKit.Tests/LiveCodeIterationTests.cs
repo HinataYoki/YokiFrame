@@ -257,4 +257,32 @@ public sealed partial class LiveCodeTests
             ["fields"] = new JsonArray(new JsonObject { ["name"] = "Value", ["type"] = "System.Int32", ["value"] = value })
         })
     }.ToJsonString();
+
+    [Fact]
+    public void Collection_batch_replaces_without_loading_and_invalid_later_element_keeps_originals()
+    {
+        using var bed = new LiveBed();
+        bed.Run(async () =>
+        {
+            await bed.Attach("public int Value = 7; public int[] Values = new int[] { 5 }; public System.Collections.Generic.List<int> Items = new System.Collections.Generic.List<int>();");
+            int count = bed.Budget.LoadedCount;
+            var payload = JsonNode.Parse(FieldPayload(80))!;
+            var changes = payload["updates"]![0]!["fields"]!.AsArray();
+            changes.Add(new JsonObject { ["name"] = "Values", ["type"] = "System.Int32[]", ["value"] = new JsonArray(1, 2) });
+            changes.Add(new JsonObject { ["name"] = "Items", ["type"] = "System.Collections.Generic.List<System.Int32>", ["value"] = new JsonArray(3, 4) });
+            Assert.Equal(3, bed.Manager.SetFields(YokiFrameLiveFieldRequest.Parse(payload.ToJsonString()), bed.Guard));
+            var array = bed.Manager.ReadField("Probe", "Values", bed.Guard);
+            var list = bed.Manager.ReadField("Probe", "Items", bed.Guard);
+            Assert.Equal(new[] { 1, 2 }, (int[])array);
+            Assert.Equal(new[] { 3, 4 }, (List<int>)list);
+            changes[0]!["value"] = 99;
+            changes[1]!["value"] = new JsonArray(10, 20);
+            changes[2]!["value"] = new JsonArray(30, "invalid");
+            Assert.ThrowsAny<Exception>(() => bed.Manager.SetFields(YokiFrameLiveFieldRequest.Parse(payload.ToJsonString()), bed.Guard));
+            Assert.Same(array, bed.Manager.ReadField("Probe", "Values", bed.Guard));
+            Assert.Same(list, bed.Manager.ReadField("Probe", "Items", bed.Guard));
+            Assert.Equal(80, bed.Manager.ReadField("Probe", "Value", bed.Guard));
+            Assert.Equal(count, bed.Budget.LoadedCount);
+        });
+    }
 }

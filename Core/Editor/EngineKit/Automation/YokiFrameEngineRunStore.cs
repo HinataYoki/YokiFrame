@@ -28,6 +28,8 @@ namespace YokiFrame
         private static readonly UTF8Encoding sUtf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
         private readonly string mRunsRoot;
+        /// <summary>Local writes invalidate the scheduler's bounded recent-history cache.</summary>
+        public long Revision { get; private set; }
 
         /// <summary>创建存储。</summary>
         /// <param name="projectRoot">项目根目录。</param>
@@ -62,6 +64,7 @@ namespace YokiFrame
             }
 
             WriteAtomic(RecordPath(record.RunId), BuildRecordJson(record));
+            Revision++;
         }
 
         /// <summary>读取运行记录。</summary>
@@ -454,6 +457,7 @@ namespace YokiFrame
                 removed++;
             }
 
+            if (removed > 0) Revision++;
             return removed;
         }
 

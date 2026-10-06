@@ -28,7 +28,8 @@ namespace YokiFrame
                 foreach (var change in update.Fields)
                 {
                     var binding = fields.BindTunableField(entry.Attachment, change.Name);
-                    if (binding.ValueType.FullName != change.TypeName)
+                    if (binding.ValueType.FullName != change.TypeName
+                        && YokiFrameLiveFieldValues.PersistedTypeName(binding.ValueType) != change.TypeName)
                         throw new ArgumentException("Exact field type required: " + change.Name + " is " + binding.ValueType.FullName + ".");
                     object value = fields.DecodeTunableValue(binding.ValueType, change.Value);
                     if (value == null ? binding.ValueType.IsValueType : !binding.ValueType.IsInstanceOfType(value))

@@ -9,7 +9,7 @@
 - CLI 保持 Native AOT，负责输入上限、提交、查询、取消和展示。Roslyn、程序集加载和执行都属于引擎宿主。
 - 宿主使用固定模板在内存中包装 `public static async Task Run(...)`，提供 `engine`、`test` 和 `cancellationToken`；不要求用户写入口属性、类或注册入口名。
 - 模板不使用 `[YokiFrameEntry]`，不将编译产物交给入口扫描器。游戏 Model/System 不依赖自动化上下文。
-- 使用 `CSharpCompilation`，不是 `CSharpScript` 的交互会话；不同运行不共享脚本变量。初版语言版本固定 C# 9，不支持 `#r` / `#load` 或自动下载依赖。
+- 使用 `CSharpCompilation`，不是 `CSharpScript` 的交互会话；每次运行使用新的局部变量、上下文、断言和日志。命中编译缓存时复用程序集，编译器生成的静态状态及用户访问的业务静态状态不重置。初版语言版本固定 C# 9，不支持 `#r` / `#load` 或自动下载依赖。
 
 ## 2. 编译核心
 
@@ -30,17 +30,22 @@
 - 编译失败不返回可加载产物。警告单独保留，不能把 Ready/编译成功当成任务通过。
 - 每条诊断提供 code、severity、message、虚拟路径、1-based 行列。包装器用 `#line` 将用户方法体映射回输入位置，不生成源码映射文件。
 - 唯一程序集名防止同名加载冲突。引用快照变化时不能复用旧编译结果；初版不引入持久 DLL 缓存。
+- 每次编译显式持有并在 finally 中释放 AssemblyMetadata，成功、失败、取消都释放引用元数据的原生资源，不依赖 GC/finalizer 的时机。宿主加载后不保留源码、PE/PDB 缓冲供后续运行。
 
 ## 3. 宿主加载与生命周期
 
 - 先完成请求准入与持久化索引，返回 accepted/runId，再调度编译。编译失败、取消或会话改变后不加载用户程序集。
 - 加载/执行前重新检查会话、代次、目标、执行开关和受信任 C# 授权；不得在错误 target 上运行。
 - 使用内存字节加载，不写 DLL/PDB，不调用 AssetDatabase.Refresh、RequestScriptCompilation 或引擎重载 API。
-- 单次 `script_run` 编译产物本身就是新的程序集，不自动向已有业务 DLL 注入或替换方法。显式 `engine.LiveCode.Patch` 可使用可选 HarmonyX 后端拦截现有方法，见 [LiveCode 契约](Engine-LiveCode-Contract.md)。加载后引用同一宿主里已加载的框架/业务类型，通过活动服务取得当前实例；不能加载第二份业务程序集造成类型身份分裂。
+- `script_run` 按包装源码和引用文件快照复用已加载的入口。每个 compiler loader 最多缓存 128 项，FIFO 淘汰，只持有入口委托和诊断；命中不编译、不加载、不增加预算，仍执行本次请求并重新校验权限/会话/目标。运行结果不缓存，执行失败也不污染下次上下文；编译失败不入缓存。并发相同首次提交可重复编译，但加载加锁复核，只加载一次。
+- 缓存键含源码 SHA-256、引用顺序、完整路径、长度和 UTC 修改时间，不是所有依赖文件内容的 hash。首次编译加载 Roslyn 等依赖后可见引用集合可能扩大，第二次会重新编译；业务加载新的磁盘程序集同样会失效。依赖替换必须正常更新文件时间，不支持保留相同长度/时间的隐形替换。淘汰、Dispose 和 prune 均不能卸载已加载程序集；重建 loader 后需重新建立缓存。Attach/Patch 的行为程序集不在此缓存范围。
+- 缓存未命中时产物是新的程序集，不自动向已有业务 DLL 注入或替换方法。显式 `engine.LiveCode.Patch` 可使用可选 HarmonyX 后端拦截现有方法，见 [LiveCode 契约](Engine-LiveCode-Contract.md)。加载后引用同一宿主里已加载的框架/业务类型，通过活动服务取得当前实例；不能加载第二份业务程序集造成类型身份分裂。
 - Unity Editor/Play 是首个集成目标。Unity Player/IL2CPP 不支持；Godot .NET Editor/Runtime 需独立验证，不将 Native AOT 导出算作支持。
 - Unity 默认域加载不能承诺单独卸载程序集。上限与剩余量以 script_status 的 maxAssemblies/maxLoadedBytes、remainingAssemblies/remainingBytes 为准；当前开发源码保留用户设置的 4096 次/64 MiB，不再沿用历史 64 次声明。计数不能在 prune 时归零；达到预算明确拒绝，不自动重载。关闭 Domain Reload 时仅退出重进 Play 不一定清零。
 - 删除运行记录、释放委托不等于卸载程序集。Godot 的 collectible AssemblyLoadContext 即使可用，也必须正确共享引擎/游戏类型身份，另行验证回收条件。
+- `script_status` 暴露 cachedScripts/maxCachedScripts、scriptCacheHits/scriptCacheMisses、scriptCacheScope 与 assemblyReclamation。loadedBytes 是累计 PE+PDB 字节，loadedBytesMeaning 明示它不是 Unity 进程或托管堆内存，也不含 Roslyn 依赖、JIT、运行对象等开销。缓存命中不等于执行零分配；不同源码反复加载仍可能持续增加域内存。
 - 用户事件订阅、静态字段、原生资源或后台 Task 可能超出运行生命周期；代码作者需成对清理，不承诺框架能撤销任意 C# 副作用。
+- 空闲 scheduler tick 不扫描运行历史；认领只读取本域待执行 ID。最近运行列表至多缓存 64 条，本地 Save/Prune 后失效，外部写入最多约 5 秒后重新读取；Provider 自身仍有约 250ms 的视图缓存。超过 64 条的显式查询直接读取历史，run_result/run_lookup 仍按实际记录对账。清理认领在完成/取消/脱离/换代时进行，不靠全历史轮询。
 
 ## 4. 安全与异步
 

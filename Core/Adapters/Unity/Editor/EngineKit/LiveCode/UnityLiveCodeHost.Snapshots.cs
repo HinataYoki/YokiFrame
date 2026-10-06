@@ -17,7 +17,9 @@ namespace YokiFrame
                 throw new NotSupportedException("Inactive or suspended behaviours are not supported by snapshot v1.");
             object instance = value.Host.Instance;
             var state = UnityLiveFieldState.Capture(instance, false);
-            if (state.values.Count > 256) throw new NotSupportedException("Snapshot supports at most 256 fields per behaviour.");
+            int roots = 0;
+            foreach (var field in state.values) if (UnityLiveFieldState.IsRoot(field.name)) roots++;
+            if (roots > 256) throw new NotSupportedException("Snapshot supports at most 256 root fields per behaviour.");
             var references = new List<YokiFrameLiveSnapshotReference>();
             foreach (var field in state.values)
             {
@@ -27,6 +29,7 @@ namespace YokiFrame
                     if (reference == default) throw new InvalidOperationException("Field object disappeared: " + field.name);
                     references.Add(new YokiFrameLiveSnapshotReference(field.name,
                         DescribeObject(reference, keyForObject(reference, id + ":field:" + field.name))));
+                    if (references.Count > 256) throw new NotSupportedException("Snapshot supports at most 256 object references per behaviour.");
                     field.hasReference = true;
                 }
                 // Old instance IDs must never survive into a recovery record.
@@ -86,9 +89,7 @@ namespace YokiFrame
             YokiFrameLiveSnapshotStore.ValidateSnapshotFieldText(fields);
             object instance = Require(attachment).Host.Instance;
             var state = JsonUtility.FromJson<UnityLiveFieldState>(fields);
-            var expected = UnityLiveFieldState.Capture(instance, false);
-            if (state == null || state.values == null || state.values.Count != expected.values.Count
-                || state.values.Count > 256)
+            if (state == null || state.values == null || state.values.Count > YokiFrameLiveFieldValues.MaxNodes)
                 throw new InvalidOperationException("Snapshot field set does not match the source.");
             var names = new HashSet<string>(StringComparer.Ordinal);
             int usedReferences = 0;
@@ -96,15 +97,11 @@ namespace YokiFrame
             {
                 if (item == null || !names.Add(item.name) || item.instanceId != 0 || !string.IsNullOrEmpty(item.globalId))
                     throw new InvalidOperationException("Invalid snapshot field or old instance identity.");
-                var field = UnityLiveFieldState.RequireField(instance, item.name);
-                if (field.FieldType.FullName != item.type)
-                    throw new InvalidOperationException("Snapshot field type mismatch: " + item.name);
                 if (references.TryGetValue(item.name, out var resolved))
                 {
                     Object reference = resolved as Object;
-                    if (!item.hasReference || reference == default || !field.FieldType.IsInstanceOfType(reference))
+                    if (!item.hasReference || reference == default)
                         throw new InvalidOperationException("Snapshot field reference mismatch: " + item.name);
-                    item.instanceId = reference.GetInstanceID();
                     usedReferences++;
                 }
                 else if (item.hasReference)
@@ -112,26 +109,28 @@ namespace YokiFrame
             }
             if (usedReferences != references.Count)
                 throw new InvalidOperationException("Snapshot contains unknown field references.");
-            state.Restore(instance, false);
+            state.Restore(instance, false, true, references);
         }
 
         public void ValidateSnapshotState(YokiFrameLiveSnapshotState snapshot)
         {
             YokiFrameLiveSnapshotStore.ValidateSnapshotFieldText(snapshot.Fields);
             var state = JsonUtility.FromJson<UnityLiveFieldState>(snapshot.Fields);
-            if (state == null || state.values == null || state.values.Count > 256)
+            if (state == null || state.values == null || state.values.Count > YokiFrameLiveFieldValues.MaxNodes)
                 throw new InvalidOperationException("Invalid snapshot field set.");
             var referenced = new HashSet<string>(StringComparer.Ordinal);
             foreach (var reference in snapshot.References) referenced.Add(reference.Field);
             var names = new HashSet<string>(StringComparer.Ordinal);
+            int roots = 0;
             foreach (var item in state.values)
             {
                 if (item == null || string.IsNullOrEmpty(item.name) || string.IsNullOrEmpty(item.type)
                     || !names.Add(item.name) || item.instanceId != 0 || !string.IsNullOrEmpty(item.globalId)
                     || item.hasReference != referenced.Remove(item.name))
                     throw new InvalidOperationException("Invalid snapshot field or reference mapping.");
+                if (UnityLiveFieldState.IsRoot(item.name)) roots++;
             }
-            if (referenced.Count != 0) throw new InvalidOperationException("Unknown snapshot field references.");
+            if (roots > 256 || referenced.Count != 0) throw new InvalidOperationException("Invalid snapshot fields or references.");
         }
 
         private static string ScenePath(Object value)

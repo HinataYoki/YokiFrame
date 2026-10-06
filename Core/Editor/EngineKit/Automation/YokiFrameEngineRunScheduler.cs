@@ -53,6 +53,10 @@ namespace YokiFrame
         private readonly object mSync = new object();
         private bool mPendingScan = true;
         private DateTime mLastScanUtc = DateTime.MinValue;
+        private const int MAX_CACHED_RECENT_RUNS = 64;
+        private IReadOnlyList<YokiFrameEngineRunRecord> mRecentRuns;
+        private DateTime mRecentReadUtc = DateTime.MinValue;
+        private long mRecentRevision = -1;
 
         /// <summary>创建调度器。</summary>
         /// <param name="store">运行存储。</param>
@@ -165,10 +169,30 @@ namespace YokiFrame
                 return Array.Empty<YokiFrameEngineRunRecord>();
             }
 
-            IReadOnlyList<YokiFrameEngineRunRecord> records = mStore.ReadAll();
-            var ordered = new List<YokiFrameEngineRunRecord>(records);
-            ordered.Sort((left, right) => right.SubmittedAtUtc.CompareTo(left.SubmittedAtUtc));
-            return ordered.Count <= limit ? ordered : ordered.GetRange(0, limit);
+            lock (mSync)
+            {
+                if (limit > MAX_CACHED_RECENT_RUNS) return ReadRecentUncached(limit);
+                DateTime now = DateTime.UtcNow;
+                if (mRecentRuns == null || mRecentRevision != mStore.Revision
+                    || now - mRecentReadUtc >= TimeSpan.FromSeconds(5))
+                {
+                    mRecentRuns = ReadRecentUncached(MAX_CACHED_RECENT_RUNS);
+                    mRecentRevision = mStore.Revision;
+                    mRecentReadUtc = now;
+                }
+                if (mRecentRuns.Count <= limit) return mRecentRuns;
+                var result = new List<YokiFrameEngineRunRecord>(limit);
+                for (int i = 0; i < limit; i++) result.Add(mRecentRuns[i]);
+                return result.AsReadOnly();
+            }
+        }
+
+        private IReadOnlyList<YokiFrameEngineRunRecord> ReadRecentUncached(int limit)
+        {
+            var ordered = new List<YokiFrameEngineRunRecord>(mStore.ReadAll());
+            ordered.Reverse();
+            if (ordered.Count > limit) ordered.RemoveRange(limit, ordered.Count - limit);
+            return ordered.AsReadOnly();
         }
 
         public bool TryReadRun(string runId, out YokiFrameEngineRunRecord record)
@@ -238,6 +262,7 @@ namespace YokiFrame
             record.Note = "cancelled before the scheduler claimed it.";
             record.AddStep("cancel", "Cancelled", "queued run cancelled");
             mStore.Save(record);
+            mStore.ReleaseClaim(record.RunId);
             lock (mSync) { mPendingWork.Remove(runId); }
             return true;
         }
@@ -273,6 +298,7 @@ namespace YokiFrame
                     record.Note = "Script memory was lost across host/domain change; not replayed.";
                     record.UpdatedAtUtc = now;
                     mStore.Save(record);
+                    mStore.ReleaseClaim(record.RunId);
                     touched++;
                     continue;
                 }
@@ -294,6 +320,7 @@ namespace YokiFrame
                     record.Note = "domain reloaded while the run was active; state is unknown and will not be replayed.";
                     record.AddStep("reload", "Unknown", "no terminal record before reload");
                     mStore.Save(record);
+                    mStore.ReleaseClaim(record.RunId);
                     touched++;
                 }
             }
@@ -395,6 +422,7 @@ namespace YokiFrame
             mStore.Save(record);
             lock (mSync)
             {
+                mStore.ReleaseClaim(record.RunId);
                 mActive.Remove(record.RunId);
                 if (active.Task != null && !active.Task.IsCompleted)
                 {
@@ -462,6 +490,7 @@ namespace YokiFrame
             record.AddStep("complete", status.ToString(), "frames=" + result.Frames);
             mStore.Save(record);
 
+            mStore.ReleaseClaim(record.RunId);
             if (active.Context != null)
             {
                 active.Context.Invalidate();
@@ -525,6 +554,7 @@ namespace YokiFrame
         /// <returns>需要扫描时返回 true。</returns>
         private bool ShouldScanForQueuedRuns()
         {
+            if (mPendingWork.Count == 0) return false;
             DateTime now = DateTime.UtcNow;
             if (mPendingScan || (now - mLastScanUtc).TotalMilliseconds >= SCAN_INTERVAL_MS)
             {
@@ -538,22 +568,20 @@ namespace YokiFrame
 
         private void ClaimNextQueued()
         {
-            IReadOnlyList<YokiFrameEngineRunRecord> records = mStore.ReadAll();
-            for (var index = 0; index < records.Count; index++)
+            // Only this domain's in-memory factories can execute. History is not an execution queue.
+            var pending = new List<string>(mPendingWork.Keys);
+            foreach (string runId in pending)
             {
-                if (records[index].Kind != "script" || records[index].OwnerHostId != mOwnerHostId)
-                    continue;
-                if (records[index].State != YokiFrameRunStatus.Queued)
+                if (!mStore.TryReadRun(runId, out var record)) continue;
+                if (record.Kind != "script" || record.OwnerHostId != mOwnerHostId
+                    || record.State != YokiFrameRunStatus.Queued)
                 {
-                    // 终态记录不再需要认领文件（惰性清理）。
-                    mStore.ReleaseClaim(records[index].RunId);
+                    mPendingWork.Remove(runId);
                     continue;
                 }
-                if (!mPendingWork.ContainsKey(records[index].RunId))
-                    continue;
 
                 // 跨进程互斥：同一项目目录下可能有多个宿主（旧会话、另一个编辑器）在同一 tick 扫描。
-                if (!mStore.TryClaim(records[index].RunId, SessionId, Generation, CLAIM_LEASE, out YokiFrameEngineRunRecord claimed))
+                if (!mStore.TryClaim(runId, SessionId, Generation, CLAIM_LEASE, out YokiFrameEngineRunRecord claimed))
                 {
                     continue;
                 }
@@ -574,6 +602,7 @@ namespace YokiFrame
                 record.Note = "Host identity or active target changed before execution.";
                 record.UpdatedAtUtc = now;
                 mStore.Save(record);
+                mStore.ReleaseClaim(record.RunId);
                 return;
             }
             record.State = YokiFrameRunStatus.Running;

@@ -6,6 +6,38 @@ namespace YokiFrame.EngineKit.Tests;
 public sealed class RunLifecycleTests
 {
     [Fact]
+    public void Idle_ticks_do_not_parse_historical_runs_or_allocate_in_proportion_to_them()
+    {
+        using var bed = RunTestBed.Create();
+        for (int i = 0; i < 50; i++) bed.Store.Save(new YokiFrameEngineRunRecord
+        {
+            RunId = "history-" + i, State = YokiFrameRunStatus.Passed, Note = new string('x', 8192)
+        });
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 100; i++) bed.Scheduler.Tick();
+        Assert.True(GC.GetAllocatedBytesForCurrentThread() - before < 16384,
+            "Idle scheduler must not read and parse historical run files.");
+    }
+
+    [Fact]
+    public void Recent_history_is_bounded_and_local_changes_invalidate_it()
+    {
+        using var bed = RunTestBed.Create();
+        for (int i = 0; i < 80; i++) bed.Store.Save(new YokiFrameEngineRunRecord
+        {
+            RunId = "history-" + i, State = YokiFrameRunStatus.Passed, SubmittedAtUtc = DateTime.UtcNow.AddDays(-1).AddSeconds(i)
+        });
+        var first = bed.Scheduler.ReadRecentRuns(64);
+        Assert.Equal(64, first.Count);
+        Assert.Same(first, bed.Scheduler.ReadRecentRuns(64));
+        var submitted = bed.Submit("new-run");
+        Assert.Equal(submitted.RunId, bed.Scheduler.ReadRecentRuns(1)[0].RunId);
+        bed.RunUntilTerminal(submitted.RunId);
+        Assert.Equal(YokiFrameRunStatus.Passed, bed.Scheduler.ReadRecentRuns(1)[0].State);
+        Assert.Equal(81, bed.Scheduler.ReadRecentRuns(100).Count);
+    }
+
+    [Fact]
     public void Submission_persists_before_execution_and_is_idempotent()
     {
         using var bed = RunTestBed.Create();

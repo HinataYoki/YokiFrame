@@ -43,7 +43,15 @@
 - `await engine.Capture("game", ".yokiframe/automation/evidence/preview.png", autoNumber:true)`：重复名称自动编号，返回实际 PNG 相对路径；默认仍不覆盖。要求运行且未暂停的 Game view，尺寸每边不超过 4096，文件不超过 32 MiB。不改相机；尚无 SceneView/自定义相机模式。
 - `cancellationToken`：可传业务 async 方法；助手只允许宿主主线程调用。
 
-预算从 script_status 的 maxAssemblies/maxLoadedBytes、remainingAssemblies/remainingBytes 读取，不猜固定 64。当前开发源码为 4096 次加载/64 MiB，仍是宿主常量；新脚本、Attach/同 ID 重挂、Patch 共用预算。SetField 本身不加载，外层新脚本仍加载。删除不退还，超限明确失败；关闭 Domain Reload 时仅退出重进 Play 不重置预算，不自动重载。查不到结果先对账，不重放写操作。完整 stdin 示例见 [CLI 命令](cli-commands.md)。
+预算从 script_status 的 maxAssemblies/maxLoadedBytes、remainingAssemblies/remainingBytes 读取，不猜固定 64。当前开发源码为 4096 次加载/64 MiB，仍是宿主常量；脚本缓存未命中、Attach/同 ID 重挂、Patch 共用预算。SetField 本身不加载。删除不退还，超限明确失败；关闭 Domain Reload 时仅退出重进 Play 不重置预算，不自动重载。查不到结果先对账，不重放写操作。完整 stdin 示例见 [CLI 命令](cli-commands.md)。
+
+重复提交相同源码且引用快照不变时，复用同一 compiler loader 的入口缓存（最多 128 项 FIFO），
+不重新编译/加载；每次仍使用新的上下文、断言和日志，并校验授权。缓存不是运行结果，
+复用程序集的静态状态不会清零。script_status 的 cachedScripts/maxCachedScripts、
+scriptCacheHits/scriptCacheMisses 可核对是否命中。引用路径/顺序/长度/修改时间变化会失效；
+首次编译加载依赖后，第二次可能再加载一次。修改源码里的数值也会失效，调参仍优先 live_set_fields。
+loadedBytes 只计累计 PE+PDB，不是进程/托管堆内存；淘汰缓存不卸载程序集，不同源码持续提交仍会累积。
+空闲调度不扫描历史，最近运行列表最多缓存 64 条，外部记录变更可能延迟约 5 秒；具体结果用 run_result 对账。
 
 ## Unity LiveCode（Play 里热改行为）
 
