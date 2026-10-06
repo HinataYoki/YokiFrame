@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>MonoMod.Backports</id>
+    <version>1.1.2</version>
+    <authors>0x0ade, DaNike</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/MonoMod</projectUrl>
+    <iconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</iconUrl>
+    <description>A set of backports of new BCL features to all frameworks which MonoMod supports.</description>
+    <copyright>Copyright 2024 0x0ade, DaNike</copyright>
+    <tags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;</tags>
+    <repository type="git" url="https://github.com/MonoMod/MonoMod.git" commit="a1b82852b2574742776af08818487b90b0bfab93" />
+    <dependencies>
+      <group targetFramework="net6.0">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework="net5.0">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework="net7.0">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" />
+        <dependency id="System.Reflection.Emit.ILGeneration" version="4.7.0" />
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETFramework3.5">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETFramework4.5.2">
+        <dependency id="System.ValueTuple" version="4.5.0" />
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" />
+        <dependency id="System.Reflection.Emit.ILGeneration" version="4.7.0" />
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETCoreApp2.1">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETCoreApp3.0">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+      <group targetFramework=".NETCoreApp3.1">
+        <dependency id="MonoMod.ILHelpers" version="1.1.0" />
+      </group>
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework3.5" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.5.2" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(NuGetPackageRoot)microsoft.codeanalysis.common/4.8.0/ThirdPartyNotices.rtf"
+          Link="licenses/Roslyn-ThirdPartyNotices.rtf" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)microsoft.codeanalysis.csharp/4.8.0/microsoft.codeanalysis.csharp.nuspec"
+          Link="licenses/microsoft.codeanalysis.csharp.nuspec" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)microsoft.codeanalysis.common/4.8.0/microsoft.codeanalysis.common.nuspec"
+          Link="licenses/microsoft.codeanalysis.common.nuspec" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

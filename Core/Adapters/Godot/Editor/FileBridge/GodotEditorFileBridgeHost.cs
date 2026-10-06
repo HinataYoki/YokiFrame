@@ -24,7 +24,7 @@ namespace YokiFrame
         private readonly string mEngineVersion;
         private readonly GodotEditorFileBridgePaths mPaths;
         private YokiFrameHostAdmissionLease mAdmissionLease;
-        private readonly YokiFrameCommandDispatcher mDispatcher;
+        private YokiFrameCommandDispatcher mDispatcher;
         private readonly YokiFrameHostCommandCoordinator mCommandCoordinator;
         private string mLastError = string.Empty;
         private string mSessionId = string.Empty;

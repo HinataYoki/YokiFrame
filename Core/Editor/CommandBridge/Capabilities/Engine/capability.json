@@ -1,0 +1,406 @@
+{
+  "schemaVersion": 1,
+  "kind": "capability-descriptor",
+  "kit": {
+    "kit": "Engine",
+    "state": "Available",
+    "role": "Host",
+    "snapshotNames": [
+      "state"
+    ],
+    "telemetryNames": [],
+    "commandCatalogDeclared": true,
+    "commands": [
+      {
+        "action": "live_export_status",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_export_commit",
+        "kind": "Dangerous",
+        "engineKinds": ["Unity"],
+        "sideEffects": ["asset.script.write", "asset.import"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "script_run",
+        "kind": "Dangerous",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.trusted-csharp"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp", "engine.roslyn.installed"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "script_status",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_status",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_tuning_bind",
+        "kind": "Dangerous",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.fields.watch"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_tuning_refresh",
+        "kind": "Dangerous",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.fields"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_tuning_status",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_tuning_unbind",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.fields.unwatch"],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_set_fields",
+        "kind": "Dangerous",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.fields"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_snapshot",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.snapshot.write"],
+        "preconditions": ["engine.reachable", "engine.operations.enabled", "engine.scripts.trustedCSharp"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "live_remove",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.live.remove"],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "run_result",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "run_lookup",
+        "kind": "ReadOnly",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": [],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "run_cancel",
+        "kind": "UserAction",
+        "engineKinds": ["Unity", "Godot"],
+        "sideEffects": ["engine.run.cancel"],
+        "preconditions": ["engine.reachable"],
+        "verifyRecipe": "engine-script"
+      },
+      {
+        "action": "domain_state",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-domain-state"
+      },
+      {
+        "action": "engine_capabilities",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-capabilities"
+      },
+      {
+        "action": "play_control",
+        "kind": "Dangerous",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "editor.playmode"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.operations.enabled"
+        ],
+        "verifyRecipe": "engine-play-control"
+      },
+      {
+        "action": "scene_query",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable",
+          "engine.operations.enabled"
+        ],
+        "verifyRecipe": "engine-scene-query"
+      },
+      {
+        "action": "scene_mutate",
+        "kind": "Dangerous",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [
+          "scene.hierarchy",
+          "scene.dirty"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.operations.enabled"
+        ],
+        "verifyRecipe": "engine-scene-mutate"
+      },
+      {
+        "action": "asset_ops",
+        "kind": "UserAction",
+        "engineKinds": [
+          "Unity"
+        ],
+        "sideEffects": [
+          "asset.import"
+        ],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-asset-ops"
+      },
+      {
+        "action": "object_list",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-object-discovery"
+      },
+      {
+        "action": "object_describe",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-object-discovery"
+      },
+      {
+        "action": "eval",
+        "kind": "Dangerous",
+        "engineKinds": [
+          "Godot"
+        ],
+        "sideEffects": [
+          "engine.gdscript.execute"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.operations.enabled"
+        ],
+        "verifyRecipe": "engine-eval"
+      },
+      {
+        "action": "eval_result",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-eval"
+      },
+      {
+        "action": "eval_prune",
+        "kind": "Maintenance",
+        "engineKinds": [
+          "Godot"
+        ],
+        "sideEffects": [
+          "engine.gdscript.unload",
+          "engine.eval-record.delete"
+        ],
+        "preconditions": [
+          "engine.reachable",
+          "engine.operations.enabled"
+        ],
+        "verifyRecipe": "engine-eval"
+      },
+      {
+        "action": "inspect",
+        "kind": "ReadOnly",
+        "engineKinds": [
+          "Unity", "Godot"
+        ],
+        "sideEffects": [],
+        "preconditions": [
+          "engine.reachable"
+        ],
+        "verifyRecipe": "engine-domain-state"
+      }
+    ],
+    "verifyRecipes": [
+      {
+        "id": "engine-script",
+        "description": "Check script_status, submit trusted C# in memory, then observe run_result. Acceptance and compilation are not a passing run.",
+        "gates": ["runtime-response-success", "engine-identity-current", "context-payload-valid"],
+        "evidence": ["command-response", "run-record", "run-result"]
+      },
+      {
+        "id": "engine-domain-state",
+        "description": "Read the hosting engine state (mode, active target, play/compile status, switch state) without mutating editor state.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response",
+          "snapshot"
+        ]
+      },
+      {
+        "id": "engine-capabilities",
+        "description": "Read the Engine operation x target availability matrix together with the execution switch state and reason.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "engine-play-control",
+        "description": "Request a play mode transition and then re-read domain_state; the response only reports acceptance, never the outcome.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response",
+          "snapshot"
+        ]
+      },
+      {
+        "id": "engine-scene-query",
+        "description": "Read the active scene hierarchy within the documented bounds; truncated=true means the returned tree is partial.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "engine-object-discovery",
+        "description": "Discover initialized live services and public member metadata for the active target. No getters, methods, attributes, enumerators or lazy initialization are executed; verify paging, limits and handle invalidation.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current"
+        ],
+        "evidence": [
+          "command-response",
+          "snapshot"
+        ]
+      },
+      {
+        "id": "engine-scene-mutate",
+        "description": "Mutate one scene object with Undo registered and the scene marked dirty; play mode reports undo as unavailable instead of pretending.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response",
+          "scene-snapshot"
+        ]
+      },
+      {
+        "id": "engine-asset-ops",
+        "description": "Refresh/import/find/inspect assets; refused while Unity is compiling or importing.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response"
+        ]
+      },
+      {
+        "id": "engine-eval",
+        "description": "Godot-only inline GDScript eval. No generated C# or domain reload. eval_result only reads stored results.",
+        "gates": [
+          "runtime-response-success",
+          "engine-identity-current",
+          "context-payload-valid"
+        ],
+        "evidence": [
+          "command-response",
+          "eval-record"
+        ]
+      }
+    ],
+    "sourcePath": "Core/Editor/EngineKit/YokiFrameEngineKitProvider.cs",
+    "sourceHash": "db24d6e40d4cf78b35440e89d98108d63d32b7b80b24e53dc2d92d2762fdbce2"
+  }
+}

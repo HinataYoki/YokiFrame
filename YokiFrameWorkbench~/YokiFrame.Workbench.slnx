@@ -2,6 +2,8 @@
   <Folder Name="/src/">
     <Project Path="src/YokiFrame.Cli/YokiFrame.Cli.csproj" />
     <Project Path="src/YokiFrame.Client/YokiFrame.Client.csproj" />
+    <Project Path="src/YokiFrame.EngineKit.Roslyn/YokiFrame.EngineKit.Roslyn.csproj" />
+    <Project Path="src/YokiFrame.EngineKit.Patching/YokiFrame.EngineKit.Patching.csproj" />
     <Project Path="src/YokiFrame.Installer.Core/YokiFrame.Installer.Core.csproj" />
     <Project Path="src/YokiFrame.Packaging/YokiFrame.Packaging.csproj" />
     <Project Path="src/YokiFrame.Workbench.RuntimeCache/YokiFrame.Workbench.RuntimeCache.csproj" />
@@ -13,6 +15,8 @@
   <Folder Name="/tests/">
     <Project Path="tests/YokiFrame.Client.Tests/YokiFrame.Client.Tests.csproj" />
     <Project Path="tests/YokiFrame.Cli.Tests/YokiFrame.Cli.Tests.csproj" />
+    <Project Path="tests/YokiFrame.EngineKit.Tests/YokiFrame.EngineKit.Tests.csproj" />
+    <Project Path="tests/YokiFrame.EngineKit.Roslyn.Tests/YokiFrame.EngineKit.Roslyn.Tests.csproj" />
     <Project Path="tests/YokiFrame.Godot.Runtime.Tests/YokiFrame.Godot.Runtime.Tests.csproj" />
     <Project Path="tests/YokiFrame.Godot.Player.Tests/YokiFrame.Godot.Player.Tests.csproj" />
     <Project Path="tests/YokiFrame.Godot.Editor.Tests/YokiFrame.Godot.Editor.Tests.csproj" />

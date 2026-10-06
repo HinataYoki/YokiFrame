@@ -17,7 +17,7 @@ public sealed partial class WorkbenchShellViewTests
     {
         Assert.Equal("Framework", WorkbenchShellViewModel.DefaultPageName);
         Assert.Equal(
-            new[] { "Framework", "Doctor", "Docs", "EventKit", "FsmKit", "LogKit", "PoolKit", "ResKit", "ActionKit", "AudioKit", "SpatialKit", "UIKit", "TableKit", "LocalizationKit", "SaveKit" },
+            new[] { "Framework", "Doctor", "Docs", "Engine", "EventKit", "FsmKit", "LogKit", "PoolKit", "ResKit", "ActionKit", "AudioKit", "SpatialKit", "UIKit", "TableKit", "LocalizationKit", "SaveKit" },
             WorkbenchShellViewModel.PageNames);
     }
 

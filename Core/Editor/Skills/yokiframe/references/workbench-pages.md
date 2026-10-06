@@ -22,3 +22,10 @@ Godot 的编辑器连接选择 `godot-editor`，游戏运行态选择 `godot-run
 | 存档位置和槽位摘要 | SaveKit | 选择持久化目录、项目目录或自定义路径并保存配置，同时查看已有后端和容器头。宿主目录在 Editor 连上后解析 |
 
 Architecture、SingletonKit、ToolClass、CodeGenKit、InspectorKit 和 SceneKit 的用法在对应 API 主页面。
+
+## Engine 引擎操作面
+
+显示宿主状态、执行开关与原因、会话身份、逐操作/逐目标能力矩阵，以及**活动服务摘要**（实现类型、程序集、Architecture）。最近运行按 kind、状态、target、errorCode 和 runId 展示；旧记录标为 legacy，不再与入口目录关联。
+这些数据来自 Engine 的 state 快照，因此页面内容随宿主写快照刷新。Unity 与 Godot 宿主都发布这份快照，两个引擎下都会显示该页面；快照缺失时页面给出原因与恢复提示。
+
+页面是只读的：发现完整签名用 `object_list/object_describe`，执行 Unity C# 用 `yoki script`；见 [engine-kit.md](engine-kit.md)。

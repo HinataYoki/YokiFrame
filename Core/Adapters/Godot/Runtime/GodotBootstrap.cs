@@ -47,6 +47,11 @@ namespace YokiFrame
 #if GODOT && TOOLS
             var projectRoot = ProjectSettings.GlobalizePath("res://");
             StartFileBridgeHostSafely(projectRoot);
+            GodotRuntimeEngineKitInstaller.EnsureInstalled(
+                this,
+                () => mFileBridgeHost == null ? string.Empty : mFileBridgeHost.SessionId,
+                () => mFileBridgeHost == null ? 0L : mFileBridgeHost.Generation,
+                projectRoot);
 #endif
             SetProcess(true);
         }
@@ -90,6 +95,11 @@ namespace YokiFrame
             float scaledDeltaTime = NormalizeDeltaTime(delta);
             float unscaledDeltaTime = ReadUnscaledDeltaTime();
             YokiFrameUpdateDispatcher.Tick(scaledDeltaTime, unscaledDeltaTime);
+
+#if GODOT && TOOLS
+            // Engine Kit 入口调度与 FileBridge 心跳解耦：bridge 未就绪时也要推进已入队的运行。
+            GodotRuntimeEngineKitInstaller.Tick();
+#endif
 
 #if GODOT && TOOLS
             if (mFileBridgeHost == null)
@@ -190,9 +200,11 @@ namespace YokiFrame
                 mFileBridgeHost = null;
             }
 
+            GodotRuntimeEngineKitInstaller.Shutdown();
             LogKitHostEnvironment.Reset();
 #endif
 
+            YokiFrameUpdateDispatcher.ResetListeners();
             YokiFrameSession.Begin();
             ClearFrameClock();
         }

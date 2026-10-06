@@ -105,4 +105,86 @@ public sealed class SkillInstallServiceTests
         File.WriteAllText(Path.Combine(skillRoot, "SKILL.md.meta"), "fileFormatVersion: 2\n");
         return root;
     }
+
+    /// <summary>
+    /// 验证真实包内 Skill 安装后带上 SKILL.md 与全部 references（含 Engine Kit 能力页与 yoki exec 编排说明）。
+    /// </summary>
+    /// <remarks>
+    /// 这条守卫锁定 Workbench"点击安装"要写入的文件数：新增能力页时必须同步更新期望值，
+    /// 避免新页只存在于包内、安装到 AI 目录后却缺失。
+    /// </remarks>
+    [Fact]
+    public void InstallCopiesEveryPackagedReferenceIncludingEngineKit()
+    {
+        var packageRoot = FindPackageRoot();
+        var packagedSkillRoot = Path.Combine(packageRoot, "Core", "Editor", "Skills", "yokiframe");
+        var packagedReferences = Directory.GetFiles(Path.Combine(packagedSkillRoot, "references"), "*.md");
+
+        Assert.Equal(6, packagedReferences.Length);
+        Assert.Contains(packagedReferences, path => Path.GetFileName(path) == "engine-kit.md");
+
+        var projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-skill-tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var packagedCopyRoot = Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills");
+            CopyDirectory(Path.Combine(packageRoot, "Core", "Editor", "Skills"), packagedCopyRoot);
+
+            _ = new SkillInstallService().Install(projectRoot, "agents", "yokiframe");
+
+            var installedRoot = Path.Combine(projectRoot, ".agents", "skills", "yokiframe");
+            Assert.True(File.Exists(Path.Combine(installedRoot, "SKILL.md")));
+            Assert.Equal(
+                packagedReferences.Length,
+                Directory.GetFiles(Path.Combine(installedRoot, "references"), "*.md").Length);
+            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "engine-kit.md")));
+            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "cli-commands.md")));
+            Assert.False(File.Exists(Path.Combine(installedRoot, "references", "engine-kit.md.meta")));
+        }
+        finally
+        {
+            if (Directory.Exists(projectRoot))
+            {
+                Directory.Delete(projectRoot, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 从测试输出目录向上定位包根。
+    /// </summary>
+    /// <returns>包含 Core/Editor/Skills 的包根路径。</returns>
+    private static string FindPackageRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, "Core", "Editor", "Skills")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("YokiFrame package root was not found above " + AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    /// 递归复制目录，供真实包夹具使用。
+    /// </summary>
+    /// <param name="source">源目录。</param>
+    /// <param name="target">目标目录。</param>
+    private static void CopyDirectory(string source, string target)
+    {
+        Directory.CreateDirectory(target);
+        foreach (var file in Directory.GetFiles(source))
+        {
+            File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
+        }
+
+        foreach (var directory in Directory.GetDirectories(source))
+        {
+            CopyDirectory(directory, Path.Combine(target, Path.GetFileName(directory)));
+        }
+    }
 }
