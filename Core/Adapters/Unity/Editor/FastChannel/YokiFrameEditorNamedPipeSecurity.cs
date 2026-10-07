@@ -11,7 +11,8 @@ using System.Security.Principal;
 namespace YokiFrame
 {
     /// <summary>
-    /// 为 Unity Editor Mono 创建仅当前 Windows SID 可连接的 Named Pipe；避免依赖 Mono 未实现的 CurrentUserOnly 和 WindowsIdentity.User。
+    /// 为 Unity Editor 创建仅当前用户可连接的 Named Pipe。
+    /// Unity 7 CoreCLR 使用 CurrentUserOnly；更早版本用受保护 DACL，因为 Mono 不支持 CurrentUserOnly。
     /// </summary>
     internal static class YokiFrameEditorNamedPipeSecurity
     {
@@ -20,16 +21,51 @@ namespace YokiFrame
         private const int ERROR_INSUFFICIENT_BUFFER = 122;
         private const int SINGLE_SERVER_INSTANCE = 1;
         private const int DEFAULT_BUFFER_SIZE = 0;
+#if !UNITY_7000_0_OR_NEWER
         private const PipeAccessRights NO_ADDITIONAL_ACCESS_RIGHTS = (PipeAccessRights)0;
+#endif
 
         /// <summary>
-        /// 使用受保护的当前用户 DACL 创建异步单实例 Named Pipe；若 Windows token 或 ACL 创建失败则抛出，调用方必须保持 FileBridge 回退。
+        /// 创建异步单实例 Named Pipe。Unity 7 使用 CurrentUserOnly；更早版本创建受保护 DACL，失败时由调用方回退 FileBridge。
         /// </summary>
         /// <param name="pipeName">已经通过 SafeId 校验的 Pipe 名称。</param>
         /// <returns>尚未等待客户端连接的安全 Pipe server。</returns>
         public static NamedPipeServerStream CreateServer(string pipeName)
         {
-            var security = CreateCurrentUserPipeSecurity();
+#if UNITY_7000_0_OR_NEWER
+            return CreateCoreClrServer(pipeName);
+#else
+            return CreateFrameworkServer(pipeName, CreateCurrentUserPipeSecurity());
+#endif
+        }
+
+#if UNITY_7000_0_OR_NEWER
+        /// <summary>
+        /// 在 Unity 7 CoreCLR 上创建 Pipe。带 ACL 的构造函数运行时不存在，创建后再改 ACL 又因句柄缺少 WRITE_DAC 被拒绝。
+        /// CurrentUserOnly 由操作系统在创建时限制为当前用户，效果等同于受保护 DACL。
+        /// </summary>
+        /// <param name="pipeName">已经通过 SafeId 校验的 Pipe 名称。</param>
+        /// <returns>仅当前用户可连接、尚未等待客户端连接的 Pipe server。</returns>
+        private static NamedPipeServerStream CreateCoreClrServer(string pipeName)
+        {
+            return new NamedPipeServerStream(
+                pipeName,
+                PipeDirection.InOut,
+                SINGLE_SERVER_INSTANCE,
+                PipeTransmissionMode.Byte,
+                PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly,
+                DEFAULT_BUFFER_SIZE,
+                DEFAULT_BUFFER_SIZE);
+        }
+#else
+        /// <summary>
+        /// 在 Mono / .NET Framework 运行时创建 Pipe。ACL 必须由构造函数写入，创建后再改会因句柄缺少 WRITE_DAC 而失败。
+        /// </summary>
+        /// <param name="pipeName">已经通过 SafeId 校验的 Pipe 名称。</param>
+        /// <param name="security">仅当前用户可访问的受保护 ACL。</param>
+        /// <returns>尚未等待客户端连接的 Pipe server。</returns>
+        private static NamedPipeServerStream CreateFrameworkServer(string pipeName, PipeSecurity security)
+        {
             return new NamedPipeServerStream(
                 pipeName,
                 PipeDirection.InOut,
@@ -42,11 +78,12 @@ namespace YokiFrame
                 HandleInheritability.None,
                 NO_ADDITIONAL_ACCESS_RIGHTS);
         }
+#endif
 
         /// <summary>
         /// 创建不继承外部规则、且只授予当前进程所属 Windows SID 完全控制权的 PipeSecurity。
         /// </summary>
-        /// <returns>可传给十参数 NamedPipeServerStream 构造函数的受保护 ACL。</returns>
+        /// <returns>仅当前用户可访问的受保护 ACL。</returns>
         private static PipeSecurity CreateCurrentUserPipeSecurity()
         {
             var currentUserSid = ReadCurrentUserSecurityIdentifier();

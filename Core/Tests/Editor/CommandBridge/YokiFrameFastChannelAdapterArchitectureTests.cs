@@ -165,7 +165,7 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Windows ACL 工厂通过当前进程 token SID 和受保护 DACL 创建 Pipe，不会退回 Mono 不支持的 CurrentUserOnly 或默认访问控制。
+        /// 验证 Windows Pipe 工厂保持当前用户限制。Unity 7 CoreCLR 使用 CurrentUserOnly；更早版本仍通过受保护 DACL 创建。
         /// </summary>
         [Test]
         public void UnityNamedPipeSecurityUsesProtectedCurrentUserAcl()
@@ -174,12 +174,13 @@ namespace YokiFrame
 
             Assert.IsTrue(source.TrimStart().StartsWith("#if UNITY_EDITOR_WIN"));
             Assert.IsTrue(source.TrimEnd().EndsWith("#endif"));
+            Assert.IsTrue(source.Contains("UNITY_7000_0_OR_NEWER"));
+            Assert.IsTrue(source.Contains("PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly"));
             Assert.IsTrue(source.Contains("OpenProcessToken"));
             Assert.IsTrue(source.Contains("GetTokenInformation"));
             Assert.IsTrue(source.Contains("SetAccessRuleProtection(true, false)"));
             Assert.IsTrue(source.Contains("PipeAccessRights.FullControl"));
             Assert.IsTrue(source.Contains("HandleInheritability.None"));
-            Assert.IsFalse(source.Contains("PipeOptions.CurrentUserOnly"));
         }
 
         /// <summary>
