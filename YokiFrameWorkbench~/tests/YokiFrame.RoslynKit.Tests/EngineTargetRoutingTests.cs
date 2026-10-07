@@ -7,11 +7,17 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineTargetRoutingTests
 {
+    /// <summary>构造只读 scene_query，并限定它支持的目标。不执行。</summary>
+    /// <param name="targets">操作声明支持的目标。</param>
+    /// <returns>尚未调度的记录型操作。</returns>
     private static RecordingEngineOperation Operation(RoslynExecutionTarget targets)
     {
         return new RecordingEngineOperation("scene_query", YokiFrameCommandKind.ReadOnly, false, false, targets);
     }
 
+    /// <summary>解析目标文本。解析失败时断言失败，不返回 None 冒充成功。</summary>
+    /// <param name="json">目标文本，可以是别名或组合。</param>
+    /// <returns>解析得到的目标标志。</returns>
     private static RoslynExecutionTarget TargetOf(string json)
     {
         RoslynExecutionTarget target = RoslynExecutionTarget.None;
@@ -19,6 +25,9 @@ public sealed class EngineTargetRoutingTests
         return target;
     }
 
+    /// <summary>操作和宿主都支持请求目标时执行一次。空 payload 也按成功期望断言。</summary>
+    /// <param name="payload">包含 target 或为空的请求 JSON。</param>
+    /// <param name="expectedSuccess">期望的成功标记。</param>
     [Theory]
     [InlineData("{\"target\":\"play\"}", true)]
     [InlineData("{\"target\":\"editor\"}", true)]
@@ -37,6 +46,7 @@ public sealed class EngineTargetRoutingTests
         Assert.Equal(1, operation.InvocationCount);
     }
 
+    /// <summary>操作不支持 play 时返回 UNSUPPORTED，且不执行。开关保持开启。</summary>
     [Fact]
     public void Target_not_supported_by_action_is_rejected()
     {
@@ -52,6 +62,7 @@ public sealed class EngineTargetRoutingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>操作支持 runtime 但宿主不承载时返回 UNAVAILABLE，且不执行。</summary>
     [Fact]
     public void Target_supported_by_action_but_not_by_host_is_unavailable()
     {
@@ -70,6 +81,8 @@ public sealed class EngineTargetRoutingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>无法识别的 target 文本或类型返回 INVALID_PAYLOAD，且不执行。</summary>
+    /// <param name="payload">含非法 target 的请求 JSON。</param>
     [Theory]
     [InlineData("{\"target\":\"bogus\"}")]
     [InlineData("{\"target\":3}")]
@@ -87,6 +100,7 @@ public sealed class EngineTargetRoutingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>来源校验早于目标校验。不受信来源即使目标也不支持，仍返回来源错误且不执行。</summary>
     [Fact]
     public void Target_validation_happens_after_switch_and_source_checks()
     {
@@ -107,6 +121,7 @@ public sealed class EngineTargetRoutingTests
         Assert.Equal(RoslynErrorCodes.SOURCE_NOT_PERMITTED, result.ErrorCode);
     }
 
+    /// <summary>目标格式化可被大小写和分隔符变体解析回来。不改变标志组合。</summary>
     [Fact]
     public void Target_formatting_round_trips()
     {

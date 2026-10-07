@@ -16,6 +16,7 @@ public sealed class AtomicFileWriterTests : IDisposable
         "yokiframe-atomic-writer-tests",
         Guid.NewGuid().ToString("N"));
 
+    /// <summary>删除本测试创建的临时根目录。目录不存在时不做任何事。</summary>
     /// <inheritdoc />
     public void Dispose()
     {
@@ -25,6 +26,7 @@ public sealed class AtomicFileWriterTests : IDisposable
         }
     }
 
+    /// <summary>eval 记录可覆盖保存，且目录中不残留临时文件。不改其他记录。</summary>
     [Fact]
     public void Eval_store_save_overwrites_without_temp_leftovers()
     {
@@ -40,6 +42,7 @@ public sealed class AtomicFileWriterTests : IDisposable
         AssertNoTempLeftovers(Path.Combine(mRoot, ".yokiframe", "engine", "eval"));
     }
 
+    /// <summary>运行记录可覆盖保存，且目录中不残留临时文件。状态字段保持原写入值。</summary>
     [Fact]
     public void Run_store_save_overwrites_without_temp_leftovers()
     {
@@ -62,6 +65,7 @@ public sealed class AtomicFileWriterTests : IDisposable
         AssertNoTempLeftovers(Path.Combine(mRoot, ".yokiframe", "engine", "runs"));
     }
 
+    /// <summary>写出的记录是无 BOM 的 UTF-8，中文内容可原样读回。</summary>
     [Fact]
     public void Written_records_are_utf8_without_bom()
     {
@@ -74,6 +78,10 @@ public sealed class AtomicFileWriterTests : IDisposable
         Assert.Contains("会话", Encoding.UTF8.GetString(bytes), StringComparison.Ordinal);
     }
 
+    /// <summary>构造一条可保存的 eval 记录。不写磁盘。</summary>
+    /// <param name="id">记录标识。</param>
+    /// <param name="note">备注文本。</param>
+    /// <returns>状态为 Ready、令牌固定的记录。</returns>
     private static RoslynEvalRecord CreateEvalRecord(string id, string note)
     {
         return new RoslynEvalRecord
@@ -87,6 +95,8 @@ public sealed class AtomicFileWriterTests : IDisposable
         };
     }
 
+    /// <summary>断言目录树中没有文件名包含 .tmp 的残留。目录不存在时直接返回。</summary>
+    /// <param name="directory">待检查的存储目录。</param>
     private static void AssertNoTempLeftovers(string directory)
     {
         if (!Directory.Exists(directory))

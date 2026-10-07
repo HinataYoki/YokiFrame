@@ -41,6 +41,11 @@ namespace YokiFrame
         private double mNextPoll;
         private readonly int mThread = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
+        /// <summary>绑定项目根、热更管理器和会话许可。实例只接受构造时所在线程的调用。</summary>
+        /// <param name="projectRoot">项目根，会规范化为绝对路径。</param>
+        /// <param name="manager">执行字段写入的热更管理器。</param>
+        /// <param name="permitted">是否同时具备引擎和受信任 C# 许可。</param>
+        /// <param name="state">读取当前域会话。</param>
         public LiveTuningBinder(string projectRoot, LiveCodeManager manager,
             Func<bool> permitted, Func<RoslynDomainState> state)
         {
@@ -48,6 +53,10 @@ namespace YokiFrame
             mManager = manager; mPermitted = permitted; mState = state;
         }
 
+        /// <summary>绑定调参文件并立即应用一次。同一标识不能重复绑定，同时最多 8 个。文件形状成为后续自动应用的授权边界。</summary>
+        /// <param name="id">调参标识。</param>
+        /// <param name="relativePath">项目内 .yokiframe/tuning 下的 json 相对路径。</param>
+        /// <returns>状态为 watching 的绑定状态，由后续刷新原地更新。</returns>
         public LiveTuningStatus Bind(string id, string relativePath)
         {
             RequireThread();
@@ -70,8 +79,13 @@ namespace YokiFrame
             return binding.Status;
         }
 
+        /// <summary>移除绑定。不回滚已经写入的字段。</summary>
+        /// <param name="id">调参标识。</param>
+        /// <returns>存在并已移除时为 true。</returns>
         public bool Unbind(string id) { RequireThread(); return mBindings.Remove(id); }
 
+        /// <summary>返回当前绑定状态。返回的是内部状态对象，后续刷新会改同一实例。</summary>
+        /// <returns>绑定状态列表。</returns>
         public IReadOnlyList<LiveTuningStatus> List()
         {
             RequireThread();
@@ -80,6 +94,8 @@ namespace YokiFrame
             return result;
         }
 
+        /// <summary>把全部分绑定标为 stopped 并记下原因，同时清掉待应用标记。不写字段。</summary>
+        /// <param name="reason">停止原因。</param>
         public void StopAll(string reason)
         {
             RequireThread();
@@ -91,6 +107,9 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>立即重读并应用一个未停止的绑定。停止后的绑定必须显式重新绑定。</summary>
+        /// <param name="id">调参标识。</param>
+        /// <returns>刷新后的同一状态对象。</returns>
         public LiveTuningStatus Refresh(string id)
         {
             RequireThread();
@@ -101,6 +120,8 @@ namespace YokiFrame
             return binding.Status;
         }
 
+        /// <summary>按轮询间隔检查文件时间戳和长度。变化后等待防抖再应用；上下文失效则停止该绑定。单个绑定的异常只记入其状态。</summary>
+        /// <param name="seconds">宿主单调时钟，单位秒。</param>
         public void Tick(double seconds)
         {
             RequireThread();
@@ -140,6 +161,8 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>稳定读取后按内容哈希决定是否写字段。形状变化只记错误，不扩大授权；上下文失效则停止。</summary>
+        /// <param name="binding">已有绑定。</param>
         private void Apply(Binding binding)
         {
             if (!ContextMatches(binding))
@@ -172,6 +195,9 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>核对许可、会话、代际、目标和每个行为的修订与活动状态。不修改绑定。</summary>
+        /// <param name="binding">待核对绑定。</param>
+        /// <returns>授权上下文仍有效时为 true。</returns>
         private bool ContextMatches(Binding binding)
         {
             if (!mPermitted()) return false;
@@ -190,17 +216,22 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>没有引擎和受信任 C# 许可时拒绝调参。</summary>
         private void RequirePermission()
         {
             if (!mPermitted()) throw new InvalidOperationException("Live tuning requires Engine and trusted C# permission.");
         }
 
+        /// <summary>拒绝非构造线程的调参调用。</summary>
         private void RequireThread()
         {
             if (System.Threading.Thread.CurrentThread.ManagedThreadId != mThread)
                 throw new InvalidOperationException("Live tuning requires the host main thread.");
         }
 
+        /// <summary>只接受项目 .yokiframe/tuning 目录下的 json，并限制在该目录内。</summary>
+        /// <param name="path">项目相对路径。</param>
+        /// <returns>规范化后的绝对路径。</returns>
         private string ResolvePath(string path)
         {
             if (string.IsNullOrEmpty(path) || !path.Replace('\\', '/').StartsWith(".yokiframe/tuning/", StringComparison.Ordinal)
@@ -211,6 +242,9 @@ namespace YokiFrame
         }
 
         private sealed class Content { internal string Text; internal long Stamp; internal long Size; }
+        /// <summary>读取未在读取期间变化的文件。超过调参载荷上限，或时间戳、长度发生变化时拒绝。</summary>
+        /// <param name="path">调参文件绝对路径。</param>
+        /// <returns>文本、写入时间和长度。</returns>
         private static Content ReadStable(string path)
         {
             var info = new FileInfo(path);
@@ -229,6 +263,9 @@ namespace YokiFrame
             return new Content { Text = text, Stamp = stamp, Size = size };
         }
 
+        /// <summary>对会话、代际、目标以及行为标识、修订、字段名和类型做稳定哈希。值变化不改变形状。</summary>
+        /// <param name="request">已解析的字段请求。</param>
+        /// <returns>授权形状哈希。</returns>
         private static string Shape(LiveFieldRequest request)
         {
             var json = new RoslynJsonBuilder().StartObject().Property("session", request.SessionId)

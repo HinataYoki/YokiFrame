@@ -104,34 +104,15 @@ namespace YokiFrame
             return snapshot;
         }
 
+        /// <summary>
+        /// 不经缓存读取开关。文件缺失、无法读取或 JSON 无效时返回关闭快照，不把 IO 异常抛给调用方。
+        /// </summary>
+        /// <returns>开关快照。文档对象保留到读取结束，避免 JsonElement 提前失效。</returns>
         private RoslynSettingsSnapshot ReadUncached()
         {
-            string json;
-            try
+            if (!TryReadSettingsText(out string json, out RoslynSettingsSnapshot failure))
             {
-                if (!File.Exists(mSettingsPath))
-                {
-                    return RoslynSettingsSnapshot.MissingConfig(
-                        "Engine settings file was not found: " + mSettingsPath);
-                }
-
-                json = File.ReadAllText(mSettingsPath);
-            }
-            catch (IOException exception)
-            {
-                return RoslynSettingsSnapshot.InvalidConfig(
-                    "Engine settings file could not be read: " + exception.Message);
-            }
-            catch (UnauthorizedAccessException exception)
-            {
-                return RoslynSettingsSnapshot.InvalidConfig(
-                    "Engine settings file could not be read: " + exception.Message);
-            }
-
-            if (string.IsNullOrEmpty(json))
-            {
-                return RoslynSettingsSnapshot.InvalidConfig(
-                    "Engine settings file is empty: " + mSettingsPath);
+                return failure;
             }
 
             JsonDocument document;
@@ -145,6 +126,60 @@ namespace YokiFrame
                     "Engine settings file is not valid JSON: " + exception.Message);
             }
 
+            return ReadSettingsDocument(document);
+        }
+
+        /// <summary>
+        /// 读取设置文件正文。文件不存在、为空或没有读取权限时返回 false。
+        /// </summary>
+        /// <param name="json">成功时的文件正文。</param>
+        /// <param name="failure">失败时的关闭快照。</param>
+        /// <returns>读到非空正文时返回 true。</returns>
+        private bool TryReadSettingsText(out string json, out RoslynSettingsSnapshot failure)
+        {
+            json = string.Empty;
+            failure = null;
+            try
+            {
+                if (!File.Exists(mSettingsPath))
+                {
+                    failure = RoslynSettingsSnapshot.MissingConfig(
+                        "Engine settings file was not found: " + mSettingsPath);
+                    return false;
+                }
+
+                json = File.ReadAllText(mSettingsPath);
+            }
+            catch (IOException exception)
+            {
+                failure = RoslynSettingsSnapshot.InvalidConfig(
+                    "Engine settings file could not be read: " + exception.Message);
+                return false;
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                failure = RoslynSettingsSnapshot.InvalidConfig(
+                    "Engine settings file could not be read: " + exception.Message);
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(json))
+            {
+                failure = RoslynSettingsSnapshot.InvalidConfig(
+                    "Engine settings file is empty: " + mSettingsPath);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 按专用小节或工程设置数组解释根对象。两种字段都没有时按关闭处理。
+        /// </summary>
+        /// <param name="document">已解析的设置文档。本方法不释放它。</param>
+        /// <returns>开关快照。</returns>
+        private RoslynSettingsSnapshot ReadSettingsDocument(JsonDocument document)
+        {
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
             {
@@ -216,49 +251,83 @@ namespace YokiFrame
             System.Collections.Generic.IReadOnlyList<JsonElement> items = entries.EnumerateArray();
             for (var index = 0; index < items.Count; index++)
             {
-                JsonElement item = items[index];
-                if (item.ValueKind != JsonValueKind.Object
-                    || !item.TryGetProperty("kit", out JsonElement kit)
-                    || kit.ValueKind != JsonValueKind.String
-                    || !IsRoslynKitName(kit.GetString())
-                    || !item.TryGetProperty("key", out JsonElement key)
-                    || key.ValueKind != JsonValueKind.String)
+                if (TryTakeEnabledSnapshot(items[index], out RoslynSettingsSnapshot snapshot))
                 {
-                    continue;
+                    return snapshot;
                 }
-
-                string keyName = key.GetString();
-                if (!string.Equals(keyName, mEnabledKey, StringComparison.Ordinal)
-                    && !(mEnabledKey == ENGINE_ENABLED_KEY
-                         && string.Equals(keyName, ENGINE_ENABLED_LEGACY_KEY, StringComparison.Ordinal)))
-                {
-                    continue;
-                }
-
-                if (!item.TryGetProperty("value", out JsonElement value) || value.ValueKind != JsonValueKind.String)
-                {
-                    return RoslynSettingsSnapshot.Disabled(
-                        "Engine settings entry '" + keyName + "' has no string value.");
-                }
-
-                string text = value.GetString();
-                if (string.Equals(text, "true", StringComparison.OrdinalIgnoreCase))
-                {
-                    return RoslynSettingsSnapshot.Enabled();
-                }
-
-                if (string.Equals(text, "false", StringComparison.OrdinalIgnoreCase))
-                {
-                    return RoslynSettingsSnapshot.Disabled(
-                        "Engine settings entry '" + keyName + "' is false.");
-                }
-
-                return RoslynSettingsSnapshot.Disabled(
-                    "Engine settings entry '" + keyName + "' is not a boolean literal.");
             }
 
             return RoslynSettingsSnapshot.Disabled(
                 "Engine settings file has no " + ENGINE_KIT_NAME + " '" + mEnabledKey + "' entry.");
+        }
+
+        /// <summary>
+        /// 命中 RoslynKit 当前或旧开关键时写出快照。其他条目返回 false，由调用方继续扫描。
+        /// </summary>
+        /// <param name="item">settings 数组中的一项。</param>
+        /// <param name="snapshot">命中时的开关快照。</param>
+        /// <returns>这一项决定了开关结果时返回 true。</returns>
+        private bool TryTakeEnabledSnapshot(JsonElement item, out RoslynSettingsSnapshot snapshot)
+        {
+            snapshot = null;
+            if (!TryReadEnabledKey(item, out string keyName))
+            {
+                return false;
+            }
+
+            if (!item.TryGetProperty("value", out JsonElement value) || value.ValueKind != JsonValueKind.String)
+            {
+                snapshot = RoslynSettingsSnapshot.Disabled(
+                    "Engine settings entry '" + keyName + "' has no string value.");
+                return true;
+            }
+
+            snapshot = InterpretEnabledValue(keyName, value.GetString());
+            return true;
+        }
+
+        /// <summary>确认这一项是 RoslynKit 的当前开关键或受支持的旧键。</summary>
+        /// <param name="item">settings 数组中的一项。</param>
+        /// <param name="keyName">命中的键名。</param>
+        /// <returns>应解释该项的 value 时返回 true。</returns>
+        private bool TryReadEnabledKey(JsonElement item, out string keyName)
+        {
+            keyName = string.Empty;
+            if (item.ValueKind != JsonValueKind.Object
+                || !item.TryGetProperty("kit", out JsonElement kit)
+                || kit.ValueKind != JsonValueKind.String
+                || !IsRoslynKitName(kit.GetString())
+                || !item.TryGetProperty("key", out JsonElement key)
+                || key.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            keyName = key.GetString();
+            return string.Equals(keyName, mEnabledKey, StringComparison.Ordinal)
+                || (mEnabledKey == ENGINE_ENABLED_KEY
+                    && string.Equals(keyName, ENGINE_ENABLED_LEGACY_KEY, StringComparison.Ordinal));
+        }
+
+        /// <summary>只接受 true 或 false 字面量，大小写不敏感。其他文本按关闭处理。</summary>
+        /// <param name="keyName">命中的键名，用于诊断。</param>
+        /// <param name="text">value 字符串。</param>
+        /// <returns>开关快照。</returns>
+        private static RoslynSettingsSnapshot InterpretEnabledValue(string keyName, string text)
+        {
+            if (string.Equals(text, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return RoslynSettingsSnapshot.Enabled();
+            }
+
+            if (string.Equals(text, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                return RoslynSettingsSnapshot.Disabled(
+                    "Engine settings entry '" + keyName + "' is false.");
+            }
+
+            return RoslynSettingsSnapshot.Disabled(
+                "Engine settings entry '" + keyName + "' is not a boolean literal.");
         }
     }
 }

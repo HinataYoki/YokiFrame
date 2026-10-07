@@ -7,6 +7,7 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineJsonBuilderTests
 {
+    /// <summary>写出嵌套对象和数组，并按原字段值往返。不写文件。</summary>
     [Fact]
     public void Builds_nested_document()
     {
@@ -43,6 +44,7 @@ public sealed class EngineJsonBuilderTests
         Assert.False(nodes[1].GetProperty("active").GetBoolean());
     }
 
+    /// <summary>控制字符、反斜杠和引号被转义后仍能还原。不改变源字符串。</summary>
     [Fact]
     public void Escapes_control_characters_and_round_trips()
     {
@@ -57,6 +59,7 @@ public sealed class EngineJsonBuilderTests
         Assert.Equal(value, document.RootElement.GetProperty("note").GetString());
     }
 
+    /// <summary>空数组和空对象是合法 JSON。不写入占位元素。</summary>
     [Fact]
     public void Empty_containers_are_valid_json()
     {
@@ -76,12 +79,14 @@ public sealed class EngineJsonBuilderTests
         Assert.Equal(JsonValueKind.Object, document.RootElement.GetProperty("child").ValueKind);
     }
 
+    /// <summary>没有打开对象时写属性名抛出 InvalidOperationException。不产生 JSON 文本。</summary>
     [Fact]
     public void Property_name_requires_an_open_object()
     {
         Assert.Throws<InvalidOperationException>(() => new RoslynJsonBuilder().Name("orphan"));
     }
 
+    /// <summary>对象值之前必须先有属性名，否则抛出 InvalidOperationException。</summary>
     [Fact]
     public void Object_value_requires_a_property_name()
     {
@@ -89,6 +94,7 @@ public sealed class EngineJsonBuilderTests
         Assert.Throws<InvalidOperationException>(() => builder.String("value"));
     }
 
+    /// <summary>第二个根值被拒绝。已写出的第一个根值不被替换。</summary>
     [Fact]
     public void Second_root_value_is_rejected()
     {

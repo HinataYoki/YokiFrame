@@ -14,7 +14,7 @@ namespace YokiFrame
     /// 差别只在引擎语义：Godot 用 EditorUndoRedoManager 登记动作，删除是 QueueFree，
     /// 保存走 EditorInterface.SaveScene。Undo 不可用时如实回报 <c>undo=unavailable</c>。
     /// </remarks>
-    public sealed class GodotEditorSceneMutateOperation : IRoslynOperation
+    public sealed partial class GodotEditorSceneMutateOperation : IRoslynOperation
     {
         /// <summary>创建编辑器 scene_mutate 操作。</summary>
         public GodotEditorSceneMutateOperation()
@@ -30,7 +30,7 @@ namespace YokiFrame
         /// <summary>获取操作描述。</summary>
         public RoslynOperationDescriptor Descriptor { get; }
 
-        /// <summary>执行一次场景修改。</summary>
+        /// <summary>执行一次场景修改。保存不依赖当前编辑根，其余操作先取根再分发。</summary>
         /// <param name="request">命令请求。</param>
         /// <returns>命令结果。</returns>
         public YokiFrameCommandResult Execute(YokiFrameCommandRequest request)
@@ -46,50 +46,78 @@ namespace YokiFrame
 
             using (document)
             {
-                JsonElement root = document.RootElement;
                 if (op == GodotSceneMutateSupport.OP_SAVE)
                 {
                     return Save();
                 }
 
-                Node sceneRoot;
-                try
+                if (!TryGetEditedRoot(out Node sceneRoot, out YokiFrameCommandResult unavailable))
                 {
-                    EditorInterface editor = EditorInterface.Singleton;
-                    sceneRoot = editor == null ? null : editor.GetEditedSceneRoot();
-                }
-                catch (Exception exception)
-                {
-                    return YokiFrameCommandResult.Error(
-                        RoslynErrorCodes.UNAVAILABLE,
-                        "EditorInterface is not available in this process: " + exception.Message);
+                    return unavailable;
                 }
 
-                if (sceneRoot == null)
-                {
-                    return YokiFrameCommandResult.Error(
-                        RoslynErrorCodes.UNAVAILABLE,
-                        "No scene is currently being edited.");
-                }
-
-                switch (op)
-                {
-                    case GodotSceneMutateSupport.OP_CREATE:
-                        return Create(sceneRoot, root);
-                    case GodotSceneMutateSupport.OP_DELETE:
-                        return Delete(sceneRoot, root);
-                    case GodotSceneMutateSupport.OP_SET_ACTIVE:
-                        return SetActive(sceneRoot, root);
-                    case GodotSceneMutateSupport.OP_SET_TRANSFORM:
-                        return SetTransform(sceneRoot, root);
-                    default:
-                        return YokiFrameCommandResult.Error(
-                            RoslynErrorCodes.INVALID_PAYLOAD,
-                            "Unsupported scene_mutate op: " + op + ".");
-                }
+                return Dispatch(op, sceneRoot, document.RootElement);
             }
         }
 
+        /// <summary>读取当前编辑场景根。编辑器接口不可用或没有打开场景时返回错误，不抛出。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="failure">不可用时的命令结果。</param>
+        /// <returns>拿到根节点时返回 true。</returns>
+        private static bool TryGetEditedRoot(out Node sceneRoot, out YokiFrameCommandResult failure)
+        {
+            sceneRoot = null;
+            failure = null;
+            try
+            {
+                EditorInterface editor = EditorInterface.Singleton;
+                sceneRoot = editor == null ? null : editor.GetEditedSceneRoot();
+            }
+            catch (Exception exception)
+            {
+                failure = YokiFrameCommandResult.Error(
+                    RoslynErrorCodes.UNAVAILABLE,
+                    "EditorInterface is not available in this process: " + exception.Message);
+                return false;
+            }
+
+            if (sceneRoot != null)
+            {
+                return true;
+            }
+
+            failure = YokiFrameCommandResult.Error(
+                RoslynErrorCodes.UNAVAILABLE,
+                "No scene is currently being edited.");
+            return false;
+        }
+
+        /// <summary>按 op 分发到具体修改。未知 op 原样返回不支持，不猜测语义。</summary>
+        /// <param name="op">已校验的操作名。</param>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">payload 根对象。</param>
+        /// <returns>命令结果。</returns>
+        private static YokiFrameCommandResult Dispatch(string op, Node sceneRoot, JsonElement root)
+        {
+            switch (op)
+            {
+                case GodotSceneMutateSupport.OP_CREATE:
+                    return Create(sceneRoot, root);
+                case GodotSceneMutateSupport.OP_DELETE:
+                    return Delete(sceneRoot, root);
+                case GodotSceneMutateSupport.OP_SET_ACTIVE:
+                    return SetActive(sceneRoot, root);
+                case GodotSceneMutateSupport.OP_SET_TRANSFORM:
+                    return SetTransform(sceneRoot, root);
+                default:
+                    return YokiFrameCommandResult.Error(
+                        RoslynErrorCodes.INVALID_PAYLOAD,
+                        "Unsupported scene_mutate op: " + op + ".");
+            }
+        }
+
+        /// <summary>保存当前编辑场景。编辑器接口缺失或保存返回非 Ok 时失败，不假装已保存。</summary>
+        /// <returns>保存结果。</returns>
         private static YokiFrameCommandResult Save()
         {
             try
@@ -123,53 +151,19 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>创建节点并尽量登记 Undo。Undo 不可用时直接挂到父节点，结果里回报 unavailable。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">含 name、nodeType 和可选 parent 的载荷。</param>
+        /// <returns>创建结果，或名字、类型、父路径错误。</returns>
         private static YokiFrameCommandResult Create(Node sceneRoot, JsonElement root)
         {
-            string name = GodotSceneMutateSupport.ReadString(root, "name");
-            if (name.Length == 0)
+            if (!TryPrepareCreate(sceneRoot, root, out string name, out string parentPath, out Node parent, out Node created, out YokiFrameCommandResult failure))
             {
-                return YokiFrameCommandResult.Error(
-                    RoslynErrorCodes.INVALID_PAYLOAD,
-                    "scene_mutate create requires a non-empty name.");
-            }
-
-            string nodeType = GodotSceneMutateSupport.ReadString(root, "nodeType");
-            Node created = GodotSceneMutateSupport.CreateNode(nodeType.Length == 0 ? "Node" : nodeType);
-            if (created == null)
-            {
-                return YokiFrameCommandResult.Error(
-                    RoslynErrorCodes.INVALID_PAYLOAD,
-                    "scene_mutate nodeType was not found: " + nodeType + ".");
-            }
-
-            string parentPath = GodotSceneMutateSupport.ReadString(root, "parent");
-            Node parent = string.IsNullOrEmpty(parentPath) ? sceneRoot : GodotSceneQuerySupport.FindByPath(sceneRoot, parentPath);
-            if (parent == null)
-            {
-                return YokiFrameCommandResult.Error(
-                    RoslynErrorCodes.INVALID_PAYLOAD,
-                    "scene_mutate parent was not found: " + parentPath + ".");
+                return failure;
             }
 
             created.Name = name;
-            string undo = "unavailable";
-            try
-            {
-                EditorUndoRedoManager manager = EditorInterface.Singleton.GetEditorUndoRedo();
-                if (manager != null)
-                {
-                    manager.CreateAction("YokiFrame scene_mutate create " + name, UndoRedo.MergeMode.Disable);
-                    manager.AddDoMethod(parent, Node.MethodName.AddChild, created);
-                    manager.AddUndoMethod(created, Node.MethodName.QueueFree);
-                    manager.CommitAction();
-                    undo = "registered";
-                }
-            }
-            catch (Exception)
-            {
-                undo = "unavailable";
-            }
-
+            string undo = TryRegisterCreateUndo(parent, created, name);
             if (undo != "registered")
             {
                 parent.AddChild(created);
@@ -184,6 +178,10 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("nodeType", created.GetClass())));
         }
 
+        /// <summary>按路径删除节点。有父节点且 Undo 可用时登记，否则直接 QueueFree。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <returns>删除结果，或目标不存在的错误。</returns>
         private static YokiFrameCommandResult Delete(Node sceneRoot, JsonElement root)
         {
             Node target;
@@ -226,6 +224,10 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("deferred", "true")));
         }
 
+        /// <summary>切换节点活动状态。CanvasItem 与 Node3D 改 visible，其余改 process_mode。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">含 path 和 active 的载荷。</param>
+        /// <returns>修改结果，或目标、字段错误。</returns>
         private static YokiFrameCommandResult SetActive(Node sceneRoot, JsonElement root)
         {
             Node target;
@@ -260,53 +262,18 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("mechanism", viaVisibility ? "visible" : "processMode")));
         }
 
+        /// <summary>写入变换。非 Node2D/Node3D 直接失败；Undo 失败时立即应用，不留下半登记动作。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">含 path 与三个数值数组的载荷。</param>
+        /// <returns>修改结果，或目标、字段、节点类型错误。</returns>
         private static YokiFrameCommandResult SetTransform(Node sceneRoot, JsonElement root)
         {
-            Node target;
-            YokiFrameCommandResult failure = ResolveTarget(sceneRoot, root, out target);
-            if (failure != null)
+            if (!TryReadTransform(sceneRoot, root, out Node target, out float[] position, out float[] rotation, out float[] scale, out YokiFrameCommandResult failure))
             {
                 return failure;
             }
 
-            if (!GodotSceneMutateSupport.TryReadVector(root, "position", 2, out float[] position)
-                || !GodotSceneMutateSupport.TryReadVector(root, "rotation", 1, out float[] rotation)
-                || !GodotSceneMutateSupport.TryReadVector(root, "scale", 1, out float[] scale))
-            {
-                return YokiFrameCommandResult.Error(
-                    RoslynErrorCodes.INVALID_PAYLOAD,
-                    "scene_mutate setTransform requires numeric position/rotation/scale arrays.");
-            }
-
-            if (target is not Node3D && target is not Node2D)
-            {
-                return YokiFrameCommandResult.Error(
-                    RoslynErrorCodes.UNAVAILABLE,
-                    "Target node is neither Node2D nor Node3D: " + target.GetClass() + ".");
-            }
-
-            string undo = "registered";
-            try
-            {
-                EditorUndoRedoManager manager = EditorInterface.Singleton.GetEditorUndoRedo();
-                if (manager == null)
-                {
-                    undo = "unavailable";
-                }
-                else
-                {
-                    manager.CreateAction("YokiFrame scene_mutate setTransform " + target.Name, UndoRedo.MergeMode.Disable);
-                    RecordTransform(manager, target, "position", BuildPositionVariant(target, position));
-                    RecordTransform(manager, target, "rotation_degrees", BuildRotationVariant(target, rotation));
-                    RecordTransform(manager, target, "scale", BuildScaleVariant(target, scale));
-                    manager.CommitAction();
-                }
-            }
-            catch (Exception)
-            {
-                undo = "unavailable";
-            }
-
+            string undo = TryRegisterTransformUndo(target, position, rotation, scale);
             if (undo != "registered")
             {
                 GodotSceneMutateSupport.ApplyTransform(target, position, rotation, scale);
@@ -319,6 +286,11 @@ namespace YokiFrame
                 undo));
         }
 
+        /// <summary>把当前属性值登记为 Undo，并把下一值登记为 Do。不提交动作。</summary>
+        /// <param name="manager">已创建动作的 Undo 管理器。</param>
+        /// <param name="target">目标节点。</param>
+        /// <param name="property">Godot 属性名。</param>
+        /// <param name="next">下一值。</param>
         private static void RecordTransform(EditorUndoRedoManager manager, Node target, string property, Variant next)
         {
             Variant previous = target.Get(property);
@@ -326,6 +298,10 @@ namespace YokiFrame
             manager.AddUndoProperty(target, property, previous);
         }
 
+        /// <summary>按节点维度构造 position。缺省的后续分量用 0。</summary>
+        /// <param name="target">Node2D 或 Node3D。</param>
+        /// <param name="values">至少含一个分量的数组。</param>
+        /// <returns>可写入 position 的 Variant。</returns>
         private static Variant BuildPositionVariant(Node target, float[] values)
         {
             return target is Node3D
@@ -333,6 +309,10 @@ namespace YokiFrame
                 : Variant.From(new Vector2(values[0], values.Length > 1 ? values[1] : 0f));
         }
 
+        /// <summary>按节点维度构造旋转。Node2D 只取第一分量。</summary>
+        /// <param name="target">Node2D 或 Node3D。</param>
+        /// <param name="values">至少含一个分量的数组。</param>
+        /// <returns>可写入 rotation_degrees 的 Variant。</returns>
         private static Variant BuildRotationVariant(Node target, float[] values)
         {
             return target is Node3D
@@ -340,6 +320,10 @@ namespace YokiFrame
                 : Variant.From(values[0]);
         }
 
+        /// <summary>按节点维度构造 scale。缺省的后续分量用 1，避免把节点缩没。</summary>
+        /// <param name="target">Node2D 或 Node3D。</param>
+        /// <param name="values">至少含一个分量的数组。</param>
+        /// <returns>可写入 scale 的 Variant。</returns>
         private static Variant BuildScaleVariant(Node target, float[] values)
         {
             return target is Node3D
@@ -347,6 +331,12 @@ namespace YokiFrame
                 : Variant.From(new Vector2(values[0], values.Length > 1 ? values[1] : 1f));
         }
 
+        /// <summary>登记单个属性的 Undo。管理器缺失或提交失败时返回 unavailable，不抛出。</summary>
+        /// <param name="target">目标节点。</param>
+        /// <param name="property">Godot 属性名。</param>
+        /// <param name="previous">修改前的值。</param>
+        /// <param name="next">修改后的值。</param>
+        /// <returns>registered 或 unavailable。</returns>
         private static string ApplyPropertyWithUndo(Node target, string property, Variant previous, Variant next)
         {
             try
@@ -369,6 +359,7 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>把当前编辑场景标为未保存。标记失败不影响已经完成的修改。</summary>
         private static void MarkUnsaved()
         {
             try
@@ -382,6 +373,11 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>按 path 解析目标。空路径和找不到都返回错误，不改场景。</summary>
+        /// <param name="sceneRoot">编辑中的场景根。</param>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <param name="target">命中的节点；失败时为 null。</param>
+        /// <returns>失败时的命令结果；成功时返回 null。</returns>
         private static YokiFrameCommandResult ResolveTarget(Node sceneRoot, JsonElement root, out Node target)
         {
             target = null;

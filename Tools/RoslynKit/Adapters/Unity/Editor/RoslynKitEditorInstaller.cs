@@ -53,70 +53,112 @@ namespace YokiFrame
                 var engineProvider = new UnityEngineOperationProvider();
                 string projectRoot = ResolveProjectRoot();
                 engineProvider.ProjectRoot = projectRoot;
-
-                // Only in-memory work can be submitted; persisted records never supply executable code.
-                var host = new RoslynRunHost(engineProvider.ReadDomainState);
-                var store = new RoslynRunStore(projectRoot);
-                var scheduler = new RoslynRunScheduler(
-                    store,
-                    host,
-                    () => settingsSource.Read().BlocksExecution,
-                    ownerHostId: "unity-editor");
-                engineProvider.RunScheduler = scheduler;
-                UnityEngineRunSchedulerDriver.EnsureStarted(scheduler);
-
-                var trustedSource = new RoslynJsonSettingsSource(
-                    ResolveSettingsPath(), "scripts.trustedCSharp", "trustedCSharp");
-                sLivePermission = () => !settingsSource.Read().BlocksExecution && !trustedSource.Read().BlocksExecution;
-                var compiler = new RoslynCompilerLoader(projectRoot,
-                    new[] { ResolvePackageDirectory(RoslynCompilerLoader.PACKAGE_RELATIVE_PATH) });
-                var budget = new RoslynLoadBudget();
-                var liveHost = new UnityLiveCodeHost(projectRoot,
-                    (id, method, arguments) => sLiveCode.Invoke(id, method, arguments, () => { }));
-                sLiveCode = new LiveCodeManager(compiler, budget,
-                    new MethodPatchBackend(ResolvePatchBundle(projectRoot)),
-                    liveHost,
-                    engineProvider.ReadDomainState, sLivePermission, projectRoot);
-                var scripts = new RoslynScriptOperations(scheduler,
-                    compiler, engineProvider.ReadDomainState, sLivePermission,
-                    allowed => new AutomationContext(
-                        () => UnityAutomationFrameClock.Started,
-                        allowed, message => Debug.Log("[YokiFrame.Script] " + message),
-                        (mode, path, autoNumber, token) =>
-                            UnityAutomationCapture.Capture(projectRoot, mode, path, autoNumber, token),
-                        sLiveCode, () => UnityAutomationFrameClock.Completed), budget);
-                sTuning = new LiveTuningBinder(projectRoot, sLiveCode, sLivePermission, engineProvider.ReadDomainState);
-                var operations = new System.Collections.Generic.List<IRoslynOperation>(scripts.CreateOperations())
-                {
-                    new UnityLiveExportOperation(liveHost, sLiveCode, "live_export_status", sLivePermission),
-                    new UnityLiveExportOperation(liveHost, sLiveCode, "live_export_commit", sLivePermission),
-                    new LiveCodeOperation(sLiveCode, "live_status"),
-                    new LiveCodeOperation(sLiveCode, "live_remove"),
-                    new LiveCodeOperation(sLiveCode, "live_snapshot", sLivePermission),
-                    new LiveCodeOperation(sLiveCode, "live_set_fields", sLivePermission),
-                    new LiveTuningOperation(sTuning, "live_tuning_bind", sLivePermission),
-                    new LiveTuningOperation(sTuning, "live_tuning_refresh", sLivePermission),
-                    new LiveTuningOperation(sTuning, "live_tuning_status"),
-                    new LiveTuningOperation(sTuning, "live_tuning_unbind")
-                };
-                engineProvider.AddOperations(operations.ToArray());
-
+                RoslynRunScheduler scheduler = InstallRunScheduler(engineProvider, settingsSource, projectRoot);
+                InstallLiveCode(engineProvider, settingsSource, projectRoot, scheduler);
                 sProvider = new RoslynKitProvider(gate, engineProvider, settingsSource);
-                EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-                EditorApplication.update += CheckLivePermission;
-                AssemblyReloadEvents.beforeAssemblyReload += ClearLiveCode;
-                EditorApplication.quitting += ClearLiveCode;
+                SubscribeProviderLifetime();
             }
 
             return sProvider;
         }
 
+        /// <summary>
+        /// 创建只接受内存脚本的运行调度器，写到引擎 Provider 后立即挂上编辑器驱动。
+        /// 已落盘记录不能从这里提供可执行代码。
+        /// </summary>
+        /// <param name="engineProvider">接收调度器的引擎 Provider。</param>
+        /// <param name="settingsSource">执行开关；调度器稍后读取 BlocksExecution。</param>
+        /// <param name="projectRoot">运行记录所在的工程根。</param>
+        /// <returns>已启动驱动的调度器。</returns>
+        private static RoslynRunScheduler InstallRunScheduler(
+            UnityEngineOperationProvider engineProvider,
+            RoslynJsonSettingsSource settingsSource,
+            string projectRoot)
+        {
+            // Only in-memory work can be submitted; persisted records never supply executable code.
+            var host = new RoslynRunHost(engineProvider.ReadDomainState);
+            var store = new RoslynRunStore(projectRoot);
+            var scheduler = new RoslynRunScheduler(
+                store,
+                host,
+                () => settingsSource.Read().BlocksExecution,
+                ownerHostId: "unity-editor");
+            engineProvider.RunScheduler = scheduler;
+            UnityEngineRunSchedulerDriver.EnsureStarted(scheduler);
+            return scheduler;
+        }
+
+        /// <summary>
+        /// 按原顺序装配许可、编译器、LiveCode、脚本操作和调参，再追加到引擎 Provider。
+        /// 回调捕获的是静态字段，允许在 LiveCode 赋值前创建宿主。
+        /// </summary>
+        /// <param name="engineProvider">接收附加操作的引擎 Provider。</param>
+        /// <param name="settingsSource">执行开关，与受信任 C# 开关同时放行。</param>
+        /// <param name="projectRoot">编译器、补丁和调参使用的工程根。</param>
+        /// <param name="scheduler">脚本操作提交到的调度器。</param>
+        private static void InstallLiveCode(
+            UnityEngineOperationProvider engineProvider,
+            RoslynJsonSettingsSource settingsSource,
+            string projectRoot,
+            RoslynRunScheduler scheduler)
+        {
+            var trustedSource = new RoslynJsonSettingsSource(
+                ResolveSettingsPath(), "scripts.trustedCSharp", "trustedCSharp");
+            sLivePermission = () => !settingsSource.Read().BlocksExecution && !trustedSource.Read().BlocksExecution;
+            var compiler = new RoslynCompilerLoader(projectRoot,
+                new[] { ResolvePackageDirectory(RoslynCompilerLoader.PACKAGE_RELATIVE_PATH) });
+            var budget = new RoslynLoadBudget();
+            var liveHost = new UnityLiveCodeHost(projectRoot,
+                (id, method, arguments) => sLiveCode.Invoke(id, method, arguments, () => { }));
+            sLiveCode = new LiveCodeManager(compiler, budget,
+                new MethodPatchBackend(ResolvePatchBundle(projectRoot)),
+                liveHost,
+                engineProvider.ReadDomainState, sLivePermission, projectRoot);
+            var scripts = new RoslynScriptOperations(scheduler,
+                compiler, engineProvider.ReadDomainState, sLivePermission,
+                allowed => new AutomationContext(
+                    () => UnityAutomationFrameClock.Started,
+                    allowed, message => Debug.Log("[YokiFrame.Script] " + message),
+                    (mode, path, autoNumber, token) =>
+                        UnityAutomationCapture.Capture(projectRoot, mode, path, autoNumber, token),
+                    sLiveCode, () => UnityAutomationFrameClock.Completed), budget);
+            sTuning = new LiveTuningBinder(projectRoot, sLiveCode, sLivePermission, engineProvider.ReadDomainState);
+            var operations = new System.Collections.Generic.List<IRoslynOperation>(scripts.CreateOperations())
+            {
+                new UnityLiveExportOperation(liveHost, sLiveCode, "live_export_status", sLivePermission),
+                new UnityLiveExportOperation(liveHost, sLiveCode, "live_export_commit", sLivePermission),
+                new LiveCodeOperation(sLiveCode, "live_status"),
+                new LiveCodeOperation(sLiveCode, "live_remove"),
+                new LiveCodeOperation(sLiveCode, "live_snapshot", sLivePermission),
+                new LiveCodeOperation(sLiveCode, "live_set_fields", sLivePermission),
+                new LiveTuningOperation(sTuning, "live_tuning_bind", sLivePermission),
+                new LiveTuningOperation(sTuning, "live_tuning_refresh", sLivePermission),
+                new LiveTuningOperation(sTuning, "live_tuning_status"),
+                new LiveTuningOperation(sTuning, "live_tuning_unbind")
+            };
+            engineProvider.AddOperations(operations.ToArray());
+        }
+
+        /// <summary>Provider 创建后按固定顺序订阅播放、更新、重载和退出。重复安装不会再次订阅。</summary>
+        private static void SubscribeProviderLifetime()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.update += CheckLivePermission;
+            AssemblyReloadEvents.beforeAssemblyReload += ClearLiveCode;
+            EditorApplication.quitting += ClearLiveCode;
+        }
+
+        /// <summary>播放模式变化时清掉 LiveCode，并在 Provider 仍在时作废对象句柄。</summary>
+        /// <param name="state">播放模式变化；不区分进入或退出。</param>
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             ClearLiveCode();
             if (sProvider != null) sProvider.InvalidateObjectHandles();
         }
 
+        /// <summary>
+        /// 约每 0.1 秒复查许可。许可丢失时清理 LiveCode；调参绑定存在时用编辑器时间 Tick。
+        /// </summary>
         private static void CheckLivePermission()
         {
             if (EditorApplication.timeSinceStartup < sNextPermissionCheck) return;
@@ -125,6 +167,7 @@ namespace YokiFrame
             if (sTuning != null) sTuning.Tick(EditorApplication.timeSinceStartup);
         }
 
+        /// <summary>先停调参再清 LiveCode。清理由重载、退出、许可丢失和播放模式变化共用。</summary>
         private static void ClearLiveCode()
         {
             if (sTuning != null) sTuning.StopAll("Live session cleared; rebind explicitly.");

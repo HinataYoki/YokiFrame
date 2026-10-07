@@ -12,21 +12,35 @@ namespace YokiFrame
         private MethodInfo mRemove;
         private bool mResolverInstalled;
 
+        /// <summary>记录补丁包目录。不在构造时加载程序集。</summary>
+        /// <param name="directory">包含补丁包和依赖 DLL 的目录。</param>
         public MethodPatchBackend(string directory) { mDirectory = directory; }
+
+        /// <summary>检查补丁包是否已随包放置。只看文件存在，不在这里加载程序集。</summary>
         public bool Installed => File.Exists(Path.Combine(mDirectory, "YokiFrame.RoslynKit.Patching.dll"));
 
+        /// <summary>按模式把静态补丁挂到目标方法。首次调用才加载补丁包。</summary>
+        /// <param name="owner">补丁所有者标识。</param>
+        /// <param name="original">被补丁方法。</param>
+        /// <param name="patch">静态补丁方法。</param>
+        /// <param name="mode">prefix、postfix 或 replace。</param>
         public void Apply(string owner, MethodInfo original, MethodInfo patch, string mode)
         {
             EnsureLoaded();
             Invoke(mApply, new object[] { owner, original, patch, mode });
         }
 
+        /// <summary>卸下先前挂上的补丁。目标异常从调用包装中重新抛出。</summary>
+        /// <param name="owner">补丁所有者标识。</param>
+        /// <param name="original">被补丁方法。</param>
+        /// <param name="patch">静态补丁方法。</param>
         public void Remove(string owner, MethodInfo original, MethodInfo patch)
         {
             EnsureLoaded();
             Invoke(mRemove, new object[] { owner, original, patch });
         }
 
+        /// <summary>加载补丁包并缓存 Apply 与 Remove。只安装一次程序集解析回调。</summary>
         private void EnsureLoaded()
         {
             if (mApply != null) return;
@@ -44,6 +58,10 @@ namespace YokiFrame
                 throw new InvalidOperationException("Patch bundle API is incompatible.");
         }
 
+        /// <summary>只为补丁目录中的 Harmony 与 Cecil 依赖提供精确全名匹配。其他程序集返回 null。</summary>
+        /// <param name="sender">触发解析的应用程序域，不使用。</param>
+        /// <param name="args">请求的程序集身份。</param>
+        /// <returns>匹配的已加载程序集；不负责时为 null。</returns>
         private Assembly Resolve(object sender, ResolveEventArgs args)
         {
             var name = new AssemblyName(args.Name);
@@ -56,6 +74,9 @@ namespace YokiFrame
             return Assembly.LoadFrom(path);
         }
 
+        /// <summary>调用静态补丁 API。目标异常保留原栈重新抛出。</summary>
+        /// <param name="method">Apply 或 Remove。</param>
+        /// <param name="args">按补丁 API 排列的参数。</param>
         private static void Invoke(MethodInfo method, object[] args)
         {
             try { method.Invoke(null, args); }

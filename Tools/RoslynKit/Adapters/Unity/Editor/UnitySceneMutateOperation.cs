@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using System;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,7 +15,7 @@ namespace YokiFrame
     /// 单次调用只改一个对象，不做批量遍历（列表式修改交给入口执行器，由用户代码分帧推进）；
     /// 播放态下 Unity 的 Undo 语义不同，响应里明确回报 <c>undo</c> 状态而不是假装可用。
     /// </remarks>
-    internal sealed class UnitySceneMutateOperation : IRoslynOperation
+    internal sealed partial class UnitySceneMutateOperation : IRoslynOperation
     {
         internal const string ACTION = "scene_mutate";
 
@@ -73,6 +72,9 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>在父路径下创建物体并登记 Undo。组件失败时立即销毁，不留下半成品。</summary>
+        /// <param name="root">含 name、path 和可选 components 的载荷。</param>
+        /// <returns>创建结果，或路径、名字、组件错误。</returns>
         private static YokiFrameCommandResult Create(JsonElement root)
         {
             if (!TryReadPath(root, out string parentPath, out string pathError))
@@ -115,6 +117,9 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(WriteResult(OP_CREATE, path, created.scene));
         }
 
+        /// <summary>按路径删除物体并登记 Undo，然后把所在场景标脏。</summary>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <returns>删除结果；路径空或目标不存在时返回 INVALID_PAYLOAD。</returns>
         private static YokiFrameCommandResult Delete(JsonElement root)
         {
             if (!TryReadPath(root, out string path, out string pathError))
@@ -136,6 +141,9 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(WriteResult(OP_DELETE, path, scene));
         }
 
+        /// <summary>设置物体激活状态并登记 Undo。active 不是布尔值时不改场景。</summary>
+        /// <param name="root">含 path 和 active 的载荷。</param>
+        /// <returns>修改结果或 INVALID_PAYLOAD。</returns>
         private static YokiFrameCommandResult SetActive(JsonElement root)
         {
             if (!TryReadPath(root, out string path, out string pathError))
@@ -165,6 +173,9 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(WriteResult(OP_SET_ACTIVE, path, target.scene));
         }
 
+        /// <summary>写入本地位置、欧拉角和缩放并登记 Undo。三个数组都必须是长度为 3 的数字。</summary>
+        /// <param name="root">含 path、position、rotation、scale 的载荷。</param>
+        /// <returns>修改结果或 INVALID_PAYLOAD。</returns>
         private static YokiFrameCommandResult SetTransform(JsonElement root)
         {
             if (!TryReadPath(root, out string path, out string pathError))
@@ -197,6 +208,8 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(WriteResult(OP_SET_TRANSFORM, path, target.scene));
         }
 
+        /// <summary>保存活动场景。无活动场景返回 UNAVAILABLE；保存失败或取消返回 FAILED。</summary>
+        /// <returns>保存结果。</returns>
         private static YokiFrameCommandResult Save()
         {
             Scene scene = SceneManager.GetActiveScene();
@@ -218,6 +231,10 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(WriteResult(OP_SAVE, scene.path, scene));
         }
 
+        /// <summary>按顺序添加组件。没有 components 数组视为成功；任一类型无效时返回错误且不再继续。</summary>
+        /// <param name="target">新建物体。</param>
+        /// <param name="root">可能含 components 的载荷。</param>
+        /// <returns>空串表示成功，否则是错误说明。</returns>
         private static string AddComponents(GameObject target, JsonElement root)
         {
             if (!root.TryGetProperty("components", out JsonElement components)
@@ -246,6 +263,9 @@ namespace YokiFrame
             return string.Empty;
         }
 
+        /// <summary>按类型名、UnityEngine 前缀和已加载程序集解析组件。找不到时返回 null。</summary>
+        /// <param name="typeName">已修剪的类型名。</param>
+        /// <returns>组件类型或 null。</returns>
         private static Type ResolveComponentType(string typeName)
         {
             Type type = Type.GetType(typeName);
@@ -273,6 +293,8 @@ namespace YokiFrame
             return null;
         }
 
+        /// <summary>把物体所在场景标脏；target 为空时直接返回。</summary>
+        /// <param name="target">刚改过的物体。</param>
         private static void MarkDirty(GameObject target)
         {
             if (target != null)
@@ -281,6 +303,8 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>把有效场景标为脏；无效场景不写。</summary>
+        /// <param name="scene">目标场景。</param>
         private static void MarkDirty(Scene scene)
         {
             if (scene.IsValid())
@@ -289,6 +313,11 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>组装已应用结果。播放态把 undo 标成不可用，不假装 Undo 仍有效。</summary>
+        /// <param name="op">已执行的操作名。</param>
+        /// <param name="path">对象或场景路径。</param>
+        /// <param name="scene">相关场景，可以无效。</param>
+        /// <returns>成功载荷 JSON。</returns>
         private static string WriteResult(string op, string path, Scene scene)
         {
             return new RoslynJsonBuilder()
@@ -304,6 +333,14 @@ namespace YokiFrame
                 .ToString();
         }
 
+        /// <summary>
+        /// 解析 op。失败时释放并清空 document。空白载荷、非法 JSON、非对象或空 op 都失败。
+        /// </summary>
+        /// <param name="payloadJson">payload JSON。</param>
+        /// <param name="op">操作名。</param>
+        /// <param name="document">成功时交给调用方释放。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>得到非空 op 时返回 true。</returns>
         private static bool TryReadPayload(
             string payloadJson,
             out string op,
@@ -349,6 +386,11 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>读取非空 path。空路径失败，不尝试查找物体。</summary>
+        /// <param name="root">载荷对象。</param>
+        /// <param name="path">修剪后的路径。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>路径非空时返回 true。</returns>
         private static bool TryReadPath(JsonElement root, out string path, out string error)
         {
             path = ReadString(root, "path");
@@ -362,6 +404,11 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>按不变文化读取长度为 3 的数字数组。缺字段、长度不对或无法解析时失败。</summary>
+        /// <param name="root">载荷对象。</param>
+        /// <param name="name">position、rotation 或 scale。</param>
+        /// <param name="value">解析出的向量；失败时保持 Vector3.one。</param>
+        /// <returns>三个分量都解析成功时返回 true。</returns>
         private static bool TryReadVector(JsonElement root, string name, out Vector3 value)
         {
             value = Vector3.one;
@@ -395,61 +442,15 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>读取并修剪字符串字段。缺失、null 或非字符串时返回空串。</summary>
+        /// <param name="element">JSON 对象。</param>
+        /// <param name="name">字段名。</param>
+        /// <returns>修剪后的文本。</returns>
         private static string ReadString(JsonElement element, string name)
         {
             return element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
                 ? (value.GetString() ?? string.Empty).Trim()
                 : string.Empty;
-        }
-
-        private static GameObject FindByPath(string path)
-        {
-            Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid())
-            {
-                return null;
-            }
-
-            GameObject[] roots = scene.GetRootGameObjects();
-            string[] segments = path.Split('/');
-            GameObject[] level = roots;
-            GameObject current = null;
-            var found = false;
-            for (var index = 0; index < segments.Length; index++)
-            {
-                string segment = segments[index].Trim();
-                if (segment.Length == 0)
-                {
-                    continue;
-                }
-
-                GameObject match = null;
-                for (var candidate = 0; candidate < level.Length; candidate++)
-                {
-                    if (string.Equals(level[candidate].name, segment, StringComparison.Ordinal))
-                    {
-                        match = level[candidate];
-                        break;
-                    }
-                }
-
-                if (match == null)
-                {
-                    return null;
-                }
-
-                current = match;
-                found = true;
-                var children = new List<GameObject>(match.transform.childCount);
-                for (var childIndex = 0; childIndex < match.transform.childCount; childIndex++)
-                {
-                    children.Add(match.transform.GetChild(childIndex).gameObject);
-                }
-
-                level = children.ToArray();
-            }
-
-            return found ? current : null;
         }
     }
 }

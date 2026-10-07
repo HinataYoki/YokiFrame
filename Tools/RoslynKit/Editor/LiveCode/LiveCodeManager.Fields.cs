@@ -6,6 +6,10 @@ namespace YokiFrame
 {
     public sealed partial class LiveCodeManager
     {
+        /// <summary>按请求顺序写入字段。任一写入失败时逆序回滚已写值，回滚失败并入 AggregateException。写入前先完成全部绑定和类型检查。</summary>
+        /// <param name="request">已解析的字段批次，会话和修订必须仍有效。</param>
+        /// <param name="guard">每个行为复查时执行的守卫。</param>
+        /// <returns>成功写入的字段数。</returns>
         public int SetFields(LiveFieldRequest request, Action guard)
         {
             Guard(guard);

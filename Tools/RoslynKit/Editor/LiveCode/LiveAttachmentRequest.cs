@@ -10,6 +10,11 @@ namespace YokiFrame
         public object Target { get; }
         public string ClassName { get; }
         public string Members { get; }
+        /// <summary>保存一次批量挂接请求。不在此处校验标识、目标和源码。</summary>
+        /// <param name="id">热更标识。</param>
+        /// <param name="target">挂接对象。</param>
+        /// <param name="className">行为类名。</param>
+        /// <param name="members">行为成员源码。</param>
         public LiveAttachmentRequest(string id, object target, string className, string members)
         {
             Id = id; Target = target; ClassName = className; Members = members;
@@ -34,6 +39,8 @@ namespace YokiFrame
         public long RequiredBytes { get; internal set; }
         public RoslynBudgetStatus Budget { get; internal set; }
         internal readonly List<LiveBatchItem> mItems = new List<LiveBatchItem>();
+
+        /// <summary>返回已解析的批量挂接项。列表是只读包装，解析完成后不再增删。</summary>
         public IReadOnlyList<LiveBatchItem> Items => mItems.AsReadOnly();
     }
 

@@ -8,6 +8,7 @@ public sealed partial class LiveCodeTests
     private const string SnapshotSource = "public int Value = 7;";
 
     [Fact]
+    /// <summary>预算耗尽后快照命令仍持久化。不加载、不调用宿主，结果不含字段文本。</summary>
     public void Snapshot_command_persists_after_budget_exhaustion_without_loading_or_invoking()
     {
         using var bed = new LiveBed();
@@ -35,6 +36,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>持久化快照可在新管理器和新会话中恢复字段。事件顺序为解析、准备、字段、激活。</summary>
     public void Persisted_snapshot_restores_in_a_new_manager_with_a_new_session()
     {
         using var bed = new LiveBed();
@@ -70,6 +72,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>整批字段在第一次激活前恢复并可见。两个对象都按解析、准备、字段、激活推进。</summary>
     public void Whole_batch_fields_are_restored_and_published_before_first_activation()
     {
         using var bed = new LiveBed();
@@ -101,6 +104,8 @@ public sealed partial class LiveCodeTests
     [InlineData("cancel")]
     [InlineData("permission")]
     [InlineData("compile")]
+    /// <summary>预检失败在加载和解析前拒绝恢复。加载计数和列表不变，宿主没有事件。</summary>
+    /// <param name="failure">hash、count、bytes、target、session、cancel、permission 或 compile。</param>
     public void Restore_rejects_preflight_failure_before_loading_or_resolving(string failure)
     {
         using var bed = new LiveBed();
@@ -137,6 +142,8 @@ public sealed partial class LiveCodeTests
     [InlineData("resolve")]
     [InlineData("fields")]
     [InlineData("activate")]
+    /// <summary>恢复失败报告阶段并清理新附件。解析失败不增加加载，其余阶段回滚为 rolledBack。</summary>
+    /// <param name="stage">resolve、fields 或 activate。</param>
     public void Restore_failure_reports_stage_and_cleans_up_new_attachments(string stage)
     {
         using var bed = new LiveBed();
@@ -165,6 +172,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>超限或失效字段使快照明确不完整，恢复失败且错误包含 incomplete。</summary>
     public void Faulted_and_oversized_fields_are_explicitly_incomplete_and_cannot_restore()
     {
         using var bed = new LiveBed();
@@ -188,6 +196,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>已有标识不会被恢复覆盖。恢复进行中再快照或挂接会失败，取消后列表为空。</summary>
     public void Existing_ids_and_concurrent_changes_are_not_overwritten()
     {
         using var bed = new LiveBed();
@@ -210,6 +219,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>共享引用键在全部目标之后、字段之前只解析一次。字段回调看到同一对象。</summary>
     public void Shared_reference_keys_resolve_once_after_all_targets_and_before_fields()
     {
         using var bed = new LiveBed();
@@ -251,6 +261,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>字段引用缺失时在加载前失败，即使目标本身能解析。阶段为 resolve，且不准备。</summary>
     public void Missing_field_reference_fails_before_loading_even_when_target_resolves()
     {
         using var bed = new LiveBed();
@@ -283,6 +294,8 @@ public sealed partial class LiveCodeTests
     [InlineData("duplicate")]
     [InlineData("size")]
     [InlineData("complete")]
+    /// <summary>损坏的持久化在源码回调之前被拒绝。回调不得被调用。</summary>
+    /// <param name="failure">schema、project、id、duplicate、size 或 complete。</param>
     public void Invalid_persistence_is_rejected_before_source_callbacks(string failure)
     {
         using var bed = new LiveBed();
@@ -305,6 +318,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>快照路径固定在引擎目录下。穿越和绝对路径抛出 ArgumentException。</summary>
     public void Snapshot_path_is_fixed_and_rejects_traversal()
     {
         using var bed = new LiveBed();
@@ -315,6 +329,10 @@ public sealed partial class LiveCodeTests
             store.GetPath(new string('a', 32)));
     }
 
+    /// <summary>改写已持久化的快照 JSON。不经过管理器校验。</summary>
+    /// <param name="bed">持有项目根的测试床。</param>
+    /// <param name="id">快照标识。</param>
+    /// <param name="change">就地修改根对象的动作。</param>
     private static void RewriteSnapshot(LiveBed bed, string id, Action<JsonObject> change)
     {
         string path = new LiveSnapshotStore(bed.Root).GetPath(id);

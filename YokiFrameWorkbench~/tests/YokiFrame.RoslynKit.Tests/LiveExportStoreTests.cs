@@ -9,6 +9,7 @@ public sealed class LiveExportStoreTests : IDisposable
     private LiveExportStore Store => new(mRoot);
 
     [Fact]
+    /// <summary>暂存不写 Assets，重复查询不推进状态。排队后提交才变成 Committed。</summary>
     public void Stage_writes_no_assets_and_query_does_not_advance_state()
     {
         var versions = new[] { Version("One"), Version("Two") };
@@ -27,6 +28,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>再导出保留 meta，并同时归档新旧源码。过期元数据哈希的暂存抛出 IOException。</summary>
     public void Reexport_preserves_metadata_and_archives_both_sources()
     {
         var original = Version("One");
@@ -46,6 +48,8 @@ public sealed class LiveExportStoreTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    /// <summary>提交前源码或 meta 被改会让整批失败。用户编辑保留，未写出的文件不出现。</summary>
+    /// <param name="metadata">为 true 时改 meta，否则改源码。</param>
     public void Concurrent_source_or_metadata_edit_blocks_whole_batch(bool metadata)
     {
         var original = Version("One");
@@ -65,6 +69,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>提交中途失败只回滚已经写成文件的项。预先占成目录的路径保持为目录。</summary>
     public void Mid_commit_failure_rolls_back_only_written_files()
     {
         var one = Version("One");
@@ -79,6 +84,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>共享源码仍保存各目标自己的字段快照。读取不合并字段。</summary>
     public void Shared_source_retains_distinct_target_field_snapshots()
     {
         var version = Version("Shared");
@@ -91,6 +97,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>重复类名或重复目标在暂存前被拒绝。失败时不创建 Assets。</summary>
     public void Duplicated_classes_or_targets_are_rejected_before_staging()
     {
         var one = Version("One");
@@ -105,6 +112,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>更新前先归档旧源码，旧记录文本保持不变。新版本可以提交。</summary>
     public void Legacy_record_is_unchanged_and_its_source_is_archived_before_update()
     {
         var original = Version("Legacy");
@@ -125,6 +133,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>重复导出号在写任何记录前被拒绝。记录文件不存在。</summary>
     public void Duplicate_export_ids_are_rejected_before_writing_any_records()
     {
         var one = Version("One");
@@ -139,6 +148,9 @@ public sealed class LiveExportStoreTests : IDisposable
     [InlineData("batchId", "../outside")]
     [InlineData("previousExportId", "../outside")]
     [InlineData("sourcePath", "Packages/One.cs")]
+    /// <summary>读版本时重新校验身份和路径边界。被改成越界值后抛异常。</summary>
+    /// <param name="key">被篡改的字段。</param>
+    /// <param name="value">越界或非法值。</param>
     public void Version_reads_revalidate_identity_and_path_boundaries(string key, string value)
     {
         var version = Version("One");
@@ -151,6 +163,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>读版本时拒绝重复目标，也拒绝超限字段。两种失败的异常类型不同。</summary>
     public void Version_reads_revalidate_duplicate_targets_and_field_size()
     {
         var version = Version("One");
@@ -169,6 +182,7 @@ public sealed class LiveExportStoreTests : IDisposable
     }
 
     [Fact]
+    /// <summary>未完成的 Committing 不会被重新排队。复制到其他项目根的记录被拒绝。</summary>
     public void Incomplete_commit_is_not_replayed_and_cross_project_records_are_rejected()
     {
         var version = Version("One");
@@ -188,6 +202,8 @@ public sealed class LiveExportStoreTests : IDisposable
     [InlineData("Assets/../One.cs")]
     [InlineData("Assets/Wrong.cs")]
     [InlineData("Packages/One.cs")]
+    /// <summary>源码路径必须留在允许边界内。越界、错名或 Packages 路径都拒绝暂存。</summary>
+    /// <param name="path">被拒绝的源码路径。</param>
     public void Paths_remain_bounded(string path)
     {
         var version = Version("One");
@@ -195,6 +211,8 @@ public sealed class LiveExportStoreTests : IDisposable
         Assert.ThrowsAny<Exception>(() => Store.Stage(version.BatchId, new[] { version }));
     }
 
+    /// <summary>暂存、排队并断言提交成功。失败时由断言中断。</summary>
+    /// <param name="version">要提交的单个版本。</param>
     private void Commit(LiveExportVersion version)
     {
         Store.Stage(version.BatchId, new[] { version });
@@ -202,6 +220,10 @@ public sealed class LiveExportStoreTests : IDisposable
         Assert.Equal("Committed", Store.Commit(version.BatchId).State);
     }
 
+    /// <summary>基于上一版本生成新源码版本。不写盘，只填上一导出号和元数据哈希。</summary>
+    /// <param name="previous">被修订的版本。</param>
+    /// <param name="source">新源码。</param>
+    /// <returns>尚未暂存的下一版本。</returns>
     private LiveExportVersion Revision(LiveExportVersion previous, string source)
     {
         var next = Version(previous.ClassName);
@@ -212,6 +234,9 @@ public sealed class LiveExportStoreTests : IDisposable
         return next;
     }
 
+    /// <summary>构造一份内存中的导出版本。不写文件。</summary>
+    /// <param name="className">类名，同时用于默认源码路径。</param>
+    /// <returns>带新导出号和批次号的版本。</returns>
     private static LiveExportVersion Version(string className)
     {
         string source = "public sealed class " + className + " { public int Value = 1; }";
@@ -223,5 +248,6 @@ public sealed class LiveExportStoreTests : IDisposable
         };
     }
 
+    /// <summary>删除本测试的临时根目录。目录不存在时不做任何事。</summary>
     public void Dispose() { if (Directory.Exists(mRoot)) Directory.Delete(mRoot, true); }
 }

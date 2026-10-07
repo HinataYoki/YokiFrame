@@ -9,6 +9,7 @@ namespace YokiFrame.Godot.Runtime.Tests;
 public sealed class GodotRoslynKitTests
 {
     [Fact]
+    /// <summary>缺失、类型不符、false 和空访问器都阻断执行；只有布尔 true 放行。</summary>
     public void Settings_source_is_fail_closed_for_missing_invalid_and_false()
     {
         // 缺失
@@ -37,6 +38,7 @@ public sealed class GodotRoslynKitTests
     }
 
     [Fact]
+    /// <summary>运行时提供者声明 runtime 目标，并使用注入的会话身份。未注入时不伪造身份。</summary>
     public void Runtime_provider_declares_runtime_target_and_real_session_identity()
     {
         var provider = new GodotRuntimeEngineOperationProvider
@@ -69,6 +71,7 @@ public sealed class GodotRoslynKitTests
     }
 
     [Fact]
+    /// <summary>运行时命令面提供发现和只读历史，不含入口或 script_run。editor 目标不可用。</summary>
     public void Runtime_host_exposes_discovery_and_read_only_history_without_entry_commands()
     {
         string projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-godot-entry", Guid.NewGuid().ToString("N"));
@@ -118,12 +121,19 @@ public sealed class GodotRoslynKitTests
         }
     }
 
+    /// <summary>用提供者的命令面装配调度器。不发送命令。</summary>
+    /// <param name="provider">已接线的 RoslynKit 提供者。</param>
+    /// <returns>可直接 Dispatch 的调度器。</returns>
     private static YokiFrameCommandDispatcher CreateDispatcher(RoslynKitProvider provider)
     {
         YokiFrameCommandPolicy policy = YokiFrameCommandPolicy.CreateWithDefaultSources(provider.Commands.ToArray());
         return new YokiFrameCommandDispatcher(policy, new IYokiFrameCommandHandler[] { provider });
     }
 
+    /// <summary>构造一条 cli 来源的 RoslynKit 请求。不发送。</summary>
+    /// <param name="action">操作名。</param>
+    /// <param name="payload">请求 JSON。</param>
+    /// <returns>带新请求号的请求。</returns>
     private static YokiFrameCommandRequest YokiFrameCommandRequestFor(string action, string payload)
     {
         return new YokiFrameCommandRequest("cli", "RoslynKit", action, payload, 5000, 0L, "req-" + Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
@@ -139,8 +149,15 @@ internal sealed class StubSettingsAccessor : IGodotProjectSettingsAccessor
 
     internal bool Boolean { get; set; }
 
+    /// <summary>按测试开关报告设置是否存在。不读取 key。</summary>
+    /// <param name="key">未使用的设置键。</param>
+    /// <returns>预设的存在标记。</returns>
     public bool HasSetting(string key) => Exists;
 
+    /// <summary>仅当设置存在且类型是布尔时读出预设值。否则失败，但仍写出预设值。</summary>
+    /// <param name="key">未使用的设置键。</param>
+    /// <param name="value">预设布尔值。</param>
+    /// <returns>存在且为布尔类型时为 true。</returns>
     public bool TryReadBoolean(string key, out bool value)
     {
         value = Boolean;
@@ -153,11 +170,15 @@ internal sealed class StubSettingsSource : IRoslynSettingsSource
 {
     private readonly RoslynSettingsSnapshot _snapshot;
 
+    /// <summary>固定返回的开关快照。不读项目设置。</summary>
+    /// <param name="snapshot">后续读取返回的快照。</param>
     internal StubSettingsSource(RoslynSettingsSnapshot snapshot)
     {
         _snapshot = snapshot;
     }
 
+    /// <summary>返回构造时固定的快照。不复制、不读磁盘。</summary>
+    /// <returns>预设快照。</returns>
     public RoslynSettingsSnapshot Read() => _snapshot;
 }
 
@@ -170,8 +191,14 @@ internal sealed class TestGodotRunHost : IRoslynRunHost
 
     public string HostTarget => "runtime";
 
+    /// <summary>立即完成场景加载。不接触 Godot，也不观察取消令牌。</summary>
+    /// <param name="sceneName">未使用的场景名。</param>
+    /// <param name="cancellationToken">未使用的取消令牌。</param>
+    /// <returns>已完成的任务。</returns>
     public Task LoadSceneAsync(string sceneName, System.Threading.CancellationToken cancellationToken) => Task.CompletedTask;
 
+    /// <summary>丢弃日志。不写控制台，避免测试依赖 Godot。</summary>
+    /// <param name="message">未使用的日志文本。</param>
     public void Log(string message)
     {
     }

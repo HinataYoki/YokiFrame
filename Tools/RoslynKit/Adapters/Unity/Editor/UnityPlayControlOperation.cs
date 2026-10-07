@@ -53,58 +53,146 @@ namespace YokiFrame
             bool previousPlaying = EditorApplication.isPlaying;
             bool previousPaused = EditorApplication.isPaused;
             string previousState = previousPlaying ? "PlayMode" : "EditMode";
-            bool accepted;
+            if (!TryApplyCommand(command, previousPlaying, previousPaused, out bool accepted, out YokiFrameCommandResult rejected))
+            {
+                return rejected;
+            }
 
+            return YokiFrameCommandResult.Success(
+                WritePlayResult(command, accepted, previousState, previousPaused));
+        }
+
+        /// <summary>
+        /// 识别命令并施加对应的编辑器状态变化。未知命令返回 false；
+        /// 已处于目标状态时仍返回 true，accepted 为 false。
+        /// </summary>
+        /// <param name="command">已规范化的命令。</param>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <param name="previousPaused">调用前是否暂停。</param>
+        /// <param name="accepted">本次是否真正改变了状态。</param>
+        /// <param name="rejected">未知命令时的错误结果。</param>
+        /// <returns>命令被识别时返回 true。</returns>
+        private static bool TryApplyCommand(
+            string command,
+            bool previousPlaying,
+            bool previousPaused,
+            out bool accepted,
+            out YokiFrameCommandResult rejected)
+        {
+            rejected = null;
             switch (command)
             {
                 case COMMAND_ENTER:
-                    accepted = !previousPlaying;
-                    if (accepted)
-                    {
-                        EditorApplication.isPlaying = true;
-                    }
-
-                    break;
+                    accepted = ApplyEnter(previousPlaying);
+                    return true;
                 case COMMAND_EXIT:
-                    accepted = previousPlaying;
-                    if (accepted)
-                    {
-                        EditorApplication.isPlaying = false;
-                    }
-
-                    break;
+                    accepted = ApplyExit(previousPlaying);
+                    return true;
                 case COMMAND_PAUSE:
-                    accepted = previousPlaying && !previousPaused;
-                    if (accepted)
-                    {
-                        EditorApplication.isPaused = true;
-                    }
-
-                    break;
+                    accepted = ApplyPause(previousPlaying, previousPaused);
+                    return true;
                 case COMMAND_RESUME:
-                    accepted = previousPlaying && previousPaused;
-                    if (accepted)
-                    {
-                        EditorApplication.isPaused = false;
-                    }
-
-                    break;
+                    accepted = ApplyResume(previousPlaying, previousPaused);
+                    return true;
                 case COMMAND_STEP:
-                    accepted = previousPlaying && previousPaused;
-                    if (accepted)
-                    {
-                        EditorApplication.Step();
-                    }
-
-                    break;
+                    accepted = ApplyStep(previousPlaying, previousPaused);
+                    return true;
                 default:
-                    return YokiFrameCommandResult.Error(
+                    accepted = false;
+                    rejected = YokiFrameCommandResult.Error(
                         RoslynErrorCodes.INVALID_PAYLOAD,
                         "Unsupported play_control command: " + command + ".");
+                    return false;
+            }
+        }
+
+        /// <summary>未在播放时请求进入播放。</summary>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <returns>实际写入 isPlaying 时返回 true。</returns>
+        private static bool ApplyEnter(bool previousPlaying)
+        {
+            bool accepted = !previousPlaying;
+            if (accepted)
+            {
+                EditorApplication.isPlaying = true;
             }
 
+            return accepted;
+        }
+
+        /// <summary>正在播放时请求退出。</summary>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <returns>实际写入 isPlaying 时返回 true。</returns>
+        private static bool ApplyExit(bool previousPlaying)
+        {
+            bool accepted = previousPlaying;
+            if (accepted)
+            {
+                EditorApplication.isPlaying = false;
+            }
+
+            return accepted;
+        }
+
+        /// <summary>正在播放且未暂停时请求暂停。</summary>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <param name="previousPaused">调用前是否暂停。</param>
+        /// <returns>实际写入 isPaused 时返回 true。</returns>
+        private static bool ApplyPause(bool previousPlaying, bool previousPaused)
+        {
+            bool accepted = previousPlaying && !previousPaused;
+            if (accepted)
+            {
+                EditorApplication.isPaused = true;
+            }
+
+            return accepted;
+        }
+
+        /// <summary>正在播放且已暂停时请求继续。</summary>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <param name="previousPaused">调用前是否暂停。</param>
+        /// <returns>实际清除暂停时返回 true。</returns>
+        private static bool ApplyResume(bool previousPlaying, bool previousPaused)
+        {
+            bool accepted = previousPlaying && previousPaused;
+            if (accepted)
+            {
+                EditorApplication.isPaused = false;
+            }
+
+            return accepted;
+        }
+
+        /// <summary>正在播放且已暂停时单步。只调用 Step，不改暂停标志。</summary>
+        /// <param name="previousPlaying">调用前是否在播放。</param>
+        /// <param name="previousPaused">调用前是否暂停。</param>
+        /// <returns>实际单步时返回 true。</returns>
+        private static bool ApplyStep(bool previousPlaying, bool previousPaused)
+        {
+            bool accepted = previousPlaying && previousPaused;
+            if (accepted)
+            {
+                EditorApplication.Step();
+            }
+
+            return accepted;
+        }
+
+        /// <summary>在状态写入之后读取编辑器标志并组装响应。</summary>
+        /// <param name="command">已执行的命令。</param>
+        /// <param name="accepted">本次是否改变了状态。</param>
+        /// <param name="previousState">调用前的 PlayMode 或 EditMode。</param>
+        /// <param name="previousPaused">调用前是否暂停。</param>
+        /// <returns>成功载荷 JSON。</returns>
+        private static string WritePlayResult(
+            string command,
+            bool accepted,
+            string previousState,
+            bool previousPaused)
+        {
             string note = accepted ? OBSERVE_NOTE : "Requested state already applied; nothing changed.";
-            string resultJson = new RoslynJsonBuilder()
+            return new RoslynJsonBuilder()
                 .StartObject()
                 .Property("operation", ACTION)
                 .Property("command", command)
@@ -117,7 +205,6 @@ namespace YokiFrame
                 .Property("note", note)
                 .EndObject()
                 .ToString();
-            return YokiFrameCommandResult.Success(resultJson);
         }
 
         /// <summary>

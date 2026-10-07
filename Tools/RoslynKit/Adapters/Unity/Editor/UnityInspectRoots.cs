@@ -59,27 +59,7 @@ namespace YokiFrame
 
                 for (var typeIndex = 0; typeIndex < types.Length; typeIndex++)
                 {
-                    Type type = types[typeIndex];
-                    if (type.IsAbstract || type.IsGenericTypeDefinition)
-                    {
-                        continue;
-                    }
-
-                    if (!string.Equals(type.FullName, selector, StringComparison.Ordinal)
-                        && !string.Equals(type.Name, selector, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    System.Reflection.PropertyInfo instance = type.GetProperty(
-                        "Instance",
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    if (instance == null || !instance.CanRead)
-                    {
-                        continue;
-                    }
-
-                    object value = instance.GetValue(null);
+                    object value = ReadSingletonInstance(types[typeIndex], selector);
                     if (value != null)
                     {
                         return value;
@@ -88,6 +68,37 @@ namespace YokiFrame
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 读取一个具体类型的静态 Instance。抽象类型、开放泛型、名字不匹配或属性不可读时返回 null，
+        /// 让调用方继续扫描；GetValue 的异常不吞掉。
+        /// </summary>
+        /// <param name="type">候选类型。</param>
+        /// <param name="selector">类型全名或短名。</param>
+        /// <returns>非空实例；未命中返回 null。</returns>
+        private static object ReadSingletonInstance(Type type, string selector)
+        {
+            if (type.IsAbstract || type.IsGenericTypeDefinition)
+            {
+                return null;
+            }
+
+            if (!string.Equals(type.FullName, selector, StringComparison.Ordinal)
+                && !string.Equals(type.Name, selector, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            System.Reflection.PropertyInfo instance = type.GetProperty(
+                "Instance",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (instance == null || !instance.CanRead)
+            {
+                return null;
+            }
+
+            return instance.GetValue(null);
         }
     }
 }

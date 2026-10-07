@@ -19,6 +19,8 @@ namespace YokiFrame
         private readonly Dictionary<string, List<Candidate>> mMethods =
             new Dictionary<string, List<Candidate>>(StringComparer.Ordinal);
 
+        /// <summary>收录声明类型上可调用的公有实例方法。跳过特殊名称、泛型、指针和 ref 返回或参数。</summary>
+        /// <param name="instance">调用目标，不可为 null。</param>
         public LiveMethodInvoker(object instance)
         {
             mInstance = instance ?? throw new ArgumentNullException(nameof(instance));
@@ -38,6 +40,10 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>按声明类型精确匹配一个重载并调用。多个匹配或没有匹配都拒绝；目标异常保留原栈抛出。</summary>
+        /// <param name="name">公有实例方法名。</param>
+        /// <param name="arguments">实参；null 视为空数组，最多 32 个。</param>
+        /// <returns>方法返回值。</returns>
         public object Invoke(string name, object[] arguments)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentException("A public method name is required.", nameof(name));
@@ -66,6 +72,10 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>要求参数个数一致，null 只能传给引用类型或可空值类型，其余必须是声明类型的实例。</summary>
+        /// <param name="parameters">方法声明参数。</param>
+        /// <param name="arguments">调用实参。</param>
+        /// <returns>完全匹配时为 true。</returns>
         private static bool Matches(ParameterInfo[] parameters, object[] arguments)
         {
             if (parameters.Length != arguments.Length) return false;

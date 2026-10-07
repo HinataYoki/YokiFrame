@@ -59,6 +59,8 @@ namespace YokiFrame
 
         private IRoslynOperation[] mOperations;
         private readonly List<IRoslynOperation> mAdditional = new List<IRoslynOperation>();
+        /// <summary>追加操作并清空缓存列表。下次读取 Operations 时重新组合内置操作和追加操作。</summary>
+        /// <param name="operations">要追加的操作。</param>
         public void AddOperations(params IRoslynOperation[] operations)
         {
             mAdditional.AddRange(operations);

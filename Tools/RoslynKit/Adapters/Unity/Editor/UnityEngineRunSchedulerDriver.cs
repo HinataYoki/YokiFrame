@@ -29,6 +29,9 @@ namespace YokiFrame
             EditorApplication.update += OnEditorUpdate;
         }
 
+        /// <summary>
+        /// 推进调度器。会话身份为空时不将对账标成完成，避免对着空身份对账；身份就绪后只对账一次，之后每次只 Tick。
+        /// </summary>
         private static void OnEditorUpdate()
         {
             RoslynRunScheduler scheduler = sScheduler;

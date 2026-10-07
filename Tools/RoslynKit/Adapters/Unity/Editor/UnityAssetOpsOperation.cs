@@ -80,6 +80,9 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>强制重新导入项目相对路径。路径为空时返回 INVALID_PAYLOAD，不调用导入。</summary>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <returns>导入后的路径与 guid，或错误结果。</returns>
         private static YokiFrameCommandResult Import(JsonElement root)
         {
             string path = ReadString(root, "path");
@@ -101,6 +104,12 @@ namespace YokiFrame
                 .ToString());
         }
 
+        /// <summary>
+        /// 按过滤器检索资产。limit 缺省或超过上限时夹到 200；非正整数直接失败。
+        /// 结果只含路径，并用 truncated 表示被截断。
+        /// </summary>
+        /// <param name="root">含 filter 和可选 limit 的载荷。</param>
+        /// <returns>检索结果或错误。</returns>
         private static YokiFrameCommandResult Find(JsonElement root)
         {
             string filter = ReadString(root, "filter");
@@ -146,6 +155,9 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(builder.EndArray().EndObject().ToString());
         }
 
+        /// <summary>读取单个资产的 guid、主类型、标签和递归依赖数量。不修改资产。</summary>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <returns>检查结果；path 为空时返回 INVALID_PAYLOAD。</returns>
         private static YokiFrameCommandResult Inspect(JsonElement root)
         {
             string path = ReadString(root, "path");
@@ -178,6 +190,15 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(builder.EndArray().EndObject().ToString());
         }
 
+        /// <summary>
+        /// 解析 op。空白载荷、非法 JSON、非对象或空 op 都失败；
+        /// 失败时释放并清空 document，避免调用方再次释放。
+        /// </summary>
+        /// <param name="payloadJson">payload JSON。</param>
+        /// <param name="op">操作名。</param>
+        /// <param name="document">成功时交给调用方释放。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>得到非空 op 时返回 true。</returns>
         private static bool TryReadPayload(
             string payloadJson,
             out string op,
@@ -223,6 +244,10 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>读取并修剪字符串字段。缺失、null 或非字符串时返回空串，不抛异常。</summary>
+        /// <param name="element">JSON 对象。</param>
+        /// <param name="name">字段名。</param>
+        /// <returns>修剪后的文本。</returns>
         private static string ReadString(JsonElement element, string name)
         {
             return element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

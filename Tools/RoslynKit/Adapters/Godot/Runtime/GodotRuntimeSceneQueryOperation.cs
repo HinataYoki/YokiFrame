@@ -7,7 +7,7 @@ namespace YokiFrame
     /// <summary>
     /// scene_query（godot-runtime）：读取运行中场景树的有界快照。
     /// </summary>
-    public sealed class GodotRuntimeSceneQueryOperation : IRoslynOperation
+    public sealed partial class GodotRuntimeSceneQueryOperation : IRoslynOperation
     {
         internal const string ACTION = "scene_query";
 
@@ -29,7 +29,7 @@ namespace YokiFrame
         /// <summary>获取操作描述。</summary>
         public RoslynOperationDescriptor Descriptor { get; }
 
-        /// <summary>执行查询。</summary>
+        /// <summary>执行查询。场景树不可用或路径不存在时失败，不写出部分快照。</summary>
         /// <param name="request">命令请求。</param>
         /// <returns>命令结果。</returns>
         public YokiFrameCommandResult Execute(YokiFrameCommandRequest request)
@@ -44,8 +44,7 @@ namespace YokiFrame
                 return YokiFrameCommandResult.Error(RoslynErrorCodes.INVALID_PAYLOAD, error);
             }
 
-            SceneTree tree = mOwner == null ? null : mOwner.GetTree();
-            Node root = tree == null ? null : tree.Root;
+            Node root = ResolveSceneRoot();
             if (root == null)
             {
                 return YokiFrameCommandResult.Error(
@@ -53,45 +52,20 @@ namespace YokiFrame
                     "SceneTree root is not available for scene_query.");
             }
 
-            var roots = new List<Node>();
-            if (string.IsNullOrEmpty(path))
+            if (!TryCollectRoots(root, path, out List<Node> roots, out YokiFrameCommandResult pathError))
             {
-                roots.Add(root);
-            }
-            else
-            {
-                Node target = GodotSceneQuerySupport.FindByPath(root, path);
-                if (target == null)
-                {
-                    return YokiFrameCommandResult.Error(
-                        RoslynErrorCodes.INVALID_PAYLOAD,
-                        "scene_query path was not found: " + path + ".");
-                }
-
-                roots.Add(target);
+                return pathError;
             }
 
-            var state = new GodotSceneTraversalState();
-            RoslynJsonBuilder builder = new RoslynJsonBuilder()
-                .StartObject()
-                .Property("operation", ACTION)
-                .Property("host", "runtime")
-                .Name("scene")
-                .StartObject()
-                .Property("name", root.Name.ToString())
-                .Property("path", root.SceneFilePath ?? string.Empty)
-                .Property("childCount", root.GetChildCount())
-                .EndObject()
-                .Property("requestedPath", path)
-                .Property("depth", depth)
-                .Property("includeInactive", includeInactive)
-                .Name("nodes");
-            GodotSceneQuerySupport.WriteNodes(builder, roots, depth, includeInactive, state);
-            return YokiFrameCommandResult.Success(builder
-                .Property("nodeCount", state.Written)
-                .Property("truncated", state.Truncated)
-                .EndObject()
-                .ToString());
+            return WriteQuery(root, path, depth, includeInactive, roots);
+        }
+
+        /// <summary>从构造时传入的节点取场景树根。节点或树已失效时返回 null，不抛出。</summary>
+        /// <returns>运行中的场景根；不可用时返回 null。</returns>
+        private Node ResolveSceneRoot()
+        {
+            SceneTree tree = mOwner == null ? null : mOwner.GetTree();
+            return tree == null ? null : tree.Root;
         }
     }
 }

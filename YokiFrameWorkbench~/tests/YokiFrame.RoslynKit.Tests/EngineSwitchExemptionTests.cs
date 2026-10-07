@@ -6,11 +6,14 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineSwitchExemptionTests
 {
+    /// <summary>构造一个标记为取消、但不是诊断的用户操作。不注册、不执行。</summary>
+    /// <returns>尚未被调度的 entry_cancel 操作。</returns>
     private static RecordingEngineOperation Cancellation()
     {
         return new RecordingEngineOperation("entry_cancel", YokiFrameCommandKind.UserAction, isDiagnostic: false, isCancellation: true);
     }
 
+    /// <summary>开关关闭时取消操作仍成功执行一次。不改配置文件。</summary>
     [Fact]
     public void Cancellation_stays_available_while_disabled()
     {
@@ -25,6 +28,7 @@ public sealed class EngineSwitchExemptionTests
         Assert.Equal(1, operation.InvocationCount);
     }
 
+    /// <summary>配置缺失时取消操作仍成功执行一次。不把缺失配置当成禁用拒绝。</summary>
     [Fact]
     public void Cancellation_stays_available_when_config_is_missing()
     {
@@ -39,6 +43,7 @@ public sealed class EngineSwitchExemptionTests
         Assert.Equal(1, operation.InvocationCount);
     }
 
+    /// <summary>配置无效时取消操作仍成功执行一次。不因无效 JSON 拒绝取消。</summary>
     [Fact]
     public void Cancellation_stays_available_when_config_is_invalid()
     {
@@ -53,6 +58,7 @@ public sealed class EngineSwitchExemptionTests
         Assert.Equal(1, operation.InvocationCount);
     }
 
+    /// <summary>Dangerous 操作即使同时标成诊断和取消，关闭时也被拒绝且不执行。</summary>
     [Fact]
     public void Dangerous_operation_can_never_exempt_itself()
     {
@@ -72,6 +78,7 @@ public sealed class EngineSwitchExemptionTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>普通用户操作在关闭时被拒绝，错误码为禁用，且调用次数为零。</summary>
     [Fact]
     public void Plain_user_action_is_blocked_while_disabled()
     {

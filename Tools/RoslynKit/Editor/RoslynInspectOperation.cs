@@ -109,6 +109,10 @@ namespace YokiFrame
             return YokiFrameCommandResult.Success(builder.EndObject().ToString());
         }
 
+        /// <summary>对已解析的静态类型写成员摘要或路径值。类型不存在时返回目标未找到。</summary>
+        /// <param name="parsed">已校验的请求。</param>
+        /// <param name="builder">已写入操作名、根和选择器的 JSON。</param>
+        /// <returns>成功结果，或类型不存在、成员不存在时的错误结果。</returns>
         private YokiFrameCommandResult WriteStatic(InspectRequest parsed, RoslynJsonBuilder builder)
         {
             Type type = ResolveType(parsed.Selector);

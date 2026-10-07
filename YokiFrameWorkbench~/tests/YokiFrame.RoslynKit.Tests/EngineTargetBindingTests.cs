@@ -5,6 +5,12 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineTargetBindingTests
 {
+    /// <summary>构造绑定到指定目标的记录型操作。不注册、不执行。</summary>
+    /// <param name="action">操作名。</param>
+    /// <param name="kind">命令种类。</param>
+    /// <param name="targets">操作声明支持的目标。</param>
+    /// <param name="cancellation">是否标记为取消豁免。</param>
+    /// <returns>尚未调度的操作。</returns>
     private static RecordingEngineOperation Bound(
         string action,
         YokiFrameCommandKind kind,
@@ -14,6 +20,7 @@ public sealed class EngineTargetBindingTests
         return new RecordingEngineOperation(action, kind, false, cancellation, targets);
     }
 
+    /// <summary>请求里的组合 target 被拒绝为 INVALID_PAYLOAD，且不执行。</summary>
     [Fact]
     public void Combined_request_target_is_rejected()
     {
@@ -32,6 +39,7 @@ public sealed class EngineTargetBindingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>Unicode 转义后的 target 键仍按 play 校验，操作不支持时返回 UNSUPPORTED 且不执行。</summary>
     [Fact]
     public void Escaped_target_key_is_still_honored()
     {
@@ -51,6 +59,8 @@ public sealed class EngineTargetBindingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>截断或非对象载荷返回 INVALID_PAYLOAD，且不执行。</summary>
+    /// <param name="payload">故意损坏的请求 JSON。</param>
     [Theory]
     [InlineData("{\"target\":")]
     [InlineData("3")]
@@ -71,6 +81,7 @@ public sealed class EngineTargetBindingTests
         Assert.Equal(0, operation.InvocationCount);
     }
 
+    /// <summary>取消豁免只跳过开关，不跳过宿主目标校验。runtime 请求仍不可用，且只执行一次。</summary>
     [Fact]
     public void Cancellation_exemption_skips_only_the_switch()
     {
@@ -98,6 +109,7 @@ public sealed class EngineTargetBindingTests
         Assert.Equal(1, operation.InvocationCount);
     }
 
+    /// <summary>与目标无关的诊断忽略宿主绑定，但仍拒绝非法 target。合法 runtime 请求会执行。</summary>
     [Fact]
     public void Target_agnostic_diagnostic_ignores_host_binding_but_still_validates_payload()
     {

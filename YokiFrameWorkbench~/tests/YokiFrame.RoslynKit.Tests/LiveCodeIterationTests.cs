@@ -6,6 +6,7 @@ namespace YokiFrame.RoslynKit.Tests;
 public sealed partial class LiveCodeTests
 {
     [Fact]
+    /// <summary>批量挂接先全部准备再激活，并报告精确预算。两项都成功且事件顺序固定。</summary>
     public void Batch_prepares_all_members_before_activation_and_reports_exact_budget()
     {
         using var bed = new LiveBed();
@@ -33,6 +34,8 @@ public sealed partial class LiveCodeTests
     [InlineData("bytes")]
     [InlineData("cancel")]
     [InlineData("session")]
+    /// <summary>预检失败时不加载、不准备。列表和宿主事件保持为空。</summary>
+    /// <param name="failure">compile、duplicate、count、bytes、cancel 或 session。</param>
     public void Batch_preflight_does_not_load_or_prepare_on_failure(string failure)
     {
         using var bed = new LiveBed();
@@ -61,6 +64,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>批量替换在激活失败时回滚并保留字段。只替换成功的一项会推进修订。</summary>
     public void Batch_replacement_preserves_fields_and_rolls_back_failed_activation()
     {
         using var bed = new LiveBed();
@@ -87,6 +91,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>预算警告分别报告字节和程序集阈值。不加载用户程序集，恢复提示包含 live_snapshot。</summary>
     public void Budget_warning_reports_count_and_byte_thresholds_without_loading()
     {
         var budget = new RoslynLoadBudget();
@@ -100,6 +105,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>字段更新不编译也不调用 getter。非法字段名被拒绝后原值保持不变。</summary>
     public void Field_updates_are_zero_compile_and_do_not_call_getters()
     {
         using var bed = new LiveBed();
@@ -133,6 +139,8 @@ public sealed partial class LiveCodeTests
     [InlineData("confirmed")]
     [InlineData("duplicate")]
     [InlineData("permission")]
+    /// <summary>类型、范围、会话、修订、目标、确认、重复或许可不合法时拒绝整批。字段保持初值。</summary>
+    /// <param name="failure">失败种类。</param>
     public void Field_batch_validation_rejects_without_mutation(string failure)
     {
         using var bed = new LiveBed();
@@ -158,6 +166,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
+    /// <summary>调参文件去抖后才应用，状态读取不产生额外应用。非法字段失败后恢复合法值，且不增加加载。</summary>
     public void Tuning_file_debounces_changes_keeps_status_pure_and_rejects_scope_changes()
     {
         using var bed = new LiveBed();
@@ -204,6 +213,8 @@ public sealed partial class LiveCodeTests
     [InlineData("session")]
     [InlineData("revision")]
     [InlineData("reattach")]
+    /// <summary>许可、会话、修订或重新挂接会使调参停止，之后不会自动恢复。Refresh 抛出 InvalidOperationException。</summary>
+    /// <param name="change">permission、session、revision 或 reattach。</param>
     public void Tuning_stops_on_context_change_and_never_resumes_automatically(string change)
     {
         using var bed = new LiveBed();
@@ -241,6 +252,8 @@ public sealed partial class LiveCodeTests
     [InlineData(".yokiframe/tuning/../../outside.json")]
     [InlineData(".yokiframe/tuning/code.cs")]
     [InlineData("C:/outside.json")]
+    /// <summary>不受控的调参路径被拒绝。不创建绑定。</summary>
+    /// <param name="path">被拒绝的路径。</param>
     public void Tuning_rejects_uncontrolled_paths(string path)
     {
         using var bed = new LiveBed();
@@ -248,6 +261,9 @@ public sealed partial class LiveCodeTests
         Assert.ThrowsAny<Exception>(() => binder.Bind("Probe", path));
     }
 
+    /// <summary>构造一条确认过的 play 字段更新。不发送。</summary>
+    /// <param name="value">Value 字段的新整数。</param>
+    /// <returns>请求 JSON。</returns>
     private static string FieldPayload(int value) => new JsonObject
     {
         ["target"] = "play", ["sessionId"] = "session-1", ["generation"] = 1, ["confirmed"] = true,
@@ -259,6 +275,7 @@ public sealed partial class LiveCodeTests
     }.ToJsonString();
 
     [Fact]
+    /// <summary>集合批量替换不加载程序集。后面的非法元素会让整批失败并保留原集合实例。</summary>
     public void Collection_batch_replaces_without_loading_and_invalid_later_element_keeps_originals()
     {
         using var bed = new LiveBed();

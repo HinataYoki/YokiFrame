@@ -5,6 +5,10 @@ internal sealed class StubEngineOperationProvider : IRoslynOperationProvider, IR
 {
     private readonly IRoslynOperation[] _operations;
 
+    /// <summary>固定引擎种类、宿主目标和操作列表。调度器与脚本服务留空。</summary>
+    /// <param name="engineKind">引擎种类。</param>
+    /// <param name="hostTargets">宿主可承载的目标。</param>
+    /// <param name="operations">声明的操作，可为空。</param>
     internal StubEngineOperationProvider(
         string engineKind,
         RoslynExecutionTarget hostTargets,
@@ -47,6 +51,8 @@ internal sealed class StubEngineOperationProvider : IRoslynOperationProvider, IR
         SessionIdentityAvailable = false
     };
 
+    /// <summary>返回当前领域状态对象本身。不复制，不触发初始化。</summary>
+    /// <returns>测试预设的领域状态。</returns>
     public RoslynDomainState ReadDomainState()
     {
         return State;

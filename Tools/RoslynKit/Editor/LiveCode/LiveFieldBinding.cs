@@ -16,19 +16,34 @@ namespace YokiFrame
         private readonly object mInstance;
         private readonly FieldInfo mField;
         public Type ValueType => mField.FieldType;
+        /// <summary>绑定一个可写实例字段。静态、只读和常量字段不能调。</summary>
+        /// <param name="instance">字段所属实例。</param>
+        /// <param name="field">实例字段。</param>
         public LiveFieldBinding(object instance, FieldInfo field)
         {
             if (instance == null || field == null || field.IsStatic || field.IsInitOnly || field.IsLiteral)
                 throw new ArgumentException("A mutable instance field is required.");
             mInstance = instance; mField = field;
         }
+        /// <summary>通过字段元数据读取当前值，不调用用户访问器。</summary>
+        /// <returns>字段当前值。</returns>
         public object Read() => mField.GetValue(mInstance);
+        /// <summary>通过字段元数据写入值，不调用用户访问器。</summary>
+        /// <param name="value">新值，类型须能被字段接受。</param>
         public void Write(object value) => mField.SetValue(mInstance, value);
     }
 
     public interface ILiveFieldHost
     {
+        /// <summary>按宿主白名单绑定可调实例字段。不得改走用户访问器。</summary>
+        /// <param name="attachment">已挂接的行为。</param>
+        /// <param name="name">字段名。</param>
+        /// <returns>可直接读写的字段绑定。</returns>
         LiveFieldBinding BindTunableField(IDisposable attachment, string name);
+        /// <summary>把 JSON 解码成字段类型的值。对象引用等宿主限制由实现拒绝。</summary>
+        /// <param name="type">目标字段类型。</param>
+        /// <param name="value">JSON 值。</param>
+        /// <returns>可写入字段的值。</returns>
         object DecodeTunableValue(Type type, JsonElement value);
     }
 
@@ -37,6 +52,10 @@ namespace YokiFrame
         public string Name { get; }
         public string TypeName { get; }
         public JsonElement Value { get; }
+        /// <summary>保存一次字段变更。JSON 元素的寿命依赖调用方持有的文档。</summary>
+        /// <param name="name">字段名。</param>
+        /// <param name="typeName">调用方声明的类型名。</param>
+        /// <param name="value">JSON 值。</param>
         internal LiveFieldChange(string name, string typeName, JsonElement value)
         {
             Name = name; TypeName = typeName; Value = value;
@@ -48,6 +67,8 @@ namespace YokiFrame
         public string Id { get; internal set; }
         public int Revision { get; internal set; }
         internal readonly List<LiveFieldChange> mFields = new List<LiveFieldChange>();
+
+        /// <summary>返回单个行为的字段变更。只读包装不复制 JSON 元素，文档寿命仍由请求持有。</summary>
         public IReadOnlyList<LiveFieldChange> Fields => mFields.AsReadOnly();
     }
 
@@ -59,8 +80,13 @@ namespace YokiFrame
         public long Generation { get; private set; }
         public string Target { get; private set; }
         internal readonly List<LiveFieldUpdate> mUpdates = new List<LiveFieldUpdate>();
+
+        /// <summary>返回批次中的行为更新。解析完成后列表不再变化。</summary>
         public IReadOnlyList<LiveFieldUpdate> Updates => mUpdates.AsReadOnly();
 
+        /// <summary>解析已确认的字段批次。要求 1 到 64 个行为、合计不超过 256 个字段，且标识和字段名不重复。</summary>
+        /// <param name="json">字段更新 JSON，最大 48 KiB。</param>
+        /// <returns>保留 JSON 值的请求，供随后按字段类型解码。</returns>
         public static LiveFieldRequest Parse(string json)
         {
             if (json == null || Encoding.UTF8.GetByteCount(json) > MaxBytes)
@@ -106,6 +132,10 @@ namespace YokiFrame
             return request;
         }
 
+        /// <summary>读取非空且不超过 256 字符的字符串属性。</summary>
+        /// <param name="json">所在对象。</param>
+        /// <param name="name">属性名，同时出现在异常文案中。</param>
+        /// <returns>属性文本。</returns>
         internal static string RequiredText(JsonElement json, string name)
         {
             string value = json.GetProperty(name).GetString();
@@ -130,6 +160,14 @@ namespace YokiFrame
             return Decode(type, json, fields, leaf, 0, ref nodes);
         }
 
+        /// <summary>递归构造脱离原对象的替换值。集合用数组或 List，数据对象不调用用户构造函数。</summary>
+        /// <param name="type">目标类型。</param>
+        /// <param name="json">当前 JSON 节点。</param>
+        /// <param name="fields">按类型提供可序列化字段。</param>
+        /// <param name="leaf">宿主叶子解码器，可为 null。</param>
+        /// <param name="depth">当前深度。</param>
+        /// <param name="nodes">已访问节点数，成功和失败路径都会递增。</param>
+        /// <returns>解码后的值；引用类型遇到 JSON null 时为 null。</returns>
         private static object Decode(Type type, JsonElement json, Func<Type, IEnumerable<FieldInfo>> fields,
             LeafDecoder leaf, int depth, ref int nodes)
         {
@@ -163,12 +201,19 @@ namespace YokiFrame
             return instance;
         }
 
+        /// <summary>拒绝超过深度 8 或 1024 个值节点的结构。</summary>
+        /// <param name="depth">当前深度。</param>
+        /// <param name="nodes">当前节点数。</param>
         public static void CheckBounds(int depth, int nodes)
         {
             if (depth > MaxDepth || nodes > MaxNodes)
                 throw new NotSupportedException("Live fields exceed depth 8 or 1024 value nodes.");
         }
 
+        /// <summary>识别一维数组和 List。嵌套集合必须包在可序列化数据类中。</summary>
+        /// <param name="type">待识别类型。</param>
+        /// <param name="element">集合元素类型；不是受支持集合时为 null。</param>
+        /// <returns>是受支持集合时为 true。</returns>
         public static bool TryCollection(Type type, out Type element)
         {
             element = null;
@@ -186,6 +231,8 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>只允许直接继承 object 或 ValueType 的具体可序列化数据类。系统命名空间、委托和枚举等不接受。</summary>
+        /// <param name="type">待检查类型。</param>
         public static void RequireDataType(Type type)
         {
             if (!type.IsDefined(typeof(SerializableAttribute), false) || type.IsAbstract || type.IsInterface
@@ -204,6 +251,11 @@ namespace YokiFrame
             return type.FullName;
         }
 
+        /// <summary>解码 string、int、float、bool 和枚举。类型不匹配时抛出，未识别的类型返回 false 且 value 为 null。</summary>
+        /// <param name="type">目标类型。</param>
+        /// <param name="json">JSON 节点。</param>
+        /// <param name="value">解码结果。</param>
+        /// <returns>已识别标量时为 true。</returns>
         public static bool TryDecodeScalar(Type type, JsonElement json, out object value)
         {
             value = null;
@@ -241,6 +293,9 @@ namespace YokiFrame
             return false;
         }
 
+        /// <summary>把 JSON 数字读成有限 float。NaN、无穷和非数字都拒绝。</summary>
+        /// <param name="json">JSON 节点。</param>
+        /// <returns>范围内的有限单精度值。</returns>
         public static float ReadSingle(JsonElement json)
         {
             if (json.ValueKind != JsonValueKind.Number || !float.TryParse(json.ToString(),

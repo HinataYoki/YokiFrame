@@ -9,6 +9,9 @@ public sealed class RoslynOperationTests
     [Theory]
     [InlineData(RoslynExecutionTarget.Editor, "editor")]
     [InlineData(RoslynExecutionTarget.Runtime, "runtime")]
+    /// <summary>Godot 宿主目标和许可设置名显式出现在描述符、拒绝信息和状态里。未许可时不执行。</summary>
+    /// <param name="target">宿主声明的目标。</param>
+    /// <param name="wireTarget">请求 JSON 中的目标文本。</param>
     public void Godot_host_target_and_permission_name_are_explicit(RoslynExecutionTarget target, string wireTarget)
     {
         using var bed = RunTestBed.Create();
@@ -28,6 +31,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>加载使用宿主回调并核对映像。释放后编译抛出 ObjectDisposedException。</summary>
     public void Compiler_uses_host_load_context_and_cannot_compile_after_disposal()
     {
         using var bed = RunTestBed.Create();
@@ -48,6 +52,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>同时存在包内目录和项目缓存时，加载失败信息指向包内目录。结束后删除临时目录。</summary>
     public void Compiler_prefers_the_packaged_bundle_over_the_project_local_cache()
     {
         using var bed = RunTestBed.Create();
@@ -70,6 +75,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>没有包内目录时回退到项目本地缓存。加载失败信息包含该目录。</summary>
     public void Compiler_falls_back_to_the_project_local_cache_when_no_packaged_bundle_is_supplied()
     {
         using var bed = RunTestBed.Create();
@@ -110,6 +116,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>可信许可同时控制 Gate、能力可用性和快照版本。从拒绝变为允许时版本必须前进。</summary>
     public void Trusted_permission_controls_gate_capabilities_and_snapshot_version()
     {
         using var bed = RunTestBed.Create();
@@ -131,6 +138,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>编译器缺失时返回 ScriptCompilerUnavailable，且不排队回退运行。</summary>
     public void Compiler_missing_never_queues_fallback_work()
     {
         using var bed = RunTestBed.Create();
@@ -143,6 +151,7 @@ public sealed class RoslynOperationTests
     }
 
     [Fact]
+    /// <summary>配置无效时诊断和取消仍被允许。状态报告未许可，并给出预算常量。</summary>
     public void Diagnostics_and_cancellation_remain_available_with_all_settings_disabled()
     {
         using var bed = RunTestBed.Create();
@@ -168,11 +177,18 @@ public sealed class RoslynOperationTests
         Assert.Equal("0", document.RootElement.GetProperty("scriptCacheHits").ToString());
     }
 
+    /// <summary>用测试床的调度器和编译器创建脚本操作。不执行。</summary>
+    /// <param name="bed">提供存储根和调度器的测试床。</param>
+    /// <param name="permitted">是否允许可信 C#。</param>
+    /// <returns>脚本操作数组。</returns>
     private static IRoslynOperation[] Create(RunTestBed bed, Func<bool> permitted)
         => new RoslynScriptOperations(bed.Scheduler, new RoslynCompilerLoader(bed.Root),
             () => new RoslynDomainState(), permitted,
             allowed => new AutomationContext(() => 0, allowed, _ => { })).CreateOperations();
 
+    /// <summary>从能力快照读取 script_run 的第一个目标可用性。缺失时抛出 InvalidOperationException。</summary>
+    /// <param name="provider">已接线的提供者。</param>
+    /// <returns>可用性文本。</returns>
     private static string ReadAvailability(RoslynKitProvider provider)
     {
         var response = provider.Handle(EnginePipeline.CreateRequest("cli", "engine_capabilities"));

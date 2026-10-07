@@ -25,6 +25,12 @@ namespace YokiFrame
         private readonly bool mRuntime;
         public IRoslynOperation[] Operations { get; }
 
+        /// <summary>创建宿主自动化。运行时与编辑器共用预算，重建插件不会卸载已加载程序集。</summary>
+        /// <param name="projectRoot">项目根，用于定位编译器和调参文件。</param>
+        /// <param name="scheduler">运行调度器。</param>
+        /// <param name="state">读取当前域状态的委托。</param>
+        /// <param name="settings">执行开关来源。</param>
+        /// <param name="runtime">为 true 时按运行帧计数；编辑器不推进游戏帧。</param>
         public GodotLiveAutomation(string projectRoot, RoslynRunScheduler scheduler,
             Func<RoslynDomainState> state, IRoslynSettingsSource settings, bool runtime)
         {
@@ -59,6 +65,7 @@ namespace YokiFrame
             Operations = operations.ToArray();
         }
 
+        /// <summary>推进一次宿主。会话或权限变化时清空绑定；运行时只在未暂停且帧号前进时计数。</summary>
         public void Tick()
         {
             var state = mState();
@@ -84,6 +91,7 @@ namespace YokiFrame
             mTuning.Tick(Time.GetTicksMsec() / 1000d);
         }
 
+        /// <summary>停止调参、清空 LiveCode 并释放编译器。重复调用直接返回。</summary>
         public void Dispose()
         {
             if (mDisposed) return;

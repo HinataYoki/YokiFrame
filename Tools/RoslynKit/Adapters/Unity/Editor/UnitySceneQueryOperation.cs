@@ -68,66 +68,19 @@ namespace YokiFrame
             }
 
             GameObject[] roots = scene.GetRootGameObjects();
-            var contexts = new List<NodeContext>();
-
-            // "/" 或只由分隔符组成的路径表示"整棵场景"，与空路径等价（文档示例用的就是 "/"）。
-            string normalizedPath = path == null ? string.Empty : path.Trim();
-            if (normalizedPath.Length > 0 && normalizedPath.Trim('/').Length == 0)
+            if (!TryCollectContexts(roots, path, out List<NodeContext> contexts, out string pathError))
             {
-                normalizedPath = string.Empty;
+                return YokiFrameCommandResult.Error(RoslynErrorCodes.INVALID_PAYLOAD, pathError);
             }
 
-            if (string.IsNullOrEmpty(normalizedPath))
-            {
-                for (var index = 0; index < roots.Length; index++)
-                {
-                    contexts.Add(new NodeContext(roots[index], roots[index].name));
-                }
-            }
-            else
-            {
-                if (!TryResolvePath(roots, normalizedPath, out GameObject target, out string pathError))
-                {
-                    return YokiFrameCommandResult.Error(RoslynErrorCodes.INVALID_PAYLOAD, pathError);
-                }
-
-                contexts.Add(new NodeContext(target, normalizedPath));
-            }
-
-            var state = new TraversalState { Remaining = MAX_NODES };
-            RoslynJsonBuilder builder = new RoslynJsonBuilder()
-                .StartObject()
-                .Property("operation", ACTION)
-                .Name("scene")
-                .StartObject()
-                .Property("name", scene.name)
-                .Property("path", scene.path)
-                .Property("isDirty", scene.isDirty)
-                .Property("rootCount", scene.rootCount)
-                .EndObject()
-                .Property("requestedPath", path)
-                .Property("depth", depth)
-                .Property("includeInactive", includeInactive)
-                .Name("nodes")
-                .StartArray();
-            for (var index = 0; index < contexts.Count; index++)
-            {
-                if (!WriteNode(builder, contexts[index], depth, includeInactive, includeValues, state))
-                {
-                    break;
-                }
-            }
-
-            return YokiFrameCommandResult.Success(builder
-                .EndArray()
-                .Property("nodeCount", state.Written)
-                .Property("truncated", state.Truncated)
-                .EndObject()
-                .ToString());
+            return WriteQuery(scene, path, depth, includeInactive, includeValues, contexts);
         }
 
         private readonly struct NodeContext
         {
+            /// <summary>记录待写出的物体及其场景路径。</summary>
+            /// <param name="gameObject">场景物体。</param>
+            /// <param name="path">从根开始的层级路径。</param>
             internal NodeContext(GameObject gameObject, string path)
             {
                 GameObject = gameObject;
@@ -146,15 +99,6 @@ namespace YokiFrame
             internal bool Truncated;
         }
 
-        /// <summary>
-        /// 递归写出单个节点；节点预算用尽时返回 false 让上层停止遍历。
-        /// </summary>
-        /// <param name="builder">JSON 写出器。</param>
-        /// <param name="context">节点上下文。</param>
-        /// <param name="depth">剩余深度。</param>
-        /// <param name="includeInactive">是否包含未激活子物体。</param>
-        /// <param name="state">遍历状态。</param>
-        /// <returns>写出成功时返回 true。</returns>
         /// <summary>
         /// 写出组件字段值（opt-in，payload 传 includeValues=true）。
         /// 覆盖公开字段与标了 [SerializeField] 的私有字段——**读的是活动对象上的真实值**，
@@ -202,8 +146,16 @@ namespace YokiFrame
             builder.EndArray();
         }
 
-
-
+        /// <summary>
+        /// 递归写出单个节点；节点预算用尽时返回 false 让上层停止遍历。
+        /// </summary>
+        /// <param name="builder">JSON 写出器。</param>
+        /// <param name="context">节点上下文。</param>
+        /// <param name="depth">剩余深度。</param>
+        /// <param name="includeInactive">是否包含未激活子物体。</param>
+        /// <param name="includeValues">为 true 时附加组件字段值。</param>
+        /// <param name="state">遍历状态。</param>
+        /// <returns>写出成功时返回 true。</returns>
         private static bool WriteNode(
             RoslynJsonBuilder builder,
             NodeContext context,
@@ -221,56 +173,17 @@ namespace YokiFrame
             GameObject gameObject = context.GameObject;
             state.Remaining--;
             state.Written++;
-
             Component[] components = gameObject.GetComponents<Component>();
-            builder.StartObject()
-                .Property("name", gameObject.name)
-                .Property("path", context.Path)
-                .Property("active", gameObject.activeSelf)
-                .Property("activeInHierarchy", gameObject.activeInHierarchy)
-                .Property("childCount", gameObject.transform.childCount)
-                .Property("componentCount", components.Length);
-            AppendTransform(builder, gameObject.transform);
+            WriteNodeHeader(builder, context, gameObject, components);
             if (includeValues)
             {
                 AppendComponentValues(builder, components);
             }
 
-            builder.Name("components")
-                .StartArray();
-            int limit = components.Length < MAX_COMPONENTS ? components.Length : MAX_COMPONENTS;
-            for (var index = 0; index < limit; index++)
-            {
-                Component component = components[index];
-                builder.String(component == null ? "MissingScript" : component.GetType().Name);
-            }
-
-            builder.EndArray();
-
+            WriteComponentNames(builder, components);
             if (depth > 0)
             {
-                builder.Name("children").StartArray();
-                for (var index = 0; index < gameObject.transform.childCount; index++)
-                {
-                    Transform child = gameObject.transform.GetChild(index);
-                    if (!includeInactive && !child.gameObject.activeSelf)
-                    {
-                        continue;
-                    }
-
-                    if (!WriteNode(
-                            builder,
-                            new NodeContext(child.gameObject, context.Path + "/" + child.gameObject.name),
-                            depth - 1,
-                            includeInactive,
-                            includeValues,
-                            state))
-                    {
-                        break;
-                    }
-                }
-
-                builder.EndArray();
+                WriteChildren(builder, gameObject, context.Path, depth, includeInactive, includeValues, state);
             }
 
             builder.EndObject();
@@ -323,6 +236,12 @@ namespace YokiFrame
             return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         }
 
+        /// <summary>按斜杠路径逐段查找物体；找不到时不抛异常。</summary>
+        /// <param name="roots">活动场景根物体。</param>
+        /// <param name="path">已去掉纯斜杠歧义的路径。</param>
+        /// <param name="target">命中的物体。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>解析到物体时返回 true。</returns>
         private static bool TryResolvePath(GameObject[] roots, string path, out GameObject target, out string error)
         {
             target = null;
@@ -332,36 +251,11 @@ namespace YokiFrame
             GameObject[] level = roots;
             for (var index = 0; index < segments.Length; index++)
             {
-                string segment = segments[index].Trim();
-                if (segment.Length == 0)
+                if (!TryMatchSegment(segments[index], ref current, ref level, out string segmentError))
                 {
-                    continue;
-                }
-
-                GameObject match = null;
-                for (var candidate = 0; candidate < level.Length; candidate++)
-                {
-                    if (string.Equals(level[candidate].name, segment, System.StringComparison.Ordinal))
-                    {
-                        match = level[candidate];
-                        break;
-                    }
-                }
-
-                if (match == null)
-                {
-                    error = "scene_query path segment was not found: " + segment + ".";
+                    error = segmentError;
                     return false;
                 }
-
-                current = match;
-                var children = new List<GameObject>(match.transform.childCount);
-                for (var childIndex = 0; childIndex < match.transform.childCount; childIndex++)
-                {
-                    children.Add(match.transform.GetChild(childIndex).gameObject);
-                }
-
-                level = children.ToArray();
             }
 
             if (current == null)
@@ -376,6 +270,17 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>
+        /// 读取查询选项。空载荷使用默认深度、包含未激活物体且不写字段值。
+        /// 非法 JSON 或字段类型直接失败，不夹取成默认值。
+        /// </summary>
+        /// <param name="payloadJson">payload JSON，允许空白。</param>
+        /// <param name="path">请求路径。</param>
+        /// <param name="depth">夹取后的深度。</param>
+        /// <param name="includeInactive">是否包含未激活物体。</param>
+        /// <param name="includeValues">是否写出字段值。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>选项可用时返回 true。</returns>
         private static bool TryReadOptions(
             string payloadJson,
             out string path,
@@ -414,47 +319,7 @@ namespace YokiFrame
                     return false;
                 }
 
-                if (root.TryGetProperty(PATH_FIELD, out JsonElement pathValue) && pathValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (pathValue.ValueKind != JsonValueKind.String)
-                    {
-                        error = "scene_query path must be a string.";
-                        return false;
-                    }
-
-                    path = pathValue.GetString() ?? string.Empty;
-                }
-
-                if (root.TryGetProperty(INCLUDE_VALUES_FIELD, out JsonElement valuesValue)
-                    && (valuesValue.ValueKind == JsonValueKind.True || valuesValue.ValueKind == JsonValueKind.False))
-                {
-                    includeValues = valuesValue.GetBoolean();
-                }
-
-                if (root.TryGetProperty(INCLUDE_INACTIVE_FIELD, out JsonElement includeValue)
-                    && includeValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (includeValue.ValueKind != JsonValueKind.True && includeValue.ValueKind != JsonValueKind.False)
-                    {
-                        error = "scene_query includeInactive must be a boolean.";
-                        return false;
-                    }
-
-                    includeInactive = includeValue.ValueKind == JsonValueKind.True;
-                }
-
-                if (root.TryGetProperty(DEPTH_FIELD, out JsonElement depthValue) && depthValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (!depthValue.TryGetInt32(out int requested))
-                    {
-                        error = "scene_query depth must be an integer.";
-                        return false;
-                    }
-
-                    depth = requested < 0 ? 0 : requested > MAX_DEPTH ? MAX_DEPTH : requested;
-                }
-
-                return true;
+                return TryReadQueryFields(root, ref path, ref depth, ref includeInactive, ref includeValues, out error);
             }
         }
     }

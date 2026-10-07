@@ -17,6 +17,9 @@ namespace YokiFrame
         private static long sCompleted;
         private static bool sInstalled;
 
+        /// <summary>
+        /// 域加载时订阅播放状态和程序集重载。已经在播放则延迟安装，避免静态构造期间改 PlayerLoop。
+        /// </summary>
         static UnityAutomationFrameClock()
         {
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
@@ -27,12 +30,18 @@ namespace YokiFrame
         internal static long Started => EditorApplication.isPlaying && sInstalled ? sStarted : -1;
         internal static long Completed => EditorApplication.isPlaying && sInstalled ? sCompleted : -1;
 
+        /// <summary>进入播放时安装计数，退出播放时卸下。其它状态不改 PlayerLoop。</summary>
+        /// <param name="state">播放模式变化。</param>
         private static void OnPlayModeChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.EnteredPlayMode) Install();
             else if (state == PlayModeStateChange.ExitingPlayMode) Remove();
         }
 
+        /// <summary>
+        /// 把开始/结束回调插入当前 PlayerLoop。两处锚点都找到才重置计数并写回；
+        /// 否则保持未安装，不调用 SetPlayerLoop。
+        /// </summary>
         private static void Install()
         {
             if (!EditorApplication.isPlaying) return;
@@ -49,16 +58,19 @@ namespace YokiFrame
             PlayerLoop.SetPlayerLoop(loop);
         }
 
+        /// <summary>播放且未暂停时递增已开始的玩家循环次数。</summary>
         private static void Begin()
         {
             if (EditorApplication.isPlaying && !EditorApplication.isPaused) sStarted++;
         }
 
+        /// <summary>播放且未暂停时把完成计数对齐到已开始次数。</summary>
         private static void End()
         {
             if (EditorApplication.isPlaying && !EditorApplication.isPaused) sCompleted = sStarted;
         }
 
+        /// <summary>已安装时从当前 PlayerLoop 去掉计数回调，不清零历史计数。</summary>
         private static void Remove()
         {
             if (!sInstalled) return;
@@ -68,6 +80,14 @@ namespace YokiFrame
             sInstalled = false;
         }
 
+        /// <summary>
+        /// 在锚点前或后插入子系统。找不到锚点时递归子列表；改的是传入的 loop 副本字段。
+        /// </summary>
+        /// <param name="loop">待修改的循环节点。</param>
+        /// <param name="anchor">定位用的子系统类型。</param>
+        /// <param name="item">要插入的回调。</param>
+        /// <param name="after">为 true 时插在锚点之后。</param>
+        /// <returns>找到锚点并插入时返回 true。</returns>
         private static bool Insert(ref PlayerLoopSystem loop, Type anchor, PlayerLoopSystem item, bool after)
         {
             var children = loop.subSystemList;
@@ -89,6 +109,8 @@ namespace YokiFrame
             return false;
         }
 
+        /// <summary>递归去掉本时钟插入的开始/结束子系统，并压缩子列表。</summary>
+        /// <param name="loop">待清理的循环节点。</param>
         private static void Strip(ref PlayerLoopSystem loop)
         {
             if (loop.subSystemList == null) return;

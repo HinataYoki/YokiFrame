@@ -14,7 +14,7 @@ namespace YokiFrame
     /// 因此 Agent 在 Unity 与 Godot 之间切换时不需要换 schema。
     /// 遍历有硬上限：深度 ≤8、节点 ≤2000、每组子节点 ≤256，超限返回 truncated=true。
     /// </remarks>
-    public static class GodotSceneQuerySupport
+    public static partial class GodotSceneQuerySupport
     {
         /// <summary>默认深度。</summary>
         public const int DEFAULT_DEPTH = 2;
@@ -51,61 +51,85 @@ namespace YokiFrame
                 return true;
             }
 
-            JsonDocument document;
-            try
+            if (!TryParseObject(payloadJson, out JsonDocument document, out error))
             {
-                document = JsonDocument.Parse(payloadJson);
-            }
-            catch (JsonException exception)
-            {
-                error = "scene_query payload is not valid JSON: " + exception.Message;
                 return false;
             }
 
             using (document)
             {
-                JsonElement root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                {
-                    error = "scene_query payload must be a JSON object.";
-                    return false;
-                }
+                return TryReadQueryFields(document.RootElement, ref path, ref depth, ref includeInactive, out error);
+            }
+        }
 
-                if (root.TryGetProperty("path", out JsonElement pathValue) && pathValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (pathValue.ValueKind != JsonValueKind.String)
-                    {
-                        error = "scene_query path must be a string.";
-                        return false;
-                    }
-
-                    path = pathValue.GetString() ?? string.Empty;
-                }
-
-                if (root.TryGetProperty("includeInactive", out JsonElement includeValue) && includeValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (includeValue.ValueKind != JsonValueKind.True && includeValue.ValueKind != JsonValueKind.False)
-                    {
-                        error = "scene_query includeInactive must be a boolean.";
-                        return false;
-                    }
-
-                    includeInactive = includeValue.ValueKind == JsonValueKind.True;
-                }
-
-                if (root.TryGetProperty("depth", out JsonElement depthValue) && depthValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (!depthValue.TryGetInt32(out int requested))
-                    {
-                        error = "scene_query depth must be an integer.";
-                        return false;
-                    }
-
-                    depth = requested < 0 ? 0 : requested > MAX_DEPTH ? MAX_DEPTH : requested;
-                }
-
+        /// <summary>把请求路径展开为起始节点。空路径表示从场景根开始，不把斜杠归一化成整棵场景。</summary>
+        /// <param name="root">场景根。</param>
+        /// <param name="path">原始请求路径。</param>
+        /// <param name="roots">起始节点。</param>
+        /// <param name="failure">路径不存在时的命令结果。</param>
+        /// <returns>至少可以开始遍历时返回 true。</returns>
+        public static bool TryCollectRoots(Node root, string path, out List<Node> roots, out YokiFrameCommandResult failure)
+        {
+            roots = new List<Node>();
+            failure = null;
+            if (string.IsNullOrEmpty(path))
+            {
+                roots.Add(root);
                 return true;
             }
+
+            Node target = FindByPath(root, path);
+            if (target == null)
+            {
+                failure = YokiFrameCommandResult.Error(
+                    RoslynErrorCodes.INVALID_PAYLOAD,
+                    "scene_query path was not found: " + path + ".");
+                return false;
+            }
+
+            roots.Add(target);
+            return true;
+        }
+
+        /// <summary>写出场景头和节点数组。host 只区分 editor/runtime，节点投影保持同一契约。</summary>
+        /// <param name="action">操作名。</param>
+        /// <param name="host">editor 或 runtime。</param>
+        /// <param name="root">用于场景头的场景根，不随请求路径改变。</param>
+        /// <param name="path">原始请求路径。</param>
+        /// <param name="depth">剩余深度。</param>
+        /// <param name="includeInactive">是否包含不可见节点。</param>
+        /// <param name="roots">起始节点。</param>
+        /// <returns>成功的命令结果。</returns>
+        public static YokiFrameCommandResult WriteQuery(
+            string action,
+            string host,
+            Node root,
+            string path,
+            int depth,
+            bool includeInactive,
+            List<Node> roots)
+        {
+            var state = new GodotSceneTraversalState();
+            RoslynJsonBuilder builder = new RoslynJsonBuilder()
+                .StartObject()
+                .Property("operation", action)
+                .Property("host", host)
+                .Name("scene")
+                .StartObject()
+                .Property("name", root.Name.ToString())
+                .Property("path", root.SceneFilePath ?? string.Empty)
+                .Property("childCount", root.GetChildCount())
+                .EndObject()
+                .Property("requestedPath", path)
+                .Property("depth", depth)
+                .Property("includeInactive", includeInactive)
+                .Name("nodes");
+            WriteNodes(builder, roots, depth, includeInactive, state);
+            return YokiFrameCommandResult.Success(builder
+                .Property("nodeCount", state.Written)
+                .Property("truncated", state.Truncated)
+                .EndObject()
+                .ToString());
         }
 
         /// <summary>按 "Root/Child" 路径查找节点。</summary>
@@ -189,6 +213,13 @@ namespace YokiFrame
             return node.ProcessMode != Node.ProcessModeEnum.Disabled;
         }
 
+        /// <summary>写出单个节点。预算用尽或节点为空时停止，不补空对象。</summary>
+        /// <param name="builder">JSON 写出器。</param>
+        /// <param name="node">当前节点。</param>
+        /// <param name="depth">剩余深度。</param>
+        /// <param name="includeInactive">是否包含不可见子节点。</param>
+        /// <param name="state">遍历状态。</param>
+        /// <returns>写出成功时返回 true。</returns>
         private static bool WriteNode(
             RoslynJsonBuilder builder,
             Node node,
@@ -209,6 +240,21 @@ namespace YokiFrame
 
             state.Remaining--;
             state.Written++;
+            WriteNodeHeader(builder, node);
+            if (depth > 0)
+            {
+                WriteChildren(builder, node, depth, includeInactive, state);
+            }
+
+            builder.EndObject();
+            return true;
+        }
+
+        /// <summary>写出节点头、分组和变换。不递归子节点。</summary>
+        /// <param name="builder">JSON 写出器。</param>
+        /// <param name="node">当前节点。</param>
+        private static void WriteNodeHeader(RoslynJsonBuilder builder, Node node)
+        {
             builder.StartObject()
                 .Property("name", node.Name.ToString())
                 .Property("path", node.GetPath().ToString())
@@ -226,36 +272,47 @@ namespace YokiFrame
 
             builder.EndArray();
             AppendTransform(builder, node);
-
-            if (depth > 0)
-            {
-                builder.Name("children");
-                var children = new List<Node>();
-                int childCount = node.GetChildCount();
-                int limit = childCount < MAX_CHILDREN_PER_NODE ? childCount : MAX_CHILDREN_PER_NODE;
-                if (childCount > MAX_CHILDREN_PER_NODE)
-                {
-                    state.Truncated = true;
-                }
-
-                for (var childIndex = 0; childIndex < limit; childIndex++)
-                {
-                    Node child = node.GetChild(childIndex);
-                    if (child == null || (!includeInactive && !IsActive(child)))
-                    {
-                        continue;
-                    }
-
-                    children.Add(child);
-                }
-
-                WriteNodes(builder, children, depth - 1, includeInactive, state);
-            }
-
-            builder.EndObject();
-            return true;
         }
 
+        /// <summary>写出子节点。超过每节点上限时标记截断，但不把超限子节点写入。</summary>
+        /// <param name="builder">JSON 写出器。</param>
+        /// <param name="node">父节点。</param>
+        /// <param name="depth">父节点剩余深度，写出时减一。</param>
+        /// <param name="includeInactive">是否包含不可见子节点。</param>
+        /// <param name="state">遍历状态。</param>
+        private static void WriteChildren(
+            RoslynJsonBuilder builder,
+            Node node,
+            int depth,
+            bool includeInactive,
+            GodotSceneTraversalState state)
+        {
+            builder.Name("children");
+            var children = new List<Node>();
+            int childCount = node.GetChildCount();
+            int limit = childCount < MAX_CHILDREN_PER_NODE ? childCount : MAX_CHILDREN_PER_NODE;
+            if (childCount > MAX_CHILDREN_PER_NODE)
+            {
+                state.Truncated = true;
+            }
+
+            for (var childIndex = 0; childIndex < limit; childIndex++)
+            {
+                Node child = node.GetChild(childIndex);
+                if (child == null || (!includeInactive && !IsActive(child)))
+                {
+                    continue;
+                }
+
+                children.Add(child);
+            }
+
+            WriteNodes(builder, children, depth - 1, includeInactive, state);
+        }
+
+        /// <summary>按节点维度写出变换。既不是 Node2D 也不是 Node3D 时不写 transform 键。</summary>
+        /// <param name="builder">JSON 写出器。</param>
+        /// <param name="node">当前节点。</param>
         private static void AppendTransform(RoslynJsonBuilder builder, Node node)
         {
             if (node is Node3D node3D)
@@ -282,6 +339,9 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>以不变文化格式化浮点，保证跨区域设置下输出稳定。</summary>
+        /// <param name="value">数值。</param>
+        /// <returns>文本。</returns>
         private static string Format(float value)
         {
             return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);

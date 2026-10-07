@@ -39,7 +39,11 @@ namespace YokiFrame
 
         /// <summary>终态：跨域重载后无终态记录，禁止自动重跑。</summary>
         Unknown,
+
+        /// <summary>正在编译用户源码，尚未进入运行。</summary>
         Compiling,
+
+        /// <summary>终态：编译失败，用户代码没有运行。</summary>
         CompileFailed
     }
 }

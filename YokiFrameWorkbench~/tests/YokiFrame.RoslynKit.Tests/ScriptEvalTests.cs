@@ -15,6 +15,7 @@ public sealed class ScriptEvalTests : IDisposable
         "yokiframe-script-eval-tests",
         Guid.NewGuid().ToString("N"));
 
+    /// <summary>删除本测试的 eval 存储目录。目录不存在时不做任何事。</summary>
     /// <inheritdoc />
     public void Dispose()
     {
@@ -25,6 +26,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>提交后同步编译并调用，记录为 Ready 且落盘。错误码和错误信息为空。</summary>
     public void Submit_compiles_and_invokes_synchronously()
     {
         var host = new FakeScriptHost { ResultJson = "{\"ok\":true}" };
@@ -50,6 +52,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>编译失败记在记录状态里，对外错误码仍为空，且不会调用脚本。</summary>
     public void Compile_failure_is_recorded_as_state_not_error_code()
     {
         var host = new FakeScriptHost { CompileError = "Parse Error: line 2" };
@@ -64,6 +67,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>调用失败时记录仍是 Ready，备注以 invoke failed 开头并包含宿主错误。</summary>
     public void Invoke_failure_keeps_ready_with_error_note()
     {
         var host = new FakeScriptHost { InvokeError = "boom" };
@@ -77,6 +81,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>没有宿主返回 UNAVAILABLE；空标识或空白源码返回 INVALID_PAYLOAD。不互相覆盖。</summary>
     public void Missing_host_and_invalid_request_are_reported_separately()
     {
         var service = new RoslynScriptEvalService(null, new RoslynEvalStore(mStoreRoot));
@@ -91,6 +96,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>修剪会卸载两条脚本并删除记录。不保留可再读取的条目。</summary>
     public void Prune_unloads_scripts_and_removes_records()
     {
         var host = new FakeScriptHost();
@@ -106,6 +112,7 @@ public sealed class ScriptEvalTests : IDisposable
     }
 
     [Fact]
+    /// <summary>语言来自宿主；宿主缺失时语言为空。不猜测默认语言。</summary>
     public void Language_comes_from_the_host()
     {
         var host = new FakeScriptHost { Language = "gdscript" };
@@ -113,6 +120,9 @@ public sealed class ScriptEvalTests : IDisposable
         Assert.Equal(string.Empty, new RoslynScriptEvalService(null, null).Language);
     }
 
+    /// <summary>用本测试目录创建 eval 服务。不提交脚本。</summary>
+    /// <param name="host">假脚本宿主。</param>
+    /// <returns>绑定该宿主和存储的服务。</returns>
     private RoslynScriptEvalService CreateService(FakeScriptHost host)
     {
         return new RoslynScriptEvalService(host, new RoslynEvalStore(mStoreRoot));
@@ -135,6 +145,12 @@ public sealed class ScriptEvalTests : IDisposable
 
         public List<string> Unloaded { get; } = new();
 
+        /// <summary>按预设编译错误决定成败。成功时记录标识和令牌，不保存源码。</summary>
+        /// <param name="id">脚本标识。</param>
+        /// <param name="token">编译令牌。</param>
+        /// <param name="code">未使用的源码。</param>
+        /// <param name="error">失败时的编译错误。</param>
+        /// <returns>没有预设错误时为 true。</returns>
         public bool TryCompile(string id, string token, string code, out string error)
         {
             error = CompileError;
@@ -147,6 +163,12 @@ public sealed class ScriptEvalTests : IDisposable
             return true;
         }
 
+        /// <summary>按预设调用错误决定成败。成功时返回预设 JSON 并记录调用。</summary>
+        /// <param name="id">脚本标识。</param>
+        /// <param name="token">调用令牌。</param>
+        /// <param name="resultJson">成功时的结果 JSON。</param>
+        /// <param name="error">失败时的调用错误。</param>
+        /// <returns>没有预设错误时为 true。</returns>
         public bool TryInvoke(string id, string token, out string resultJson, out string error)
         {
             resultJson = string.Empty;
@@ -161,6 +183,8 @@ public sealed class ScriptEvalTests : IDisposable
             return true;
         }
 
+        /// <summary>记录被卸载的脚本标识。不删除存储文件。</summary>
+        /// <param name="id">脚本标识。</param>
         public void Unload(string id)
         {
             Unloaded.Add(id);

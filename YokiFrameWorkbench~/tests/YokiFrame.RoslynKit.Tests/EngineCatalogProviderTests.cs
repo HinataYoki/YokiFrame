@@ -7,6 +7,13 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineCatalogProviderTests
 {
+    /// <summary>装配带指定宿主目标和额外操作的提供者。不发送命令。</summary>
+    /// <param name="settings">初始开关快照。</param>
+    /// <param name="hostTargets">宿主承载目标。</param>
+    /// <param name="engineProvider">接收引擎提供者。</param>
+    /// <param name="settingsSource">接收设置源。</param>
+    /// <param name="extraOperations">附加操作。</param>
+    /// <returns>可查询命令面的提供者。</returns>
     private static RoslynKitProvider CreateProvider(
         RoslynSettingsSnapshot settings,
         RoslynExecutionTarget hostTargets,
@@ -20,6 +27,9 @@ public sealed class EngineCatalogProviderTests
         return new RoslynKitProvider(gate, engineProvider, settingsSource);
     }
 
+    /// <summary>执行 engine_capabilities 并返回根元素。失败时断言。</summary>
+    /// <param name="provider">被测提供者。</param>
+    /// <returns>能力报告根元素。</returns>
     private static JsonElement Capabilities(RoslynKitProvider provider)
     {
         YokiFrameCommandResult result = provider.Handle(
@@ -28,6 +38,10 @@ public sealed class EngineCatalogProviderTests
         return JsonDocument.Parse(result.ResultJson).RootElement;
     }
 
+    /// <summary>在能力报告中查找操作。缺失时抛出 InvalidOperationException。</summary>
+    /// <param name="capabilities">能力报告根元素。</param>
+    /// <param name="action">操作名。</param>
+    /// <returns>该操作的元素。</returns>
     private static JsonElement Operation(JsonElement capabilities, string action)
     {
         JsonElement operations = capabilities.GetProperty("operations");
@@ -42,6 +56,10 @@ public sealed class EngineCatalogProviderTests
         throw new InvalidOperationException("capabilities report does not contain action: " + action);
     }
 
+    /// <summary>读取操作对某个目标的可用性。目标未声明时抛出 InvalidOperationException。</summary>
+    /// <param name="operation">操作元素。</param>
+    /// <param name="target">目标名。</param>
+    /// <returns>可用性文本。</returns>
     private static string TargetAvailability(JsonElement operation, string target)
     {
         JsonElement entries = operation.GetProperty("targetAvailability");
@@ -57,6 +75,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>提供者合并内建诊断和引擎操作。命令面正好包含约定的六个动作。</summary>
     public void Provider_composes_builtin_and_engine_operations()
     {
         RoslynKitProvider provider = CreateProvider(
@@ -76,6 +95,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>未知快照名抛出 ArgumentException。不创建 state 以外的快照。</summary>
     public void Unknown_snapshot_name_is_rejected()
     {
         RoslynKitProvider provider = CreateProvider(
@@ -89,6 +109,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>能力报告按目标列出矩阵。宿主不承载的 runtime 标为 UnsupportedByHostTarget，诊断不受限。</summary>
     public void Capabilities_report_lists_per_target_matrix()
     {
         var sceneQuery = new RecordingEngineOperation("scene_query", YokiFrameCommandKind.ReadOnly, false, false,
@@ -127,6 +148,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>快照携带能力矩阵、对象目录和运行摘要，且不含 entries 入口目录。</summary>
     public void Snapshot_carries_capability_matrix_objects_and_runs_without_an_entry_catalog()
     {
         var settingsSource = new StubEngineSettingsSource(RoslynSettingsSnapshot.Enabled());
@@ -166,6 +188,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>最近运行读取在 TTL 内被缓存。新提交不会立刻出现，超时后才刷新。</summary>
     public void Recent_runs_read_is_cached_between_version_probes()
     {
         var settingsSource = new StubEngineSettingsSource(RoslynSettingsSnapshot.Enabled());
@@ -202,6 +225,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>快照记录最近运行，运行活动会推进状态版本。TTL 过后计数至少为 1。</summary>
     public void Snapshot_records_recent_runs_and_bumps_version()
     {
         var settingsSource = new StubEngineSettingsSource(RoslynSettingsSnapshot.Enabled());
@@ -243,6 +267,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>命令面新增操作后状态版本与旧提供者不同。同一提供者重复读取版本不变。</summary>
     public void State_version_changes_when_the_command_face_changes()
     {
         var settingsSource = new StubEngineSettingsSource(RoslynSettingsSnapshot.Enabled());
@@ -271,6 +296,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>开关关闭时执行操作标为 DisabledBySettings，取消和诊断仍为 Enabled。</summary>
     public void Disabled_switch_marks_execution_operations_but_not_diagnostics()
     {
         var sceneQuery = new RecordingEngineOperation("scene_query", YokiFrameCommandKind.ReadOnly);
@@ -295,6 +321,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>快照与 domain_state 的领域字段一致，并额外包含能力矩阵和宿主目标。</summary>
     public void Snapshot_matches_domain_state_action_payload()
     {
         RoslynKitProvider provider = CreateProvider(
@@ -337,6 +364,7 @@ public sealed class EngineCatalogProviderTests
     }
 
     [Fact]
+    /// <summary>播放状态或开关变化才推进版本。没有变化时重复读取保持原版本。</summary>
     public void State_version_advances_only_when_state_or_switch_changes()
     {
         var settingsSource = new StubEngineSettingsSource(RoslynSettingsSnapshot.Enabled());

@@ -80,12 +80,18 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>从构造时传入的节点取场景树根。节点或树已失效时返回 null，不抛出。</summary>
+        /// <returns>运行中的场景根；不可用时返回 null。</returns>
         private Node ResolveSceneRoot()
         {
             SceneTree tree = mOwner == null ? null : mOwner.GetTree();
             return tree == null ? null : tree.Root;
         }
 
+        /// <summary>创建节点并直接挂到父节点。Runtime 没有 Undo，结果固定回报 unavailable-in-runtime。</summary>
+        /// <param name="sceneRoot">运行中的场景根。</param>
+        /// <param name="root">含 name、nodeType 和可选 parent 的载荷。</param>
+        /// <returns>创建结果，或名字、类型、父路径错误。</returns>
         private static YokiFrameCommandResult Create(Node sceneRoot, JsonElement root)
         {
             string name = GodotSceneMutateSupport.ReadString(root, "name");
@@ -126,6 +132,10 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("nodeType", created.GetClass())));
         }
 
+        /// <summary>按路径延迟删除节点。Runtime 不登记 Undo，结果固定回报 unavailable-in-runtime。</summary>
+        /// <param name="sceneRoot">运行中的场景根。</param>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <returns>删除结果，或目标不存在的错误。</returns>
         private static YokiFrameCommandResult Delete(Node sceneRoot, JsonElement root)
         {
             Node target;
@@ -144,6 +154,10 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("deferred", "true")));
         }
 
+        /// <summary>切换节点活动状态。CanvasItem 与 Node3D 改 visible，其余改 process_mode。</summary>
+        /// <param name="sceneRoot">运行中的场景根。</param>
+        /// <param name="root">含 path 和 active 的载荷。</param>
+        /// <returns>修改结果，或目标、字段错误。</returns>
         private static YokiFrameCommandResult SetActive(Node sceneRoot, JsonElement root)
         {
             Node target;
@@ -168,6 +182,10 @@ namespace YokiFrame
                 new KeyValuePair<string, string>("mechanism", viaVisibility ? "visible" : "processMode")));
         }
 
+        /// <summary>直接写入变换。非 Node2D/Node3D 失败，不改其他属性。</summary>
+        /// <param name="sceneRoot">运行中的场景根。</param>
+        /// <param name="root">含 path 与三个数值数组的载荷。</param>
+        /// <returns>修改结果，或目标、字段、节点类型错误。</returns>
         private static YokiFrameCommandResult SetTransform(Node sceneRoot, JsonElement root)
         {
             Node target;
@@ -199,6 +217,11 @@ namespace YokiFrame
                 "unavailable-in-runtime"));
         }
 
+        /// <summary>按 path 解析目标。空路径和找不到都返回错误，不改场景。</summary>
+        /// <param name="sceneRoot">运行中的场景根。</param>
+        /// <param name="root">含 path 的载荷。</param>
+        /// <param name="target">命中的节点；失败时为 null。</param>
+        /// <returns>失败时的命令结果；成功时返回 null。</returns>
         private static YokiFrameCommandResult ResolveTarget(Node sceneRoot, JsonElement root, out Node target)
         {
             target = null;

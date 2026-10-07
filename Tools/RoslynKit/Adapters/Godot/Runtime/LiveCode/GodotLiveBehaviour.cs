@@ -13,6 +13,10 @@ namespace YokiFrame
         public GodotLiveBehaviourHost Host { get; internal set; }
 
         internal Func<string, string, object[], object> LiveInvoker;
+        /// <summary>从附着节点查找子节点。原型尚未附着时由 Godot 抛出，不在这里伪造节点。</summary>
+        /// <typeparam name="T">期望的节点类型。</typeparam>
+        /// <param name="path">相对附着节点的路径。</param>
+        /// <returns>命中的节点。</returns>
         public T GetNode<T>(NodePath path) where T : Node => Node.GetNode<T>(path);
 
         /// <summary>延迟调用一次；宿主未绑定、已释放或已停止时不再触发。</summary>
@@ -31,6 +35,11 @@ namespace YokiFrame
             Host.CancelDelay();
         }
 
+        /// <summary>调用另一个仍附着的原型。当前原型已分离时抛出，不把调用转到已释放宿主。</summary>
+        /// <param name="id">目标原型标识。</param>
+        /// <param name="method">目标方法名。</param>
+        /// <param name="arguments">方法参数。</param>
+        /// <returns>目标方法返回值。</returns>
         public object CallLive(string id, string method, params object[] arguments)
         {
             if (LiveInvoker == null) throw new InvalidOperationException("Live behaviour is detached.");

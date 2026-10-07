@@ -53,6 +53,10 @@ namespace YokiFrame
         }
 
         private IRoslynOperation[] mOperations;
+        /// <summary>
+        /// 用内建操作加上 additional 替换当前列表。重复调用以 sOperations 重新打底，不会累加旧的附加项。
+        /// </summary>
+        /// <param name="additional">要追加的操作。</param>
         internal void AddOperations(IRoslynOperation[] additional)
         {
             var operations = new List<IRoslynOperation>(sOperations);

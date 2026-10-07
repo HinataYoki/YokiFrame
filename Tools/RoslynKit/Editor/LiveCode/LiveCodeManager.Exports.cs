@@ -8,6 +8,12 @@ namespace YokiFrame
 {
     public sealed partial class LiveCodeManager
     {
+        /// <summary>把活动行为按脚本路径分组、编译并暂存。同一路径必须是同类同成员；编译不加载程序集。期间拒绝其他批量。</summary>
+        /// <param name="requests">1 到 64 个行为导出请求。</param>
+        /// <param name="batchId">批次标识；null 时生成 N 格式 GUID。</param>
+        /// <param name="guard">宿主守卫。</param>
+        /// <param name="token">编译取消令牌。</param>
+        /// <returns>宿主暂存后的批次。</returns>
         public async Task<LiveExportBatch> ExportMany(IReadOnlyList<LiveExportRequest> requests,
             string batchId, Action guard, CancellationToken token)
         {
@@ -59,6 +65,13 @@ namespace YokiFrame
             finally { mBatchAttaching = false; }
         }
 
+        /// <summary>按上一版导出和成员源码创建再导出并暂存。不加载程序集，期间拒绝其他批量。</summary>
+        /// <param name="previousExportId">上一版导出标识。</param>
+        /// <param name="members">新的成员源码，不能为空白。</param>
+        /// <param name="batchId">批次标识；null 时生成。</param>
+        /// <param name="guard">宿主守卫。</param>
+        /// <param name="token">编译取消令牌。</param>
+        /// <returns>只含这一版的暂存批次。</returns>
         public async Task<LiveExportBatch> Reexport(string previousExportId, string members,
             string batchId, Action guard, CancellationToken token)
         {
@@ -81,6 +94,9 @@ namespace YokiFrame
             finally { mBatchAttaching = false; }
         }
 
+        /// <summary>把已暂存批次排队提交。回调只复查当时的会话，不捕获提交脚本的可释放上下文。</summary>
+        /// <param name="batchId">批次标识。</param>
+        /// <param name="guard">提交前的宿主守卫。</param>
         public void CommitExport(string batchId, Action guard)
         {
             Guard(guard);
@@ -90,9 +106,13 @@ namespace YokiFrame
             RequireExportHost().QueueExportCommit(batchId, () => Check(scope, epoch, () => { }));
         }
 
+        /// <summary>要求当前宿主实现版本化导出。</summary>
+        /// <returns>导出宿主。</returns>
         private ILiveExportHost RequireExportHost() => mHost as ILiveExportHost
             ?? throw new NotSupportedException("Versioned export is not supported by this host.");
 
+        /// <summary>复制当前会话、代际和目标，供导出完成前复查。</summary>
+        /// <returns>域状态副本。</returns>
         private RoslynDomainState ExportScope()
         {
             var state = mState();
@@ -100,6 +120,9 @@ namespace YokiFrame
             { SessionId = state.SessionId, Generation = state.Generation, ActiveTarget = state.ActiveTarget };
         }
 
+        /// <summary>接受 N 格式 GUID；null 时生成新标识。其他文本拒绝。</summary>
+        /// <param name="id">调用方批次标识。</param>
+        /// <returns>可用的批次标识。</returns>
         private static string ValidateBatchId(string id)
         {
             if (id == null) return Guid.NewGuid().ToString("N");

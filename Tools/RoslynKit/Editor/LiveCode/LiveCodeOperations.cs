@@ -7,6 +7,11 @@ namespace YokiFrame
     {
         private readonly LiveCodeManager mManager;
 
+        /// <summary>按动作注册热更命令。未知动作在构造时拒绝。快照和字段写入使用调用方目标与许可，状态和移除则跨目标。</summary>
+        /// <param name="manager">热更管理器。</param>
+        /// <param name="action">live_status、live_remove、live_snapshot 或 live_set_fields。</param>
+        /// <param name="permission">快照和字段写入的执行许可；状态与移除不使用。</param>
+        /// <param name="targets">快照和字段写入允许的执行目标，默认 Play。</param>
         public LiveCodeOperation(LiveCodeManager manager, string action, System.Func<bool> permission = null,
             RoslynExecutionTarget targets = RoslynExecutionTarget.Play)
         {
@@ -24,6 +29,9 @@ namespace YokiFrame
 
         public RoslynOperationDescriptor Descriptor { get; }
 
+        /// <summary>执行热更命令。字段更新把参数和 JSON 错误映射为 INVALID_PAYLOAD，把状态和能力错误映射为 LiveFieldUpdateRejected。</summary>
+        /// <param name="request">含动作载荷的命令。</param>
+        /// <returns>成功 JSON 或对应错误码的失败结果。</returns>
         public YokiFrameCommandResult Execute(YokiFrameCommandRequest request)
         {
             var json = new RoslynJsonBuilder().StartObject().Property("operation", Descriptor.Action);

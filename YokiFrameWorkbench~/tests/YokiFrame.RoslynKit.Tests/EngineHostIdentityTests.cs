@@ -7,6 +7,7 @@ namespace YokiFrame.RoslynKit.Tests;
 /// </summary>
 public sealed class EngineHostIdentityTests
 {
+    /// <summary>从已发布 registry 读出会话标识和代数。成功时原因为空，不改文件。</summary>
     [Fact]
     public void Reads_session_identity_from_published_registry()
     {
@@ -21,6 +22,7 @@ public sealed class EngineHostIdentityTests
         Assert.Equal(string.Empty, reason);
     }
 
+    /// <summary>generation 以字符串发布时仍解析为整数。不把字符串原样返回。</summary>
     [Fact]
     public void Accepts_generation_published_as_string()
     {
@@ -33,6 +35,7 @@ public sealed class EngineHostIdentityTests
         Assert.Equal(7L, generation);
     }
 
+    /// <summary>文件缺失、JSON 损坏或没有 sessionId 时失败，并给出原因。不伪造会话或代数。</summary>
     [Fact]
     public void Reports_reasons_without_faking_identity()
     {
@@ -54,6 +57,7 @@ public sealed class EngineHostIdentityTests
         Assert.Contains("no sessionId", anonymousReason, StringComparison.Ordinal);
     }
 
+    /// <summary>缓存跟随 registry 内容更新；内容不变时重复读取保持稳定。不依赖 mtime 粒度。</summary>
     [Fact]
     public void Cache_follows_registry_updates()
     {
@@ -79,6 +83,8 @@ public sealed class EngineHostIdentityTests
 
     private sealed class IdentityFixture : IDisposable
     {
+        /// <summary>创建临时 registry 目录。需要文件时先写入空对象，避免读取落到其他夹具。</summary>
+        /// <param name="createFile">为 false 时不创建 engine.json。</param>
         internal IdentityFixture(bool createFile = true)
         {
             Root = Path.Combine(Path.GetTempPath(), "yokiframe-identity-tests", Guid.NewGuid().ToString("N"));
@@ -94,11 +100,14 @@ public sealed class EngineHostIdentityTests
 
         internal string RegistryPath { get; }
 
+        /// <summary>覆盖写入 registry 文本。不追加，不改路径。</summary>
+        /// <param name="json">完整 JSON 文本，可以是故意损坏的片段。</param>
         internal void Write(string json)
         {
             File.WriteAllText(RegistryPath, json);
         }
 
+        /// <summary>删除临时目录。删除遇到 IOException 时吞掉，避免掩盖用例本身的断言。</summary>
         public void Dispose()
         {
             try

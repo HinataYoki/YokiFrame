@@ -9,7 +9,7 @@ using YokiFrame.Json;
 namespace YokiFrame
 {
     /// <summary>Metadata-only discovery over live registrations, not an object execution endpoint.</summary>
-    public sealed class RoslynObjectCatalog
+    public sealed partial class RoslynObjectCatalog
     {
         public const int MAX_CATALOG = 4096;
         public const int MAX_PAGE = 100;
@@ -19,16 +19,23 @@ namespace YokiFrame
         private const int MAX_SNAPSHOT_OBJECTS = 20;
         private readonly IRoslynOperationProvider mProvider;
         private string mIdentity = string.Empty;
+        /// <summary>当前目录作用域。刷新后更换，避免旧句柄继续命中已失效对象。</summary>
         private string mScope = Guid.NewGuid().ToString("N");
 
+        /// <summary>创建对象目录，只保存提供者引用，不立即读取注册表。</summary>
+        /// <param name="provider">提供域状态与宿主目标的操作入口。</param>
         public RoslynObjectCatalog(IRoslynOperationProvider provider) => mProvider = provider;
 
+        /// <summary>清空身份缓存并更换 scope，使已发出的 objectId 失效。</summary>
         public void Invalidate()
         {
             mIdentity = string.Empty;
             mScope = Guid.NewGuid().ToString("N");
         }
 
+        /// <summary>身份变化时更换 scope，并返回当前 scope。不读取服务注册。</summary>
+        /// <param name="state">当前域状态。</param>
+        /// <returns>本次发现使用的 scope。</returns>
         public string ObserveScope(RoslynDomainState state)
         {
             string identity = state.SessionId + ":" + state.Generation.ToString(CultureInfo.InvariantCulture) + ":" + state.ActiveTarget;
@@ -36,11 +43,16 @@ namespace YokiFrame
             return mScope;
         }
 
+        /// <summary>创建 object_list 与 object_describe。两者都回调本目录，不复制注册数据。</summary>
+        /// <returns>两个只读诊断操作。</returns>
         public IRoslynOperation[] CreateOperations() => new IRoslynOperation[]
         {
             new Operation(this, "object_list"), new Operation(this, "object_describe")
         };
 
+        /// <summary>刷新 scope 后把最多 20 个活动服务摘要写入 snapshot。身份不可用时不写对象。</summary>
+        /// <param name="builder">snapshot JSON。</param>
+        /// <param name="state">当前域状态。</param>
         public void WriteSnapshot(RoslynJsonBuilder builder, RoslynDomainState state)
         {
             ObserveScope(state);
@@ -55,6 +67,9 @@ namespace YokiFrame
             builder.EndArray();
         }
 
+        /// <summary>用当前 scope 和注册标识组成 objectId。不检查该注册是否仍存活。</summary>
+        /// <param name="info">活动服务信息。</param>
+        /// <returns>scope 前缀的对象标识。</returns>
         private string ObjectId(ArchitectureLiveServiceInfo info) => mScope + ":" + info.RegistrationId;
 
         /// <summary>执行对象目录查询。只读元数据，不调用 getter。</summary>
@@ -96,51 +111,7 @@ namespace YokiFrame
 
             using (var document = JsonDocument.Parse(request.PayloadJson))
             {
-                var root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                {
-                    error = Invalid("Expected an object payload.");
-                    return false;
-                }
-
-                string target = ReadString(root, "target", required: true);
-                if (!RoslynExecutionTargets.TryParse(target, out var parsed)
-                    || !RoslynExecutionTargets.IsSingleTarget(parsed))
-                {
-                    error = Invalid("A single target is required.");
-                    return false;
-                }
-
-                target = RoslynExecutionTargets.Format(parsed);
-                var state = mProvider.ReadDomainState();
-                ObserveScope(state);
-                if (!state.SessionIdentityAvailable || state.ActiveTarget != target
-                    || (mProvider.HostTargets & parsed) == 0 || state.IsCompiling)
-                {
-                    error = YokiFrameCommandResult.Error(RoslynErrorCodes.UNAVAILABLE,
-                        "Discovery requires the active host target and a published session identity.");
-                    return false;
-                }
-
-                string rootName = ReadString(root, "root");
-                if (rootName.Length > 0 && rootName != "service")
-                {
-                    error = Invalid("Only root=service is supported. Use scene_query for scene objects.");
-                    return false;
-                }
-
-                int offset = ReadNumber(root, "offset", 0, 0, MAX_CATALOG);
-                long revision = ArchitectureRegistry.DiagnosticVersion;
-                string revisionToken = mScope + ":" + revision.ToString(CultureInfo.InvariantCulture);
-                string expected = ReadString(root, "catalogRevision");
-                if ((offset > 0 && expected.Length == 0) || (expected.Length > 0 && expected != revisionToken))
-                {
-                    error = YokiFrameCommandResult.Error("ObjectCatalogChanged", "Restart paging from offset 0.");
-                    return false;
-                }
-
-                query = new DiscoveryQuery(root, state, target, offset, ReadNumber(root, "limit", 25, 1, MAX_PAGE), revision, revisionToken);
-                return true;
+                return TryReadDiscoveryQuery(document.RootElement, out query, out error);
             }
         }
 
@@ -325,6 +296,10 @@ namespace YokiFrame
             internal string RevisionToken { get; }
         }
 
+        /// <summary>实现类型或任一契约类型的 FullName 与过滤值相同即命中。</summary>
+        /// <param name="item">活动服务。</param>
+        /// <param name="type">要匹配的类型全名。</param>
+        /// <returns>命中时返回 true。</returns>
         private static bool MatchesType(ArchitectureLiveServiceInfo item, string type)
         {
             if (item.ImplementationType.FullName == type) return true;
@@ -332,6 +307,9 @@ namespace YokiFrame
             return false;
         }
 
+        /// <summary>写一条服务摘要。过长或不可见类型标为不支持，契约最多写 32 个。</summary>
+        /// <param name="builder">JSON 构建器。</param>
+        /// <param name="info">活动服务。</param>
         private void WriteObject(RoslynJsonBuilder builder, ArchitectureLiveServiceInfo info)
         {
             string type = info.ImplementationType.FullName ?? info.ImplementationType.Name;
@@ -346,10 +324,17 @@ namespace YokiFrame
             builder.EndArray().Property("contractsTruncated", info.ContractTypes.Count > MAX_PARAMETERS).EndObject();
         }
 
+        /// <summary>用声明类型、模块和元数据记号组成稳定成员键。</summary>
+        /// <param name="member">成员。</param>
+        /// <returns>供哈希使用的成员键。</returns>
         private static string MemberId(MemberInfo member) =>
             (member.DeclaringType.AssemblyQualifiedName ?? "") + ":" + member.Module.ModuleVersionId.ToString("N")
             + ":" + member.MetadataToken.ToString(CultureInfo.InvariantCulture);
 
+        /// <summary>写成员元数据。不调用 getter 或方法，只反映可见性和签名限制。</summary>
+        /// <param name="builder">JSON 构建器。</param>
+        /// <param name="member">方法、属性或字段。</param>
+        /// <param name="objectId">所属对象标识，参与 memberId 哈希。</param>
         private static void WriteMember(RoslynJsonBuilder builder, MemberInfo member, string objectId)
         {
             string id = RoslynEvalRequest.ComputeSha256(objectId + ":" + MemberId(member));
@@ -359,52 +344,14 @@ namespace YokiFrame
             Type valueType = method != null ? method.ReturnType : property != null ? property.PropertyType : field.FieldType;
             ParameterInfo[] parameters = method != null ? method.GetParameters()
                 : property != null ? property.GetIndexParameters() : Array.Empty<ParameterInfo>();
-            string reason = "";
-            if (method != null && method.ContainsGenericParameters) reason = "Open generic method requires type arguments.";
-            if (valueType.IsPointer || valueType.IsByRef) reason = "Pointer/ref returns require specialized C# handling.";
-            if (member.DeclaringType == null || !member.DeclaringType.IsVisible) reason = "Declaring type is not public.";
-            if (parameters.Length > MAX_PARAMETERS) reason = "Parameter metadata limit exceeded.";
-            var signature = new StringBuilder(Bound(valueType.FullName ?? valueType.Name))
-                .Append(' ').Append(Bound(member.Name)).Append('(');
-            for (int i = 0; i < parameters.Length && i < MAX_PARAMETERS; i++)
-            {
-                Type parameterType = parameters[i].ParameterType;
-                if (parameterType.IsByRef || parameterType.IsPointer) reason = "ref/out/pointer parameters require specialized C# handling.";
-                if ((parameterType.FullName ?? parameterType.Name).Length > MAX_TEXT
-                    || (parameters[i].Name ?? "").Length > MAX_TEXT) reason = "Parameter metadata exceeds the text limit.";
-                signature.Append(i == 0 ? "" : ", ").Append(Bound(parameterType.FullName ?? parameterType.Name));
-            }
-            signature.Append(')');
-            if (signature.Length > MAX_TEXT || (valueType.AssemblyQualifiedName ?? "").Length > MAX_TEXT)
-                reason = "Signature metadata exceeds the text limit.";
-            builder.StartObject().Property("memberId", id)
-                .Property("kind", method != null ? "method" : property != null ? "property" : "field")
-                .Property("name", Bound(member.Name)).Property("declaringType", Bound(member.DeclaringType.FullName))
-                .Property("signature", Bound(signature.ToString())).Property("valueType", Bound(valueType.FullName ?? valueType.Name))
-                .Property("valueAssembly", Bound(valueType.Assembly.GetName().Name))
-                .Property("genericArity", method != null && method.IsGenericMethod ? method.GetGenericArguments().Length : 0)
-                .Property("async", IsAsync(valueType)).Property("supported", reason.Length == 0)
-                .Property("reason", reason).Property("requiresExecution", true)
-                .Property("static", method != null ? method.IsStatic : field != null ? field.IsStatic
-                    : (property.GetGetMethod() ?? property.GetSetMethod()).IsStatic)
-                .Property("canRead", field != null || property != null && property.GetGetMethod() != null)
-                .Property("canWrite", property != null ? property.GetSetMethod() != null : field != null && !field.IsInitOnly && !field.IsLiteral)
-                .Name("parameters").StartArray();
-            for (int i = 0; i < parameters.Length && i < MAX_PARAMETERS; i++)
-            {
-                var parameter = parameters[i];
-                ReadDefault(parameter, out string defaultKind, out string defaultValue);
-                builder.StartObject().Property("name", Bound(parameter.Name))
-                    .Property("type", Bound(parameter.ParameterType.FullName ?? parameter.ParameterType.Name))
-                    .Property("assembly", Bound(parameter.ParameterType.Assembly.GetName().Name))
-                    .Property("optional", parameter.IsOptional).Property("out", parameter.IsOut)
-                    .Property("modifier", parameter.IsOut ? "out" : parameter.ParameterType.IsByRef
-                        ? (parameter.IsIn ? "in" : "ref") : "")
-                    .Property("defaultKind", defaultKind).Property("defaultValue", defaultValue).EndObject();
-            }
-            builder.EndArray().EndObject();
+            string reason = DescribeMemberSupport(member, method, valueType, parameters);
+            string signature = BuildMemberSignature(member, valueType, parameters, ref reason);
+            WriteMemberMetadata(builder, member, method, property, field, valueType, parameters, id, signature, reason);
         }
 
+        /// <summary>按类型全名判断返回值是否为 Task、ValueTask 或 UniTask。</summary>
+        /// <param name="type">返回值或属性类型。</param>
+        /// <returns>是已知异步类型时返回 true。</returns>
         private static bool IsAsync(Type type)
         {
             string name = type.IsGenericType ? type.GetGenericTypeDefinition().FullName : type.FullName;
@@ -413,6 +360,10 @@ namespace YokiFrame
                 || name == "Cysharp.Threading.Tasks.UniTask" || name == "Cysharp.Threading.Tasks.UniTask`1";
         }
 
+        /// <summary>读取参数默认值。只保留 null、基元、decimal 和字符串，超长文本不写出。</summary>
+        /// <param name="parameter">参数。</param>
+        /// <param name="kind">none、null、invariant、unavailable 或 metadataLimit。</param>
+        /// <param name="text">可展示的默认值文本。</param>
         private static void ReadDefault(ParameterInfo parameter, out string kind, out string text)
         {
             kind = "none";
@@ -427,9 +378,22 @@ namespace YokiFrame
             if (text.Length > MAX_TEXT) { text = ""; kind = "metadataLimit"; }
         }
 
+        /// <summary>把文本限制在 MAX_TEXT。null 变为空，超长变为固定占位。</summary>
+        /// <param name="value">原始文本。</param>
+        /// <returns>可写入响应的文本。</returns>
         private static string Bound(string value) => value == null ? "" : value.Length <= MAX_TEXT ? value : "[metadata limit]";
+
+        /// <summary>构造无效载荷错误，错误码为 INVALID_PAYLOAD。</summary>
+        /// <param name="message">错误说明。</param>
+        /// <returns>失败的命令结果。</returns>
         private static YokiFrameCommandResult Invalid(string message) =>
             YokiFrameCommandResult.Error(RoslynErrorCodes.INVALID_PAYLOAD, message);
+
+        /// <summary>读取必填或可选字符串。类型不对或超过 1024 字符时抛出 ArgumentException。</summary>
+        /// <param name="root">JSON 对象。</param>
+        /// <param name="name">属性名。</param>
+        /// <param name="required">缺失时是否抛出。</param>
+        /// <returns>字符串值。</returns>
         private static string ReadString(JsonElement root, string name, bool required = false)
         {
             if (!root.TryGetProperty(name, out var value))
@@ -441,6 +405,13 @@ namespace YokiFrame
                 throw new ArgumentException(name + " must be a string of at most 1024 characters.");
             return value.GetString();
         }
+        /// <summary>读取整数。缺失时用默认值；超出闭区间时抛出 ArgumentException。</summary>
+        /// <param name="root">JSON 对象。</param>
+        /// <param name="name">属性名。</param>
+        /// <param name="fallback">缺失时的值。</param>
+        /// <param name="min">允许的最小值。</param>
+        /// <param name="max">允许的最大值。</param>
+        /// <returns>区间内的整数。</returns>
         private static int ReadNumber(JsonElement root, string name, int fallback, int min, int max)
         {
             if (!root.TryGetProperty(name, out var value)) return fallback;
@@ -452,6 +423,10 @@ namespace YokiFrame
         private sealed class Operation : IRoslynOperation
         {
             private readonly RoslynObjectCatalog mOwner;
+
+            /// <summary>绑定目录和动作名，并标记为全目标只读诊断。</summary>
+            /// <param name="owner">执行查询的目录。</param>
+            /// <param name="action">object_list 或 object_describe。</param>
             internal Operation(RoslynObjectCatalog owner, string action)
             {
                 mOwner = owner;
@@ -459,6 +434,10 @@ namespace YokiFrame
                     isDiagnostic: true, targets: RoslynExecutionTargets.ALL);
             }
             public RoslynOperationDescriptor Descriptor { get; }
+
+            /// <summary>把请求交给目录执行，不在操作实例上保存结果。</summary>
+            /// <param name="request">命令请求。</param>
+            /// <returns>目录查询结果。</returns>
             public YokiFrameCommandResult Execute(YokiFrameCommandRequest request) => mOwner.Execute(Descriptor.Action, request);
         }
     }

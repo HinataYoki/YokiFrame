@@ -93,6 +93,9 @@ namespace YokiFrame
 
         private sealed class ScriptHandle
         {
+            /// <summary>保存一次编译产物。释放时先释放实例，再释放脚本。</summary>
+            /// <param name="script">编译出的 GDScript。</param>
+            /// <param name="instance">脚本实例，可以为空。</param>
             public ScriptHandle(GDScript script, GodotObject instance)
             {
                 Script = script;

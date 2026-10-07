@@ -34,6 +34,15 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>从实例或静态类型沿路径逐段读取成员和索引。</summary>
+        /// <param name="instance">当前实例；静态成员读取时为 null。</param>
+        /// <param name="path">点号成员与方括号索引组成的路径。</param>
+        /// <param name="limit">传给索引读取的上限参数；路径本身不另做截断。</param>
+        /// <param name="value">解析成功时的最终值。</param>
+        /// <param name="error">失败原因；成功时为空字符串。</param>
+        /// <param name="resolvedPath">成功走过的路径文本。</param>
+        /// <param name="staticType">静态根类型；实例路径省略。</param>
+        /// <returns>路径完整解析时返回 true。任一段失败后不再继续。</returns>
         private static bool TryWalk(
             object instance,
             string path,
@@ -59,51 +68,30 @@ namespace YokiFrame
 
                 if (symbol == '[')
                 {
-                    int close = path.IndexOf(']', index);
-                    if (close < 0)
-                    {
-                        error = "path is missing a closing ]: " + path;
-                        return false;
-                    }
-
-                    string key = path.Substring(index + 1, close - index - 1).Trim();
-                    if (!TryIndex(value, key, limit, out value, out error))
+                    if (!TryWalkIndex(path, limit, ref index, ref value, ref error, ref resolvedPath, ref currentType))
                     {
                         return false;
                     }
 
-                    resolvedPath += "[" + key + "]";
-                    currentType = value == null ? null : value.GetType();
-                    index = close + 1;
                     continue;
                 }
 
-                int end = index;
-                while (end < path.Length && path[end] != '.' && path[end] != '[')
-                {
-                    end++;
-                }
-
-                string member = path.Substring(index, end - index).Trim();
-                if (member.Length == 0)
-                {
-                    index = end;
-                    continue;
-                }
-
-                if (!TryReadMember(value, currentType, member, out value, out error))
+                if (!TryWalkMember(path, ref index, ref value, ref currentType, ref error, ref resolvedPath))
                 {
                     return false;
                 }
-
-                resolvedPath += (resolvedPath.Length == 0 ? string.Empty : ".") + member;
-                currentType = value == null ? null : value.GetType();
-                index = end;
             }
 
             return true;
         }
 
+        /// <summary>读取同名字段，否则读取无参属性。属性 getter 的目标异常会转成失败原因。</summary>
+        /// <param name="instance">实例；静态成员时可为 null。</param>
+        /// <param name="type">当前值的类型。前一段为 null 时失败，不继续反射。</param>
+        /// <param name="member">成员名。</param>
+        /// <param name="value">读到的值。</param>
+        /// <param name="error">找不到成员或 getter 抛出时的原因。</param>
+        /// <returns>找到字段或成功读取属性时返回 true。</returns>
         private static bool TryReadMember(object instance, Type type, string member, out object value, out string error)
         {
             value = null;
@@ -141,6 +129,13 @@ namespace YokiFrame
             return false;
         }
 
+        /// <summary>按字典、列表、字符串索引器的顺序用键取值。</summary>
+        /// <param name="container">被索引的对象。</param>
+        /// <param name="key">字典键、列表下标或索引器参数。</param>
+        /// <param name="limit">保留的调用参数。索引逻辑不使用它做截断。</param>
+        /// <param name="value">命中的元素。</param>
+        /// <param name="error">失败原因。</param>
+        /// <returns>某一类容器命中时返回 true。</returns>
         private static bool TryIndex(object container, string key, int limit, out object value, out string error)
         {
             value = null;
@@ -153,51 +148,23 @@ namespace YokiFrame
 
             if (container is IDictionary dictionary)
             {
-                foreach (DictionaryEntry entry in dictionary)
-                {
-                    if (string.Equals(Convert.ToString(entry.Key, CultureInfo.InvariantCulture), key, StringComparison.Ordinal))
-                    {
-                        value = entry.Value;
-                        return true;
-                    }
-                }
-
-                error = "dictionary key was not found: " + key + ".";
-                return false;
+                return TryIndexDictionary(dictionary, key, out value, out error);
             }
 
             if (container is IList list)
             {
-                if (!int.TryParse(key, NumberStyles.Integer, CultureInfo.InvariantCulture, out int position)
-                    || position < 0
-                    || position >= list.Count)
-                {
-                    error = "list index is out of range: " + key + " (count " + list.Count + ").";
-                    return false;
-                }
-
-                value = list[position];
-                return true;
+                return TryIndexList(list, key, out value, out error);
             }
 
-            // 支持带字符串索引器的类型（例如自定义容器）。
-            PropertyInfo indexer = container.GetType().GetProperty("Item", new[] { typeof(string) });
-            if (indexer != null)
-            {
-                value = indexer.GetValue(container, new object[] { key });
-                if (value == null)
-                {
-                    error = "indexer returned null for key: " + key + ".";
-                    return false;
-                }
-
-                return true;
-            }
-
-            error = "value of type " + container.GetType().FullName + " does not support [" + key + "].";
-            return false;
+            return TryIndexStringIndexer(container, key, out value, out error);
         }
 
+        /// <summary>把字段和属性摘要写成 JSON 数组。先字段后属性，合计不超过 limit。</summary>
+        /// <param name="builder">正在写入的 JSON。</param>
+        /// <param name="instance">实例；静态摘要时为 null。</param>
+        /// <param name="depth">剩余展开深度。</param>
+        /// <param name="limit">字段与属性合计的写入上限。</param>
+        /// <param name="staticType">静态类型；实例路径省略。</param>
         private static void WriteMemberSummary(
             RoslynJsonBuilder builder,
             object instance,
@@ -214,53 +181,17 @@ namespace YokiFrame
             }
 
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-            var written = 0;
-            FieldInfo[] fields = type.GetFields(Flags);
-            for (var index = 0; index < fields.Length && written < limit; index++)
-            {
-                FieldInfo field = fields[index];
-                if (field.IsStatic != (instance == null) || field.IsInitOnly)
-                {
-                    continue;
-                }
-
-                object value = field.GetValue(field.IsStatic ? null : instance);
-                WriteEntry(builder, field.Name, value, depth, limit);
-                written++;
-            }
-
-            PropertyInfo[] properties = type.GetProperties(Flags);
-            for (var index = 0; index < properties.Length && written < limit; index++)
-            {
-                PropertyInfo property = properties[index];
-                if (!property.CanRead || property.GetIndexParameters().Length != 0)
-                {
-                    continue;
-                }
-
-                MethodInfo getter = property.GetGetMethod(nonPublic: true);
-                if (getter == null || getter.IsStatic != (instance == null))
-                {
-                    continue;
-                }
-
-                object value;
-                try
-                {
-                    value = property.GetValue(instance);
-                }
-                catch (TargetInvocationException exception)
-                {
-                    value = "<threw " + (exception.InnerException ?? exception).GetType().Name + ">";
-                }
-
-                WriteEntry(builder, property.Name, value, depth, limit);
-                written++;
-            }
-
+            int written = WriteFields(builder, instance, type, depth, limit, Flags);
+            WriteProperties(builder, instance, type, depth, limit, Flags, written);
             builder.EndArray();
         }
 
+        /// <summary>写一个成员的名称、类型和值。深度足够且可展开时递归写成员摘要。</summary>
+        /// <param name="builder">正在写入的 JSON。</param>
+        /// <param name="name">成员名。</param>
+        /// <param name="value">成员值。</param>
+        /// <param name="depth">剩余展开深度。</param>
+        /// <param name="limit">嵌套摘要或集合的上限。</param>
         private static void WriteEntry(
             RoslynJsonBuilder builder,
             string name,
@@ -283,6 +214,9 @@ namespace YokiFrame
             builder.EndObject();
         }
 
+        /// <summary>判断值是否应按对象继续展开，而不是当作标量或序列。</summary>
+        /// <param name="value">非 null 的值。</param>
+        /// <returns>非基元、非枚举、非字符串、非 decimal 且非序列时返回 true。</returns>
         private static bool IsExpandable(object value)
         {
             Type type = value.GetType();
@@ -293,6 +227,10 @@ namespace YokiFrame
                 && !(value is IEnumerable);
         }
 
+        /// <summary>把运行时值写成 JSON。序列按 limit 截断，其余复杂对象写成截断后的文本。</summary>
+        /// <param name="builder">正在写入的 JSON。</param>
+        /// <param name="value">要写的值。</param>
+        /// <param name="limit">序列元素上限。</param>
         private static void WriteValue(RoslynJsonBuilder builder, object value, int limit)
         {
             if (value == null)
@@ -328,27 +266,16 @@ namespace YokiFrame
 
             if (value is IEnumerable sequence)
             {
-                builder.StartArray();
-                var written = 0;
-                foreach (object item in sequence)
-                {
-                    if (written >= limit)
-                    {
-                        builder.String("<truncated at " + limit + ">");
-                        break;
-                    }
-
-                    WriteValue(builder, item, limit);
-                    written++;
-                }
-
-                builder.EndArray();
+                WriteSequence(builder, sequence, limit);
                 return;
             }
 
             builder.String(Truncate(Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.GetType().Name));
         }
 
+        /// <summary>把文本限制在 <see cref="MAX_TEXT_CHARS"/> 以内。null 视为空字符串。</summary>
+        /// <param name="text">原始文本。</param>
+        /// <returns>未超过上限时返回原文，否则返回前缀。</returns>
         private static string Truncate(string text)
         {
             if (text == null)
@@ -359,6 +286,9 @@ namespace YokiFrame
             return text.Length <= MAX_TEXT_CHARS ? text : text.Substring(0, MAX_TEXT_CHARS);
         }
 
+        /// <summary>先按程序集限定名解析类型，再扫描已加载程序集。单个程序集抛错时跳过。</summary>
+        /// <param name="name">类型名。</param>
+        /// <returns>找到的类型；都没有时返回 null。</returns>
         private static Type ResolveType(string name)
         {
             Type direct = Type.GetType(name);
@@ -388,6 +318,11 @@ namespace YokiFrame
             return null;
         }
 
+        /// <summary>解析 inspect 载荷。空白载荷和非法 JSON 直接失败，不创建请求。</summary>
+        /// <param name="payloadJson">命令载荷。</param>
+        /// <param name="request">成功时的请求。</param>
+        /// <param name="error">失败原因。</param>
+        /// <returns>载荷是带选择器的 JSON 对象时返回 true。</returns>
         private static bool TryParse(string payloadJson, out InspectRequest request, out string error)
         {
             request = null;
@@ -411,54 +346,14 @@ namespace YokiFrame
 
             using (document)
             {
-                JsonElement root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                {
-                    error = "inspect payload must be a JSON object.";
-                    return false;
-                }
-
-                var parsed = new InspectRequest
-                {
-                    Root = ReadString(root, "root"),
-                    Selector = ReadString(root, "selector"),
-                    Path = ReadString(root, "path"),
-                    Depth = DEFAULT_DEPTH,
-                    Limit = DEFAULT_LIMIT
-                };
-                if (parsed.Root.Length == 0)
-                {
-                    parsed.Root = ROOT_SERVICE;
-                }
-
-                if (parsed.Selector.Length == 0)
-                {
-                    parsed.Selector = ReadString(root, "type");
-                }
-
-                if (parsed.Selector.Length == 0)
-                {
-                    error = "inspect requires 'selector' (or 'type'): the type or object name to read.";
-                    return false;
-                }
-
-                if (root.TryGetProperty("depth", out JsonElement depthValue) && depthValue.ValueKind == JsonValueKind.Number
-                    && depthValue.TryGetInt32(out int depth))
-                {
-                    parsed.Depth = depth < 1 ? 1 : depth > MAX_DEPTH ? MAX_DEPTH : depth;
-                }
-
-                if (root.TryGetProperty("limit", out JsonElement limitValue) && limitValue.ValueKind == JsonValueKind.Number
-                    && limitValue.TryGetInt32(out int limit))
-                {
-                    parsed.Limit = limit < 1 ? 1 : limit > MAX_LIMIT ? MAX_LIMIT : limit;
-                }
-
-                request = parsed;
-                return true;
+                return TryReadInspectRequest(document.RootElement, out request, out error);
             }
         }
 
+        /// <summary>读取 JSON 字符串属性。缺失或非字符串时返回空，不抛异常。</summary>
+        /// <param name="element">对象元素。</param>
+        /// <param name="name">属性名。</param>
+        /// <returns>字符串值；内容为 null 时视为空。</returns>
         private static string ReadString(JsonElement element, string name)
         {
             return element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

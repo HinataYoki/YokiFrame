@@ -94,13 +94,29 @@ namespace YokiFrame
                     settings.State);
             }
 
+            return Decide(request, operation, settings, target, hostTargets);
+        }
+
+        /// <summary>
+        /// 按固定顺序做开关、来源和目标裁决。调用时载荷已经解析成功。
+        /// </summary>
+        /// <param name="request">命令请求。</param>
+        /// <param name="operation">命中的操作描述。</param>
+        /// <param name="settings">刚刚读取的开关快照。</param>
+        /// <param name="target">已解析的单一目标。</param>
+        /// <param name="hostTargets">当前宿主可承载的执行目标。</param>
+        /// <returns>裁决结果。</returns>
+        private RoslynGateDecision Decide(
+            YokiFrameCommandRequest request,
+            RoslynOperationDescriptor operation,
+            RoslynSettingsSnapshot settings,
+            RoslynExecutionTarget target,
+            RoslynExecutionTarget hostTargets)
+        {
             // ② 执行开关：缺失与解析失败一律 fail-closed；豁免只跳过这一层。
             if (!operation.ExemptFromExecutionSwitch && settings.BlocksExecution)
             {
-                return RoslynGateDecision.Reject(
-                    RoslynErrorCodes.OPERATION_DISABLED,
-                    BuildDisabledMessage(settings, operation),
-                    settings.State);
+                return RejectDisabled(settings, operation);
             }
 
             // ③ Dangerous 操作只允许受信来源。
@@ -112,6 +128,37 @@ namespace YokiFrame
                     settings.State);
             }
 
+            return DecideAvailability(operation, settings, target, hostTargets);
+        }
+
+        /// <summary>构造执行开关关闭时的拒绝结果。</summary>
+        /// <param name="settings">开关快照。</param>
+        /// <param name="operation">操作描述。</param>
+        /// <returns>关闭拒绝。</returns>
+        private static RoslynGateDecision RejectDisabled(
+            RoslynSettingsSnapshot settings,
+            RoslynOperationDescriptor operation)
+        {
+            return RoslynGateDecision.Reject(
+                RoslynErrorCodes.OPERATION_DISABLED,
+                BuildDisabledMessage(settings, operation),
+                settings.State);
+        }
+
+        /// <summary>
+        /// 按与 engine_capabilities 相同的规则绑定目标。不支持或宿主不能承载时拒绝。
+        /// </summary>
+        /// <param name="operation">操作描述。</param>
+        /// <param name="settings">开关快照。</param>
+        /// <param name="target">请求的单一目标。</param>
+        /// <param name="hostTargets">当前宿主可承载的执行目标。</param>
+        /// <returns>放行或目标拒绝。</returns>
+        private static RoslynGateDecision DecideAvailability(
+            RoslynOperationDescriptor operation,
+            RoslynSettingsSnapshot settings,
+            RoslynExecutionTarget target,
+            RoslynExecutionTarget hostTargets)
+        {
             // ④ 目标绑定：与 engine_capabilities 共用同一份判定规则。
             RoslynOperationAvailability availability = RoslynAvailabilityRules.Resolve(
                 operation,
@@ -120,10 +167,7 @@ namespace YokiFrame
                 hostTargets);
             if (availability == RoslynOperationAvailability.DisabledBySettings)
             {
-                return RoslynGateDecision.Reject(
-                    RoslynErrorCodes.OPERATION_DISABLED,
-                    BuildDisabledMessage(settings, operation),
-                    settings.State);
+                return RejectDisabled(settings, operation);
             }
 
             if (availability == RoslynOperationAvailability.UnsupportedByTarget)
@@ -177,40 +221,55 @@ namespace YokiFrame
 
             using (document)
             {
-                JsonElement root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                {
-                    error = "Engine payload must be a JSON object.";
-                    return false;
-                }
+                return TryReadSingleTarget(document.RootElement, ref target, out error);
+            }
+        }
 
-                if (!root.TryGetProperty(TARGET_FIELD_NAME, out JsonElement value)
-                    || value.ValueKind == JsonValueKind.Null)
-                {
-                    return true;
-                }
+        /// <summary>
+        /// 从 JSON 对象读取单一 target。字段缺失或为 null 时保持调用方传入的默认目标。
+        /// </summary>
+        /// <param name="root">payload 根节点。</param>
+        /// <param name="target">成功时写回的单一目标。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>可以继续裁决时返回 true。</returns>
+        private static bool TryReadSingleTarget(
+            JsonElement root,
+            ref RoslynExecutionTarget target,
+            out string error)
+        {
+            error = string.Empty;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                error = "Engine payload must be a JSON object.";
+                return false;
+            }
 
-                if (value.ValueKind != JsonValueKind.String)
-                {
-                    error = "Engine payload target must be a string.";
-                    return false;
-                }
-
-                if (!RoslynExecutionTargets.TryParse(value.GetString(), out RoslynExecutionTarget parsed))
-                {
-                    error = "Engine payload target is not a known execution target.";
-                    return false;
-                }
-
-                if (!RoslynExecutionTargets.IsSingleTarget(parsed))
-                {
-                    error = "Engine payload target must be a single target; combined values are only valid in capability declarations.";
-                    return false;
-                }
-
-                target = parsed;
+            if (!root.TryGetProperty(TARGET_FIELD_NAME, out JsonElement value)
+                || value.ValueKind == JsonValueKind.Null)
+            {
                 return true;
             }
+
+            if (value.ValueKind != JsonValueKind.String)
+            {
+                error = "Engine payload target must be a string.";
+                return false;
+            }
+
+            if (!RoslynExecutionTargets.TryParse(value.GetString(), out RoslynExecutionTarget parsed))
+            {
+                error = "Engine payload target is not a known execution target.";
+                return false;
+            }
+
+            if (!RoslynExecutionTargets.IsSingleTarget(parsed))
+            {
+                error = "Engine payload target must be a single target; combined values are only valid in capability declarations.";
+                return false;
+            }
+
+            target = parsed;
+            return true;
         }
 
         /// <summary>

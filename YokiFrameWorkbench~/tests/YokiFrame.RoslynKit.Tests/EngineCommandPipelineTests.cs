@@ -7,17 +7,22 @@ public sealed class EngineCommandPipelineTests
 {
     private const string DangerousPayload = "{\"confirmed\":true}";
 
+    /// <summary>构造 play_control 危险操作。不注册。</summary>
+    /// <returns>调用次数为零的操作。</returns>
     private static RecordingEngineOperation DangerousOperation()
     {
         return new RecordingEngineOperation("play_control", YokiFrameCommandKind.Dangerous);
     }
 
+    /// <summary>构造诊断型 engine_capabilities。不注册。</summary>
+    /// <returns>调用次数为零的只读操作。</returns>
     private static RecordingEngineOperation DiagnosticOperation()
     {
         return new RecordingEngineOperation("engine_capabilities", YokiFrameCommandKind.ReadOnly, isDiagnostic: true);
     }
 
     [Fact]
+    /// <summary>已确认的 cli 危险操作在开启时执行一次。</summary>
     public void Dangerous_from_cli_with_confirmed_executes()
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -32,6 +37,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>已确认的 workbench 危险操作在开启时执行一次。</summary>
     public void Dangerous_from_workbench_with_confirmed_executes()
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -48,6 +54,8 @@ public sealed class EngineCommandPipelineTests
     [Theory]
     [InlineData("codex")]
     [InlineData("external-automation")]
+    /// <summary>不受信来源被 Gate 拒绝且不执行。设置仍被读取一次。</summary>
+    /// <param name="source">codex 或 external-automation。</param>
     public void Dangerous_from_untrusted_source_is_rejected_by_gate_without_executing(string source)
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -64,6 +72,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>未确认时策略先拒绝，Gate 不被读取，操作也不执行。</summary>
     public void Dangerous_without_confirmed_is_rejected_by_policy_before_gate_is_consulted()
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -80,6 +89,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>开关关闭早于来源限制。不受信来源得到的是禁用错误，而不是来源错误。</summary>
     public void Execution_switch_is_evaluated_before_source_restriction()
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -98,6 +108,8 @@ public sealed class EngineCommandPipelineTests
     [InlineData("Disabled")]
     [InlineData("MissingConfig")]
     [InlineData("InvalidConfig")]
+    /// <summary>关闭、缺失和无效配置都拒绝执行，错误信息包含状态名，且不调用操作。</summary>
+    /// <param name="stateName">期望出现在错误信息中的状态名。</param>
     public void Blocked_switch_states_reject_execution(string stateName)
     {
         RoslynSettingsSnapshot snapshot = stateName switch
@@ -120,6 +132,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>开关关闭时诊断查询仍成功执行一次。</summary>
     public void Diagnostic_queries_remain_available_while_disabled()
     {
         RecordingEngineOperation operation = DiagnosticOperation();
@@ -134,6 +147,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>配置无效时诊断查询仍成功。来源即使是 codex 也不被这条诊断拦住。</summary>
     public void Diagnostic_queries_remain_available_when_config_is_invalid()
     {
         RecordingEngineOperation operation = DiagnosticOperation();
@@ -148,6 +162,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>非诊断只读操作在关闭时被拒绝且不执行。</summary>
     public void Non_diagnostic_readonly_operation_is_blocked_while_disabled()
     {
         var operation = new RecordingEngineOperation("scene_query", YokiFrameCommandKind.ReadOnly);
@@ -163,6 +178,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>未注册动作由策略返回 UnknownCommand，且不执行已注册操作。</summary>
     public void Unregistered_engine_action_is_rejected_by_policy()
     {
         RecordingEngineOperation operation = DangerousOperation();
@@ -178,6 +194,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>其他 Kit 的用户操作仍按原策略放行到来源，最终因没有处理器返回 HandlerMissing。</summary>
     public void Other_kits_keep_their_policy_behaviour()
     {
         // Policy 未被修改：其它 Kit 的 UserAction 对 codex 来源仍然放行，
@@ -194,6 +211,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>重复引擎动作在构造处理器时抛出 ArgumentException。不进入调度。</summary>
     public void Duplicate_engine_actions_are_rejected_at_construction()
     {
         RecordingEngineOperation first = DangerousOperation();
@@ -205,6 +223,7 @@ public sealed class EngineCommandPipelineTests
     }
 
     [Fact]
+    /// <summary>处理器为每个操作暴露一个描述符，且 Kit 名都是 RoslynKit。</summary>
     public void Handler_exposes_one_descriptor_per_operation()
     {
         RecordingEngineOperation play = DangerousOperation();

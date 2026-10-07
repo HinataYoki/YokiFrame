@@ -57,14 +57,38 @@ namespace YokiFrame
 
             mEngineProvider = engineProvider ?? throw new ArgumentNullException(nameof(engineProvider));
             mSettingsSource = settingsSource ?? throw new ArgumentNullException(nameof(settingsSource));
-
-            // 内建诊断操作 + 引擎侧操作共同组成命令面；capabilities 通过回调看到完整集合。
+            mObjects = new RoslynObjectCatalog(mEngineProvider);
             var operations = new List<IRoslynOperation>();
-            var capabilities = new RoslynCapabilitiesOperation(engineProvider, settingsSource, () => operations);
-            operations.Add(new RoslynDomainStateOperation(engineProvider, settingsSource));
+            CreateOperations(operations);
+            mOperations = operations.ToArray();
+            mHandler = new RoslynCommandHandler(gate, mOperations, engineProvider.HostTargets);
+        }
+
+        /// <summary>
+        /// 按固定顺序组装命令面：诊断、inspect、对象目录、引擎操作，以及可选的脚本和运行操作。
+        /// 只读字段仍由构造函数赋值，这里只填充调用方提供的列表。
+        /// </summary>
+        /// <param name="operations">构造函数持有的操作列表。</param>
+        private void CreateOperations(List<IRoslynOperation> operations)
+        {
+            // 内建诊断操作 + 引擎侧操作共同组成命令面；capabilities 通过回调看到完整集合。
+            var capabilities = new RoslynCapabilitiesOperation(mEngineProvider, mSettingsSource, () => operations);
+            operations.Add(new RoslynDomainStateOperation(mEngineProvider, mSettingsSource));
+            AddInspectOperation(operations);
+            operations.AddRange(mObjects.CreateOperations());
+            operations.Add(capabilities);
+            AddEngineOperations(operations);
+            AddScriptEvalOperations(operations);
+            AddRunOperations(operations);
+        }
+
+        /// <summary>注册默认 inspect 根，并追加引擎额外提供的根。</summary>
+        /// <param name="operations">正在组装的操作列表。</param>
+        private void AddInspectOperation(List<IRoslynOperation> operations)
+        {
             // Legacy value inspection is separate from metadata-only object discovery.
             InspectRootRegistry inspectRoots = InspectRootRegistry.CreateDefault();
-            IInspectRootSource inspectSource = engineProvider as IInspectRootSource;
+            IInspectRootSource inspectSource = mEngineProvider as IInspectRootSource;
             if (inspectSource != null && inspectSource.Roots != null)
             {
                 for (var rootIndex = 0; rootIndex < inspectSource.Roots.Count; rootIndex++)
@@ -74,35 +98,44 @@ namespace YokiFrame
             }
 
             operations.Add(new RoslynInspectOperation(inspectRoots));
-            mObjects = new RoslynObjectCatalog(engineProvider);
-            operations.AddRange(mObjects.CreateOperations());
+        }
 
-            operations.Add(capabilities);
-            IReadOnlyList<IRoslynOperation> engineOperations = engineProvider.Operations;
+        /// <summary>按引擎提供者的原顺序追加其操作，不筛选。</summary>
+        /// <param name="operations">正在组装的操作列表。</param>
+        private void AddEngineOperations(List<IRoslynOperation> operations)
+        {
+            IReadOnlyList<IRoslynOperation> engineOperations = mEngineProvider.Operations;
             for (var index = 0; index < engineOperations.Count; index++)
             {
                 operations.Add(engineOperations[index]);
             }
+        }
 
+        /// <summary>仅当引擎提供脚本执行服务时注册 eval、结果和清理操作。</summary>
+        /// <param name="operations">正在组装的操作列表。</param>
+        private void AddScriptEvalOperations(List<IRoslynOperation> operations)
+        {
             // Only Godot's independent script eval remains. Unity uses script_run.
-            IRoslynScriptEvalProvider scriptProvider = engineProvider as IRoslynScriptEvalProvider;
+            IRoslynScriptEvalProvider scriptProvider = mEngineProvider as IRoslynScriptEvalProvider;
             IRoslynScriptEvalService scriptService = scriptProvider == null ? null : scriptProvider.ScriptEval;
             if (scriptService != null)
             {
-                operations.Add(new RoslynEvalOperation(scriptService, engineProvider.HostTargets));
+                operations.Add(new RoslynEvalOperation(scriptService, mEngineProvider.HostTargets));
                 operations.Add(new RoslynEvalResultOperation(scriptService));
                 operations.Add(new RoslynEvalPruneOperation(scriptService));
             }
+        }
 
-            if (engineProvider.Runs != null)
+        /// <summary>引擎接有运行调度器时注册查询、查找和取消操作。</summary>
+        /// <param name="operations">正在组装的操作列表。</param>
+        private void AddRunOperations(List<IRoslynOperation> operations)
+        {
+            if (mEngineProvider.Runs != null)
             {
-                operations.Add(new RoslynRunOperation(engineProvider.Runs, "run_result"));
-                operations.Add(new RoslynRunOperation(engineProvider.Runs, "run_lookup"));
-                operations.Add(new RoslynRunOperation(engineProvider.Runs, "run_cancel"));
+                operations.Add(new RoslynRunOperation(mEngineProvider.Runs, "run_result"));
+                operations.Add(new RoslynRunOperation(mEngineProvider.Runs, "run_lookup"));
+                operations.Add(new RoslynRunOperation(mEngineProvider.Runs, "run_cancel"));
             }
-
-            mOperations = operations.ToArray();
-            mHandler = new RoslynCommandHandler(gate, mOperations, engineProvider.HostTargets);
         }
 
         /// <summary>

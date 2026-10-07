@@ -14,14 +14,25 @@ namespace YokiFrame
         private const int MaxRecordBytes = 4 * 1024 * 1024;
         private readonly string mRoot;
         private readonly string mProject;
+        /// <summary>规范化项目根，并用同一路径规则计算项目身份。不创建目录。</summary>
+        /// <param name="root">项目根目录。</param>
         public LiveExportStore(string root)
         {
             mRoot = Path.GetFullPath(root);
             mProject = new LiveSnapshotStore(root).ProjectIdentity;
         }
 
+        /// <summary>返回导出记录的项目内路径。标识必须是 N 格式 GUID。</summary>
+        /// <param name="id">导出标识。</param>
+        /// <returns>记录 JSON 的绝对路径。</returns>
         public string RecordPath(string id) => LiveCodePaths.Record(mRoot, id);
+        /// <summary>返回批次记录路径，即导出记录路径加 .batch。</summary>
+        /// <param name="id">批次标识。</param>
+        /// <returns>批次文件绝对路径。</returns>
         public string BatchPath(string id) => RecordPath(id) + ".batch";
+        /// <summary>校验类名与文件名一致后，解析已有脚本的项目内路径。不检查文件是否存在。</summary>
+        /// <param name="version">含类名和相对源码路径的版本。</param>
+        /// <returns>脚本绝对路径。</returns>
         public string ScriptPath(LiveExportVersion version)
         {
             LiveCodeManager.ValidateName(version.ClassName);
@@ -30,6 +41,10 @@ namespace YokiFrame
             return LiveCodePaths.ExistingScript(mRoot, version.SourcePath, "Assets");
         }
 
+        /// <summary>把 1 到 16 个版本暂存为 Prepared 批次。先校验再归档旧版、写版本记录，最后写批次文件。</summary>
+        /// <param name="batchId">新批次标识，不能与已有批次重复。</param>
+        /// <param name="versions">同一批次内路径、类名和导出标识都不得重复。</param>
+        /// <returns>只含导出标识的 Prepared 批次。</returns>
         public LiveExportBatch Stage(string batchId, IReadOnlyList<LiveExportVersion> versions)
         {
             if (versions == null || versions.Count == 0 || versions.Count > MaxVersions)
@@ -61,6 +76,9 @@ namespace YokiFrame
             return batch;
         }
 
+        /// <summary>读取导出版本。架构 1 走旧记录，架构 2 读取目标列表并再校验。</summary>
+        /// <param name="id">导出标识，必须与记录内身份一致。</param>
+        /// <returns>校验后的版本。</returns>
         public LiveExportVersion ReadVersion(string id)
         {
             using var doc = JsonDocument.Parse(ReadText(RecordPath(id)));
@@ -83,6 +101,10 @@ namespace YokiFrame
             return version;
         }
 
+        /// <summary>把架构 1 记录补成版本对象。源码优先读旁路归档，否则读脚本，哈希不符则拒绝推断。</summary>
+        /// <param name="id">记录中的导出标识。</param>
+        /// <param name="root">已解析的旧记录根对象。</param>
+        /// <returns>无批次号的版本，含单个目标。</returns>
         private LiveExportVersion ReadLegacy(string id, JsonElement root)
         {
             if (Text(root, "exportId") != id) throw new InvalidDataException("Legacy export identity mismatch.");
@@ -104,6 +126,8 @@ namespace YokiFrame
             return version;
         }
 
+        /// <summary>旧版尚无旁路源码时，把当前读到的源码写入 .source。已有批次或归档则不覆盖。</summary>
+        /// <param name="id">上一版导出标识。</param>
         private void ArchiveLegacy(string id)
         {
             var version = ReadVersion(id);
@@ -111,6 +135,9 @@ namespace YokiFrame
                 WriteNew(RecordPath(id) + ".source", version.Source);
         }
 
+        /// <summary>读取并校验批次身份、数量和状态。不修改文件。</summary>
+        /// <param name="id">批次标识。</param>
+        /// <returns>批次及其导出标识。</returns>
         public LiveExportBatch ReadBatch(string id)
         {
             using var doc = JsonDocument.Parse(ReadText(BatchPath(id)));
@@ -135,6 +162,9 @@ namespace YokiFrame
             return batch;
         }
 
+        /// <summary>仅把 Prepared 批次标为 Queued。已提交返回 false，其他状态拒绝重放。</summary>
+        /// <param name="id">批次标识。</param>
+        /// <returns>是否新写入 Queued。</returns>
         public bool MarkQueued(string id)
         {
             var batch = ReadBatch(id);
@@ -145,6 +175,9 @@ namespace YokiFrame
             return true;
         }
 
+        /// <summary>Queued 批次记为 Failed 并保存错误。其他状态不改文件。</summary>
+        /// <param name="id">批次标识。</param>
+        /// <param name="error">失败说明。</param>
         public void FailQueued(string id, string error)
         {
             var batch = ReadBatch(id);
@@ -255,15 +288,23 @@ namespace YokiFrame
             Replace(path, ReadVersion(version.PreviousExportId).Source);
         }
 
+        /// <summary>判断脚本是否存在且内容哈希等于该版本。</summary>
+        /// <param name="version">待比较版本。</param>
+        /// <returns>路径和哈希都匹配时为 true。</returns>
         public bool MatchesSource(LiveExportVersion version) =>
             File.Exists(ScriptPath(version)) && LiveCodeManager.Hash(ReadText(ScriptPath(version))) == version.SourceHash;
 
+        /// <summary>计算脚本 .meta 的哈希。文件不存在时返回空字符串，不创建文件。</summary>
+        /// <param name="version">提供脚本路径的版本。</param>
+        /// <returns>meta 哈希或空字符串。</returns>
         public string MetaHash(LiveExportVersion version)
         {
             string path = YokiFrameFilePathPolicy.EnsureInside(mRoot, ScriptPath(version) + ".meta");
             return File.Exists(path) ? LiveCodeManager.Hash(ReadText(path)) : "";
         }
 
+        /// <summary>新导出不能覆盖已有源码或 meta；修订必须与上一版的类、路径、源码和 meta 一致。</summary>
+        /// <param name="version">即将写入或暂存的版本。</param>
         public void ValidateCurrent(LiveExportVersion version)
         {
             string path = ScriptPath(version);
@@ -280,6 +321,9 @@ namespace YokiFrame
                 throw new IOException("ExportConflict: source or metadata no longer matches the previous version.");
         }
 
+        /// <summary>序列化批次。不写盘，导出标识顺序与列表一致。</summary>
+        /// <param name="batch">批次。</param>
+        /// <returns>架构 1 的 JSON。</returns>
         public string SerializeBatch(LiveExportBatch batch)
         {
             var json = new RoslynJsonBuilder().StartObject().Property("schema", 1).Property("project", mProject)
@@ -289,6 +333,9 @@ namespace YokiFrame
             return json.EndArray().EndObject().ToString();
         }
 
+        /// <summary>序列化架构 2 版本并检查记录大小。不写盘。</summary>
+        /// <param name="version">含目标和源码的版本。</param>
+        /// <returns>未超过记录上限的 JSON。</returns>
         private string SerializeVersion(LiveExportVersion version)
         {
             var json = new RoslynJsonBuilder().StartObject().Property("schema", 2).Property("project", mProject)
@@ -305,12 +352,17 @@ namespace YokiFrame
             return text;
         }
 
+        /// <summary>核对架构号和项目身份，不匹配则拒绝记录。</summary>
+        /// <param name="root">JSON 根对象。</param>
+        /// <param name="expected">期望架构号。</param>
         private void CheckHeader(JsonElement root, int expected)
         {
             if (!root.GetProperty("schema").TryGetInt32(out int schema) || schema != expected || Text(root, "project") != mProject)
                 throw new InvalidDataException("Export schema/project mismatch.");
         }
 
+        /// <summary>校验版本身份、路径、源码哈希和最多 64 个不重复目标。不写盘。</summary>
+        /// <param name="version">待校验版本。</param>
         private void ValidateVersion(LiveExportVersion version)
         {
             RecordPath(version.ExportId);
@@ -337,12 +389,24 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>用替换写入批次记录。</summary>
+        /// <param name="batch">已更新状态的批次。</param>
         private void SaveBatch(LiveExportBatch batch) => Replace(BatchPath(batch.BatchId), SerializeBatch(batch));
+        /// <summary>读取必填字符串。缺失或 JSON null 都视为记录损坏。</summary>
+        /// <param name="root">对象。</param>
+        /// <param name="name">属性名，同时用作异常文案。</param>
+        /// <returns>属性字符串。</returns>
         private static string Text(JsonElement root, string name) => root.GetProperty(name).GetString() ?? throw new InvalidDataException(name);
+        /// <summary>拒绝 null 或 UTF-8 字节数超限的文本。</summary>
+        /// <param name="text">待测文本。</param>
+        /// <param name="bytes">允许的最大字节数。</param>
         private static void ValidateSize(string text, int bytes)
         {
             if (text == null || Encoding.UTF8.GetByteCount(text) > bytes) throw new InvalidDataException("Export record size limit exceeded.");
         }
+        /// <summary>按 UTF-8 读取已有文件。超过 4 MiB 的记录直接拒绝。</summary>
+        /// <param name="path">绝对路径。</param>
+        /// <returns>文件全文。</returns>
         public static string ReadText(string path)
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -350,12 +414,18 @@ namespace YokiFrame
             using var reader = new StreamReader(stream, new UTF8Encoding(false, true));
             return reader.ReadToEnd();
         }
+        /// <summary>仅当路径不存在时创建并写入。不覆盖已有文件。</summary>
+        /// <param name="path">新文件路径。</param>
+        /// <param name="text">全文。</param>
         public static void WriteNew(string path, string text)
         {
             using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             using var writer = new StreamWriter(stream, new UTF8Encoding(false));
             writer.Write(text);
         }
+        /// <summary>先写临时文件再替换目标。失败时删除仍存在的临时文件。</summary>
+        /// <param name="path">已有目标路径。</param>
+        /// <param name="text">替换后的全文。</param>
         public static void Replace(string path, string text)
         {
             string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

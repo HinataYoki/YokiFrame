@@ -58,6 +58,9 @@ namespace YokiFrame
             new GodotEditorSceneMutateOperation()
         };
         private readonly List<IRoslynOperation> mOperations = new List<IRoslynOperation>(sOperations);
+
+        /// <summary>追加操作。后加的操作与内置场景操作一起暴露，不替换已有描述符。</summary>
+        /// <param name="operations">要追加的操作。</param>
         public void AddOperations(params IRoslynOperation[] operations) => mOperations.AddRange(operations);
 
         /// <summary>获取 Godot 专有操作：场景查询（当前编辑场景）。</summary>
@@ -116,6 +119,8 @@ namespace YokiFrame
             };
         }
 
+        /// <summary>读取编辑器是否正在播放场景。宿主未初始化或接口抛错时按编辑态处理，不把异常冒泡成命令失败。</summary>
+        /// <returns>正在播放时返回 true。</returns>
         private static bool IsPlaying()
         {
             try
