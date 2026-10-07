@@ -11,7 +11,6 @@
     <Project Path="src/YokiFrame.Tooling.Application/YokiFrame.Tooling.Application.csproj" />
     <Project Path="src/YokiFrame.Workbench.Avalonia/YokiFrame.Workbench.Avalonia.csproj" />
     <Project Path="../Tools/TableKit/Editor/YokiFrame.TableKit.Editor.csproj" />
-    <Project Path="../Tools/RoslynKit/Runtime/YokiFrame.RoslynKit.csproj" />
     <Project Path="../Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj" />
   </Folder>
   <Folder Name="/tests/">

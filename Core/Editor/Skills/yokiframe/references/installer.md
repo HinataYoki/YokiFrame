@@ -38,7 +38,7 @@ Skill 的唯一包内来源是 `<packageRoot>/Core/Editor/Skills/yokiframe/`。�
 `installed` 只表示主 DLL 在。不要下载依赖，也不要为了跑脚本启动外部编译器。缺包时在包根执行：
 
 ```powershell
-dotnet publish "YokiFrameWorkbench~/src/YokiFrame.RoslynKit.Compiler/YokiFrame.RoslynKit.Compiler.csproj" `
+dotnet publish "YokiFrameWorkbench~/src/YokiFrame.RoslynKit.Compiler/YokiFrame.RoslynKit.Roslyn.csproj" `
   -c Release -o "<projectRoot>/.yokiframe/automation/compiler/roslyn-4.8.0"
 ```
 
