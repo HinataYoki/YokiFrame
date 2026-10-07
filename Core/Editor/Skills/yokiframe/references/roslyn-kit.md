@@ -24,7 +24,7 @@ yoki command send --kit RoslynKit --action engine_capabilities
 yoki command send --kit RoslynKit --action script_status
 ```
 
-`script_status.installed` 为 false 时，按 [installer.md](installer.md) 准备编译器，不要临时下载或调用外部编译器。
+`script_status.installed` 为 false 时，按 [installer.md](installer.md) 准备编译器，不要临时下载或调用外部编译器。Unity `6000.5` 起编译器 bundle 必须经 `CurrentAssemblies.LoadFromPath` 加载；`Assembly.LoadFrom` 会进入可回收上下文，依赖解析返回 `0x80131515`。
 
 ## 调用已有服务
 

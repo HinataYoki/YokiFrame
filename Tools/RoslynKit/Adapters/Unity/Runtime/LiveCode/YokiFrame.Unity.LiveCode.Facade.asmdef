@@ -2,9 +2,7 @@
     "name": "YokiFrame.Unity.LiveCode.Facade",
     "rootNamespace": "YokiFrame",
     "references": [],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

@@ -8,13 +8,23 @@ namespace YokiFrame
     public sealed class MethodPatchBackend
     {
         private readonly string mDirectory;
+        private readonly Func<string, Assembly> mLoadAssembly;
         private MethodInfo mApply;
         private MethodInfo mRemove;
         private bool mResolverInstalled;
 
         /// <summary>记录补丁包目录。不在构造时加载程序集。</summary>
         /// <param name="directory">包含补丁包和依赖 DLL 的目录。</param>
-        public MethodPatchBackend(string directory) { mDirectory = directory; }
+        public MethodPatchBackend(string directory) : this(directory, null) { }
+
+        /// <summary>记录补丁包目录和宿主加载器。不在构造时加载程序集。</summary>
+        /// <param name="directory">包含补丁包和依赖 DLL 的目录。</param>
+        /// <param name="loadAssembly">程序集加载委托；null 时使用 <see cref="Assembly.LoadFrom"/>。</param>
+        public MethodPatchBackend(string directory, Func<string, Assembly> loadAssembly)
+        {
+            mDirectory = directory;
+            mLoadAssembly = loadAssembly;
+        }
 
         /// <summary>检查补丁包是否已随包放置。只看文件存在，不在这里加载程序集。</summary>
         public bool Installed => File.Exists(Path.Combine(mDirectory, "YokiFrame.RoslynKit.Patching.dll"));
@@ -50,7 +60,7 @@ namespace YokiFrame
                 AppDomain.CurrentDomain.AssemblyResolve += Resolve;
                 mResolverInstalled = true;
             }
-            Type type = Assembly.LoadFrom(Path.Combine(mDirectory, "YokiFrame.RoslynKit.Patching.dll"))
+            Type type = LoadBundle(Path.Combine(mDirectory, "YokiFrame.RoslynKit.Patching.dll"))
                 .GetType("YokiFrame.RoslynKit.Patching.MethodPatcher", true);
             mApply = type.GetMethod("Apply");
             mRemove = type.GetMethod("Remove");
@@ -71,7 +81,16 @@ namespace YokiFrame
             string path = Path.Combine(mDirectory, name.Name + ".dll");
             if (!File.Exists(path)) return null;
             if (AssemblyName.GetAssemblyName(path).FullName != name.FullName) return null;
-            return Assembly.LoadFrom(path);
+            // Unity 6.5 默认 LoadFrom 进入可回收上下文，Harmony 依赖随后返回 0x80131515。
+            return LoadBundle(path);
+        }
+
+        /// <summary>按宿主委托加载补丁程序集；未提供委托时保留路径加载。</summary>
+        /// <param name="path">程序集绝对路径。</param>
+        /// <returns>已加载程序集。</returns>
+        private Assembly LoadBundle(string path)
+        {
+            return mLoadAssembly == null ? Assembly.LoadFrom(path) : mLoadAssembly(path);
         }
 
         /// <summary>调用静态补丁 API。目标异常保留原栈重新抛出。</summary>

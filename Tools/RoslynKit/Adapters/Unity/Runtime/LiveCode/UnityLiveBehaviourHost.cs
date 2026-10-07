@@ -10,6 +10,7 @@ namespace YokiFrame
     /// <summary>
     /// 预编译的 Editor 帧宿主。转发生命周期、物理回调和延迟调用，不承载用户业务。
     /// 与原型外观同程序集：外观要被内存编译引用，宿主要被场景 AddComponent，两者互相持有。
+    /// 程序集只含 Editor 平台，但目录不能叫 Editor，否则 Play Mode 会拒绝挂载。
     /// </summary>
     [AddComponentMenu("")]
     public sealed partial class UnityLiveBehaviourHost : MonoBehaviour

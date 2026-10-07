@@ -27,6 +27,7 @@ namespace YokiFrame
         private readonly IReadOnlyList<string> mCandidateDirectories;
         private readonly string mReferenceDirectory;
         private readonly Func<byte[], byte[], Assembly> mLoadAssembly;
+        private readonly Func<string, Assembly> mLoadCompilerAssembly;
         private MethodInfo mCompile;
         private volatile string mResolvedDirectory;
         private readonly object mLoadLock = new object();
@@ -108,6 +109,22 @@ namespace YokiFrame
             Func<byte[], byte[], Assembly> loadAssembly = null)
             : this(projectRoot, Array.Empty<string>(), referenceDirectory, loadAssembly)
         {
+        }
+
+        /// <summary>
+        /// 建立编译器加载器，并允许宿主替换编译器 bundle 的加载方式。
+        /// </summary>
+        /// <param name="projectRoot">工程根；<see cref="RELATIVE_PATH"/> 以它为基准。</param>
+        /// <param name="compilerDirectories">优先尝试的编译器目录（通常为包内 bundle）。</param>
+        /// <param name="referenceDirectory">编译引用程序集目录；null 时由调用方另行提供。</param>
+        /// <param name="loadAssembly">用户脚本 PE/PDB 加载委托；null 时使用 <see cref="Assembly.Load(byte[], byte[])"/>。</param>
+        /// <param name="loadCompilerAssembly">编译器 bundle 加载委托；null 时加载到不可回收上下文。</param>
+        public RoslynCompilerLoader(string projectRoot, IReadOnlyList<string> compilerDirectories,
+            string referenceDirectory, Func<byte[], byte[], Assembly> loadAssembly,
+            Func<string, Assembly> loadCompilerAssembly)
+            : this(projectRoot, compilerDirectories, referenceDirectory, loadAssembly)
+        {
+            mLoadCompilerAssembly = loadCompilerAssembly;
         }
 
         /// <summary>
@@ -257,7 +274,11 @@ namespace YokiFrame
                     AppDomain.CurrentDomain.AssemblyResolve += ResolveDependency;
                     mResolverInstalled = true;
                 }
-                Assembly compiler = Assembly.LoadFrom(Path.Combine(directory, COMPILER_ASSEMBLY_NAME));
+                string compilerPath = Path.Combine(directory, COMPILER_ASSEMBLY_NAME);
+                // 宿主未提供加载器时保留旧路径；Unity 6.5 必须由 Adapter 注入不可回收加载器。
+                Assembly compiler = mLoadCompilerAssembly == null
+                    ? Assembly.LoadFrom(compilerPath)
+                    : mLoadCompilerAssembly(compilerPath);
                 mCompile = compiler.GetType("YokiFrame.RoslynKit.Compiler.MemoryCompiler", true).GetMethod("Compile");
                 if (mCompile == null) throw new InvalidOperationException("Compiler bundle has an incompatible API.");
             }
@@ -275,7 +296,8 @@ namespace YokiFrame
             if (!File.Exists(path)) return null;
             AssemblyName bundled = AssemblyName.GetAssemblyName(path);
             if (bundled.FullName != requested.FullName) return null;
-            return Assembly.LoadFrom(path);
+            // Unity 6.5 的默认 LoadFrom 会进入可回收上下文，其依赖随后无法被 AssemblyResolve 返回。
+            return mLoadCompilerAssembly == null ? Assembly.LoadFrom(path) : mLoadCompilerAssembly(path);
         }
 
         public void Dispose()

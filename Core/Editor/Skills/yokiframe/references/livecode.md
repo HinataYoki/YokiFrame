@@ -78,7 +78,7 @@
 
 ### 原型之间怎么互相调用
 
-facade 是普通类（`YokiFrame.UnityLiveBehaviour`），位于 Editor-only 程序集 `YokiFrame.Unity.LiveCode.Facade`。内存编译只引用这个外观和运行时程序集，不引用 `YokiFrame.Unity.Editor`。**Unity 原生 SendMessage / SendMessageUpwards / BroadcastMessage 不转发到原型**。使用显式按 ID 调用：
+facade 是普通类（`YokiFrame.UnityLiveBehaviour`），位于运行时程序集 `YokiFrame.Unity.LiveCode.Facade`。它不能限制为 Editor 平台，也不能放在名为 `Editor` 的目录，否则 Play Mode 会拒绝 `AddComponent`；源码使用整文件 `UNITY_EDITOR` 宏，Player 不编译这些类型。内存编译只引用这个外观和运行时程序集，不引用 `YokiFrame.Unity.Editor`。**Unity 原生 SendMessage / SendMessageUpwards / BroadcastMessage 不转发到原型**。使用显式按 ID 调用：
 
 ```csharp
 // 原型方法内；目标方法须声明为 public。

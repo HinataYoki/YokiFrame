@@ -8,7 +8,8 @@ namespace YokiFrame
 {
     /// <summary>
     /// Play 原型外观。用户成员编译后继承它，由同名宿主转发生命周期。
-    /// 单独放在 Editor-only 程序集：内存编译需要引用它，Player 又不能带上原型类型。
+    /// 单独放在 Editor-only 程序集，且源码不能位于名为 Editor 的目录：
+    /// 内存编译需要引用它，Player 又不能带上原型类型；Play Mode 会拒绝把 Editor 目录脚本 AddComponent 到场景对象。
     /// </summary>
     public abstract class UnityLiveBehaviour
     {

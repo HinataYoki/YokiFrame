@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 #if UNITY_6000_5_OR_NEWER
@@ -106,12 +107,13 @@ namespace YokiFrame
                 ResolveSettingsPath(), "scripts.trustedCSharp", "trustedCSharp");
             sLivePermission = () => !settingsSource.Read().BlocksExecution && !trustedSource.Read().BlocksExecution;
             var compiler = new RoslynCompilerLoader(projectRoot,
-                new[] { ResolvePackageDirectory(RoslynCompilerLoader.PACKAGE_RELATIVE_PATH) });
+                new[] { ResolvePackageDirectory(RoslynCompilerLoader.PACKAGE_RELATIVE_PATH) },
+                null, null, LoadCompilerAssembly);
             var budget = new RoslynLoadBudget();
             var liveHost = new UnityLiveCodeHost(projectRoot,
                 (id, method, arguments) => sLiveCode.Invoke(id, method, arguments, () => { }));
             sLiveCode = new LiveCodeManager(compiler, budget,
-                new MethodPatchBackend(ResolvePatchBundle(projectRoot)),
+                new MethodPatchBackend(ResolvePatchBundle(projectRoot), LoadCompilerAssembly),
                 liveHost,
                 engineProvider.ReadDomainState, sLivePermission, projectRoot);
             var scripts = new RoslynScriptOperations(scheduler,
@@ -187,6 +189,21 @@ namespace YokiFrame
             if (File.Exists(Path.Combine(packaged, "0Harmony.dll"))) return packaged;
             return Path.GetFullPath(Path.Combine(projectRoot,
                 ".yokiframe/automation/patches/harmonyx-2.16.1".Replace('/', Path.DirectorySeparatorChar)));
+        }
+
+        /// <summary>
+        /// 加载 Roslyn bundle。Unity 6.5 起默认 <c>Assembly.LoadFrom</c> 会进入可回收上下文，
+        /// 依赖解析随后返回 0x80131515，因此必须走当前不可回收的程序集上下文。
+        /// </summary>
+        /// <param name="path">编译器或依赖程序集绝对路径。</param>
+        /// <returns>已加载程序集。</returns>
+        private static Assembly LoadCompilerAssembly(string path)
+        {
+#if UNITY_6000_5_OR_NEWER
+            return CurrentAssemblies.LoadFromPath(path);
+#else
+            return Assembly.LoadFrom(path);
+#endif
         }
 
         /// <summary>

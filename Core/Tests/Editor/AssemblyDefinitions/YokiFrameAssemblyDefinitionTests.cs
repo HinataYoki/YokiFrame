@@ -19,7 +19,7 @@ namespace YokiFrame
         private const string UNITY_EDITOR_ASMDEF_PATH = "Assets/YokiFrame/Core/Adapters/Unity/Editor/YokiFrame.Unity.Editor.asmdef";
         private const string UNITY_RUNTIME_ASMDEF_PATH = "Assets/YokiFrame/Core/Adapters/Unity/Runtime/YokiFrame.Unity.Runtime.asmdef";
         private const string LIVE_CODE_FACADE_ASMDEF_PATH =
-            "Assets/YokiFrame/Tools/RoslynKit/Adapters/Unity/Editor/LiveCode/Facade/YokiFrame.Unity.LiveCode.Facade.asmdef";
+            "Assets/YokiFrame/Tools/RoslynKit/Adapters/Unity/Runtime/LiveCode/YokiFrame.Unity.LiveCode.Facade.asmdef";
         private const string LEGACY_UNITY_EDITOR_ASMDEF_PATH = "Assets/YokiFrame/Core/Editor/YokiFrame.Unity.Editor.asmdef";
         private const string UNITY_RUNTIME_ADAPTER_PATH_FRAGMENT = "/Assets/YokiFrame/Core/Adapters/Unity/Runtime/";
         private const string GODOT_RUNTIME_ADAPTER_PATH_FRAGMENT = "/Assets/YokiFrame/Core/Adapters/Godot/Runtime/";
@@ -55,17 +55,27 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 LiveCode 原型外观单独成 Editor-only 程序集，供内存编译引用且不进入 Player。
+        /// 验证 LiveCode 原型外观是运行时程序集，且不放在名为 Editor 的目录；Player 类型由整文件宏排除。
         /// </summary>
         [Test]
-        public void LiveCodeFacadeAssemblyIsEditorOnly()
+        public void LiveCodeFacadeAssemblyCanAttachDuringPlayMode()
         {
             AssertAssembly(LIVE_CODE_FACADE_ASMDEF_PATH, "YokiFrame.Unity.LiveCode.Facade", "7c4e1a9b2d6f4e0a8b3c5d7e9f102346", false);
             string asmdef = File.ReadAllText(Path.Combine(Application.dataPath, "..", LIVE_CODE_FACADE_ASMDEF_PATH));
-            Assert.IsTrue(
-                Regex.IsMatch(asmdef, "\\\"includePlatforms\\\"\\s*:\\s*\\[\\s*\\\"Editor\\\"\\s*\\]"),
-                "LiveCode 原型外观必须只包含 Editor 平台，禁止进入 Player。");
+            Assert.IsFalse(
+                Regex.IsMatch(asmdef, "\\\"includePlatforms\\\"\\s*:\\s*\\[[^\\]]*\\\"Editor\\\"[^\\]]*\\]"),
+                "LiveCode 原型外观不能限制为 Editor 平台，否则 Play Mode 拒绝 AddComponent。");
             Assert.IsFalse(asmdef.Contains("YokiFrame.Unity.Editor"), "原型外观不能反向依赖 Unity Editor 适配器。");
+            Assert.IsFalse(
+                LIVE_CODE_FACADE_ASMDEF_PATH.Contains("/Editor/"),
+                "LiveCode 原型外观不能放在名为 Editor 的目录，否则 Play Mode 拒绝 AddComponent。");
+            string facadeDirectory = Path.GetDirectoryName(Path.Combine(Application.dataPath, "..", LIVE_CODE_FACADE_ASMDEF_PATH));
+            string[] sources = Directory.GetFiles(facadeDirectory, "*.cs", SearchOption.TopDirectoryOnly);
+            Assert.Greater(sources.Length, 0, "LiveCode 原型外观缺少源码。");
+            for (int index = 0; index < sources.Length; index++)
+            {
+                AssertWholeFileGuard(sources[index], UNITY_EDITOR_ADAPTER_DEFINE);
+            }
         }
 
         /// <summary>
