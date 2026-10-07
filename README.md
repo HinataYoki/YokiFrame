@@ -208,6 +208,7 @@ string title = LocalizationKit.Get(1001);
 | **SpatialKit** | HashGrid、Quadtree 和 Octree 空间查询 | [SpatialKit](Documentation~/Api/03-Tool/SpatialKit.md) |
 | **TableKit** | Luban 配置生成和运行时读取 | [TableKit](Documentation~/Api/03-Tool/TableKit.md) |
 | **UIKit** | Unity 面板、绑定、动画和代码生成 | [UIKit](Documentation~/Api/03-Tool/UIKit.md) |
+| **RoslynKit** | 操作当前编辑器：进播放、查场景、调用已有服务；不退出播放时试行为 | [RoslynKit](Documentation~/Api/03-Tool/RoslynKit.md) |
 
 ---
 
@@ -216,7 +217,7 @@ string title = LocalizationKit.Get(1001);
 | 工具 | 用途 |
 |------|------|
 | **Workbench** | Avalonia 桌面工具，实时查看项目状态、Kit 运行态与诊断信息 |
-| **`yoki` CLI** | 脚本化读取、诊断与执行已声明的受控操作，默认只读 |
+| **`yoki` CLI** | 脚本化读取、诊断、宿主操作和受信任内存 C#。改变宿主状态前先看 RoslynKit 开关 |
 | **Installer** | 图形化安装、更新与回滚，支持 Unity 本地 / Git URL 与 Godot 本地安装 |
 
 工具链面向开发者和 AI 工具，运行时诊断不会进入 Player 构建。安装相关的自动化流程见 [AI 安装指引](Documentation~/Guides/AI-Install.md)。

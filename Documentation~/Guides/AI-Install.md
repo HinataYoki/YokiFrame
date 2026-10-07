@@ -146,12 +146,7 @@ if (-not (Test-Path -LiteralPath $yoki)) {
 
 核对差异后同步 `SKILL.md` 和相关 `references/*.md`；保留用户自定义内容，不复制 `.meta`，不删除整个目录来完成仅文档更新。验收文件内容与内部链接，特别是 `roslyn-kit.md`、`cli-commands.md` 和 `installer.md`。Skill 中引用包内设计/API 时先解析包根，不能以安装目录的 `../` 层数推算。
 
-**文档安装不等于 Roslyn 能力安装。** 当前内存 C# 已在 Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime 真机验证，仍需新宿主操作面、可用 CLI、项目级 Roslyn 编译器包和显式受信任执行授权；安装器自动分发尚未接入。Godot 使用 project.godot 的 `yokiframe/engine/trusted_csharp` 布尔设置；Capture/Patch/Export/Bind 未实现。
-
-- 编译器目录为 `<projectRoot>/.yokiframe/automation/compiler/roslyn-4.8.0/`。本节的 Runtime bootstrap 和 Installer 事务目前不会生成它；开发阶段构建步骤见 Skill 的 `references/installer.md`。
-- `RoslynKit/script_status` 的 `installed` 表示主 DLL 存在，不能单凭它宣告完整依赖加载成功；需一次真实 C# 编译/执行验收。
-- 已准备编译器包后的每次脚本执行不调用外部 SDK、Node 或 csc。本文前述 .NET SDK/C++ 工具链属于从源码构建/安装工具的前置条件，不能混为日常脚本运行依赖。
-- 更新 Skill 不自动更新已安装的 CLI，不自动启用 `RoslynKit/scripts.trustedCSharp`，不创建测试入口或回退到落盘 eval。
+更新 Skill 不更新 `yoki`，也不打开 RoslynKit 执行开关。编译器是否可用看 `script_status.installed`，准备方式见 Skill 的 `references/installer.md`。开关和调用方式见 `references/roslyn-kit.md`。本文的 .NET SDK 与 C++ 工具链只用于构建 Workbench、Installer 和 `yoki`。
 
 ## 执行安装事务
 

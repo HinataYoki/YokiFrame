@@ -15,7 +15,7 @@ YokiFrame 是面向 Unity 2022.3+ 和 Godot .NET 的跨宿主 C# 游戏框架。
 - 处理音频、存档、本地化、空间索引和数据表
 - 在 Unity 中搭建 UI、Inspector 和编辑器生成流程
 
-YokiFrame 不替代 Unity 或 Godot 编辑器，也不负责通用 Scene、Prefab、Asset、Play Mode、截图或输入自动化。这些工作仍由对应引擎或专用工具完成。
+编辑器里的播放、场景和截图不是上面这些 Kit 的游戏接口。需要让当前编辑器动起来，或在不退出播放时试一段行为，使用 [RoslynKit](../03-Tool/RoslynKit.md)。新功能仍写普通代码。
 
 ## 能做什么
 
@@ -32,6 +32,7 @@ YokiFrame 不替代 Unity 或 Godot 编辑器，也不负责通用 Scene、Prefa
 | 从 Luban 数据表生成 C# 类型并在运行时读取 | `TableKit` |
 | 搭建 Unity 面板、绑定和 Inspector | `UIKit`、`InspectorKit` |
 | 生成编辑器侧 C# 代码 | `CodeGenKit` |
+| 让当前编辑器进播放、查场景，或在不退出播放时试行为 | [RoslynKit](../03-Tool/RoslynKit.md) |
 
 ## 选择入口
 
@@ -43,7 +44,7 @@ YokiFrame 不替代 Unity 或 Godot 编辑器，也不负责通用 Scene、Prefa
 | 查看当前项目、运行态和 Kit 证据 | Workbench | 只显示已有真实数据链路的页面，默认用于观察和诊断 |
 | 脚本化读取、诊断或执行已声明操作 | `yoki` CLI | 默认只读；改变项目或宿主状态的命令需要明确触发 |
 | 安装、更新或回滚 YokiFrame | Installer | 安装流程由专门的 AI 安装指引说明 |
-| 操作 Scene、Prefab、Asset、Play Mode、截图或输入 | Unity/Godot 或外部工具 | 不属于 YokiFrame Runtime API |
+| 进播放、查改场景、截图，或在不退出播放时试行为 | [RoslynKit](../03-Tool/RoslynKit.md) | 用 `yoki`。实现新功能仍写普通代码 |
 
 ## 三层状态
 
@@ -79,6 +80,7 @@ Workbench 页面存在不代表可以修改 Runtime；Runtime API 已实现也�
 | SpatialKit | 已实现 | 已实现 | 已实现 | [SpatialKit](../03-Tool/SpatialKit.md) |
 | TableKit | 已实现（生成后） | 未完成 | 已实现（Luban 生成） | [TableKit](../03-Tool/TableKit.md) |
 | UIKit | 已实现（Unity 专属） | 已实现（Unity Editor） | 已实现 | [UIKit](../03-Tool/UIKit.md) |
+| RoslynKit | 不提供。只在编辑器里操作宿主，不进 Player | 已实现 | 无专页 | [RoslynKit](../03-Tool/RoslynKit.md) |
 
 ## 关键边界
 
@@ -91,6 +93,7 @@ Workbench 页面存在不代表可以修改 Runtime；Runtime API 已实现也�
 - TableKit 是离线生成入口；项目尚未生成代码时，不存在对应的 Runtime 类型。
 - AudioKit 和 SaveKit 的 Interaction 以只读观察为主，不提供会改变运行时业务状态的控制操作。
 - UIKit 只支持 Unity，不为 Godot 提供兼容壳或占位能力。
+- RoslynKit 不进入 Player，也没有 Workbench 专页。命令和限制不在本页重复。
 
 ## 从这里继续
 

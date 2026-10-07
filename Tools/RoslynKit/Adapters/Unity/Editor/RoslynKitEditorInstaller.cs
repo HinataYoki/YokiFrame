@@ -133,7 +133,7 @@ namespace YokiFrame
 
         /// <summary>
         /// 解析 HarmonyX 补丁负载目录：包内 <c>Dependencies~</c> 优先，
-        /// 独立分发的项目本地回退路径次之（见 Engine-LiveCode-Contract §3）。
+        /// 独立分发时回退到项目 <c>.yokiframe/automation/patches/harmonyx-2.16.1</c>。
         /// </summary>
         /// <param name="projectRoot">Unity 工程根。</param>
         /// <returns>补丁负载目录绝对路径。</returns>

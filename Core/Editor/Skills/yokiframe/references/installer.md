@@ -26,23 +26,16 @@ Skill 的唯一包内来源是 `<packageRoot>/Core/Editor/Skills/yokiframe/`。�
 
 完整框架安装流程见包根 `Documentation~/Guides/AI-Install.md`。在源码开发项目中只更新 Skill 不需要、也不能对本项目运行覆盖源码的框架安装事务。
 
-## Roslyn 自动化的安装边界
+## Roslyn 编译器
 
-Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime 的内存 C# 已实现并真机验证；正式安装器分发仍未完成。Godot 的 Capture/Patch/Export/Bind 未实现，不把宿主接线当成功能完全相同。按四层分别检查：
+做法在 [roslyn-kit.md](roslyn-kit.md)。更新 Skill 不更新 `yoki`，也不打开执行开关。
 
-| 层 | 检查方式 | 缺失时 |
-|---|---|---|
-| Skill | `SKILL.md`、`references/roslyn-kit.md`、`references/cli-commands.md` 为同版 | 更新文档，不修改运行权限 |
-| CLI | 新构建支持 `yoki script`；已有 CLI 可发送 `RoslynKit/script_run` | 报告 CLI 版本不匹配；不要假称复制 Skill 会升级可执行文件 |
-| Unity 宿主 | 在线 `engine_capabilities` 有 `script_run` / `script_status` / `run_*` / `object_list` / `object_describe`，没有 `entry_*` 或 Unity eval | 先更新桥接并完成一次正常 Unity 编译，不回退到落盘 eval |
-| Godot 宿主 | .NET/Tools 正式 Editor 插件及 Runtime Bootstrap 分别发布上述操作，target=editor/runtime | 先正常构建并重启宿主；不把 GDScript eval 当成 C# 回退 |
-| 编译器包 | `script_status` 的 `installed=true`；实际脚本还须通过编译/加载验证 | 返回 `ScriptCompilerUnavailable`，不临时下载、不启动外部编译器 |
+编译器入口是 `YokiFrame.RoslynKit.Compiler.dll`。先看 `script_status.installed`。
 
-编译器优先使用包内 `Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/`，项目本地回退目录是 `.yokiframe/automation/compiler/roslyn-4.8.0/`。入口 DLL 是 `YokiFrame.RoslynKit.Compiler.dll`。`installed` 只检查主 DLL 存在，不代表所有依赖兼容已验证。**当前 Runtime bootstrap / Installer 尚未自动分发此目录**，不能把“框架安装成功”说成“Roslyn 已就绪”。
+- Unity：包内 `Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/`。本地包和 Git URL 会带上。`installed=true` 时不要再发布。
+- Godot：安装投影不含 `Adapters/Unity`，所以 add-on 里没有这份编译器。只有 `installed=false` 时，才把 bundle 放到 `.yokiframe/automation/compiler/roslyn-4.8.0/`。
 
-旧属性/入口 API 已删除，是破坏性变更。升级前检查业务脚本中的 `YokiFrameEntry` / `EntryContext`、旧 CLI 调用方及 `Assets/YokiFrame.Eval/Editor/` 残留并迁移；Installer 尚无自动阻断此类引用的预检，不自动删除用户脚本。历史运行文件保持原位，可用 `run_result/run_lookup` 只读查询。
-
-开发者从源码准备编译器包时可在包根执行以下命令；这是安装/构建步骤，不是每次自动化任务的依赖：
+`installed` 只表示主 DLL 在。不要下载依赖，也不要为了跑脚本启动外部编译器。缺包时在包根执行：
 
 ```powershell
 dotnet publish "YokiFrameWorkbench~/src/YokiFrame.RoslynKit.Compiler/YokiFrame.RoslynKit.Compiler.csproj" `

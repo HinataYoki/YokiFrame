@@ -1,12 +1,12 @@
 # LiveCode：行为原型、零编译调参与显式恢复
 
-> **实现范围**：Unity Play 行为及 Godot 4.7 .NET/Tools editor/runtime 行为、批量、调参、恢复已验证。Patch 与 Export/Bind 仅 Unity；Godot 不支持 Capture。Player/IL2CPP 不支持。宿主侧契约见包根 `Documentation~/Guides/Engine-LiveCode-Contract.md`；Godot 差异见本页末节。
+> Unity Play 可做行为、补丁、调参、快照和导出。Godot editor/runtime 可做行为、批量、调参和恢复，不能 Patch、Export、Bind、Capture。Player 不支持。Godot 差异在本页末节。
 >
-> 需要「先让用户在运行态里调手感，满意后再落盘成 Mono」时用这一页。只想读状态、截图、跑断言，用 [roslyn-kit.md](roslyn-kit.md) 的 `yoki script`，不要起 LiveCode。
+> 只有用户明确要求不退出 Play 就改行为或调参，或点名 LiveCode 时，才读这一页。实现功能默认写正式 `.cs` 并落盘。只读状态、截图或断言用 [roslyn-kit.md](roslyn-kit.md)，不要起 LiveCode。
 
 ## 给 Agent 的硬边界
 
-Play Mode 里改行为、调数值、截图和断言，默认走内存编译，**不要**为了试一次就改 `Assets` 下的 `.cs`。下面这些是当前实现做不到的，撞上就停，不要换一种写法再试。
+已经决定走本页时，试手感用内存编译，不要为了试一次就改正式 `.cs`。下面这些做不到，撞上就停，改回正式代码，不要换一种临时写法再试。
 
 **硬限制，不能靠重试绕过：**
 
@@ -41,7 +41,7 @@ Play Mode 里改行为、调数值、截图和断言，默认走内存编译，*
 
 | 调用 | 语义 |
 |---|---|
-| `RoslynKit/LiveCode.Patch` | 用完整 static patch 类拦截已有方法；`replace` 是 bool prefix |
+| `await engine.LiveCode.Patch(id, originalMethod, source, patchType, patchMethod, "replace")` | 脚本内 API，不是 CLI action。用完整 static patch 类拦截已有方法；`replace` 是 bool prefix |
 | `engine.LiveCode.Attach(id, target, className, members)` | 把成员源码编译成临时行为挂到 **Play 场景对象**上 |
 | `await engine.LiveCode.AttachMany(requests)` | 1..64 个 `LiveAttachmentRequest(id,target,className,members)`，整批预检/准备后激活，返回逐项结果 |
 | `engine.LiveCode.ReadField(id, name)` / `SetField(id, name, value)` | 读写**已声明的 public / SerializeField** 字段 |
@@ -142,7 +142,6 @@ private void Awake()
   binding=true 的中断旧记录不自动认领。旧 manifest 不改写。
 - 批次中断为 Queued/Committing 或响应未知时先查状态，不能自动重放；Failed/Partial 先
   核对文件。提交与编译是两个阶段，暂存的 Roslyn 校验不证明 Unity asmdef 引用正确。
-- 详细签名、限制和验收见包根 `Documentation~/Guides/Engine-LiveCode-Export-Contract.md`。
 - 稳定代码也可直接维护 Assets 下正常 .cs，编译后按真实类型加组件，无需 LiveCode。Bind 会通过 Undo 加组件、恢复字段并保存原场景，必须明确授权；不要为自动化擅自保存或覆盖用户脏场景。
 - `Bind` / `live_remove` / 重挂之后，旧 handle 可能报 `ObjectHandleExpired` 或
   `A behaviour ID cannot silently move to another object`。重建过场景对象后，先
@@ -247,7 +246,6 @@ Snapshot 的 complete 只覆盖支持字段，不是整个场景。Patch、Fault
   托管对象不支持。集合嵌套用 Serializable 数据类包装；同一 Unity 对象的多处引用支持。
   含引用的非 null 数据对象通过受信任 SetField 设置，JSON 不接受对象引用。
 - 回调异常禁用 host 并报 status=unavailable；手动 enabled=true 不清 Faulted。同 ID Attach 可用修复后源码重建，故障字段不自动迁移；框架不回滚任意副作用。
-- RoslynKit/asset_ops refresh 曾出现未复验的 UnknownCommand；2026-10-06 稳定宿主已通过 FileBridge 复验成功。新故障应记录 requestId、session、在线 catalog 和错误，不据旧记录认定永久不支持，也不自动重放。
 - Unity 与 Godot 均有 Snapshot/Restore、AttachMany、零编译字段、预算预警和文件热载。不自动重载或重放。
 
 ## Godot .NET / Tools 差异

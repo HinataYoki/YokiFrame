@@ -47,5 +47,7 @@ CLI 的未知选项、非法数值或缺失必填项会在进入命令前直接�
 | FsmKit 不更新 | 确认 Unity/Godot 生命周期持续调用对应的更新入口，并且 FSM 已 `Start`。 |
 | UIKit Root 设置无效 | 在第一次 UIKit 变更前注册 Prefab Variant；Root 创建后不能替换。 |
 | ResKit 返回空资源 | 确认 Provider 已安装、路径是宿主定义的 location，并检查资源是否真的存在。 |
+| RoslynKit 拒绝执行或编译器不可用 | 按 Skill `roslyn-kit.md` 看 `engine_capabilities` 和 `script_status`，再核对两个开关。`installed=false` 时按 `installer.md` 准备编译器。 |
+| 进播放后脚本仍停在编辑器 | `play_control` 只表示已接受。`domain_state` 确认 `isPlaying` 后，再用 `yoki script --target play` 和 `gameFrame`。 |
 
 更多限制以对应 Kit 的 API 页面为准。
