@@ -112,7 +112,9 @@ internal sealed class InstallerApplicationFixture : IDisposable
     /// </summary>
     private void CreateSourcePackage()
     {
-        WriteText(Path.Combine(SourcePackageRoot, "package.json"), "{\"name\":\"com.hinatayoki.yokiframe\"}");
+        WriteText(
+            Path.Combine(SourcePackageRoot, "package.json"),
+            "{\"name\":\"com.hinatayoki.yokiframe\",\"version\":\"2.0.3\"}");
         WriteText(Path.Combine(SourcePackageRoot, "Documentation~", "README.md"), "fixture");
         WriteText(Path.Combine(SourcePackageRoot, "Core", "Runtime", "CoreMarker.cs"), "namespace Fixture; public sealed class CoreMarker { }");
         WriteText(

@@ -14,6 +14,15 @@ namespace YokiFrame
     {
         private static readonly object sLock = new();
         private static readonly Dictionary<Type, ArchitectureDebugInfo> sInfos = new();
+        private sealed class LiveService
+        {
+            internal string Id;
+            internal WeakReference<IService> Reference;
+            internal readonly List<Type> Contracts = new();
+        }
+
+        private static readonly Dictionary<Type, List<LiveService>> sLiveServices = new();
+        private static readonly Dictionary<Type, WeakReference<IArchitecture>> sArchitectures = new();
         private static long sDiagnosticVersion;
 
         /// <summary>
@@ -62,7 +71,11 @@ namespace YokiFrame
                 info.InstanceHash = architecture != null ? RuntimeHelpers.GetHashCode(architecture) : 0;
                 info.IsAlive = architecture != null;
                 info.Initialized = initialized;
-                UpdateServices(info, services);
+                if (!sArchitectures.TryGetValue(architectureType, out var oldArchitecture)
+                    || !oldArchitecture.TryGetTarget(out var oldInstance) || !ReferenceEquals(oldInstance, architecture))
+                    sLiveServices.Remove(architectureType);
+                sArchitectures[architectureType] = new WeakReference<IArchitecture>(architecture);
+                UpdateServices(architectureType, info, services);
                 BumpDiagnosticVersion();
             }
         }
@@ -88,12 +101,15 @@ namespace YokiFrame
                     return;
                 }
 
-                if (architecture != null && info.InstanceHash != RuntimeHelpers.GetHashCode(architecture))
+                if (architecture != null && (!sArchitectures.TryGetValue(architectureType, out var current)
+                    || !current.TryGetTarget(out var instance) || !ReferenceEquals(instance, architecture)))
                 {
                     return;
                 }
 
                 info.IsAlive = false;
+                sLiveServices.Remove(architectureType);
+                sArchitectures.Remove(architectureType);
                 if (architecture != null)
                 {
                     info.InstanceHash = RuntimeHelpers.GetHashCode(architecture);
@@ -132,6 +148,8 @@ namespace YokiFrame
             lock (sLock)
             {
                 sInfos.Clear();
+                sLiveServices.Clear();
+                sArchitectures.Clear();
                 BumpDiagnosticVersion();
             }
         }
@@ -191,21 +209,126 @@ namespace YokiFrame
         /// <param name="info">架构诊断记录。</param>
         /// <param name="services">架构服务表。</param>
         private static void UpdateServices(
+            Type architectureType,
             ArchitectureDebugInfo info,
             IEnumerable<KeyValuePair<Type, IService>> services)
         {
             info.Services.Clear();
+            sLiveServices.TryGetValue(architectureType, out var previous);
+            var live = new List<LiveService>();
             if (services != null)
             {
                 foreach (KeyValuePair<Type, IService> pair in services)
                 {
                     AddServiceInfo(info.Services, pair.Key, pair.Value);
+                    if (pair.Key == null || pair.Value == null) continue;
+                    LiveService registration = FindService(live, pair.Value);
+                    if (registration == null)
+                    {
+                        var old = FindService(previous, pair.Value);
+                        registration = new LiveService
+                        {
+                            Id = old == null ? Guid.NewGuid().ToString("N") : old.Id,
+                            Reference = new WeakReference<IService>(pair.Value)
+                        };
+                        live.Add(registration);
+                    }
+                    registration.Contracts.Add(pair.Key);
                 }
 
                 info.Services.Sort(CompareServices);
             }
 
             info.ServiceCount = info.Services.Count;
+            sLiveServices[architectureType] = live;
+        }
+
+        /// <summary>Resolves an already registered service without initializing an architecture.</summary>
+        public static bool TryResolveLiveService(
+            Type serviceType, string architectureName, out IService service, out string reason)
+        {
+            service = null;
+            reason = "No initialized architecture has a live service of the requested type.";
+            if (serviceType == null) return false;
+            lock (sLock)
+            {
+                foreach (var pair in sLiveServices)
+                {
+                    ArchitectureDebugInfo info = sInfos[pair.Key];
+                    if (!IsLiveArchitecture(pair.Key, info)) continue;
+                    if (!string.IsNullOrEmpty(architectureName) && pair.Key.FullName != architectureName) continue;
+                    foreach (var registration in pair.Value)
+                    {
+                        if (!registration.Reference.TryGetTarget(out IService candidate) || !serviceType.IsInstanceOfType(candidate))
+                            continue;
+                        if (service != null && !ReferenceEquals(service, candidate))
+                        {
+                            service = null;
+                            reason = "Multiple live services match; specify the architecture's full name.";
+                            return false;
+                        }
+                        service = candidate;
+                    }
+                }
+            }
+            if (service == null) return false;
+            reason = string.Empty;
+            return true;
+        }
+
+        private static LiveService FindService(List<LiveService> registrations, IService instance)
+        {
+            if (registrations == null) return null;
+            foreach (var registration in registrations)
+                if (registration.Reference.TryGetTarget(out var candidate) && ReferenceEquals(candidate, instance))
+                    return registration;
+            return null;
+        }
+
+        private static bool IsLiveArchitecture(Type type, ArchitectureDebugInfo info) =>
+            info.IsAlive && info.Initialized && sArchitectures.TryGetValue(type, out var weak)
+                && weak.TryGetTarget(out _);
+
+        /// <summary>Copies metadata only; never calls service getters, methods or enumerators.</summary>
+        public static IReadOnlyList<ArchitectureLiveServiceInfo> ReadLiveServiceCatalog(
+            int maximum, out bool truncated)
+        {
+            if (maximum < 1 || maximum > 4096) throw new ArgumentOutOfRangeException(nameof(maximum));
+            var result = new List<ArchitectureLiveServiceInfo>();
+            truncated = false;
+            lock (sLock)
+            {
+                foreach (var pair in sLiveServices)
+                {
+                    var info = sInfos[pair.Key];
+                    if (!IsLiveArchitecture(pair.Key, info)) continue;
+                    foreach (var registration in pair.Value)
+                    {
+                        if (!registration.Reference.TryGetTarget(out var instance)) continue;
+                        if (result.Count == maximum) { truncated = true; return result; }
+                        result.Add(new ArchitectureLiveServiceInfo(registration.Id, pair.Key,
+                            instance.GetType(), registration.Contracts.ToArray()));
+                    }
+                }
+            }
+            return result;
+        }
+
+        /// <summary>Resolves a current registration without constructing or initializing services.</summary>
+        public static bool TryResolveServiceRegistration(string id, out IService service)
+        {
+            service = null;
+            lock (sLock)
+            {
+                foreach (var pair in sLiveServices)
+                {
+                    var info = sInfos[pair.Key];
+                    if (!IsLiveArchitecture(pair.Key, info)) continue;
+                    foreach (var registration in pair.Value)
+                        if (registration.Id == id) return registration.Reference.TryGetTarget(out service);
+                }
+            }
+            return false;
         }
 
         /// <summary>

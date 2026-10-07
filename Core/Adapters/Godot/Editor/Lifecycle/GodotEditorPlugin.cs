@@ -24,6 +24,12 @@ namespace YokiFrame
         {
             GodotYokiFrameEditorSettingsFile.Register();
             RegisterWorkbenchMenu();
+
+            // RoslynKit 必须在 Editor Host 建立之前注册：宿主构造时按 catalog 一次性组装命令面。
+            GodotRoslynKitEditorHooks.EnsureInstalled?.Invoke(
+                () => mFileBridgeHost == null ? string.Empty : mFileBridgeHost.SessionId,
+                () => mFileBridgeHost == null ? 0L : mFileBridgeHost.Generation,
+                ProjectSettings.GlobalizePath("res://"));
             StartEditorHost();
             SetProcess(true);
         }
@@ -34,6 +40,9 @@ namespace YokiFrame
         /// <param name="delta">当前 Editor 帧间隔秒数。</param>
         public override void _Process(double delta)
         {
+            // 入口执行器与 FileBridge 心跳解耦：bridge 未就绪时也要推进已入队的运行。
+            GodotRoslynKitEditorHooks.Tick?.Invoke();
+
             YokiFrameFileBridgePumpSchedule.Due due = mPumpSchedule.Advance(delta);
             if (due.RefreshHeartbeat)
             {
@@ -53,6 +62,7 @@ namespace YokiFrame
         {
             SetProcess(false);
             StopEditorHost();
+            GodotRoslynKitEditorHooks.Shutdown?.Invoke();
             UnregisterWorkbenchMenu();
         }
 

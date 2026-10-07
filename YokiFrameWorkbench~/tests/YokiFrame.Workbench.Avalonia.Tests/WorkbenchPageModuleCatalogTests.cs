@@ -69,7 +69,7 @@ public sealed class WorkbenchPageModuleCatalogTests
             static item => item.PageName is "Doctor" or "Architecture" or "Automation");
     }
 
-    /// <summary>验证 UIKit 是 Unity 专属页面，Godot engine 下不进入导航。</summary>
+    /// <summary>验证 UIKit 是 Unity 专属页面，Godot engine 下不进入导航；Engine 页面则对两个引擎都显示。</summary>
     [Fact]
     public void GodotEngineHidesUnityOnlyPages()
     {
@@ -83,6 +83,7 @@ public sealed class WorkbenchPageModuleCatalogTests
         var pageNames = groups.SelectMany(static group => group.Items).Select(static item => item.PageName);
 
         Assert.DoesNotContain("UIKit", pageNames);
+        Assert.DoesNotContain("RoslynKit", pageNames);
         Assert.Contains("ResKit", pageNames);
         Assert.Contains("SaveKit", pageNames);
     }

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="HarmonyX" Version="2.16.1" />
+  </ItemGroup>
+  <Target Name="BundleForUnity" AfterTargets="Build">
+    <ItemGroup>
+      <PatchBundle Include="$(TargetDir)*.dll" />
+      <PatchBundle Include="$(TargetDir)*.deps.json" />
+      <LocalPatchNotice Include="$(MSBuildProjectDirectory)/licenses/*.txt" />
+      <PatchNotice Include="$(NuGetPackageRoot)%(ReferenceCopyLocalPaths.NuGetPackageId)/%(ReferenceCopyLocalPaths.NuGetPackageVersion)/LICENSE*"
+                   Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != ''">
+        <PackageId>%(ReferenceCopyLocalPaths.NuGetPackageId)</PackageId>
+      </PatchNotice>
+      <PatchNotice Include="$(NuGetPackageRoot)%(ReferenceCopyLocalPaths.NuGetPackageId)/%(ReferenceCopyLocalPaths.NuGetPackageVersion)/*.nuspec"
+                   Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != ''">
+        <PackageId>%(ReferenceCopyLocalPaths.NuGetPackageId)</PackageId>
+      </PatchNotice>
+      <PatchNotice Include="$(NuGetPackageRoot)%(ReferenceCopyLocalPaths.NuGetPackageId)/%(ReferenceCopyLocalPaths.NuGetPackageVersion)/THIRD-PARTY-NOTICES*"
+                   Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != ''">
+        <PackageId>%(ReferenceCopyLocalPaths.NuGetPackageId)</PackageId>
+      </PatchNotice>
+    </ItemGroup>
+    <Copy SourceFiles="@(PatchBundle)"
+          DestinationFolder="$(MSBuildProjectDirectory)/../../../Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/harmonyx-2.16.1"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PatchNotice)"
+          DestinationFiles="@(PatchNotice->'$(MSBuildProjectDirectory)/../../../Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/harmonyx-2.16.1/licenses/%(PackageId)/%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(LocalPatchNotice)"
+          DestinationFolder="$(MSBuildProjectDirectory)/../../../Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/harmonyx-2.16.1/licenses"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

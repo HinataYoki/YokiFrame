@@ -53,7 +53,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "--kit",
+            "RoslynKit",
             "System",
             "--name",
             "state");
@@ -87,7 +87,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "--kit",
+            "RoslynKit",
             "System");
 
         Assert.Equal(0, result.ExitCode);
@@ -117,7 +117,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "--kit",
+            "RoslynKit",
             "System");
 
         Assert.Equal(1, result.ExitCode);

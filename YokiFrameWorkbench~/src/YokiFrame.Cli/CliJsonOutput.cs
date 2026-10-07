@@ -225,7 +225,19 @@ internal static class CliJsonOutput
         }
 
         if (string.Equals(errorCode, "CommandTimeout", StringComparison.Ordinal)
-            || string.Equals(errorCode, "FastChannelCommandTimeout", StringComparison.Ordinal))
+            || string.Equals(errorCode, "FastChannelCommandTimeout", StringComparison.Ordinal)
+            || string.Equals(errorCode, "ScriptSubmissionUnknown", StringComparison.Ordinal)
+            || string.Equals(errorCode, "ScriptObservationFailed", StringComparison.Ordinal)
+            || string.Equals(errorCode, "ScriptWaitInterrupted", StringComparison.Ordinal)
+            || string.Equals(errorCode, "ScriptUnknown", StringComparison.Ordinal)
+            || string.Equals(errorCode, "ScriptDetached", StringComparison.Ordinal))
+        {
+            return YokiFrame.Protocol.Results.CommandOutcomeState.Unknown;
+        }
+
+        // §12.3：域重载类错误"结果未知，先查证"，禁止当成失败或直接重放。
+        if (string.Equals(errorCode, "HostIdentityChanged", StringComparison.Ordinal)
+            || string.Equals(errorCode, "RoslynReloading", StringComparison.Ordinal))
         {
             return YokiFrame.Protocol.Results.CommandOutcomeState.Unknown;
         }

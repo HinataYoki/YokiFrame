@@ -43,6 +43,8 @@ public sealed class CommandExecutionResult
     /// <param name="targetIdentity">发送时确认的宿主身份。</param>
     /// <param name="requestId">本次请求标识。</param>
     /// <param name="evidence">统一 transport-specific 证据。</param>
+    /// <param name="outcomeOverride">结论覆盖；仅域重载等"结果未知"场景使用（§12）。</param>
+    /// <param name="warning">附加结构化警告，例如 ReloadedSession。</param>
     public CommandExecutionResult(
         string transport,
         string commandPath,
@@ -50,7 +52,9 @@ public sealed class CommandExecutionResult
         CommandResponse response,
         HostIdentity? targetIdentity,
         string requestId,
-        CommandEvidence evidence)
+        CommandEvidence evidence,
+        CommandOutcomeState? outcomeOverride = null,
+        string warning = "")
     {
         Transport = transport;
         CommandPath = commandPath;
@@ -59,9 +63,11 @@ public sealed class CommandExecutionResult
         TargetIdentity = targetIdentity;
         RequestId = requestId ?? string.Empty;
         Evidence = evidence;
-        Outcome = string.Equals(response.Status, "Success", StringComparison.OrdinalIgnoreCase)
-            ? CommandOutcomeState.Succeeded
-            : CommandOutcomeState.Failed;
+        Warning = warning ?? string.Empty;
+        Outcome = outcomeOverride
+            ?? (string.Equals(response.Status, "Success", StringComparison.OrdinalIgnoreCase)
+                ? CommandOutcomeState.Succeeded
+                : CommandOutcomeState.Failed);
     }
 
     /// <summary>
@@ -94,7 +100,10 @@ public sealed class CommandExecutionResult
     public CommandEvidence Evidence { get; }
 
     /// <summary>
-    /// 获取 terminal response 表示的命令结果状态。
+    /// 获取 terminal response 表示的命令结果状态；域重载场景可被显式覆盖为 Unknown。
     /// </summary>
     public CommandOutcomeState Outcome { get; }
+
+    /// <summary>获取附加结构化警告；无警告时为空。</summary>
+    public string Warning { get; } = string.Empty;
 }

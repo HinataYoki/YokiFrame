@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Models;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -26,6 +27,7 @@ internal static class WorkbenchPageSectionProjector
             new WorkbenchDisplaySection("Errors", state.ErrorMessages.Count == 0 ? "none" : string.Join(Environment.NewLine, state.ErrorMessages))
         };
     }
+
 
     /// <summary>
     /// 创建 Doctor 页段落；报告不可用时保留恢复建议。

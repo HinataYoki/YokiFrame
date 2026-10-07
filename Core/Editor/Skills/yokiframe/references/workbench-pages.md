@@ -21,4 +21,4 @@ Godot 的编辑器连接选择 `godot-editor`，游戏运行态选择 `godot-run
 | 本地化文本 | LocalizationKit | 搜索 standalone JSON 或 Luban 单表，打开 Excel，创建模板。预览写入项目 Temp。已注册 XML 时，以 Luban 结果为准 |
 | 存档位置和槽位摘要 | SaveKit | 选择持久化目录、项目目录或自定义路径并保存配置，同时查看已有后端和容器头。宿主目录在 Editor 连上后解析 |
 
-Architecture、SingletonKit、ToolClass、CodeGenKit、InspectorKit 和 SceneKit 的用法在对应 API 主页面。
+Architecture、SingletonKit、ToolClass、CodeGenKit、InspectorKit 和 SceneKit 的用法在对应 API 主页面。RoslynKit 没有 Workbench 页面，宿主操作和内存编译走 `yoki`，见 [roslyn-kit.md](roslyn-kit.md)。

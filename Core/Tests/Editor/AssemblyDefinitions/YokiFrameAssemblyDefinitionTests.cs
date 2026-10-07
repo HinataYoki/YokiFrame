@@ -18,6 +18,8 @@ namespace YokiFrame
         private const string CORE_EDITOR_ASMDEF_PATH = "Assets/YokiFrame/Core/Editor/YokiFrame.Editor.asmdef";
         private const string UNITY_EDITOR_ASMDEF_PATH = "Assets/YokiFrame/Core/Adapters/Unity/Editor/YokiFrame.Unity.Editor.asmdef";
         private const string UNITY_RUNTIME_ASMDEF_PATH = "Assets/YokiFrame/Core/Adapters/Unity/Runtime/YokiFrame.Unity.Runtime.asmdef";
+        private const string LIVE_CODE_FACADE_ASMDEF_PATH =
+            "Assets/YokiFrame/Tools/RoslynKit/Adapters/Unity/Editor/LiveCode/Facade/YokiFrame.Unity.LiveCode.Facade.asmdef";
         private const string LEGACY_UNITY_EDITOR_ASMDEF_PATH = "Assets/YokiFrame/Core/Editor/YokiFrame.Unity.Editor.asmdef";
         private const string UNITY_RUNTIME_ADAPTER_PATH_FRAGMENT = "/Assets/YokiFrame/Core/Adapters/Unity/Runtime/";
         private const string GODOT_RUNTIME_ADAPTER_PATH_FRAGMENT = "/Assets/YokiFrame/Core/Adapters/Godot/Runtime/";
@@ -50,6 +52,20 @@ namespace YokiFrame
                 Assert.IsFalse(name.StartsWith("UnityEditor", System.StringComparison.Ordinal), "Core 主程序集禁止引用 UnityEditor: " + name);
                 Assert.IsFalse(name.StartsWith("Godot", System.StringComparison.Ordinal), "Core 主程序集禁止引用 Godot: " + name);
             }
+        }
+
+        /// <summary>
+        /// 验证 LiveCode 原型外观单独成 Editor-only 程序集，供内存编译引用且不进入 Player。
+        /// </summary>
+        [Test]
+        public void LiveCodeFacadeAssemblyIsEditorOnly()
+        {
+            AssertAssembly(LIVE_CODE_FACADE_ASMDEF_PATH, "YokiFrame.Unity.LiveCode.Facade", "7c4e1a9b2d6f4e0a8b3c5d7e9f102346", false);
+            string asmdef = File.ReadAllText(Path.Combine(Application.dataPath, "..", LIVE_CODE_FACADE_ASMDEF_PATH));
+            Assert.IsTrue(
+                Regex.IsMatch(asmdef, "\\\"includePlatforms\\\"\\s*:\\s*\\[\\s*\\\"Editor\\\"\\s*\\]"),
+                "LiveCode 原型外观必须只包含 Editor 平台，禁止进入 Player。");
+            Assert.IsFalse(asmdef.Contains("YokiFrame.Unity.Editor"), "原型外观不能反向依赖 Unity Editor 适配器。");
         }
 
         /// <summary>

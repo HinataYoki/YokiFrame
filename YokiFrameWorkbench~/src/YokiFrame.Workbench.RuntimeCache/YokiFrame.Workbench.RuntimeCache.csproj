@@ -11,6 +11,8 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\..\Core\Editor\RuntimeCache\**\*.cs" Link="RuntimeCache\%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- 共享只读 JSON DOM（替代 System.Text.Json）位于 CommandBridge\Json，RuntimeCache 校验器与 RoslynKit 共用。 -->
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Json\**\*.cs" Link="Json\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Shared\RuntimeCache\**\*.cs" Link="RuntimeCache\Shared\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\..\Core\Editor\CommandBridge\Storage\**\*.cs" Link="Storage\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\..\Core\Editor\Tooling\RuntimeCache\**\*.cs" Link="RuntimeCacheLayout\%(RecursiveDir)%(Filename)%(Extension)" />

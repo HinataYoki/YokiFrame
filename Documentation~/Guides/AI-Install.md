@@ -140,6 +140,14 @@ if (-not (Test-Path -LiteralPath $yoki)) {
 - 只有用户明确要求安装 Skill 时才执行；Skill 不是"安装 YokiFrame"的必需步骤
 - 旧身份 `yokiframe-cli`、`yokiframe-workbench`、`yokiframe-command-bridge`、`yokiframe-editor` 不再随包提供
 
+### 更新已安装的 Skill 文档
+
+先定位实际安装目标，不因“更新 Skill”就默认写全局目录：Codex 项目目标为 `.codex/skills/yokiframe`，Agents 为 `.agents/skills/yokiframe`，自定义目标以用户已有路径为准（例如 `custom/skills/yokiframe`）。包内来源始终是 `Core/Editor/Skills/yokiframe/`。
+
+核对差异后同步 `SKILL.md` 和相关 `references/*.md`；保留用户自定义内容，不复制 `.meta`，不删除整个目录来完成仅文档更新。验收文件内容与内部链接，特别是 `roslyn-kit.md`、`cli-commands.md` 和 `installer.md`。Skill 中引用包内设计/API 时先解析包根，不能以安装目录的 `../` 层数推算。
+
+更新 Skill 不更新 `yoki`，也不打开 RoslynKit 执行开关。编译器是否可用看 `script_status.installed`，准备方式见 Skill 的 `references/installer.md`。开关和调用方式见 `references/roslyn-kit.md`。本文的 .NET SDK 与 C++ 工具链只用于构建 Workbench、Installer 和 `yoki`。
+
 ## 执行安装事务
 
 以下命令使用 PowerShell；Linux/macOS 去掉命令前的 `&`，并按本机路径修改分隔符。每种模式都必须先 plan，再 apply。

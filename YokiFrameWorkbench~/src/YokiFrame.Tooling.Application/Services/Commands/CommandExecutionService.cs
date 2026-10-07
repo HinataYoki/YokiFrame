@@ -196,7 +196,39 @@ public sealed class CommandExecutionService
             source,
             remainingTimeoutMs,
             cancellationToken).ConfigureAwait(false);
-        EnsureCurrentIdentity(selectedEngineId, expectedIdentity);
+        try
+        {
+            EnsureCurrentIdentity(selectedEngineId, expectedIdentity);
+        }
+        catch (YokiFrameProtocolException exception) when (IsReloadException(exception))
+        {
+            // §12.1：域重载期间会话换代**不代表命令失败**。
+            // 终态响应已落盘 → 原样返回并标注 ReloadedSession；否则抛 Unknown 语义并保留 requestId 与两条证据路径。
+            if (TryReadTerminalResponse(fileBridgeResult.ResponsePath, out CommandResponse? reloadedResponse))
+            {
+                return new CommandExecutionResult(
+                    FILE_BRIDGE_TRANSPORT,
+                    fileBridgeResult.CommandPath,
+                    fileBridgeResult.ResponsePath,
+                    reloadedResponse!,
+                    targetIdentity,
+                    fileBridgeResult.Envelope.RequestId,
+                    CommandEvidence.FileBacked(fileBridgeResult.CommandPath, fileBridgeResult.ResponsePath),
+                    outcomeOverride: null,
+                    warning: "ReloadedSession: the host session changed while waiting; the terminal response was read back from "
+                        + fileBridgeResult.ResponsePath
+                        + ". Inspect with: command status --request-id "
+                        + fileBridgeResult.Envelope.RequestId);
+            }
+
+            throw new YokiFrameProtocolException(new YokiFrameError(
+                "HostIdentityChanged",
+                "The host session changed while the command was waiting and no terminal response was persisted.",
+                "Run 'command status --request-id " + fileBridgeResult.Envelope.RequestId
+                    + "' to recover the terminal state; do not treat this as a failure.",
+                new[] { fileBridgeResult.CommandPath, fileBridgeResult.ResponsePath }));
+        }
+
         return new CommandExecutionResult(
             FILE_BRIDGE_TRANSPORT,
             fileBridgeResult.CommandPath,
@@ -469,6 +501,43 @@ public sealed class CommandExecutionService
     /// </summary>
     /// <param name="engineId">目标 engine。</param>
     /// <param name="expectedIdentity">请求开始时捕获的身份。</param>
+    /// <summary>判断异常是否属于域重载类（会话换代的正常现象，不是命令失败）。</summary>
+    /// <param name="exception">协议异常。</param>
+    /// <returns>属于重载类时返回 true。</returns>
+    private static bool IsReloadException(YokiFrameProtocolException exception)
+    {
+        string code = exception.Error == null ? string.Empty : exception.Error.Code;
+        return string.Equals(code, "HostIdentityChanged", StringComparison.Ordinal)
+            || string.Equals(code, "RoslynReloading", StringComparison.Ordinal);
+    }
+
+    /// <summary>读回已落盘的终态响应；不存在或不可解析时返回 false（§10.1 反查语义的客户端侧对应）。</summary>
+    /// <param name="responsePath">响应文件路径。</param>
+    /// <param name="response">解析结果。</param>
+    /// <returns>读取成功时返回 true。</returns>
+    private static bool TryReadTerminalResponse(string responsePath, out CommandResponse? response)
+    {
+        response = null;
+        if (string.IsNullOrEmpty(responsePath) || !File.Exists(responsePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            response = CommandResponse.FromJson(File.ReadAllText(responsePath));
+            return response != null && !string.IsNullOrEmpty(response.Status);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
+
     private void EnsureCurrentIdentity(string engineId, HostIdentity? expectedIdentity)
     {
         if (expectedIdentity == null)

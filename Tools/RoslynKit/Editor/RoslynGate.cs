@@ -1,0 +1,320 @@
+#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING
+using System;
+using YokiFrame.Json;
+
+namespace YokiFrame
+{
+    /// <summary>
+    /// 在 Policy 之后实施 RoslynKit 自己的策略：载荷与目标、执行开关、危险来源限制与目标绑定。
+    /// </summary>
+    /// <remarks>
+    /// 判定顺序固定为：① 载荷与目标解析 → ② 执行开关（豁免只跳过这一层）→ ③ Dangerous 来源限制 → ④ 目标绑定。
+    /// 该顺序是对外契约，调用方据此判断错误码先后关系。
+    /// </remarks>
+    public sealed class RoslynGate
+    {
+        /// <summary>默认允许执行 Dangerous 操作的来源。</summary>
+        public static readonly string[] DEFAULT_DANGEROUS_SOURCES =
+        {
+            YokiFrameCommandSourceContract.CLI,
+            YokiFrameCommandSourceContract.WORKBENCH
+        };
+
+        private const string TARGET_FIELD_NAME = "target";
+
+        private readonly IRoslynSettingsSource mSettingsSource;
+        private readonly string[] mDangerousSources;
+
+        /// <summary>
+        /// 创建 Gate。
+        /// </summary>
+        /// <param name="settingsSource">执行开关读取端口。</param>
+        /// <param name="dangerousSources">允许执行 Dangerous 操作的来源；为空表示不允许任何来源。</param>
+        public RoslynGate(
+            IRoslynSettingsSource settingsSource,
+            string[] dangerousSources)
+        {
+            mSettingsSource = settingsSource ?? throw new ArgumentNullException(nameof(settingsSource));
+            mDangerousSources = dangerousSources == null ? new string[0] : (string[])dangerousSources.Clone();
+        }
+
+        /// <summary>
+        /// 使用默认危险来源集合创建 Gate。
+        /// </summary>
+        /// <param name="settingsSource">执行开关读取端口。</param>
+        /// <returns>默认 Gate。</returns>
+        public static RoslynGate CreateDefault(IRoslynSettingsSource settingsSource)
+        {
+            return new RoslynGate(settingsSource, DEFAULT_DANGEROUS_SOURCES);
+        }
+
+        /// <summary>
+        /// 裁决一条 RoslynKit 命令，按全部宿主目标校验；供不区分宿主的调用方使用。
+        /// </summary>
+        /// <param name="request">命令请求。</param>
+        /// <param name="operation">命中的操作描述。</param>
+        /// <returns>裁决结果。</returns>
+        public RoslynGateDecision Evaluate(
+            YokiFrameCommandRequest request,
+            RoslynOperationDescriptor operation)
+        {
+            return Evaluate(request, operation, RoslynExecutionTargets.ALL);
+        }
+
+        /// <summary>
+        /// 裁决一条 RoslynKit 命令；每次调用都会重新读取开关快照。
+        /// </summary>
+        /// <param name="request">命令请求。</param>
+        /// <param name="operation">命中的操作描述。</param>
+        /// <param name="hostTargets">当前宿主可承载的执行目标。</param>
+        /// <returns>裁决结果。</returns>
+        public RoslynGateDecision Evaluate(
+            YokiFrameCommandRequest request,
+            RoslynOperationDescriptor operation,
+            RoslynExecutionTarget hostTargets)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            if (operation == null)
+            {
+                throw new ArgumentNullException(nameof(operation));
+            }
+
+            RoslynSettingsSnapshot settings = mSettingsSource.Read();
+
+            // ① 载荷与目标：豁免也不跳过；payload 必须是合法 JSON 对象，target 必须是单一已知目标。
+            if (!TryResolveTarget(request.PayloadJson, out RoslynExecutionTarget target, out string targetError))
+            {
+                return RoslynGateDecision.Reject(
+                    RoslynErrorCodes.INVALID_PAYLOAD,
+                    targetError,
+                    settings.State);
+            }
+
+            return Decide(request, operation, settings, target, hostTargets);
+        }
+
+        /// <summary>
+        /// 按固定顺序做开关、来源和目标裁决。调用时载荷已经解析成功。
+        /// </summary>
+        /// <param name="request">命令请求。</param>
+        /// <param name="operation">命中的操作描述。</param>
+        /// <param name="settings">刚刚读取的开关快照。</param>
+        /// <param name="target">已解析的单一目标。</param>
+        /// <param name="hostTargets">当前宿主可承载的执行目标。</param>
+        /// <returns>裁决结果。</returns>
+        private RoslynGateDecision Decide(
+            YokiFrameCommandRequest request,
+            RoslynOperationDescriptor operation,
+            RoslynSettingsSnapshot settings,
+            RoslynExecutionTarget target,
+            RoslynExecutionTarget hostTargets)
+        {
+            // ② 执行开关：缺失与解析失败一律 fail-closed；豁免只跳过这一层。
+            if (!operation.ExemptFromExecutionSwitch && settings.BlocksExecution)
+            {
+                return RejectDisabled(settings, operation);
+            }
+
+            // ③ Dangerous 操作只允许受信来源。
+            if (operation.Kind == YokiFrameCommandKind.Dangerous && !IsDangerousSourceAllowed(request.Source))
+            {
+                return RoslynGateDecision.Reject(
+                    RoslynErrorCodes.SOURCE_NOT_PERMITTED,
+                    "Source '" + request.Source + "' is not permitted to run Dangerous RoslynKit operations.",
+                    settings.State);
+            }
+
+            return DecideAvailability(operation, settings, target, hostTargets);
+        }
+
+        /// <summary>构造执行开关关闭时的拒绝结果。</summary>
+        /// <param name="settings">开关快照。</param>
+        /// <param name="operation">操作描述。</param>
+        /// <returns>关闭拒绝。</returns>
+        private static RoslynGateDecision RejectDisabled(
+            RoslynSettingsSnapshot settings,
+            RoslynOperationDescriptor operation)
+        {
+            return RoslynGateDecision.Reject(
+                RoslynErrorCodes.OPERATION_DISABLED,
+                BuildDisabledMessage(settings, operation),
+                settings.State);
+        }
+
+        /// <summary>
+        /// 按与 engine_capabilities 相同的规则绑定目标。不支持或宿主不能承载时拒绝。
+        /// </summary>
+        /// <param name="operation">操作描述。</param>
+        /// <param name="settings">开关快照。</param>
+        /// <param name="target">请求的单一目标。</param>
+        /// <param name="hostTargets">当前宿主可承载的执行目标。</param>
+        /// <returns>放行或目标拒绝。</returns>
+        private static RoslynGateDecision DecideAvailability(
+            RoslynOperationDescriptor operation,
+            RoslynSettingsSnapshot settings,
+            RoslynExecutionTarget target,
+            RoslynExecutionTarget hostTargets)
+        {
+            // ④ 目标绑定：与 engine_capabilities 共用同一份判定规则。
+            RoslynOperationAvailability availability = RoslynAvailabilityRules.Resolve(
+                operation,
+                target,
+                settings,
+                hostTargets);
+            if (availability == RoslynOperationAvailability.DisabledBySettings)
+            {
+                return RejectDisabled(settings, operation);
+            }
+
+            if (availability == RoslynOperationAvailability.UnsupportedByTarget)
+            {
+                return RoslynGateDecision.Reject(
+                    RoslynErrorCodes.UNSUPPORTED,
+                    "Action '" + operation.Action + "' does not support target '" + RoslynExecutionTargets.Format(target) + "'.",
+                    settings.State);
+            }
+
+            if (availability == RoslynOperationAvailability.UnsupportedByHostTarget)
+            {
+                return RoslynGateDecision.Reject(
+                    RoslynErrorCodes.UNAVAILABLE,
+                    "Current host cannot serve target '" + RoslynExecutionTargets.Format(target) + "'.",
+                    settings.State);
+            }
+
+            return RoslynGateDecision.Allow(settings.State);
+        }
+
+        /// <summary>
+        /// 解析 payload 的 target 字段；使用 JSON DOM 读取，转义键名（例如 \u0074arget）同样命中。
+        /// </summary>
+        /// <param name="payloadJson">payload JSON。</param>
+        /// <param name="target">解析出的单一目标；缺省为 editor。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>解析成功时返回 true。</returns>
+        private static bool TryResolveTarget(
+            string payloadJson,
+            out RoslynExecutionTarget target,
+            out string error)
+        {
+            target = RoslynExecutionTarget.Editor;
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(payloadJson))
+            {
+                return true;
+            }
+
+            JsonDocument document;
+            try
+            {
+                document = JsonDocument.Parse(payloadJson);
+            }
+            catch (JsonException exception)
+            {
+                error = "Engine payload is not valid JSON: " + exception.Message;
+                return false;
+            }
+
+            using (document)
+            {
+                return TryReadSingleTarget(document.RootElement, ref target, out error);
+            }
+        }
+
+        /// <summary>
+        /// 从 JSON 对象读取单一 target。字段缺失或为 null 时保持调用方传入的默认目标。
+        /// </summary>
+        /// <param name="root">payload 根节点。</param>
+        /// <param name="target">成功时写回的单一目标。</param>
+        /// <param name="error">失败说明。</param>
+        /// <returns>可以继续裁决时返回 true。</returns>
+        private static bool TryReadSingleTarget(
+            JsonElement root,
+            ref RoslynExecutionTarget target,
+            out string error)
+        {
+            error = string.Empty;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                error = "Engine payload must be a JSON object.";
+                return false;
+            }
+
+            if (!root.TryGetProperty(TARGET_FIELD_NAME, out JsonElement value)
+                || value.ValueKind == JsonValueKind.Null)
+            {
+                return true;
+            }
+
+            if (value.ValueKind != JsonValueKind.String)
+            {
+                error = "Engine payload target must be a string.";
+                return false;
+            }
+
+            if (!RoslynExecutionTargets.TryParse(value.GetString(), out RoslynExecutionTarget parsed))
+            {
+                error = "Engine payload target is not a known execution target.";
+                return false;
+            }
+
+            if (!RoslynExecutionTargets.IsSingleTarget(parsed))
+            {
+                error = "Engine payload target must be a single target; combined values are only valid in capability declarations.";
+                return false;
+            }
+
+            target = parsed;
+            return true;
+        }
+
+        /// <summary>
+        /// 判断来源是否允许执行 Dangerous 操作。
+        /// </summary>
+        /// <param name="source">命令来源。</param>
+        /// <returns>允许时返回 true。</returns>
+        private bool IsDangerousSourceAllowed(string source)
+        {
+            if (string.IsNullOrEmpty(source))
+            {
+                return false;
+            }
+
+            for (var index = 0; index < mDangerousSources.Length; index++)
+            {
+                if (string.Equals(mDangerousSources[index], source, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 构造可诊断的关闭说明，包含开关状态与原因。
+        /// </summary>
+        /// <param name="settings">开关快照。</param>
+        /// <param name="operation">操作描述。</param>
+        /// <returns>说明文本。</returns>
+        private static string BuildDisabledMessage(
+            RoslynSettingsSnapshot settings,
+            RoslynOperationDescriptor operation)
+        {
+            string message = "RoslynKit operations are disabled (" + settings.State + ").";
+            if (!operation.ExecutionPermitted)
+                message = "The action's additional execution permission is disabled.";
+            if (!string.IsNullOrEmpty(settings.Reason))
+            {
+                message += " " + settings.Reason;
+            }
+
+            return message + " Requested action: " + operation.Action + ".";
+        }
+    }
+}
+#endif

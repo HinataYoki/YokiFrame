@@ -38,6 +38,10 @@ public sealed class GodotProjectFilePatcherTests
         "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Runtime/YokiFrame.SpatialKit.csproj";
     private const string SPATIAL_KIT_EDITOR_PROJECT =
         "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Editor/YokiFrame.SpatialKit.Editor.csproj";
+    private const string ROSLYN_KIT_EDITOR_PROJECT =
+        "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj";
+    private const string ROSLYN_KIT_ADAPTER_PROJECT =
+        "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Adapters/Godot/Runtime/YokiFrame.RoslynKit.Godot.csproj";
 
     /// <summary>
     /// 验证缺少 owner group 时会创建唯一 YokiFrame ItemGroup，并完整保留用户拥有的项目节点。
@@ -359,6 +363,26 @@ public sealed class GodotProjectFilePatcherTests
                     "$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))",
                     (string?)spatialKitEditorReference.Attribute("Condition"));
                 Assert.Equal("YokiFrameToolsBuild=True", Assert.Single(spatialKitEditorReference.Elements()).Value);
+            },
+            roslynKitEditorReference =>
+            {
+                Assert.Equal("ProjectReference", roslynKitEditorReference.Name.LocalName);
+                Assert.Equal(ROSLYN_KIT_EDITOR_PROJECT, (string?)roslynKitEditorReference.Attribute("Include"));
+                Assert.Equal(
+                    "$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))",
+                    (string?)roslynKitEditorReference.Attribute("Condition"));
+                Assert.Equal("YokiFrameToolsBuild=True", Assert.Single(roslynKitEditorReference.Elements()).Value);
+            },
+            roslynKitAdapterReference =>
+            {
+                Assert.Equal("ProjectReference", roslynKitAdapterReference.Name.LocalName);
+                Assert.Equal(ROSLYN_KIT_ADAPTER_PROJECT, (string?)roslynKitAdapterReference.Attribute("Include"));
+                Assert.Equal(
+                    "$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))",
+                    (string?)roslynKitAdapterReference.Attribute("Condition"));
+                Assert.Equal(
+                    "GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=True",
+                    Assert.Single(roslynKitAdapterReference.Elements()).Value);
             });
     }
 

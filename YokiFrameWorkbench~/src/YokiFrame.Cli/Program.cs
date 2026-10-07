@@ -14,7 +14,7 @@ using YokiFrame.Tooling.Application.Services;
 /// <summary>
 /// YokiFrame Phase 1 CLI 入口，提供 AI 和脚本可稳定调用的 compact JSON 命令。
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     /// <summary>
     /// 解析命令；Installer 在创建 FileBridge client 前进入共享 Application 会话，其余命令继续走 Client。
@@ -32,8 +32,30 @@ internal static class Program
         Console.CancelKeyPress += cancelHandler;
         try
         {
+            return await ExecuteAsync(args, lifetimeCancellation).ConfigureAwait(false);
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
+    /// <summary>
+    /// 在已建立的取消令牌下执行一次 CLI 调用；exec 用它在本进程内顺序执行每一步。
+    /// </summary>
+    /// <param name="args">命令行参数。</param>
+    /// <param name="lifetimeCancellation">进程级取消源。</param>
+    /// <returns>进程退出码。</returns>
+    internal static async Task<int> ExecuteAsync(string[] args, CancellationTokenSource lifetimeCancellation)
+    {
+        try
+        {
             var commandLine = CliCommandLine.Parse(args);
             CliCommandSchemaRegistry.Validate(commandLine);
+            if (CliExecCommands.IsExecCommand(commandLine))
+            {
+                return await CliExecCommands.RunAsync(commandLine, lifetimeCancellation).ConfigureAwait(false);
+            }
             if (CliInstallerCommands.IsInstallerCommand(commandLine))
             {
                 return await CliInstallerCommands.DispatchAsync(commandLine, lifetimeCancellation.Token).ConfigureAwait(false);
@@ -74,10 +96,6 @@ internal static class Program
                 "Run the command again with valid arguments or inspect the current project state.",
                 Array.Empty<string>()));
         }
-        finally
-        {
-            Console.CancelKeyPress -= cancelHandler;
-        }
     }
 
     /// <summary>
@@ -92,6 +110,11 @@ internal static class Program
         IYokiFrameClient client,
         CancellationToken cancellationToken)
     {
+        if (commandLine.IsCommand("script"))
+        {
+            return await CliScriptCommands.RunAsync(commandLine, client, cancellationToken).ConfigureAwait(false);
+        }
+
         if (commandLine.IsCommand("harness", "status"))
         {
             return WriteHarnessStatus(client);

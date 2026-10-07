@@ -113,7 +113,9 @@ internal sealed class CliInstallerFixture : IDisposable
     /// </summary>
     private void WriteSourcePackage()
     {
-        WriteText(Path.Combine(SourcePackageRoot, "package.json"), "{\"name\":\"com.hinatayoki.yokiframe\"}");
+        WriteText(
+            Path.Combine(SourcePackageRoot, "package.json"),
+            "{\"name\":\"com.hinatayoki.yokiframe\",\"version\":\"2.0.3\"}");
         WriteText(Path.Combine(SourcePackageRoot, "Documentation~", "README.md"), "fixture");
         WriteText(Path.Combine(SourcePackageRoot, "Core", "Runtime", "Alpha.cs"), "namespace Fixture; public sealed class Alpha { }");
         WriteText(Path.Combine(SourcePackageRoot, "Core", "Runtime", "Alpha.cs.meta"), "guid: fixture");

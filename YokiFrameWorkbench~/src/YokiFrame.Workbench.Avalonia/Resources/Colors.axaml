@@ -35,6 +35,7 @@
       <SolidColorBrush x:Key="Brush.Action.Selected" Color="#E3F0FC" />
       <!-- 文档树 tokens.css 是导航图标颜色的唯一视觉基准。 -->
       <SolidColorBrush x:Key="Brush.Icon.Framework" Color="#00A5D8" />
+      <SolidColorBrush x:Key="Brush.Icon.RoslynKit" Color="#149E7A" />
       <SolidColorBrush x:Key="Brush.Icon.Docs" Color="#7B88D8" />
       <SolidColorBrush x:Key="Brush.Icon.CodeGenKit" Color="#8E44AD" />
       <SolidColorBrush x:Key="Brush.Icon.InspectorKit" Color="#2C8FDA" />
@@ -115,6 +116,7 @@
       <SolidColorBrush x:Key="Brush.Action.Selected" Color="#202B37" />
       <!-- 文档树 tokens.css 是导航图标颜色的唯一视觉基准。 -->
       <SolidColorBrush x:Key="Brush.Icon.Framework" Color="#64D2FF" />
+      <SolidColorBrush x:Key="Brush.Icon.RoslynKit" Color="#3DDC97" />
       <SolidColorBrush x:Key="Brush.Icon.Docs" Color="#BF5AF2" />
       <SolidColorBrush x:Key="Brush.Icon.CodeGenKit" Color="#BF5AF2" />
       <SolidColorBrush x:Key="Brush.Icon.InspectorKit" Color="#64D2FF" />

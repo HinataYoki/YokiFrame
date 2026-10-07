@@ -167,12 +167,48 @@ internal static partial class ProjectModelDocumentFactory
             throw CreateDescriptorError("CapabilitySourceMissing", "Capability implementation source is missing.", descriptorPath, sourcePath);
         }
 
-        using var stream = File.OpenRead(sourcePath);
-        var actualHash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+        // Windows 检出（git core.autocrlf）会把实现文件写成 CRLF，而描述符哈希按 LF 文本生成；
+        // 校验前只归一化换行字节，既不改动其它内容，也让同一个包在不同平台得到同一结论。
+        byte[] actualHashBytes = SHA256.HashData(NormalizeLineEndings(File.ReadAllBytes(sourcePath)));
+        var actualHash = Convert.ToHexString(actualHashBytes).ToLowerInvariant();
         if (!string.Equals(actualHash, kit.SourceHash, StringComparison.OrdinalIgnoreCase))
         {
             throw CreateDescriptorError("CapabilitySourceHashMismatch", "Capability implementation hash does not match sourceHash.", descriptorPath, sourcePath);
         }
+    }
+
+    /// <summary>
+    /// 把 CRLF 字节对折叠为 LF；只有 0x0D 紧跟 0x0A 时才会被移除，因此 LF 文件与含 BOM 的文件保持原样。
+    /// </summary>
+    /// <param name="source">原始文件字节。</param>
+    /// <returns>换行归一化后的字节。</returns>
+    private static byte[] NormalizeLineEndings(byte[] source)
+    {
+        if (source == null || source.Length == 0)
+        {
+            return source ?? Array.Empty<byte>();
+        }
+
+        var normalized = new byte[source.Length];
+        var length = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index] == (byte)'\r' && index + 1 < source.Length && source[index + 1] == (byte)'\n')
+            {
+                continue;
+            }
+
+            normalized[length++] = source[index];
+        }
+
+        if (length == source.Length)
+        {
+            return source;
+        }
+
+        var result = new byte[length];
+        Array.Copy(normalized, result, length);
+        return result;
     }
 
     /// <summary>创建可由 CLI 转换为稳定失败结果的 descriptor 协议异常。</summary>

@@ -21,4 +21,7 @@ YokiFrameWorkbench~/.validation-artifacts*/
 YokiFrameWorkbench~/**/.validation-artifacts*/
 
 # Package-local Runtime payloads are forbidden. Rebuildable tool output belongs to each project's .yokiframe cache.
+# Exception: editor-only bundles the target user cannot rebuild (they have no .NET SDK) ship inside the
+# package under Editor/EngineKit/Dependencies~/. Unity ignores that folder because of the trailing '~'.
+# See YokiFrameRoslynCompilerLoader.PACKAGE_RELATIVE_PATH.
 WorkbenchRuntime~/

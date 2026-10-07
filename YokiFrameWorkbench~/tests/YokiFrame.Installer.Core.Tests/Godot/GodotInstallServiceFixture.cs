@@ -309,6 +309,15 @@ internal sealed class GodotInstallServiceFixture : IDisposable
         WriteSourceFile(
             "Tools/SaveKit/Editor/YokiFrame.SaveKit.Editor.csproj",
             "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        WriteSourceFile(
+            "Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        WriteSourceFile(
+            "Tools/RoslynKit/Adapters/Godot/Runtime/YokiFrame.RoslynKit.Godot.csproj",
+            "<Project Sdk=\"Godot.NET.Sdk/4.7.0\" />");
+        WriteSourceFile(
+            "Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll",
+            "roslyn-compiler");
         WriteSourceFile("YokiFrameWorkbench~/src/FixtureBuildInput.cs", "namespace Fixture; public sealed class FixtureBuildInput { }");
         WriteSourceFile("WorkbenchRuntime~/win-x64/yoki.dll", "selected-runtime");
         WriteSourceFile("WorkbenchRuntime~/linux-x64/yoki.dll", "other-runtime");

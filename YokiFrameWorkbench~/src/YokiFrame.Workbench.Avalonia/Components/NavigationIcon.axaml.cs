@@ -99,6 +99,7 @@ public sealed partial class NavigationIcon : UserControl
         return iconKey?.Trim().ToLowerInvariant() switch
         {
             "docs" => "Docs",
+            "engine" or "roslynkit" => "RoslynKit",
             "codegen" or "codegenkit" => "CodeGenKit",
             "inspector" or "inspectorkit" => "InspectorKit",
             "event" or "eventkit" => "EventKit",

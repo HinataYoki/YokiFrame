@@ -14,6 +14,9 @@ namespace YokiFrame
     {
         private static readonly TimeSpan PROCESSING_LEASE = TimeSpan.FromSeconds(60);
 
+        private long mToolProviderRevision = -1;
+        private YokiFrameKitInteractionRegistry mKitInteractions;
+
         /// <summary>
         /// 消费 commands 顶层全部 JSON，确保每个文件进入 response/archive 或 deadletter 终态。
         /// </summary>
@@ -21,7 +24,10 @@ namespace YokiFrame
         public int ProcessPendingCommands()
         {
             EnsureRunning();
-            return mCommandCoordinator.ProcessPendingCommands();
+            RefreshCatalogKitsIfNeeded();
+            var processed = mCommandCoordinator.ProcessPendingCommands();
+            PublishChangedKitSnapshots();
+            return processed;
         }
 
         /// <summary>
@@ -64,24 +70,53 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 创建只允许三个 Editor System 只读命令的共享 dispatcher。
+        /// 创建 Editor dispatcher：System 只读命令 + catalog 显式注册的 Kit Provider（例如 Engine）。
         /// </summary>
         /// <returns>Editor 命令 dispatcher。</returns>
         private YokiFrameCommandDispatcher CreateCommandDispatcher()
         {
-            // 命令面唯一声明在 GodotEditorSystemCommandHandler.CommandDescriptors，策略直接聚合。
-            YokiFrameCommandPolicy policy = YokiFrameCommandPolicy.CreateWithDefaultSources(
-                GodotEditorSystemCommandHandler.CommandDescriptors);
-            return new YokiFrameCommandDispatcher(
-                policy,
-                new IYokiFrameCommandHandler[]
-                {
-                    new GodotEditorSystemCommandHandler(
-                        CreatePingResultJson,
-                        CreateBridgeStatusResultJson,
-                        () => CreateCommandCatalogJson(policy.AllowedCommands),
-                        CreateEnvironmentResultJson)
-                });
+            // 命令面的唯一来源是各 Provider 自己声明的描述符；这里只做聚合，不硬编码任何 Kit。
+            mToolProviderRevision = YokiFrameToolKitInteractionCatalog.Revision;
+            mKitInteractions = new YokiFrameKitInteractionRegistry();
+            YokiFrameToolKitInteractionCatalog.RegisterProviders(mKitInteractions);
+            IReadOnlyList<IYokiFrameKitInteractionProvider> providers = mKitInteractions.Providers;
+
+            var descriptors = new List<YokiFrameCommandDescriptor>(GodotEditorSystemCommandHandler.CommandDescriptors.Length);
+            descriptors.AddRange(GodotEditorSystemCommandHandler.CommandDescriptors);
+            for (var index = 0; index < providers.Count; index++)
+            {
+                descriptors.AddRange(providers[index].Commands);
+            }
+
+            YokiFrameCommandPolicy policy = YokiFrameCommandPolicy.CreateWithDefaultSources(descriptors.ToArray());
+            var handlers = new List<IYokiFrameCommandHandler>(providers.Count + 1)
+            {
+                new GodotEditorSystemCommandHandler(
+                    CreatePingResultJson,
+                    CreateBridgeStatusResultJson,
+                    // System 分组只列 System 自己的命令；其余 Kit 由 CreateCatalogKits 按 Provider 分组列出。
+                    () => CreateCommandCatalogJson(GodotEditorSystemCommandHandler.CommandDescriptors),
+                    CreateEnvironmentResultJson)
+            };
+            for (var index = 0; index < providers.Count; index++)
+            {
+                handlers.Add(providers[index]);
+            }
+
+            return new YokiFrameCommandDispatcher(policy, handlers.ToArray());
+        }
+
+        /// <summary>
+        /// catalog 版本变化时重建命令策略，使后注册的 Kit 同样能被服务（插件启动顺序无关）。
+        /// </summary>
+        private void RefreshCatalogKitsIfNeeded()
+        {
+            if (YokiFrameToolKitInteractionCatalog.Revision == mToolProviderRevision)
+            {
+                return;
+            }
+
+            mDispatcher = CreateCommandDispatcher();
         }
 
         /// <summary>
@@ -109,11 +144,47 @@ namespace YokiFrame
                 SessionId = mSessionId,
                 Generation = mGeneration,
                 Sequence = mSequence,
-                Kits = new[]
-                {
-                    new YokiFrameFileBridgeCommandCatalogKit { Kit = "System", Actions = actions.ToArray() }
-                }
+                Kits = CreateCatalogKits(actions)
             });
+        }
+
+        /// <summary>
+        /// 组装按 Kit 分组的命令目录：System 之后追加 catalog 注册的 Kit（例如 Engine）。
+        /// </summary>
+        /// <param name="systemActions">System 命令。</param>
+        /// <returns>目录分组。</returns>
+        private YokiFrameFileBridgeCommandCatalogKit[] CreateCatalogKits(
+            List<YokiFrameFileBridgeCommandCatalogAction> systemActions)
+        {
+            var kits = new List<YokiFrameFileBridgeCommandCatalogKit>
+            {
+                new YokiFrameFileBridgeCommandCatalogKit { Kit = "System", Actions = systemActions.ToArray() }
+            };
+            IReadOnlyList<IYokiFrameKitInteractionProvider> providers = mKitInteractions == null
+                ? Array.Empty<IYokiFrameKitInteractionProvider>()
+                : mKitInteractions.Providers;
+            for (var index = 0; index < providers.Count; index++)
+            {
+                IReadOnlyList<YokiFrameCommandDescriptor> commands = providers[index].Commands;
+                var kitActions = new List<YokiFrameFileBridgeCommandCatalogAction>(commands.Count);
+                for (var commandIndex = 0; commandIndex < commands.Count; commandIndex++)
+                {
+                    kitActions.Add(new YokiFrameFileBridgeCommandCatalogAction
+                    {
+                        Action = commands[commandIndex].Action,
+                        Kind = commands[commandIndex].Kind.ToString()
+                    });
+                }
+
+                kitActions.Sort(static (left, right) => string.CompareOrdinal(left.Action, right.Action));
+                kits.Add(new YokiFrameFileBridgeCommandCatalogKit
+                {
+                    Kit = providers[index].Kit,
+                    Actions = kitActions.ToArray()
+                });
+            }
+
+            return kits.ToArray();
         }
 
         /// <summary>

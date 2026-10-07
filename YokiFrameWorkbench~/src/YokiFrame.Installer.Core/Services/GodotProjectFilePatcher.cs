@@ -41,6 +41,10 @@ public sealed class GodotProjectFilePatcher
         "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Runtime/YokiFrame.SpatialKit.csproj";
     private const string SPATIAL_KIT_EDITOR_PROJECT =
         "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Editor/YokiFrame.SpatialKit.Editor.csproj";
+    private const string ROSLYN_KIT_EDITOR_PROJECT =
+        "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj";
+    private const string ROSLYN_KIT_ADAPTER_PROJECT =
+        "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Adapters/Godot/Runtime/YokiFrame.RoslynKit.Godot.csproj";
 
     /// <summary>
     /// 创建或替换唯一 YokiFrame owner group，并保持其它项目节点、注释和顺序不变。
@@ -194,7 +198,11 @@ public sealed class GodotProjectFilePatcher
             CreateReference(projectNamespace, SAVE_KIT_EDITOR_PROJECT, TOOLS_CONDITION,
                 "YokiFrameToolsBuild=True"),
             CreateReference(projectNamespace, SPATIAL_KIT_EDITOR_PROJECT, TOOLS_CONDITION,
-                "YokiFrameToolsBuild=True"));
+                "YokiFrameToolsBuild=True"),
+            CreateReference(projectNamespace, ROSLYN_KIT_EDITOR_PROJECT, TOOLS_CONDITION,
+                "YokiFrameToolsBuild=True"),
+            CreateReference(projectNamespace, ROSLYN_KIT_ADAPTER_PROJECT, TOOLS_CONDITION,
+                "GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=True"));
     }
 
     /// <summary>创建带可选 Tools 条件和传递属性的规范化项目引用。</summary>
