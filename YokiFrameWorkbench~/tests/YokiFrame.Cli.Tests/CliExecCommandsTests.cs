@@ -17,13 +17,13 @@ public sealed class CliExecCommandsTests
         // 审查清单 §2.0 里那段 Unity 冒烟脚本；这里锁定"它是合法步骤流"，
         // 防止文档里的示例随 schema 演进而失效（没有在线 engine 时会在第一步失败，那是预期的）。
         const string script = """
-{"command":["command","send","--kit","Engine","--action","domain_state"],"expect":{"contains":"engineKind"}}
-{"command":["command","send","--kit","Engine","--action","engine_capabilities"],"expect":{"contains":"scene_query"}}
-{"command":["command","send","--kit","Engine","--action","scene_query","--payload","{\"path\":\"/\",\"depth\":2}"],"expect":{"contains":"rootCount"}}
-{"command":["command","send","--kit","Engine","--action","entry_list"],"expect":{"contains":"entries"}}
-{"command":["command","send","--kit","Engine","--action","eval","--payload","{\"confirmed\":true,\"id\":\"smoke1\",\"code\":\"ctx.Log(\\\"smoke\\\");\"}"],"retry":{"attempts":5,"delayMs":1000},"expect":{"contains":"accepted"}}
-{"command":["command","send","--kit","Engine","--action","eval_result","--payload","{\"id\":\"smoke1\"}"],"retry":{"attempts":30,"delayMs":2000},"expect":{"contains":"Ready"}}
-{"command":["command","send","--kit","Engine","--action","eval_prune","--payload","{}"],"expect":{"contains":"removedRecords"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","domain_state"],"expect":{"contains":"engineKind"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","engine_capabilities"],"expect":{"contains":"scene_query"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","scene_query","--payload","{\"path\":\"/\",\"depth\":2}"],"expect":{"contains":"rootCount"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","entry_list"],"expect":{"contains":"entries"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","eval","--payload","{\"confirmed\":true,\"id\":\"smoke1\",\"code\":\"ctx.Log(\\\"smoke\\\");\"}"],"retry":{"attempts":5,"delayMs":1000},"expect":{"contains":"accepted"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","eval_result","--payload","{\"id\":\"smoke1\"}"],"retry":{"attempts":30,"delayMs":2000},"expect":{"contains":"Ready"}}
+{"command":["command","send","RoslynKit","RoslynKit","--action","eval_prune","--payload","{}"],"expect":{"contains":"removedRecords"}}
 """;
 
         (int exitCode, string output) = await RunExecAsync(script);

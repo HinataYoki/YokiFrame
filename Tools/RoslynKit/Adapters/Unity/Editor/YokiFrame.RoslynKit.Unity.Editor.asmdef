@@ -1,0 +1,22 @@
+{
+    "name": "YokiFrame.RoslynKit.Unity.Editor",
+    "rootNamespace": "YokiFrame",
+    "references": [
+        "GUID:224151c835b786a4f8efadaa1799380d",
+        "GUID:8e62f2f1c4b54a22a65cf2e98aa12920",
+        "GUID:b2d3e4f5061728394a5b6c7d8e9f0112",
+        "GUID:c43cf80ab82b5e04ba14ddf6cd7b676e",
+        "YokiFrame.Unity.LiveCode.Facade"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -237,7 +237,7 @@ internal static class CliJsonOutput
 
         // §12.3：域重载类错误"结果未知，先查证"，禁止当成失败或直接重放。
         if (string.Equals(errorCode, "HostIdentityChanged", StringComparison.Ordinal)
-            || string.Equals(errorCode, "EngineReloading", StringComparison.Ordinal))
+            || string.Equals(errorCode, "RoslynReloading", StringComparison.Ordinal))
         {
             return YokiFrame.Protocol.Results.CommandOutcomeState.Unknown;
         }

@@ -32,9 +32,9 @@
 | 直接读共享内存 | `telemetry read` |
 | 直接读 snapshot 文件 | `snapshot read` |
 | 看命令桥 | `bridge status` |
-| 看引擎状态（模式、播放/编译、执行开关） | `command send --kit Engine --action domain_state` |
-| 看引擎操作可用性矩阵与开关原因 | `command send --kit Engine --action engine_capabilities` |
-| 不读源码发现存活服务与公开签名 | `command send --kit Engine --action object_list --payload '{"target":"editor","root":"service"}'`，再用 `object_describe` 传 objectId；运行态显式改 target |
+| 看引擎状态（模式、播放/编译、执行开关） | `command send --kit RoslynKit --action domain_state` |
+| 看引擎操作可用性矩阵与开关原因 | `command send --kit RoslynKit --action engine_capabilities` |
+| 不读源码发现存活服务与公开签名 | `command send --kit RoslynKit --action object_list --payload '{"target":"editor","root":"service"}'`，再用 `object_describe` 传 objectId；运行态显式改 target |
 | 看诊断摘要 | `doctor` |
 | 看 FastChannel 端点 | `fastchannel status`。这里给出的是登记的端点 |
 | 执行已声明 action | `command send`。action 来自 `harness catalog --refresh-commands` 的 `commandCatalog`，payload 与 Workbench 上同一次操作一致 |
@@ -53,7 +53,7 @@
 
 ## 内存 C# 自动化（yoki script）
 
-需要普通 C#、调用已注册服务、真实等帧与断言时使用。先运行 `command send --kit Engine --action script_status`，确认宿主已接线、编译器已安装、受信任 C# 已获授权。
+需要普通 C#、调用已注册服务、真实等帧与断言时使用。先运行 `command send --kit RoslynKit --action script_status`，确认宿主已接线、编译器已安装、受信任 C# 已获授权。
 
 ```powershell
 @'
@@ -64,11 +64,11 @@ engine.ConsoleLog("automation completed");
 ```
 
 - 输入是 C# 方法体，不是 TS 或带属性的入口；128 KiB UTF-8 上限。可选文件必须位于项目根内，推荐 `scripts/engine/*.csx`，不写进 Assets。用 `--file` 时按 UTF-8 读取；管道喂 stdin 时非 ASCII 可能被按本地代码页解码，含中文的脚本优先用 `--file`。
-- `--confirm-execution` 不开启项目设置。执行要求 `Engine/operations.enabled` 与 `Engine/scripts.trustedCSharp` 都为 true；Roslyn 不是沙箱。默认等待 30000ms，长任务加 `--timeout`（上限 600000）。
+- `--confirm-execution` 不开启项目设置。执行要求 `RoslynKit/operations.enabled` 与 `RoslynKit/scripts.trustedCSharp` 都为 true；Roslyn 不是沙箱。默认等待 30000ms，长任务加 `--timeout`（上限 600000）。
 - CLI 仅在终态 `Passed` 时返回成功；`CompileFailed` / `Failed` / `Errored` / `Cancelled` / `Timeout` 分开报告。无结论或 `Detached` 报未知，不能自动重新提交。
 - accepted 返回丢失后用 `run_lookup` 加原 requestId 对账；取得 runId 后用 `run_result`。中断等待时 CLI 尝试 `run_cancel`，不声称任意 C# 已被强制停止。
-- 已安装 CLI 暂无 `script`、但宿主已有新操作时，可用 `command send --kit Engine --action script_run --payload '{"code":"test.Equal(1,1);","target":"editor","confirmed":true}'` 提交，再用 `run_result` 查终态。这同样是内存路径，不是 eval 回退。
-- Roslyn 已接入 Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime。Godot 须额外设置 `yokiframe/engine/trusted_csharp=true`，不使用 Unity 的 JSON 设置文件；Godot Capture/Patch/Export/Bind 未实现。助手 API、限制和结果查询见 [engine-kit.md](engine-kit.md)。
+- 已安装 CLI 暂无 `script`、但宿主已有新操作时，可用 `command send --kit RoslynKit --action script_run --payload '{"code":"test.Equal(1,1);","target":"editor","confirmed":true}'` 提交，再用 `run_result` 查终态。这同样是内存路径，不是 eval 回退。
+- Roslyn 已接入 Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime。Godot 须额外设置 `yokiframe/engine/trusted_csharp=true`，不使用 Unity 的 JSON 设置文件；Godot Capture/Patch/Export/Bind 未实现。助手 API、限制和结果查询见 [roslyn-kit.md](roslyn-kit.md)。
 - 要在 Play 里热改/新增行为、边跑边调参、最后落盘成 MonoBehaviour，用同一受信任提交里的 `engine.LiveCode`。成员源码怎么写、跨原型怎么调用、Export/Bind 的真实边界见 [livecode.md](livecode.md)。
 
 ## 多步编排不要落盘（yoki exec）
@@ -84,7 +84,7 @@ engine.ConsoleLog("automation completed");
 
 | 形态 | 含义 |
 |---|---|
-| `{"command":["command","send","--kit","Engine","--action","domain_state"]}` | 执行一条 yoki 子命令；**自动继承外层 `--project`** |
+| `{"command":["command","send","--kit","RoslynKit","--action","domain_state"]}` | 执行一条 yoki 子命令；**自动继承外层 `--project`** |
 | `{"wait":5000}` | 等待毫秒（上限 60s，超出按 60s 截断） |
 | `{"command":[...],"retry":{"attempts":10,"delayMs":3000}}` | 失败重试；attempts ≤120 |
 | `{"command":[...],"expect":{"contains":"\"isPlaying\":true"}}` | 断言输出包含指定文本 |
@@ -102,13 +102,13 @@ engine.ConsoleLog("automation completed");
 
 ```bash
 @'
-{"command":["command","send","--kit","Engine","--action","engine_capabilities"]}
-{"command":["command","send","--kit","Engine","--action","play_control","--payload","{\"command\":\"enter\",\"confirmed\":true}"]}
+{"command":["command","send","--kit","RoslynKit","--action","engine_capabilities"]}
+{"command":["command","send","--kit","RoslynKit","--action","play_control","--payload","{\"command\":\"enter\",\"confirmed\":true}"]}
 {"wait":5000}
-{"command":["command","send","--kit","Engine","--action","domain_state"],"retry":{"attempts":10,"delayMs":3000},"expect":{"contains":"\"isPlaying\":true"}}
-{"command":["command","send","--kit","Engine","--action","play_control","--payload","{\"command\":\"exit\",\"confirmed\":true}"]}
+{"command":["command","send","--kit","RoslynKit","--action","domain_state"],"retry":{"attempts":10,"delayMs":3000},"expect":{"contains":"\"isPlaying\":true"}}
+{"command":["command","send","--kit","RoslynKit","--action","play_control","--payload","{\"command\":\"exit\",\"confirmed\":true}"]}
 {"wait":5000}
-{"command":["command","send","--kit","Engine","--action","domain_state"],"expect":{"contains":"\"mode\":\"EditMode\""}}
+{"command":["command","send","--kit","RoslynKit","--action","domain_state"],"expect":{"contains":"\"mode\":\"EditMode\""}}
 '@ | yoki exec --project <项目根>
 ```
 
@@ -130,16 +130,16 @@ engine.ConsoleLog("automation completed");
 
 运行记录和截图写入项目 `.yokiframe/` 受控目录；需要维护的 C# 任务可放项目根 `scripts/engine/*.csx`。不要生成 Assets 下的任务 `.cs` 或将任务编译为磁盘 DLL/PDB，也不要把一次性 shell 编排写到系统临时目录。
 
-## 引擎操作开关（Engine Kit）
+## 引擎操作开关（RoslynKit）
 
-Engine Kit 的执行类操作默认关闭，开关写在工程设置文件 `ProjectSettings/Packages/com.hinatayoki.yokiframe/editor-settings.json` 里：
+RoslynKit 的执行类操作默认关闭，开关写在工程设置文件 `ProjectSettings/Packages/com.hinatayoki.yokiframe/editor-settings.json` 里：
 
 ```json
-{ "kit": "Engine", "key": "operations.enabled", "value": "true" }
+{ "kit": "RoslynKit", "key": "operations.enabled", "value": "true" }
 ```
 
 - 每次命令执行都会重新读取该开关，改完立即生效，无需重启编辑器。
-- 关闭、配置缺失或解析失败时：`engine_capabilities`、`domain_state` 等诊断与结果查询仍可用；执行类操作返回 `EngineOperationDisabled`。
+- 关闭、配置缺失或解析失败时：`engine_capabilities`、`domain_state` 等诊断与结果查询仍可用；执行类操作返回 `RoslynOperationDisabled`。
 - `--action engine_capabilities` 可查看每个操作的可用性（`Enabled` / `DisabledBySettings` / `UnsupportedByHostTarget`）。
 
 `--dry-run` 返回将要写入的 `writes[]`，失败原因与正式执行相同。`installer apply` 的预览命令是 `installer plan`，`audio index generate` 的预览命令是 `audio index scan`。

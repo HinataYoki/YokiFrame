@@ -1,0 +1,48 @@
+<Project Sdk="Godot.NET.Sdk/4.7.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>YokiFrame.RoslynKit.Godot</AssemblyName>
+    <RootNamespace>YokiFrame</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GodotProjectDir Condition="'$(GodotProjectDir)' == ''">$(MSBuildProjectDirectory)</GodotProjectDir>
+    <DefineConstants>$(DefineConstants);GODOT;TOOLS</DefineConstants>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);NETSDK1023</NoWarn>
+    <OutputPath>$(YokiFrameBuildRoot)/bin/$(MSBuildProjectName)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>$(YokiFrameBuildRoot)/obj/$(MSBuildProjectName)/$(Configuration)/</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="bin/**/*.cs;obj/**/*.cs;.godot/**/*.cs" />
+    <Compile Include="..\Editor\**/*.cs" Link="Editor\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GodotSharp" Version="4.7.0" PrivateAssets="all" />
+    <PackageReference Include="GodotSharpEditor" Version="4.7.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../../Core/Runtime/YokiFrame.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="../../../../../Core/Editor/YokiFrame.Editor.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
+    </ProjectReference>
+    <ProjectReference Include="../../../../../Core/Adapters/Godot/Editor/YokiFrame.Godot.Editor.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="../../../../../Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="../../../Editor/YokiFrame.RoslynKit.Editor.csproj">
+      <GlobalPropertiesToRemove>GodotProjectDir</GlobalPropertiesToRemove>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

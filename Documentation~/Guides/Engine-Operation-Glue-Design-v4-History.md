@@ -58,17 +58,17 @@
 
 ```
 CLI / Workbench / AI
-  │ command send --kit Engine --action entry_run --payload {entry,target,...}
+  │ command send Engine RoslynKit --action entry_run --payload {entry,target,...}
   ▼  CommandExecutionService（ReadOnly→FastChannel；其余→FileBridge；含重载容错 §12）
 宿主主线程 Dispatcher → Policy（协议级准入）
   ▼
-Engine Kit Provider（胶水层，引擎无关）
+RoslynKit Provider（胶水层，引擎无关）
   ├─ Gate（开关 + 来源 + target 可用性，§8/§9）
   ├─ Operations：编辑器操作桥（scene/play/asset）
   ├─ Entry Registry：入口发现 + 缓存（§6）
   └─ Run Scheduler：tick 驱动异步运行器（§10）
-        ├─ Unity  : Core/Adapters/Unity/Editor/EngineKit/     [editor, play]
-        └─ Godot  : Core/Adapters/Godot/{Editor,Runtime}/EngineKit/  [editor, play, runtime]
+        ├─ Unity  : Tools/RoslynKit/Adapters/Unity/Editor/     [editor, play]
+        └─ Godot  : Tools/RoslynKit/Adapters/Godot/{Editor,Runtime}/  [editor, play, runtime]
 ```
 
 ### 3.1 接线方式
@@ -82,7 +82,7 @@ Engine Kit Provider（胶水层，引擎无关）
 | 通道 | 本期 |
 |---|---|
 | 命令面（`command send`/`list_commands`/`harness catalog`） | ✅ |
-| CLI snapshot（`snapshot read --kit Engine`） | ✅ |
+| CLI snapshot（`snapshot read Engine RoslynKit`） | ✅ |
 | 共享内存 telemetry、Workbench Dashboard 页面 | ❌ 移出（需版本化 Provider / 固定清单登记），列 P4 可选 |
 
 ---
@@ -114,40 +114,40 @@ v3 把"编辑器里跑 C#"当成唯一形态，这是错的：**Editor 内调用
 
 ## 5. 契约设计
 
-新增 `Core/Editor/EngineKit/`（守卫 `#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING`）：
+新增 `Tools/RoslynKit/Editor/`（守卫 `#if UNITY_EDITOR || (GODOT && TOOLS) || YOKIFRAME_TOOLING`）：
 
 **程序集边界（评审第 2 条）**：用户游戏脚本要引用的类型**不能**放在 Editor-only 程序集，否则 Player 构建时类型缺失。约定如下：
 
 | 类型 | 程序集 | 位置 |
 |---|---|---|
-| `YokiFrameEntryAttribute`、`YokiFrameEntryTarget`(flags)、`YokiFrameEntryContext`（契约与分帧原语签名）、`YokiFrameEntryResult`、`YokiFrameEntryAssertion`、`YokiFrameEntryStatus` | **运行时程序集 `YokiFrame`**（`Core/Runtime/YokiFrame.asmdef`，`autoReferenced: true`） | `Core/Runtime/EngineKit/` |
-| 入口扫描器与注册表、Run Scheduler、Gate、Provider、Settings、错误码、`entry_lookup` | Editor / Tools 程序集 | `Core/Editor/EngineKit/` |
-| 各引擎的具体操作实现 | 引擎适配器程序集 | `Core/Adapters/{Unity,Godot}/**/EngineKit/` |
+| `YokiFrameEntryAttribute`、`YokiFrameEntryTarget`(flags)、`YokiFrameEntryContext`（契约与分帧原语签名）、`YokiFrameEntryResult`、`YokiFrameEntryAssertion`、`YokiFrameEntryStatus` | **运行时程序集 `YokiFrame`**（`Core/Runtime/YokiFrame.asmdef`，`autoReferenced: true`） | `Tools/RoslynKit/Runtime/` |
+| 入口扫描器与注册表、Run Scheduler、Gate、Provider、Settings、错误码、`entry_lookup` | Editor / Tools 程序集 | `Tools/RoslynKit/Editor/` |
+| 各引擎的具体操作实现 | 引擎适配器程序集 | `Tools/RoslynKit/Adapters/{Unity,Godot}/` |
 
 依赖方向：**运行时契约层不得引用 Editor/Tools 类型**；Editor 层实现运行时层声明的类型与接口。`YokiFrameEntryContext` 的**实现**在宿主侧（Unity 编辑器 / `godot-runtime`），运行层只放抽象与数据模型。
 
 ```csharp
-public interface IYokiFrameEngineOperation
+public interface IYokiFrameRoslynOperation
 {
     string Operation { get; }
     YokiFrameCommandDescriptor Descriptor { get; }        // 常驻注册（§9 决议 A）
-    IReadOnlyList<YokiFrameEngineExecutionTarget> Targets { get; }   // editor/play/runtime
-    YokiFrameEngineOperationAvailability GetAvailability(in YokiFrameEngineOperationContext context);
-    YokiFrameCommandResult Execute(in YokiFrameEngineOperationContext context);
+    IReadOnlyList<YokiFrameRoslynExecutionTarget> Targets { get; }   // editor/play/runtime
+    YokiFrameRoslynOperationAvailability GetAvailability(in YokiFrameRoslynOperationContext context);
+    YokiFrameCommandResult Execute(in YokiFrameRoslynOperationContext context);
 }
 
-public interface IYokiFrameEngineOperationProvider
+public interface IYokiFrameRoslynOperationProvider
 {
     string EngineKind { get; }
-    IReadOnlyList<IYokiFrameEngineOperation> Operations { get; }
-    IYokiFrameEngineEntryRegistry Entries { get; }        // §6
-    IYokiFrameEngineRunScheduler Runs { get; }           // §10
-    YokiFrameEngineDomainState ReadDomainState();
+    IReadOnlyList<IYokiFrameRoslynOperation> Operations { get; }
+    IYokiFrameRoslynEntryRegistry Entries { get; }        // §6
+    IYokiFrameRoslynRunScheduler Runs { get; }           // §10
+    YokiFrameRoslynDomainState ReadDomainState();
 }
 
-public sealed class YokiFrameEngineKitProvider : IYokiFrameKitInteractionProvider
+public sealed class YokiFrameRoslynKitProvider : IYokiFrameKitInteractionProvider
 {
-    public string Kit => "Engine";
+    public string Kit => "RoslynKit";
     public IReadOnlyList<string> SnapshotNames => new[] { "state" };
     public IReadOnlyList<YokiFrameCommandDescriptor> Commands { get; }   // 常驻，与开关无关
     public string CreateSnapshot(string snapshotName);
@@ -227,9 +227,9 @@ public static async Task<YokiFrameEntryResult> RunAsync(YokiFrameEntryContext ct
 
 ## 8. 【P1-③】Dangerous 来源限制的执行点（v4 改判）
 
-C13 证明 v3 的"Engine Kit 传入 `dangerousSources`"**无处可传**：Policy 由三个宿主工厂创建（Unity Editor `:54`、Godot Editor `:73`、Godot Runtime `:76`），Provider 没有传参接口；若改共享 Policy 的默认行为，又会波及所有 Kit 的 Dangerous 命令。
+C13 证明 v3 的"RoslynKit 传入 `dangerousSources`"**无处可传**：Policy 由三个宿主工厂创建（Unity Editor `:54`、Godot Editor `:73`、Godot Runtime `:76`），Provider 没有传参接口；若改共享 Policy 的默认行为，又会波及所有 Kit 的 Dangerous 命令。
 
-**v4 决议：限制作用域 = Engine Kit，执行点 = Engine Gate（不是 Policy）。**
+**v4 决议：限制作用域 = RoslynKit，执行点 = Engine Gate（不是 Policy）。**
 
 理由：
 - 作用域天然隔离——其他 Kit 的 Dangerous 命令零影响，不需要改共享 Policy 的语义。
@@ -237,7 +237,7 @@ C13 证明 v3 的"Engine Kit 传入 `dangerousSources`"**无处可传**：Policy
 - Gate 能从 `YokiFrameCommandRequest.Source` 直接判定，错误码 `EngineOperationSourceNotPermitted` 比通用 `PolicyRejected` 更可诊断。
 - 保留升级路径：若将来其他 Kit 也要同款限制，再把它提升为 Policy 的按 Kit 覆盖表（届时才需要改三处宿主工厂）。
 
-**测试矩阵（P0 交付，落在 EngineKit 测试）**：
+**测试矩阵（P0 交付，落在 RoslynKit 测试）**：
 
 | source | 只读动作 | Dangerous + `confirmed:true` | Dangerous 无 `confirmed` |
 |---|---|---|---|
@@ -355,7 +355,7 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| **P0 契约与权限** | EngineKit 契约 + Gate（开关/来源/target）+ `domain_state` + `engine_capabilities` + Unity 接线与 snapshot + descriptor/capability.json 一致性测试 | §8 矩阵全绿且其他 Kit 行为不变；`snapshot read --kit Engine` 有数据；`harness catalog` 出现 Engine 动作；关闭时 `engine_capabilities` 报 `DisabledBySettings`、执行返回 `EngineOperationDisabled` |
+| **P0 契约与权限** | RoslynKit 契约 + Gate（开关/来源/target）+ `domain_state` + `engine_capabilities` + Unity 接线与 snapshot + descriptor/capability.json 一致性测试 | §8 矩阵全绿且其他 Kit 行为不变；`snapshot read Engine RoslynKit` 有数据；`harness catalog` 出现 Engine 动作；关闭时 `engine_capabilities` 报 `DisabledBySettings`、执行返回 `EngineOperationDisabled` |
 | **P1 Unity 纵切** | 编辑器操作桥（`scene_query`/`scene_mutate`/`play_control`/`asset_ops`）+ **入口执行器全流程**（`entry_list`/`entry_run`/`entry_result`/`entry_cancel`，异步、断言、异常、日志）+ **最小重载适配（§12）** | 跑通"发现入口 → 改场景 → 跨帧执行 → 明确 Passed/Failed"；断言失败给全量明细；异常 → `Errored`+`stack`；提交成功与运行通过分别断言；域重载下 `requestId` 不丢 |
 | **P2 Godot 纵切** | 同一流程在 Godot Editor 跑通（含 C12 目录分组、状态发布链、`target` 支持）+ Godot Runtime 的 `entry_run`（runtime target） | 同一 `entry_list`/`entry_run`/`entry_result` 流程在 Godot 可用；Unity 侧零改动 |
 | **P3 动态 eval（可选）** | T2 状态机 + §11 程序集归属修正 + `eval_result` | 编译失败不依赖重载即落 `CompileFailed`；崩溃窗口 → `Unknown` 不自动重放；`eval_result` 纯读 |
@@ -385,12 +385,12 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 ## 16. 改动文件清单
 
 **新增**
-- `Core/Runtime/EngineKit/`（**运行时程序集**，评审第 2 条）：`YokiFrameEntryAttribute`、`YokiFrameEntryTarget`、`YokiFrameEntryContext`（契约与分帧原语签名）、`YokiFrameEntryResult`、`YokiFrameEntryAssertion`、`YokiFrameEntryStatus`
-- `Core/Editor/EngineKit/`：Provider、Operation/Provider 契约、Gate、Errors、DomainState、入口扫描器与注册表、Run Scheduler、运行记录与**请求索引**存储、`entry_lookup`
-- `Core/Editor/CommandBridge/Capabilities/Engine/capability.json`
-- `Core/Adapters/Unity/Editor/EngineKit/`（Provider + 安装器 + 编辑器操作 + 入口执行器接线 + T2 子系统）
-- `Core/Adapters/Godot/{Editor,Runtime}/EngineKit/`（P2）
-- `Core/Tests/Editor/EngineKit/`（含 §8 矩阵、§10 状态机、`entry_list` 目录契约测试）
+- `Tools/RoslynKit/Runtime/`（**运行时程序集**，评审第 2 条）：`YokiFrameEntryAttribute`、`YokiFrameEntryTarget`、`YokiFrameEntryContext`（契约与分帧原语签名）、`YokiFrameEntryResult`、`YokiFrameEntryAssertion`、`YokiFrameEntryStatus`
+- `Tools/RoslynKit/Editor/`：Provider、Operation/Provider 契约、Gate、Errors、DomainState、入口扫描器与注册表、Run Scheduler、运行记录与**请求索引**存储、`entry_lookup`
+- `Core/Editor/CommandBridge/Capabilities/Roslyn/capability.json`
+- `Tools/RoslynKit/Adapters/Unity/Editor/`（Provider + 安装器 + 编辑器操作 + 入口执行器接线 + T2 子系统）
+- `Tools/RoslynKit/Adapters/Godot/{Editor,Runtime}/`（P2）
+- `Core/Tests/Editor/RoslynKit/`（含 §8 矩阵、§10 状态机、`entry_list` 目录契约测试）
 
 **修改**
 - `YokiFrameWorkbench~/src/YokiFrame.Tooling.Application/Services/Commands/CommandExecutionService.cs`（§12.1）
@@ -412,7 +412,7 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 |---|---|---|
 | ① 缺 C# 自动化测试执行契约 | 主线改为"入口执行器"：`entry_list`/`entry_run`/`entry_result`/`entry_cancel` + 异步 runId + 状态机 + 结构化断言结果；非目标修正 | §1、§6、§7、§10 |
 | ② 编辑器 ≠ 运行时执行 | 新增 `target: editor/play/runtime` 模型；Unity `runtime` 明确不支持（C14） | §4 |
-| ③ Dangerous 限制无接线点 | C13 证实 Provider 无传参路径；**改判为 Gate 执行、作用域 = Engine Kit**，pump 因此确实不用改 | §8 |
+| ③ Dangerous 限制无接线点 | C13 证实 Provider 无传参路径；**改判为 Gate 执行、作用域 = RoslynKit**，pump 因此确实不用改 | §8 |
 | ④ 生成目录与程序集探测不匹配 | C15 证实；固定 `Editor/` 目录 + 全程序集类型/Token 探测 + 引用规则 | §11 |
 | ⑤ AI 无法发现入口契约 | `entry_list` 机读目录（参数/异步/target/程序集/说明），`entry_run` 只引用 name | §6.2 |
 | ⑥ 重载适配晚于依赖它的功能 | 前置：与 `play_control` 同批交付，并在验收里断言 | §12、§14 |
@@ -442,9 +442,9 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 ### 18.4 回归手段（本机无 Unity 时同样可执行）
 1. `dotnet build Core/Editor/YokiFrame.Editor.csproj -t:Rebuild` —— 工具构建。
 2. 构造去掉 `System.Text.Json` 包引用的变体 csproj 并构建 —— 必须 0 错误，**等价 Unity 2022.3 的处境**。
-3. `dotnet test YokiFrameWorkbench~/tests/YokiFrame.EngineKit.Tests` —— Gate 策略矩阵。
+3. `dotnet test YokiFrameWorkbench~/tests/YokiFrame.RoslynKit.Tests` —— Gate 策略矩阵。
 
-### 18.5 对 EngineKit 的约束
+### 18.5 对 RoslynKit 的约束
 后续所有 Unity 侧引擎实现（场景操作、Play 控制、入口执行器、T2 生成源码）都必须满足 18.4 的三条回归；任何 Unity 6 独有 API 需按版本探测后再使用。
 
 ### 18.6 工作副本
@@ -473,7 +473,7 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 
 于是 inspect 操作里**没有任何机制特例**（TryResolveRoot 只委托注册表）；新增一类来源 = 新增一个策略。Unity 适配器用 UnityInspectRoots 注册内置 singleton 根（SingletonRegistry 只存诊断快照、不持有实例，因此按名字找类型读静态 Instance）。
 
-**验证**：EngineKit 134/134（含 7 例 inspect：路径读成员、字典键、列表索引、静态根、缺失成员 vs 未知根、未命中不崩、自定义根、无路径列成员）；Godot.Editor 31/31（新增锁定用例：Godot 宿主命令面含 inspect）；Godot.Runtime 96/96；Tooling 324/324；Unity 编译门 0 错误；Godot 两个适配器真编译 0 错误。
+**验证**：RoslynKit 134/134（含 7 例 inspect：路径读成员、字典键、列表索引、静态根、缺失成员 vs 未知根、未命中不崩、自定义根、无路径列成员）；Godot.Editor 31/31（新增锁定用例：Godot 宿主命令面含 inspect）；Godot.Runtime 96/96；Tooling 324/324；Unity 编译门 0 错误；Godot 两个适配器真编译 0 错误。
 
 **引擎通用性**：inspect 引擎无关 → Godot 宿主同样可用（且 Godot 已有 Runtime 宿主，因此 Godot Player 也能读）；限制是只能读 C# 侧对象，GDScript 对象读不到（用 GDScript eval 或 C# 入口）。
 ## 19. P0 实施进度（v4.3）
@@ -481,19 +481,19 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 ### 19.1 已实施并有自动化验证
 | 项 | 位置 | 验证 |
 |---|---|---|
-| Gate：开关 → 来源 → target 判定顺序与错误码 | `Core/Editor/EngineKit/YokiFrameEngineGate.cs` | 49 个测试（真实 Dispatcher → Policy → Gate） |
-| 豁免模型：诊断/取消类豁免开关，Dangerous 永不豁免 | `YokiFrameEngineOperationDescriptor.cs` | `EngineSwitchExemptionTests` |
-| 执行目标模型与宿主绑定判定 | `YokiFrameEngineExecutionTarget.cs`、Gate ④ 段 | `EngineTargetRoutingTests` |
-| 内建真实操作：`domain_state`、`engine_capabilities` | `YokiFrameEngineDomainStateOperation.cs`、`YokiFrameEngineCapabilitiesOperation.cs` | `EngineCatalogProviderTests` |
-| Kit Provider：命令面 + state snapshot 组合 | `YokiFrameEngineKitProvider.cs` | 同上 |
+| Gate：开关 → 来源 → target 判定顺序与错误码 | `Tools/RoslynKit/Editor/YokiFrameRoslynGate.cs` | 49 个测试（真实 Dispatcher → Policy → Gate） |
+| 豁免模型：诊断/取消类豁免开关，Dangerous 永不豁免 | `YokiFrameRoslynOperationDescriptor.cs` | `EngineSwitchExemptionTests` |
+| 执行目标模型与宿主绑定判定 | `YokiFrameRoslynExecutionTarget.cs`、Gate ④ 段 | `EngineTargetRoutingTests` |
+| 内建真实操作：`domain_state`、`engine_capabilities` | `YokiFrameRoslynDomainStateOperation.cs`、`YokiFrameRoslynCapabilitiesOperation.cs` | `EngineCatalogProviderTests` |
+| Kit Provider：命令面 + state snapshot 组合 | `YokiFrameRoslynKitProvider.cs` | 同上 |
 | 包内 JSON DOM（替代 System.Text.Json，修 Unity 2022.3 CS0122） | `Core/Editor/CommandBridge/Json/YokiFrameJsonDom.cs` | 无 System.Text.Json 变体构建 + Packaging 测试 |
-| Unity 接线：安装器 + Unity 引擎 Provider | `Core/Adapters/Unity/Editor/EngineKit/` | **待 Unity 内验证**（本机无 Unity，dotnet 不编译 Unity 适配器） |
+| Unity 接线：安装器 + Unity 引擎 Provider | `Tools/RoslynKit/Adapters/Unity/Editor/` | **待 Unity 内验证**（本机无 Unity，dotnet 不编译 Unity 适配器） |
 
 ### 19.2 待实施（P0 收尾）
 1. `capability.json`（Workbench 项目模型 / `harness catalog` 的声明式来源）与 descriptor 一致性测试。
 2. 会话身份（`sessionId`/`generation`）接入：当前 `SessionIdentityAvailable=false`，来源在 pump 私有静态字段，需要一次受控的内部访问器改动（会触碰 pump，需单独评审）。
 3. `entry_*` 系列动作（入口执行器）——属 P1 主线。
-4. Unity 内的端到端验收：`harness catalog --refresh-commands` 出现 `Engine/domain_state`；`command send --kit Engine --action domain_state` / `engine_capabilities` 有返回；`snapshot read --kit Engine` 有数据；开关关闭时危险动作返回 `EngineOperationDisabled`。
+4. Unity 内的端到端验收：`harness catalog --refresh-commands` 出现 `RoslynKit/domain_state`；`command send Engine RoslynKit --action domain_state` / `engine_capabilities` 有返回；`snapshot read Engine RoslynKit` 有数据；开关关闭时危险动作返回 `EngineOperationDisabled`。
 
 ### 19.3 验收口径（用户确认）
 当前只有 **Gate 的开关与来源门禁**部分可验收；**P0 整体未完成**。已有测试不证明真实运行可被取消（取消语义在 §10 设计，尚未实现）。
@@ -504,7 +504,7 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 | 面 | 机制 | 状态 |
 |---|---|---|
 | Overview 实时数据卡片 | `WorkbenchRuntimeKitCatalog.SnapshotStateKits` 加入 `Engine`，Overview 的 `CreateSnapshotCards` 按 `state.Snapshots` 动态渲染——与 LogKit/FsmKit 同一条路 | ✅ 已实施（`WorkbenchDashboardServiceTests` 通过） |
-| 命令面与 state snapshot | Kit registry 注册 Provider，`snapshot read --kit Engine` / `command send --kit Engine --action …` | ✅ Unity 内实测通过 |
+| 命令面与 state snapshot | Kit registry 注册 Provider，`snapshot read Engine RoslynKit` / `command send Engine RoslynKit --action …` | ✅ Unity 内实测通过 |
 | 工程模型 capabilities 清单 | `ProjectModelSourceScanner` 只扫 `Core/Runtime` 与 `Tools`；`Core/Editor` 下的描述符（System/Validation/Architecture/…/Engine）一律不进清单 | 保持现状（与其它 Core Kit 一致，且安装器会扫描 kit 引用，扩扫描根有波及） |
 | 专属页面 | 每 Kit 手写页面（VM + axaml）；Engine 暂无，Overview 卡片已覆盖当前只读能力 | 待 P1 出现执行类操作后再评估 |
 
@@ -513,13 +513,13 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 ### 19.5 目标绑定与快照修正（v4.5，按评审复现修订）
 | 评审 | 问题 | 修复 |
 |---|---|---|
-| ① 组合 target 误放行 | 请求只接受**单一** target（`YokiFrameEngineExecutionTargets.IsSingleTarget`）；组合值仅用于能力声明。原先的操作/宿主/请求三条交集检查改为「操作声明 ∩ 宿主承载」的显式判定，不再存在共同目标缺失仍放行的路径 |
+| ① 组合 target 误放行 | 请求只接受**单一** target（`YokiFrameRoslynExecutionTargets.IsSingleTarget`）；组合值仅用于能力声明。原先的操作/宿主/请求三条交集检查改为「操作声明 ∩ 宿主承载」的显式判定，不再存在共同目标缺失仍放行的路径 |
 | ② 豁免越过 target 校验 | 豁免**只跳过执行开关**；载荷解析、来源限制、目标绑定一律保留。目标无关行为（诊断与能力查询）改由 descriptor 的 `IsTargetAgnostic` **显式声明**，不再靠豁免隐式获得 |
 | ③ 转义键名丢 target | 弃用 `JsonHelper` 顶层快速扫描，改用包内 JSON DOM 直接 `TryGetProperty`（`\u0074arget` 解码后同样命中）；payload 非法 JSON、非对象、未知或组合 target 一律 `EngineOperationInvalidPayload`，不再静默回退 editor |
 | ④ snapshot 不增量刷新 | Provider 实现 `IYokiFrameSnapshotVersionedKitInteractionProvider`，`StateVersion` 由「引擎状态 + 执行开关」指纹驱动，宿主只在变化时重写文件快照；**无需修改 pump** |
-| ⑤ 能力报告非逐 target | 报告改为 `targetAvailability[]` 逐目标矩阵（`Enabled` / `DisabledBySettings` / `UnsupportedByTarget` / `UnsupportedByHostTarget`），并与 Gate 共用 `YokiFrameEngineAvailabilityRules` 单一事实源，避免两处漂移 |
+| ⑤ 能力报告非逐 target | 报告改为 `targetAvailability[]` 逐目标矩阵（`Enabled` / `DisabledBySettings` / `UnsupportedByTarget` / `UnsupportedByHostTarget`），并与 Gate 共用 `YokiFrameRoslynAvailabilityRules` 单一事实源，避免两处漂移 |
 
-**测试**：EngineKit 60/60 通过（新增组合 target、转义键名、载荷校验、豁免越权、目标无关诊断、逐目标矩阵与 `StateVersion` 推进用例）。
+**测试**：RoslynKit 60/60 通过（新增组合 target、转义键名、载荷校验、豁免越权、目标无关诊断、逐目标矩阵与 `StateVersion` 推进用例）。
 
 **v4.4 → v4.5**：按评审复现修正组合 target、豁免越权、转义键名、快照增量版本与逐 target 能力矩阵；Workbench 新增 Engine 页面模块（`WorkbenchDefaultPageModules`，静态 section 投影，无需新 XAML）。
 
@@ -527,20 +527,20 @@ Queued ──调度器认领──▶ Running ──┬─▶ Passed            
 | 面 | 状态 | 说明 |
 |---|---|---|
 | 编辑器操作桥 | **进行中** | ✅ Unity `play_control`（提交即返回 + 域重载语义 + 幂等状态提示）；✅ Unity `scene_query`（有界遍历：深度 ≤8、节点 ≤2000、每节点组件 ≤24，超限 `truncated`，支持 `path`/`depth`/`includeInactive`）；⏳ `scene_mutate`、`asset_ops` |
-| 共享 JSON 写出器 | ✅ | `YokiFrameEngineJsonBuilder`（公开，Core 与各适配器共用）；`YokiFrameEngineJsonWriter` 已收敛到它，字段名与顺序不变 |
+| 共享 JSON 写出器 | ✅ | `YokiFrameRoslynJsonBuilder`（公开，Core 与各适配器共用）；`YokiFrameRoslynJsonWriter` 已收敛到它，字段名与顺序不变 |
 | 用户入口执行器 | ⏳ 未开始 | 运行时契约层（属性/target/Context/结果模型）+ 扫描器 + Run Scheduler + `entry_*` + 请求索引 |
 | 客户端重载适配 | ⏳ 未开始 | §12：Client/Workbench/CLI 三处改动，需与首个引入重载的功能同批交付 |
 
 **验证提示**：`play_control` / `scene_query` 属 Unity 适配器，本机无 Unity 无法编译；请在 Unity 中编译后用 CLI 复核：
 
 ```
-yoki command send --kit Engine --action engine_capabilities          # 应看到 play_control / scene_query 的逐 target 矩阵
-yoki command send --kit Engine --action scene_query --payload '{"depth":2}'
-yoki command send --kit Engine --action play_control --payload '{"command":"enter","confirmed":true}'
-yoki command send --kit Engine --action domain_state                 # 复核是否真的进入 PlayMode
+yoki command send Engine RoslynKit --action engine_capabilities          # 应看到 play_control / scene_query 的逐 target 矩阵
+yoki command send Engine RoslynKit --action scene_query --payload '{"depth":2}'
+yoki command send Engine RoslynKit --action play_control --payload '{"command":"enter","confirmed":true}'
+yoki command send Engine RoslynKit --action domain_state                 # 复核是否真的进入 PlayMode
 ```
 
-⚠️ `play_control` 与 `scene_query` 需要开关打开（`Engine/operations.enabled = true`）才能执行；只读的 `scene_query` 也受开关约束（它绑定 editor|play 目标，不是诊断豁免）。
+⚠️ `play_control` 与 `scene_query` 需要开关打开（`RoslynKit/operations.enabled = true`）才能执行；只读的 `scene_query` 也受开关约束（它绑定 editor|play 目标，不是诊断豁免）。
 
 **v4.5 → v4.6**：按 §14 进入 P1；新增公开 JSON 写出器与 Unity `play_control`/`scene_query`，写出器单元测试 6 例。
 
@@ -562,9 +562,9 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 | 层 | 内容 |
 |---|---|
-| 运行时契约（`Core/Runtime/EngineKit/`，进 Player） | `YokiFrameEntryAttribute`、`YokiFrameEntryTarget`、`YokiFrameEntryStatus`、`YokiFrameEntryAssertion`、`YokiFrameEntryResult`、`YokiFrameEntryContext`（分帧原语签名 + 失效钩子） |
-| 编辑器层（`Core/Editor/EngineKit/Entry/`） | 目录扫描器与缓存、参数绑定与调用器、运行记录与请求索引存储（原子写/独占建索引/TTL 回收）、分帧上下文实现、Run Scheduler、`entry_list`/`entry_run`/`entry_result`/`entry_lookup`/`entry_cancel` |
-| Unity 接线（`Core/Adapters/Unity/Editor/EngineKit/`） | `UnityEngineEntryHost`（编辑态同步开场景、播放态异步加载由 update 观察）、`UnityEngineEntrySchedulerDriver`（每帧 Tick + 每次域加载一次 Reconcile）、安装器注入目录/存储/调度器 |
+| 运行时契约（`Tools/RoslynKit/Runtime/`，进 Player） | `YokiFrameEntryAttribute`、`YokiFrameEntryTarget`、`YokiFrameEntryStatus`、`YokiFrameEntryAssertion`、`YokiFrameEntryResult`、`YokiFrameEntryContext`（分帧原语签名 + 失效钩子） |
+| 编辑器层（`Tools/RoslynKit/Editor/Entry/`） | 目录扫描器与缓存、参数绑定与调用器、运行记录与请求索引存储（原子写/独占建索引/TTL 回收）、分帧上下文实现、Run Scheduler、`entry_list`/`entry_run`/`entry_result`/`entry_lookup`/`entry_cancel` |
+| Unity 接线（`Tools/RoslynKit/Adapters/Unity/Editor/`） | `UnityEngineEntryHost`（编辑态同步开场景、播放态异步加载由 update 观察）、`UnityEngineEntrySchedulerDriver`（每帧 Tick + 每次域加载一次 Reconcile）、安装器注入目录/存储/调度器 |
 
 对齐 §10.2 的关键实现点：提交即返回（先写记录与索引）；同一 `requestId` 幂等；`entry_result`/`entry_lookup` 纯读；取消与超时都是"请求"，宽限期内观察到用户代码退出才落 `Cancelled`/`Timeout`，否则 `Detached`；迟到完成只写 `lateResultPath` 不改终态；重载后孤儿运行判 `Unknown` 绝不重放；上下文失效后框架调用被拒绝并计入 `staleContextCalls`。
 
@@ -572,17 +572,17 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 **§12 客户端重载适配已实现**：`CommandExecutionService` 在身份变化时读回已落盘终态响应（标注 `ReloadedSession`），读不到则以保留 `commandPath`/`responsePath` 证据的方式抛 `HostIdentityChanged`；CLI 把 `HostIdentityChanged`/`EngineReloading` 映射为 `Unknown`（先查证、不重放）。`CommandExecutionResult` 新增可选 `Warning` 与结论覆盖。
 
-**R5 漂移守卫**：新增 `EngineCapabilityManifestTests`——① `capability.json` 的动作集合必须与 Provider 注册的命令面一致；② 清单 `sourceHash` 必须等于 `YokiFrameEngineKitProvider.cs`（LF 归一化）的 SHA-256；③ 每个动作指向存在的校验配方。清单已同步为 9 个动作 / 6 个配方。
+**R5 漂移守卫**：新增 `EngineCapabilityManifestTests`——① `capability.json` 的动作集合必须与 Provider 注册的命令面一致；② 清单 `sourceHash` 必须等于 `YokiFrameRoslynKitProvider.cs`（LF 归一化）的 SHA-256；③ 每个动作指向存在的校验配方。清单已同步为 9 个动作 / 6 个配方。
 
-**本轮验证**：EngineKit 93/93；Tooling 324/324；CLI 68/68；Installer.Core 138/138；Avalonia 424/424；`Core/Editor` 构建 0 警告 0 错误。
+**本轮验证**：RoslynKit 93/93；Tooling 324/324；CLI 68/68；Installer.Core 138/138；Avalonia 424/424；`Core/Editor` 构建 0 警告 0 错误。
 
 **仍未完成（诚实清单）**：`scene_mutate` / `asset_ops` 尚未实现；会话身份（`sessionId`/`generation`）仍需给 pump 加受控访问器；`entry_run` 的 runtime target 在 Unity 无宿主（§4/§14 已声明）；Godot 纵切（P2）未开始；§12 的重载行为只在自动化层面覆盖，真机需在 Unity 里用 `play_control enter` 复核。
 
 **v4.7 → v4.8**：补齐 P1 主线（入口执行器 + 重载适配 + 漂移守卫），并把"取消必须唤醒帧等待"这条写进 §10.2 的实现注记。
 
-### 19.9 P2 第一半：Godot Runtime 的 Engine Kit（v4.9）
+### 19.9 P2 第一半：Godot Runtime 的 RoslynKit（v4.9）
 
-**已实现（`Core/Adapters/Godot/Runtime/EngineKit/`）**：
+**已实现（`Tools/RoslynKit/Adapters/Godot/Runtime/`）**：
 
 | 文件 | 作用 |
 |---|---|
@@ -599,7 +599,7 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 - 命令目录按 Kit 分组：System 组只列 System 自己的描述符，其余按 Provider 的 Kit 分组（**这条是既有测试抓出来的**：聚合后 `policy.AllowedCommands` 会把 Kit 命令混进 System 组）；
 - 新增 `RefreshCatalogKitsIfNeeded`：catalog revision 变化时重建命令策略，因此**插件启动顺序无关**，后注册的 Kit 也无需重启宿主即可被服务。
 
-**Godot Editor Engine Kit**（`Core/Adapters/Godot/Editor/EngineKit/`）：`GodotEditorEngineOperationProvider`（`HostTargets = editor`，播放时报告 `PlayMode` + runtime 目标）、`GodotEditorEntryHost`（EditorInterface 同步开场景）、`GodotEditorEngineKitInstaller`（catalog 注册 + Process 推进 + 退出释放）。插件在 `_EnterTree` **建立 Editor Host 之前**安装，`_Process` 推进，`_ExitTree` 释放。
+**Godot Editor RoslynKit**（`Tools/RoslynKit/Adapters/Godot/Editor/`）：`GodotEditorEngineOperationProvider`（`HostTargets = editor`，播放时报告 `PlayMode` + runtime 目标）、`GodotEditorEntryHost`（EditorInterface 同步开场景）、`GodotEditorRoslynKitInstaller`（catalog 注册 + Process 推进 + 退出释放）。插件在 `_EnterTree` **建立 Editor Host 之前**安装，`_Process` 推进，`_ExitTree` 释放。
 
 **状态发布链（C12 第三项）**：新增 `GodotEditorFileBridgeHost.Snapshots.cs` —— 按 catalog Provider 的 `SnapshotNames` 写 `snapshots/<kit>/<name>.json`，信封字段与 Godot Runtime 宿主一致（`engineId`/`kit`/`name`/`generation`/`sequence`/`writtenAtUtc`/`payloadJson`；类型各自持有，因为两侧是不同程序集，契约是 JSON 形状）。版本化 Provider 只在 `StateVersion` 变化时落盘（`telemetryAvailable=false`，编辑器没有共享内存遥测），未声明版本的 Provider 跟随 catalog revision 写一次。
 
@@ -607,7 +607,7 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 ### 19.11 P2 收官：Godot 场景操作（v4.11）
 
-**新增**（`Core/Adapters/Godot/{Runtime,Editor}/EngineKit/`）：
+**新增**（`Tools/RoslynKit/Adapters/Godot/{Runtime,Editor}/`）：
 
 | 文件 | 作用 |
 |---|---|
@@ -617,7 +617,7 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 **与 Unity 的契约一致性**：payload 完全相同（`path`/`depth`/`includeInactive`；`op`/`path`/`name`/`active`/`position`/`rotation`/`scale`）。差异只在引擎语义，且都**如实回报**：Godot 用 `nodeType`（Unity 用 `components`）；删除是延迟释放 `deferred=true`；**Runtime 没有 Undo、也不能保存场景**（`undo=unavailable-in-runtime`，save → `EngineOperationUnavailable`）；编辑器用 `EditorUndoRedoManager` 登记动作并 `MarkSceneAsUnsaved`，登记失败时降级并回报 `undo=unavailable`。
 
-**验证**：Godot.Runtime **90/90**、Godot.Editor **29/29**、EngineKit **93/93**。
+**验证**：Godot.Runtime **90/90**、Godot.Editor **29/29**、RoslynKit **93/93**。
 
 **覆盖边界（诚实说明）**：Godot 场景操作与快照的正常路径需要**活的 Godot 进程**（合法载荷会触碰 `EditorInterface`/`SceneTree` 等原生单例，在测试进程里可能直接终止进程）。本机覆盖的是操作描述符、载荷校验的全部失败路径、能力矩阵逐 target 可用性与共享内核边界。
 
@@ -627,25 +627,25 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 | 层 | 内容 |
 |---|---|
-| Core（`Core/Editor/EngineKit/Eval/`） | `YokiFrameEngineEvalSourceGenerator`（生成源码，含 Token 常量与 `[YokiFrameEntry]` 声明）、`YokiFrameEngineEvalRequest`（内联 code / 项目内 codeFile + hash 校验）、`YokiFrameEngineEvalTypeProbe`（**类型全名 + Token** 双匹配，不按程序集名）、`YokiFrameEngineEvalStore`（记录持久化）、`YokiFrameEngineEvalService`（编译阶段状态机）、`eval` / `eval_result` / `eval_prune` 三个操作 |
+| Core（`Tools/RoslynKit/Editor/Eval/`） | `YokiFrameRoslynEvalSourceGenerator`（生成源码，含 Token 常量与 `[YokiFrameEntry]` 声明）、`YokiFrameRoslynEvalRequest`（内联 code / 项目内 codeFile + hash 校验）、`YokiFrameRoslynEvalTypeProbe`（**类型全名 + Token** 双匹配，不按程序集名）、`YokiFrameRoslynEvalStore`（记录持久化）、`YokiFrameRoslynEvalService`（编译阶段状态机）、`eval` / `eval_result` / `eval_prune` 三个操作 |
 | Unity 接线 | `UnityEngineEvalHost`（写 `Assets/YokiFrame.Eval/Editor/`、`AssetDatabase.Refresh`、用 `CompilationPipeline.assemblyCompilationFinished` 只收集生成目录内的编译错误）、安装器装配 eval 服务、每帧驱动同时推进编译阶段 |
 
-**关键设计**：把"编译"抽象成 `IYokiFrameEngineEvalHost` 接缝后，eval 状态机（Compiling → Ready / CompileFailed → 提交运行 → 复用 entry_run 的调度与结论语义）**可以在没有引擎进程时被完整单测**。
+**关键设计**：把"编译"抽象成 `IYokiFrameRoslynEvalHost` 接缝后，eval 状态机（Compiling → Ready / CompileFailed → 提交运行 → 复用 entry_run 的调度与结论语义）**可以在没有引擎进程时被完整单测**。
 
 **规则落地**：① 生成目录固定（Unity 特殊目录 → Assembly-CSharp-Editor，不建 asmdef）；② 探测只认 Token，同名残留不会被误判；③ 编译失败**不依赖域重载**即可落 `CompileFailed`（读到错误或等待超时）；④ 就绪后经入口目录提交运行，断言/异常/取消语义与 `entry_run` 一致；⑤ `eval_result` 纯读；⑥ `eval_prune` 回收生成源码与记录（§13）。
 
-**验证**：EngineKit **99/99**（新增 6 例）。**诚实边界**：Unity 侧"真实写盘 → 编译 → 反射调用"需要活的 Unity 编辑器；**Godot 侧 eval 未做**。
+**验证**：RoslynKit **99/99**（新增 6 例）。**诚实边界**：Unity 侧"真实写盘 → 编译 → 反射调用"需要活的 Unity 编辑器；**Godot 侧 eval 未做**。
 ### 19.13 会话身份缺口关闭：读已发布 registry，零改 pump（v4.13）
 
 §19.2 一直把"会话身份（`sessionId`/`generation`）"列为待实施，理由是 pump 把它们存在私有静态字段里；文档同时把"不改 pump"当成硬约束，两者相互矛盾。
 
-**解法**：不需要访问 pump —— pump **本来就把身份写进了已发布的 `engine.json`**（`sessionId` / `generation` 为根级字段）。新增 `YokiFrameEngineHostIdentityReader`（Core/Editor，引擎无关）按 (存在性, mtime, 长度) 缓存读取，Unity Provider 在 `ReadDomainState` 时用它填 `sessionId`/`generation`/`sessionIdentityAvailable`。
+**解法**：不需要访问 pump —— pump **本来就把身份写进了已发布的 `engine.json`**（`sessionId` / `generation` 为根级字段）。新增 `YokiFrameRoslynHostIdentityReader`（Core/Editor，引擎无关）按 (存在性, mtime, 长度) 缓存读取，Unity Provider 在 `ReadDomainState` 时用它填 `sessionId`/`generation`/`sessionIdentityAvailable`。
 
 - 读不到时**不伪造**：`SessionIdentityAvailable=false`，并给出原因（文件缺失 / JSON 非法 / 尚未发布 sessionId 三种）。
 - 缓存按 mtime + 长度失效，宿主每帧的状态指纹不会带来每帧文件读取。
 - 该读取器对任何宿主通用（Godot 的 `engine.json` 同样是这个形状），后续可复用。
 
-**验证**：EngineKit **103/103**（新增 4 例：正常读取、字符串代次兼容、三种不可用原因、缓存跟随更新）。
+**验证**：RoslynKit **103/103**（新增 4 例：正常读取、字符串代次兼容、三种不可用原因、缓存跟随更新）。
 
 **v4.12 → v4.13**：关闭会话身份缺口（零改 pump），并补齐审查清单文档。
 
@@ -655,20 +655,20 @@ yoki command send --kit Engine --action domain_state                 # 复核是
 
 Workbench 只读快照文件、看不到命令返回值。与其为页面新开一条命令管线，**把能力矩阵与入口目录摘要并入 Engine state snapshot**：
 
-- `YokiFrameEngineSnapshotWriter`（Core/Editor）：domain_state 字段 + `hostTargets` + `capabilities[]` + 入口目录摘要（最多 50 条，超出置 `truncatedEntries`）；
-- 矩阵与 `engine_capabilities` 共用 `YokiFrameEngineCapabilityProjection`（判定仍来自与 Gate 同源的 `YokiFrameEngineAvailabilityRules`），两处不会漂移；
+- `YokiFrameRoslynSnapshotWriter`（Core/Editor）：domain_state 字段 + `hostTargets` + `capabilities[]` + 入口目录摘要（最多 50 条，超出置 `truncatedEntries`）；
+- 矩阵与 `engine_capabilities` 共用 `YokiFrameRoslynCapabilityProjection`（判定仍来自与 Gate 同源的 `YokiFrameRoslynAvailabilityRules`），两处不会漂移；
 - `domain_state` 保持精简（高频只读命令不带矩阵），两者共用 `WriteDomainStateInto` 保证 domain 字段逐字一致；
 - 快照版本指纹扩展到**命令面与入口目录**：新增操作或入口失效都会让快照重写，页面不会停在旧矩阵。
 
 页面侧 `CreateEngineSections` 现在展示：承载目标、**逐操作一行**（kind → `editor:Enabled, play:DisabledBySettings`）、入口数量与清单（含 invalid 原因）、会话标识与代次；命令提示降级为"看明细"。
 
-**验证**：EngineKit **105/105**（新增 2 例：快照携带矩阵与入口摘要、命令面变化推进版本；并修正了 `WriteDomainState` 缺少闭合对象导致 JSON 损坏的缺陷）；Avalonia 侧新增 2 例端到端投影（真实 dashboard 解析快照信封 → 反射调用投影器断言矩阵与入口行，2/2 通过）。
+**验证**：RoslynKit **105/105**（新增 2 例：快照携带矩阵与入口摘要、命令面变化推进版本；并修正了 `WriteDomainState` 缺少闭合对象导致 JSON 损坏的缺陷）；Avalonia 侧新增 2 例端到端投影（真实 dashboard 解析快照信封 → 反射调用投影器断言矩阵与入口行，2/2 通过）。
 
 **v4.13 → v4.14**：Engine 页面接入真实数据（能力矩阵 + 入口目录），并把命令面/入口纳入快照版本指纹。
 
-**v4.14 → v4.15（核对清理）**：本节的锚点插入被执行了两次且落在 `## 19.` 之前，已去重并移到 §19.13 之后；删除两处死代码（`YokiFrameEngineCapabilitiesOperation.ResolveTargets`、`YokiFrameEngineKitProvider.ToArray`）；Engine 页面取消 Unity 专属可见性（Godot Editor / Runtime 同样注册 Engine Kit 并发布 state 快照），快照缺失分支补恢复提示，并补上入口 invalid 原因与截断标记的断言；刷新 Engine（因删死代码）与 EventKit（工作副本行尾变化、内容未变）的 `capability.json` sourceHash。
+**v4.14 → v4.15（核对清理）**：本节的锚点插入被执行了两次且落在 `## 19.` 之前，已去重并移到 §19.13 之后；删除两处死代码（`YokiFrameRoslynCapabilitiesOperation.ResolveTargets`、`YokiFrameRoslynKitProvider.ToArray`）；Engine 页面取消 Unity 专属可见性（Godot Editor / Runtime 同样注册 RoslynKit 并发布 state 快照），快照缺失分支补恢复提示，并补上入口 invalid 原因与截断标记的断言；刷新 Engine（因删死代码）与 EventKit（工作副本行尾变化、内容未变）的 `capability.json` sourceHash。
 
-**复跑结果**：EngineKit **105/105**、Protocol **73/73**、Avalonia **427/427**、Cli 68/68、Tooling 324/324、Installer.Core 138/138、Packaging 108/108、Client 83/83、Godot.Editor 29/29、Godot.Runtime 90/90、Godot.Player 1/1。Unity 侧只读抽查：`.yokiframe/engines/unity-editor/snapshots/Engine/state.json` 含 `hostTargets`、14 行能力矩阵、入口摘要与会话身份，Editor.log 最后一次编译成功。
+**复跑结果**：RoslynKit **105/105**、Protocol **73/73**、Avalonia **427/427**、Cli 68/68、Tooling 324/324、Installer.Core 138/138、Packaging 108/108、Client 83/83、Godot.Editor 29/29、Godot.Runtime 90/90、Godot.Player 1/1。Unity 侧只读抽查：`.yokiframe/engines/unity-editor/snapshots/RoslynKit/state.json` 含 `hostTargets`、14 行能力矩阵、入口摘要与会话身份，Editor.log 最后一次编译成功。
 ### 19.16 Unity-only 代码的编译审计（v4.16）
 
 **触发**：真机 Unity 首次编译报 `CS0165: Use of unassigned local variable 'sessionId'/'generation'`——我把 `out` 变量写在 `&&` 短路右侧，左侧为 false 时它们从未被赋值。
@@ -685,10 +685,10 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 | 预处理器配对 | 逐文件数 `#if` / `#endif` | 9/9 文件均为 1:1 |
 | 命名空间 | 逐文件读 `namespace` | 全部 `namespace YokiFrame` |
 | 裸引擎类型 | 对无 `using UnityEngine` 的文件搜 `Object`/`Debug`/`Application`/`Vector3`/`Mathf`… | 无命中（唯一候选是 `JsonValueKind.Object`，JSON 枚举） |
-| 接口实现完整性 | 接口定义 × 实现逐成员对照 | `IYokiFrameEngineOperationProvider` **7/7**；`IYokiFrameEngineEvalProvider.Eval`、`IYokiFrameEngineEvalHostProvider.EvalProjectRoot` 均在 |
+| 接口实现完整性 | 接口定义 × 实现逐成员对照 | `IYokiFrameRoslynOperationProvider` **7/7**；`IYokiFrameRoslynEvalProvider.Eval`、`IYokiFrameRoslynEvalHostProvider.EvalProjectRoot` 均在 |
 | 短路 `out` 全量扫描 | `Core` 全树 grep `&&…out` / `\|\|…out` | 其余命中均在 `if` 条件内使用，明确赋值成立；Unity 适配器仅此一处 |
 
-**验证**：Core/Editor 0 错误；EngineKit 105/105；Godot Runtime/Editor（`-p:YokiFrameToolsBuild=True`，真编译）各 0 错误；Avalonia 全量 **427/427**（此前 1 例 TableKit 失败单跑 17/17，确认偶发）。真机侧：`.yokiframe/engines/unity-editor/snapshots/Engine/state.json` 可解析出 `hostTargets` 与能力矩阵，与 Workbench 投影契约一致。
+**验证**：Core/Editor 0 错误；RoslynKit 105/105；Godot Runtime/Editor（`-p:YokiFrameToolsBuild=True`，真编译）各 0 错误；Avalonia 全量 **427/427**（此前 1 例 TableKit 失败单跑 17/17，确认偶发）。真机侧：`.yokiframe/engines/unity-editor/snapshots/RoslynKit/state.json` 可解析出 `hostTargets` 与能力矩阵，与 Workbench 投影契约一致。
 
 **纪律（v4.21 更新）**：任何新增/修改 Unity 适配器代码后，**先跑 §19.21 的本地编译门**（它是真正的编译器），再补跑本表六项语义检查。
 ### 19.21 Unity 本地编译门（v4.21，堵住最大的验证盲区）
@@ -700,7 +700,7 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 1. **照抄 Unity 生成的 `Assembly-CSharp-Editor.csproj` 的引用集**（231 个引用，含 UnityEngine 模块、UnityEditor、System.Memory 等）——脚本生成，避免手工维护；
 2. 采用与 Unity 相同的目标框架与语言版本（`net471` / C# 9）；
 3. **刻意不定义 `YOKIFRAME_TOOLING`**，只定义 `UNITY_EDITOR` 系列宏，精确模拟 Unity 侧编译环境；
-4. 编译 `Core/Runtime` + `Core/Editor` + `Core/Adapters/Unity/Editor/{EngineKit,FileBridge,FastChannel,Harness,Context}`。
+4. 编译 `Core/Runtime` + `Core/Editor` + `Core/Adapters/Unity/Editor/{RoslynKit,FileBridge,FastChannel,Harness,Context}`。
 
 **结果**：0 错误 0 警告 ✅。**从此 Unity 适配器的语法/类型/接口错误可在本机发现**，不再依赖真机编译兜底。
 
@@ -712,25 +712,25 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 
 **为什么不能照搬 Unity 路径**：Unity 的 eval 依赖 `AssetDatabase.Refresh` + `CompilationPipeline` + 域重载后的类型探测；Godot 的 C# 由 .NET SDK 编译、程序集在进程启动时装载，没有等价的「改完即生效」通道。按既有决策⑥，Godot 侧走 **GDScript 运行时编译**，C# 走 T0（`entry_*` 反射入口，不做动态编译）。
 
-**新增接缝（引擎无关）**：`IYokiFrameEngineScriptEvalHost` —— `TryCompile(id, token, code)` / `TryInvoke(id, token, out resultJson)` / `Unload(id)` / `Language`。任何「运行时能编译脚本」的宿主都能复用。
+**新增接缝（引擎无关）**：`IYokiFrameRoslynScriptEvalHost` —— `TryCompile(id, token, code)` / `TryInvoke(id, token, out resultJson)` / `Unload(id)` / `Language`。任何「运行时能编译脚本」的宿主都能复用。
 
-**新增服务**：`YokiFrameEngineScriptEvalService`（+ `IYokiFrameEngineScriptEvalService` / `IYokiFrameEngineScriptEvalProvider`）。与 C# eval 的差异来自编译模型：① 编译同步，`Submit` 返回即终态（Ready / CompileFailed），无轮询；② 不落盘、不做类型探测、不受域重载影响（`SourcePath` 记为内存标记）；③ 调用结论直接写在记录的 `Note` 上（C# 路径的结论来自运行调度器）。记录复用同一个 `YokiFrameEngineEvalStore`，因此 `eval_result` / `eval_prune` 对两类 eval 行为一致。
+**新增服务**：`YokiFrameRoslynScriptEvalService`（+ `IYokiFrameRoslynScriptEvalService` / `IYokiFrameRoslynScriptEvalProvider`）。与 C# eval 的差异来自编译模型：① 编译同步，`Submit` 返回即终态（Ready / CompileFailed），无轮询；② 不落盘、不做类型探测、不受域重载影响（`SourcePath` 记为内存标记）；③ 调用结论直接写在记录的 `Note` 上（C# 路径的结论来自运行调度器）。记录复用同一个 `YokiFrameRoslynEvalStore`，因此 `eval_result` / `eval_prune` 对两类 eval 行为一致。
 
 **命令面接线**：`eval` 新增可选 `language`（缺省 `csharp`；`script` 或宿主自身语言走脚本路径，未知语言 → `EngineOperationUnsupported`；脚本路径拒绝 `codeFile` → `InvalidPayload`）。Provider 在**任一** eval 子系统可用时注册 eval 三件套；`eval_result` 先查 C# 服务再查脚本服务；`eval_prune` 同时回收两者并回报 `removedScripts`。**动作面仍是 14 个**（是 `eval` 的 payload 扩展，不是新动作）。
 
-**验证**：EngineKit **117/117**（新增 12 例：服务 6 + 接线 6）。
+**验证**：RoslynKit **117/117**（新增 12 例：服务 6 + 接线 6）。
 ### 19.18 Godot 侧 eval 第二片：GDScript 真宿主与接线（v4.18）
 
 **真宿主**：`GodotScriptEvalHost` 把用户代码包成 `extends RefCounted` + 令牌注释 + `func run():`（函数体制表符缩进），编译后立即调用；令牌不匹配（同名重编译）直接拒绝。`Unload` 只释放句柄——**不落盘、无生成目录**。
 
 **原生调用隔离**：`IGodotScriptCompiler` 接缝 + `GodotGdScriptCompiler` 真实现（`GDScript.SourceCode` → `Reload()` → `Call("new")` → `Call("run")` → `Json.Stringify`）。宿主逻辑（包装、令牌校验、错误归类、卸载）在注入假编译器下**全部单测**，真实现只做调用不做判断——延续「Godot 静态 API 不碰测试进程」的纪律。
 
-**接线**：Godot Runtime/Editor 两个 Provider 都实现 `IYokiFrameEngineScriptEvalProvider`，安装器在构造 Kit Provider **之前**接上 `YokiFrameEngineScriptEvalService` + 记录存储。eval 操作声明的是 Editor 目标，因此运行时宿主上仍不可用（与 Unity 一致）。
+**接线**：Godot Runtime/Editor 两个 Provider 都实现 `IYokiFrameRoslynScriptEvalProvider`，安装器在构造 Kit Provider **之前**接上 `YokiFrameRoslynScriptEvalService` + 记录存储。eval 操作声明的是 Editor 目标，因此运行时宿主上仍不可用（与 Unity 一致）。
 
 **踩坑**：`YokiFrame.Json` 命名空间会遮蔽 Godot 的 `Json` 类（`CS0234`）——Godot 类型在适配器里必须用 `Godot.` 前缀显式限定；已把 `Error` / `Variant` / `GodotObject` / `Json` 全部限定。
 
-**验证**：Godot.Runtime **96/96**（新增 6 例宿主单测：包装与缩进、令牌校验、同 id 重编译释放旧句柄、编译失败不建句柄、Unload、调用失败传播）；Godot.Editor **30/30**（含锁定用例：编辑器命令面含 eval 三件套 + 端到端 GDScript 提交 → Ready → eval_result 可读）；两个适配器 `-p:YokiFrameToolsBuild=True` 真编译各 0 错误；EngineKit 117/117。
-**接线回归（锁定用例抓到的真 bug）**：`YokiFrameEngineKitProvider` 装配 eval 三件套的条件是「宿主实现 `IYokiFrameEngineEvalProvider` 且（C# 服务或脚本服务非空）」。Godot 两个 Provider 起初**只**实现了 `IYokiFrameEngineScriptEvalProvider`，于是条件不成立——**eval 根本没注册**，而当时的单测全绿（它们直接构造 Provider 绕过装配）。补的锁定用例（Godot Editor 命令面含 eval + 端到端 GDScript 提交与读取）当场复现了这个空档。修法：Godot Runtime/Editor 两个 Provider 同时实现 `IYokiFrameEngineEvalProvider`，`Eval` 如实返回 null（Godot 不做 C# 动态编译，C# 走 T0）。
+**验证**：Godot.Runtime **96/96**（新增 6 例宿主单测：包装与缩进、令牌校验、同 id 重编译释放旧句柄、编译失败不建句柄、Unload、调用失败传播）；Godot.Editor **30/30**（含锁定用例：编辑器命令面含 eval 三件套 + 端到端 GDScript 提交 → Ready → eval_result 可读）；两个适配器 `-p:YokiFrameToolsBuild=True` 真编译各 0 错误；RoslynKit 117/117。
+**接线回归（锁定用例抓到的真 bug）**：`YokiFrameRoslynKitProvider` 装配 eval 三件套的条件是「宿主实现 `IYokiFrameRoslynEvalProvider` 且（C# 服务或脚本服务非空）」。Godot 两个 Provider 起初**只**实现了 `IYokiFrameRoslynScriptEvalProvider`，于是条件不成立——**eval 根本没注册**，而当时的单测全绿（它们直接构造 Provider 绕过装配）。补的锁定用例（Godot Editor 命令面含 eval + 端到端 GDScript 提交与读取）当场复现了这个空档。修法：Godot Runtime/Editor 两个 Provider 同时实现 `IYokiFrameRoslynEvalProvider`，`Eval` 如实返回 null（Godot 不做 C# 动态编译，C# 走 T0）。
 
 **教训**：接缝装配的正确性只能由「经过装配路径」的用例保证——直接构造 Provider 的用例覆盖不到它。
 
@@ -741,9 +741,9 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 
 **动机**：Workbench 只读快照文件，看不到 `entry_*` 命令的返回值；审查者想知道「入口执行器到底跑了什么」只能自己发命令。
 
-**改动**：① `IYokiFrameEngineRunScheduler` 增加纯读的 `ReadRecentRuns(limit)`（按提交时间倒序，调度器从运行存储 `ReadAll()` 取）；② 快照写出器追加 `recentRunCount` / `truncatedRuns` / `recentRuns[]`（每条含 runId / requestId / entry / target / state / errorCode / resultPath / 提交与更新时间，最多 10 条）；③ 版本指纹纳入最近运行（新运行或状态变化都会让快照重写，页面不会停在旧记录）；④ Engine 页面新增「Recent runs」段落。
+**改动**：① `IYokiFrameRoslynRunScheduler` 增加纯读的 `ReadRecentRuns(limit)`（按提交时间倒序，调度器从运行存储 `ReadAll()` 取）；② 快照写出器追加 `recentRunCount` / `truncatedRuns` / `recentRuns[]`（每条含 runId / requestId / entry / target / state / errorCode / resultPath / 提交与更新时间，最多 10 条）；③ 版本指纹纳入最近运行（新运行或状态变化都会让快照重写，页面不会停在旧记录）；④ Engine 页面新增「Recent runs」段落。
 
-**验证**：EngineKit **118/118**（新增 1 例：空快照 `recentRunCount=0` → 提交并跑完一个入口后 `recentRunCount≥1`、快照里出现 runId、且 `StateVersion` 推进）；Avalonia 全量 **428/428**（投影用例断言 `Recent runs: 1 recorded` 与 `combat.smoke: Succeeded @ editor (run-42)`）。
+**验证**：RoslynKit **118/118**（新增 1 例：空快照 `recentRunCount=0` → 提交并跑完一个入口后 `recentRunCount≥1`、快照里出现 runId、且 `StateVersion` 推进）；Avalonia 全量 **428/428**（投影用例断言 `Recent runs: 1 recorded` 与 `combat.smoke: Succeeded @ editor (run-42)`）。
 
 ### 19.23 eval 生成代码的 CS0161（v4.23，用户真机编译发现）
 
@@ -753,14 +753,14 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 
 **修复**：生成器在用户代码之后追加三行：`#pragma warning disable CS0162, CS1998` / `return ctx.Pass();` / `#pragma warning restore CS0162, CS1998`。`ctx.Pass()` 是框架的结果工厂；同时压掉「不可达代码 / 缺少 await」两类警告，避免用户工程开 warnings-as-errors 时误伤。另外把用户当时已生成的 `Eval_smoke1.cs` 就地补上同样三行，使其无需等待重新生成即可编译。
 
-**验证**：Unity 编译门 0 错误；EngineKit **127/127**。**教训**：生成器产出的代码必须至少编译一次——这次是真机替我们发现的（本机编译门只覆盖手写代码，不覆盖生成产物）。
+**验证**：Unity 编译门 0 错误；RoslynKit **127/127**。**教训**：生成器产出的代码必须至少编译一次——这次是真机替我们发现的（本机编译门只覆盖手写代码，不覆盖生成产物）。
 ### 19.22 原子写回归单源（v4.22）
 
-**发现**：共享原子写 `YokiFrameAtomicFileWriter` 的注释明确写着「禁止在调用方再复制私有原子写实现」，但 `YokiFrameEngineRunStore` 与 `YokiFrameEngineEvalStore` **各私有复制了一份**——而且复制版用**固定临时文件名** `path + ".tmp"`：两个宿主同时写同一条记录会互相踩；同时缺少共享版的 flush 与「备份-提交-恢复」兜底。
+**发现**：共享原子写 `YokiFrameAtomicFileWriter` 的注释明确写着「禁止在调用方再复制私有原子写实现」，但 `YokiFrameRoslynRunStore` 与 `YokiFrameRoslynEvalStore` **各私有复制了一份**——而且复制版用**固定临时文件名** `path + ".tmp"`：两个宿主同时写同一条记录会互相踩；同时缺少共享版的 flush 与「备份-提交-恢复」兜底。
 
 **改动**：两处私有实现删除，改为调用共享写出器（调用点不变）。
 
-**验证**：EngineKit **127/127**（新增 3 例，从**公开存储入口**验证原子写行为：覆盖成功、**目录内不残留 `.tmp`**、UTF-8 无 BOM；共享实现是 internal，因此走真实调用点而不是直接测内部）；Unity 编译门 0 错误；原有存储用例全部通过，说明行为兼容。
+**验证**：RoslynKit **127/127**（新增 3 例，从**公开存储入口**验证原子写行为：覆盖成功、**目录内不残留 `.tmp`**、UTF-8 无 BOM；共享实现是 internal，因此走真实调用点而不是直接测内部）；Unity 编译门 0 错误；原有存储用例全部通过，说明行为兼容。
 
 **性能修正（v4.20.x）**：版本指纹会被宿主泵**每帧**读取（Unity 泵挂在 `EditorApplication.update` 上），而运行枚举要读目录——因此 `ReadRecentRuns` 加了 250ms TTL 缓存，避免每帧一次目录枚举；新增用例断言「TTL 内不重新枚举、超过 TTL 后刷新到最新」。
 
@@ -771,9 +771,9 @@ Workbench 只读快照文件、看不到命令返回值。与其为页面新开�
 
 **缺口**：`ClaimNextQueued` 只按记录状态取待运行项。同一项目目录下若有两个宿主（旧编辑器会话、另一个编辑器实例）同时扫描，两者都会看到同一条 `Queued` 记录并各自 `Claim` → **重复执行用户代码**。原设计只在域内加锁，跨进程没有互斥。
 
-**改动**：① `YokiFrameEngineRunStore.TryClaim(runId, owner, generation, lease)` —— 用 `FileMode.CreateNew` 独占创建 `<runId>.claim` 提供原子性（只有一个进程能创建成功）；文件已存在时，**只有租约过期或内容不可读**才允许接管；② 认领文件刻意不带 `.json` 后缀，因此不会被 `ReadAll` 当成运行记录；③ 调度器在扫描时先认领再执行，认领失败直接跳过；终态记录惰性释放认领文件；④ 租约只需覆盖 `Queued → Running` 窗口（30s），因为一旦进入 `Running`，`TryClaim` 会因状态不符而拒绝。
+**改动**：① `YokiFrameRoslynRunStore.TryClaim(runId, owner, generation, lease)` —— 用 `FileMode.CreateNew` 独占创建 `<runId>.claim` 提供原子性（只有一个进程能创建成功）；文件已存在时，**只有租约过期或内容不可读**才允许接管；② 认领文件刻意不带 `.json` 后缀，因此不会被 `ReadAll` 当成运行记录；③ 调度器在扫描时先认领再执行，认领失败直接跳过；终态记录惰性释放认领文件；④ 租约只需覆盖 `Queued → Running` 窗口（30s），因为一旦进入 `Running`，`TryClaim` 会因状态不符而拒绝。
 
-**验证**：EngineKit **123/123**（新增 5 例：外来未过期认领阻止本地执行且记录保持 `Queued`；过期认领可被接管且**只**产生一次 `claim` 步；终态后认领文件被惰性清理；第二个宿主随后扫描不会二次执行；**owner 含引号/反斜杠时认领文件仍是合法 JSON**（修掉一处失败开放：破损 JSON 曾被当作租约过期而允许接管）——`claim` 步数与 `Attempt` 都保持 1）。Godot.Runtime 96/96、Godot.Editor 30/30、Tooling 324/324、Godot 适配器真编译 0 错误。
+**验证**：RoslynKit **123/123**（新增 5 例：外来未过期认领阻止本地执行且记录保持 `Queued`；过期认领可被接管且**只**产生一次 `claim` 步；终态后认领文件被惰性清理；第二个宿主随后扫描不会二次执行；**owner 含引号/反斜杠时认领文件仍是合法 JSON**（修掉一处失败开放：破损 JSON 曾被当作租约过期而允许接管）——`claim` 步数与 `Attempt` 都保持 1）。Godot.Runtime 96/96、Godot.Editor 30/30、Tooling 324/324、Godot 适配器真编译 0 错误。
 
 
 

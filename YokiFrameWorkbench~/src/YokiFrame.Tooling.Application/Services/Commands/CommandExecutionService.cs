@@ -508,7 +508,7 @@ public sealed class CommandExecutionService
     {
         string code = exception.Error == null ? string.Empty : exception.Error.Code;
         return string.Equals(code, "HostIdentityChanged", StringComparison.Ordinal)
-            || string.Equals(code, "EngineReloading", StringComparison.Ordinal);
+            || string.Equals(code, "RoslynReloading", StringComparison.Ordinal);
     }
 
     /// <summary>读回已落盘的终态响应；不存在或不可解析时返回 false（§10.1 反查语义的客户端侧对应）。</summary>

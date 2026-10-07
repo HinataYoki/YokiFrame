@@ -3,7 +3,7 @@
   <!--
     Unity 适配器的本地编译门（引擎操作面用）。
     由脚本从 Unity 生成的 Assembly-CSharp-Editor.csproj 照抄引用集与宏列表生成，因此与真机编译环境一致。
-    覆盖范围：Core/Runtime + Core/Editor + Core/Adapters/Unity/Editor/{EngineKit,FileBridge,FastChannel,Harness,Context}。
+    覆盖范围：Core/Runtime + Core/Editor + Core/Adapters/Unity/Editor/{RoslynKit,FileBridge,FastChannel,Harness,Context}。
     刻意**不**合并其它 asmdef 的子树：asmdef 引用边界会影响名字解析，合并会产生误报（详见设计文档 §19.21）。
     用法：dotnet build YokiFrameWorkbench~/tests/YokiFrame.Unity.CompileGate
   -->
@@ -26,8 +26,9 @@
   <ItemGroup>
     <Compile Include="..\..\..\Core\Runtime\**\*.cs" />
     <Compile Include="..\..\..\Core\Editor\**\*.cs" />
-    <Compile Include="..\..\..\Core\Adapters\Unity\Editor\EngineKit\**\*.cs" />
-    <Compile Include="..\..\..\Core\Adapters\Unity\Runtime\EngineKit\**\*.cs" />
+    <Compile Include="..\..\..\Tools\RoslynKit\Editor\**\*.cs" />
+    <Compile Include="..\..\..\Tools\RoslynKit\Runtime\**\*.cs" />
+    <Compile Include="..\..\..\Tools\RoslynKit\Adapters\Unity\**\*.cs" />
     <Compile Include="..\..\..\Core\Adapters\Unity\Editor\FileBridge\**\*.cs" />
     <Compile Include="..\..\..\Core\Adapters\Unity\Editor\FastChannel\**\*.cs" />
     <Compile Include="..\..\..\Core\Adapters\Unity\Editor\Harness\**\*.cs" />

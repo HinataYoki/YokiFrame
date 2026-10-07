@@ -123,13 +123,13 @@ public sealed class WorkbenchEnginePageProjectionTests
                 }
             });
 
-            string snapshotRoot = Path.Combine(engineRoot, "snapshots", "Engine");
+            string snapshotRoot = Path.Combine(engineRoot, "snapshots", "RoslynKit");
             Directory.CreateDirectory(snapshotRoot);
             File.WriteAllText(Path.Combine(snapshotRoot, "state.json"), JsonSerializer.Serialize(new
             {
                 protocolVersion = 2,
                 engineId = "unity-editor",
-                kit = "Engine",
+                kit = "RoslynKit",
                 name = "state",
                 generation = 5,
                 sequence = 10,
@@ -242,13 +242,13 @@ public sealed class WorkbenchEnginePageProjectionTests
             "]" +
             "}";
 
-        string snapshotRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor", "snapshots", "Engine");
+        string snapshotRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor", "snapshots", "RoslynKit");
         Directory.CreateDirectory(snapshotRoot);
         string envelope = JsonSerializer.Serialize(new
         {
             protocolVersion = 2,
             engineId = "unity-editor",
-            kit = "Engine",
+            kit = "RoslynKit",
             name = "state",
             generation = 3,
             sequence = 9,

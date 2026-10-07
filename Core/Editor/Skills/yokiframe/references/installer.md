@@ -32,23 +32,23 @@ Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime 的内存 C# 已实现
 
 | 层 | 检查方式 | 缺失时 |
 |---|---|---|
-| Skill | `SKILL.md`、`references/engine-kit.md`、`references/cli-commands.md` 为同版 | 更新文档，不修改运行权限 |
-| CLI | 新构建支持 `yoki script`；已有 CLI 可发送 `Engine/script_run` | 报告 CLI 版本不匹配；不要假称复制 Skill 会升级可执行文件 |
+| Skill | `SKILL.md`、`references/roslyn-kit.md`、`references/cli-commands.md` 为同版 | 更新文档，不修改运行权限 |
+| CLI | 新构建支持 `yoki script`；已有 CLI 可发送 `RoslynKit/script_run` | 报告 CLI 版本不匹配；不要假称复制 Skill 会升级可执行文件 |
 | Unity 宿主 | 在线 `engine_capabilities` 有 `script_run` / `script_status` / `run_*` / `object_list` / `object_describe`，没有 `entry_*` 或 Unity eval | 先更新桥接并完成一次正常 Unity 编译，不回退到落盘 eval |
 | Godot 宿主 | .NET/Tools 正式 Editor 插件及 Runtime Bootstrap 分别发布上述操作，target=editor/runtime | 先正常构建并重启宿主；不把 GDScript eval 当成 C# 回退 |
 | 编译器包 | `script_status` 的 `installed=true`；实际脚本还须通过编译/加载验证 | 返回 `ScriptCompilerUnavailable`，不临时下载、不启动外部编译器 |
 
-编译器固定在项目 `.yokiframe/automation/compiler/roslyn-4.8.0/`，包含 `YokiFrame.EngineKit.Roslyn.dll`、完整依赖及许可证。`installed` 只检查主 DLL 存在，不代表所有依赖兼容已验证。**当前 Runtime bootstrap / Installer 尚未自动分发此目录**，不能把“框架安装成功”说成“Roslyn 已就绪”。
+编译器优先使用包内 `Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/`，项目本地回退目录是 `.yokiframe/automation/compiler/roslyn-4.8.0/`。入口 DLL 是 `YokiFrame.RoslynKit.Compiler.dll`。`installed` 只检查主 DLL 存在，不代表所有依赖兼容已验证。**当前 Runtime bootstrap / Installer 尚未自动分发此目录**，不能把“框架安装成功”说成“Roslyn 已就绪”。
 
 旧属性/入口 API 已删除，是破坏性变更。升级前检查业务脚本中的 `YokiFrameEntry` / `EntryContext`、旧 CLI 调用方及 `Assets/YokiFrame.Eval/Editor/` 残留并迁移；Installer 尚无自动阻断此类引用的预检，不自动删除用户脚本。历史运行文件保持原位，可用 `run_result/run_lookup` 只读查询。
 
 开发者从源码准备编译器包时可在包根执行以下命令；这是安装/构建步骤，不是每次自动化任务的依赖：
 
 ```powershell
-dotnet publish "YokiFrameWorkbench~/src/YokiFrame.EngineKit.Roslyn/YokiFrame.EngineKit.Roslyn.csproj" `
+dotnet publish "YokiFrameWorkbench~/src/YokiFrame.RoslynKit.Compiler/YokiFrame.RoslynKit.Compiler.csproj" `
   -c Release -o "<projectRoot>/.yokiframe/automation/compiler/roslyn-4.8.0"
 ```
 
 已有可用 CLI 和编译器包后，运行任务不需要外部 .NET SDK、Node 或 csc；宿主直接加载编译器。不要覆盖正在使用的编译器 DLL，也不要把它们放进 Assets 让 Unity 自动导入。
 
-安装或更新文档**不授权执行任意 C#**。`operations.enabled` 与 `scripts.trustedCSharp` 均默认 fail-closed，需用户明确授权；设置位置和命令见 [engine-kit.md](engine-kit.md)。验收结束恢复原设置、播放状态；不保存用户脏场景。
+安装或更新文档**不授权执行任意 C#**。`operations.enabled` 与 `scripts.trustedCSharp` 均默认 fail-closed，需用户明确授权；设置位置和命令见 [roslyn-kit.md](roslyn-kit.md)。验收结束恢复原设置、播放状态；不保存用户脏场景。

@@ -29,7 +29,6 @@ public static class WorkbenchDefaultPageModules
             CreateModule("Framework", "框架", "框架总览", "查看框架连接、引擎通信、AI Skills 与运行日志。", "工作台", "framework", WorkbenchPagePresentation.Overview, WorkbenchPageNavigationVisibility.Primary, WorkbenchPageSectionProjector.CreateFrameworkSections),
             CreateModule("Doctor", "诊断", "诊断", "检查宿主通信、协议状态与可操作诊断。", "工作台", "warning", WorkbenchPagePresentation.Detail, WorkbenchPageNavigationVisibility.Hidden, WorkbenchPageSectionProjector.CreateDoctorSections),
             CreateSpecializedModule("Docs", "文档", "文档", "浏览随 YokiFrame 包提供的离线文档与 API 参考。", "工作台", "docs", WorkbenchPagePresentation.Documentation, WorkbenchPageNavigationVisibility.Primary),
-            CreateModule("Engine", "Engine", "Engine 引擎操作面", "查看宿主引擎状态、执行目标与引擎操作开关。", "Core", "engine", WorkbenchPagePresentation.Detail, WorkbenchPageNavigationVisibility.Primary, WorkbenchPageSectionProjector.CreateEngineSections),
             CreateSpecializedModule("EventKit", "EventKit", "EventKit", "观察 Runtime 事件、活动监听与近期发送时间线。", "Core", "eventkit", WorkbenchPagePresentation.EventKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("FsmKit", "FsmKit", "FsmKit", "观察状态机实例、当前状态、转换历史与运行证据。", "Core", "fsm", WorkbenchPagePresentation.FsmKit, WorkbenchPageNavigationVisibility.Primary),
             CreateSpecializedModule("LogKit", "LogKit", "LogKit", "配置 Runtime 日志输出、等级、容量与文件策略。", "Core", "logkit", WorkbenchPagePresentation.LogKit, WorkbenchPageNavigationVisibility.Primary),

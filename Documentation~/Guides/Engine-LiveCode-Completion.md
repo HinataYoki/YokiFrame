@@ -1,7 +1,7 @@
 # LiveCode 长期迭代交付清单
 
 用户目标：继续直到做完。此前 Snapshot/Restore v1 已完成，本清单的六项增量已交付。
-完成范围是长期迭代通道，不代表全部 EngineKit、双引擎功能对等或正式安装分发完成。
+完成范围是长期迭代通道，不代表全部 RoslynKit、双引擎功能对等或正式安装分发完成。
 
 | 项目 | 状态 | 完成证据要求 |
 |---|---|---|
@@ -15,7 +15,7 @@
 禁止自动域重载或自动重放未知结果；不改用户预算/权限/Play 设置，不保存用户场景。
 Godot 不以 mock 测试冒充真机验证；若缺环境先核实并记录，保留未完成状态。
 
-2026-10-06 最终回归：EngineKit 240/240、Roslyn 7/7、Godot Editor 31/31、Runtime 96/96；
+2026-10-06 最终回归：RoslynKit 240/240、Roslyn 7/7、Godot Editor 31/31、Runtime 96/96；
 Unity 编译门与 Godot 验收工程构建均为 0 警告/0 错误。测试项目保留已有 nullable 警告。
 `da53afbfb5af4cae9620e1427a4ff692` 5 条断言验证错误批次不写、float/color、换版迁移；
 `9488c55419f4412e940eadf7aba83ac0` 验证清理与场景未改，之后退出 Play。
@@ -45,7 +45,7 @@ Godot 恢复是显式进程重启加 Restore，isCompiling=false 不作构建守
 同类多个实例共享源文件，更新保留 .meta、组件与当前字段，旧记录不被覆盖。
 live_export_commit/status 已接入 Unity 命令目录，Godot 不发布这两项。
 
-本增量回归：EngineKit 263/263，Roslyn 7/7，Godot Editor 31/31、Runtime 96/96，
+本增量回归：RoslynKit 263/263，Roslyn 7/7，Godot Editor 31/31、Runtime 96/96，
 Unity CompileGate 0 警告/0 错误。真实 Unity 完成批量、共享目标、原位更新和拒绝路径验证；
 仅保存本次新建的隔离测试场景。具体 runId、兼容流程、ID 复用与字段迁移边界见
 [版本化导出契约](Engine-LiveCode-Export-Contract.md)，不改写上文历史测试计数。
@@ -58,7 +58,7 @@ Snapshot/Restore 和导出共用字段状态。嵌套 Unity 引用按路径映�
 JSON 不接受对象引用；字典、直接嵌套集合、多态、继承、循环/共享托管对象仍拒绝。
 Godot 仍保持原字段类型范围，没有宣称本次递归字段扩展已接入 Godot。
 
-验证：EngineKit 282/282，Godot Runtime 96/96，Unity CompileGate 0 警告/0 错误。
+验证：RoslynKit 282/282，Godot Runtime 96/96，Unity CompileGate 0 警告/0 错误。
 Unity 脚本 `scripts/engine/live-fields-regression.csx`（项目根）结果
 `f21f9a4429f348d99163bac43ae76d42`：67/67，覆盖集合、私有 SerializeField 结构体、
 重挂到新程序集、嵌套引用快照/恢复、字段早于 Awake、拒绝循环/共享数据、恢复失败不写入、
@@ -73,6 +73,6 @@ CLI 请求 `cli-1791323511211-e985e7a9` 实际应用两个字段，前后均 2 �
 - 脚本入口按源码/引用文件快照缓存，每个 loader 最多 128 项 FIFO；相同代码命中后不再编译/加载，运行上下文与报告仍逐次创建。Attach/Patch 不复用此缓存，旧程序集也不会因淘汰而卸载。
 - Roslyn 元数据在 finally 中显式 Dispose，源码/PE/PDB 不进入缓存；包内编译器 DLL/PDB 已同步 Release 构建。script_status 明示 loadedBytes 的 PE/PDB 含义和缓存统计。
 - 空闲调度不再每 250ms 遍历历史 JSON，认领只读本域待执行 ID。最近列表缓存最多 64 条，本地写入失效、外部变化约 5 秒刷新；不改 pump 或清理用户历史。
-- EngineKit 290/290、Roslyn 7/7、Godot Runtime 96/96；Unity CompileGate 0 警告/0 错误。覆盖同源码并发加载一次、引用文件变化、权限撤销、执行失败独立报告、预算耗尽仍可命中，以及空闲 tick 分配与历史缓存失效。
+- RoslynKit 290/290、Roslyn 7/7、Godot Runtime 96/96；Unity CompileGate 0 警告/0 错误。覆盖同源码并发加载一次、引用文件变化、权限撤销、执行失败独立报告、预算耗尽仍可命中，以及空闲 tick 分配与历史缓存失效。
 - Unity 2022.3.16f1 EditMode 连续执行 `scripts/engine/script-memory-probe.csx` 8 次，全部 Passed，sessionId 均为 `1e89304847ad413e9eb99798e4fbf2ca`、generation 均为 `639269213616405816`。首个 runId `a6aed4cadceb44a4b33206b68e5377c2`，末个 `8450e445ad7c4d69ad05a6e427b12a6b`；首次加载依赖令第二次引用快照变化，计数为 1/2/2/2/2/2/2/2，末次 loadedBytes=34748、cache hits=6、misses=2。Unity 已加载 compiler MVID 与新包一致：`cf723bdf-813c-46dc-876d-8dfc0932675b`。
 - 同一短窗口 Mono heap 固定 124809216 字节，Mono used 在 36024320..42475520 字节间分配/回收；Unity allocated 从 174468722 到 173976823 字节。未强制 GC，不把这组采样当作长时间无泄漏证明；未做 EditorLoop Profiler 前后对照，不能给出 EditorTime 降幅。不同源码与反复 Attach 仍会累积程序集，需显式重载/宿主上下文重置才可能回收。

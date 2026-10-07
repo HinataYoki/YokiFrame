@@ -1,4 +1,4 @@
-# EngineKit LiveCode：运行中方法补丁与行为原型
+# RoslynKit LiveCode：运行中方法补丁与行为原型
 
 > 当前验证环境：Unity 2022.3.16f1、Windows x64、Editor Mono，2026-10-06。
 > 这是源码开发项目的实现与验收记录，不代表 Installer 已正式发布。
@@ -25,7 +25,7 @@ string exportId = await engine.LiveCode.Export(id, "Assets/Weapons/WeaponControl
 - 批量用 `await ExportMany(requests, batchId = null)` 暂存，`CommitExport(batchId)` 显式提交；
   更新用 `await Reexport(previousExportId, members, batchId = null)`，无需 Play handle。
   `Bind(exportId, target = null)` 支持多个目标。完整流程见 [版本化导出契约](Engine-LiveCode-Export-Contract.md)。
-- `List()` 返回 ID、kind、revision、源码 hash、session、target 与状态；`Remove(id)` 只移除该项。命令 `Engine/live_status` 诊断，`Engine/live_remove` 接收 `{"id":"..."}`，关闭执行开关仍可移除。
+- `List()` 返回 ID、kind、revision、源码 hash、session、target 与状态；`Remove(id)` 只移除该项。命令 `RoslynKit/live_status` 诊断，`RoslynKit/live_remove` 接收 `{"id":"..."}`，关闭执行开关仍可移除。
 - 所有新执行仍需 Engine 操作与 trusted C# 授权、确认、当前 session/target 和宿主主线程。结束一次提交不移除它注册的行为或补丁。
 - ID 和 className 为最多 80 字符的 ASCII 标识符。最多 64 个活动 handle；复用 ID 更新版本，同一行为 ID 不得静默换目标。
 - 调参优先 `live_set_fields` 或显式文件绑定，方法调用优先 Invoke。
@@ -63,9 +63,9 @@ budgetConfiguration=hostConstants。以在线值为准，不根据文档猜上�
 ```csharp
 public static class ReadPatch
 {
-    public static bool Prefix(string id, ref EngineKitDemo.DemoUnitStats __result)
+    public static bool Prefix(string id, ref RoslynKitDemo.DemoUnitStats __result)
     {
-        __result = new EngineKitDemo.DemoUnitStats(id, 150, 150, 30, 0);
+        __result = new RoslynKitDemo.DemoUnitStats(id, 150, 150, 30, 0);
         return false;
     }
 }
@@ -82,9 +82,9 @@ YokiFrame 基础设施程序集。内联、Burst、async 状态机、native API�
 编译失败保留旧补丁。更新仅撤销旧的精确 patch 方法，不移除其他工具的补丁。
 补丁执行异常不自动 unpatch，业务副作用无法事务回滚。
 
-依赖构建：`dotnet build YokiFrameWorkbench~/src/YokiFrame.EngineKit.Patching -c Release`。
+依赖构建：`dotnet build YokiFrameWorkbench~/src/YokiFrame.RoslynKit.Patching -c Release`。
 完整 DLL、manifest、许可证复制到
-`Core/Adapters/Unity/Editor/EngineKit/Dependencies~/harmonyx-2.16.1`；
+`Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/harmonyx-2.16.1`；
 Unity 忽略 ~ 目录，由适配器反射加载。独立分发的回退路径为
 `.yokiframe/automation/patches/harmonyx-2.16.1`。不要只复制 0Harmony.dll。
 patchInstalled 仅证明入口 DLL 存在，不保证所有目标兼容；Roslyn 编译器仍独立安装。
@@ -92,7 +92,9 @@ patchInstalled 仅证明入口 DLL 存在，不保证所有目标兼容；Roslyn
 ## 4. 行为原型与通信
 
 Attach 接收类成员，不是完整类或方法体，不在成员顶层写 using。宿主生成普通
-C# facade，预编译的 editor-only MonoBehaviour host 转发生命周期：
+C# facade。外观和帧宿主都在 Editor-only 程序集 `YokiFrame.Unity.LiveCode.Facade`：
+内存编译可以引用它，Player 编译图不包含它。Roslyn 引用按程序集名前缀排除
+`UnityEditor*` 和其它 `*.Editor`，避免原型依赖编辑器 API。宿主转发生命周期：
 Awake、OnEnable、Start、Update、FixedUpdate、LateUpdate、OnDisable、OnDestroy。
 仅非泛型、无参、void 实例回调；帧回调缓存 delegate。
 
@@ -223,7 +225,7 @@ DLL 取得编译引用。依赖必须先正常构建，不能一边替换该目�
 Godot facade 提供 Node、GetNode、CallLive，不是完整 Node；原生信号/Call 不自动转发。
 Suspend/回滚恢复不重跑 `_EnterTree`/`_Ready`，真正新版本会重跑；停止只调用一次退出回调。
 
-**Godot 碰撞与 Unity 不同，必须说清**：Godot 没有"声明式碰撞消息"，碰撞依赖节点类型与信号。宿主 `YokiFrameGodotLiveBehaviourHost` 是从 `Node` 直接派生的 sealed 类型，**永远不是碰撞体**，因此原型声明 `_OnBody*` / `_OnArea*` 时宿主按以下顺序解析碰撞来源：① 目标节点自身是 `Area3D`/`RigidBody3D` → 接它的信号；② 目标是 `CharacterBody3D` 等其他 `CollisionObject3D` → 无 `body_entered` 信号，不接；③ 向上查找最近的 `CollisionObject3D` 父级 → 接它；④ 都没有 → 创建临时 `Area3D` 子节点（含 SphereShape3D，半径 0.5）承载检测，宿主停止时 `QueueFree` 回收。`RigidBody3D` 的 `body_entered` 携带 `Node`、`Area3D` 的携带 `Node3D`，原型统一按 `Node` 绑定以兼容两者；`_OnAreaEntered/Exited` 参数为 `Area3D`。临时 `Area3D` 会出现在运行场景层级里，这是可观察的副作用，不是隐藏行为。
+**Godot 碰撞与 Unity 不同，必须说清**：Godot 没有"声明式碰撞消息"，碰撞依赖节点类型与信号。宿主 `GodotLiveBehaviourHost` 是从 `Node` 直接派生的 sealed 类型，**永远不是碰撞体**，因此原型声明 `_OnBody*` / `_OnArea*` 时宿主按以下顺序解析碰撞来源：① 目标节点自身是 `Area3D`/`RigidBody3D` → 接它的信号；② 目标是 `CharacterBody3D` 等其他 `CollisionObject3D` → 无 `body_entered` 信号，不接；③ 向上查找最近的 `CollisionObject3D` 父级 → 接它；④ 都没有 → 创建临时 `Area3D` 子节点（含 SphereShape3D，半径 0.5）承载检测，宿主停止时 `QueueFree` 回收。`RigidBody3D` 的 `body_entered` 携带 `Node`、`Area3D` 的携带 `Node3D`，原型统一按 `Node` 绑定以兼容两者；`_OnAreaEntered/Exited` 参数为 `Area3D`。临时 `Area3D` 会出现在运行场景层级里，这是可观察的副作用，不是隐藏行为。
 字段为声明的 public/[Export] 可写字段：标量、枚举、Godot 向量/Quaternion/Color、
 GodotObject 引用；引用仅用于快照/脚本 SetField，直接 JSON 调参仍不接受对象引用。
 所有目标/引用都要求 resolver；不把 NodePath、名称、旧 InstanceId 当成跨进程身份。
@@ -247,7 +249,7 @@ Godot Patch/Export/Bind/Capture 和专用 Workbench 原型编辑界面仍未实�
 ### 8.1 Snapshot / Restore 第一版（已实现）
 
 ```bash
-yoki command send --kit Engine --action live_snapshot --payload '{"target":"play"}'
+yoki command send --kit RoslynKit --action live_snapshot --payload '{"target":"play"}'
 ```
 
 这是 **UserAction**，不是 ReadOnly/FastChannel 查询，因为它写磁盘。需要执行与 trusted
@@ -264,9 +266,9 @@ C# 开关、Play target 和空闲宿主；不编译、不加载程序集、不�
 脚本内真实签名：
 
 ```csharp
-YokiFrameLiveSnapshot saved = engine.LiveCode.Snapshot(); // 同样写盘，返回 SnapshotId
-YokiFrameLiveSnapshot record = engine.LiveCode.ReadSnapshot(snapshotId);
-YokiFrameLiveRestoreResult result = await engine.LiveCode.Restore(
+LiveSnapshot saved = engine.LiveCode.Snapshot(); // 同样写盘，返回 SnapshotId
+LiveSnapshot record = engine.LiveCode.ReadSnapshot(snapshotId);
+LiveRestoreResult result = await engine.LiveCode.Restore(
     snapshotId,
     entry => sourceById[entry.Id],       // string 成员源码；核对 ClassName/SourceHash
     identity => objectsByKey[identity.Key]); // 可省略；有临时对象时必需
@@ -305,7 +307,7 @@ test.Equal(result.Success, true, result.Stage + ": " + result.Error);
 
 ### 8.2 批量与调参分层（Unity / Godot 已实现）
 
-- `await engine.LiveCode.AttachMany(IReadOnlyList<YokiFrameLiveAttachmentRequest>)` 接受 1..64 项，
+- `await engine.LiveCode.AttachMany(IReadOnlyList<LiveAttachmentRequest>)` 接受 1..64 项，
   每项构造为 `(id, target, className, members)`。全部校验/编译但不加载，核对精确预算后准备
   所有 host、迁移字段、暂停旧版本、发布全部新 ID、最后激活。返回 Success/Stage/Error/
   Items(status/error/handle)、RequiredAssemblies/RequiredBytes、Budget、UserCodeMayHaveRun。
@@ -351,9 +353,9 @@ Godot 字段类型使用 Godot.Vector3 等全名，授权设置与恢复限制�
 
 ### 长期迭代增量最终回归（2026-10-06）
 
-EngineKit **240/240**、Roslyn **7/7**、Godot Editor **31/31**、Runtime **96/96**；
+RoslynKit **240/240**、Roslyn **7/7**、Godot Editor **31/31**、Runtime **96/96**；
 Unity 编译门与 Godot 隔离验收工程构建 **0 警告/0 错误**。独立测试工程有既有 nullable 警告。
-Skill 的入口及 engine-kit/livecode/cli-commands/installer 共 5 文件已同步安装副本，
+Skill 的入口及 roslyn-kit/livecode/cli-commands/installer 共 5 文件已同步安装副本，
 SHA-256 相同，UTF-8 模式下两份 Skill 校验通过。
 
 | runId / requestId | 本次证据 |
@@ -410,7 +412,7 @@ Snapshot/Restore 第一版新增证据（2026-10-06）：
 本地新增覆盖耗尽预算、换 manager/session、错误 hash/项目/schema、重复 ID、限额、
 取消、并发冲突、解析/字段/激活失败清理、全批次字段先于激活。
 
-最终复验：EngineKit **207/207**（新增 25 例）、Roslyn **7/7**、Godot Editor **31/31**、
+最终复验：RoslynKit **207/207**（新增 25 例）、Roslyn **7/7**、Godot Editor **31/31**、
 Godot Runtime **96/96**；Unity 编译门 **0 警告/0 错误**。测试工程保留已有 nullable 警告。
 补齐字段清单预校验、引用去重与缺失映射拒绝后，真机
 `6aab5a15530440b9a0bf8e66dd404d69` 再次 **16/16**，总用时 2852ms；
@@ -424,6 +426,6 @@ Godot Runtime **96/96**；Unity 编译门 **0 警告/0 错误**。测试工程�
 `cfdea51c05ca4bf8958646306819b893`（绑定 6 断言）、
 `f762eb3da6544aa7bea8fabe1f3bd888`（正常 MonoBehaviour 6 断言）。
 历史 exportId `2855d9d1f915443c8b6bbf2e10624bcb`，
-场景 `Assets/EngineKitLiveDemo/EngineKitLiveDemo.unity`，
+场景 `Assets/RoslynKitLiveDemo/RoslynKitLiveDemo.unity`，
 脚本 `scripts/engine/live-gun.csx`，截图 live-gun-runtime.png /
 live-gun-persisted.png。自动开火不是物理鼠标验证；历史记录不代替本轮完整导出验收。

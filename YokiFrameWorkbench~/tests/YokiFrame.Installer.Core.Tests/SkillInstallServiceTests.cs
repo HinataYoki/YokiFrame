@@ -107,21 +107,21 @@ public sealed class SkillInstallServiceTests
     }
 
     /// <summary>
-    /// 验证真实包内 Skill 安装后带上 SKILL.md 与全部 references（含 Engine Kit 能力页与 yoki exec 编排说明）。
+    /// 验证真实包内 Skill 安装后带上 SKILL.md 与全部 references（含 RoslynKit 能力页与 yoki exec 编排说明）。
     /// </summary>
     /// <remarks>
     /// 这条守卫锁定 Workbench"点击安装"要写入的文件数：新增能力页时必须同步更新期望值，
     /// 避免新页只存在于包内、安装到 AI 目录后却缺失。
     /// </remarks>
     [Fact]
-    public void InstallCopiesEveryPackagedReferenceIncludingEngineKit()
+    public void InstallCopiesEveryPackagedReferenceIncludingRoslynKit()
     {
         var packageRoot = FindPackageRoot();
         var packagedSkillRoot = Path.Combine(packageRoot, "Core", "Editor", "Skills", "yokiframe");
         var packagedReferences = Directory.GetFiles(Path.Combine(packagedSkillRoot, "references"), "*.md");
 
         Assert.Equal(6, packagedReferences.Length);
-        Assert.Contains(packagedReferences, path => Path.GetFileName(path) == "engine-kit.md");
+        Assert.Contains(packagedReferences, path => Path.GetFileName(path) == "roslyn-kit.md");
 
         var projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-skill-tests", Guid.NewGuid().ToString("N"));
         try
@@ -136,9 +136,9 @@ public sealed class SkillInstallServiceTests
             Assert.Equal(
                 packagedReferences.Length,
                 Directory.GetFiles(Path.Combine(installedRoot, "references"), "*.md").Length);
-            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "engine-kit.md")));
+            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "roslyn-kit.md")));
             Assert.True(File.Exists(Path.Combine(installedRoot, "references", "cli-commands.md")));
-            Assert.False(File.Exists(Path.Combine(installedRoot, "references", "engine-kit.md.meta")));
+            Assert.False(File.Exists(Path.Combine(installedRoot, "references", "roslyn-kit.md.meta")));
         }
         finally
         {

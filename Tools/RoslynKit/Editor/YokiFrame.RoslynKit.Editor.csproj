@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>YokiFrame.RoslynKit.Editor</AssemblyName>
+    <RootNamespace>YokiFrame</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);GODOT;TOOLS</DefineConstants>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="**/*.cs"
+             Exclude="Adapters/**/*.cs;**/Tests/**/*.cs;bin/**/*.cs;obj/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Core/Editor/YokiFrame.Editor.csproj" />
+    <ProjectReference Include="../../../Core/Runtime/YokiFrame.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

@@ -14,9 +14,9 @@ description: Use for YokiFrame game code, live inspection, Unity/Godot editor co
 | 写服务、事件、状态、资源、场景、对象池、日志、单例、动作、音频、存档、本地化、空间查询、配表或 Unity UI | 包根 `Documentation~/Api/00-GettingStarted/FrameworkOverview.md` 选择 Kit，再打开该 Kit 主页面 | 按主页面的公开类型写。常用写法见 [usage-patterns.md](references/usage-patterns.md) |
 | 查看项目、Kit 运行态和诊断 | Workbench | Unity 按 `Ctrl+E` 打开当前项目的 Workbench。各页能看和能改的内容见 [workbench-pages.md](references/workbench-pages.md) |
 | 脚本化读取状态，或执行已经声明的操作 | 项目 `.yokiframe/runtime/` 里的 `yoki` | 用 `current.json` 和 `tool-manifest.json` 定位可执行文件。命令见 [cli-commands.md](references/cli-commands.md) |
-| 让宿主引擎动起来：进/退播放、查场景层级、看引擎状态与操作开关 | Engine Kit | 先确认执行开关，再用 `yoki command send --kit Engine`。命令、目标语义和错误码见 [engine-kit.md](references/engine-kit.md) |
-| 外部 C# 调用已有 Model/System、等帧、断言和日志 | Roslyn 自动化 | 先查 `script_status` 与授权；用 `yoki script` 提交方法体。Unity 支持截图，Godot 暂不支持。见 [engine-kit.md](references/engine-kit.md) |
-| 不读业务源码，发现活动 Model/System 和公开方法签名 | Engine 对象目录 | 用 `object_list` / `object_describe`，显式传当前 target；查询只读元数据，不执行 getter。见 [engine-kit.md](references/engine-kit.md) |
+| 让宿主动起来：进/退播放、查场景层级、看状态与操作开关 | RoslynKit | 先确认执行开关，再用 `yoki command send --kit RoslynKit`。命令协议名是 RoslynKit。见 [roslyn-kit.md](references/roslyn-kit.md) |
+| 外部 C# 调用已有 Model/System、等帧、断言和日志 | Roslyn 自动化 | 先查 `script_status` 与授权；用 `yoki script` 提交方法体。Unity 支持截图，Godot 暂不支持。见 [roslyn-kit.md](references/roslyn-kit.md) |
+| 不读业务源码，发现活动 Model/System 和公开方法签名 | Engine 对象目录 | 用 `object_list` / `object_describe`，显式传当前 target；查询只读元数据，不执行 getter。见 [roslyn-kit.md](references/roslyn-kit.md) |
 | 在 Play 里热改或新增行为、边跑边调参，再落盘成 MonoBehaviour | LiveCode | 用受信任 `yoki script` 里的 `engine.LiveCode`。成员源码写法、跨原型调用、字段可读性和 Export/Bind 边界见 [livecode.md](references/livecode.md) |
 | 安装、更新、回滚 | Installer | 先出计划，用户确认后执行。见 [installer.md](references/installer.md) |
 | 安装或更新本 Skill，以及核对自动化依赖 | Workbench 框架页 | Skill 文档、CLI、宿主和编译器包分别验收，不因文档更新就开启执行权限。见 [installer.md](references/installer.md) |

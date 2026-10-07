@@ -470,7 +470,9 @@ public sealed class GodotInstallServiceTests
                 "addons/yokiframe/package/YokiFrame/Tools/ActionKit/Editor/YokiFrame.ActionKit.Editor.csproj",
                 "addons/yokiframe/package/YokiFrame/Tools/AudioKit/Editor/YokiFrame.AudioKit.Editor.csproj",
                 "addons/yokiframe/package/YokiFrame/Tools/SaveKit/Editor/YokiFrame.SaveKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Editor/YokiFrame.SpatialKit.Editor.csproj"
+                "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Editor/YokiFrame.SpatialKit.Editor.csproj",
+                "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj",
+                "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Adapters/Godot/Runtime/YokiFrame.RoslynKit.Godot.csproj"
             ],
             projectReferences);
         var editorReference = Assert.Single(ownerGroup.Elements(), static element =>

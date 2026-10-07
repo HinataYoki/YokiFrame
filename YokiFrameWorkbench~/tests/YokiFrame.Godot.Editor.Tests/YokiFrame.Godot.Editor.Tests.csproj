@@ -24,5 +24,8 @@
     <ProjectReference Include="..\..\..\Core\Adapters\Godot\Editor\YokiFrame.Godot.Editor.csproj">
       <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Tools\RoslynKit\Adapters\Godot\Runtime\YokiFrame.RoslynKit.Godot.csproj">
+      <AdditionalProperties>YokiFrameToolsBuild=True</AdditionalProperties>
+    </ProjectReference>
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-# Engine Kit 设计：Roslyn 内存 C# 自动化与通用引擎桥接
+# RoslynKit 设计：Roslyn 内存 C# 自动化与通用引擎桥接
 
 > 版本：**v5.2，用户选定 Roslyn；取代 v5.1 自研 YokiScript 解析器方案**。
 > **当前实现**：Unity editor/play 与 Godot 4.7 .NET/Tools editor/runtime 的内存 C#、LiveCode 恢复/批量/调参已落地。2026-10-06 已移除 `entry_*`、属性扫描器、Unity 落盘 eval 与入口页面投影，并增加活动 Architecture 服务目录，验证见 §14 和 LiveCode 契约。Godot Capture/Patch/Export/Bind、正式安装器分发及任意对象根发现仍未完成。
@@ -158,7 +158,7 @@ yoki script --engine unity-editor --target editor --confirm-execution --file scr
 以下限制适用于通用 `invoke` 与上下文助手，不是任意 C# 的隔离保证。脚本可使用已经发现签名的强类型公开 API；授权 Roslyn 意味着信任整段代码，不要求每次先做反射式方法绑定。
 
 - 对已发现的活动实例，调用被项目范围允许的**已编译公开方法**；允许范围内的静态方法也可发现与调用。
-- 包括普通 C# Model/System 方法，不限静态方法，不要求返回某个 Engine Kit 专用结果类型，不要求传测试上下文。
+- 包括普通 C# Model/System 方法，不限静态方法，不要求返回某个 RoslynKit 专用结果类型，不要求传测试上下文。
 - 第一版支持 JSON 标量、数组和可明确绑定的 DTO 参数，以及 `void`、可序列化值、`Task`、`Task<T>` 返回；参数转换失败必须在执行前拒绝。
 - 重载不唯一、开放泛型、`ref/out`、指针、委托以及未提供适配的 awaitable 应在目录中标明不支持。后续按项目已有技术栈扩展 UniTask 等适配，不假称已支持任意 C# 签名。
 - 所有业务调用默认 `Dangerous`，必须经过权限 Gate、`confirmed` 和宿主主线程调度；**不因方法名是 Get/Read 而自动降为只读**。
@@ -203,7 +203,7 @@ yoki script --engine unity-editor --target editor --confirm-execution --file scr
 
 - 新增通用调用范围默认 fail-closed；启用 `operations.enabled` 不等于允许调用任意已加载类型。项目显式允许的范围必须可查询、可审计。
 - Dangerous 仅接受 `cli` / `workbench` 来源且需 `confirmed:true`。脚本提交通过已有客户端，不伪造桥接记录绕过 Gate。
-- `script_run` 另外要求项目显式启用 `Engine/scripts.trustedCSharp`；Unity 在同一设置文件的 `settings` 数组配置。`operations.enabled` 单独打开不足以开放任意 C#；缺失、false 或非法配置默认拒绝，Gate 和能力矩阵同步反映。
+- `script_run` 另外要求项目显式启用 `RoslynKit/scripts.trustedCSharp`；Unity 在同一设置文件的 `settings` 数组配置。`operations.enabled` 单独打开不足以开放任意 C#；缺失、false 或非法配置默认拒绝，Gate 和能力矩阵同步反映。
 - 脚本确认覆盖整段受信任 C#；不谎称逐方法 Gate 能拦截直接业务调用。未确认时在派发前拒绝，确认不会修改项目配置。
 - `source` 仍是审计字段，不是认证凭据；本设计面向受信任的本机项目操作。
 - 开关关闭、缺失或解析失败时，继续允许诊断、元数据发现、按 §5.2 收敛后的只读 inspect、结果查询和取消；拒绝新的执行、日志写入、截图和队列认领。
@@ -211,7 +211,7 @@ yoki script --engine unity-editor --target editor --confirm-execution --file scr
 - 豁免仅跳过执行开关，不绕过 payload、目标、句柄及范围校验；Dangerous 永不自豁免。
 - 只读资格必须由实现保证。需要主线程访问的值读取沿用主线程调度，不在后台线程直接触碰 Unity/Godot 对象。
 
-错误继续区分：载荷非法、未允许调用、目标不支持、宿主不可用、对象已失效、运行不存在、超时和未知结局；不能全部包装成 `EngineOperationFailed`。
+错误继续区分：载荷非法、未允许调用、目标不支持、宿主不可用、对象已失效、运行不存在、超时和未知结局；不能全部包装成 `RoslynOperationFailed`。
 
 ## 8. 运行、结果与重载
 
@@ -366,13 +366,13 @@ Skill 的职责是先发现能力/对象/签名，再生成可执行脚本；不
 
 共享 Registry 提供稳定注册 ID 与活动性复核。Workbench 已移除入口目录，展示能力、活动服务和通用运行。生产源码扫描不再包含旧入口类型/注册或 Unity eval 生成路径；旧磁盘 JSON 的 entry 字段仅为历史兼容读取保留。
 
-本增量测试：EngineKit 157/157；Godot Editor 31/31、Runtime 96/96；Roslyn 7/7；CLI 74/74；Workbench Engine 投影 4/4；Skill 安装 6/6；Unity 编译门 0 错误/0 警告。测试数量因删除旧属性扫描/生成器测试并迁移生命周期覆盖而变化，不能与旧 158 简单相加。
+本增量测试：RoslynKit 157/157；Godot Editor 31/31、Runtime 96/96；Roslyn 7/7；CLI 74/74；Workbench Engine 投影 4/4；Skill 安装 6/6；Unity 编译门 0 错误/0 警告。测试数量因删除旧属性扫描/生成器测试并迁移生命周期覆盖而变化，不能与旧 158 简单相加。
 
-Unity 刷新框架后真实发现 `EngineKitDemo.DemoStatsModel` / `DemoStatsSystem`，通过 FastChannel 返回 `Read(System.String)`、`ApplyChange(System.String,System.Int32,System.Int32)` 签名。在线能力目录无 entry_* / Unity eval。随后 runId `a26c412e4f2b455386b190fd14e3dc7c` 直接调用服务、等待 3 editorTick 并记录控制台日志，6 条断言通过，Health=120、Attack=18，未修改业务值。会话 `f07cce63bdb64548b737c2e2ed120b8d`、generation `639268677319497854`；脚本体内观察窗口的 compilation/reload 事件均为 0，不把该窗口冒充覆盖第一次 Roslyn 编译的全程。
+Unity 刷新框架后真实发现 `RoslynKitDemo.DemoStatsModel` / `DemoStatsSystem`，通过 FastChannel 返回 `Read(System.String)`、`ApplyChange(System.String,System.Int32,System.Int32)` 签名。在线能力目录无 entry_* / Unity eval。随后 runId `a26c412e4f2b455386b190fd14e3dc7c` 直接调用服务、等待 3 editorTick 并记录控制台日志，6 条断言通过，Health=120、Attack=18，未修改业务值。会话 `f07cce63bdb64548b737c2e2ed120b8d`、generation `639268677319497854`；脚本体内观察窗口的 compilation/reload 事件均为 0，不把该窗口冒充覆盖第一次 Roslyn 编译的全程。
 
 最终源码刷新后，于 2026-10-06 15:32（Asia/Shanghai）再次执行 runId `c4a68756192b4a42ad9f7483201630b0`，requestId `cli-1791271968047-fea2eee3`：6 条断言通过，控制台日志为 `discovery-final Sentinel health=120, attack=18`。前后 sessionId 均为 `c13e6246279b43d78acd225d4d378a98`、generation 均为 `639268684982929316`，脚本体内编译/重载事件为 0。最终 Validation 为 Ready、编译 Idle、issues 为空、控制台错误数 0；Engine snapshot 已增量反映本次 Passed 运行和两个活动服务，不含旧 entries 目录。
 
-迁移专项真机验证：历史 eval runId `e21e668ef2d34516877bfa019d650155` 可经 `run_result` 和 `run_lookup` 读取，明确标 `kind=legacy` / `recordSchema=legacy-entry-v4`，记录与结果文件查询前后 SHA-256 不变。发现目录逐条分页可取得两个服务；不同作用域的句柄被拒为 `ObjectHandleExpired`，EditMode 查询 play 目标被拒为 `EngineOperationUnavailable`。项目 `Assets/Scripts` 未检出旧 Entry API 引用；此扫描不代替其他项目的升级预检。
+迁移专项真机验证：历史 eval runId `e21e668ef2d34516877bfa019d650155` 可经 `run_result` 和 `run_lookup` 读取，明确标 `kind=legacy` / `recordSchema=legacy-entry-v4`，记录与结果文件查询前后 SHA-256 不变。发现目录逐条分页可取得两个服务；不同作用域的句柄被拒为 `ObjectHandleExpired`，EditMode 查询 play 目标被拒为 `RoslynOperationUnavailable`。项目 `Assets/Scripts` 未检出旧 Entry API 引用；此扫描不代替其他项目的升级预检。
 
 已同步包内 Skill 的五个变更文档到当前项目 `custom/skills/yokiframe/`，SHA-256 一致，两份 Skill 各 16 个本地文档链接校验通过。只更新操作说明，没有因同步 Skill 自动安装编译器或修改授权。
 
@@ -387,7 +387,7 @@ Unity 刷新框架后真实发现 `EngineKitDemo.DemoStatsModel` / `DemoStatsSys
 | 编译 | Roslyn 4.8.0 / netstandard2.0 / C# 9；MemoryStream PE/PDB，显式宿主引用，无任务文件和外部编译进程 |
 | 接口 | `script_run`、`script_status`、`run_result`、`run_lookup`、`run_cancel`；`yoki script` 前台提交/观察 |
 | 生命周期 | 复用瞬态 work 调度；编译在后台，加载/入口和助手在主线程；独立信任开关、请求去重、取消和换代 Unknown |
-| 测试 | EngineKit 158/158；Roslyn 编译组件 7/7；CLI 全量 74/74；Skill 安装 6/6；Unity 编译门 0 错误、0 警告 |
+| 测试 | RoslynKit 158/158；Roslyn 编译组件 7/7；CLI 全量 74/74；Skill 安装 6/6；Unity 编译门 0 错误、0 警告 |
 | 真机 | Unity 2022.3.16f1，SampleScene；不读取本地业务源码，通过 CLI 执行并取回真实数值 |
 | 未完成（当前） | Godot Capture/Patch/Export/Bind、安装器自动分发/升级预检、Native AOT 新版发布回归、其他对象根、inspect 值读取收敛、独立 invoke/wait/capture/log actions |
 
@@ -420,7 +420,7 @@ SendMessage 不转发到普通 facade。Faulted 行为可同 ID 修复重挂，�
 复活。Unity gameFrame 改为实际 Update/LateUpdate 完成屏障，截图支持显式自动编号。
 script_status 报预算最大/已用/剩余值，保留用户的 4096 次上限，不把历史 64 当成现值。
 
-EngineKit 182/182、Roslyn 7/7，Unity 编译门 0 错误/0 警告；两次真机提交分别通过
+RoslynKit 182/182、Roslyn 7/7，Unity 编译门 0 错误/0 警告；两次真机提交分别通过
 32 与 7 条断言，覆盖跨原型调用/替换、连续 12 次等帧、截图编号、故障恢复与暂停。
 Export 的公共两参签名和完整 MonoBehaviour 包装已核实；asset_ops refresh 的旧
 UnknownCommand 在稳定 FileBridge 未复现。详情与 runId 见
@@ -478,7 +478,7 @@ loadedBytes 仅累计 PE+PDB，不能用于判断进程内存。Attach/Patch/不
 缓存淘汰不卸载程序集，不自动重载。
 
 调度认领仅访问本域待执行记录；空闲 tick 不扫历史。最近列表缓存最多 64 条，
-本地写入失效，外部修改约 5 秒刷新；结果对账仍纯读。EngineKit 290/290、Roslyn 7/7、
+本地写入失效，外部修改约 5 秒刷新；结果对账仍纯读。RoslynKit 290/290、Roslyn 7/7、
 Godot Runtime 96/96、Unity 编译门通过。Unity 连续 8 次相同脚本 Passed，加载数
 1/2/2/2/2/2/2/2，后 6 次命中，Mono heap 采样不变。测试证据、内存范围与未完成的
 EditorLoop 性能对照见 `Engine-LiveCode-Completion.md`；不宣称所有内存增长均已消除。

@@ -43,7 +43,7 @@ public sealed class CliErrorOutputTests
             projectRoot.Path,
             "--engine",
             "unity-editor",
-            "--kit",
+            "RoslynKit",
             "System",
             "--action",
             "ping",
@@ -299,7 +299,7 @@ public sealed class CliErrorOutputTests
     {
         using var process = StartCli(
             "command", "send", "--project", projectRoot, "--engine", "unity-editor",
-            "--kit", "System", "--action", "list_commands", "--timeout", "5000");
+            "RoslynKit", "System", "--action", "list_commands", "--timeout", "5000");
         var standardOutputTask = process.StandardOutput.ReadToEndAsync();
         var standardErrorTask = process.StandardError.ReadToEndAsync();
 

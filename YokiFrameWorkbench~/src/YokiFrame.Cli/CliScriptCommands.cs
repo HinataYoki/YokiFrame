@@ -43,7 +43,7 @@ internal static class CliScriptCommands
             ["code"] = body, ["target"] = target, ["confirmed"] = true, ["timeoutMs"] = timeoutMs
         };
         CommandExecutionResult submitted = await service.ExecuteAsync(
-            engine, "Engine", "script_run", payload.ToJsonString(), "cli", 10000, token);
+            engine, "RoslynKit", "script_run", payload.ToJsonString(), "cli", 10000, token);
         if (submitted.Outcome != CommandOutcomeState.Succeeded)
             return Fail(submitted.Response.ErrorCode.Length == 0 ? "ScriptSubmissionUnknown" : submitted.Response.ErrorCode,
                 submitted.Response.ErrorMessage, new JsonObject { ["requestId"] = submitted.RequestId });
@@ -62,7 +62,7 @@ internal static class CliScriptCommands
             {
                 token.ThrowIfCancellationRequested();
                 CommandExecutionResult observed = await service.ExecuteWithIdentityAsync(
-                    engine, "Engine", "run_result", query.ToJsonString(), "cli", 5000, token, submitted.TargetIdentity);
+                    engine, "RoslynKit", "run_result", query.ToJsonString(), "cli", 5000, token, submitted.TargetIdentity);
                 if (observed.Outcome != CommandOutcomeState.Succeeded)
                 {
                     interruptedCode = "ScriptObservationFailed";
@@ -91,7 +91,7 @@ internal static class CliScriptCommands
         using var cleanup = new CancellationTokenSource(2000);
         try
         {
-            var cancellation = await service.ExecuteWithIdentityAsync(engine, "Engine", "run_cancel",
+            var cancellation = await service.ExecuteWithIdentityAsync(engine, "RoslynKit", "run_cancel",
                 query.ToJsonString(), "cli", 1500, cleanup.Token, submitted.TargetIdentity);
             context["cancelRequestAccepted"] = cancellation.Outcome == CommandOutcomeState.Succeeded;
         }
@@ -120,7 +120,7 @@ internal static class CliScriptCommands
     private static int Fail(string code, string message, JsonObject? context = null)
     {
         return CliJsonOutput.WriteError(new YokiFrameError(code, message,
-            "Inspect Engine/script_status and the run record. Do not automatically retry execution.",
+            "Inspect RoslynKit/script_status and the run record. Do not automatically retry execution.",
             Array.Empty<string>()), context);
     }
 }

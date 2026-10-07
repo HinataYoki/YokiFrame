@@ -148,7 +148,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: false,
             "Ready/telemetry",
             static json => Value(json, "state") + "/" + Value(json, "source"),
-            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "YooAsset",
             static json => Value(json["summary"], "provider"),
-            new[] { "kit", "status", "--kit", "ResKit", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "RoslynKit", "ResKit", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景三：telemetry 不可用，回落 snapshot 且 generation 一致。</summary>
@@ -187,7 +187,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "TelemetryNotUsed",
             static json => Value(json["issues"]?[0], "code"),
-            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景四：snapshot 的 generation 落后于当前宿主。</summary>
@@ -202,7 +202,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "Stale/KitStateStale",
             static json => Value(json, "state") + "/" + Value(json["error"], "code"),
-            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景五：registry 存在但 heartbeat 缺失，宿主离线。</summary>
@@ -234,7 +234,7 @@ public sealed class CliDiagnosticBudgetTests
                 + (!string.IsNullOrWhiteSpace(Value(json, "requestId"))).ToString().ToLowerInvariant(),
             new[]
             {
-                "command", "send", "--engine", ENGINE_ID, "--kit", "System", "--action", "ping",
+                "command", "send", "--engine", ENGINE_ID, "RoslynKit", "System", "--action", "ping",
                 "--timeout", "1000", "--project", project.Path
             });
     }
@@ -266,7 +266,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "EngineSelectionRequired",
             static json => Value(json["error"], "code"),
-            new[] { "kit", "status", "--kit", "System", "--project", project.Path });
+            new[] { "kit", "status", "RoslynKit", "System", "--project", project.Path });
     }
 
     /// <summary>
@@ -406,7 +406,7 @@ public sealed class CliDiagnosticBudgetTests
     /// <param name="payloadJson">payload 文本。</param>
     /// <param name="generation">帧所属 generation。</param>
     /// <param name="sequence">帧序号。</param>
-    /// <param name="kit">帧所属 Kit；segment 名必须与查询用的 --kit 完全一致。</param>
+    /// <param name="kit">帧所属 Kit；segment 名必须与查询用的 Engine 完全一致。</param>
     /// <returns>持有命名映射的句柄。</returns>
     private static IDisposable WriteTelemetryFrame(
         string projectRoot,

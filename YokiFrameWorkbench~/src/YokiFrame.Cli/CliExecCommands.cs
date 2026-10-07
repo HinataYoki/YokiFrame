@@ -12,7 +12,7 @@ namespace YokiFrame.Cli;
 /// 多步编排（等重载、重试、断言）过去只能靠外部 shell 脚本，会在本地留下 .ps1/.sh 临时文件。
 /// exec 把这类脚本留在 stdin 上：不落盘、不留痕。
 /// 步骤格式为 NDJSON，一行一步，支持三种形态：
-/// <c>{"command":["command","send","--kit","Engine","--action","domain_state"]}</c>、
+/// <c>{"command":["command","send","RoslynKit","RoslynKit","--action","domain_state"]}</c>、
 /// <c>{"wait":3000}</c>、
 /// <c>{"command":[...],"retry":{"attempts":10,"delayMs":3000},"expect":{"contains":"isPlaying"}}</c>。
 /// 每一步输出一行结果，最后输出一行汇总。

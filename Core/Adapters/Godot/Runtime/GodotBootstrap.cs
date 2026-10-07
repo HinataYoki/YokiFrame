@@ -47,7 +47,8 @@ namespace YokiFrame
 #if GODOT && TOOLS
             var projectRoot = ProjectSettings.GlobalizePath("res://");
             StartFileBridgeHostSafely(projectRoot);
-            GodotRuntimeEngineKitInstaller.EnsureInstalled(
+            // RoslynKit 安装器在独立程序集，Core 启动只发出钩子。
+            GodotRoslynKitRuntimeHooks.EnsureInstalled?.Invoke(
                 this,
                 () => mFileBridgeHost == null ? string.Empty : mFileBridgeHost.SessionId,
                 () => mFileBridgeHost == null ? 0L : mFileBridgeHost.Generation,
@@ -97,8 +98,8 @@ namespace YokiFrame
             YokiFrameUpdateDispatcher.Tick(scaledDeltaTime, unscaledDeltaTime);
 
 #if GODOT && TOOLS
-            // Engine Kit 入口调度与 FileBridge 心跳解耦：bridge 未就绪时也要推进已入队的运行。
-            GodotRuntimeEngineKitInstaller.Tick();
+            // RoslynKit 入口调度与 FileBridge 心跳解耦：bridge 未就绪时也要推进已入队的运行。
+            GodotRoslynKitRuntimeHooks.Tick?.Invoke();
 #endif
 
 #if GODOT && TOOLS
@@ -200,7 +201,7 @@ namespace YokiFrame
                 mFileBridgeHost = null;
             }
 
-            GodotRuntimeEngineKitInstaller.Shutdown();
+            GodotRoslynKitRuntimeHooks.Shutdown?.Invoke();
             LogKitHostEnvironment.Reset();
 #endif
 

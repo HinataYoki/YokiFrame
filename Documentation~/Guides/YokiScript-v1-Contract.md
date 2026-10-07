@@ -1,7 +1,7 @@
 # YokiScript v1：语法与执行契约
 
 > **历史方案，已撤销，未实施。用户现已选定 Roslyn，以下内容不再是开发或验收要求。**
-> 当前唯一执行契约为 [Roslyn 内存 C# 自动化](Engine-Roslyn-Automation-Contract.md)，父设计为 [Engine Kit v5.2](Engine-Operation-Glue-Design.md)。
+> 当前唯一执行契约为 [Roslyn 内存 C# 自动化](Engine-Roslyn-Automation-Contract.md)，父设计为 [RoslynKit v5.2](Engine-Operation-Glue-Design.md)。
 > 第一版必须支持父设计 §12 中用户给出的整段脚本。它是自研命令语言，不是 TypeScript 子集兼容性承诺；不依赖外部 SDK、Node、JS 引擎或 C# eval。
 
 ## 1. 执行模型

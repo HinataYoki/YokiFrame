@@ -20,12 +20,12 @@ public sealed class GodotSceneOperationsTests
 
         Assert.Equal("scene_query", query.Descriptor.Action);
         Assert.Equal(YokiFrameCommandKind.ReadOnly, query.Descriptor.Kind);
-        Assert.Equal(YokiFrameEngineExecutionTarget.Runtime, query.Descriptor.Targets);
+        Assert.Equal(RoslynExecutionTarget.Runtime, query.Descriptor.Targets);
         Assert.False(query.Descriptor.IsTargetAgnostic);
 
         Assert.Equal("scene_mutate", mutate.Descriptor.Action);
         Assert.Equal(YokiFrameCommandKind.Dangerous, mutate.Descriptor.Kind);
-        Assert.Equal(YokiFrameEngineExecutionTarget.Runtime, mutate.Descriptor.Targets);
+        Assert.Equal(RoslynExecutionTarget.Runtime, mutate.Descriptor.Targets);
     }
 
     [Theory]
@@ -39,7 +39,7 @@ public sealed class GodotSceneOperationsTests
         YokiFrameCommandResult result = query.Execute(CreateRequest("scene_query", payload));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class GodotSceneOperationsTests
         YokiFrameCommandResult result = query.Execute(CreateRequest("scene_query", "{\"depth\":1}"));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.UNAVAILABLE, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.UNAVAILABLE, result.ErrorCode);
     }
 
     [Theory]
@@ -64,7 +64,7 @@ public sealed class GodotSceneOperationsTests
         YokiFrameCommandResult result = mutate.Execute(CreateRequest("scene_mutate", payload));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class GodotSceneOperationsTests
             "{\"op\":\"create\",\"name\":\"Probe\"}"));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.UNAVAILABLE, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.UNAVAILABLE, result.ErrorCode);
     }
 
     [Fact]
@@ -99,6 +99,6 @@ public sealed class GodotSceneOperationsTests
 
     private static YokiFrameCommandRequest CreateRequest(string action, string payload)
     {
-        return new YokiFrameCommandRequest("cli", "Engine", action, payload, 5000, 0L, "req-" + Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
+        return new YokiFrameCommandRequest("cli", "RoslynKit", action, payload, 5000, 0L, "req-" + Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
     }
 }

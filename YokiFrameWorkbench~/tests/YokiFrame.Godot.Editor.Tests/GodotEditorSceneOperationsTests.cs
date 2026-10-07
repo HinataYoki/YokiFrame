@@ -20,11 +20,11 @@ public sealed class GodotEditorSceneOperationsTests
 
         Assert.Equal("scene_query", query.Descriptor.Action);
         Assert.Equal(YokiFrameCommandKind.ReadOnly, query.Descriptor.Kind);
-        Assert.Equal(YokiFrameEngineExecutionTarget.Editor, query.Descriptor.Targets);
+        Assert.Equal(RoslynExecutionTarget.Editor, query.Descriptor.Targets);
 
         Assert.Equal("scene_mutate", mutate.Descriptor.Action);
         Assert.Equal(YokiFrameCommandKind.Dangerous, mutate.Descriptor.Kind);
-        Assert.Equal(YokiFrameEngineExecutionTarget.Editor, mutate.Descriptor.Targets);
+        Assert.Equal(RoslynExecutionTarget.Editor, mutate.Descriptor.Targets);
     }
 
     [Theory]
@@ -36,7 +36,7 @@ public sealed class GodotEditorSceneOperationsTests
         YokiFrameCommandResult result = new GodotEditorSceneQueryOperation().Execute(CreateRequest("scene_query", payload));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
     }
 
     [Theory]
@@ -48,21 +48,21 @@ public sealed class GodotEditorSceneOperationsTests
         YokiFrameCommandResult result = new GodotEditorSceneMutateOperation().Execute(CreateRequest("scene_mutate", payload));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(YokiFrameEngineErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
+        Assert.Equal(RoslynErrorCodes.INVALID_PAYLOAD, result.ErrorCode);
     }
 
     [Fact]
     public void Editor_capabilities_matrix_includes_scene_operations_for_editor_target()
     {
-        var settingsSource = new StubEditorSettingsSource(YokiFrameEngineSettingsSnapshot.Enabled());
+        var settingsSource = new StubEditorSettingsSource(RoslynSettingsSnapshot.Enabled());
         var engineProvider = new GodotEditorEngineOperationProvider
         {
             EngineVersionAccessor = () => "4.7.0-test",
             IsPlayingAccessor = () => false,
             SessionIdAccessor = () => "session-editor"
         };
-        var gate = YokiFrameEngineGate.CreateDefault(settingsSource);
-        var provider = new YokiFrameEngineKitProvider(gate, engineProvider, settingsSource);
+        var gate = RoslynGate.CreateDefault(settingsSource);
+        var provider = new RoslynKitProvider(gate, engineProvider, settingsSource);
 
         YokiFrameCommandResult result = provider.Handle(CreateRequest("engine_capabilities", "{}"));
         Assert.True(result.IsSuccess, result.ErrorCode + " " + result.ErrorMessage);
@@ -110,6 +110,6 @@ public sealed class GodotEditorSceneOperationsTests
 
     private static YokiFrameCommandRequest CreateRequest(string action, string payload)
     {
-        return new YokiFrameCommandRequest("cli", "Engine", action, payload, 5000, 0L, "req-" + Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
+        return new YokiFrameCommandRequest("cli", "RoslynKit", action, payload, 5000, 0L, "req-" + Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
     }
 }

@@ -2,7 +2,29 @@
 
 > **实现范围**：Unity Play 行为及 Godot 4.7 .NET/Tools editor/runtime 行为、批量、调参、恢复已验证。Patch 与 Export/Bind 仅 Unity；Godot 不支持 Capture。Player/IL2CPP 不支持。宿主侧契约见包根 `Documentation~/Guides/Engine-LiveCode-Contract.md`；Godot 差异见本页末节。
 >
-> 需要「先让用户在运行态里调手感，满意后再落盘成 Mono」时用这一页。只想读状态、截图、跑断言，用 [engine-kit.md](engine-kit.md) 的 `yoki script`，不要起 LiveCode。
+> 需要「先让用户在运行态里调手感，满意后再落盘成 Mono」时用这一页。只想读状态、截图、跑断言，用 [roslyn-kit.md](roslyn-kit.md) 的 `yoki script`，不要起 LiveCode。
+
+## 给 Agent 的硬边界
+
+Play Mode 里改行为、调数值、截图和断言，默认走内存编译，**不要**为了试一次就改 `Assets` 下的 `.cs`。下面这些是当前实现做不到的，撞上就停，不要换一种写法再试。
+
+**硬限制，不能靠重试绕过：**
+
+- 不能把方法插进已经存在的类。`Attach` 是新的临时行为，`Patch` 只是包住旧方法。要改 `Player.cs` 的源码，这是正式编译，先告诉用户。
+- 内存程序集不卸载。`Remove` 只停用，`loadedAssemblies` 不减。同 ID 重挂也再占一次。预算见 `script_status`，耗尽后停止新 Attach / 新脚本，不要连续重试。
+- 没有协程、`enabled`、运行时 `AddComponent<原型>`、Inspector 编辑。碰撞/触发回调和 `Delay` 已支持，签名见下文；需要协程或正式组件生命周期时写真实代码。
+- 两个原型不能互引类型，也不能 `SendMessage`。只能 `CallLive` / `Invoke`，参数类型必须完全一致。
+- 标量、枚举、向量、颜色、对象引用可调。数组、List、嵌套对象要按当前字段契约走；属性和 `SerializeReference` 仍然改不了。
+- Patch 打中该方法的所有调用，不限单个对象；异常不会自动撤销补丁。
+- 取消和超时停不了不加检查的死循环。失败不回滚 `Awake` 已经造成的加分、生成物体等副作用。
+- Player、IL2CPP、手机包没有 LiveCode。Godot 没有 Patch、Export、Bind、Capture。
+
+**必须编译进真实代码时，先告诉用户，再改文件：**
+
+- `Export` / `CommitExport` / `Reexport` 会写 `Assets/.../*.cs` 并 `AssetDatabase.Refresh()`，随后 Unity 编译，Play 现场会丢。
+- `Bind` 只在 Edit Mode，会给场景加组件并保存该场景。
+- 改已有业务 `.cs`、asmdef、包依赖，都会触发 Unity 资产编译。这不属于本功能的零编译路径。
+- 第一次安装 Roslyn / Harmony 包本身也要编译一次。装完之后的 `yoki script` 和 `Attach` 才不触发 Unity 编译。
 
 ## 什么时候用
 
@@ -19,25 +41,25 @@
 
 | 调用 | 语义 |
 |---|---|
-| `Engine/LiveCode.Patch` | 用完整 static patch 类拦截已有方法；`replace` 是 bool prefix |
+| `RoslynKit/LiveCode.Patch` | 用完整 static patch 类拦截已有方法；`replace` 是 bool prefix |
 | `engine.LiveCode.Attach(id, target, className, members)` | 把成员源码编译成临时行为挂到 **Play 场景对象**上 |
-| `await engine.LiveCode.AttachMany(requests)` | 1..64 个 `YokiFrameLiveAttachmentRequest(id,target,className,members)`，整批预检/准备后激活，返回逐项结果 |
+| `await engine.LiveCode.AttachMany(requests)` | 1..64 个 `LiveAttachmentRequest(id,target,className,members)`，整批预检/准备后激活，返回逐项结果 |
 | `engine.LiveCode.ReadField(id, name)` / `SetField(id, name, value)` | 读写**已声明的 public / SerializeField** 字段 |
 | `engine.LiveCode.Invoke(id, method, args...)` | 按 ID 调用原型声明的 public 实例方法，不要求引用另一个原型类型 |
 | `await engine.LiveCode.Export(id, "Assets/.../X.cs")` | 单项暂存并安排提交；返回 exportId，后续导入可重载 |
-| `await engine.LiveCode.ExportMany(requests, batchId = null)` | 暂存 1..64 个 `YokiFrameLiveExportRequest(id,path)`；最多 16 份脚本，不写 Assets；返回 Prepared 批次 |
+| `await engine.LiveCode.ExportMany(requests, batchId = null)` | 暂存 1..64 个 `LiveExportRequest(id,path)`；最多 16 份脚本，不写 Assets；返回 Prepared 批次 |
 | `await engine.LiveCode.Reexport(previousExportId, members, batchId = null)` | 同类/同路径暂存新版本，EditMode 无 handle 也可用；不直接提交 |
-| `engine.LiveCode.CommitExport(batchId)` / `Engine/live_export_commit` | 显式提交批次，统一请求导入；CLI payload 为 batchId/target/confirmed:true |
-| `Engine/live_export_status` | 只读，传 batchId 或 exportId 二选一；Committed 不等于 compiled |
+| `engine.LiveCode.CommitExport(batchId)` / `RoslynKit/live_export_commit` | 显式提交批次，统一请求导入；CLI payload 为 batchId/target/confirmed:true |
+| `RoslynKit/live_export_status` | 只读，传 batchId 或 exportId 二选一；Committed 不等于 compiled |
 | `engine.LiveCode.Bind(exportId, target = null)` | EditMode 一个版本绑定多个目标；多目标版本必须显式传 target；重复绑定不重置现有字段 |
 | `engine.LiveCode.List()` / `Remove(id)` | 诊断与逐个移除 |
-| `Engine/live_status` / `Engine/live_remove` | 诊断 handle / 按 `{"id":"..."}` 移除，执行开关关闭时仍可用 |
-| `Engine/live_snapshot` | `{"target":"play"}`，不加载程序集，写受控快照文件，返回 snapshotId/path/complete/逐项错误 |
+| `RoslynKit/live_status` / `RoslynKit/live_remove` | 诊断 handle / 按 `{"id":"..."}` 移除，执行开关关闭时仍可用 |
+| `RoslynKit/live_snapshot` | `{"target":"play"}`，不加载程序集，写受控快照文件，返回 snapshotId/path/complete/逐项错误 |
 | `engine.LiveCode.Snapshot()` / `ReadSnapshot(snapshotId)` | 保存并返回记录 / 读取记录；Snapshot 返回对象，不是 JSON 字符串 |
 | `await engine.LiveCode.Restore(snapshotId, sourceProvider, resolver)` | 核对源码 hash、对象、预算，恢复所有字段后才激活；resolver 可省略，但临时引用必需 |
 
 - `Export` 的签名是 **两个参数**：`Export(id, outputPath)`。不要再传 className/source，会得到 `CS1501`。
-- 每次提交仍需 `--confirm-execution`，并依赖 [engine-kit.md](engine-kit.md) 的两个开关。
+- 每次提交仍需 `--confirm-execution`，并依赖 [roslyn-kit.md](roslyn-kit.md) 的两个开关。
 
 ## 成员源码怎么写（最容易踩的地方）
 
@@ -56,7 +78,7 @@
 
 ### 原型之间怎么互相调用
 
-facade 是普通类（`YokiFrame.YokiFrameUnityLiveBehaviour`），**Unity 原生 SendMessage / SendMessageUpwards / BroadcastMessage 不转发到原型**。使用显式按 ID 调用：
+facade 是普通类（`YokiFrame.UnityLiveBehaviour`），位于 Editor-only 程序集 `YokiFrame.Unity.LiveCode.Facade`。内存编译只引用这个外观和运行时程序集，不引用 `YokiFrame.Unity.Editor`。**Unity 原生 SendMessage / SendMessageUpwards / BroadcastMessage 不转发到原型**。使用显式按 ID 调用：
 
 ```csharp
 // 原型方法内；目标方法须声明为 public。
@@ -184,7 +206,7 @@ AttachMany 是 N 个行为程序集，外层脚本未命中缓存时另占 1，�
 
 ## 显式快照与恢复
 
-1. 预算耗尽也能直接 `yoki command send --kit Engine --action live_snapshot --payload '{"target":"play"}'`。
+1. 预算耗尽也能直接 `yoki command send --kit RoslynKit --action live_snapshot --payload '{"target":"play"}'`。
    这是写盘的 UserAction，要求执行/trusted 开关；不是 ReadOnly，也不需要新脚本程序集。
    必须核对 complete=true 和每项 error。记录位于返回的项目内 path，不自动覆盖或删除。
 2. 保存原成员源码及 snapshotId，检查记录中的目标和引用 key。运行时对象需要调用方建立
@@ -225,7 +247,7 @@ Snapshot 的 complete 只覆盖支持字段，不是整个场景。Patch、Fault
   托管对象不支持。集合嵌套用 Serializable 数据类包装；同一 Unity 对象的多处引用支持。
   含引用的非 null 数据对象通过受信任 SetField 设置，JSON 不接受对象引用。
 - 回调异常禁用 host 并报 status=unavailable；手动 enabled=true 不清 Faulted。同 ID Attach 可用修复后源码重建，故障字段不自动迁移；框架不回滚任意副作用。
-- Engine/asset_ops refresh 曾出现未复验的 UnknownCommand；2026-10-06 稳定宿主已通过 FileBridge 复验成功。新故障应记录 requestId、session、在线 catalog 和错误，不据旧记录认定永久不支持，也不自动重放。
+- RoslynKit/asset_ops refresh 曾出现未复验的 UnknownCommand；2026-10-06 稳定宿主已通过 FileBridge 复验成功。新故障应记录 requestId、session、在线 catalog 和错误，不据旧记录认定永久不支持，也不自动重放。
 - Unity 与 Godot 均有 Snapshot/Restore、AttachMany、零编译字段、预算预警和文件热载。不自动重载或重放。
 
 ## Godot .NET / Tools 差异

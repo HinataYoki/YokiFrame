@@ -6,7 +6,7 @@
 ## API
 
 - `Export(id, path)` 保留旧签名；单项暂存后安排提交，返回 exportId。批量不循环调用它。
-- `await ExportMany(requests, batchId = null)`：请求为 `YokiFrameLiveExportRequest(id, path)`。
+- `await ExportMany(requests, batchId = null)`：请求为 `LiveExportRequest(id, path)`。
   相同路径、类名和源码合并成一份脚本，但各目标保留独立字段快照；返回 Prepared 批次。
 - `await Reexport(previousExportId, members, batchId = null)`：无需 Play handle，可在 EditMode
   更新旧记录的同一路径/类名，返回 Prepared 批次，不删除脚本或组件。
@@ -24,9 +24,9 @@ Play 中一次暂存多个原型；同一个类只输出一个 `.cs`，不再为
 
 ```csharp
 var batch = await engine.LiveCode.ExportMany(new[] {
-    new YokiFrame.YokiFrameLiveExportRequest("Target01", "Assets/Weapons/TargetPatrol.cs"),
-    new YokiFrame.YokiFrameLiveExportRequest("Target02", "Assets/Weapons/TargetPatrol.cs"),
-    new YokiFrame.YokiFrameLiveExportRequest("Target03", "Assets/Weapons/TargetPatrol.cs")
+    new YokiFrame.LiveExportRequest("Target01", "Assets/Weapons/TargetPatrol.cs"),
+    new YokiFrame.LiveExportRequest("Target02", "Assets/Weapons/TargetPatrol.cs"),
+    new YokiFrame.LiveExportRequest("Target03", "Assets/Weapons/TargetPatrol.cs")
 });
 engine.ConsoleLog(batch.BatchId);
 ```
@@ -37,8 +37,8 @@ engine.ConsoleLog(batch.BatchId);
 源码最多 128 KiB、每目标字段最多 64 KiB、单记录最多 4 MiB；source/scene 路径最多 1024 UTF-8 字节。
 
 ```bash
-yoki command send --kit Engine --action live_export_commit --payload '{"batchId":"<batch>","target":"play","confirmed":true}'
-yoki command send --kit Engine --action live_export_status --payload '{"batchId":"<batch>"}'
+yoki command send --kit RoslynKit --action live_export_commit --payload '{"batchId":"<batch>","target":"play","confirmed":true}'
+yoki command send --kit RoslynKit --action live_export_status --payload '{"batchId":"<batch>"}'
 ```
 
 提交需要执行/trusted C# 双开关及确认；查询是诊断只读，关闭执行开关后仍可用。
@@ -95,7 +95,7 @@ LiveCode 状态可表达 null class/集合；绑定到正式组件并保存/重�
 
 ## 验证证据
 
-- EngineKit 263/263，Roslyn 7/7，Godot Editor 31/31、Runtime 96/96；Unity CompileGate
+- RoslynKit 263/263，Roslyn 7/7，Godot Editor 31/31、Runtime 96/96；Unity CompileGate
   0 警告/0 错误。测试工程保留原有 nullable 警告，未扩展 Godot 导出能力。
 - `43cbab366490408b9b632ca18024b47f`：6 个原型合并成 4 份脚本，暂存不写 Assets、场景不变脏。
   批次 `3d6e9fff805346aba28d96e7255226eb` 一次提交后四份均 compiled=true。
@@ -110,7 +110,7 @@ LiveCode 状态可表达 null class/集合；绑定到正式组件并保存/重�
   冲突整批拒绝、写入失败回滚、Committing 中断不重放、损坏记录和取消/会话失效。
 
 验收脚本位于项目 `scripts/engine/export-v2-*.csx`，测试场景位于
-`Assets/EngineKitExportValidation_20261006A/ExportValidation.unity`；未保存用户原有场景。
+`Assets/RoslynKitExportValidation_20261006A/ExportValidation.unity`；未保存用户原有场景。
 收尾 `257526c2d0c24115917d168ca13417f7`：4/4，EditMode、无 Live handle，
 只关闭干净的隔离测试场景，磁盘证据保留。文档与安装 Skill 两份 reference 的 SHA-256
 一致，两侧 Skill 校验均通过；任务文件空白检查通过，全仓 diff-check 仍有原有 `.meta` 尾空格。

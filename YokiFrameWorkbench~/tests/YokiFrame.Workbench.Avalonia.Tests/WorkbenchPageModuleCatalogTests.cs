@@ -60,9 +60,9 @@ public sealed class WorkbenchPageModuleCatalogTests
         Assert.Equal(
             new[] { "Framework", "Docs" },
             groups[0].Items.Select(static item => item.PageName));
-        Assert.Equal(new[] { "Engine", "EventKit", "FsmKit", "LogKit", "PoolKit", "ResKit" }, groups[1].Items.Select(static item => item.PageName));
+        Assert.Equal(new[] { "EventKit", "FsmKit", "LogKit", "PoolKit", "ResKit" }, groups[1].Items.Select(static item => item.PageName));
         Assert.Equal(new[] { "ActionKit", "AudioKit", "SpatialKit", "UIKit", "TableKit", "LocalizationKit", "SaveKit" }, groups[2].Items.Select(static item => item.PageName));
-        Assert.Equal(new[] { "framework", "docs", "engine", "eventkit", "fsm", "logkit", "poolkit", "reskit", "actionkit", "audiokit", "spatialkit", "uikit", "tablekit", "localization", "savekit" },
+        Assert.Equal(new[] { "framework", "docs", "eventkit", "fsm", "logkit", "poolkit", "reskit", "actionkit", "audiokit", "spatialkit", "uikit", "tablekit", "localization", "savekit" },
             groups.SelectMany(static group => group.Items).Select(static item => item.IconKey));
         Assert.DoesNotContain(
             groups.SelectMany(static group => group.Items),
@@ -83,8 +83,7 @@ public sealed class WorkbenchPageModuleCatalogTests
         var pageNames = groups.SelectMany(static group => group.Items).Select(static item => item.PageName);
 
         Assert.DoesNotContain("UIKit", pageNames);
-        // Engine 页面不再限 Unity：Godot Editor / Runtime 宿主同样注册 Engine Kit 并发布 state 快照。
-        Assert.Contains("Engine", pageNames);
+        Assert.DoesNotContain("RoslynKit", pageNames);
         Assert.Contains("ResKit", pageNames);
         Assert.Contains("SaveKit", pageNames);
     }

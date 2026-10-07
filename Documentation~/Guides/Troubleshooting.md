@@ -29,7 +29,7 @@ CLI 报错时保留错误建议和 evidence path，并先运行：
 $YOKI = "<Workbench 框架页显示的 yoki 路径>"
 & $YOKI project status --project <projectRoot>
 & $YOKI engine list --project <projectRoot>
-& $YOKI kit status --kit System --engine <engineId> --project <projectRoot>
+& $YOKI kit status Engine System --engine <engineId> --project <projectRoot>
 & $YOKI doctor --engine <engineId> --project <projectRoot>
 ```
 

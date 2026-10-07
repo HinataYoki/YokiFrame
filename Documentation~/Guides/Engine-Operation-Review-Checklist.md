@@ -1,4 +1,4 @@
-# Engine Kit v5.2 / Roslyn 内存 C# 审查与验证清单
+# RoslynKit v5.2 / Roslyn 内存 C# 审查与验证清单
 
 > 对应 [当前设计](Engine-Operation-Glue-Design.md)。**Unity Roslyn 最小纵切已实现并真机验证；不是 v5 整体迁移完成。** 勾选项仅代表下面明确列出的验证范围，未勾选项仍待完成或扩大覆盖。
 > 目标是宿主使用 Roslyn 内存编译 C#，CLI 负责传输与查询；保留完整自动化工作流，不实现 TS 外观或自研解析器，不保留 `[YokiFrameEntry]` 或 `entry_*` 作为目标 API。
@@ -152,7 +152,7 @@ Engine-LiveCode-Contract.md §7/§9。以上 Model/View 全工作流、截图和
 
 继续实施时按受影响范围运行；当前证据见设计 §14，不因更新安装文档就扩大已验证范围：
 
-- Core/EngineKit：发现、Gate、绑定、调度和状态机测试。
+- Core/RoslynKit：发现、Gate、绑定、调度和状态机测试。
 - 编译组件：Roslyn 实编译、引用、诊断、内存产物、取消和边界。
 - CLI/Tooling：脚本传输、Native AOT、重载、超时、中断和结构化输出。
 - Unity：优先通过项目指定 Unity 工具链实际编译，再运行真机纵切；已有 Unity 编译门作补充。

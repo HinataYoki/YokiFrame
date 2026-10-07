@@ -1,6 +1,6 @@
 # Roslyn 内存 C# 自动化契约
 
-> 对应 [Engine Kit v5.2](Engine-Operation-Glue-Design.md)。用户选择 Roslyn，撤销自研 YokiScript。独立编译组件与 Unity/Godot 宿主接线分别验收；本契约不是已发布能力清单。
+> 对应 [RoslynKit v5.2](Engine-Operation-Glue-Design.md)。用户选择 Roslyn，撤销自研 YokiScript。独立编译组件与 Unity/Godot 宿主接线分别验收；本契约不是已发布能力清单。
 
 ## 1. 输入与执行位置
 
@@ -89,11 +89,11 @@ Godot 授权为 project.godot 的 `yokiframe/engine/trusted_csharp`。恢复已�
 
 ## 7. 实现与安装状态
 
-- 已实现独立 `YokiFrame.EngineKit.Roslyn` 编译组件、Unity 接线、`script_run/script_status/run_result/run_lookup/run_cancel`、新 CLI 的 `script` 命令与上述上下文。
-- 复用运行存储/调度器，脚本直接提交瞬态 work；内部结果改为 YokiFrameRunResult/Status/Assertion。旧属性、扫描器、entry_* 和 Unity 落盘 eval 已移除，无兼容执行别名。历史存储目录不迁动，run_result/run_lookup 可读旧记录但不重放。
+- 已实现独立 `YokiFrame.RoslynKit.Compiler` 编译组件、Unity 接线、`script_run/script_status/run_result/run_lookup/run_cancel`、新 CLI 的 `script` 命令与上述上下文。
+- 复用运行存储/调度器，脚本直接提交瞬态 work；内部结果改为 RunResult/Status/Assertion。旧属性、扫描器、entry_* 和 Unity 落盘 eval 已移除，无兼容执行别名。历史存储目录不迁动，run_result/run_lookup 可读旧记录但不重放。
 - `object_list/object_describe` 已提供 `root=service` 的只读元数据目录，显式 target、会话绑定 ID、有界分页；不执行 getter/方法。完整 payload 与边界见父设计 §5.1；当前强类型 C# 不要求 memberId 调用协议。
 - 运行记录保存 `kind=script`、payloadHash、ownerHostId、sessionId/generation 和编译诊断；同宿主换代后无完成证据的任务为 Unknown，其他宿主不能认领、对账或取消。查询纯读，源码不作为可重放任务保存。
 - 编译器包位于 `.yokiframe/automation/compiler/roslyn-4.8.0/`，宿主只加载项目本地的固定依赖，不下载、不调用 dotnet。`script_status.installed` 只表示主 DLL 存在；依赖不全/不兼容仍可能在运行时失败。
 - 本项目已通过开发构建准备该目录；**正式 Runtime bootstrap / Installer 尚未分发编译器包**，CLI 的新命令也需要新构建。开发准备命令见 Skill `references/installer.md`，不能宣称所有已安装版本自动可用。
-- Unity `settings` 数组中需同时启用 `Engine/operations.enabled` 和 `Engine/scripts.trustedCSharp`；每次脚本提交仍需显式确认。文档或依赖安装不自动开启授权。
+- Unity `settings` 数组中需同时启用 `RoslynKit/operations.enabled` 和 `RoslynKit/scripts.trustedCSharp`；每次脚本提交仍需显式确认。文档或依赖安装不自动开启授权。
 - 验证与实际 runId 见父设计 §14 和 LiveCode 契约 §9，区分先前纵切与后续恢复回归。Godot Capture/构建守卫、Native AOT 发布回归、同名依赖冲突矩阵和 Installer 升级预检尚未验收。

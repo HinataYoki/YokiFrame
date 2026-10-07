@@ -23,7 +23,7 @@ internal static class WorkbenchRuntimeKitCatalog
         "SpatialKit",
         "SaveKit",
         "UIKit",
-        "Engine",
+        "RoslynKit",
     };
 
     /// <summary>获取允许周期性 Shared Memory 读取的 Runtime Kit 目录。</summary>
