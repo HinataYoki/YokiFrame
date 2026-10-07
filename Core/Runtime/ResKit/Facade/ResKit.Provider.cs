@@ -12,6 +12,8 @@ namespace YokiFrame
         private static bool sSupportsRawBytes;
         private static bool sSupportsRawText;
         private static long sProviderGeneration;
+        private static readonly object sProviderCreateLock = new();
+        private static int sProviderCreateDepth;
 
 #if UNITY_EDITOR || (GODOT && TOOLS)
         /// <summary>获取当前 Provider 的稳定展示名；未创建时返回 None，读取不会触发默认创建。</summary>
@@ -90,39 +92,140 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>返回当前 Provider；为空时在状态锁内调用宿主工厂并只安装一次。</summary>
-        private static IResourceProvider EnsureProviderLocked()
+        /// <summary>
+        /// 返回当前 Provider。缺失时在状态锁外调用宿主工厂，提交前再次确认没有显式 Provider 或会话重置。
+        /// 工厂不得重入 ResKit，否则抛出 InvalidOperationException。
+        /// </summary>
+        /// <returns>已安装的资源 Provider。</returns>
+        private static IResourceProvider EnsureProvider()
         {
-            if (sProvider != null)
+            lock (sProviderCreateLock)
+            {
+                while (true)
+                {
+                    IResourceProvider current = ReadInstalledProvider();
+                    if (current != null)
+                    {
+                        return current;
+                    }
+
+                    if (!TryBeginProviderCreate(out Func<IResourceProvider> factory, out long generation))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        IResourceProvider created = factory();
+                        if (created == null)
+                        {
+                            throw new InvalidOperationException("The ResKit default provider factory returned null.");
+                        }
+
+                        current = CommitCreatedProvider(created, generation);
+                    }
+                    finally
+                    {
+                        EndProviderCreate();
+                    }
+
+                    if (current != null)
+                    {
+                        return current;
+                    }
+                }
+            }
+        }
+
+        /// <summary>读取已经安装的 Provider；尚未创建时返回 null，不调用工厂。</summary>
+        /// <returns>当前 Provider 或 null。</returns>
+        private static IResourceProvider ReadInstalledProvider()
+        {
+            lock (sLock)
             {
                 return sProvider;
             }
+        }
 
-            if (sDefaultProviderFactory == null)
+        /// <summary>
+        /// 在状态锁内占住一次默认工厂调用。已有 Provider 时返回 false，由调用方重新读取。
+        /// </summary>
+        /// <param name="factory">本次要在锁外调用的工厂。</param>
+        /// <param name="generation">占位时的 Provider 代次，提交时用来识别会话重置。</param>
+        /// <returns>需要调用工厂时返回 true。</returns>
+        private static bool TryBeginProviderCreate(out Func<IResourceProvider> factory, out long generation)
+        {
+            factory = null;
+            generation = 0;
+            lock (sLock)
             {
-                throw new InvalidOperationException(
-                    "ResKit provider is not configured. Install an engine adapter or call ResKit.SetProvider first.");
-            }
+                if (sProvider != null)
+                {
+                    return false;
+                }
 
-            IResourceProvider provider = sDefaultProviderFactory();
-            if (provider == null)
+                if (sDefaultProviderFactory == null)
+                {
+                    throw new InvalidOperationException(
+                        "ResKit provider is not configured. Install an engine adapter or call ResKit.SetProvider first.");
+                }
+
+                if (sProviderCreateDepth > 0)
+                {
+                    throw new InvalidOperationException(
+                        "ResKit default provider factory must not reenter ResKit.");
+                }
+
+                sProviderCreateDepth = 1;
+                factory = sDefaultProviderFactory;
+                generation = sProviderGeneration;
+                return true;
+            }
+        }
+
+        /// <summary>结束一次工厂占位。必须在工厂返回、失败或重入拒绝后调用。</summary>
+        private static void EndProviderCreate()
+        {
+            lock (sLock)
             {
-                throw new InvalidOperationException("The ResKit default provider factory returned null.");
+                sProviderCreateDepth = 0;
             }
+        }
 
+        /// <summary>
+        /// 提交锁外创建的 Provider。显式注册优先；代次变化或工厂被清空时放弃候选并让调用方重试。
+        /// </summary>
+        /// <param name="created">工厂返回的候选 Provider。</param>
+        /// <param name="generation">开始创建时观察到的 Provider 代次。</param>
+        /// <returns>最终安装的 Provider；本次结果已过期时返回 null。</returns>
+        private static IResourceProvider CommitCreatedProvider(IResourceProvider created, long generation)
+        {
 #if UNITY_EDITOR || (GODOT && TOOLS)
-            string providerName = ResolveProviderName(provider);
+            string providerName = ResolveProviderName(created);
 #endif
-            ResolveProviderCapabilities(provider, out bool rawBytes, out bool rawText);
-            InstallProviderLocked(provider, rawBytes, rawText
+            ResolveProviderCapabilities(created, out bool rawBytes, out bool rawText);
+            lock (sLock)
+            {
+                if (sProvider != null)
+                {
+                    return sProvider;
+                }
+
+                if (sProviderGeneration != generation || sDefaultProviderFactory == null)
+                {
+                    return null;
+                }
+
+                InstallProviderLocked(created, rawBytes, rawText
 #if UNITY_EDITOR || (GODOT && TOOLS)
-                , providerName
+                    , providerName
 #endif
-                );
+                    );
 #if UNITY_EDITOR || (GODOT && TOOLS)
-            BumpDiagnosticVersionLocked();
+                BumpDiagnosticVersionLocked();
 #endif
-            return provider;
+                return created;
+            }
         }
 
         /// <summary>在状态锁内发布已经验证的 Provider 元数据并推进 Provider 代次。</summary>

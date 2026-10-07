@@ -32,8 +32,9 @@ Skill 的唯一包内来源是 `<packageRoot>/Core/Editor/Skills/yokiframe/`。�
 
 编译器入口是 `YokiFrame.RoslynKit.Compiler.dll`。先看 `script_status.installed`。
 
-- Unity：包内 `Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/`。本地包和 Git URL 会带上。`installed=true` 时不要再发布。
-- Godot：安装投影不含 `Adapters/Unity`，所以 add-on 里没有这份编译器。只有 `installed=false` 时，才把 bundle 放到 `.yokiframe/automation/compiler/roslyn-4.8.0/`。
+- Unity 和 Godot 都使用包内 `Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0/`。本地包、Git URL 和 Godot add-on 投影会带上。`installed=true` 时不要再发布。
+- HarmonyX 仍在 `Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/harmonyx-2.16.1/`，只属于 Unity 补丁，不进 Godot 投影。
+- 包内 bundle 缺失时，才把编译器放到 `.yokiframe/automation/compiler/roslyn-4.8.0/`。
 
 `installed` 只表示主 DLL 在。不要下载依赖，也不要为了跑脚本启动外部编译器。缺包时在包根执行：
 

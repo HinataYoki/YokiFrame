@@ -11,10 +11,18 @@ namespace YokiFrame
         /// <exception cref="NotSupportedException">当前 Provider 不支持场景加载时抛出。</exception>
         public static IResSceneProvider GetSceneProvider()
         {
-            IResourceProvider provider;
-            lock (sLock)
+            IResourceProvider provider = null;
+            while (provider == null)
             {
-                provider = EnsureProviderLocked();
+                lock (sLock)
+                {
+                    provider = sProvider;
+                }
+
+                if (provider == null)
+                {
+                    EnsureProvider();
+                }
             }
 
             IResSceneProvider sceneProvider = provider as IResSceneProvider;

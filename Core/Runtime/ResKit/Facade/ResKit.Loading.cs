@@ -32,35 +32,14 @@ namespace YokiFrame
             ResLoadSource source = CaptureLoadSource();
 #endif
             ResCacheKey key = new(typeof(T), path);
-            ResPendingLoad pending;
-            lock (sLock)
+            ResPendingLoad pending = AdmitLoad<T>(key, anonymous, true
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                , source
+#endif
+                , out ResLease cachedLease, out _);
+            if (cachedLease != null)
             {
-                if (sCache.TryGetValue(key, out ResCacheEntry cached))
-                {
-                    ResLease cachedLease = AcquireLeaseLocked(cached, anonymous);
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                    cachedLease.SetSource(source);
-#endif
-                    return cachedLease;
-                }
-
-                if (sPendingLoads.ContainsKey(key))
-                {
-                    throw new InvalidOperationException(
-                        "A ResKit load for the same resource key is already in progress. Use the async API to join it.");
-                }
-
-                IResourceProvider provider = EnsureProviderLocked();
-                pending = new ResPendingLoad(
-                    key, provider
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                    , sProviderName
-#endif
-                    , sProviderGeneration, sCacheEpoch, true);
-                sPendingLoads.Add(key, pending);
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                BumpDiagnosticVersionLocked();
-#endif
+                return cachedLease;
             }
 
             ResLease lease = InvokeSynchronousProvider<T>(pending, anonymous);
@@ -74,6 +53,136 @@ namespace YokiFrame
             }
 #endif
             return lease;
+        }
+
+        /// <summary>
+        /// 取得已缓存 lease，或在 Provider 已安装时登记加载占位。Provider 缺失时在状态锁外创建后重试。
+        /// </summary>
+        /// <typeparam name="T">调用方期望的资源对象类型。</typeparam>
+        /// <param name="key">资源缓存键。</param>
+        /// <param name="anonymous">是否创建匿名 lease。</param>
+        /// <param name="synchronous">同步加载遇到同 key 在途请求时失败；异步加载则加入。</param>
+#if UNITY_EDITOR || (GODOT && TOOLS)
+        /// <param name="source">本次获取的调用来源。</param>
+#endif
+        /// <param name="cachedLease">命中缓存时的 lease；未命中时为 null。</param>
+        /// <param name="startProvider">本次是否负责启动异步 Provider 调用。</param>
+        /// <returns>新登记或加入的在途加载；命中缓存时返回 null。</returns>
+        private static ResPendingLoad AdmitLoad<T>(
+            ResCacheKey key,
+            bool anonymous,
+            bool synchronous,
+#if UNITY_EDITOR || (GODOT && TOOLS)
+            ResLoadSource source,
+#endif
+            out ResLease cachedLease,
+            out bool startProvider) where T : class
+        {
+            while (true)
+            {
+                ResPendingLoad pending = TryAdmitLoadLocked<T>(key, anonymous, synchronous
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                    , source
+#endif
+                    , out cachedLease, out startProvider, out bool needsProvider);
+                if (!needsProvider)
+                {
+                    return pending;
+                }
+
+                EnsureProvider();
+            }
+        }
+
+        /// <summary>在状态锁内完成缓存命中、在途加入或新占位登记。</summary>
+        /// <typeparam name="T">调用方期望的资源对象类型。</typeparam>
+        /// <param name="key">资源缓存键。</param>
+        /// <param name="anonymous">是否创建匿名 lease。</param>
+        /// <param name="synchronous">同步路径遇到在途加载时抛出。</param>
+#if UNITY_EDITOR || (GODOT && TOOLS)
+        /// <param name="source">本次获取的调用来源。</param>
+#endif
+        /// <param name="cachedLease">命中缓存时的 lease。</param>
+        /// <param name="startProvider">需要由调用方启动异步加载时为 true。</param>
+        /// <param name="needsProvider">当前没有 Provider，调用方必须在锁外创建。</param>
+        /// <returns>在途加载；命中缓存或需要创建 Provider 时返回 null。</returns>
+        private static ResPendingLoad TryAdmitLoadLocked<T>(
+            ResCacheKey key,
+            bool anonymous,
+            bool synchronous,
+#if UNITY_EDITOR || (GODOT && TOOLS)
+            ResLoadSource source,
+#endif
+            out ResLease cachedLease,
+            out bool startProvider,
+            out bool needsProvider) where T : class
+        {
+            cachedLease = null;
+            startProvider = false;
+            needsProvider = false;
+            lock (sLock)
+            {
+                if (sCache.TryGetValue(key, out ResCacheEntry cached))
+                {
+                    cachedLease = AcquireLeaseLocked(cached, anonymous);
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                    cachedLease.SetSource(source);
+#endif
+                    return null;
+                }
+
+                if (sPendingLoads.TryGetValue(key, out ResPendingLoad existing))
+                {
+                    if (synchronous)
+                    {
+                        throw new InvalidOperationException(
+                            "A ResKit load for the same resource key is already in progress. Use the async API to join it.");
+                    }
+
+                    existing.WaiterCount++;
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                    BumpDiagnosticVersionLocked();
+#endif
+                    return existing;
+                }
+
+                if (sProvider == null)
+                {
+                    needsProvider = true;
+                    return null;
+                }
+
+                return CreateAdmittedPending(key, synchronous, out startProvider);
+            }
+        }
+
+        /// <summary>在已持有状态锁且 Provider 存在时登记新的加载占位。</summary>
+        /// <param name="key">资源缓存键。</param>
+        /// <param name="synchronous">同步占位不增加等待者，也不标记启动 Provider。</param>
+        /// <param name="startProvider">异步新占位需要调用方启动 Provider。</param>
+        /// <returns>已登记的在途加载。</returns>
+        private static ResPendingLoad CreateAdmittedPending(
+            ResCacheKey key,
+            bool synchronous,
+            out bool startProvider)
+        {
+            ResPendingLoad pending = new(
+                key, sProvider
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                , sProviderName
+#endif
+                , sProviderGeneration, sCacheEpoch, synchronous);
+            sPendingLoads.Add(key, pending);
+            startProvider = !synchronous;
+            if (!synchronous)
+            {
+                pending.WaiterCount++;
+            }
+
+#if UNITY_EDITOR || (GODOT && TOOLS)
+            BumpDiagnosticVersionLocked();
+#endif
+            return pending;
         }
 
         /// <summary>在状态锁外调用 Provider，并将成功、失败或跨代结果提交给共享状态。</summary>

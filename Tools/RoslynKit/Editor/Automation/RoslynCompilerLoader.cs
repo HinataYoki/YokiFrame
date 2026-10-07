@@ -15,9 +15,9 @@ namespace YokiFrame
     /// </summary>
     public sealed class RoslynCompilerLoader : IDisposable
     {
-        /// <summary>随包分发的编译器 bundle 相对包根的路径，装完即可用。</summary>
+        /// <summary>随包分发的编译器 bundle 相对包根的路径。放在 Editor 门面而不是 Unity Adapter，Godot 投影才会带上。</summary>
         public const string PACKAGE_RELATIVE_PATH =
-            "Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0";
+            "Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0";
 
         /// <summary>项目本地编译器 bundle 相对工程根的路径；保留给自定义或离线场景。</summary>
         public const string RELATIVE_PATH = ".yokiframe/automation/compiler/roslyn-4.8.0";

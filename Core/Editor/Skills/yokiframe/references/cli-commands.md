@@ -17,7 +17,7 @@
 
 ## 要查什么就用哪条命令
 
-日常查看一个 Kit 用 `kit status`。它先读 telemetry，读不到再读 snapshot。
+日常查看一个 Kit 用 `kit status`。它先读 telemetry，读不到再读 snapshot。命名共享内存只在 Windows 可用；其它平台会走 snapshot，不要把 `telemetry read` 失败当成命令错误后反复重试。
 
 | 要做的事 | 命令 |
 |---|---|
@@ -25,9 +25,9 @@
 | 看项目模型、能力、心跳和在线 action | `harness catalog`。在线 action 加 `--refresh-commands` |
 | 看项目模型 | `project status` |
 | 重建项目模型 | `project refresh`。`--package` 可选，只在需要指定包根时使用。先加 `--dry-run` 查看 `writes[]` |
-| 列出 engine | `engine list` |
+| 列出 engine | `engine list`。`fastChannel` 是 `active`、`fallback` 或 `unavailable`，不是“登记过端点”的布尔值 |
 | 看某个 Kit | `kit status` |
-| 直接读共享内存 | `telemetry read` |
+| 直接读共享内存 | `telemetry read`。仅 Windows；非 Windows 用 `snapshot read` 或 `kit status` |
 | 直接读 snapshot 文件 | `snapshot read` |
 | 看命令桥 | `bridge status` |
 | 看引擎状态（模式、播放/编译、执行开关） | `command send --kit RoslynKit --action domain_state` |

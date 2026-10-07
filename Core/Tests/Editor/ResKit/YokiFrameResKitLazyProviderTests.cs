@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 #if YOKIFRAME_UNITASK_SUPPORT
@@ -115,6 +116,23 @@ namespace YokiFrame.Tests
             CollectionAssert.AreEqual(new byte[] { 4, 2 }, bytes);
             Assert.AreSame(provider, ResKit.GetProvider());
             Assert.AreEqual(1, factoryCount);
+        }
+
+        /// <summary>验证默认工厂在创建期间重入 ResKit 会失败，而不是在状态锁内递归。</summary>
+        [Test]
+        public void DefaultFactoryMustNotReenterResKit()
+        {
+            ResKit.RegisterDefaultProviderFactory(() =>
+            {
+                ResKit.Load<LazyAsset>("Lazy/Reenter");
+                return new LazyResourceProvider();
+            });
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+                () => ResKit.Load<LazyAsset>("Lazy/First"));
+
+            Assert.That(exception.Message, Does.Contain("must not reenter"));
+            Assert.IsNull(ResKit.GetProvider());
         }
 
         /// <summary>用于验证默认 Provider 生命周期的最小资源对象。</summary>

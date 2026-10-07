@@ -24,7 +24,7 @@ namespace YokiFrame
         /// <param name="timeoutMs">等待超时毫秒数。</param>
         /// <param name="createdAtUtc">信封创建时间文本。</param>
         /// <param name="payloadJson">payload JSON 文本。</param>
-        /// <returns>校验��过返回 null；失败返回稳定原因说明。</returns>
+        /// <returns>校验通过返回 null；失败返回稳定原因说明。</returns>
         public static string Validate(
             int protocolVersion,
             string engineId,

@@ -120,8 +120,9 @@ public sealed class SkillInstallServiceTests
         var packagedSkillRoot = Path.Combine(packageRoot, "Core", "Editor", "Skills", "yokiframe");
         var packagedReferences = Directory.GetFiles(Path.Combine(packagedSkillRoot, "references"), "*.md");
 
-        Assert.Equal(6, packagedReferences.Length);
+        Assert.Equal(7, packagedReferences.Length);
         Assert.Contains(packagedReferences, path => Path.GetFileName(path) == "roslyn-kit.md");
+        Assert.Contains(packagedReferences, path => Path.GetFileName(path) == "tablekit-luban.md");
 
         var projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-skill-tests", Guid.NewGuid().ToString("N"));
         try

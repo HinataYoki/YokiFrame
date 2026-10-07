@@ -38,6 +38,7 @@ public sealed class GodotPackageProjectionTests
             "Tools/AudioKit/Editor/YokiFrame.AudioKit.Editor.csproj",
             "Tools/AudioKit/Runtime/AudioKit.cs",
             "Tools/AudioKit/Runtime/YokiFrame.AudioKit.csproj",
+            "Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll",
             "Tools/SaveKit/Adapters/Godot/Runtime/YokiFrame.SaveKit.Godot.csproj",
             "Tools/SaveKit/Editor/YokiFrame.SaveKit.Editor.csproj",
             "Tools/SaveKit/Runtime/SaveKit.cs",
@@ -77,6 +78,7 @@ public sealed class GodotPackageProjectionTests
             "Tools/SaveKit/Editor/YokiFrame.SaveKit.Editor.csproj",
             "Tools/SaveKit/Runtime/SaveKit.cs",
             "Tools/SaveKit/Runtime/YokiFrame.SaveKit.csproj",
+            "Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll",
             "WorkbenchRuntime~/win-x64/YokiFrame.Workbench.Avalonia.exe"
         });
         WriteFixtureFiles(root, new[]
@@ -101,7 +103,8 @@ public sealed class GodotPackageProjectionTests
             "Tools/AudioKit/Adapters/Unity/Runtime/UnityAudioKitBackend.cs",
             "Tools/UIKit/Adapters/Unity/Runtime/UIKit.cs",
             "Tools/UIKit/Adapters/Unity/Editor/UIKitInteractionProvider.cs",
-            "Tools/UIKit/Integrations/Unity/DOTween/Runtime/DOTweenAnimations.cs"
+            "Tools/UIKit/Integrations/Unity/DOTween/Runtime/DOTweenAnimations.cs",
+            "Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll"
         });
         return root;
     }

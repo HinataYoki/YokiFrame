@@ -318,8 +318,35 @@ internal static partial class Program
             ["mode"] = entry.Mode,
             ["generation"] = entry.Generation,
             ["capabilities"] = capabilities,
-            ["fastChannel"] = entry.FastChannels.Count > 0
+            ["fastChannel"] = ResolveFastChannelState(entry)
         };
+    }
+
+    private const string FAST_CHANNEL_ACTIVE = "active";
+    private const string FAST_CHANNEL_FALLBACK = "fallback";
+    private const string FAST_CHANNEL_UNAVAILABLE = "unavailable";
+
+    /// <summary>
+    /// 把登记端点收成三态：有启用端点是 active，只有停用端点是 fallback，没有端点是 unavailable。
+    /// </summary>
+    /// <param name="entry">engine registry 条目。</param>
+    /// <returns>fastChannel 摘要。</returns>
+    private static string ResolveFastChannelState(EngineRegistryEntry entry)
+    {
+        if (entry.FastChannels.Count == 0)
+        {
+            return FAST_CHANNEL_UNAVAILABLE;
+        }
+
+        foreach (var endpoint in entry.FastChannels)
+        {
+            if (endpoint.Enabled)
+            {
+                return FAST_CHANNEL_ACTIVE;
+            }
+        }
+
+        return FAST_CHANNEL_FALLBACK;
     }
 
     /// <summary>

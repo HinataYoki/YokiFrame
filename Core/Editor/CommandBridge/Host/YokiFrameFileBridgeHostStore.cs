@@ -152,7 +152,7 @@ namespace YokiFrame
             File.Move(commandPath, archivePath);
         }
 
-        /// <summary>写入 deadletter 诊断并移���原始请求作为不可丢失证据。</summary>
+        /// <summary>写入 deadletter 诊断并移动原始请求作为不可丢失证据。</summary>
         public void MoveToDeadletter(string commandPath, string errorCode, string errorMessage)
         {
             var deadletterId = CreateDeadletterId(commandPath);

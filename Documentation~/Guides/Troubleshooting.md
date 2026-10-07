@@ -35,7 +35,7 @@ $YOKI = "<Workbench 框架页显示的 yoki 路径>"
 
 CLI 的未知选项、非法数值或缺失必填项会在进入命令前直接返回结构化 JSON；不要依赖错误输入静默回落默认值。长时间命令可按 Ctrl+C 取消，退出码为 `130`，结果中的 `error.code` 为 `Cancelled`。
 
-读取运行态时优先使用 `kit status`，它已经内置 telemetry -> snapshot 回落；需要指定通道或原始字段时才使用 `telemetry read` / `snapshot read`，后者加 `--detail full`。多个 engine 在线时必须显式传入 `--engine`。不要直接修改工具缓存或 `.yokiframe` 文件。
+读取运行态时优先使用 `kit status`，它已经内置 telemetry -> snapshot 回落。命名共享内存只在 Windows 可用，其它平台直接使用 snapshot。`engine list` 的 `fastChannel` 为 `active`、`fallback` 或 `unavailable`。需要原始字段时才使用 `telemetry read` / `snapshot read`，后者加 `--detail full`。多个 engine 在线时必须显式传入 `--engine`。不要直接修改工具缓存或 `.yokiframe` 文件。
 
 ## Kit 特定问题
 

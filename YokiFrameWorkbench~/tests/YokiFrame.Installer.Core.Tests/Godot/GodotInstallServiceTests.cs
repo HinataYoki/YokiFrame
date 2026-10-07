@@ -418,6 +418,10 @@ public sealed class GodotInstallServiceTests
         Assert.False(File.Exists(fixture.GetTargetPackagePath("Tests/Ignored.cs")));
         Assert.False(File.Exists(fixture.GetTargetPackagePath("YokiFrameWorkbench~/ignored.txt")));
         Assert.False(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/CoreMarker.cs.meta")));
+        Assert.True(File.Exists(fixture.GetTargetPackagePath(
+            "Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll")));
+        Assert.False(File.Exists(fixture.GetTargetPackagePath(
+            "Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll")));
         var ownerManifest = new PackageOwnerManifestStore().Read(fixture.AddonRoot);
         Assert.Contains(ownerManifest.Files, static file => file.RelativePath == "package/YokiFrame/Core/Runtime/CoreMarker.cs.uid");
         Assert.Contains(ownerManifest.Files, static file => file.RelativePath == "package/YokiFrame/Core/Runtime/ScriptTool.gd.uid");

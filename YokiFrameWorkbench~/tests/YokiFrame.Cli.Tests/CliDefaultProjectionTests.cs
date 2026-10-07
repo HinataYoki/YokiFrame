@@ -28,11 +28,26 @@ public sealed class CliDefaultProjectionTests
         Assert.False(json.AsObject().ContainsKey("enginesRoot"));
         var engine = json["engines"]![0]!;
         Assert.Equal(ENGINE_ID, engine["engineId"]!.GetValue<string>());
-        Assert.True(engine["fastChannel"]!.GetValue<bool>());
+        Assert.Equal("active", engine["fastChannel"]!.GetValue<string>());
         Assert.False(engine.AsObject().ContainsKey("fastChannels"));
         Assert.False(engine.AsObject().ContainsKey("projectPath"));
         Assert.False(engine.AsObject().ContainsKey("sessionId"));
         Assert.True(result.StandardOutput.Length < 600, result.StandardOutput);
+    }
+
+    /// <summary>验证已登记但未启用的 FastChannel 显示为 fallback，而不是可用。</summary>
+    [Fact]
+    public async Task EngineListReportsFallbackWhenFastChannelIsDisabled()
+    {
+        using var project = ProjectFixture.Create();
+        project.WriteEngineRegistry(false);
+        project.WriteHeartbeat();
+
+        var result = await RunCliAsync("engine", "list", "--project", project.Path);
+
+        Assert.Equal(0, result.ExitCode);
+        var json = JsonNode.Parse(result.StandardOutput)!;
+        Assert.Equal("fallback", json["engines"]![0]!["fastChannel"]!.GetValue<string>());
     }
 
     /// <summary>
@@ -213,13 +228,17 @@ public sealed class CliDefaultProjectionTests
         public static ProjectFixture Create() => new();
 
         /// <summary>写入带 FastChannel endpoint 的 engine registry。</summary>
-        public void WriteEngineRegistry()
+        /// <param name="fastChannelEnabled">端点是否处于启用状态。</param>
+        public void WriteEngineRegistry(bool fastChannelEnabled = true)
         {
+            var enabled = fastChannelEnabled ? "true" : "false";
             File.WriteAllText(
                 System.IO.Path.Combine(EngineRoot, "engine.json"),
                 "{\"protocolVersion\":2,\"engineId\":\"unity-editor\",\"engine\":\"Unity\",\"version\":\"6000.0.0f1\",\"projectPath\":\""
                 + Escape(Path)
-                + "\",\"adapterVersion\":\"test\",\"sessionId\":\"session\",\"generation\":1,\"mode\":\"EditMode\",\"capabilities\":[\"snapshot.read\",\"command.send\"],\"fastChannels\":[{\"protocolVersion\":1,\"engineId\":\"unity-editor\",\"sessionId\":\"session\",\"generation\":1,\"transport\":\"namedPipe\",\"endpoint\":\"YokiFrame.FastChannel.test\",\"enabled\":true,\"fallback\":\"filebridge\",\"readOnlyCommands\":[\"System/ping\",\"FsmKit/get_state\"]}]}");
+                + "\",\"adapterVersion\":\"test\",\"sessionId\":\"session\",\"generation\":1,\"mode\":\"EditMode\",\"capabilities\":[\"snapshot.read\",\"command.send\"],\"fastChannels\":[{\"protocolVersion\":1,\"engineId\":\"unity-editor\",\"sessionId\":\"session\",\"generation\":1,\"transport\":\"namedPipe\",\"endpoint\":\"YokiFrame.FastChannel.test\",\"enabled\":"
+                + enabled
+                + ",\"fallback\":\"filebridge\",\"readOnlyCommands\":[\"System/ping\",\"FsmKit/get_state\"]}]}");
         }
 
         /// <summary>写入新鲜 heartbeat，使 generation 可以被 CLI 解析。</summary>

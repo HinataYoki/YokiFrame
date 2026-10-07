@@ -76,36 +76,14 @@ namespace YokiFrame
             ResLoadSource source = CaptureLoadSource();
 #endif
             ResCacheKey key = new(typeof(T), path);
-            ResPendingLoad pending;
-            bool startProvider = false;
-            lock (sLock)
+            ResPendingLoad pending = AdmitLoad<T>(key, anonymous, false
+#if UNITY_EDITOR || (GODOT && TOOLS)
+                , source
+#endif
+                , out ResLease cachedLease, out bool startProvider);
+            if (cachedLease != null)
             {
-                if (sCache.TryGetValue(key, out ResCacheEntry cached))
-                {
-                    ResLease cachedLease = AcquireLeaseLocked(cached, anonymous);
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                    cachedLease.SetSource(source);
-#endif
-                    return cachedLease;
-                }
-
-                if (!sPendingLoads.TryGetValue(key, out pending))
-                {
-                    IResourceProvider provider = EnsureProviderLocked();
-                    pending = new ResPendingLoad(
-                        key, provider
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                        , sProviderName
-#endif
-                        , sProviderGeneration, sCacheEpoch, false);
-                    sPendingLoads.Add(key, pending);
-                    startProvider = true;
-                }
-
-                pending.WaiterCount++;
-#if UNITY_EDITOR || (GODOT && TOOLS)
-                BumpDiagnosticVersionLocked();
-#endif
+                return cachedLease;
             }
 
             if (startProvider)

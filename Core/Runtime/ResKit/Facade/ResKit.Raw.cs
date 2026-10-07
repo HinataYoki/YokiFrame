@@ -92,12 +92,23 @@ namespace YokiFrame
         /// <summary>获取当前 Provider 的 raw capability，不支持时抛出明确异常。</summary>
         private static IRawResourceProvider EnsureRawProvider(bool text)
         {
-            IResourceProvider provider;
-            bool supported;
-            lock (sLock)
+            IResourceProvider provider = null;
+            bool supported = false;
+            while (provider == null)
             {
-                provider = EnsureProviderLocked();
-                supported = text ? sSupportsRawText : sSupportsRawBytes;
+                lock (sLock)
+                {
+                    if (sProvider != null)
+                    {
+                        provider = sProvider;
+                        supported = text ? sSupportsRawText : sSupportsRawBytes;
+                    }
+                }
+
+                if (provider == null)
+                {
+                    EnsureProvider();
+                }
             }
 
             if (supported && provider is IRawResourceProvider rawProvider)
