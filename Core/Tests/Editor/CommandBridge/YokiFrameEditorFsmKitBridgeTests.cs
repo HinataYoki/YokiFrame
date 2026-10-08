@@ -1,7 +1,6 @@
 using System;
-using System.Reflection;
 using NUnit.Framework;
-using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -34,32 +33,32 @@ namespace YokiFrame
             FsmKitCommandHandler.ClearAll();
         }
 
-        /// <summary>
-        /// 验证 FsmKit/state payload 直接包含已注册状态机的 Workbench 诊断列表。
-        /// </summary>
+        /// <summary>验证 FileBridge state payload 直接包含已注册状态机。</summary>
         [Test]
-        public void CreateStatePayloadJsonForFsmKitContainsRegisteredMachine()
+        public void CreateStatePayloadJson_已注册状态机_state包含该实例()
         {
             FSM<PayloadStateId> fsm = new FSM<PayloadStateId>("UnityPayload");
             fsm.Add(PayloadStateId.Idle, new EmptyState());
 
-            string payloadJson = InvokeStatePayloadJson("FsmKit");
-            FsmSnapshotEnvelope payload = JsonUtility.FromJson<FsmSnapshotEnvelope>(payloadJson);
+            string payloadJson = YokiFrameEditorFileBridgePump.CreateStatePayloadJson("FsmKit");
+            using (JsonDocument document = JsonDocument.Parse(payloadJson))
+            {
+                JsonElement fsms = document.RootElement.GetProperty("fsms");
+                Assert.AreEqual(JsonValueKind.Array, fsms.ValueKind);
+                Assert.AreEqual(1, fsms.GetArrayLength());
+                Assert.AreEqual("UnityPayload", fsms[0].GetProperty("name").GetString());
+            }
 
-            Assert.AreEqual(1, payload.fsms.Length);
-            Assert.AreEqual("UnityPayload", payload.fsms[0].name);
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证 Editor dispatcher 已注册 FsmKit handler，并能返回成功 terminal result。
-        /// </summary>
+        /// <summary>验证 Editor dispatcher 将 list_all 路由到真实 FsmKit 结果。</summary>
         [Test]
-        public void EditorDispatcherRoutesFsmKitReadOnlyCommand()
+        public void Dispatch_list_all_返回已注册状态机()
         {
             FSM<PayloadStateId> fsm = new FSM<PayloadStateId>("UnityCommand");
             fsm.Add(PayloadStateId.Idle, new EmptyState());
-            YokiFrameCommandDispatcher dispatcher = GetEditorDispatcher();
+            YokiFrameCommandDispatcher dispatcher = YokiFrameEditorFileBridgePump.CommandDispatcherForTests;
             YokiFrameCommandRequest request = new YokiFrameCommandRequest(
                 "cli",
                 "FsmKit",
@@ -71,35 +70,14 @@ namespace YokiFrame
             YokiFrameCommandResult result = dispatcher.Dispatch(request);
 
             Assert.IsTrue(result.IsSuccess, result.ErrorCode + ": " + result.ErrorMessage);
-            StringAssert.Contains("UnityCommand", result.ResultJson);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                JsonElement fsms = document.RootElement.GetProperty("fsms");
+                Assert.AreEqual(1, fsms.GetArrayLength());
+                Assert.AreEqual("UnityCommand", fsms[0].GetProperty("name").GetString());
+            }
+
             GC.KeepAlive(fsm);
-        }
-
-        /// <summary>
-        /// 反射调用 Editor pump 的 payload JSON 构造方法，让缺失宿主接入表现为明确测试红灯。
-        /// </summary>
-        /// <param name="kit">Kit 标识。</param>
-        /// <returns>指定 Kit 的 payload JSON。</returns>
-        private static string InvokeStatePayloadJson(string kit)
-        {
-            MethodInfo method = typeof(YokiFrameEditorFileBridgePump).GetMethod(
-                "CreateStatePayloadJson",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(method, "Unity Editor pump 尚未提供 FsmKit payload JSON 入口。");
-            return (string)method.Invoke(null, new object[] { kit });
-        }
-
-        /// <summary>
-        /// 读取 Editor pump 实际使用的 dispatcher，验证策略与 handler 的最终组合结果。
-        /// </summary>
-        /// <returns>Editor pump 的共享 dispatcher。</returns>
-        private static YokiFrameCommandDispatcher GetEditorDispatcher()
-        {
-            FieldInfo field = typeof(YokiFrameEditorFileBridgePump).GetField(
-                "sCommandDispatcher",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(field);
-            return (YokiFrameCommandDispatcher)field.GetValue(null);
         }
 
         /// <summary>
@@ -136,18 +114,6 @@ namespace YokiFrame
             /// <typeparam name="TMsg">消息类型。</typeparam>
             /// <param name="message">消息值。</param>
             public void SendMessage<TMsg>(TMsg message) { }
-        }
-
-        [Serializable]
-        private sealed class FsmSnapshotEnvelope
-        {
-            public FsmSummary[] fsms = Array.Empty<FsmSummary>();
-        }
-
-        [Serializable]
-        private sealed class FsmSummary
-        {
-            public string name = string.Empty;
         }
     }
 }

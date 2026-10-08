@@ -11,14 +11,9 @@ public sealed class SharedMemoryTelemetryNotificationTests
     /// <summary>
     /// 验证同项目 publisher 发出信号后 listener 会立即返回。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task ListenerWakesWhenPublisherSignals()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         string projectRoot = Path.Combine(
             Path.GetTempPath(),
             "YokiFrame-notification-" + Guid.NewGuid().ToString("N"));
@@ -50,14 +45,9 @@ public sealed class SharedMemoryTelemetryNotificationTests
     /// <summary>
     /// 验证 Workbench 关闭令牌可以打断通知等待，不需要等待 watchdog。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void ListenerWaitHonorsCancellation()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         string projectRoot = Path.Combine(
             Path.GetTempPath(),
             "YokiFrame-notification-cancel-" + Guid.NewGuid().ToString("N"));

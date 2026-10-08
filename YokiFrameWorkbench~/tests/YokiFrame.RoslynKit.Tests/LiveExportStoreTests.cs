@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using YokiFrame;
 
@@ -24,7 +25,7 @@ public sealed class LiveExportStoreTests : IDisposable
         Assert.True(Store.MarkQueued(batch.BatchId));
         Assert.Equal("Committed", Store.Commit(batch.BatchId).State);
         Assert.False(Store.MarkQueued(batch.BatchId));
-        foreach (var item in versions) Assert.Equal(item.Source, File.ReadAllText(Store.ScriptPath(item)));
+        foreach (var item in versions) Assert.Equal(Encoding.UTF8.GetBytes(item.Source), File.ReadAllBytes(Store.ScriptPath(item)));
     }
 
     [Fact]
@@ -38,7 +39,7 @@ public sealed class LiveExportStoreTests : IDisposable
         Store.Stage(next.BatchId, new[] { next });
         Store.MarkQueued(next.BatchId);
         Assert.Equal("Committed", Store.Commit(next.BatchId).State);
-        Assert.Equal("guid: preserved", File.ReadAllText(Store.ScriptPath(original) + ".meta"));
+        Assert.Equal(Encoding.UTF8.GetBytes("guid: preserved"), File.ReadAllBytes(Store.ScriptPath(original) + ".meta"));
         Assert.Equal(original.Source, Store.ReadVersion(original.ExportId).Source);
         Assert.Equal(next.Source, Store.ReadVersion(next.ExportId).Source);
         var stale = Revision(original, "stale");
@@ -63,7 +64,7 @@ public sealed class LiveExportStoreTests : IDisposable
         File.WriteAllText(changed, "user edit");
         Store.MarkQueued(next.BatchId);
         Assert.Equal("Failed", Store.Commit(next.BatchId).State);
-        Assert.Equal("user edit", File.ReadAllText(changed));
+        Assert.Equal(Encoding.UTF8.GetBytes("user edit"), File.ReadAllBytes(changed));
         Assert.False(File.Exists(Store.ScriptPath(extra)));
         Assert.Throws<InvalidOperationException>(() => Store.MarkQueued(next.BatchId));
     }

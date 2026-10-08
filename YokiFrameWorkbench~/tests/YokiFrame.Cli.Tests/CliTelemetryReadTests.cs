@@ -24,7 +24,7 @@ public sealed class CliTelemetryReadTests
             "read",
             "--engine",
             engineId,
-            "RoslynKit",
+            "--kit",
             "System",
             "--name",
             "state",
@@ -44,13 +44,14 @@ public sealed class CliTelemetryReadTests
 
     /// <summary>
     /// 验证 CLI 可以从 Windows named memory map 读取已提交帧，并把 payload 展开为默认 summary。
+    /// 非 Windows 没有该命名映射，直接跳过。
     /// </summary>
     [Fact]
     public async Task ExistingTelemetrySegmentProjectsSummary()
     {
         if (!OperatingSystem.IsWindows())
         {
-            return;
+            throw Xunit.Sdk.SkipException.ForSkip("Shared memory telemetry 仅在 Windows 上可用。");
         }
 
         var engineId = "test-" + Guid.NewGuid().ToString("N");
@@ -66,7 +67,7 @@ public sealed class CliTelemetryReadTests
             "read",
             "--engine",
             engineId,
-            "RoslynKit",
+            "--kit",
             "System",
             "--name",
             "state",
@@ -87,13 +88,14 @@ public sealed class CliTelemetryReadTests
 
     /// <summary>
     /// 验证 --detail full 仍然返回协议原始字段，供定位问题和 Workbench 使用。
+    /// 非 Windows 没有该命名映射，直接跳过。
     /// </summary>
     [Fact]
     public async Task FullDetailRestoresRawTelemetryFields()
     {
         if (!OperatingSystem.IsWindows())
         {
-            return;
+            throw Xunit.Sdk.SkipException.ForSkip("Shared memory telemetry 仅在 Windows 上可用。");
         }
 
         var engineId = "test-" + Guid.NewGuid().ToString("N");
@@ -109,7 +111,7 @@ public sealed class CliTelemetryReadTests
             "read",
             "--engine",
             engineId,
-            "RoslynKit",
+            "--kit",
             "System",
             "--name",
             "state",

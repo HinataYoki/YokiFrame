@@ -17,9 +17,9 @@ public sealed class EventKitCodeScanServiceTests : IDisposable
         Directory.CreateDirectory(Path.Combine(mProjectRoot, "Assets", "Scripts"));
     }
 
-    /// <summary>验证 Roslyn 能识别跨行 Type/Enum/String 调用并忽略注释和字符串内容。</summary>
+    /// <summary>验证 Roslyn 能识别跨行 Type/Enum/String 调用，枚举键使用规范类型名，并忽略注释和字符串内容。</summary>
     [Fact]
-    public async Task ScanAsyncParsesCallsAndIgnoresCommentsAndStrings()
+    public async Task ScanAsync_注释和字符串_不进入关系()
     {
         WriteSource("Assets/Scripts/Demo.cs", """
             namespace Demo;
@@ -54,12 +54,14 @@ public sealed class EventKitCodeScanServiceTests : IDisposable
         Assert.Single(type.Senders);
         Assert.Single(type.Receivers);
         Assert.Single(type.Unregisters);
-        Assert.DoesNotContain(scan.Relations, static relation => relation.EventKey.Contains("Fake", StringComparison.Ordinal));
+        Assert.Equal(
+            new[] { "Demo.DamageEvent", "Demo.Signal.Ready", "legacy.message" },
+            scan.Relations.Select(static relation => relation.EventKey).ToArray());
     }
 
     /// <summary>验证同名命名空间类型和闭合泛型实参不会被错误合并。</summary>
     [Fact]
-    public async Task ScanAsyncPreservesNamespaceAndClosedGenericIdentity()
+    public async Task ScanAsync_同名类型和闭合泛型_保持独立身份()
     {
         WriteSource("Assets/Scripts/Generic.cs", """
             namespace Combat { public sealed class DamageEvent { } }
@@ -78,18 +80,21 @@ public sealed class EventKitCodeScanServiceTests : IDisposable
             """);
 
         WorkbenchEventKitCodeScan scan = await CreateService().ScanAsync(true, CancellationToken.None);
-        string[] identities = scan.Relations.Select(static relation => relation.Identity).ToArray();
 
-        Assert.Equal(4, identities.Length);
-        Assert.Contains(identities, static identity => identity.Contains("Combat.DamageEvent", StringComparison.Ordinal));
-        Assert.Contains(identities, static identity => identity.Contains("UI.DamageEvent", StringComparison.Ordinal));
-        Assert.Contains(identities, static identity => identity.Contains("Envelope<Combat.DamageEvent>", StringComparison.Ordinal));
-        Assert.Contains(identities, static identity => identity.Contains("Envelope<UI.DamageEvent>", StringComparison.Ordinal));
+        Assert.Equal(
+            new[]
+            {
+                WorkbenchEventKitCodeRelation.CreateIdentity("Type", "Combat.DamageEvent", "Combat.DamageEvent"),
+                WorkbenchEventKitCodeRelation.CreateIdentity("Type", "Envelope<Combat.DamageEvent>", "Envelope<Combat.DamageEvent>"),
+                WorkbenchEventKitCodeRelation.CreateIdentity("Type", "Envelope<UI.DamageEvent>", "Envelope<UI.DamageEvent>"),
+                WorkbenchEventKitCodeRelation.CreateIdentity("Type", "UI.DamageEvent", "UI.DamageEvent")
+            },
+            scan.Relations.Select(static relation => relation.Identity).ToArray());
     }
 
     /// <summary>验证全局命名空间不会泄漏 Roslyn 占位文本，包内泛型基类属性能还原枚举类型。</summary>
     [Fact]
-    public async Task ScanAsyncResolvesGlobalAndInheritedGenericEnumTypes()
+    public async Task ScanAsync_全局命名空间和继承枚举_还原真实类型()
     {
         WriteYokiFrameAssembly();
         WriteSource("Assets/Scripts/GameStateTemplate.cs", """
@@ -110,8 +115,9 @@ public sealed class EventKitCodeScanServiceTests : IDisposable
 
         WorkbenchEventKitCodeScan scan = await CreateService().ScanAsync(true, CancellationToken.None);
 
-        Assert.DoesNotContain(scan.Relations, static relation =>
-            relation.EventKey.Contains("global namespace", StringComparison.Ordinal));
+        Assert.Equal(
+            new[] { "ApplyAwait.Start", "GameState", "GameState" },
+            scan.Relations.Select(static relation => relation.EventKey).ToArray());
         Assert.Contains(scan.Relations, static relation => relation.EventKey == "ApplyAwait.Start");
         Assert.Contains(scan.Relations, static relation =>
             relation.EventKey == "GameState" && relation.PayloadType.Length == 0);

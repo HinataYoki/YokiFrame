@@ -1,5 +1,5 @@
-using System.Text.Json;
-using YokiFrame.Packaging.Models;
+using System.Text;
+using YokiFrame.Json;
 using YokiFrame.Packaging.Services;
 
 namespace YokiFrame.Packaging.Tests;
@@ -7,8 +7,10 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 通过真实最小 .NET 项目覆盖当前平台发布、staging 提交和失败保护。
 /// </summary>
-public sealed class RuntimePublishServiceTests
+public sealed class RuntimePublishServiceTests : IDisposable
 {
+    private readonly List<string> mCleanupRoots = new();
+
     /// <summary>
     /// 验证 Native AOT 发布会生成独立 GUI/CLI profile，并提交可搬运 manifest。
     /// </summary>
@@ -30,15 +32,13 @@ public sealed class RuntimePublishServiceTests
         Assert.True(File.Exists(Path.Combine(plan.PublishRoot, NormalizeEntry(plan.Profile.GuiEntry))));
         Assert.True(File.Exists(Path.Combine(plan.PublishRoot, NormalizeEntry(plan.Profile.CliEntry))));
         Assert.False(Directory.Exists(plan.StagingRoot));
-        var manifest = JsonSerializer.Deserialize<RuntimeManifest>(
-            File.ReadAllText(plan.ManifestPath),
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        Assert.NotNull(manifest);
-        Assert.Equal(".", manifest.RuntimeRoot);
-        var platform = Assert.Single(manifest.Platforms);
-        Assert.Equal(plan.Profile.RuntimeIdentifier, platform.Platform);
-        Assert.False(platform.SharedRuntime);
-        Assert.Equal("win-x64-aot/yoki.exe", platform.CliEntry);
+        using var manifestDocument = JsonDocument.Parse(File.ReadAllText(plan.ManifestPath));
+        var manifestRoot = manifestDocument.RootElement;
+        Assert.Equal(".", manifestRoot.GetProperty("runtimeRoot").GetString());
+        var platformElement = Assert.Single(manifestRoot.GetProperty("platforms").EnumerateArray());
+        Assert.Equal(plan.Profile.RuntimeIdentifier, platformElement.GetProperty("platform").GetString());
+        Assert.False(platformElement.GetProperty("sharedRuntime").GetBoolean());
+        Assert.Equal("win-x64-aot/yoki.exe", platformElement.GetProperty("cliEntry").GetString());
     }
 
     /// <summary>
@@ -103,8 +103,8 @@ public sealed class RuntimePublishServiceTests
 
         Assert.Throws<InvalidOperationException>(() => new RuntimePublishService().Publish(plan));
 
-        Assert.Equal("existing-profile", File.ReadAllText(markerPath));
-        Assert.Equal(originalManifest, File.ReadAllText(plan.ManifestPath));
+        AssertUtf8FileEquals(markerPath, "existing-profile");
+        AssertUtf8FileEquals(plan.ManifestPath, originalManifest);
         Assert.False(Directory.Exists(plan.StagingRoot));
     }
 
@@ -121,7 +121,7 @@ public sealed class RuntimePublishServiceTests
 
         Assert.Throws<IOException>(() => new RuntimePublishService().Publish(plan));
 
-        Assert.Equal("existing-profile", File.ReadAllText(Path.Combine(plan.PublishRoot, "existing.marker")));
+        AssertUtf8FileEquals(Path.Combine(plan.PublishRoot, "existing.marker"), "existing-profile");
         Assert.False(Directory.Exists(plan.StagingRoot));
     }
 
@@ -148,8 +148,8 @@ public sealed class RuntimePublishServiceTests
         Assert.Throws<InvalidOperationException>(() => new RuntimePublishService().Publish(plan));
 
         Assert.False(File.Exists(Path.Combine(plan.PublishRoot, "new.marker")));
-        Assert.Equal("stable-profile", File.ReadAllText(Path.Combine(plan.PublishRoot, "old.marker")));
-        Assert.Equal("stable-manifest", File.ReadAllText(plan.ManifestPath));
+        AssertUtf8FileEquals(Path.Combine(plan.PublishRoot, "old.marker"), "stable-profile");
+        AssertUtf8FileEquals(plan.ManifestPath, "stable-manifest");
         Assert.False(Directory.Exists(transactionRoot));
     }
 
@@ -184,7 +184,7 @@ public sealed class RuntimePublishServiceTests
     /// </summary>
     /// <param name="hasCompileError">是否向 CLI 项目写入编译错误。</param>
     /// <returns>测试包根。</returns>
-    private static string CreateBuildablePackageRoot(bool hasCompileError)
+    private string CreateBuildablePackageRoot(bool hasCompileError)
     {
         var packageRoot = Path.Combine(
             Path.GetTempPath(),
@@ -202,7 +202,9 @@ public sealed class RuntimePublishServiceTests
         WriteFile(Path.Combine(bootstrapRoot, "install-godot.cmd"), "godot-cmd-bootstrap");
         WriteFile(Path.Combine(bootstrapRoot, "install-godot.sh"), "godot-sh-bootstrap");
         WriteFile(Path.Combine(bootstrapRoot, "install-godot.command"), "godot-command-bootstrap");
-        return Path.GetFullPath(packageRoot);
+        var fullPackageRoot = Path.GetFullPath(packageRoot);
+        mCleanupRoots.Add(fullPackageRoot);
+        return fullPackageRoot;
     }
 
     /// <summary>
@@ -210,15 +212,42 @@ public sealed class RuntimePublishServiceTests
     /// </summary>
     /// <param name="packageRoot">独立源码包根。</param>
     /// <returns>包外的项目缓存 Runtime 根。</returns>
-    private static string CreateRuntimeRoot(string packageRoot)
+    private string CreateRuntimeRoot(string packageRoot)
     {
-        return Path.Combine(
+        var cacheRoot = Path.Combine(
             Path.GetDirectoryName(packageRoot)!,
-            "runtime-cache-" + Guid.NewGuid().ToString("N"),
+            "runtime-cache-" + Guid.NewGuid().ToString("N"));
+        mCleanupRoots.Add(cacheRoot);
+        return Path.Combine(
+            cacheRoot,
             ".yokiframe",
             "runtime",
             "com.hinatayoki.yokiframe",
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+    }
+
+    /// <summary>
+    /// 按 UTF-8 字节比较文件副作用，避免用文本读取证明发布结果。
+    /// </summary>
+    /// <param name="path">待比较文件。</param>
+    /// <param name="expected">期望的 UTF-8 文本。</param>
+    private static void AssertUtf8FileEquals(string path, string expected)
+    {
+        Assert.Equal(Encoding.UTF8.GetBytes(expected), File.ReadAllBytes(path));
+    }
+
+    /// <summary>
+    /// 删除当前测试创建的源码包和项目 Runtime 缓存。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var cleanupRoot in mCleanupRoots)
+        {
+            if (Directory.Exists(cleanupRoot))
+            {
+                Directory.Delete(cleanupRoot, recursive: true);
+            }
+        }
     }
 
     /// <summary>

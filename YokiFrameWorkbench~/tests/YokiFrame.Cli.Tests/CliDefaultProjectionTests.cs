@@ -68,7 +68,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "RoslynKit",
+            "--kit",
             "System",
             "--name",
             "state");
@@ -102,7 +102,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "RoslynKit",
+            "--kit",
             "System");
 
         Assert.Equal(0, result.ExitCode);
@@ -132,7 +132,7 @@ public sealed class CliDefaultProjectionTests
             project.Path,
             "--engine",
             ENGINE_ID,
-            "RoslynKit",
+            "--kit",
             "System");
 
         Assert.Equal(1, result.ExitCode);
@@ -191,13 +191,55 @@ public sealed class CliDefaultProjectionTests
             var json = JsonNode.Parse(result.StandardOutput)!;
             Assert.False(json.AsObject().ContainsKey("status"));
             Assert.True(json["summary"]!.AsObject().ContainsKey("pending"));
-            Assert.DoesNotContain(project.Path, result.StandardOutput, StringComparison.OrdinalIgnoreCase);
+            AssertOmitsProjectPath(json, project.Path);
         }
 
         var fullResult = await RunCliAsync("doctor", "--detail", "full", "--project", project.Path, "--engine", ENGINE_ID);
         Assert.Equal(0, fullResult.ExitCode);
         var fullJson = JsonNode.Parse(fullResult.StandardOutput)!;
         Assert.True(fullJson["status"]!.AsObject().ContainsKey("engineRoot"));
+    }
+
+
+    /// <summary>断言已解析 JSON 的每个字符串字段都不包含项目绝对路径。</summary>
+    /// <param name="node">CLI 输出节点。</param>
+    /// <param name="projectPath">临时项目绝对路径。</param>
+    private static void AssertOmitsProjectPath(JsonNode node, string projectPath)
+    {
+        if (node is JsonValue value)
+        {
+            if (value.TryGetValue<string>(out var text)
+                && text.Contains(projectPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.Fail("默认输出字段包含项目绝对路径: " + text);
+            }
+
+            return;
+        }
+
+        if (node is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item != null)
+                {
+                    AssertOmitsProjectPath(item, projectPath);
+                }
+            }
+
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var entry in obj)
+            {
+                if (entry.Value != null)
+                {
+                    AssertOmitsProjectPath(entry.Value, projectPath);
+                }
+            }
+        }
     }
 
     /// <summary>启动真实 CLI 程序并捕获输出。</summary>

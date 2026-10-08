@@ -151,7 +151,7 @@ public sealed class TableKitSettingsServiceTests
 
     /// <summary>保存结果只包含当前资源定位字段，不写入已删除的三态契约。</summary>
     [Fact]
-    public void WritesOnlyCurrentRuntimeLocationFields()
+    public void Save_当前资源定位_只写现行字段()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-config-" + Guid.NewGuid().ToString("N"));
         try
@@ -162,30 +162,29 @@ public sealed class TableKitSettingsServiceTests
                 IsAddressable = true,
                 RuntimePathPattern = string.Empty
             });
-            string settingsJson = File.ReadAllText(GetDraftPath(root));
-            Assert.Contains("\"IsAddressable\": true", settingsJson, StringComparison.Ordinal);
-            Assert.Contains("\"RuntimePathPattern\": \"\"", settingsJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("UseAsyncLoading", settingsJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("RuntimeLocationMode", settingsJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("ExplicitRuntimePath", settingsJson, StringComparison.Ordinal);
-            JsonObject runtimeSettings = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            using JsonDocument settingsJson = ToolingFileObservation.OpenJson(GetDraftPath(root));
+            Assert.True(settingsJson.RootElement.GetProperty("IsAddressable").GetBoolean());
+            Assert.Equal(string.Empty, settingsJson.RootElement.GetProperty("RuntimePathPattern").GetString());
+            Assert.False(settingsJson.RootElement.TryGetProperty("UseAsyncLoading", out _));
+            Assert.False(settingsJson.RootElement.TryGetProperty("RuntimeLocationMode", out _));
+            Assert.False(settingsJson.RootElement.TryGetProperty("ExplicitRuntimePath", out _));
+            using JsonDocument runtimeSettings = ToolingFileObservation.OpenJson(Path.Combine(
                 root,
                 "Assets",
                 "Settings",
                 "Resources",
                 "YokiFrame",
-                "runtime-settings.json")))!.AsObject();
-            JsonObject[] tableKitSettings = runtimeSettings["settings"]!.AsArray()
-                .Select(static item => item!.AsObject())
-                .Where(static item => item["kit"]!.GetValue<string>() == "TableKit")
+                "runtime-settings.json"));
+            JsonElement[] tableKitSettings = runtimeSettings.RootElement.GetProperty("settings").EnumerateArray()
+                .Where(static item => item.GetProperty("kit").GetString() == "TableKit")
                 .ToArray();
             Assert.Equal(2, tableKitSettings.Length);
             Assert.Contains(tableKitSettings, static item =>
-                item["key"]!.GetValue<string>() == "runtimePathPattern"
-                && item["value"]!.GetValue<string>() == "{0}");
+                item.GetProperty("key").GetString() == "runtimePathPattern"
+                && item.GetProperty("value").GetString() == "{0}");
             Assert.Contains(tableKitSettings, static item =>
-                item["key"]!.GetValue<string>() == "useRawResourceLoading"
-                && item["value"]!.GetValue<string>() == "true");
+                item.GetProperty("key").GetString() == "useRawResourceLoading"
+                && item.GetProperty("value").GetString() == "true");
         }
         finally
         {
@@ -195,7 +194,7 @@ public sealed class TableKitSettingsServiceTests
 
     /// <summary>旧草稿中的异步开关应被兼容读取，并在下一次保存时从文档中移除。</summary>
     [Fact]
-    public void LegacyAsyncSwitchIsIgnoredAndRemovedOnSave()
+    public void Save_旧异步开关_读取后从草稿移除()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-config-" + Guid.NewGuid().ToString("N"));
         try
@@ -217,7 +216,8 @@ public sealed class TableKitSettingsServiceTests
             service.Save(root, loaded);
 
             Assert.False(loaded.UseRawResourceLoading);
-            Assert.DoesNotContain("UseAsyncLoading", File.ReadAllText(settingsPath), StringComparison.Ordinal);
+            using JsonDocument saved = ToolingFileObservation.OpenJson(settingsPath);
+            Assert.False(saved.RootElement.TryGetProperty("UseAsyncLoading", out _));
         }
         finally
         {
@@ -258,7 +258,7 @@ public sealed class TableKitSettingsServiceTests
     /// <returns>已解析的草稿 JSON。</returns>
     private static JsonObject ReadDraft(string root)
     {
-        return JsonNode.Parse(File.ReadAllText(GetDraftPath(root)))!.AsObject();
+        return JsonNode.Parse(File.ReadAllBytes(GetDraftPath(root)))!.AsObject();
     }
 
     /// <summary>取得测试项目 TableKit 草稿绝对路径。</summary>

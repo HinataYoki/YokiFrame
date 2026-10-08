@@ -1,3 +1,4 @@
+using YokiFrame.Installer.Core.Tests;
 using YokiFrame.Installer.Core.Models;
 using YokiFrame.Installer.Core.Services;
 
@@ -35,7 +36,7 @@ public sealed class InstallerTransactionRecoveryTests
 
             InstallerPackageTransactionRecovery.Recover(projectRoot);
 
-            Assert.Equal("old", File.ReadAllText(Path.Combine(targetRoot, "old.txt")));
+            InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "old.txt"), "old");
             Assert.False(Directory.Exists(stagingRoot));
             Assert.False(Directory.Exists(backupRoot));
             Assert.Empty(InstallerTransactionJournal.ReadAll(projectRoot));
@@ -75,7 +76,7 @@ public sealed class InstallerTransactionRecoveryTests
 
             InstallerPackageTransactionRecovery.Recover(projectRoot);
 
-            Assert.Equal("old", File.ReadAllText(Path.Combine(targetRoot, "old.txt")));
+            InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "old.txt"), "old");
             Assert.False(File.Exists(Path.Combine(targetRoot, "new.txt")));
             Assert.Empty(InstallerTransactionJournal.ReadAll(projectRoot));
         }
@@ -198,8 +199,8 @@ public sealed class InstallerTransactionRecoveryTests
 
             InstallerGodotTransactionRecovery.Recover(projectRoot);
 
-            Assert.Equal("old", File.ReadAllText(Path.Combine(targetRoot, "version.txt")));
-            Assert.Equal("old-project", File.ReadAllText(projectFile));
+            InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "version.txt"), "old");
+            InstallerFileAssert.EqualUtf8(projectFile, "old-project");
             Assert.False(Directory.Exists(cleanupRoot));
             Assert.Empty(InstallerTransactionJournal.ReadAll(projectRoot));
         }
@@ -240,7 +241,7 @@ public sealed class InstallerTransactionRecoveryTests
 
             InstallerGodotTransactionRecovery.Recover(projectRoot);
 
-            Assert.Equal("old", File.ReadAllText(Path.Combine(targetRoot, "version.txt")));
+            InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "version.txt"), "old");
             Assert.Empty(InstallerTransactionJournal.ReadAll(projectRoot));
         }
         finally
@@ -280,7 +281,7 @@ public sealed class InstallerTransactionRecoveryTests
 
             InstallerGodotTransactionRecovery.Recover(projectRoot);
 
-            Assert.Equal("current", File.ReadAllText(Path.Combine(targetRoot, "version.txt")));
+            InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "version.txt"), "current");
             Assert.False(Directory.Exists(cleanupRoot));
             Assert.Empty(InstallerTransactionJournal.ReadAll(projectRoot));
         }

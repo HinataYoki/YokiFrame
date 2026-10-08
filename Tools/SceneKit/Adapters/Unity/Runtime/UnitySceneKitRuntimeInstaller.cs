@@ -24,9 +24,12 @@ namespace YokiFrame.Unity
         /// 注意：<c>sDefaultProvider</c> / <c>sDefaultBackend</c> 无需在此处理，
         /// <c>SceneKit.ResolveDefaultBackend</c> 已用 Provider 引用比对自行失效缓存。
         /// </para>
+        /// <para>
+        /// 特性直接放在 internal 测试缝上。Unity 通过反射调用该静态方法，测试也调用同一方法，避免再包一层私有钩子。
+        /// </para>
         /// </remarks>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void RegisterSceneKitReset()
+        internal static void RegisterSceneKitResetForTests()
         {
             YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "scenekit", SceneKit.Reset);
         }

@@ -5,8 +5,24 @@ namespace YokiFrame.Installer.Core.Tests;
 /// <summary>
 /// 覆盖 YokiFrame 包内 Skill 安装服务，确保 Workbench 面板不是静态占位。
 /// </summary>
-public sealed class SkillInstallServiceTests
+public sealed class SkillInstallServiceTests : IDisposable
 {
+    private readonly List<string> mRoots = new();
+
+    /// <summary>
+    /// 删除本用例创建的临时项目，避免 Skill 安装夹具残留。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var root in mRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     /// <summary>
     /// 验证服务能把包内 Skill 安装到 Codex 目标目录。
     /// </summary>
@@ -19,7 +35,9 @@ public sealed class SkillInstallServiceTests
         Assert.True(result.Success);
         Assert.True(result.Installed);
         Assert.Equal("codex", result.TargetId);
-        Assert.True(File.Exists(Path.Combine(projectRoot, ".codex", "skills", "yokiframe", "SKILL.md")));
+        InstallerFileAssert.EqualFile(
+            Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills", "yokiframe", "SKILL.md"),
+            Path.Combine(projectRoot, ".codex", "skills", "yokiframe", "SKILL.md"));
     }
 
     /// <summary>
@@ -41,7 +59,7 @@ public sealed class SkillInstallServiceTests
 
         Assert.True(result.Success);
         Assert.Contains("已更新", result.Log, StringComparison.Ordinal);
-        Assert.Equal("new-content", File.ReadAllText(Path.Combine(targetRoot, "SKILL.md")));
+        InstallerFileAssert.EqualUtf8(Path.Combine(targetRoot, "SKILL.md"), "new-content");
         Assert.False(File.Exists(Path.Combine(targetRoot, "stale.md")));
     }
 
@@ -55,6 +73,9 @@ public sealed class SkillInstallServiceTests
 
         _ = new SkillInstallService().Install(projectRoot, "agents", "yokiframe");
 
+        InstallerFileAssert.EqualFile(
+            Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills", "yokiframe", "SKILL.md"),
+            Path.Combine(projectRoot, ".agents", "skills", "yokiframe", "SKILL.md"));
         Assert.False(File.Exists(Path.Combine(projectRoot, ".agents", "skills", "yokiframe", "SKILL.md.meta")));
     }
 
@@ -96,13 +117,14 @@ public sealed class SkillInstallServiceTests
     /// </summary>
     /// <param name="skillName">Skill 名称。</param>
     /// <returns>测试项目根目录。</returns>
-    private static string CreateProjectWithPackagedSkill(string skillName)
+    private string CreateProjectWithPackagedSkill(string skillName)
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-skill-tests", Guid.NewGuid().ToString("N"));
         var skillRoot = Path.Combine(root, "Assets", "YokiFrame", "Core", "Editor", "Skills", skillName);
         Directory.CreateDirectory(skillRoot);
         File.WriteAllText(Path.Combine(skillRoot, "SKILL.md"), "---\nname: " + skillName + "\ndescription: test\n---\n");
         File.WriteAllText(Path.Combine(skillRoot, "SKILL.md.meta"), "fileFormatVersion: 2\n");
+        mRoots.Add(root);
         return root;
     }
 
@@ -133,12 +155,20 @@ public sealed class SkillInstallServiceTests
             _ = new SkillInstallService().Install(projectRoot, "agents", "yokiframe");
 
             var installedRoot = Path.Combine(projectRoot, ".agents", "skills", "yokiframe");
-            Assert.True(File.Exists(Path.Combine(installedRoot, "SKILL.md")));
+            InstallerFileAssert.EqualFile(
+                Path.Combine(packagedCopyRoot, "yokiframe", "SKILL.md"),
+                Path.Combine(installedRoot, "SKILL.md"));
+            var installedReferences = Directory.GetFiles(Path.Combine(installedRoot, "references"), "*.md");
             Assert.Equal(
-                packagedReferences.Length,
-                Directory.GetFiles(Path.Combine(installedRoot, "references"), "*.md").Length);
-            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "roslyn-kit.md")));
-            Assert.True(File.Exists(Path.Combine(installedRoot, "references", "cli-commands.md")));
+                packagedReferences.Select(Path.GetFileName).OrderBy(static name => name, StringComparer.Ordinal),
+                installedReferences.Select(Path.GetFileName).OrderBy(static name => name, StringComparer.Ordinal));
+            foreach (var packagedPath in packagedReferences)
+            {
+                InstallerFileAssert.EqualFile(
+                    packagedPath,
+                    Path.Combine(installedRoot, "references", Path.GetFileName(packagedPath)));
+            }
+
             Assert.False(File.Exists(Path.Combine(installedRoot, "references", "roslyn-kit.md.meta")));
         }
         finally

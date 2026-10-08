@@ -19,7 +19,7 @@ public sealed partial class WorkbenchWindow
     private Task? mFsmTelemetryPollingTask;
 
     /// <summary>窗口打开后创建唯一后台轮询循环，空闲 tick 不再创建 Task 或捕获闭包。</summary>
-    private void StartFsmTelemetryPolling()
+    internal void StartFsmTelemetryPolling()
     {
         if (mFsmTelemetryPollingTask != null)
         {
@@ -34,7 +34,7 @@ public sealed partial class WorkbenchWindow
     }
 
     /// <summary>窗口关闭时取消后台轮询并清除各通道请求，阻止后续访问 UI。</summary>
-    private Task StopFsmTelemetryPolling()
+    internal Task StopFsmTelemetryPolling()
     {
         mEventKitTelemetryChannel.ClearIdentity();
         mLogKitTelemetryChannel.ClearIdentity();
@@ -128,12 +128,43 @@ public sealed partial class WorkbenchWindow
 
     /// <summary>仅在任一 Kit 来源需要高频刷新时重新评估全部通道模式。</summary>
     /// <param name="state">本轮低频 dashboard 状态。</param>
-    private void UpdateSharedMemoryRefreshMode(WorkbenchDashboardState state)
+    internal void UpdateSharedMemoryRefreshMode(WorkbenchDashboardState state)
     {
         UpdateTelemetryNotificationMode(state);
         UpdateEventKitTelemetryRefreshMode(state);
         UpdateLogKitTelemetryRefreshMode(state);
         mFsmTelemetryChannel.UpdateRefreshMode(state);
+    }
+
+    /// <summary>测试缝：写入当前 dashboard，供遥测通道读取宿主身份。</summary>
+    /// <param name="state">测试准备的 dashboard。</param>
+    internal void SetCurrentDashboardState(WorkbenchDashboardState state)
+    {
+        mCurrentState = state;
+    }
+
+    /// <summary>测试缝：按 dashboard 捕获身份并设置已接受的帧游标。</summary>
+    /// <param name="state">与后续刷新比较的 dashboard。</param>
+    /// <param name="sequence">已接受的帧序号。</param>
+    internal void SeedFsmTelemetryCursor(WorkbenchDashboardState state, long sequence)
+    {
+        mFsmTelemetryChannel.SeedCursor(state, sequence);
+    }
+
+    /// <summary>测试缝：读取 FsmKit 通道当前帧游标。</summary>
+    internal long FsmTelemetryObservedSequence => mFsmTelemetryChannel.ObservedSequence;
+
+    /// <summary>测试缝：读取当前高频请求，用引用相等判断请求是否被轮换。</summary>
+    internal object? FsmTelemetryActiveRequest => mFsmTelemetryChannel.ActiveRequest;
+
+    /// <summary>测试缝：把一次读取结果提交到当前 FsmKit 请求。</summary>
+    /// <param name="request">刷新时发布的请求实例。</param>
+    /// <param name="result">已构造的读取结果。</param>
+    internal void ApplyFsmTelemetryResult(
+        object request,
+        WorkbenchTelemetryReadResult<WorkbenchFsmKitState> result)
+    {
+        mFsmTelemetryChannel.ApplyObservedResult(request, result);
     }
 
     /// <summary>选择变化时立即轮换 FsmKit 命名段请求，不等待下一次 1 秒 dashboard。</summary>

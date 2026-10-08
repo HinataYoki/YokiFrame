@@ -1,7 +1,6 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using NUnit.Framework;
 using YokiFrame.Unity;
 using YooAsset.Editor;
@@ -14,21 +13,13 @@ using CopyOption = YooAsset.Editor.EBuildinFileCopyOption;
 namespace YokiFrame.Unity.Tests
 {
     /// <summary>
-    /// 守护首包拷贝策略的「下拉索引 == 枚举值」隐含前提。
+    /// 守护首包拷贝策略的「下拉索引 == 枚举值」前提。
+    /// 适配器把下拉索引直接强转为当前主版本的拷贝枚举，标签顺序和底层值漂移都会静默错配。
     /// </summary>
-    /// <remarks>
-    /// 该集成把下拉索引直接强转为当前 YooAsset 版本的拷贝枚举值，
-    /// 因此枚举的声明顺序必须与 <c>sCopyOptionNames</c> 的中文标签顺序一一对应；
-    /// 若 YooAsset 次版本增删或调整枚举成员，映射会**静默指向错误的拷贝策略**（不抛错、无提示）。
-    /// 本测试把该先前只存在于注释里的前提固化为断言，使漂移在编译期后立即可见。
-    /// </remarks>
     public sealed class YooAssetCopyOptionMappingTests
     {
-        /// <summary>下拉标签所在的私有静态字段名。</summary>
-        private const string LABELS_FIELD_NAME = "sCopyOptionNames";
-
-        /// <summary>当前 YooAsset 版本枚举的期望声明顺序（与中文标签顺序对应）。</summary>
-        private static readonly string[] EXPECTED_V3_NAMES =
+        /// <summary>与 Drawer 中文标签一一对应的枚举声明顺序。V2.3 与 V3 当前成员名相同。</summary>
+        private static readonly string[] EXPECTED_ENUM_NAMES =
         {
             "None",
             "ClearAndCopyAll",
@@ -37,49 +28,47 @@ namespace YokiFrame.Unity.Tests
             "OnlyCopyByTags"
         };
 
-        /// <summary>读取 Drawer 中硬编码的拷贝策略中文标签。</summary>
-        /// <returns>按索引排列的标签列表。</returns>
-        private static IList<string> ReadCopyOptionLabels()
+        /// <summary>Drawer 下拉必须按该顺序展示，索引才能强转到对应枚举值。</summary>
+        private static readonly string[] EXPECTED_LABELS =
         {
-            FieldInfo field = typeof(YooAssetInitializationOptionsDrawer).GetField(
-                LABELS_FIELD_NAME,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, "未找到 " + LABELS_FIELD_NAME);
-            return (IList<string>)field.GetValue(null);
-        }
+            "不拷贝",
+            "清空后拷贝全部",
+            "清空后按标签拷贝",
+            "直接拷贝全部",
+            "直接按标签拷贝"
+        };
 
-        /// <summary>
-        /// 标签数量必须等于枚举成员数量，否则存在索引越界或成员未覆盖。
-        /// </summary>
+        /// <summary>验证中文标签顺序固定，且数量等于当前拷贝枚举成员数。</summary>
         [Test]
-        public void CopyOptionLabelCountMatchesEnumMemberCount()
+        public void sCopyOptionNames_当前拷贝枚举_数量一致且标签顺序固定()
         {
-            int enumCount = Enum.GetNames(typeof(CopyOption)).Length;
-            IList<string> labels = ReadCopyOptionLabels();
+            IList<string> labels = YooAssetInitializationOptionsDrawer.sCopyOptionNames;
 
             Assert.AreEqual(
-                enumCount,
+                Enum.GetNames(typeof(CopyOption)).Length,
                 labels.Count,
                 "下拉标签数量与当前 YooAsset 拷贝枚举成员数量不一致，索引映射可能已失效");
+            CollectionAssert.AreEqual(EXPECTED_LABELS, labels);
         }
 
         /// <summary>
-        /// 锁定 V3 枚举的声明顺序，使 YooAsset 侧顺序漂移立即失败而不是静默错配。
+        /// 验证声明顺序和底层值同时锁定。
+        /// 每个成员的底层值必须等于声明索引，因此首项 None 为 0；否则下拉强转会指向别的策略。
         /// </summary>
         [Test]
-        public void BundledCopyOptionDeclarationOrderIsLocked()
+        public void CopyOption_声明顺序_底层值等于索引()
         {
+            string[] names = Enum.GetNames(typeof(CopyOption));
             CollectionAssert.AreEqual(
-                EXPECTED_V3_NAMES,
-                Enum.GetNames(typeof(CopyOption)),
+                EXPECTED_ENUM_NAMES,
+                names,
                 "YooAsset 拷贝枚举声明顺序发生变化，必须同步复核下拉标签顺序");
-        }
 
-        /// <summary>校验首个成员必须为 None 且值为 0，保证「不拷贝」映射到默认值。</summary>
-        [Test]
-        public void FirstCopyOptionIsNoneWithZeroValue()
-        {
-            Assert.AreEqual(0, (int)CopyOption.None, "None 必须为 0，否则下拉默认项含义改变");
+            for (int index = 0; index < names.Length; index++)
+            {
+                CopyOption value = (CopyOption)Enum.Parse(typeof(CopyOption), names[index]);
+                Assert.AreEqual(index, (int)value, names[index] + " 的底层值必须等于声明索引");
+            }
         }
     }
 }

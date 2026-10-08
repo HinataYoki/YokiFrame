@@ -83,6 +83,16 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 暴露后台 bootstrap 队列，供测试在编译期绑定 Task 签名。
+        /// 不反射 private 方法；队列改成 async void 时本方法无法编译。
+        /// </summary>
+        /// <returns>尚未执行的后台队列委托。</returns>
+        internal static Func<YokiFrameWorkbenchLaunchPlan, Task> GetRuntimeBootstrapQueueForTests()
+        {
+            return QueueRuntimeBootstrapAndLaunch;
+        }
+
+        /// <summary>
         /// 在后台执行 Packaging bootstrap；重复 Ctrl+E 只复用正在进行的同一构建，避免两个 AOT 发布事务争用缓存。
         /// </summary>
         /// <param name="plan">要求 Runtime bootstrap 的启动计划。</param>

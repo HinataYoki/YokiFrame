@@ -8,7 +8,7 @@ public sealed class EventKitScanActivationTests
 {
     /// <summary>验证旧扫描晚完成时不会结束或覆盖切换范围后启动的新扫描。</summary>
     [Fact]
-    public async Task OlderScanCompletionCannotOverwriteLatestScan()
+    public async Task SetPageActive_旧扫描晚完成_不覆盖新扫描()
     {
         TaskCompletionSource<WorkbenchEventKitCodeScan> firstScan = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -27,9 +27,9 @@ public sealed class EventKitScanActivationTests
             firstCompleted = true;
             return result;
         });
-        Invoke(viewModel, "SetProjectRoot", "C:/Project");
+        viewModel.SetProjectRoot("C:/Project");
 
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetPageActive(true);
         viewModel.ExcludeEditor = false;
         Assert.Equal(2, invocationCount);
 
@@ -45,7 +45,7 @@ public sealed class EventKitScanActivationTests
 
     /// <summary>验证 Dashboard 在页面停留期间重复同步激活状态不会重复扫描。</summary>
     [Fact]
-    public async Task RepeatedActiveUpdatesScanOnlyOnce()
+    public async Task SetPageActive_停留期间重复激活_只扫描一次()
     {
         var invocationCount = 0;
         EventKitPageViewModel viewModel = CreateViewModel((_, _) =>
@@ -53,18 +53,18 @@ public sealed class EventKitScanActivationTests
             invocationCount++;
             return Task.FromResult(CreateScan());
         });
-        Invoke(viewModel, "SetProjectRoot", "C:/Project");
+        viewModel.SetProjectRoot("C:/Project");
 
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetPageActive(true);
         await WaitUntilAsync(() => !viewModel.IsScanning);
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetPageActive(true);
 
         Assert.Equal(1, invocationCount);
     }
 
     /// <summary>验证离开后重新进入页面会按最新源码重新执行扫描。</summary>
     [Fact]
-    public async Task ReenteringPageStartsANewScan()
+    public async Task SetPageActive_离开后重新进入_重新扫描()
     {
         var invocationCount = 0;
         EventKitPageViewModel viewModel = CreateViewModel((_, _) =>
@@ -72,12 +72,12 @@ public sealed class EventKitScanActivationTests
             invocationCount++;
             return Task.FromResult(CreateScan());
         });
-        Invoke(viewModel, "SetProjectRoot", "C:/Project");
+        viewModel.SetProjectRoot("C:/Project");
 
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetPageActive(true);
         await WaitUntilAsync(() => !viewModel.IsScanning);
-        Invoke(viewModel, "SetPageActive", false);
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetPageActive(false);
+        viewModel.SetPageActive(true);
         await WaitUntilAsync(() => !viewModel.IsScanning);
 
         Assert.Equal(2, invocationCount);
@@ -85,7 +85,7 @@ public sealed class EventKitScanActivationTests
 
     /// <summary>验证离开 EventKit 页面会立刻取消仍在运行的后台扫描。</summary>
     [Fact]
-    public async Task LeavingPageCancelsRunningScan()
+    public async Task SetPageActive_离开页面_取消运行中扫描()
     {
         CancellationToken capturedToken = default;
         EventKitPageViewModel viewModel = CreateViewModel(async (_, token) =>
@@ -94,11 +94,11 @@ public sealed class EventKitScanActivationTests
             await Task.Delay(Timeout.InfiniteTimeSpan, token);
             return CreateScan();
         });
-        Invoke(viewModel, "SetProjectRoot", "C:/Project");
-        Invoke(viewModel, "SetPageActive", true);
+        viewModel.SetProjectRoot("C:/Project");
+        viewModel.SetPageActive(true);
         await WaitUntilAsync(() => capturedToken.CanBeCanceled);
 
-        Invoke(viewModel, "SetPageActive", false);
+        viewModel.SetPageActive(false);
 
         Assert.True(capturedToken.IsCancellationRequested);
         Assert.False(viewModel.IsScanning);
@@ -106,7 +106,7 @@ public sealed class EventKitScanActivationTests
 
     /// <summary>验证页面先激活而项目根后就绪时仍会自动启动一次扫描。</summary>
     [Fact]
-    public async Task ActivePageScansWhenProjectRootBecomesAvailable()
+    public async Task SetProjectRoot_页面已激活_自动扫描一次()
     {
         var invocationCount = 0;
         EventKitPageViewModel viewModel = CreateViewModel((_, _) =>
@@ -115,8 +115,8 @@ public sealed class EventKitScanActivationTests
             return Task.FromResult(CreateScan());
         });
 
-        Invoke(viewModel, "SetPageActive", true);
-        Invoke(viewModel, "SetProjectRoot", "C:/Project");
+        viewModel.SetPageActive(true);
+        viewModel.SetProjectRoot("C:/Project");
         await WaitUntilAsync(() => !viewModel.IsScanning);
 
         Assert.Equal(1, invocationCount);
@@ -126,23 +126,7 @@ public sealed class EventKitScanActivationTests
     private static EventKitPageViewModel CreateViewModel(
         Func<bool, CancellationToken, Task<WorkbenchEventKitCodeScan>> scanAsync)
     {
-        object? instance = Activator.CreateInstance(
-            typeof(EventKitPageViewModel),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null,
-            new object?[] { scanAsync, null },
-            null);
-        return Assert.IsType<EventKitPageViewModel>(instance);
-    }
-
-    /// <summary>调用页面内部生命周期方法而不扩大生产 API。</summary>
-    private static void Invoke(EventKitPageViewModel viewModel, string methodName, params object[] arguments)
-    {
-        var method = typeof(EventKitPageViewModel).GetMethod(
-            methodName,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, arguments);
+        return new EventKitPageViewModel(scanAsync, null);
     }
 
     /// <summary>创建不含关系的最小合法扫描结果。</summary>

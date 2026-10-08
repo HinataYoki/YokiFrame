@@ -11,7 +11,7 @@ public sealed class DocumentationWebViewStorageTests
     /// 验证已知项目根时，WebView2 数据固定落在项目 `.yokiframe/workbench` 状态目录。
     /// </summary>
     [Fact]
-    public void ResolveWebView2UserDataFolderUsesProjectScopedWorkbenchState()
+    public void ResolveWebView2UserDataFolder_已知项目根_使用项目Workbench目录()
     {
         var projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-webview2-tests", "project");
         ToolStartupOptions startupOptions = new(
@@ -29,7 +29,7 @@ public sealed class DocumentationWebViewStorageTests
     /// 验证设计期或未知启动上下文不推测项目路径，交由平台默认行为处理。
     /// </summary>
     [Fact]
-    public void ResolveWebView2UserDataFolderReturnsNullWithoutStartupOptions()
+    public void ResolveWebView2UserDataFolder_无启动选项_返回空()
     {
         var result = DocumentationPageView.ResolveWebView2UserDataFolder(null);
 

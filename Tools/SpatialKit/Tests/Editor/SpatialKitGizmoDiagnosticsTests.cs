@@ -10,7 +10,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证 Octree 输出真实三维节点，并在预算不足时明确标记裁剪。</summary>
         [Test]
-        public void OctreeGizmoSnapshot_ContainsVolumeNodesAndTruncation()
+        public void CreateGizmoDiagnosticsFrame_预算不足_保留三维节点并标记裁剪()
         {
             Octree<GizmoEntity> tree = SpatialKit.CreateOctree<GizmoEntity>(
                 new YokiBounds(YokiVector3.Zero, new YokiVector3(20f, 20f, 20f)),
@@ -33,7 +33,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 HashGrid 与 Quadtree 保留各自二维投影平面和节点边界。</summary>
         [Test]
-        public void PlanarGizmoSnapshots_PreservePlaneAndBounds()
+        public void CreateGizmoDiagnosticsFrame_平面索引_保留投影平面和边界()
         {
             SpatialHashGrid<GizmoEntity> grid = SpatialKit.CreateHashGrid<GizmoEntity>(2f, SpatialPlane.XY);
             Quadtree<GizmoEntity> tree = SpatialKit.CreateQuadtree<GizmoEntity>(

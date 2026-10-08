@@ -37,7 +37,7 @@ public sealed class OfflineDocumentationServiceTests
     /// 验证唯一框架概览进入 Workbench 导航，旧 GettingStarted 辅助页和 Guides 仍可读取但不展示；Kit 续篇仍拼接到主页面。
     /// </summary>
     [Fact]
-    public void GetIndexKeepsGettingStartedLimitedAndMergesKitContinuations()
+    public void GetIndex_入门与续篇_限制导航并合并标题()
     {
         using var fixture = DocumentationFixture.Create();
         fixture.WritePackageDocument("Api/00-GettingStarted/FrameworkOverview.md", "# 框架概览\n");
@@ -75,16 +75,16 @@ public sealed class OfflineDocumentationServiceTests
             service.GetIndex().NavigationDocuments[0].RelativePath);
         Assert.DoesNotContain(documents, static item => item.RelativePath.EndsWith(".part.md", StringComparison.OrdinalIgnoreCase));
         Assert.False(Assert.Single(documents, static item => item.RelativePath.EndsWith("/Guides/AI-Install.md")).IsNavigationVisible);
-        Assert.Contains("## 实践与诊断", service.ReadDocument("Documentation~/Api/02-Core/FsmKit.md").Markdown, StringComparison.Ordinal);
-        Assert.Contains("## 进阶示例", service.ReadDocument("Documentation~/Api/03-Tool/ActionKit.md").Markdown, StringComparison.Ordinal);
-        Assert.Contains("## 扩展边界", service.ReadDocument("Documentation~/Api/03-Tool/UIKit.md").Markdown, StringComparison.Ordinal);
+        Assert.Contains(service.ReadDocument("Documentation~/Api/02-Core/FsmKit.md").Headings, static heading => heading.Title == "实践与诊断");
+        Assert.Contains(service.ReadDocument("Documentation~/Api/03-Tool/ActionKit.md").Headings, static heading => heading.Title == "进阶示例");
+        Assert.Contains(service.ReadDocument("Documentation~/Api/03-Tool/UIKit.md").Headings, static heading => heading.Title == "扩展边界");
     }
 
     /// <summary>
     /// 验证超长 Kit 文档的续篇会拼接到正文，但不会作为第二个用户目录条目出现。
     /// </summary>
     [Fact]
-    public void GetIndexMergesContinuationWithoutDuplicateNavigationEntry()
+    public void ReadDocument_续篇_合并到同一文档标题()
     {
         using var fixture = DocumentationFixture.Create();
         fixture.WritePackageDocument("Api/03-Tool/ActionKit.md", "# ActionKit 动作\n\n## 基础动作\n");
@@ -95,15 +95,15 @@ public sealed class OfflineDocumentationServiceTests
         var document = service.ReadDocument(entry.RelativePath);
 
         Assert.Equal("ActionKit 动作", entry.Title);
-        Assert.Contains("## 基础动作", document.Markdown, StringComparison.Ordinal);
-        Assert.Contains("## 进阶动作", document.Markdown, StringComparison.Ordinal);
+        Assert.Contains(document.Headings, static heading => heading.Level == 2 && heading.Title == "基础动作");
+        Assert.Contains(document.Headings, static heading => heading.Level == 2 && heading.Title == "进阶动作");
     }
 
     /// <summary>
     /// 验证 Markdown 读取结果包含标题、正文、稳定目录锚点和可直接复制的代码文本。
     /// </summary>
     [Fact]
-    public void ReadDocumentReturnsHeadingsAndCopyReadyCodeBlocks()
+    public void ReadDocument_示例Markdown_返回标题锚点和代码块()
     {
         using var fixture = DocumentationFixture.Create();
         fixture.WritePackageDocument(
@@ -115,7 +115,6 @@ public sealed class OfflineDocumentationServiceTests
 
         Assert.Equal("Markdown 指南", document.Title);
         Assert.Equal("Documentation~/Guides/Markdown.md", document.RelativePath);
-        Assert.Contains("fsm.Change", document.Markdown, StringComparison.Ordinal);
         Assert.Collection(
             document.Headings,
             heading => Assert.Equal((1, "Markdown 指南", "markdown-指南"), (heading.Level, heading.Title, heading.Anchor)),

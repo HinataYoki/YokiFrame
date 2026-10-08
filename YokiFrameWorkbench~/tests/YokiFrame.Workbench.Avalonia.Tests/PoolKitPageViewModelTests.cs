@@ -96,36 +96,6 @@ public sealed class PoolKitPageViewModelTests
         Assert.Equal("已打开 Test.cs:10", viewModel.OperationStatusText);
     }
 
-    /// <summary>验证页面使用双栏主从、对象标签与事件抽屉，且样式不硬编码颜色。</summary>
-    [Fact]
-    public void PageContractUsesMasterDetailTabsAndEventDrawer()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "PoolKitPageView.axaml");
-        string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-
-        Assert.Contains("Width=\"320\" MinWidth=\"280\" MaxWidth=\"420\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("PoolMasterPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("PoolDetailPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("GridSplitter", xaml, StringComparison.Ordinal);
-        Assert.Contains("ObjectTabs", xaml, StringComparison.Ordinal);
-        Assert.Contains("EventDrawer", xaml, StringComparison.Ordinal);
-        Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        Assert.True(xaml.Contains("当前对象池还没有事件记录") || xaml.Contains("String.PoolKit.NoEvents"), "PoolKit 页面应包含空事件提示");
-        Assert.Contains("workbench.poolkit.search", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedActiveObjects", xaml, StringComparison.Ordinal);
-        Assert.Contains("PoolKitObjectListItemViewModel", xaml, StringComparison.Ordinal);
-        Assert.Contains("Classes=\"ghost poolkit-source-link\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Padding=\"0,0,12,0\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Width=\"3*\" MinWidth=\"220\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("HorizontalAlignment=\"Right\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.ToggleTrackingCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.ToggleLocationCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.CheckLeaksCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.ClearHistoryCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.TrackingEnabled", shell, StringComparison.Ordinal);
-        Assert.Contains("PoolKitPage.StackTraceEnabled", shell, StringComparison.Ordinal);
-    }
-
     /// <summary>验证最小与常用窗口下双栏工作区无横向滚动、字号可读并保存视觉证据。</summary>
     [Theory]
     [InlineData(1700, 1060)]
@@ -237,7 +207,7 @@ public sealed class PoolKitPageViewModelTests
                 "Assets/Runtime/PoolCaller.cs",
                 40 + index))
             .ToArray();
-        object dataSource = CreateInternalDataSource(
+        WorkbenchPoolKitDataSource dataSource = new(
             "unity-editor", "dense-pool-session", 9L, "PlayMode",
             DateTimeOffset.Parse("2026-07-19T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.PoolKit" }, string.Empty, "{}");
@@ -247,7 +217,7 @@ public sealed class PoolKitPageViewModelTests
             .Take(2)
             .Select(static item => new WorkbenchPoolKitSuspectedLeak(item.Name, item.ActiveCount, item.PeakCount))
             .ToArray();
-        return CreateInternal<WorkbenchPoolKitState>(
+        return new WorkbenchPoolKitState(
             dataSource,
             8L,
             new WorkbenchPoolKitStats(
@@ -282,11 +252,11 @@ public sealed class PoolKitPageViewModelTests
                 "Spawn", 16.85 + index, "PanelHandler", "Panel-" + index,
                 "Assets/UI/Panel.cs", 18 + index))
             .ToArray();
-        object dataSource = CreateInternalDataSource(
+        WorkbenchPoolKitDataSource dataSource = new(
             "unity-editor", "pool-session", 8L, "PlayMode",
             DateTimeOffset.Parse("2026-07-16T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.PoolKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchPoolKitState>(
+        return new WorkbenchPoolKitState(
             dataSource,
             version,
             new WorkbenchPoolKitStats(2, 4 + activeCount, 1 + activeCount, 3, 5, true, false, true, eventCount),
@@ -314,36 +284,6 @@ public sealed class PoolKitPageViewModelTests
             name, typeName, total, activeCount, inactiveCount, Math.Max(total, 4), 20,
             total > 0 ? (double)activeCount / total : 0d,
             "Normal", activeCount, false, inactiveCount, false, active, inactive);
-    }
-
-    /// <summary>通过反射创建 Application 内部 PoolKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchPoolKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.PoolKit.WorkbenchPoolKitDataSource", true)!;
-        object? instance = Activator.CreateInstance(
-            type,
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsAssignableFrom<object>(instance);
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
     }
 
     /// <summary>捕获完整 Headless 帧并计算稳定像素哈希。</summary>

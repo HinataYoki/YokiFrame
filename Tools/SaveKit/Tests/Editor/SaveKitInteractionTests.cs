@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
+using JsonDocument = YokiFrame.Json.JsonDocument;
+using JsonElement = YokiFrame.Json.JsonElement;
+using JsonValueKind = YokiFrame.Json.JsonValueKind;
 
 namespace YokiFrame.Tests
 {
@@ -27,7 +30,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证纯状态读取不会调用默认工厂或创建内存后端。</summary>
         [Test]
-        public void Snapshot_DoesNotInitializeDefaultBackend()
+        public void CreateDiagnosticsSnapshot_未配置后端_不创建默认工厂()
         {
             var storageCreated = false;
             var serializerCreated = false;
@@ -43,18 +46,20 @@ namespace YokiFrame.Tests
                     return new TestSaveSerializer();
                 });
 
+            SaveKitDiagnosticsSnapshot snapshot = SaveKit.CreateDiagnosticsSnapshot();
             string json = GetProvider().CreateSnapshot("state");
 
             Assert.IsFalse(storageCreated);
             Assert.IsFalse(serializerCreated);
-            StringAssert.Contains("\"storageConfigured\":false", json);
-            StringAssert.Contains("\"serializerConfigured\":false", json);
-            StringAssert.Contains("\"metadataAvailable\":false", json);
+            Assert.IsFalse(snapshot.StorageConfigured);
+            Assert.IsFalse(snapshot.SerializerConfigured);
+            Assert.IsFalse(snapshot.MetadataAvailable);
+            Assert.AreEqual(1, ReadSchemaVersion(json));
         }
 
-        /// <summary>验证 Provider 只声明两个只读命令，并能返回完整且安全的查询结果。</summary>
+        /// <summary>验证 Provider 只声明两个只读命令，且结果 schema 版本为 1。</summary>
         [Test]
-        public void Provider_DeclaresAndExecutesOnlyReadOnlyCommands()
+        public void Handle_只读命令_返回固定schema()
         {
             IYokiFrameKitInteractionProvider provider = GetProvider();
             CollectionAssert.AreEqual(
@@ -69,13 +74,13 @@ namespace YokiFrame.Tests
 
             Assert.IsTrue(stats.IsSuccess);
             Assert.IsTrue(snapshot.IsSuccess);
-            StringAssert.Contains("\"schemaVersion\":1", stats.ResultJson);
-            StringAssert.Contains("\"schemaVersion\":1", snapshot.ResultJson);
+            Assert.AreEqual(1, ReadSchemaVersion(stats.ResultJson));
+            Assert.AreEqual(1, ReadSchemaVersion(snapshot.ResultJson));
         }
 
-        /// <summary>验证 SaveKit 只跟踪 FileBridge Snapshot 版本，配置变化不会把它提升为 Telemetry Provider。</summary>
+        /// <summary>验证配置变化只推进 Snapshot 版本，不把 SaveKit 提升为 Telemetry Provider。</summary>
         [Test]
-        public void Provider_TracksSnapshotChangesWithoutPublishingTelemetry()
+        public void SetStorage_配置变化_只推进Snapshot版本()
         {
             var provider = GetProvider() as IYokiFrameSnapshotVersionedKitInteractionProvider;
             Assert.IsNotNull(provider);
@@ -88,25 +93,25 @@ namespace YokiFrame.Tests
             Assert.IsFalse(provider is IYokiFrameVersionedKitInteractionProvider);
         }
 
-        /// <summary>验证 Interaction 优先使用可选头部读取契约，不会调用 Storage.Read 取得完整存档。</summary>
+        /// <summary>验证诊断快照使用头部读取契约，不调用 Storage.Read。</summary>
         [Test]
-        public void Snapshot_UsesMetadataReaderWithoutReadingPayload()
+        public void CreateDiagnosticsSnapshot_仅有头部存储_不读取完整文档()
         {
             var storage = new HeaderOnlyStorage(SaveTarget.Slot(3));
             SaveKit.SetStorage(storage);
             SaveKit.SetSerializer(new TestSaveSerializer());
 
-            string json = GetProvider().CreateSnapshot("state");
+            SaveKitDiagnosticsSnapshot snapshot = SaveKit.CreateDiagnosticsSnapshot();
 
             Assert.IsFalse(storage.ReadWasCalled);
-            StringAssert.Contains("\"slotCount\":1", json);
-            StringAssert.Contains("\"slotTotal\":1", json);
-            StringAssert.Contains("\"displayName\":\"Header only\"", json);
+            Assert.AreEqual(1, snapshot.Slots.Count);
+            Assert.AreEqual(1, snapshot.SlotTotal);
+            Assert.AreEqual("Header only", snapshot.Slots[0].DisplayName);
         }
 
-        /// <summary>验证大量容器仅公开有界头部，不会将模块内容放入 Snapshot。</summary>
+        /// <summary>验证超过 32 个槽时快照只公开有界头部，且模块文本不进入元数据字段。</summary>
         [Test]
-        public void Snapshot_IsBoundedAndDoesNotExposeModulePayload()
+        public void CreateSnapshot_超过32个槽_只公开有界头部且不含模块文本()
         {
             SaveKit.SetStorage(new MemorySaveStorage());
             SaveKit.SetSerializer(new TestSaveSerializer());
@@ -118,20 +123,21 @@ namespace YokiFrame.Tests
                 SaveKit.Save(SaveTarget.Slot(index), data, new string('名', 1024));
             }
 
+            SaveKitDiagnosticsSnapshot snapshot = SaveKit.CreateDiagnosticsSnapshot();
             string json = GetProvider().CreateSnapshot("state");
 
-            StringAssert.Contains("\"slotTotal\":64", json);
-            StringAssert.Contains("\"slotCount\":32", json);
-            StringAssert.Contains("\"slotsTruncated\":true", json);
-            StringAssert.DoesNotContain(SECRET, json);
+            Assert.AreEqual(64, snapshot.SlotTotal);
+            Assert.AreEqual(32, snapshot.Slots.Count);
+            Assert.IsTrue(snapshot.SlotsTruncated);
+            AssertSnapshotOmitsModuleText(json, SECRET);
             Assert.LessOrEqual(
                 Encoding.UTF8.GetByteCount(json),
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
         }
 
-        /// <summary>验证 Exists 和 GetMeta 走 ISaveMetadataStorage 契约，不触发完整 Read。</summary>
+        /// <summary>验证 Exists 和 GetMeta 走头部契约，不触发完整 Read。</summary>
         [Test]
-        public void ExistsAndGetMeta_UsesMetadataReaderWithoutReadingPayload()
+        public void Exists_仅有头部存储_不读取完整文档()
         {
             var storage = new HeaderOnlyStorage(SaveTarget.Slot(3));
             SaveKit.SetStorage(storage);
@@ -143,6 +149,86 @@ namespace YokiFrame.Tests
             Assert.IsTrue(exists);
             Assert.AreEqual(SaveTarget.Slot(3), meta.Target);
             Assert.IsFalse(storage.ReadWasCalled, "Exists/GetMeta must use TryReadMetadata, not Read.");
+        }
+
+        /// <summary>确认 state JSON 的已知字符串字段都不包含模块文本。</summary>
+        /// <param name="json">state 快照 JSON。</param>
+        /// <param name="secret">只应存在于模块 payload 的文本。</param>
+        private static void AssertSnapshotOmitsModuleText(string json, string secret)
+        {
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual(1, ReadInt32(root, "schemaVersion"));
+                AssertStringsOmit(root.GetProperty("backend"), secret, "storageType", "serializerId", "encryptorId");
+                AssertCollectionOmits(root.GetProperty("slots"), secret);
+                AssertCollectionOmits(root.GetProperty("globals"), secret);
+                JsonElement autoSaveTarget;
+                if (root.GetProperty("autoSave").TryGetProperty("target", out autoSaveTarget)
+                    && autoSaveTarget.ValueKind == JsonValueKind.Object)
+                {
+                    AssertStringsOmit(autoSaveTarget, secret, "kind", "name");
+                }
+            }
+        }
+
+        /// <summary>确认容器元数据数组中的显示名、序列化器和目标名不包含模块文本。</summary>
+        /// <param name="entries">slots 或 globals 数组。</param>
+        /// <param name="secret">模块文本。</param>
+        private static void AssertCollectionOmits(JsonElement entries, string secret)
+        {
+            Assert.AreEqual(JsonValueKind.Array, entries.ValueKind);
+            for (int index = 0; index < entries.GetArrayLength(); index++)
+            {
+                JsonElement entry = entries[index];
+                AssertStringsOmit(entry, secret, "displayName", "serializerId");
+                AssertStringsOmit(entry.GetProperty("target"), secret, "kind", "name");
+            }
+        }
+
+        /// <summary>确认一组已解析字符串字段都不包含模块文本。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="secret">模块文本。</param>
+        /// <param name="propertyNames">字符串字段名。</param>
+        private static void AssertStringsOmit(JsonElement element, string secret, params string[] propertyNames)
+        {
+            for (int index = 0; index < propertyNames.Length; index++)
+            {
+                string value = ReadString(element, propertyNames[index]);
+                Assert.IsTrue(value.IndexOf(secret, StringComparison.Ordinal) < 0, propertyNames[index]);
+            }
+        }
+
+        /// <summary>读取 state JSON 的 schemaVersion。</summary>
+        /// <param name="json">命令或快照 JSON。</param>
+        /// <returns>schema 版本。</returns>
+        private static int ReadSchemaVersion(string json)
+        {
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                return ReadInt32(document.RootElement, "schemaVersion");
+            }
+        }
+
+        /// <summary>读取 JSON 字符串字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段文本；JSON null 时返回空字符串。</returns>
+        private static string ReadString(JsonElement element, string propertyName)
+        {
+            string value = element.GetProperty(propertyName).GetString();
+            return value ?? string.Empty;
+        }
+
+        /// <summary>读取 JSON 整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static int ReadInt32(JsonElement element, string propertyName)
+        {
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
         }
 
         /// <summary>从 Tool catalog 组合后的 Registry 获取 SaveKit Provider，覆盖真实安装路径。</summary>

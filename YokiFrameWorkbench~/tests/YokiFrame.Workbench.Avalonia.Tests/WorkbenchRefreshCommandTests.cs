@@ -1,4 +1,3 @@
-using System.Reflection;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
 namespace YokiFrame.Workbench.Avalonia.Tests;
@@ -9,21 +8,17 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class WorkbenchRefreshCommandTests
 {
     /// <summary>
-    /// 验证页头刷新会同时请求 dashboard 并重新读取当前项目的 Skill 状态。
+    /// 验证页头刷新会同时请求 dashboard，并把过期 Skill 状态收回等待项目状态。
     /// </summary>
     [Fact]
-    public void GlobalRefreshAlsoRefreshesSkillStatus()
+    public void 刷新命令_已有Skill状态_同时刷新Dashboard并回到等待()
     {
         var dashboardRefreshCount = 0;
         var viewModel = new WorkbenchShellViewModel(
             () => dashboardRefreshCount++,
             _ => { },
             _ => Task.CompletedTask);
-        var statusField = typeof(WorkbenchShellViewModel).GetField(
-            "mSkillInstallStatusText",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(statusField);
-        statusField.SetValue(viewModel, "过期状态");
+        viewModel.SkillInstallStatusText = "过期状态";
 
         viewModel.RefreshCommand.Execute(null);
 

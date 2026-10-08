@@ -213,11 +213,11 @@ public sealed class ActionKitHeadlessRenderingTests
                 5200 + index,
                 index == 3 ? "Simulated action failure" : string.Empty))
             .ToArray();
-        object source = CreateInternalDataSource(
+        WorkbenchActionKitDataSource source = new(
             "unity-editor", "action-visual", 7L, "PlayMode",
             DateTimeOffset.Parse("2026-07-19T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.ActionKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchActionKitState>(
+        return new WorkbenchActionKitState(
             source,
             12L,
             new WorkbenchActionKitStats(5288L, roots.Length, 1736L, 18L, 3L, 1815L, true, 2),
@@ -289,41 +289,6 @@ public sealed class ActionKitHeadlessRenderingTests
             children,
             children.Count,
             children.Count > 0 ? 0 : -1);
-    }
-
-    /// <summary>通过反射创建 Application 内部 ActionKit 数据源。</summary>
-    /// <param name="arguments">内部构造方法参数。</param>
-    /// <returns>可传入 ActionKit 状态构造方法的数据源。</returns>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchActionKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.ActionKit.WorkbenchActionKitDataSource", true)!;
-        object? instance = Activator.CreateInstance(
-            type,
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsAssignableFrom<object>(instance);
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    /// <typeparam name="T">目标强类型模型。</typeparam>
-    /// <param name="arguments">内部构造方法参数。</param>
-    /// <returns>构造完成的强类型模型。</returns>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
     }
 
     /// <summary>保存 Headless 渲染帧，供 ActionKit 两种目标窗口尺寸人工复核。</summary>

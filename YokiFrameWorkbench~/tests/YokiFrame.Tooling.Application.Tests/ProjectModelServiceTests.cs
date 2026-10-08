@@ -39,35 +39,35 @@ public sealed class ProjectModelServiceTests
     /// 验证静态 harness 从项目 `.yokiframe` 缓存读取当前 GUI 与 CLI，不回退到包内 Runtime 目录。
     /// </summary>
     [Fact]
-    public void RefreshPublishesProjectRuntimeCachePaths()
+    public void Refresh_项目缓存可用_发布相对运行时路径()
     {
         using var fixture = ProjectModelTestFixture.Create();
 
         _ = fixture.CreateService().Refresh();
 
-        var harness = JsonNode.Parse(File.ReadAllText(fixture.HarnessPath))!.AsObject();
-        var cli = harness["cli"]!.AsObject();
-        var workbench = harness["workbench"]!.AsObject();
-        Assert.True(cli["available"]!.GetValue<bool>());
-        Assert.True(workbench["available"]!.GetValue<bool>());
-        Assert.StartsWith(".yokiframe/runtime/com.hinatayoki.yokiframe/", cli["runtimeRoot"]!.GetValue<string>(), StringComparison.Ordinal);
-        Assert.DoesNotContain("WorkbenchRuntime~", cli["path"]!.GetValue<string>(), StringComparison.Ordinal);
+        using JsonDocument harness = ToolingFileObservation.OpenJson(fixture.HarnessPath);
+        JsonElement cli = harness.RootElement.GetProperty("cli");
+        JsonElement workbench = harness.RootElement.GetProperty("workbench");
+        Assert.True(cli.GetProperty("available").GetBoolean());
+        Assert.True(workbench.GetProperty("available").GetBoolean());
+        Assert.StartsWith(".yokiframe/runtime/com.hinatayoki.yokiframe/", cli.GetProperty("runtimeRoot").GetString(), StringComparison.Ordinal);
+        Assert.True((cli.GetProperty("path").GetString() ?? string.Empty).IndexOf("WorkbenchRuntime~", StringComparison.Ordinal) < 0);
     }
 
     /// <summary>
     /// 验证项目 Runtime 入口被篡改后，Project Model 不再发布可启动状态。
     /// </summary>
     [Fact]
-    public void RefreshRejectsTamperedProjectRuntimeCache()
+    public void Refresh_运行时入口被篡改_不再发布可启动状态()
     {
         using var fixture = ProjectModelTestFixture.Create();
         fixture.TamperRuntimeGui();
 
         _ = fixture.CreateService().Refresh();
 
-        var harness = JsonNode.Parse(File.ReadAllText(fixture.HarnessPath))!.AsObject();
-        Assert.False(harness["cli"]!["available"]!.GetValue<bool>());
-        Assert.False(harness["workbench"]!["available"]!.GetValue<bool>());
+        using JsonDocument harness = ToolingFileObservation.OpenJson(fixture.HarnessPath);
+        Assert.False(harness.RootElement.GetProperty("cli").GetProperty("available").GetBoolean());
+        Assert.False(harness.RootElement.GetProperty("workbench").GetProperty("available").GetBoolean());
     }
 
     /// <summary>
@@ -100,21 +100,21 @@ public sealed class ProjectModelServiceTests
     /// 验证相同输入下 refresh 会修复被外部篡改的 harness modelId，而不重新生成 Project Model。
     /// </summary>
     [Fact]
-    public void RefreshRepairsTamperedHarnessModelIdWithoutChangingModel()
+    public void Refresh_harness标识被篡改_修复且不更换模型()
     {
         using var fixture = ProjectModelTestFixture.Create();
         var service = fixture.CreateService();
         var first = service.Refresh();
-        var harness = JsonNode.Parse(File.ReadAllText(fixture.HarnessPath))!.AsObject();
+        var harness = JsonNode.Parse(File.ReadAllBytes(fixture.HarnessPath))!.AsObject();
         harness["projectModel"]!["modelId"] = "tampered-model-id";
         File.WriteAllText(fixture.HarnessPath, harness.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
 
         var repaired = service.Refresh();
-        var restored = JsonNode.Parse(File.ReadAllText(fixture.HarnessPath))!;
+        using JsonDocument restored = ToolingFileObservation.OpenJson(fixture.HarnessPath);
 
         Assert.False(repaired.Changed);
         Assert.Equal(first.Bundle!.Manifest.ModelId, repaired.Bundle!.Manifest.ModelId);
-        Assert.Equal(first.Bundle.Manifest.ModelId, restored["projectModel"]!["modelId"]!.GetValue<string>());
+        Assert.Equal(first.Bundle.Manifest.ModelId, restored.RootElement.GetProperty("projectModel").GetProperty("modelId").GetString());
     }
 
     /// <summary>
@@ -431,7 +431,7 @@ public sealed class ProjectModelServiceTests
         {
             var projectModelRoot = Path.Combine(ProjectRoot, ".yokiframe", "project");
             var architecturePath = Path.Combine(projectModelRoot, "architecture.json");
-            var architecture = JsonNode.Parse(File.ReadAllText(architecturePath))!.AsObject();
+            var architecture = JsonNode.Parse(File.ReadAllBytes(architecturePath))!.AsObject();
             var ownershipRule = architecture["ownership"]!.AsArray()
                 .Select(static node => node!.AsObject())
                 .Single(rule => rule["path"]!.GetValue<string>() == "Assets/**");
@@ -442,7 +442,7 @@ public sealed class ProjectModelServiceTests
             var architectureHash = Convert.ToHexString(
                 SHA256.HashData(Encoding.UTF8.GetBytes(architectureJson))).ToLowerInvariant();
             var manifestPath = Path.Combine(projectModelRoot, "project-model.json");
-            var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+            var manifest = JsonNode.Parse(File.ReadAllBytes(manifestPath))!.AsObject();
             var architectureReference = manifest["documents"]!.AsArray()
                 .Select(static node => node!.AsObject())
                 .Single(reference => reference["path"]!.GetValue<string>() == "architecture.json");

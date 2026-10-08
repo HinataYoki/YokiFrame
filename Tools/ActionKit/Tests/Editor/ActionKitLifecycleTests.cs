@@ -41,7 +41,7 @@ namespace YokiFrame.Tests
         /// 验证 Start 会同步推进 dt=0，立即回调和正常完成回调各执行一次。
         /// </summary>
         [Test]
-        public void StartImmediateCallbackCompletesSynchronouslyExactlyOnce()
+        public void Start_立即回调_同步完成且只一次()
         {
             var actionCount = 0;
             var finishCount = 0;
@@ -63,7 +63,7 @@ namespace YokiFrame.Tests
         /// 验证正时长 Delay 只在累计时间达到阈值时执行完成回调。
         /// </summary>
         [Test]
-        public void DelayCompletesAfterAccumulatedScaledTime()
+        public void Tick_缩放时间累计到点_Delay完成()
         {
             var callbackCount = 0;
             IAction action = ActionKit.Delay(1f, () => callbackCount++);
@@ -82,7 +82,7 @@ namespace YokiFrame.Tests
         /// 验证控制器选择 UnscaledDeltaTime 后只消费宿主非缩放时间。
         /// </summary>
         [Test]
-        public void ControllerUsesUnscaledTimeWhenRequested()
+        public void Tick_请求非缩放时间_不随缩放推进()
         {
             IAction action = ActionKit.Delay(1f, null);
             IActionController controller = action.Start();
@@ -97,7 +97,7 @@ namespace YokiFrame.Tests
         /// 验证暂停期间不推进动作，恢复后继续使用后续时间步长。
         /// </summary>
         [Test]
-        public void PauseAndResumeGateSchedulerProgress()
+        public void Pause_暂停后_调度不再推进()
         {
             IAction action = ActionKit.Delay(1f, null);
             IActionController controller = action.Start();
@@ -115,7 +115,7 @@ namespace YokiFrame.Tests
         /// 验证取消只触发清理，不触发 Action 或 controller 的正常完成回调。
         /// </summary>
         [Test]
-        public void CancelDoesNotInvokeNormalCompletionCallbacks()
+        public void Cancel_取消_不调用正常完成回调()
         {
             var actionFinishCount = 0;
             var controllerFinishCount = 0;
@@ -136,7 +136,7 @@ namespace YokiFrame.Tests
         /// 验证宿主线程取消尚未进入执行列表的根动作时，会在 Cancel 返回前终结并释放动作树。
         /// </summary>
         [Test]
-        public void CancelPreparedActionReleasesSynchronouslyOnHostThread()
+        public void Cancel_已准备动作_在宿主线程同步释放()
         {
             var finishCount = 0;
             CancellationProbeAction action = new(static () => { });
@@ -157,7 +157,7 @@ namespace YokiFrame.Tests
         /// 验证旧 controller handle 在原动作结束后不能暂停或取消后续动作。
         /// </summary>
         [Test]
-        public void CompletedControllerHandleCannotControlLaterAction()
+        public void Control_已完成句柄_不能控制后续动作()
         {
             IActionController oldController = ActionKit.Delay(0f, null).Start();
             IAction nextAction = ActionKit.Delay(10f, null);
@@ -176,7 +176,7 @@ namespace YokiFrame.Tests
         /// 验证生命周期异常只形成一次 Faulted 终态，不逐帧重试或调用正常完成回调。
         /// </summary>
         [Test]
-        public void CallbackExceptionFaultsOnceWithoutRetry()
+        public void Tick_回调抛错_只故障一次且不重试()
         {
             var invocationCount = 0;
             var finishCount = 0;
@@ -201,7 +201,7 @@ namespace YokiFrame.Tests
         /// 验证自定义 Action 在首次执行前一定收到 OnInit，并自动获得非零运行 ID。
         /// </summary>
         [Test]
-        public void CustomActionIsInitializedBeforeStartAndGetsRuntimeId()
+        public void Start_自定义动作_先初始化并获得运行时ID()
         {
             ProbeAction action = new();
 
@@ -216,7 +216,7 @@ namespace YokiFrame.Tests
         /// 验证活动 Action 的堆栈记录在正常完成后自动移除。
         /// </summary>
         [Test]
-        public void StackTraceIsRemovedWhenActionTerminates()
+        public void Terminate_动作结束_移除堆栈记录()
         {
             ActionStackTraceService.Enabled = true;
             IAction action = ActionKit.Delay(1f, null);
@@ -232,7 +232,7 @@ namespace YokiFrame.Tests
         /// 验证外部 Finish 标记不受暂停门控，已完成动作仍会在下一 Tick 正常终结。
         /// </summary>
         [Test]
-        public void PausedActionMarkedFinishedStillFinalizes()
+        public void Finish_暂停中标记完成_仍然收尾()
         {
             var finishCount = 0;
             IAction action = ActionKit.Delay(10f, () => finishCount++);
@@ -251,7 +251,7 @@ namespace YokiFrame.Tests
         /// 验证 Action 在 OnExecute 内请求取消后，会在同一个宿主 Tick 清理而不是多运行一帧。
         /// </summary>
         [Test]
-        public void CancellationRequestedDuringExecuteFinalizesInSameTick()
+        public void Execute_执行中请求取消_同帧收尾()
         {
             IActionController controller = null;
             CancellationProbeAction action = new(() => controller.Cancel());
@@ -269,7 +269,7 @@ namespace YokiFrame.Tests
         /// 验证动作已进入 OnFinish 后的取消请求不把已发生的正常完成改写成取消终态。
         /// </summary>
         [Test]
-        public void NormalCompletionWinsCancellationRequestedFromOnFinish()
+        public void Finish_完成回调里请求取消_正常完成优先()
         {
             IActionController controller = null;
             IAction action = ActionKit.Delay(1f, () => controller.Cancel());
@@ -287,7 +287,7 @@ namespace YokiFrame.Tests
         /// 验证手动重复 Update 已完成 Action 时，正常完成钩子仍保持 exactly-once。
         /// </summary>
         [Test]
-        public void ManualUpdateInvokesFinishExactlyOnce()
+        public void Update_手动推进到完成_只结束一次()
         {
             ManualFinishProbeAction action = new();
 
@@ -301,7 +301,7 @@ namespace YokiFrame.Tests
         /// 验证直接实现 IAction 的自定义类型也只初始化一次，不会在每个 Tick 被重复 OnInit。
         /// </summary>
         [Test]
-        public void PlainIActionInitializesOnceAcrossTicks()
+        public void Tick_普通IAction_跨帧只初始化一次()
         {
             PlainAction action = new();
             IActionController controller = action.Start();

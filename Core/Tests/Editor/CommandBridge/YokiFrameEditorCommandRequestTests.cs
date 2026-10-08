@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Reflection;
 using NUnit.Framework;
 
 namespace YokiFrame
@@ -17,34 +16,15 @@ namespace YokiFrame
         public void CreateCommandRequestCarriesCommandFileBytes()
         {
             const long COMMAND_FILE_BYTES = 4096L;
-            MethodInfo createRequest = GetCreateCommandRequestMethod();
             YokiFrameEditorCommandEnvelope envelope = CreateEnvelope();
-
-            YokiFrameCommandRequest request = (YokiFrameCommandRequest)createRequest.Invoke(
-                null,
-                new object[] { envelope, COMMAND_FILE_BYTES });
+            YokiFrameCommandRequest request = YokiFrameEditorFileBridgePump.CreateCommandRequest(
+                envelope,
+                COMMAND_FILE_BYTES);
 
             Assert.AreEqual(COMMAND_FILE_BYTES, request.CommandFileBytes);
             Assert.AreEqual("cli", request.Source);
             Assert.AreEqual("System", request.Kit);
             Assert.AreEqual("ping", request.Action);
-        }
-
-        /// <summary>
-        /// 定位携带文件大小参数的私有创建方法，确保测试锁定真实转换入口。
-        /// </summary>
-        /// <returns>命令请求创建方法。</returns>
-        private static MethodInfo GetCreateCommandRequestMethod()
-        {
-            MethodInfo method = typeof(YokiFrameEditorFileBridgePump).GetMethod(
-                "CreateCommandRequest",
-                BindingFlags.Static | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(YokiFrameEditorCommandEnvelope), typeof(long) },
-                null);
-
-            Assert.IsNotNull(method);
-            return method;
         }
 
         /// <summary>

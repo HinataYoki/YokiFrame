@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using YokiFrame.Installer.Core.Models;
+using YokiFrame.Installer.Core.Tests;
 using YokiFrame.Installer.Core.Services;
 using YokiFrame.Installer.Core.Tests.Transactions;
 
@@ -32,14 +33,23 @@ public sealed class UnityInstallServiceTests
 
         _ = new UnityInstallService().Execute(request);
 
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("package.json")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Api/00-GettingStarted/FrameworkOverview.md")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Documentation~/Guides/AI-Install.md")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs.meta")));
+        foreach (var relativePath in new[]
+        {
+            "package.json",
+            "Documentation~/Api/00-GettingStarted/FrameworkOverview.md",
+            "Documentation~/Guides/AI-Install.md",
+            "Core/Runtime/Alpha.cs",
+            "Core/Runtime/Alpha.cs.meta",
+            "YokiFrameWorkbench~/src/YokiFrame.Installer.Core/Installer.cs",
+        })
+        {
+            InstallerFileAssert.EqualFile(
+                Path.Combine(fixture.SourcePackageRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)),
+                fixture.GetEmbeddedPath(relativePath));
+        }
+
         Assert.False(File.Exists(fixture.GetEmbeddedPath("WorkbenchRuntime~/win-x64/YokiFrame.Workbench.Avalonia.exe")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("Core/Tests/AlphaTests.cs")));
-        Assert.True(File.Exists(fixture.GetEmbeddedPath("YokiFrameWorkbench~/src/YokiFrame.Installer.Core/Installer.cs")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("YokiFrameWorkbench~/.artifacts-installer-ui/Installer.dll")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("YokiFrameWorkbench~/src/YokiFrame.Installer.Core/.artifacts-validation/Installer.dll")));
         Assert.False(File.Exists(fixture.GetEmbeddedPath("WorkbenchRuntime~/linux-x64/yoki")));
@@ -90,7 +100,7 @@ public sealed class UnityInstallServiceTests
 
         var result = service.Execute(request);
 
-        Assert.Equal("alpha-v2", File.ReadAllText(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs")));
+        InstallerFileAssert.EqualUtf8(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs"), "alpha-v2");
         Assert.False(result.ManifestChanged);
         Assert.Equal(manifestBefore, File.ReadAllBytes(fixture.ManifestPath));
         Assert.Equal(staleWriteTime, File.GetLastWriteTimeUtc(fixture.ManifestPath));
@@ -120,9 +130,7 @@ public sealed class UnityInstallServiceTests
 
         Assert.Equal(PackageOwnershipState.Modified, plan.ExistingPackageState);
         Assert.Contains("Core/Runtime/Alpha.cs", plan.ModifiedPaths);
-        Assert.Equal(
-            "Core/Runtime/Alpha.cs",
-            File.ReadAllText(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs")));
+        InstallerFileAssert.EqualUtf8(fixture.GetEmbeddedPath("Core/Runtime/Alpha.cs"), "Core/Runtime/Alpha.cs");
         Assert.NotNull(result.PackageTransaction);
         Assert.True(result.PackageTransaction.ReplacedExistingPackage);
         fixture.AssertNoManifestTemporaryFiles();
@@ -382,7 +390,7 @@ public sealed class UnityInstallServiceTests
 
         _ = Assert.Throws<InvalidDataException>(() => new UnityInstallService().Execute(request));
 
-        Assert.Equal(invalidManifest, File.ReadAllText(fixture.ManifestPath));
+        InstallerFileAssert.EqualUtf8(fixture.ManifestPath, invalidManifest);
         before.AssertMatches(DirectoryTreeSnapshot.Capture(fixture.Root));
         fixture.AssertNoManifestTemporaryFiles();
     }

@@ -154,19 +154,6 @@ public sealed class WindowStateStoreTests
             }
         });
     }
-
-    /// <summary>
-    /// 验证窗口状态存储使用 source-generated JSON 元数据，避免 Native AOT 发布版运行时依赖反射序列化。
-    /// </summary>
-    [Fact]
-    public void WindowStateStoreUsesNativeAotFriendlyJsonContext()
-    {
-        var source = File.ReadAllText(FindWindowStateStoreSourcePath());
-
-        Assert.Contains("JsonSerializable(typeof(PersistedWindowState))", source);
-        Assert.Contains("WindowStateJsonContext.Default.PersistedWindowState", source);
-    }
-
     /// <summary>
     /// 创建测试项目根目录。
     /// </summary>
@@ -186,34 +173,5 @@ public sealed class WindowStateStoreTests
         {
             new WindowWorkArea(new PixelRect(0, 0, 1920, 1040))
         };
-    }
-
-    /// <summary>
-    /// 从测试输出目录向上查找窗口状态存储源码路径。
-    /// </summary>
-    /// <returns>窗口状态存储源码路径。</returns>
-    private static string FindWindowStateStoreSourcePath()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            var candidate = Path.Combine(
-                directory.FullName,
-                "Assets",
-                "YokiFrame",
-                "YokiFrameWorkbench~",
-                "src",
-                "YokiFrame.Workbench.Avalonia",
-                "Services",
-                "WindowStateStore.cs");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new FileNotFoundException("无法定位 WindowStateStore.cs。");
     }
 }

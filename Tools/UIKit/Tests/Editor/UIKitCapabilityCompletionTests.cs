@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -104,34 +103,6 @@ namespace YokiFrame.Tests
             }
         }
 
-#if YOKIFRAME_INPUTSYSTEM_SUPPORT && !ENABLE_LEGACY_INPUT_MANAGER
-        /// <summary>验证 Input System-only 项目在 Root 初始化时安装新输入模块。</summary>
-        [Test]
-        public void RootInitializationUsesInputSystemUiModuleWhenLegacyInputIsDisabled()
-        {
-            UIRoot.Dispose();
-            Type installerType = Type.GetType(
-                "YokiFrame.UIKitInputSystemModuleInstaller, YokiFrame.UIKit.InputSystem");
-            Assert.IsNotNull(installerType, "UIKit Input System Integration 未加载输入模块安装器。");
-            MethodInfo install = installerType.GetMethod(
-                "Install",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(install);
-            install.Invoke(null, null);
-
-            UIRoot root = UIRoot.Instance;
-            BaseInputModule inputModule = root.EventSystem.GetComponent<BaseInputModule>();
-
-            Assert.IsNotNull(inputModule);
-            Assert.AreEqual(
-                "UnityEngine.InputSystem.UI.InputSystemUIInputModule",
-                inputModule.GetType().FullName);
-            PropertyInfo actionsAssetProperty = inputModule.GetType().GetProperty("actionsAsset");
-            Assert.IsNotNull(actionsAssetProperty);
-            Assert.IsNotNull(actionsAssetProperty.GetValue(inputModule));
-        }
-#endif
-
 #if ENABLE_LEGACY_INPUT_MANAGER
         /// <summary>验证启用 Legacy Input Manager 时 Root 初始化使用 StandaloneInputModule。</summary>
         [Test]
@@ -207,19 +178,18 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证 Runtime 诊断快照不创建额外 Root，并反映已打开面板。</summary>
+        /// <summary>验证打开面板后，运行时诊断快照的数量和面板描述与当前状态一致。</summary>
         [Test]
-        public void RuntimeDiagnosticsReflectLoadedPanels()
+        public void CaptureRuntimeDiagnostics_打开面板后_数量和描述与状态一致()
         {
-            UIKitRuntimeSnapshot before = UIKit.CaptureRuntimeDiagnostics();
-            Assert.IsTrue(before.HasRoot, "SetPanelLoader 已按变更语义创建测试 Root。");
             UIKit.OpenPanel<UIKitNavigationFirstTestPanel>();
 
             UIKitRuntimeSnapshot snapshot = UIKit.CaptureRuntimeDiagnostics();
 
             Assert.AreEqual(1, snapshot.LoadedPanelCount);
             Assert.AreEqual(1, snapshot.VisiblePanelCount);
-            StringAssert.Contains(nameof(UIKitNavigationFirstTestPanel), snapshot.Panels[0]);
+            Assert.AreEqual(1, snapshot.Panels.Count);
+            Assert.AreEqual("UIKitNavigationFirstTestPanel | Open | Common", snapshot.Panels[0]);
         }
 
         /// <summary>验证 Show/Hide 动画进入过渡状态，且反向操作拒绝旧 generation 回调。</summary>

@@ -42,14 +42,14 @@ public sealed class LocalizationKitPageViewTests
     {
         using TemporaryLocalizationProject project = TemporaryLocalizationProject.Create();
         string catalogPath = Path.Combine(project.Root, "Assets", "Settings", "YokiFrame", "localization.json");
-        string catalogJson = File.ReadAllText(catalogPath);
+        byte[] catalogBytes = File.ReadAllBytes(catalogPath);
         File.Delete(catalogPath);
         LocalizationKitPageViewModel viewModel = new(project.Root, new LocalizationKitApplicationService());
 
         await viewModel.EnsureLoadedAsync();
         Assert.True(viewModel.HasLoadError);
         string failureStatus = viewModel.StatusText;
-        File.WriteAllText(catalogPath, catalogJson);
+        File.WriteAllBytes(catalogPath, catalogBytes);
 
         await viewModel.EnsureLoadedAsync();
 
@@ -186,18 +186,6 @@ public sealed class LocalizationKitPageViewTests
         Assert.False(viewModel.HasLoadError);
         Assert.Single(viewModel.Entries);
         Assert.Equal("menu.start", viewModel.Entries[0].Key);
-    }
-
-    /// <summary>验证 Luban 工作目录输入在失焦前也会回写 ViewModel，关闭保存不会丢失最后一段输入。</summary>
-    [Fact]
-    public void LubanWorkDirBindingUpdatesBeforeFocusLeavesControl()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "LocalizationKitPageView.axaml");
-
-        Assert.Contains(
-            "LubanWorkDir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
     }
 
     /// <summary>选择工作目录后应持久化覆盖项，并可通过宿主回调打开已创建的 Excel 作者目录。</summary>

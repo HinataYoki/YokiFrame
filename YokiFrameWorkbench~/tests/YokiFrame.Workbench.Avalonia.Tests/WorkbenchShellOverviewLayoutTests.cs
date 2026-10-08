@@ -1,268 +1,140 @@
-using System.Reflection;
-using YokiFrame.Client.FileBridge.Diagnostics;
-using YokiFrame.Protocol.FileBridge;
-using YokiFrame.Workbench.Avalonia.ViewModels;
-using YokiFrame.Tooling.Application.Models;
-
-namespace YokiFrame.Workbench.Avalonia.Tests;
-
-/// <summary>
-/// 覆盖框架总览页的信息架构，避免 Workbench 回退成无功能的旧界面仿制。
-/// </summary>
-public sealed partial class WorkbenchShellOverviewLayoutTests
-{
-    /// <summary>
-    /// 验证框架总览按运行状态、命令桥和 Skill 组织布局。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewSurfacesOperationalSections()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.Contains("CurrentPageTitle", xaml);
-        Assert.Contains("Classes=\"page-header\"", xaml);
-        Assert.Contains("CurrentPageDescription", xaml);
-        Assert.True(xaml.Contains("运行状态") || xaml.Contains("String.Overview.RuntimeStatus"));
-        Assert.True(xaml.Contains("命令桥") || xaml.Contains("String.Overview.CommandBridge"));
-        Assert.True(xaml.Contains("安装 Skill") || xaml.Contains("String.Overview.SkillsTitle"));
-        Assert.Contains("components:LogConsole", xaml);
-        Assert.Contains("SummaryCards", xaml);
-        Assert.Contains("EngineCards", xaml);
-        Assert.Contains("SkillTargets", xaml);
-        Assert.Contains("SkillOptions", xaml);
-        Assert.Contains("SkillStatusCards", xaml);
-    }
-
-    /// <summary>
-    /// 验证总览使用真实字号的非对称双栏网格。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewUsesAsymmetricColumnsWithoutPageScaling()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.Contains("ColumnDefinitions=\"*,420\"", xaml);
-        Assert.Contains("x:Name=\"OverviewDesignSurface\"", xaml);
-    }
-
-    /// <summary>
-    /// 验证框架总览按单页工作台布局分配高度，运行日志与命令桥不会被状态卡挤出首屏。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewFitsPrimaryWorkflowIntoOnePage()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.Contains("RowDefinitions=\"Auto,52,*\"", xaml);
-        Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,*,Auto\"", xaml);
-        Assert.Contains("<UniformGrid Rows=\"1\" />", xaml);
-        Assert.Contains("Classes=\"overview-metric-card\"", xaml);
-        Assert.Contains("FontSize=\"{DynamicResource FontSize.Lg}\"", ReadMetricCardXaml());
-        Assert.Contains("MaxLines=\"1\"", ReadMetricCardXaml());
-        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", ReadMetricCardXaml());
-    }
-
-    /// <summary>
-    /// 验证命令桥卡片只承载真实链路验证入口，发送和响应明细统一沉到运行日志中。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewKeepsCommandBridgeAsVerificationPanel()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.True(xaml.Contains("Text=\"命令桥\"") || xaml.Contains("String.Overview.CommandBridge"));
-        Assert.True(xaml.Contains("Content=\"Ping\"") || xaml.Contains("String.Overview.Ping"));
-        Assert.True(xaml.Contains("Content=\"状态\"") || xaml.Contains("String.Overview.Status"));
-        Assert.True(xaml.Contains("Content=\"目录\"") || xaml.Contains("String.Overview.Catalog"));
-        Assert.Contains("PingCommand", xaml);
-        Assert.Contains("BridgeStatusCommand", xaml);
-        Assert.Contains("RefreshCommandCatalogCommand", xaml);
-    }
-
-    /// <summary>
-    /// 验证框架总览把字体选择合并到紧凑控制带，并绑定为真实显示偏好。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewRestoresDisplayFontCard()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.True(xaml.Contains("Text=\"字体\"") || xaml.Contains("String.Overview.FontLabel"));
-        Assert.Contains("DisplayFontOptions", xaml);
-        Assert.Contains("SelectedDisplayFontName", xaml);
-        Assert.Contains("SelectedDisplayFontFamily", xaml);
-    }
-
-    /// <summary>
-    /// 验证运行日志通过样式类区分发送、接收和错误消息，避免命令桥卡片承担结果展示。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewColorsCommandTrafficInLogConsole()
-    {
-        var logConsole = ReadLogConsoleXaml();
-        var terminalStyles = ReadTerminalStylesXaml();
-
-        Assert.Contains("Classes.outbound=\"{CompiledBinding IsOutbound}\"", logConsole);
-        Assert.Contains("Classes.inbound=\"{CompiledBinding IsInbound}\"", logConsole);
-        Assert.Contains("Classes.error=\"{CompiledBinding IsError}\"", logConsole);
-        Assert.Contains("TextBlock.terminal-line.outbound", terminalStyles);
-        Assert.Contains("TextBlock.terminal-line.inbound", terminalStyles);
-        Assert.Contains("TextBlock.terminal-line.error", terminalStyles);
-        Assert.Contains("FontSize.Md", terminalStyles);
-    }
-
-    /// <summary>
-    /// 验证运行日志的复制和清空按钮绑定真实动作，不再只是静态按钮。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewBindsLogConsoleActions()
-    {
-        var logConsole = ReadLogConsoleXaml();
-        var codeBehind = ReadLogConsoleCodeBehind();
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-
-        viewModel.ShowCommandInFlight("System", "ping");
-        var text = InvokeCreateLogClipboardText(viewModel);
-        InvokeClearLogCommand(viewModel);
-
-        Assert.Contains("Click=\"OnCopyLogsButtonClick\"", logConsole);
-        Assert.Contains("Command=\"{CompiledBinding ClearLogCommand}\"", logConsole);
-        Assert.Contains("Clipboard", codeBehind);
-        Assert.Contains("catch (Exception exception)", codeBehind);
-        Assert.Contains("ShowTransientError(\"复制日志失败:", codeBehind);
-        Assert.Contains("System/ping", text);
-        Assert.Empty(viewModel.LogLines);
-    }
-
-    /// <summary>
-    /// 验证 ViewModel 为命令发送、响应和错误写入不同类型的运行日志。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewWritesDirectionalCommandLogLines()
-    {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-
-        viewModel.ShowCommandInFlight("System", "ping");
-        viewModel.ShowCommandResult(new WorkbenchCommandState("System", "ping", true, "Ok", "{\"pong\":true}", string.Empty));
-        viewModel.ShowTransientError("bridge timeout");
-
-        AssertLogLineKind(viewModel.LogLines[^3], "Outbound", "命令发送");
-        AssertLogLineKind(viewModel.LogLines[^2], "Inbound", "命令接收");
-        AssertLogLineKind(viewModel.LogLines[^1], "Error", "错误");
-    }
-
-    /// <summary>
-    /// 验证 Skill 安装面板绑定真实目标和安装命令，避免恢复成静态说明块。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewRestoresCommandBackedSkillInstaller()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.Contains("SkillTargets", xaml);
-        Assert.Contains("SkillOptions", xaml);
-        Assert.Contains("SelectCommand", xaml);
-        Assert.Contains("InstallCommand", xaml);
-        Assert.Contains("UninstallCommand", xaml);
-        Assert.Contains("CompiledBinding ActionText", xaml);
-        Assert.Contains("CompiledBinding CustomSkillActionText", xaml);
-        Assert.Contains("SkillInstallStatusText", xaml);
-        Assert.Contains("SkillStatusCards", xaml);
-    }
-
-    /// <summary>
-    /// 验证 Skill 面板使用摘要网格和全宽操作行组织信息，并提供自定义目录安装入口。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewUsesSkillSummaryGridAndOperationalTargetRows()
-    {
-        var xaml = ReadWorkbenchShellViewXaml();
-
-        Assert.Contains("UniformGrid Columns=\"3\"", xaml);
-        Assert.Contains("Classes=\"card skill-target-row\"", xaml);
-        Assert.Contains("Classes.neutral=\"{CompiledBinding !IsInstalled}\"", xaml);
-        Assert.Contains("CustomSkillPath", xaml);
-        Assert.Contains("TextAlignment=\"Center\"", xaml);
-        Assert.Contains("InstallCustomSkillCommand", xaml);
-        Assert.Contains("UninstallCustomSkillCommand", xaml);
-    }
-
-    /// <summary>
-    /// 验证自定义目录安装命令会调用 Installer.Core 真实写入当前选中的 Skill。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewInstallsSkillToCustomDirectory()
-    {
-        var projectRoot = CreateProjectWithPackagedSkill("yokiframe");
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-
-        viewModel.UpdateDashboard(CreateDashboardState(projectRoot));
-        SetPropertyValue(viewModel, "CustomSkillPath", "custom/skills");
-        InvokeCommandProperty(viewModel, "InstallCustomSkillCommand");
-
-        Assert.True(File.Exists(Path.Combine(projectRoot, "custom", "skills", "yokiframe", "SKILL.md")));
-    }
-
-    /// <summary>
-    /// 验证已安装目标把按钮文案切成更新，并且再次安装会整目录替换旧文档。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewUpdatesInstalledSkillByReplacingDirectory()
-    {
-        var projectRoot = CreateProjectWithPackagedSkill("yokiframe");
-        var targetRoot = Path.Combine(projectRoot, ".codex", "skills", "yokiframe");
-        Directory.CreateDirectory(targetRoot);
-        File.WriteAllText(Path.Combine(targetRoot, "SKILL.md"), "old");
-        File.WriteAllText(Path.Combine(targetRoot, "stale.md"), "stale");
-        File.WriteAllText(
-            Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills", "yokiframe", "SKILL.md"),
-            "new-content");
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-
-        viewModel.UpdateDashboard(CreateDashboardState(projectRoot));
-        var codex = Assert.Single(viewModel.SkillTargets, target => target.Id == "codex");
-        Assert.True(codex.IsInstalled);
-        Assert.True(codex.ActionText == "更新" || codex.ActionText == "Update");
-        Assert.True(codex.InstallCommand.CanExecute(null));
-        codex.InstallCommand.Execute(null);
-
-        Assert.Equal("new-content", File.ReadAllText(Path.Combine(targetRoot, "SKILL.md")));
-        Assert.False(File.Exists(Path.Combine(targetRoot, "stale.md")));
-        var updated = Assert.Single(viewModel.SkillTargets, target => target.Id == "codex");
-        Assert.True(updated.ActionText == "更新" || updated.ActionText == "Update");
-    }
-
-    /// <summary>
-    /// 验证 ViewModel 能把首批 snapshot 投影为总览卡片，供实时数据区域直接展示。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewProjectsSnapshotCardsFromDashboard()
-    {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-        var property = typeof(WorkbenchShellViewModel).GetProperty("SnapshotCards", BindingFlags.Instance | BindingFlags.Public);
-
-        Assert.NotNull(property);
-        viewModel.UpdateDashboard(CreateDashboardState());
-        var cards = Assert.IsAssignableFrom<IReadOnlyList<WorkbenchMetricCard>>(property.GetValue(viewModel));
-
-        AssertMetricCard(cards, "EventKit", "snapshot", "available");
-        AssertMetricCard(cards, "LogKit", "telemetry", "missing: stale");
-    }
-
-    /// <summary>
-    /// 验证桥接状态卡片只保留框架总览首屏真正需要的紧凑诊断信息。
-    /// </summary>
-    [Fact]
-    public void FrameworkOverviewProjectsTauriLikeEngineStatusCards()
-    {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-
-        viewModel.UpdateDashboard(CreateDashboardState());
-
-        Assert.InRange(viewModel.EngineCards.Count, 1, 4);
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "心跳" || card.Title == "Heartbeat");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "命令" || card.Title == "Command");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "事件" || card.Title == "Events");
-        Assert.Contains(viewModel.EngineCards, card => card.Title == "背压" || card.Title == "Pressure");
-    }
-}
+using System.Text;
+using YokiFrame.Tooling.Application.Models;
+using YokiFrame.Workbench.Avalonia.ViewModels;
+
+namespace YokiFrame.Workbench.Avalonia.Tests;
+
+/// <summary>
+/// 覆盖框架总览页可观察的日志、Skill 安装和状态卡片契约。
+/// </summary>
+public sealed partial class WorkbenchShellOverviewLayoutTests
+{
+    /// <summary>
+    /// 验证复制日志包含已发送命令，并且清空命令会移除全部运行日志。
+    /// </summary>
+    [Fact]
+    public void CreateLogClipboardText_已记录发送命令_复制文本包含命令且清空后无日志()
+    {
+        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+
+        viewModel.ShowCommandInFlight("System", "ping");
+        var text = viewModel.CreateLogClipboardText();
+        Assert.True(viewModel.ClearLogCommand.CanExecute(null));
+        viewModel.ClearLogCommand.Execute(null);
+
+        Assert.Contains("System/ping", text, StringComparison.Ordinal);
+        Assert.Empty(viewModel.LogLines);
+    }
+
+    /// <summary>
+    /// 验证 ViewModel 为命令发送、响应和错误写入不同类型的运行日志。
+    /// </summary>
+    [Fact]
+    public void ShowCommandResult_发送接收和错误_日志行类型与消息匹配()
+    {
+        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+
+        viewModel.ShowCommandInFlight("System", "ping");
+        viewModel.ShowCommandResult(new WorkbenchCommandState("System", "ping", true, "Ok", "{\"pong\":true}", string.Empty));
+        viewModel.ShowTransientError("bridge timeout");
+
+        Assert.Equal(WorkbenchLogLineKind.Outbound, viewModel.LogLines[^3].Kind);
+        Assert.Contains("命令发送", viewModel.LogLines[^3].Message, StringComparison.Ordinal);
+        Assert.Equal(WorkbenchLogLineKind.Inbound, viewModel.LogLines[^2].Kind);
+        Assert.Contains("命令接收", viewModel.LogLines[^2].Message, StringComparison.Ordinal);
+        Assert.Equal(WorkbenchLogLineKind.Error, viewModel.LogLines[^1].Kind);
+        Assert.Contains("错误", viewModel.LogLines[^1].Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 验证自定义目录安装命令会把当前选中的 Skill 写入项目内目标目录。
+    /// </summary>
+    [Fact]
+    public void InstallCustomSkillCommand_自定义目录_写入Skill文件()
+    {
+        var projectRoot = CreateProjectWithPackagedSkill("yokiframe");
+        try
+        {
+            var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+            viewModel.UpdateDashboard(CreateDashboardState(projectRoot));
+            viewModel.CustomSkillPath = "custom/skills";
+
+            Assert.True(viewModel.InstallCustomSkillCommand.CanExecute(null));
+            viewModel.InstallCustomSkillCommand.Execute(null);
+
+            Assert.True(File.Exists(Path.Combine(projectRoot, "custom", "skills", "yokiframe", "SKILL.md")));
+        }
+        finally
+        {
+            Directory.Delete(projectRoot, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// 验证已安装目标把按钮文案切成更新，并且再次安装会整目录替换旧文档。
+    /// </summary>
+    [Fact]
+    public void InstallCommand_已安装目标_替换目录并移除过期文件()
+    {
+        var projectRoot = CreateProjectWithPackagedSkill("yokiframe");
+        var targetRoot = Path.Combine(projectRoot, ".codex", "skills", "yokiframe");
+        try
+        {
+            Directory.CreateDirectory(targetRoot);
+            File.WriteAllText(Path.Combine(targetRoot, "SKILL.md"), "old");
+            File.WriteAllText(Path.Combine(targetRoot, "stale.md"), "stale");
+            File.WriteAllText(
+                Path.Combine(projectRoot, "Assets", "YokiFrame", "Core", "Editor", "Skills", "yokiframe", "SKILL.md"),
+                "new-content");
+            var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+
+            viewModel.UpdateDashboard(CreateDashboardState(projectRoot));
+            var codex = Assert.Single(viewModel.SkillTargets, target => target.Id == "codex");
+            Assert.True(codex.IsInstalled);
+            Assert.True(codex.ActionText == "更新" || codex.ActionText == "Update");
+            Assert.True(codex.InstallCommand.CanExecute(null));
+            codex.InstallCommand.Execute(null);
+
+            var installed = File.ReadAllBytes(Path.Combine(targetRoot, "SKILL.md"));
+            Assert.Equal(Encoding.UTF8.GetBytes("new-content"), installed);
+            Assert.False(File.Exists(Path.Combine(targetRoot, "stale.md")));
+            var updated = Assert.Single(viewModel.SkillTargets, target => target.Id == "codex");
+            Assert.True(updated.ActionText == "更新" || updated.ActionText == "Update");
+        }
+        finally
+        {
+            Directory.Delete(projectRoot, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// 验证 ViewModel 能把首批 snapshot 投影为总览卡片，供实时数据区域直接展示。
+    /// </summary>
+    [Fact]
+    public void UpdateDashboard_有成功和失败快照_投影对应总览卡片()
+    {
+        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+
+        viewModel.UpdateDashboard(CreateDashboardState());
+
+        AssertMetricCard(viewModel.SnapshotCards, "EventKit", "snapshot", "available");
+        AssertMetricCard(viewModel.SnapshotCards, "LogKit", "telemetry", "missing: stale");
+    }
+
+    /// <summary>
+    /// 验证桥接状态卡片只保留框架总览首屏真正需要的紧凑诊断信息。
+    /// </summary>
+    [Fact]
+    public void FrameworkOverviewProjectsTauriLikeEngineStatusCards()
+    {
+        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+
+        viewModel.UpdateDashboard(CreateDashboardState());
+
+        Assert.InRange(viewModel.EngineCards.Count, 1, 4);
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "心跳" || card.Title == "Heartbeat");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "命令" || card.Title == "Command");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "事件" || card.Title == "Events");
+        Assert.Contains(viewModel.EngineCards, card => card.Title == "背压" || card.Title == "Pressure");
+    }
+}

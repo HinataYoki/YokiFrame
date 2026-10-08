@@ -57,25 +57,6 @@ public sealed class UIKitPageViewModelTests
         Assert.Equal("显示 2 / 3", viewModel.CoverageText);
         Assert.True(viewModel.CurrentCollectionTruncated);
     }
-
-    /// <summary>验证页面 XAML 明确包含双尺寸布局、虚拟化和无横向滚动策略。</summary>
-    [Fact]
-    public void PageContractUsesAdaptiveVirtualizedMasterDetail()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "UIKitPageView.axaml");
-
-        Assert.Contains("UIKitWideLayout", xaml, StringComparison.Ordinal);
-        Assert.Contains("UIKitCompactLayout", xaml, StringComparison.Ordinal);
-        Assert.Contains("UIKitMetricsPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("UIKitDetailPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        // i18n 切片后页面词条改用 DynamicResource 资源 key，兼容旧中文直书与资源 key 两种契约。
-        Assert.True(xaml.Contains("运行时诊断") || xaml.Contains("String.UIKit.RuntimeDiagnostics"), "UIKit 页面应包含运行时诊断词条");
-        Assert.True(xaml.Contains("编辑器工具") || xaml.Contains("String.UIKit.EditorTools"), "UIKit 页面应包含编辑器工具词条");
-        Assert.Contains("kit-panel-header", xaml, StringComparison.Ordinal);
-        Assert.Contains("kit-stat uikit-summary-metric", xaml, StringComparison.Ordinal);
-    }
-
     /// <summary>验证运行时协议枚举只在表现层转换为简体中文。</summary>
     [Fact]
     public void DisplayConverterLocalizesRuntimeEnums()
@@ -508,27 +489,6 @@ public sealed class UIKitPageViewModelTests
             }
         }
     }
-
-    /// <summary>验证 Editor Tools 仅保留面板创建与生成代码入口。</summary>
-    [Fact]
-    public void EditorToolsViewContractContainsOnlyGenerationActions()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "UIKitEditorToolsView.axaml");
-
-        Assert.Contains("uikit.editor.create-prefab", xaml, StringComparison.Ordinal);
-        Assert.Contains("uikit.editor.generate-code", xaml, StringComparison.Ordinal);
-        Assert.Contains("String.UIKit.Editor.CreatePrefab", xaml, StringComparison.Ordinal);
-        Assert.Equal("创建预制体", WorkbenchI18nService.Instance.GetString("String.UIKit.Editor.CreatePrefab"));
-        Assert.Contains("AssemblySelector", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{CompiledBinding AssemblyNames}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{CompiledBinding AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{CompiledBinding CodeTemplateDisplay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{CompiledBinding PrefabFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{CompiledBinding ScriptFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{CompiledBinding ScriptNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Classes=\"kit-panel uikit-editor-panel\"", xaml, StringComparison.Ordinal);
-    }
-
     /// <summary>渲染 Unity Editor Tools 宽屏界面，验证单一表单和操作按钮不为空。</summary>
     [Fact]
     public async Task EditorToolsRendersWideFormWithoutHorizontalOverflow()

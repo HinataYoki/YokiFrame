@@ -94,7 +94,10 @@ public sealed class CliHarnessCatalogTests
 
         var strictResult = await RunCliAsync("harness", "catalog", "--strict", "--project", project.Path);
         Assert.Equal(1, strictResult.ExitCode);
-        Assert.Contains("CapabilityCatalogNotReady", strictResult.StandardError, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, strictResult.StandardOutput.Trim());
+        var strictJson = JsonNode.Parse(strictResult.StandardError)
+            ?? throw new InvalidOperationException("CLI stderr is not JSON.");
+        Assert.Equal("CapabilityCatalogNotReady", strictJson["error"]!["code"]!.GetValue<string>());
     }
 
     /// <summary>

@@ -104,7 +104,7 @@ namespace YokiFrame
         /// 先提交字段修改，再逐对象记录 Undo，避免按钮读取到旧的序列化值。
         /// </summary>
         /// <param name="method">待调用的无参数实例方法。</param>
-        private void InvokeCustomButton(MethodInfo method)
+        internal void InvokeCustomButton(MethodInfo method)
         {
             if (method == null || !TryGetSerializedObject(out SerializedObject currentSerializedObject))
                 return;
@@ -141,7 +141,7 @@ namespace YokiFrame
         /// <param name="serializedObject">当前面板的序列化对象。</param>
         /// <param name="targetType">当前面板类型。</param>
         /// <param name="propertyPaths">输出字段路径列表。</param>
-        private static void CollectCustomPropertyPaths(
+        internal static void CollectCustomPropertyPaths(
             SerializedObject serializedObject,
             Type targetType,
             List<string> propertyPaths)
@@ -169,7 +169,7 @@ namespace YokiFrame
         /// <summary>收集派生面板上可由 IMGUI 执行的无参数按钮方法。</summary>
         /// <param name="targetType">当前面板类型。</param>
         /// <param name="buttonMethods">输出按钮方法列表。</param>
-        private static void CollectCustomButtonMethods(Type targetType, List<MethodInfo> buttonMethods)
+        internal static void CollectCustomButtonMethods(Type targetType, List<MethodInfo> buttonMethods)
         {
             if (buttonMethods == null)
                 return;
@@ -307,7 +307,7 @@ namespace YokiFrame
         /// <summary>检查编辑器当前全部目标，避免 Unity 刷新期间创建无效 SerializedObject。</summary>
         /// <param name="editorTargets">Editor 当前目标集合。</param>
         /// <returns>所有目标均有效时返回 true。</returns>
-        private static bool HasValidTargets(UnityEngine.Object[] editorTargets)
+        internal static bool HasValidTargets(UnityEngine.Object[] editorTargets)
         {
             if (editorTargets == null || editorTargets.Length == 0)
                 return false;

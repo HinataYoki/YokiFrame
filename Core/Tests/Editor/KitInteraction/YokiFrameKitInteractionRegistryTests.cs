@@ -11,7 +11,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证 Registry 可以路由任意 Kit 的 Snapshot 与只读 Command。</summary>
         [Test]
-        public void RegistryRoutesProviderSnapshotAndCommand()
+        public void Register_单个Provider_返回快照和命令()
         {
             YokiFrameKitInteractionRegistry registry = new YokiFrameKitInteractionRegistry();
             registry.Register(new TestKitInteractionProvider("ExampleKit"));
@@ -27,7 +27,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证重复 Kit 会在组合阶段被拒绝，避免不同 Provider 竞争相同命令和状态事实。</summary>
         [Test]
-        public void RegistryRejectsDuplicateKit()
+        public void Register_重复Kit_拒绝并指出名称()
         {
             YokiFrameKitInteractionRegistry registry = new YokiFrameKitInteractionRegistry();
             registry.Register(new TestKitInteractionProvider("ExampleKit"));
@@ -40,7 +40,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Core 六个 Provider 顺序固定，已注册 Tool Provider 只追加在其后。</summary>
         [Test]
-        public void DefaultCompositionStartsWithCoreProvidersAndAppendsTools()
+        public void CreateDefault_组合目录_Core六个在前()
         {
             YokiFrameKitInteractionRegistry registry =
                 YokiFrameCoreKitInteractions.CreateDefault(out long toolProviderRevision);
@@ -67,7 +67,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证默认策略不硬编码业务 Kit，命令必须由当前 Registry 显式追加。</summary>
         [Test]
-        public void CommandPolicyReceivesKitCommandsFromRegistry()
+        public void CreateDefault_追加命令描述_策略放行这些命令()
         {
             YokiFrameCommandPolicy defaultPolicy = YokiFrameCommandPolicy.CreateDefault();
             YokiFrameKitInteractionRegistry registry = YokiFrameCoreKitInteractions.CreateDefault();

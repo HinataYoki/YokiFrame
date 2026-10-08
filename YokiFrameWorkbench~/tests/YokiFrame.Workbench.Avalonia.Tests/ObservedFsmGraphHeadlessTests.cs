@@ -1,4 +1,3 @@
-using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -218,11 +217,7 @@ public sealed class ObservedFsmGraphHeadlessTests
     /// <returns>控件已提交的视觉版本号。</returns>
     private static int GetVisualRevision(ObservedFsmGraph graph)
     {
-        var property = typeof(ObservedFsmGraph).GetProperty(
-            "VisualRevision",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(property);
-        return Assert.IsType<int>(property.GetValue(graph));
+        return graph.VisualRevision;
     }
 
     /// <summary>
@@ -232,10 +227,6 @@ public sealed class ObservedFsmGraphHeadlessTests
     /// <returns>控件已构建的渲染快照版本号。</returns>
     private static int GetRenderSnapshotRevision(ObservedFsmGraph graph)
     {
-        var property = typeof(ObservedFsmGraph).GetProperty(
-            "RenderSnapshotRevision",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(property);
-        return Assert.IsType<int>(property.GetValue(graph));
+        return graph.RenderSnapshotRevision;
     }
 }

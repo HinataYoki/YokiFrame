@@ -23,10 +23,20 @@ public sealed class RuntimeManifestRuntimeCacheRootTests
         Directory.CreateDirectory(Path.GetDirectoryName(ignoredPath)!);
         File.WriteAllText(ignoredPath, "state");
 
-        var manifest = new RuntimeManifestBuilder().Build(runtimeRoot, "YokiFrameTool", "win-x64", "Workbench.exe");
+        try
+        {
+            var manifest = new RuntimeManifestBuilder().Build(runtimeRoot, "YokiFrameTool", "win-x64", "Workbench.exe");
 
-        var platform = Assert.Single(manifest.Platforms);
-        Assert.Single(platform.Files);
-        Assert.Equal("win-x64/Workbench.exe", platform.Files[0].RelativePath);
+            var platform = Assert.Single(manifest.Platforms);
+            Assert.Single(platform.Files);
+            Assert.Equal("win-x64/Workbench.exe", platform.Files[0].RelativePath);
+        }
+        finally
+        {
+            if (Directory.Exists(projectRoot))
+            {
+                Directory.Delete(projectRoot, recursive: true);
+            }
+        }
     }
 }

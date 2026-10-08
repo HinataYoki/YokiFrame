@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -193,20 +192,14 @@ namespace YokiFrame.Tests
         {
             Bind bind = mBoundObject.GetComponent<Bind>();
             UnityInspectorEditor editor = UnityInspectorEditor.CreateEditor(bind);
+            var bindInspector = editor as UIKitBindInspector;
+            Assert.IsNotNull(bindInspector);
             try
             {
                 VisualElement root = editor.CreateInspectorGUI();
                 AssertButton(root, "+ 添加组件");
                 Assert.IsNull(FindToggle(root, nameof(RectTransform)));
-                MethodInfo selectMember = editor.GetType().GetMethod(
-                    "SetMemberSelected",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.IsNotNull(selectMember);
-                selectMember.Invoke(editor, new object[]
-                {
-                    mBoundObject.GetComponent<RectTransform>(),
-                    true,
-                });
+                bindInspector.SetMemberSelected(mBoundObject.GetComponent<RectTransform>(), true);
 
                 SerializedObject serializedBind = new(bind);
                 Assert.AreEqual(2, serializedBind.FindProperty("mMemberTargets").arraySize);
@@ -217,11 +210,7 @@ namespace YokiFrame.Tests
                 Assert.AreEqual("ConfirmButtonRectTransform", bind.MemberTargets[1].Name);
                 Assert.IsNotNull(FindSelectionLabel(root, nameof(RectTransform)));
 
-                selectMember.Invoke(editor, new object[]
-                {
-                    mBoundObject.GetComponent<UnityButton>(),
-                    false,
-                });
+                bindInspector.SetMemberSelected(mBoundObject.GetComponent<UnityButton>(), false);
                 Assert.AreEqual(0, bind.MemberTargets.Count);
                 Assert.AreSame(mBoundObject.GetComponent<RectTransform>(), bind.Target);
                 Assert.AreEqual("ConfirmButtonRectTransform", bind.Name);
@@ -249,21 +238,17 @@ namespace YokiFrame.Tests
                 Name = "ConfirmButtonRectTransform",
             });
             UnityInspectorEditor editor = UnityInspectorEditor.CreateEditor(bind);
+            var bindInspector = editor as UIKitBindInspector;
+            Assert.IsNotNull(bindInspector);
             try
             {
                 VisualElement root = editor.CreateInspectorGUI();
                 Assert.AreEqual("ConfirmButton", bind.MemberTargets[0].Name);
                 TextField before = FindTextField(root, "ConfirmButtonRectTransform");
                 Assert.IsNotNull(before);
-                MethodInfo writeName = editor.GetType().GetMethod(
-                    "WriteMemberName",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.IsNotNull(writeName);
-                writeName.Invoke(editor, new object[]
-                {
+                bindInspector.WriteMemberName(
                     mBoundObject.GetComponent<RectTransform>(),
-                    "ConfirmButtonRect",
-                });
+                    "ConfirmButtonRect");
                 Assert.AreSame(before, FindTextField(root, "ConfirmButtonRectTransform"));
                 Assert.AreEqual("ConfirmButtonRect", bind.MemberTargets[1].Name);
             }

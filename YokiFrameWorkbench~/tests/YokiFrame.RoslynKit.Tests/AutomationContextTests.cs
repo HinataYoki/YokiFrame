@@ -1,3 +1,4 @@
+using System.Text;
 using YokiFrame;
 
 namespace YokiFrame.RoslynKit.Tests;
@@ -120,7 +121,7 @@ public sealed class AutomationContextTests
         Assert.EndsWith("repeat-001.png", next);
         File.WriteAllText(next, "other");
         Assert.EndsWith("repeat-002.png", AutomationPaths.EvidencePng(bed.Root, relative, true));
-        Assert.Equal("previous", File.ReadAllText(first));
+        Assert.Equal(Encoding.UTF8.GetBytes("previous"), File.ReadAllBytes(first));
         Assert.Throws<IOException>(() => AutomationPaths.EvidencePng(bed.Root, "../outside.png", true));
     }
 

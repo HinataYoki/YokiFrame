@@ -7,7 +7,7 @@ namespace YokiFrame
     {
         /// <summary>验证完整扫描且零 Error 时可以形成 Ready 的零错误证据。</summary>
         [Test]
-        public void InspectCompleteScanCanProveZeroErrors()
+        public void Inspect_完整扫描且没有错误_状态为Ready()
         {
             var result = Inspect(
                 10,
@@ -29,7 +29,7 @@ namespace YokiFrame
 
         /// <summary>验证扫描会统计全部 Error，但只返回最后的固定数量明细。</summary>
         [Test]
-        public void InspectRetainsLastBoundedErrorDetails()
+        public void Inspect_错误数量超过上限_只保留最后的明细()
         {
             var result = Inspect(
                 2,
@@ -54,7 +54,7 @@ namespace YokiFrame
 
         /// <summary>验证 Console 超过扫描上限时，即使窗口内零 Error 也不能宣称全局通过。</summary>
         [Test]
-        public void InspectPartialScanCannotProveGlobalZeroErrors()
+        public void Inspect_扫描不完整且窗口内无错误_状态为Partial()
         {
             var result = Inspect(
                 10,

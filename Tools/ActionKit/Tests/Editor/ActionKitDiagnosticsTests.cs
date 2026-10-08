@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Text;
 using NUnit.Framework;
+using YokiFrame.Json;
 
 namespace YokiFrame.Tests
 {
@@ -26,23 +27,29 @@ namespace YokiFrame.Tests
             ActionStackTraceService.Enabled = false;
         }
 
-        /// <summary>验证极端转义文本下 state 仍严格落在 Shared Memory 64 KiB 边界内。</summary>
+        /// <summary>验证节点超限时先裁剪节点，仍保留调试文本，并且 payload 不超过共享内存上限。</summary>
         [Test]
-        public void WorkbenchSnapshotNeverExceedsSharedMemoryBudget()
+        public void WriteWorkbench_节点超限_保留调试文本且不超过共享内存()
         {
             ISequence sequence = ActionKit.Sequence();
             for (var index = 0; index < 256; index++)
+            {
                 sequence.Append(new LongDebugAction());
+            }
+
             sequence.Start();
 
             string json = ActionKitSnapshotWriter.WriteWorkbench();
-            int payloadBytes = Encoding.UTF8.GetByteCount(json);
-
             Assert.LessOrEqual(
-                payloadBytes,
+                Encoding.UTF8.GetByteCount(json),
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
-            StringAssert.Contains("\"nodesTruncated\":true", json);
-            StringAssert.Contains("\\u0001", json, "分级降载应先缩减节点预算，而不是直接丢弃全部诊断文本。");
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                Assert.IsTrue(document.RootElement.GetProperty("nodesTruncated").GetBoolean());
+                Assert.IsTrue(
+                    ContainsDebugCharacter(document.RootElement, '\u0001'),
+                    "分级降载应先缩减节点预算，而不是直接丢弃全部诊断文本。");
+            }
         }
 
         /// <summary>验证同一诊断版本的重复读取复用 Editor 快照，避免命令与 Telemetry 重复序列化。</summary>
@@ -75,7 +82,10 @@ namespace YokiFrame.Tests
 
             string json = ActionKitSnapshotWriter.WriteWorkbench();
 
-            StringAssert.Contains("\"depthTruncated\":true", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                Assert.IsTrue(document.RootElement.GetProperty("depthTruncated").GetBoolean());
+            }
         }
 
         /// <summary>验证未自行分配 ID 的 ActionBase 子节点在首次启动时获得唯一非零 ID。</summary>
@@ -134,7 +144,10 @@ namespace YokiFrame.Tests
             YokiFrameKitInteractionRegistry registry = YokiFrameCoreKitInteractions.CreateDefault();
 
             Assert.IsTrue(registry.TryCreateSnapshot("ActionKit", "state", out string json));
-            StringAssert.Contains("\"schemaVersion\":1", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                Assert.AreEqual(1, ReadInt(document.RootElement, "schemaVersion"));
+            }
             Assert.AreEqual(4, CountActionKitCommands(registry.GetCommandDescriptors()));
         }
 
@@ -148,7 +161,10 @@ namespace YokiFrame.Tests
 
             Assert.IsTrue(result.IsSuccess);
             Assert.IsTrue(ActionStackTraceService.Enabled);
-            StringAssert.Contains("\"stackTraceEnabled\":true", result.ResultJson);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                Assert.IsTrue(document.RootElement.GetProperty("stats").GetProperty("stackTraceEnabled").GetBoolean());
+            }
         }
 
         /// <summary>验证缺失、字符串、重复、额外和嵌套字段都不能绕过唯一 bool 契约。</summary>
@@ -176,6 +192,18 @@ namespace YokiFrame.Tests
             for (var index = 0; index < commands.Length; index++)
                 if (commands[index].Kit == "ActionKit") count++;
             return count;
+        }
+
+        /// <summary>
+        /// 读取必需整数属性。
+        /// </summary>
+        /// <param name="owner">所属对象。</param>
+        /// <param name="propertyName">属性名。</param>
+        /// <returns>整数值。</returns>
+        private static int ReadInt(JsonElement owner, string propertyName)
+        {
+            Assert.IsTrue(owner.GetProperty(propertyName).TryGetInt32(out int value), propertyName);
+            return value;
         }
 
         /// <summary>创建携带真实 UTF-8 payload 字节数的 ActionKit 测试请求。</summary>
@@ -215,6 +243,65 @@ namespace YokiFrame.Tests
             return root;
         }
 
+        /// <summary>
+        /// 在已解析的 roots 与 children 中查找仍保留指定字符的 debugInfo。
+        /// </summary>
+        /// <param name="element">state 根或动作节点。</param>
+        /// <param name="character">应被保留的诊断字符。</param>
+        /// <returns>任一 debugInfo 包含该字符时返回 true。</returns>
+        private static bool ContainsDebugCharacter(JsonElement element, char character)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            JsonElement debugInfo;
+            if (element.TryGetProperty("debugInfo", out debugInfo)
+                && debugInfo.ValueKind == JsonValueKind.String)
+            {
+                string debugText = debugInfo.GetString();
+                if (debugText != null && debugText.IndexOf(character) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            if (ContainsDebugCharacterInArray(element, "roots", character)
+                || ContainsDebugCharacterInArray(element, "children", character))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 检查对象上的数组属性，任一元素保留诊断字符即成立。
+        /// </summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">数组属性名。</param>
+        /// <param name="character">应被保留的诊断字符。</param>
+        /// <returns>数组中存在匹配节点时返回 true。</returns>
+        private static bool ContainsDebugCharacterInArray(JsonElement element, string propertyName, char character)
+        {
+            JsonElement items;
+            if (!element.TryGetProperty(propertyName, out items) || items.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            int length = items.GetArrayLength();
+            for (int index = 0; index < length; index++)
+            {
+                if (ContainsDebugCharacter(items[index], character))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         /// <summary>提供极端转义诊断文本且保持运行的自定义子 Action。</summary>
         private sealed class LongDebugAction : ActionBase
         {

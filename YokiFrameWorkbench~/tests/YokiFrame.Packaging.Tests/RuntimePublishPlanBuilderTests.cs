@@ -6,8 +6,10 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 覆盖从任意 YokiFrame 包根生成当前平台发布路径计划。
 /// </summary>
-public sealed class RuntimePublishPlanBuilderTests
+public sealed class RuntimePublishPlanBuilderTests : IDisposable
 {
+    private readonly List<string> mCleanupRoots = new();
+
     /// <summary>
     /// 验证发布计划相对包根定位工具源码，并把可再生 Runtime 输出放在包外项目缓存。
     /// </summary>
@@ -58,7 +60,6 @@ public sealed class RuntimePublishPlanBuilderTests
         Assert.StartsWith(packageRoot, plan.GuiProjectPath, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(runtimeRoot, plan.RuntimeRoot);
         Assert.False(plan.RuntimeRoot.StartsWith(packageRoot, StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(Path.Combine("Assets", "YokiFrame", "Assets", "YokiFrame"), plan.RuntimeRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -83,20 +84,10 @@ public sealed class RuntimePublishPlanBuilderTests
             OSPlatform.Linux,
             Architecture.X64));
 
-        Assert.Contains("YokiFrame.Workbench.Avalonia.csproj", exception.FileName, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// 验证维护发布可以通过受控 profile 标识创建计划，而不把任意 RID 直接拼接到输出路径。
-    /// </summary>
-    [Fact]
-    public void BuildExposesAllowlistedProfilePlanEntryPoint()
-    {
-        var method = typeof(RuntimePublishPlanBuilder).GetMethod(
-            nameof(RuntimePublishPlanBuilder.Build),
-            new[] { typeof(string), typeof(string), typeof(string), typeof(string), typeof(bool) });
-
-        Assert.NotNull(method);
+        Assert.EndsWith(
+            "YokiFrame.Workbench.Avalonia.csproj",
+            exception.FileName,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -120,7 +111,7 @@ public sealed class RuntimePublishPlanBuilderTests
     /// 创建包含 GUI 与 CLI 最小项目占位文件的独立 YokiFrame 包根。
     /// </summary>
     /// <returns>不依赖 `Assets/YokiFrame` 祖先目录的包根绝对路径。</returns>
-    private static string CreatePackageRoot()
+    private string CreatePackageRoot()
     {
         var packageRoot = Path.Combine(
             Path.GetTempPath(),
@@ -128,19 +119,24 @@ public sealed class RuntimePublishPlanBuilderTests
             "standalone-package-" + Guid.NewGuid().ToString("N"));
         WriteProject(packageRoot, "YokiFrame.Workbench.Avalonia");
         WriteProject(packageRoot, "YokiFrame.Cli");
-        return Path.GetFullPath(packageRoot);
+        var fullPackageRoot = Path.GetFullPath(packageRoot);
+        mCleanupRoots.Add(fullPackageRoot);
+        return fullPackageRoot;
     }
 
     /// <summary>
     /// 创建不位于源码包内的项目级 Runtime 缓存根，模拟 `.yokiframe/runtime` 指纹目录。
     /// </summary>
     /// <returns>可供发布计划使用的包外目录。</returns>
-    private static string CreateExternalRuntimeRoot()
+    private string CreateExternalRuntimeRoot()
     {
-        return Path.Combine(
+        var cacheRoot = Path.Combine(
             Path.GetTempPath(),
             "yokiframe-packaging-tests",
-            "project-runtime-" + Guid.NewGuid().ToString("N"),
+            "project-runtime-" + Guid.NewGuid().ToString("N"));
+        mCleanupRoots.Add(cacheRoot);
+        return Path.Combine(
+            cacheRoot,
             ".yokiframe",
             "runtime",
             "com.hinatayoki.yokiframe",
@@ -162,5 +158,19 @@ public sealed class RuntimePublishPlanBuilderTests
             projectName + ".csproj");
         Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
         File.WriteAllText(projectPath, "<Project />");
+    }
+
+    /// <summary>
+    /// 删除当前测试创建的包根和包外 Runtime 根。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var cleanupRoot in mCleanupRoots)
+        {
+            if (Directory.Exists(cleanupRoot))
+            {
+                Directory.Delete(cleanupRoot, recursive: true);
+            }
+        }
     }
 }

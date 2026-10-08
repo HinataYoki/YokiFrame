@@ -23,17 +23,36 @@ namespace YokiFrame
         // 声明顺序早于 sCommandDispatcher，保证 CreateCommandDispatcher 写入的策略缓存不会被后续字段初始化器覆盖。
         private static YokiFrameCommandPolicy sHostCommandPolicy;
         private static YokiFrameCommandDispatcher sCommandDispatcher = CreateCommandDispatcher();
+
+        /// <summary>
+        /// 获取当前 Editor pump 正在使用的命令分发器，供测试验证真实组合结果。
+        /// </summary>
+        internal static YokiFrameCommandDispatcher CommandDispatcherForTests => sCommandDispatcher;
         // 三宿主共享的 Kit 状态版本簿；按 Kit 回落语义由 tracker 承载。
         private static readonly YokiFrameKitStateVersionTracker sStateVersions = new YokiFrameKitStateVersionTracker();
         private static string sCommandProcessingError = string.Empty;
         private static string sSessionId = Guid.NewGuid().ToString("N");
         private static long sGeneration = DateTimeOffset.UtcNow.Ticks;
+
+        /// <summary>获取当前 Editor pump 会话标识，供测试核对已发布身份。</summary>
+        internal static string SessionIdForTests => sSessionId;
+
+        /// <summary>获取当前 Editor pump 代际，供测试核对已发布身份。</summary>
+        internal static long GenerationForTests => sGeneration;
         private static string sStartedAtUtc = DateTimeOffset.UtcNow.ToString("O");
 #if UNITY_EDITOR_WIN
         private static YokiFrameEditorNamedPipeFastChannelHost sFastChannelHost;
 #endif
         private static YokiFrameHostAdmissionLease sAdmissionLease;
         private static string sFastChannelStartError = string.Empty;
+
+        /// <summary>获取 FastChannel 最近一次启动错误，供测试判断 listener 是否实际就绪。</summary>
+        internal static string FastChannelStartErrorForTests => sFastChannelStartError;
+
+#if UNITY_EDITOR_WIN
+        /// <summary>获取当前 Windows Named Pipe listener。</summary>
+        internal static YokiFrameEditorNamedPipeFastChannelHost FastChannelHostForTests => sFastChannelHost;
+#endif
         private static YokiFrameFileBridgePumpSchedule sPumpSchedule;
         private static double sLastPumpTime;
         private static long sSequence;
@@ -99,7 +118,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="isAssetImportWorkerProcess">当前进程是否为 Unity 资源导入 worker。</param>
         /// <returns>当前进程可以注册 FileBridge 生命周期时返回 true。</returns>
-        private static bool ShouldOwnBridge(bool isAssetImportWorkerProcess)
+        internal static bool ShouldOwnBridge(bool isAssetImportWorkerProcess)
         {
             return !isAssetImportWorkerProcess;
         }
@@ -157,7 +176,7 @@ namespace YokiFrame
         /// 创建初始 Registry，并原子保存与其 Tool Provider 快照对应的版本。
         /// </summary>
         /// <returns>当前完整 Kit Interaction Registry。</returns>
-        private static YokiFrameKitInteractionRegistry CreateKitInteractions()
+        internal static YokiFrameKitInteractionRegistry CreateKitInteractions()
         {
             return CreateKitInteractions(out sToolProviderRevision);
         }

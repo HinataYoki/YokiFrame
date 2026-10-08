@@ -79,7 +79,7 @@ internal static class WorkbenchStartupTrace
     /// </summary>
     /// <param name="options">已完成路径归一化的工具启动选项。</param>
     /// <returns>当前模式可写且不会污染发布 Runtime 的诊断目录。</returns>
-    private static string ResolveTraceRoot(ToolStartupOptions options)
+    internal static string ResolveTraceRoot(ToolStartupOptions options)
     {
         if (options.Mode == ToolStartupMode.Workbench)
         {

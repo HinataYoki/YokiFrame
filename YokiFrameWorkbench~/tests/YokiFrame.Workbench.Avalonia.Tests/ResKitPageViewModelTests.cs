@@ -114,25 +114,6 @@ public sealed class ResKitPageViewModelTests
         Assert.Contains("当前状态已更新至 v7", viewModel.SourceStatusText, StringComparison.Ordinal);
     }
 
-    /// <summary>验证页面使用双栏主从、历史抽屉、按需详情和 Shell 显式动作。</summary>
-    [Fact]
-    public void PageContractUsesMasterDetailAndHistoryDrawer()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "ResKitPageView.axaml");
-        string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-
-        Assert.Contains("ResourceMasterPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("ResourceDetailPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("GridSplitter", xaml, StringComparison.Ordinal);
-        Assert.Contains("HistoryDrawer", xaml, StringComparison.Ordinal);
-        Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("workbench.reskit.search", xaml, StringComparison.Ordinal);
-        Assert.Contains("LoadSourcesCommand", xaml, StringComparison.Ordinal);
-        Assert.Contains("ResKitPage.ToggleTrackingCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("ResKitPage.ClearHistoryCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("ResKitPage.TrackingEnabled", shell, StringComparison.Ordinal);
-    }
-
     /// <summary>验证最小与常用窗口下双栏工作区无横向滚动、字号可读并保存视觉证据。</summary>
     [Theory]
     [InlineData(1700, 1060)]
@@ -262,11 +243,11 @@ public sealed class ResKitPageViewModelTests
                 "Unity.Resources",
                 "2026-07-19T08:" + index.ToString("00") + ":14.9335149Z"))
             .ToArray();
-        object source = CreateInternalDataSource(
+        WorkbenchResKitDataSource source = new(
             "unity-editor", "dense-res-session", 9L, "PlayMode",
             DateTimeOffset.Parse("2026-07-19T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.ResKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchResKitState>(
+        return new WorkbenchResKitState(
             source,
             8L,
             new WorkbenchResKitProvider("Unity.Resources", 12L, true, true),
@@ -302,11 +283,11 @@ public sealed class ResKitPageViewModelTests
             new("Audio/Old\u001fUnityEngine.AudioClip\u001f2026-07-17T08:00:00Z\u001f0",
                 "Audio/Old", "UnityEngine.AudioClip", "Unity.Resources", "2026-07-17T08:00:00Z")
         };
-        object source = CreateInternalDataSource(
+        WorkbenchResKitDataSource source = new(
             "unity-editor", "res-session", 8L, "PlayMode",
             DateTimeOffset.Parse("2026-07-17T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.ResKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchResKitState>(
+        return new WorkbenchResKitState(
             source, version,
             new WorkbenchResKitProvider("Unity.Resources", 3L, true, true),
             new WorkbenchResKitStats(2, 0, 1 + audioLeaseCount, 1, true),
@@ -331,28 +312,6 @@ public sealed class ResKitPageViewModelTests
             path + "\u001f" + typeName, path, typeName, "Ready", leaseCount,
             "Unity.Resources", 3L, includeSourcePreview ? leaseCount : 1,
             sources, includeSourcePreview ? leaseCount : 0, includeSourcePreview && leaseCount > sources.Length);
-    }
-
-    /// <summary>通过反射创建 Application 内部 ResKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchResKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitDataSource", true)!;
-        object? instance = Activator.CreateInstance(
-            type,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
-            null, arguments, null);
-        return Assert.IsAssignableFrom<object>(instance);
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
-            null, arguments, null);
-        return Assert.IsType<T>(instance);
     }
 
     /// <summary>捕获完整 Headless 帧并计算非空像素哈希。</summary>

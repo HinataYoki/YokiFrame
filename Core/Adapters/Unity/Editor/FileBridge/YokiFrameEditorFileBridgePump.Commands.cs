@@ -87,7 +87,7 @@ namespace YokiFrame
         /// <param name="envelope">已完成协议和 safe ID 校验的命令信封。</param>
         /// <param name="commandFileBytes">命令文件字节数，供 Runtime policy 复核文件大小边界。</param>
         /// <returns>Runtime 命令请求。</returns>
-        private static YokiFrameCommandRequest CreateCommandRequest(
+        internal static YokiFrameCommandRequest CreateCommandRequest(
             YokiFrameEditorCommandEnvelope envelope,
             long commandFileBytes)
         {
@@ -124,7 +124,7 @@ namespace YokiFrame
         /// <summary>
         /// 执行 Unity Editor 当前支持的 System 命令。
         /// </summary>
-        private sealed class EditorSystemCommandHandler : YokiFrameKitCommandHandler
+        internal sealed class EditorSystemCommandHandler : YokiFrameKitCommandHandler
         {
             /// <summary>Unity Editor System 命令面的唯一声明；宿主策略由此聚合，禁止另建清单。</summary>
             public static readonly YokiFrameCommandDescriptor[] SystemCommandDescriptors =

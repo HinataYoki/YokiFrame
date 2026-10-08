@@ -7,8 +7,24 @@ namespace YokiFrame.Installer.Core.Tests;
 /// <summary>
 /// 锁定 Installer 对受管包 owner manifest 与用户修改冲突的判定契约。
 /// </summary>
-public sealed class PackageOwnershipTests
+public sealed class PackageOwnershipTests : IDisposable
 {
+    private readonly List<string> mRoots = new();
+
+    /// <summary>
+    /// 删除本用例创建的临时包目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var root in mRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     /// <summary>
     /// 验证目标包目录不存在时明确返回未安装状态，避免把空目标误判为 legacy 或冲突。
     /// </summary>
@@ -148,22 +164,21 @@ public sealed class PackageOwnershipTests
         var manifest = store.Create(projection);
         store.Write(packageRoot, manifest);
         var manifestPath = store.GetManifestPath(packageRoot);
-        var firstJson = File.ReadAllText(manifestPath);
+        var firstBytes = File.ReadAllBytes(manifestPath);
 
-        AssertManifestContainsNoAbsolutePaths(firstJson);
+        AssertManifestContainsNoAbsolutePaths(firstBytes);
 
         var loadedManifest = store.Read(packageRoot);
         store.Write(packageRoot, loadedManifest);
-        var secondJson = File.ReadAllText(manifestPath);
 
-        Assert.Equal(firstJson, secondJson);
+        Assert.Equal(firstBytes, File.ReadAllBytes(manifestPath));
     }
 
     /// <summary>
     /// 创建包含缺失、内容变化与额外文件测试基线的确定性 Godot 包投影。
     /// </summary>
     /// <returns>带稳定 SHA-256 的投影。</returns>
-    private static PackageProjection CreateProjection()
+    private PackageProjection CreateProjection()
     {
         var sourceRoot = CreateTempRoot("source");
         WriteFile(sourceRoot, "Core/Runtime/YokiFrame.cs", "original");
@@ -200,8 +215,8 @@ public sealed class PackageOwnershipTests
     /// <summary>
     /// 解析 manifest JSON 的全部字符串值，确保没有开发机源路径或其它绝对路径泄漏。
     /// </summary>
-    /// <param name="json">待检查的 manifest JSON。</param>
-    private static void AssertManifestContainsNoAbsolutePaths(string json)
+    /// <param name="json">待检查的 manifest 字节。</param>
+    private static void AssertManifestContainsNoAbsolutePaths(byte[] json)
     {
         using var document = JsonDocument.Parse(json);
         List<string> stringValues = new();
@@ -273,10 +288,11 @@ public sealed class PackageOwnershipTests
     /// </summary>
     /// <param name="prefix">便于诊断的目录前缀。</param>
     /// <returns>新建的临时目录。</returns>
-    private static string CreateTempRoot(string prefix)
+    private string CreateTempRoot(string prefix)
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-owner-tests", prefix + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        mRoots.Add(root);
         return root;
     }
 }

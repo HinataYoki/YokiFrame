@@ -29,9 +29,9 @@ namespace YokiFrame.Unity.Tests
                 Object.DestroyImmediate(mHolder);
         }
 
-        /// <summary>Drawer 应包含四张通用卡片、滑块开关、嵌套折叠和字符串列表。</summary>
+        /// <summary>验证默认视觉树组合通用卡片、只读字符串列表、开关和折叠，且不使用 Toggle。</summary>
         [Test]
-        public void DrawerUsesInspectorKitCardsAndStringList()
+        public void CreatePropertyGUI_默认选项_组合卡片只读列表开关和折叠()
         {
             SerializedObject serializedObject = new(mHolder);
             SerializedProperty property = serializedObject.FindProperty(
@@ -64,51 +64,51 @@ namespace YokiFrame.Unity.Tests
             Assert.That(root.Query<Toggle>().ToList(), Is.Empty);
         }
 
-        /// <summary>编辑器和 Player 都是本地模式时隐藏联网策略与启动下载参数。</summary>
+        /// <summary>验证编辑器和 Player 都是本地模式时隐藏联网策略与启动下载参数。</summary>
         [Test]
-        public void DrawerHidesNetworkSettingsWhenBothModesAreLocal()
+        public void CreatePropertyGUI_编辑器与Player都本地_隐藏联网设置()
         {
             mHolder.Options.EditorPlayMode = EPlayMode.EditorSimulateMode;
             mHolder.Options.RuntimePlayMode = EPlayMode.OfflinePlayMode;
 
             VisualElement root = CreateOptionsRoot();
 
-            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.False);
-            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
-            Assert.That(ContainsLabel(root, "版本请求附加时间戳"), Is.False);
+            Assert.That(HasExactLabel(root, "联网初始化策略"), Is.False);
+            Assert.That(HasExactLabel(root, "启动下载并发数"), Is.False);
+            Assert.That(HasExactLabel(root, "版本请求附加时间戳"), Is.False);
         }
 
-        /// <summary>编辑器进入 Host 模式时，即使 Player 保持离线也显示联网配置。</summary>
+        /// <summary>验证编辑器进入 Host 模式时，即使 Player 保持离线也显示联网配置和下载并发。</summary>
         [Test]
-        public void DrawerShowsNetworkSettingsWhenEditorUsesRemoteMode()
+        public void CreatePropertyGUI_编辑器Host且Player离线_显示联网和下载并发()
         {
             mHolder.Options.EditorPlayMode = EPlayMode.HostPlayMode;
             mHolder.Options.RuntimePlayMode = EPlayMode.OfflinePlayMode;
 
             VisualElement root = CreateOptionsRoot();
 
-            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.True);
-            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.True);
+            Assert.That(HasExactLabel(root, "联网初始化策略"), Is.True);
+            Assert.That(HasExactLabel(root, "启动下载并发数"), Is.True);
         }
 
-        /// <summary>Player 进入 Web 模式时，即使编辑器保持模拟也显示联网配置。</summary>
+        /// <summary>验证 Player 进入 Web 模式时显示联网配置，但不显示 Host 启动下载并发。</summary>
         [Test]
-        public void DrawerShowsNetworkSettingsWhenPlayerUsesRemoteMode()
+        public void CreatePropertyGUI_Player为Web且编辑器模拟_显示联网但隐藏下载并发()
         {
             mHolder.Options.EditorPlayMode = EPlayMode.EditorSimulateMode;
             mHolder.Options.RuntimePlayMode = EPlayMode.WebPlayMode;
 
             VisualElement root = CreateOptionsRoot();
 
-            Assert.That(ContainsLabel(root, "联网初始化策略"), Is.True);
-            Assert.That(ContainsLabel(root, "清单超时秒数"), Is.True);
-            Assert.That(ContainsLabel(root, "版本请求附加时间戳"), Is.True);
-            Assert.That(ContainsLabel(root, "启动下载并发数"), Is.False);
+            Assert.That(HasExactLabel(root, "联网初始化策略"), Is.True);
+            Assert.That(HasExactLabel(root, "清单超时秒数"), Is.True);
+            Assert.That(HasExactLabel(root, "版本请求附加时间戳"), Is.True);
+            Assert.That(HasExactLabel(root, "启动下载并发数"), Is.False);
         }
 
-        /// <summary>联网策略下拉框选择四种枚举值时都显示对应的说明标题。</summary>
+        /// <summary>验证四种联网策略各自显示对应的说明标题。</summary>
         [Test]
-        public void DrawerShowsStrategyExplanationForEachValue()
+        public void CreatePropertyGUI_四种联网策略_显示对应说明()
         {
             mHolder.Options.EditorPlayMode = EPlayMode.HostPlayMode;
             YooAssetInitializationStrategy[] strategies =
@@ -130,13 +130,13 @@ namespace YokiFrame.Unity.Tests
             {
                 mHolder.Options.InitializationStrategy = strategies[index];
                 VisualElement root = CreateOptionsRoot();
-                Assert.That(ContainsLabel(root, titles[index]), Is.True);
+                Assert.That(HasExactLabel(root, titles[index]), Is.True);
             }
         }
 
-        /// <summary>Drawer 创建时应以 YooAsset 收集器为唯一 package 数据源。</summary>
+        /// <summary>验证创建视觉树时把手写包名替换为 YooAsset 收集器中的包名。</summary>
         [Test]
-        public void DrawerSynchronizesPackagesFromCollector()
+        public void CreatePropertyGUI_已有手动包名_同步为收集器包名()
         {
             mHolder.Options.PackageNames = new List<string> { "ManualPackage" };
             SerializedObject serializedObject = new(mHolder);
@@ -148,9 +148,9 @@ namespace YokiFrame.Unity.Tests
             CollectionAssert.AreEqual(GetExpectedCollectorPackages(), mHolder.Options.PackageNames);
         }
 
-        /// <summary>打包卡片只在扫描到成对实现后显示构建加密和运行时解密类型。</summary>
+        /// <summary>验证扫描到成对实现后显示构建加密、运行时解密和构建按钮。</summary>
         [Test]
-        public void DrawerShowsOnlyScannedEncryptionImplementationPairs()
+        public void CreatePropertyGUI_已有成对实现_显示加解密类型和构建按钮()
         {
             mHolder.Options.EncryptionMode = YooAssetEncryptionMode.XorStream;
             SerializedObject serializedObject = new(mHolder);
@@ -159,15 +159,15 @@ namespace YokiFrame.Unity.Tests
 
             VisualElement root = new YooAssetInitializationOptionsDrawer().CreatePropertyGUI(property);
 
-            Assert.That(ContainsLabel(root, "构建加密实现"), Is.True);
-            Assert.That(ContainsLabel(root, "运行时解密实现"), Is.True);
-            Assert.That(ContainsLabel(root, "加密服务"), Is.False);
-            Assert.That(ContainsButton(root, "按当前方案构建"), Is.True);
+            Assert.That(HasExactLabel(root, "构建加密实现"), Is.True);
+            Assert.That(HasExactLabel(root, "运行时解密实现"), Is.True);
+            Assert.That(HasExactLabel(root, "加密服务"), Is.False);
+            Assert.That(HasExactButton(root, "按当前方案构建"), Is.True);
         }
 
-        /// <summary>扫描目录只接受同一方案中同时存在的构建加密和运行时解密实现。</summary>
+        /// <summary>验证空集或只有加密侧时不收录，且内置 XOR 以完整对出现。</summary>
         [Test]
-        public void EncryptionCatalogRequiresCompleteImplementationPair()
+        public void CollectPairs_缺侧或内置XOR_只保留完整对()
         {
             List<YooAssetEncryptionImplementationPair> empty =
                 YooAssetEncryptionImplementationCatalog.CollectPairs(new System.Type[0]);
@@ -213,8 +213,11 @@ namespace YokiFrame.Unity.Tests
             return names;
         }
 
-        /// <summary>检查视觉树是否包含指定文本的标签。</summary>
-        private static bool ContainsLabel(VisualElement root, string text)
+        /// <summary>按完整文本精确匹配用户可见标签，不使用子串包含。</summary>
+        /// <param name="root">待检查的视觉树。</param>
+        /// <param name="text">期望的完整标签文本。</param>
+        /// <returns>存在完全相同的标签时返回 true。</returns>
+        private static bool HasExactLabel(VisualElement root, string text)
         {
             List<Label> labels = root.Query<Label>().ToList();
             for (int index = 0; index < labels.Count; index++)
@@ -226,8 +229,11 @@ namespace YokiFrame.Unity.Tests
             return false;
         }
 
-        /// <summary>检查视觉树是否包含指定文本的按钮。</summary>
-        private static bool ContainsButton(VisualElement root, string text)
+        /// <summary>按完整文本精确匹配用户可见按钮，不使用子串包含。</summary>
+        /// <param name="root">待检查的视觉树。</param>
+        /// <param name="text">期望的完整按钮文本。</param>
+        /// <returns>存在完全相同的按钮时返回 true。</returns>
+        private static bool HasExactButton(VisualElement root, string text)
         {
             List<Button> buttons = root.Query<Button>().ToList();
             for (int index = 0; index < buttons.Count; index++)

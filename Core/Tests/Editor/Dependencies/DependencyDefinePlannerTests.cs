@@ -2,7 +2,6 @@
 
 using System;
 using System.IO;
-using System.Reflection;
 using NUnit.Framework;
 using YokiFrame.Unity;
 
@@ -17,7 +16,7 @@ namespace YokiFrame.Tests
         /// 验证 planner 保留非受管宏、移除未检测依赖与废弃 FMOD 宏，并输出稳定去重排序。
         /// </summary>
         [Test]
-        public void PlannerPreservesExternalSymbolsAndProducesStableManagedSet()
+        public void CreatePlan_混有外部和废弃宏_保留外部宏并稳定排序()
         {
             var snapshot = new DependencyInventorySnapshot(
                 new[] { "com.tuyoogame.yooasset" },
@@ -57,7 +56,7 @@ namespace YokiFrame.Tests
         /// 验证七组固定依赖分别可由 package、真实 asmdef name 或预编译 DLL 文件名命中。
         /// </summary>
         [Test]
-        public void PlannerDetectsExactlySevenSupportedDependencyDefinesFromSnapshotEvidence()
+        public void CreatePlan_七组依赖证据_只生成对应支持宏()
         {
             AssertSingleDefine(new[] { "com.cysharp.unitask" }, null, null, "YOKIFRAME_UNITASK_SUPPORT");
             AssertSingleDefine(null, new[] { "YooAsset" }, null, "YOKIFRAME_YOOASSET_SUPPORT");
@@ -73,7 +72,7 @@ namespace YokiFrame.Tests
         /// 验证幂等刷新只采集一次 inventory，且目标宏未变化时不调用写入端。
         /// </summary>
         [Test]
-        public void CoordinatorCollectsOnceAndSkipsIdempotentWrite()
+        public void Refresh_目标宏未变化_只采集一次且不写入()
         {
             var snapshot = new DependencyInventorySnapshot(
                 new[] { "com.cysharp.unitask" },
@@ -102,7 +101,7 @@ namespace YokiFrame.Tests
         /// 验证 inventory 采集异常会返回可诊断失败，且不读取或写入 PlayerSettings 宏。
         /// </summary>
         [Test]
-        public void CoordinatorDoesNotModifySymbolsWhenInventoryCollectionFails()
+        public void Refresh_库存采集失败_不读写宏并返回错误()
         {
             var readCount = 0;
             var writeCount = 0;
@@ -127,7 +126,7 @@ namespace YokiFrame.Tests
         /// 验证成功刷新会保留本轮 plan、inventory 和采集诊断，供 Unity Console 输出可审计的宏差异与证据。
         /// </summary>
         [Test]
-        public void CoordinatorRetainsPlanSnapshotAndInventoryDiagnostics()
+        public void Refresh_刷新成功_保留规划结果和采集诊断()
         {
             var snapshot = new DependencyInventorySnapshot(
                 new[] { "com.cysharp.unitask" },
@@ -140,61 +139,35 @@ namespace YokiFrame.Tests
 
             var result = coordinator.Refresh();
 
-            var resultType = result.GetType();
-            var planProperty = resultType.GetProperty("Plan", BindingFlags.Instance | BindingFlags.Public);
-            var snapshotProperty = resultType.GetProperty("Snapshot", BindingFlags.Instance | BindingFlags.Public);
-            var diagnosticsProperty = resultType.GetProperty(
-                "InventoryDiagnostics",
-                BindingFlags.Instance | BindingFlags.Public);
-
-            Assert.IsNotNull(planProperty, "刷新结果必须保留宏规划结果。");
-            Assert.IsNotNull(snapshotProperty, "刷新结果必须保留本轮 inventory 快照。");
-            Assert.IsNotNull(diagnosticsProperty, "刷新结果必须保留 inventory 诊断。");
-            Assert.AreSame(snapshot, snapshotProperty.GetValue(result));
-            Assert.IsTrue(((DependencyDefinePlan)planProperty.GetValue(result)).Changed);
-            CollectionAssert.IsEmpty((string[])diagnosticsProperty.GetValue(result));
+            Assert.IsNotNull(result.Plan, "刷新结果必须保留宏规划结果。");
+            Assert.AreSame(snapshot, result.Snapshot);
+            Assert.IsTrue(result.Plan.Changed);
+            CollectionAssert.IsEmpty(result.InventoryDiagnostics);
         }
 
         /// <summary>
         /// 验证单个无法读取的 asmdef 只返回带路径的诊断，不会向上抛出并中止其它依赖证据采集。
         /// </summary>
         [Test]
-        public void InventoryParserIsolatesUnreadableAssemblyDefinition()
+        public void TryReadAssemblyDefinitionName_文件不可读_只返回路径诊断()
         {
-            var method = typeof(UnityDependencyInventoryProvider).GetMethod(
-                "TryReadAssemblyDefinitionName",
-                BindingFlags.Static | BindingFlags.Public,
-                null,
-                new[]
-                {
-                    typeof(string),
-                    typeof(Func<string>),
-                    typeof(string).MakeByRefType(),
-                    typeof(string).MakeByRefType()
-                },
-                null);
-            Assert.IsNotNull(method, "缺少带路径和读取回调的 asmdef 容错解析入口。");
-            object[] arguments =
-            {
+            bool succeeded = UnityDependencyInventoryProvider.TryReadAssemblyDefinitionName(
                 "Assets/ThirdParty/Broken.asmdef",
-                (Func<string>)(() => throw new IOException("file is locked")),
-                null,
-                null
-            };
-
-            var succeeded = (bool)method.Invoke(null, arguments);
+                () => throw new IOException("file is locked"),
+                out string assemblyName,
+                out string diagnostic);
 
             Assert.IsFalse(succeeded);
-            Assert.AreEqual(string.Empty, arguments[2]);
-            StringAssert.Contains("Assets/ThirdParty/Broken.asmdef", (string)arguments[3]);
-            StringAssert.Contains("file is locked", (string)arguments[3]);
+            Assert.AreEqual(string.Empty, assemblyName);
+            StringAssert.Contains("Assets/ThirdParty/Broken.asmdef", diagnostic);
+            StringAssert.Contains("file is locked", diagnostic);
         }
 
         /// <summary>
         /// 验证真实 asmdef JSON 的 name 字段是检测事实，不依赖文件名猜测。
         /// </summary>
         [Test]
-        public void InventoryParserReadsAssemblyDefinitionNameFromJson()
+        public void TryReadAssemblyDefinitionName_包含name字段_读取程序集名()
         {
             Assert.IsTrue(UnityDependencyInventoryProvider.TryReadAssemblyDefinitionName(
                 "{\"name\":\"Company.Real.Assembly\"}",

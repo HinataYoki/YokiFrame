@@ -8,10 +8,10 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class GodotRuntimeBootstrapperTests
 {
     /// <summary>
-    /// 验证 bootstrap 通过 Packaging 项目传入 source、target 和打开新 Installer 开关。
+    /// 打开安装器时转发完整 Packaging bootstrap 命令，且参数列表包含打开开关。
     /// </summary>
     [Fact]
-    public void CreateStartInfoUsesPackagingBootstrapWithOpenInstaller()
+    public void 创建启动信息_打开安装器_转发完整命令且包含打开开关()
     {
         var sourcePackageRoot = Path.Combine(Path.GetTempPath(), "yokiframe source");
         var targetProjectRoot = Path.Combine(Path.GetTempPath(), "godot project");
@@ -51,10 +51,10 @@ public sealed class GodotRuntimeBootstrapperTests
     }
 
     /// <summary>
-    /// 验证自动安装流程可以只构建 Runtime，不额外启动第二个 Installer。
+    /// 不打开安装器时仍转发完整 Packaging bootstrap 命令，且参数列表不包含打开开关。
     /// </summary>
     [Fact]
-    public void CreateStartInfoCanBuildWithoutOpeningInstaller()
+    public void 创建启动信息_不打开安装器_保留完整命令且不含打开开关()
     {
         var sourcePackageRoot = Path.Combine(Path.GetTempPath(), "yokiframe source");
         var targetProjectRoot = Path.Combine(Path.GetTempPath(), "godot project");
@@ -71,6 +71,25 @@ public sealed class GodotRuntimeBootstrapperTests
             packagingProjectPath,
             openInstaller: false);
 
-        Assert.DoesNotContain("--open-installer", startInfo.ArgumentList);
+        Assert.Equal("dotnet", startInfo.FileName);
+        Assert.Equal(sourcePackageRoot, startInfo.WorkingDirectory);
+        Assert.False(startInfo.UseShellExecute);
+        Assert.Equal(
+            new[]
+            {
+                "run",
+                "--project",
+                packagingProjectPath,
+                "--",
+                "runtime",
+                "bootstrap",
+                "--package-root",
+                sourcePackageRoot,
+                "--project-root",
+                targetProjectRoot,
+                "--configuration",
+                "Release"
+            },
+            startInfo.ArgumentList.ToArray());
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -33,7 +34,7 @@ namespace YokiFrame
 
         /// <summary>验证 Provider 声明两个只读与两个显式用户操作命令。</summary>
         [Test]
-        public void ProviderDeclaresFixedCommandsAndRiskKinds()
+        public void CreateDefault_PoolKit_声明四个命令和风险()
         {
             IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
 
@@ -54,7 +55,7 @@ namespace YokiFrame
 
         /// <summary>验证 state 包含真实对象池、对象明细、事件和疑似未归还摘要。</summary>
         [Test]
-        public void StateSnapshotContainsPoolDetailsEventsAndLeaks()
+        public void CreateSnapshot_有活动对象_包含池事件和泄漏()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -62,18 +63,22 @@ namespace YokiFrame
 
             PoolToken token = pool.Allocate();
             string json = GetProvider().CreateSnapshot("state");
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual(1, ReadInt(root, "schemaVersion"));
+                Assert.AreEqual("PoolToken", root.GetProperty("pools")[0].GetProperty("name").GetString());
+                Assert.AreEqual(1, ReadInt(root.GetProperty("pools")[0], "activeCount"));
+                Assert.AreEqual("Spawn", root.GetProperty("events")[0].GetProperty("eventType").GetString());
+                Assert.AreEqual(1, root.GetProperty("leaks").GetProperty("suspectedLeaks").GetArrayLength());
+            }
 
-            StringAssert.StartsWith("{\"schemaVersion\":1", json);
-            StringAssert.Contains("\"name\":\"PoolToken\"", json);
-            StringAssert.Contains("\"activeCount\":1", json);
-            StringAssert.Contains("\"eventType\":\"Spawn\"", json);
-            StringAssert.Contains("\"suspectedLeaks\":[{", json);
             Assert.IsTrue(pool.Recycle(token));
         }
 
         /// <summary>验证定位开关自动启用依赖跟踪，并拒绝字段不完整 payload。</summary>
         [Test]
-        public void SetTrackingValidatesCompletePayloadAndEnforcesStackDependencies()
+        public void Handle_堆栈载荷不完整_拒绝且完整载荷打开依赖()
         {
             IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
 
@@ -92,7 +97,7 @@ namespace YokiFrame
 
         /// <summary>验证事件历史不能在关闭跟踪时形成看似开启但永不记录的无效组合。</summary>
         [Test]
-        public void SetTrackingDisablesDependentDiagnosticsWhenTrackingIsOff()
+        public void Handle_关闭跟踪却打开历史_历史被关闭()
         {
             IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
 
@@ -108,7 +113,7 @@ namespace YokiFrame
 
         /// <summary>验证极端长文本和大量池/对象仍不超过 Shared Memory 默认 payload 上限。</summary>
         [Test]
-        public void SnapshotBoundsPoolsObjectsEventsAndUtf8Payload()
+        public void CreateSnapshot_池超过预算_截断并守住载荷()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -120,9 +125,12 @@ namespace YokiFrame
             }
 
             string json = GetProvider().CreateSnapshot("state");
-
-            StringAssert.Contains("\"poolTotal\":30", json);
-            StringAssert.Contains("\"poolsTruncated\":true", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual(30, ReadInt(root, "poolTotal"));
+                Assert.IsTrue(root.GetProperty("poolsTruncated").GetBoolean());
+            }
             Assert.LessOrEqual(
                 Encoding.UTF8.GetByteCount(json),
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
@@ -130,7 +138,7 @@ namespace YokiFrame
 
         /// <summary>验证被池列表预算裁剪的活跃池仍会进入全量泄漏摘要并携带稳定池标识。</summary>
         [Test]
-        public void LeakSnapshotIncludesActivePoolOutsideVisiblePoolBudget()
+        public void CreateSnapshot_可见池被裁剪_泄漏摘要仍含活动池()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -143,25 +151,60 @@ namespace YokiFrame
             leakPool.Allocate();
 
             string json = GetProvider().CreateSnapshot("state");
-
-            StringAssert.Contains("\"poolsTruncated\":true", json);
-            StringAssert.Contains("\"leaks\":{\"suspectedLeaks\":[{\"poolId\":", json);
-            StringAssert.Contains("\"total\":1", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.IsTrue(root.GetProperty("poolsTruncated").GetBoolean());
+                JsonElement leaks = root.GetProperty("leaks").GetProperty("suspectedLeaks");
+                Assert.AreEqual(1, leaks.GetArrayLength());
+                Assert.IsFalse(string.IsNullOrEmpty(leaks[0].GetProperty("poolId").GetString()));
+                Assert.AreEqual(1, ReadInt(root.GetProperty("leaks"), "total"));
+            }
         }
 
         /// <summary>验证 capability descriptor 与 Provider 命令面一致。</summary>
         [Test]
-        public void CapabilityDescriptorMatchesProviderCatalog()
+        public void Capability_描述文件_与Provider命令一致()
         {
             string path = Path.Combine(
                 Application.dataPath,
                 "YokiFrame", "Core", "Editor", "PoolKit", "Capabilities", "capability.json");
-            string descriptor = File.ReadAllText(path);
+            IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
+            using (JsonDocument document = JsonDocument.Parse(File.ReadAllText(path)))
+            {
+                JsonElement commands = document.RootElement.GetProperty("kit").GetProperty("commands");
+                CollectionAssert.AreEquivalent(
+                    provider.Commands.Select(static command => command.Action).ToArray(),
+                    ReadActions(commands));
+            }
+        }
 
-            StringAssert.Contains("\"get_workbench_snapshot\"", descriptor);
-            StringAssert.Contains("\"check_leak\"", descriptor);
-            StringAssert.Contains("\"set_tracking\"", descriptor);
-            StringAssert.Contains("\"clear_history\"", descriptor);
+        /// <summary>
+        /// 读取 capability 命令 action，避免用子串把说明文本误判为命令。
+        /// </summary>
+        /// <param name="commands">命令数组。</param>
+        /// <returns>action 列表。</returns>
+        private static string[] ReadActions(JsonElement commands)
+        {
+            var actions = new string[commands.GetArrayLength()];
+            for (var index = 0; index < actions.Length; index++)
+            {
+                actions[index] = commands[index].GetProperty("action").GetString();
+            }
+
+            return actions;
+        }
+
+        /// <summary>
+        /// 读取必需整数属性，解析失败时给出字段名。
+        /// </summary>
+        /// <param name="owner">所属对象。</param>
+        /// <param name="propertyName">属性名。</param>
+        /// <returns>整数值。</returns>
+        private static int ReadInt(JsonElement owner, string propertyName)
+        {
+            Assert.IsTrue(owner.GetProperty(propertyName).TryGetInt32(out int value), propertyName);
+            return value;
         }
 
         /// <summary>从 Core 默认 Registry 获取唯一 PoolKit Provider。</summary>

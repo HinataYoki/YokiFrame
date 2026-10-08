@@ -45,15 +45,9 @@ public sealed partial class GodotFileBridgeHostTests
     /// <summary>
     /// 验证 Unix Domain Socket 只允许当前用户读写，避免同机其它用户连接本机控制面。
     /// </summary>
-    [Fact]
+    [UnixFact]
     public void StartRestrictsUnixSocketToCurrentUser()
     {
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        Assert.True(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS());
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
 
@@ -341,29 +335,24 @@ public sealed partial class GodotFileBridgeHostTests
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
         host.Start();
-        var registryBefore = File.ReadAllText(fixture.RegistryPath);
-        var snapshotPath = fixture.GetSnapshotPath("FsmKit");
-        var snapshotBefore = File.ReadAllText(snapshotPath);
-        var heartbeatBefore = File.ReadAllText(fixture.HeartbeatPath);
+        byte[] registryBefore = File.ReadAllBytes(fixture.RegistryPath);
+        string snapshotPath = fixture.GetSnapshotPath("FsmKit");
+        byte[] snapshotBefore = File.ReadAllBytes(snapshotPath);
+        byte[] heartbeatBefore = File.ReadAllBytes(fixture.HeartbeatPath);
 
         host.RefreshHeartbeat();
 
-        Assert.NotEqual(registryBefore, File.ReadAllText(fixture.RegistryPath));
-        Assert.Equal(snapshotBefore, File.ReadAllText(snapshotPath));
-        Assert.NotEqual(heartbeatBefore, File.ReadAllText(fixture.HeartbeatPath));
+        Assert.NotEqual(registryBefore, File.ReadAllBytes(fixture.RegistryPath));
+        Assert.Equal(snapshotBefore, File.ReadAllBytes(snapshotPath));
+        Assert.NotEqual(heartbeatBefore, File.ReadAllBytes(fixture.HeartbeatPath));
     }
 
     /// <summary>
     /// 验证 Windows Godot Runtime 在启动后为四个首批 Kit 发布与 FileBridge 状态一致的 committed telemetry 帧。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void StartPublishesCommittedTelemetryForAllStateKitsOnWindows()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
 
@@ -378,14 +367,9 @@ public sealed partial class GodotFileBridgeHostTests
     /// <summary>
     /// 验证刷新会保留当前 generation 并把 telemetry 帧更新到与 heartbeat/snapshot 相同的新 sequence。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void RefreshStateUpdatesCommittedTelemetrySequenceOnWindows()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
         host.Start();
@@ -403,14 +387,9 @@ public sealed partial class GodotFileBridgeHostTests
     /// <summary>
     /// 验证 Windows Host 停止时释放所有 telemetry map，避免新会话误读退出前的帧。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void StopReleasesTelemetrySegmentsOnWindows()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
         host.Start();
@@ -515,14 +494,9 @@ public sealed partial class GodotFileBridgeHostTests
     /// <summary>
     /// 验证活动 registry 清理因外部文件句柄失败时，Stop 仍释放 admission lease，避免后续 Host 被永久判定为已占用。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void StopReleasesAdmissionLeaseWhenActiveStateCleanupFails()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         using GodotFileBridgeHost host = new(fixture.ProjectRoot, "4.7.0");
         host.Start();
@@ -545,14 +519,9 @@ public sealed partial class GodotFileBridgeHostTests
     /// <summary>
     /// 验证启动阶段 registry 写入失败时，Start 回滚也会释放已经取得的 admission lease。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void StartFailureReleasesAdmissionLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();
         Directory.CreateDirectory(Path.GetDirectoryName(fixture.RegistryPath)!);
         File.WriteAllText(fixture.RegistryPath, "{\"sessionId\":\"old\",\"generation\":1}");

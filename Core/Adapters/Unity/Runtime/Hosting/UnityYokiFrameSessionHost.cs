@@ -16,6 +16,14 @@ namespace YokiFrame.Unity
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         private static void BeginSession()
         {
+            BeginSessionForTests();
+        }
+
+        /// <summary>
+        /// 执行与程序集加载后相同的会话换代，供测试验证宿主入口没有旁路重置。
+        /// </summary>
+        internal static void BeginSessionForTests()
+        {
             YokiFrameSession.Begin();
         }
     }

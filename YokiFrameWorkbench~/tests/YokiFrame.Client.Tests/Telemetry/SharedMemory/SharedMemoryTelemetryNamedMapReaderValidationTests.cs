@@ -17,7 +17,7 @@ public sealed class SharedMemoryTelemetryNamedMapReaderValidationTests
     /// <summary>验证错误身份、协议和 payload 上限均在进入 payload 读取前被拒绝，同时保留准确状态。</summary>
     /// <param name="headerKind">待构造的错误 header 类型。</param>
     /// <param name="expectedStatus">统一 frame reader 应返回的诊断状态。</param>
-    [Theory]
+    [WindowsTheory]
     [InlineData(HeaderKind.InvalidMagic, SharedMemoryTelemetryFrameStatus.InvalidMagic)]
     [InlineData(HeaderKind.UnsupportedVersion, SharedMemoryTelemetryFrameStatus.UnsupportedVersion)]
     [InlineData(HeaderKind.WrongEngine, SharedMemoryTelemetryFrameStatus.EngineIdHashMismatch)]
@@ -27,11 +27,6 @@ public sealed class SharedMemoryTelemetryNamedMapReaderValidationTests
         HeaderKind headerKind,
         SharedMemoryTelemetryFrameStatus expectedStatus)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrame(headerKind, false, out var payloadReadAttemptCount);
 
         Assert.NotNull(result);
@@ -40,14 +35,9 @@ public sealed class SharedMemoryTelemetryNamedMapReaderValidationTests
     }
 
     /// <summary>验证测试探针只在合法 header 确实进入 payload 复制路径时记录一次。</summary>
-    [Fact]
+    [WindowsFact]
     public void AcceptedHeaderEntersPayloadReaderOnce()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrame(HeaderKind.Valid, false, out var payloadReadAttemptCount);
 
         Assert.NotNull(result);
@@ -56,14 +46,9 @@ public sealed class SharedMemoryTelemetryNamedMapReaderValidationTests
     }
 
     /// <summary>验证合法 header 仍复制 payload 并执行 CRC 校验，没有被前置校验错误短路。</summary>
-    [Fact]
+    [WindowsFact]
     public void CrcMismatchStillReadsPayloadOnce()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrame(HeaderKind.Valid, true, out var payloadReadAttemptCount);
 
         Assert.NotNull(result);

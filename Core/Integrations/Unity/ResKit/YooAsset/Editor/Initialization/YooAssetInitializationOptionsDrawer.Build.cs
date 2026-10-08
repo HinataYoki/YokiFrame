@@ -17,7 +17,7 @@ namespace YokiFrame.Unity
         private static readonly List<string> sCompressNames = new(
             Enum.GetNames(typeof(ECompressOption)));
 
-        private static readonly List<string> sCopyOptionNames = new()
+        internal static readonly List<string> sCopyOptionNames = new()
         {
             "不拷贝",
             "清空后拷贝全部",

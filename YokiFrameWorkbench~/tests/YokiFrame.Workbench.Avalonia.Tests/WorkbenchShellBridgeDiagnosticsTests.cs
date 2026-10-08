@@ -1,3 +1,5 @@
+using Avalonia.Threading;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Client.FileBridge.Diagnostics;
 using YokiFrame.Protocol.FileBridge;
 using YokiFrame.Workbench.Avalonia.ViewModels;
@@ -14,17 +16,28 @@ public sealed class WorkbenchShellBridgeDiagnosticsTests
     /// 验证 Workbench 引擎诊断卡片压缩为首屏可扫读的关键 FileBridge 字段。
     /// </summary>
     [Fact]
-    public void WorkbenchShellViewModelProjectsBridgeDiagnosticsIntoEngineCards()
+    public void UpdateDashboard_诊断桥接_引擎卡固定四张()
     {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-        var status = CreateDiagnosticBridgeStatus();
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        WorkbenchShellViewModel? viewModel = null;
+        try
+        {
+            viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+            viewModel.UpdateDashboard(CreateDashboardState(CreateDiagnosticBridgeStatus()));
 
-        viewModel.UpdateDashboard(CreateDashboardState(status));
-
-        Assert.InRange(viewModel.EngineCards.Count, 1, 4);
-        AssertMetricCard(viewModel.SummaryCards, "队列", "2 / 1", "results 4 / deadletter 3");
-        AssertMetricCard(viewModel.EngineCards, "事件", "JSONL", "protocol 12 files / 4096 bytes");
-        AssertMetricCard(viewModel.EngineCards, "背压", "Active", "BridgeBusy 5");
+            Assert.Equal(4, viewModel.EngineCards.Count);
+            AssertMetricCard(viewModel.EngineCards, "心跳", "新鲜", "gen 7 \u00b7 seq 3 \u00b7 age 1s");
+            AssertMetricCard(viewModel.EngineCards, "命令", "commands", "engine-scoped");
+            AssertMetricCard(viewModel.SummaryCards, "队列", "2 / 1", "results 4 / deadletter 3");
+            AssertMetricCard(viewModel.EngineCards, "事件", "JSONL", "protocol 12 files / 4096 bytes");
+            AssertMetricCard(viewModel.EngineCards, "背压", "Active", "BridgeBusy 5");
+        }
+        finally
+        {
+            viewModel?.Dispose();
+            Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        }
     }
 
     /// <summary>
@@ -33,12 +46,21 @@ public sealed class WorkbenchShellBridgeDiagnosticsTests
     [Fact]
     public void WorkbenchShellViewModelKeepsRecentIssueInSummaryCards()
     {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
-        var status = CreateDiagnosticBridgeStatus();
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        WorkbenchShellViewModel? viewModel = null;
+        try
+        {
+            viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+            viewModel.UpdateDashboard(CreateDashboardState(CreateDiagnosticBridgeStatus()));
 
-        viewModel.UpdateDashboard(CreateDashboardState(status));
-
-        AssertMetricCard(viewModel.SummaryCards, "最近问题", "Bridge busy", "limit MaxPendingCommands");
+            AssertMetricCard(viewModel.SummaryCards, "最近问题", "Bridge busy", "limit MaxPendingCommands");
+        }
+        finally
+        {
+            viewModel?.Dispose();
+            Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        }
     }
 
     /// <summary>

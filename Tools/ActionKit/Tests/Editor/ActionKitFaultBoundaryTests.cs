@@ -32,7 +32,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Message 和 ToString 都抛错的异常仍只形成一次 Faulted 终态。</summary>
         [Test]
-        public void HostileExceptionCannotInterruptFaultCleanup()
+        public void Cleanup_清理回调抛错_不中断其余清理()
         {
             ExecuteFaultAction action = new();
             IActionController controller = action.Start();
@@ -51,28 +51,28 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 OnPause 抛错会在下一宿主 Tick 形成 Faulted，而不是永久暂停。</summary>
         [Test]
-        public void PauseHookExceptionFaultsOnNextTick()
+        public void Tick_暂停钩子抛错_下一帧进入故障()
         {
             AssertControlHookFault(ControlHook.Pause);
         }
 
         /// <summary>验证 OnResume 抛错会在下一宿主 Tick 清理部分传播的暂停树。</summary>
         [Test]
-        public void ResumeHookExceptionFaultsOnNextTick()
+        public void Tick_恢复钩子抛错_下一帧进入故障()
         {
             AssertControlHookFault(ControlHook.Resume);
         }
 
         /// <summary>验证时间源钩子抛错会形成 Faulted，不让外部驱动保持不一致状态。</summary>
         [Test]
-        public void UpdateModeHookExceptionFaultsOnNextTick()
+        public void Tick_更新模式钩子抛错_下一帧进入故障()
         {
             AssertControlHookFault(ControlHook.UpdateMode);
         }
 
         /// <summary>验证正常完成后的 OnDeinit 异常会改记 Faulted，并继续释放后续兄弟节点。</summary>
         [Test]
-        public void DeinitExceptionOverridesCompletedAndContinuesTreeCleanup()
+        public void Deinit_完成时抛错_覆盖终态并继续清理树()
         {
             DeinitProbeAction sibling = new();
             ISequence sequence = ActionKit.Sequence()
@@ -93,7 +93,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Coroutine Dispose 异常会形成 Faulted，而不是伪装成取消成功。</summary>
         [Test]
-        public void CoroutineDisposeExceptionOverridesCancelledTerminal()
+        public void Dispose_取消时抛错_覆盖为故障终态()
         {
             IActionController controller = ActionKit.Coroutine(new ThrowingDisposeEnumerator()).Start();
 
@@ -112,7 +112,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Repeat 提前结束活动 Coroutine 时先释放旧枚举器，再创建下一轮实例。</summary>
         [Test]
-        public void RepeatExternalFinishDisposesCoroutineBeforeNextRound()
+        public void Finish_重复中外部结束_先释放协程()
         {
             TrackingEnumerator first = new();
             TrackingEnumerator second = new();

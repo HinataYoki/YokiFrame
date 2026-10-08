@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using YokiFrame;
@@ -16,7 +15,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证 Windows 宿主只选择 Native AOT profile，不回退到开发期 managed profile。
     /// </summary>
     [Fact]
-    public void ResolvePreferredRuntimeIdsUsesWindowsNativeAotProfile()
+    public void ResolvePreferredRuntimeIds_Windows托管RID_只选择NativeAot()
     {
         var runtimeIds = ResolvePreferredRuntimeIds("win-x64");
 
@@ -27,7 +26,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证文件摘要、物理全集和双入口均有效时返回可信 GUI 路径。
     /// </summary>
     [Fact]
-    public void ValidateAcceptsCompleteRuntimeManifest()
+    public void TryValidateRuntimeManifest_完整缓存_返回Gui路径()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
 
@@ -41,7 +40,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证只存在 managed Windows profile 时不会被 Native AOT 启动策略接受。
     /// </summary>
     [Fact]
-    public void ValidateRejectsWindowsManagedProfileWhenAotIsRequired()
+    public void TryValidateRuntimeManifest_只有ManagedProfile_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture("win-x64");
 
@@ -54,7 +53,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证入口内容在 manifest 生成后被篡改时，即使文件仍存在也会拒绝启动。
     /// </summary>
     [Fact]
-    public void ValidateRejectsTamperedEntrypoint()
+    public void TryValidateRuntimeManifest_入口被篡改_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         File.WriteAllText(fixture.GuiPath, "tampered-gui");
@@ -68,7 +67,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证平台目录出现 manifest 未声明的额外发布载荷时拒绝启动。
     /// </summary>
     [Fact]
-    public void ValidateRejectsUnexpectedRuntimePayload()
+    public void TryValidateRuntimeManifest_存在未声明载荷_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         File.WriteAllText(Path.Combine(fixture.PlatformRoot, "unexpected.dat"), "unexpected");
@@ -82,7 +81,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证其它字段与文件摘要均有效时，单独把 GUI entry 改为上级目录仍会命中越界门禁。
     /// </summary>
     [Fact]
-    public void ValidateRejectsRuntimeEntrypointTraversal()
+    public void TryValidateRuntimeManifest_入口路径穿越_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         var outsidePath = Path.Combine(
@@ -108,7 +107,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证目标 profile 重复时拒绝选择第一条记录，避免歧义 manifest 绕过校验。
     /// </summary>
     [Fact]
-    public void ValidateRejectsDuplicateRuntimeProfile()
+    public void TryValidateRuntimeManifest_重复Profile_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         fixture.WriteManifest(duplicatePlatform: true);
@@ -122,7 +121,7 @@ public sealed class GodotWorkbenchLauncherTests
     /// 验证 platform 与 runtimeIdentifier 不一致时拒绝缓存。
     /// </summary>
     [Fact]
-    public void ValidateRejectsMismatchedRuntimeIdentifier()
+    public void TryValidateRuntimeManifest_标识不匹配_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         fixture.WriteManifest(platform => platform with { RuntimeIdentifier = "linux-x64" });
@@ -135,8 +134,8 @@ public sealed class GodotWorkbenchLauncherTests
     /// <summary>
     /// 验证已列入 manifest 的入口被替换为缓存外符号链接时拒绝启动。
     /// </summary>
-    [Fact]
-    public void ValidateRejectsEntrypointSymbolicLink()
+    [SymbolicLinkFact(SymbolicLinkProbeKind.File)]
+    public void TryValidateRuntimeManifest_入口是符号链接_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         var outsidePath = Path.Combine(
@@ -144,15 +143,7 @@ public sealed class GodotWorkbenchLauncherTests
             "outside-gui-" + Guid.NewGuid().ToString("N") + ".exe");
         File.WriteAllText(outsidePath, File.ReadAllText(fixture.GuiPath));
         File.Delete(fixture.GuiPath);
-        try
-        {
-            File.CreateSymbolicLink(fixture.GuiPath, outsidePath);
-        }
-        catch (Exception exception) when (IsSymbolicLinkUnavailable(exception))
-        {
-            File.Delete(outsidePath);
-            return;
-        }
+        File.CreateSymbolicLink(fixture.GuiPath, outsidePath);
 
         try
         {
@@ -169,23 +160,15 @@ public sealed class GodotWorkbenchLauncherTests
     /// <summary>
     /// 验证 manifest 文件自身被替换为链接时拒绝读取链接目标。
     /// </summary>
-    [Fact]
-    public void ValidateRejectsManifestSymbolicLink()
+    [SymbolicLinkFact(SymbolicLinkProbeKind.File)]
+    public void TryValidateRuntimeManifest_清单是符号链接_拒绝启动()
     {
         using var fixture = new RuntimeManifestFixture(WINDOWS_NATIVE_AOT_RUNTIME_ID);
         var outsidePath = Path.Combine(
             Path.GetDirectoryName(fixture.Root)!,
             "outside-manifest-" + Guid.NewGuid().ToString("N") + ".json");
         File.Move(fixture.ManifestPath, outsidePath);
-        try
-        {
-            File.CreateSymbolicLink(fixture.ManifestPath, outsidePath);
-        }
-        catch (Exception exception) when (IsSymbolicLinkUnavailable(exception))
-        {
-            File.Move(outsidePath, fixture.ManifestPath);
-            return;
-        }
+        File.CreateSymbolicLink(fixture.ManifestPath, outsidePath);
 
         try
         {
@@ -202,8 +185,8 @@ public sealed class GodotWorkbenchLauncherTests
     /// <summary>
     /// 验证项目 `.yokiframe` 目录整体指向项目外时，current 指针和 Runtime 均不能被接受。
     /// </summary>
-    [Fact]
-    public void ResolveRuntimeRootRejectsExternalStateDirectorySymbolicLink()
+    [SymbolicLinkFact(SymbolicLinkProbeKind.Directory)]
+    public void ResolveRuntimeRoot_项目外符号链接_拒绝解析()
     {
         var testRoot = Path.Combine(
             Path.GetTempPath(),
@@ -214,20 +197,11 @@ public sealed class GodotWorkbenchLauncherTests
         var linkPath = Path.Combine(projectRoot, ".yokiframe");
         Directory.CreateDirectory(projectRoot);
         CreateExternalRuntimePointer(outsideStateRoot);
-        try
-        {
-            Directory.CreateSymbolicLink(linkPath, outsideStateRoot);
-        }
-        catch (Exception exception) when (IsSymbolicLinkUnavailable(exception))
-        {
-            Directory.Delete(testRoot, recursive: true);
-            return;
-        }
+        Directory.CreateSymbolicLink(linkPath, outsideStateRoot);
 
         try
         {
-            var exception = Assert.Throws<TargetInvocationException>(() => ResolveRuntimeRoot(projectRoot));
-            Assert.IsType<InvalidDataException>(exception.InnerException);
+            Assert.Throws<InvalidDataException>(() => ResolveRuntimeRoot(projectRoot));
         }
         finally
         {
@@ -237,29 +211,27 @@ public sealed class GodotWorkbenchLauncherTests
     }
 
     /// <summary>
-    /// 反射调用生产代码的候选 RID 解析，避免测试复制 Windows 发布策略。
+    /// 调用生产候选 RID 解析，避免测试复制 Windows 发布策略。
     /// </summary>
     /// <param name="runtimeId">当前宿主基础 RID。</param>
     /// <returns>按优先级排列的 Runtime profile 标识。</returns>
     private static string[] ResolvePreferredRuntimeIds(string runtimeId)
     {
-        var method = GetLauncherMethod("ResolvePreferredRuntimeIds");
-        return Assert.IsType<string[]>(method.Invoke(null, new object[] { runtimeId }));
+        return GodotWorkbenchLauncher.ResolvePreferredRuntimeIds(runtimeId);
     }
 
     /// <summary>
-    /// 反射调用生产 Runtime 根解析，保留异常包装供测试判断具体拒绝原因类型。
+    /// 调用 Runtime 根解析，保留异常类型供测试判断拒绝原因。
     /// </summary>
     /// <param name="projectRoot">测试项目根。</param>
     /// <returns>解析成功后的 Runtime 根。</returns>
     private static string ResolveRuntimeRoot(string projectRoot)
     {
-        var method = GetLauncherMethod("ResolveRuntimeRoot");
-        return Assert.IsType<string>(method.Invoke(null, new object[] { projectRoot }));
+        return GodotWorkbenchLauncher.ResolveRuntimeRoot(projectRoot);
     }
 
     /// <summary>
-    /// 反射调用生产完整性校验器，并读取其两个输出参数。
+    /// 调用完整性校验，并读取入口路径和失败原因。
     /// </summary>
     /// <param name="fixture">Runtime 缓存夹具。</param>
     /// <param name="executablePath">校验成功后的 GUI 入口。</param>
@@ -270,30 +242,14 @@ public sealed class GodotWorkbenchLauncherTests
         out string executablePath,
         out string error)
     {
-        var method = GetLauncherMethod("TryValidateRuntimeManifest");
-        object[] arguments =
-        {
+        return GodotWorkbenchLauncher.TryValidateRuntimeManifest(
             fixture.ManifestPath,
             fixture.Root,
             ResolvePreferredRuntimeIds("win-x64"),
-            string.Empty,
-            string.Empty
-        };
-        var valid = Assert.IsType<bool>(method.Invoke(null, arguments));
-        executablePath = Assert.IsType<string>(arguments[3]);
-        error = Assert.IsType<string>(arguments[4]);
-        return valid;
+            out executablePath,
+            out error);
     }
 
-    /// <summary>
-    /// 判断当前环境是否不允许创建测试符号链接；仅在该能力不可用时跳过该断言。
-    /// </summary>
-    /// <param name="exception">创建符号链接时抛出的异常。</param>
-    /// <returns>属于环境能力限制时返回 true。</returns>
-    private static bool IsSymbolicLinkUnavailable(Exception exception)
-    {
-        return exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException;
-    }
 
     /// <summary>
     /// 在项目外创建 current 指针及其指向的最小 Runtime 目录，用于祖先链接拒绝测试。
@@ -310,18 +266,6 @@ public sealed class GodotWorkbenchLauncherTests
             JsonSerializer.Serialize(pointer));
     }
 
-    /// <summary>
-    /// 获取指定私有启动器方法，类型或方法缺失时让测试清晰失败。
-    /// </summary>
-    /// <param name="methodName">目标私有静态方法名。</param>
-    /// <returns>用于测试调用的方法元数据。</returns>
-    private static MethodInfo GetLauncherMethod(string methodName)
-    {
-        var launcherType = typeof(GodotEditorFileBridgeHost).Assembly.GetType("YokiFrame.GodotWorkbenchLauncher")
-            ?? throw new InvalidOperationException("Godot Workbench launcher type is missing.");
-        return launcherType.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Godot Workbench launcher method is missing: " + methodName);
-    }
 
     /// <summary>
     /// 创建可独立变更 manifest 或物理载荷的最小双入口 Runtime 缓存。

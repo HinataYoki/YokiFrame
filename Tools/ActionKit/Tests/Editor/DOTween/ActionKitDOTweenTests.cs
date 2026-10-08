@@ -5,35 +5,56 @@ using NUnit.Framework;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>覆盖 DOTween 接管、暂停、时间源和取消语义。</summary>
+    /// <summary>
+    /// 覆盖 DOTween 接管、暂停、时间源和取消语义。
+    /// DOTween.initialized 是第三方非公开静态字段，不是本仓库 private。
+    /// EditMode 不能调用公开 Init，夹具只为手动 Tween 建立前置状态。
+    /// 测试程序集受 YOKIFRAME_DOTWEEN_SUPPORT 约束；当前工程没有该宏时不编译本夹具，也不安装包。
+    /// 宏存在但字段缺失时，SetUp 使用 Assert.Ignore。
+    /// </summary>
     public sealed class ActionKitDOTweenTests
     {
         private static readonly FieldInfo sDotweenInitializedField = typeof(DOTween).GetField(
             "initialized",
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         private bool mWasDotweenInitialized;
+        private bool mPreparedDotween;
 
-        /// <summary>EditMode 无法调用 DOTween public Init，测试前只置位全局标志以验证 Manual Tween 生命周期。</summary>
+        /// <summary>
+        /// 为手动 Tween 置位第三方 DOTween.initialized。
+        /// 这是第三方非公开静态字段，不是本仓库 private；字段缺失时忽略，不安装包。
+        /// </summary>
         [SetUp]
         public void SetUp()
         {
-            Assert.IsNotNull(sDotweenInitializedField, "当前 DOTween 版本缺少 initialized 状态字段。");
+            if (sDotweenInitializedField == null)
+            {
+                Assert.Ignore("当前 DOTween 没有 initialized 字段。该字段是第三方非公开静态字段，不安装包。");
+            }
+
             mWasDotweenInitialized = (bool)sDotweenInitializedField.GetValue(null);
             sDotweenInitializedField.SetValue(null, true);
+            mPreparedDotween = true;
         }
 
-        /// <summary>每个测试后关闭动作并清理 DOTween，避免跨测试保留静态状态。</summary>
+        /// <summary>每个测试后关闭动作并恢复第三方 initialized 字段，避免跨测试保留静态状态。</summary>
         [TearDown]
         public void TearDown()
         {
+            if (!mPreparedDotween)
+            {
+                return;
+            }
+
             ActionKitScheduler.Cleanup();
             DOTween.KillAll(false);
             sDotweenInitializedField.SetValue(null, mWasDotweenInitialized);
+            mPreparedDotween = false;
         }
 
         /// <summary>验证 Sequence 后置 Tween 在轮到前保持暂停。</summary>
         [Test]
-        public void SequenceTweenDoesNotPlayBeforeItsTurn()
+        public void Tick_序列未轮到_Tween保持暂停()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -51,7 +72,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证恢复父 Sequence 不会提前播放尚未轮到的 Tween。</summary>
         [Test]
-        public void SequenceResumeDoesNotPlayTweenBeforeItsTurn()
+        public void Resume_序列未轮到_Tween不提前播放()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -68,7 +89,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 controller 暂停和恢复直接映射到 Tween。</summary>
         [Test]
-        public void ControllerPauseAndResumeControlTween()
+        public void Pause_控制器暂停_Tween随之暂停()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -84,7 +105,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证旧入口在 controller 时间源变化时仍完整保留调用方已有的 Manual/independent 配置。</summary>
         [Test]
-        public void LegacyEntryPreservesExistingTweenTiming()
+        public void Start_旧入口_保持原有Tween时间()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -102,7 +123,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证显式时序入口使用指定 Manual 阶段，并随 controller 切换 scaled/unscaled。</summary>
         [Test]
-        public void ManagedTimingEntryUsesExplicitPhaseAndControllerTimeSource()
+        public void Start_托管计时_使用显式阶段和控制器时间源()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -120,7 +141,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证取消默认执行 Kill(false) 且不补齐终值。</summary>
         [Test]
-        public void CancelKillsTweenWithoutCompleting()
+        public void Cancel_取消_Kill且不完成()
         {
             float value = 0f;
             bool killInvoked = false;
@@ -144,7 +165,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证取消 Sequence 时会终止尚未进入 OnStart 的暂停 Tween。</summary>
         [Test]
-        public void CancelKillsTweenBeforeItsSequenceTurn()
+        public void Cancel_轮到前取消_Kill该Tween()
         {
             bool killInvoked = false;
             Tween tween = DOTween.To(static () => 0f, static _ => { }, 1f, 1f)
@@ -162,7 +183,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证正常完成不会误杀由调用方配置为可复用的 Tween。</summary>
         [Test]
-        public void NaturalCompletionKeepsReusableTweenActive()
+        public void Complete_自然完成_可复用Tween保持活动()
         {
             float value = 0f;
             Tween tween = DOTween.To(() => value, current => value = current, 1f, 1f)
@@ -180,7 +201,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Repeat 上一轮正常钩子不会让下一轮取消错误跳过 Kill(false)。</summary>
         [Test]
-        public void RepeatCancellationKillsTweenAfterPreviousRoundWasExternallyFinished()
+        public void Cancel_上一轮已外部结束_本轮Kill且不完成()
         {
             bool killInvoked = false;
             Tween tween = DOTween.To(static () => 0f, static _ => { }, 1f, 1f)
@@ -204,7 +225,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证公开 new 的实例释放后不会成为内部 ToAction 池的后续租约。</summary>
         [Test]
-        public void PubliclyConstructedActionDoesNotEnterInternalPool()
+        public void Cancel_公开构造_不进入内部池()
         {
             Tween publicTween = DOTween.To(static () => 0f, static _ => { }, 1f, 1f)
                 .SetUpdate(UpdateType.Manual);
@@ -227,7 +248,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证空 Sequence 参数在分配包装 Action 前明确失败。</summary>
         [Test]
-        public void DotweenExtensionRejectsNullSequence()
+        public void ToAction_序列为空_立即拒绝()
         {
             Tween tween = DOTween.To(static () => 0f, static _ => { }, 1f, 1f)
                 .SetUpdate(UpdateType.Manual);
@@ -238,7 +259,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证空 Tween 在进入 PoolKit 分配路径前明确失败。</summary>
         [Test]
-        public void DotweenActionRejectsNullTween()
+        public void ToAction_Tween为空_立即拒绝()
         {
             Assert.Throws<System.ArgumentNullException>(() =>
                 DOTweenActionExtensions.ToAction(null));

@@ -10,7 +10,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证预编译程序集快照保持稳定排序，且不把具体可选包写成测试前置条件。</summary>
         [Test]
-        public void CaptureReturnsStablePrecompiledAssemblyNames()
+        public void Capture_当前工程预编译程序集_名称保持稳定排序()
         {
             DependencyInventorySnapshot snapshot = new UnityDependencyInventoryProvider().Capture();
 
@@ -21,7 +21,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 DOTween 宏严格跟随当前 inventory，缺包时必须自动回退而不是让测试失败。</summary>
         [Test]
-        public void CurrentProjectPlanMatchesDotweenInventory()
+        public void CreatePlan_当前工程库存_DOTween宏与检测结果一致()
         {
             DependencyInventorySnapshot snapshot = new UnityDependencyInventoryProvider().Capture();
             string[] currentSymbols = new UnityDependencyDefineStore().ReadSymbols();

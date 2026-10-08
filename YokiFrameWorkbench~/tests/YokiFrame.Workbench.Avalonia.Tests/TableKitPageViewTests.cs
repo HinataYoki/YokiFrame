@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
@@ -54,26 +55,6 @@ public sealed class TableKitPageViewTests
 
         viewModel.CustomEditorDataPath = false;
         Assert.Equal("Assets/Generated/Table", viewModel.EditorDataPath);
-    }
-
-    /// <summary>验证 TableKit 可编辑配置在关闭前不会等待输入控件失焦才回写。</summary>
-    [Fact]
-    public void EditableConfigurationBindingsUpdateImmediately()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "TableKitConfigurationView.axaml");
-
-        Assert.Contains(
-            "TargetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "RuntimePathPattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "AssemblyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
     }
 
     /// <summary>验证历史绝对路径以项目相对形式显示，且四个主路径字段禁止键盘输入。</summary>
@@ -436,9 +417,9 @@ public sealed class TableKitPageViewTests
         });
     }
 
-    /// <summary>验证成功结果会自动进入数据任务，并选中首表首记录。</summary>
+    /// <summary>验证成功结果进入数据任务并选中首表首记录，且选中记录 JSON 的 id 为结构化数值。</summary>
     [Fact]
-    public async Task SuccessfulValidationSelectsFirstTableAndRecord()
+    public async Task ApplyOperationResultAsync_成功且含预览表_选中首表首记录()
     {
         TableKitPageViewModel viewModel = new();
         viewModel.IsConsoleExpanded = true;
@@ -450,7 +431,8 @@ public sealed class TableKitPageViewTests
         Assert.Equal(2, viewModel.SelectedPreviewRecords.Count);
         Assert.Equal("1. 10001", viewModel.SelectedPreviewRecord?.Title);
         Assert.Equal(4, viewModel.SelectedPreviewFields.Count);
-        Assert.Contains("\"id\": 10001", viewModel.SelectedPreviewJson, StringComparison.Ordinal);
+        using JsonDocument preview = JsonDocument.Parse(viewModel.SelectedPreviewJson);
+        Assert.Equal(10001, preview.RootElement.GetProperty("id").GetInt32());
         Assert.Contains("0 错误", viewModel.ConsoleSummaryText, StringComparison.Ordinal);
     }
 

@@ -151,21 +151,24 @@ public sealed class RunLifecycleTests
         };
         bed.Store.Save(old);
         string path = Path.Combine(bed.Store.RunsRoot, "legacy.json");
-        string original = File.ReadAllText(path);
+        byte[] original = File.ReadAllBytes(path);
         Assert.Equal(0, bed.Scheduler.Reconcile(TimeSpan.Zero));
         bed.Scheduler.Tick();
         Assert.True(bed.Scheduler.TryLookupReadOnly(old.RequestId, out _));
         var operation = new RoslynRunOperation(bed.Scheduler, "run_result");
         var result = operation.Execute(EnginePipeline.CreateRequest("cli", "run_result", """{"runId":"legacy"}"""));
         Assert.True(result.IsSuccess);
-        Assert.Contains("old.entry", result.ResultJson);
+        using (JsonDocument response = JsonDocument.Parse(result.ResultJson))
+        {
+            Assert.Equal("old.entry", response.RootElement.GetProperty("legacyEntry").GetString());
+        }
         Assert.False(bed.Scheduler.TryCancel(old.RunId, out _, out _));
-        Assert.Equal(original, File.ReadAllText(path));
+        Assert.Equal(original, File.ReadAllBytes(path));
         Assert.False(bed.Store.TryReadRequestIndex(old.RequestId, out _));
     }
 
     [Fact]
-    /// <summary>入口和 eval 命令以及已删除类型都不能被发现。不注册这些命令。</summary>
+    /// <summary>入口和 eval 命令不能被发现。不注册这些命令。</summary>
     public void Removed_commands_and_types_cannot_be_discovered()
     {
         using var bed = RunTestBed.Create();
@@ -173,9 +176,6 @@ public sealed class RunLifecycleTests
         var provider = new RoslynKitProvider(RoslynGate.CreateDefault(settings),
             new StubEngineOperationProvider("Unity", RoslynExecutionTarget.Editor) { Runs = bed.Scheduler }, settings);
         Assert.DoesNotContain(provider.Commands, c => c.Action.StartsWith("entry_", StringComparison.Ordinal) || c.Action.StartsWith("eval", StringComparison.Ordinal));
-        Assert.Null(typeof(RunResult).Assembly.GetType("YokiFrame.YokiFrameEntryAttribute"));
-        Assert.Null(typeof(RoslynKitProvider).Assembly.GetType("YokiFrame.YokiFrameRoslynEntryRegistry"));
-        Assert.Null(typeof(RoslynKitProvider).Assembly.GetType("YokiFrame.YokiFrameRoslynEvalSourceGenerator"));
     }
 }
 

@@ -141,7 +141,7 @@ public sealed class GodotPlayerBoundaryTests
     /// 扫描无 TOOLS 的真实 DLL，确认诊断类型、partial 成员、Editor 引用和配置文本均不存在。
     /// </summary>
     [Fact]
-    public void NoToolsAssembliesExcludeWorkbenchAndEditorSurface()
+    public void NoToolsAssembliesExcludeWorkbenchAndEditorSurface_PlayerBoundary()
     {
         string[] assemblyPaths = ResolveAssemblyPaths();
         HashSet<string> typeNames = new(StringComparer.Ordinal);

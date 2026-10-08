@@ -182,7 +182,7 @@ namespace YokiFrame
         /// <summary>
         /// 在 Unity Editor 主线程 drain 后台 FastChannel 请求，避免 listener 线程直接调用 dispatcher 或 Unity API。
         /// </summary>
-        private static void ProcessFastChannelRequestsSafely()
+        internal static void ProcessFastChannelRequestsSafely()
         {
 #if UNITY_EDITOR_WIN
             var host = sFastChannelHost;
@@ -410,7 +410,7 @@ namespace YokiFrame
         /// 创建同机多项目不冲突的安全 Pipe 名称，包含项目范围哈希、session 与 generation。
         /// </summary>
         /// <returns>当前 Unity Editor session 专属 Pipe 名称。</returns>
-        private static string CreateFastChannelPipeName()
+        internal static string CreateFastChannelPipeName()
         {
             var projectScopeId = YokiFrameSharedMemoryTelemetryProjectScopeId.Compute(
                 YokiFrameEditorFileBridgePaths.GetProjectRoot());

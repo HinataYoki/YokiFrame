@@ -22,7 +22,7 @@ public sealed class FsmKitVisualStabilityHeadlessTests
     /// 验证等价 telemetry 帧不会产生空白中间帧，真实状态变化后也不会回退旧图。
     /// </summary>
     [Fact]
-    public async Task EquivalentFramesKeepPixelsStableAndChangedStateDoesNotRollBack()
+    public async Task ApplyPeriodicState_等价帧与状态切换_像素稳定且不回退()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await Dispatcher.UIThread.InvokeAsync(AssertVisualSequence);
@@ -54,6 +54,7 @@ public sealed class FsmKitVisualStabilityHeadlessTests
         finally
         {
             window.Close();
+            viewModel.Dispose();
         }
     }
 

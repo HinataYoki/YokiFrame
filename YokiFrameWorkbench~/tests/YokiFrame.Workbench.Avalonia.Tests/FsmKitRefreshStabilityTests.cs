@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json.Nodes;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -24,13 +23,13 @@ public sealed class FsmKitRefreshStabilityTests
     /// 验证全新 DTO 快照不会替换集合、同一实例列表项或当前选择对象。
     /// </summary>
     [Fact]
-    public void EquivalentSnapshotsKeepMachineCollectionAndSelectionIdentity()
+    public void ApplyPeriodicState_等价快照_保留列表与选择身份()
     {
         var firstState = CreateState(
             "snapshot", CHOSEN_INSTANCE_ID, "Y", "X", "Y", sBaseTime, "snapshot");
         var secondState = CreateState(
             "snapshot", CHOSEN_INSTANCE_ID, "Y", "X", "Y", sBaseTime, "snapshot");
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
 
         Assert.NotSame(firstState, secondState);
         Assert.NotSame(firstState.Machines, secondState.Machines);
@@ -55,9 +54,9 @@ public sealed class FsmKitRefreshStabilityTests
     /// 验证精确 telemetry 从 X 更新到 Y 后，低频默认总览只合并列表摘要，不回退详情。
     /// </summary>
     [Fact]
-    public void DefaultOverviewDoesNotRollBackLatestSelectedTelemetryDetails()
+    public void ApplyPeriodicState_已有精确Telemetry_默认总览不回退详情()
     {
-        FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
+        using FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
         viewModel.ApplyPeriodicState(CreateState(
             "telemetry", CHOSEN_INSTANCE_ID, "X", "Ready", "X", sBaseTime.AddSeconds(1), "chosen-x"));
         viewModel.ApplyPeriodicState(CreateState(
@@ -89,13 +88,13 @@ public sealed class FsmKitRefreshStabilityTests
     /// 验证语义相同但 DTO 全新的详情帧复用单一观测图模型，避免控件重建闪烁。
     /// </summary>
     [Fact]
-    public void EquivalentDetailsKeepGraphModelIdentity()
+    public void ApplyPeriodicState_等价详情_复用观测图模型()
     {
         var firstState = CreateState(
             "telemetry", CHOSEN_INSTANCE_ID, "Y", "X", "Y", sBaseTime.AddSeconds(1), "chosen-y-1");
         var secondState = CreateState(
             "telemetry", CHOSEN_INSTANCE_ID, "Y", "X", "Y", sBaseTime.AddSeconds(2), "chosen-y-2");
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
 
         viewModel.ApplyPeriodicState(firstState);
         var graphModel = viewModel.GraphModel;
@@ -109,9 +108,9 @@ public sealed class FsmKitRefreshStabilityTests
     /// 验证 Selected.InstanceId 不匹配的 telemetry 帧不能覆盖当前实例的图、历史和来源。
     /// </summary>
     [Fact]
-    public void MismatchedTelemetryInstanceDoesNotOverwriteSelectedDetails()
+    public void ApplyPeriodicState_Telemetry实例不匹配_不覆盖当前详情()
     {
-        FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
+        using FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
         viewModel.ApplyPeriodicState(CreateState(
             "telemetry", CHOSEN_INSTANCE_ID, "Y", "X", "Y", sBaseTime.AddSeconds(1), "chosen-y"));
         var graphModel = viewModel.GraphModel;
@@ -133,12 +132,12 @@ public sealed class FsmKitRefreshStabilityTests
 
     /// <summary>验证真实 ListBox 在新 DTO 刷新和搜索筛选后仍保留当前项及选中状态。</summary>
     [Fact]
-    public async Task ListBoxSelectionSurvivesRefreshAndSearchFiltering()
+    public async Task ApplyPeriodicState_刷新并搜索_真实列表保持选中()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
+            using FsmKitPageViewModel viewModel = CreateViewModelWithChosenSelection();
             FsmKitPageView view = new() { DataContext = viewModel };
             Window window = new() { Width = 1200, Height = 760, Content = view };
             try
@@ -228,7 +227,7 @@ public sealed class FsmKitRefreshStabilityTests
             chosenState,
             historyFrom,
             historyTo);
-        var dataSource = CreateInternal<WorkbenchFsmKitDataSource>(
+        var dataSource = new WorkbenchFsmKitDataSource(
             "unity-editor",
             "session-refresh",
             9L,
@@ -249,15 +248,7 @@ public sealed class FsmKitRefreshStabilityTests
     /// <returns>生产 parser 返回的 FsmKit 状态。</returns>
     private static WorkbenchFsmKitState ParseState(WorkbenchFsmKitDataSource dataSource)
     {
-        var parserType = typeof(WorkbenchFsmKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.FsmKit.WorkbenchFsmKitStateParser");
-        Assert.NotNull(parserType);
-        var parseMethod = parserType.GetMethod(
-            "Parse",
-            BindingFlags.Static | BindingFlags.NonPublic);
-        Assert.NotNull(parseMethod);
-        var state = parseMethod.Invoke(null, new object[] { dataSource });
-        return Assert.IsType<WorkbenchFsmKitState>(state);
+        return WorkbenchFsmKitStateParser.Parse(dataSource);
     }
 
     /// <summary>
@@ -403,20 +394,4 @@ public sealed class FsmKitRefreshStabilityTests
         };
     }
 
-    /// <summary>
-    /// 调用 Application 模型受控内部构造方法，仅用于为真实 parser 注入数据源。
-    /// </summary>
-    /// <typeparam name="T">需要构造的内部模型类型。</typeparam>
-    /// <param name="arguments">与内部构造签名顺序一致的参数。</param>
-    /// <returns>构造成功且类型精确匹配的实例。</returns>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        var instance = Activator.CreateInstance(
-            typeof(T),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
-    }
 }

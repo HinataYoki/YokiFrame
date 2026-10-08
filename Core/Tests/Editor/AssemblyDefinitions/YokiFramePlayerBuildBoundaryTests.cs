@@ -22,11 +22,11 @@ namespace YokiFrame
         private const string EVIDENCE_FILE_NAME = "player-boundary-evidence.txt";
 
         /// <summary>
-        /// 构建未启用 Editor 宏且关闭 managed stripping 的 Windows Player，并扫描真实 Managed DLL 与 Resources 数据。
+        /// PlayerBoundary：构建未启用 Editor 宏且关闭 managed stripping 的 Windows Player，并扫描真实 Managed DLL 与 Resources，确认不包含 Workbench 工具面。
         /// </summary>
         [Test]
         [Explicit("该测试会执行完整 Standalone Player 构建，只在发布边界验证时按完整测试名运行。")]
-        public void StandaloneWindowsPlayerExcludesWorkbenchTooling()
+        public void StandaloneWindowsPlayerExcludesWorkbenchTooling_PlayerBoundary()
         {
             Assert.AreEqual(RuntimePlatform.WindowsEditor, Application.platform, "该守卫需要 Windows Unity Editor。");
             Assert.IsFalse(EditorApplication.isCompiling, "Player 边界构建开始时 Unity 仍在编译脚本。");

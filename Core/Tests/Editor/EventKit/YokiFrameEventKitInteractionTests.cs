@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
+using JsonDocument = YokiFrame.Json.JsonDocument;
+using JsonElement = YokiFrame.Json.JsonElement;
 
 namespace YokiFrame
 {
@@ -83,13 +85,12 @@ namespace YokiFrame
                 diagnostics.Activities.Select(activity => activity.Sequence).ToArray());
         }
 
-        /// <summary>验证 state Snapshot 合并当前监听器与近期活动，并保持唯一只读命令面。</summary>
+        /// <summary>验证 state 命令返回当前监听器与近期活动，并且与 CreateSnapshot 相同。</summary>
         [Test]
-        public void StateSnapshotContainsRuntimeRegistrationsAndRecentEvents()
+        public void Handle_注册并发送_返回监听器和近期活动()
         {
             IYokiFrameVersionedKitInteractionProvider provider = GetEventKitProvider();
-            Action<SamplePayload> listener = _ => { };
-            EventKit.Type.Register(listener);
+            EventKit.Type.Register<SamplePayload>(_ => { });
             EventKit.Type.Send(new SamplePayload());
 
             string payloadJson = provider.CreateSnapshot("state");
@@ -105,12 +106,19 @@ namespace YokiFrame
             Assert.AreEqual("get_workbench_snapshot", provider.Commands[0].Action);
             Assert.AreEqual("set_tracking", provider.Commands[1].Action);
             Assert.IsTrue(commandResult.IsSuccess);
-            StringAssert.Contains("\"eventKey\":\"" + typeof(SamplePayload).FullName + "\"", payloadJson);
-            StringAssert.Contains("\"payloadType\":\"" + typeof(SamplePayload).FullName + "\"", payloadJson);
-            StringAssert.Contains("\"handlerCount\":1", payloadJson);
-            StringAssert.Contains("\"sequence\":2", payloadJson);
-            StringAssert.Contains("\"kind\":\"register\"", payloadJson);
-            StringAssert.Contains("\"kind\":\"send\"", payloadJson);
+            Assert.AreEqual(payloadJson, commandResult.ResultJson);
+            using (JsonDocument document = JsonDocument.Parse(commandResult.ResultJson))
+            {
+                JsonElement events = document.RootElement.GetProperty("events");
+                Assert.AreEqual(1, events.GetArrayLength());
+                JsonElement registration = events[0];
+                Assert.AreEqual(typeof(SamplePayload).FullName, registration.GetProperty("payloadType").GetString());
+                Assert.AreEqual(1, ReadJsonInt32(registration, "handlerCount"));
+                Assert.AreEqual(2L, ReadJsonInt64(registration, "lastSequence"));
+                JsonElement activities = document.RootElement.GetProperty("recentEvents").GetProperty("events");
+                Assert.IsTrue(HasJsonKind(activities, "register"));
+                Assert.IsTrue(HasJsonKind(activities, "send"));
+            }
         }
 
         /// <summary>验证没有监听器的纯发送事件仍会形成可见行，不依赖静态代码扫描。</summary>
@@ -120,11 +128,13 @@ namespace YokiFrame
             IYokiFrameVersionedKitInteractionProvider provider = GetEventKitProvider();
 
             EventKit.Type.Send(new SamplePayload());
-            string payloadJson = provider.CreateSnapshot("state");
 
-            StringAssert.Contains("\"eventKey\":\"" + typeof(SamplePayload).FullName + "\"", payloadJson);
-            StringAssert.Contains("\"handlerCount\":0", payloadJson);
-            StringAssert.Contains("\"lastSequence\":1", payloadJson);
+            EventKitWorkbenchSnapshot snapshot = EventKitSnapshotBuilder.Create();
+            EventKitRegistrationSnapshot registration = FindRegistration(snapshot, typeof(SamplePayload).FullName);
+            Assert.IsNotNull(registration);
+            Assert.AreEqual(0, registration.HandlerCount);
+            Assert.AreEqual(1L, registration.LastSequence);
+            Assert.AreEqual(1L, provider.StateVersion);
         }
 
         /// <summary>验证 Type 与 Enum 同短名类型使用完整身份，不会在 Workbench 行中静默折叠。</summary>
@@ -137,13 +147,16 @@ namespace YokiFrame
             EventKit.Enum.Register(CollisionScopeA.Signal.Ready, () => { });
             EventKit.Enum.Register(CollisionScopeB.Signal.Ready, () => { });
 
-            string payloadJson = provider.CreateSnapshot("state");
+            EventKitWorkbenchSnapshot snapshot = EventKitSnapshotBuilder.Create();
 
-            StringAssert.Contains(typeof(CollisionScopeA.Payload).FullName, payloadJson);
-            StringAssert.Contains(typeof(CollisionScopeB.Payload).FullName, payloadJson);
-            StringAssert.Contains(typeof(CollisionScopeA.Signal).FullName, payloadJson);
-            StringAssert.Contains(typeof(CollisionScopeB.Signal).FullName, payloadJson);
-            StringAssert.Contains("\"totalEvents\":4", payloadJson);
+            Assert.IsNotNull(FindRegistration(snapshot, EventKitTypeIdentity.Format(typeof(CollisionScopeA.Payload))));
+            Assert.IsNotNull(FindRegistration(snapshot, EventKitTypeIdentity.Format(typeof(CollisionScopeB.Payload))));
+            Assert.IsNotNull(FindRegistration(snapshot, EventKitTypeIdentity.FormatEnumEventKey(
+                new EnumEventKey(typeof(CollisionScopeA.Signal), (ulong)CollisionScopeA.Signal.Ready))));
+            Assert.IsNotNull(FindRegistration(snapshot, EventKitTypeIdentity.FormatEnumEventKey(
+                new EnumEventKey(typeof(CollisionScopeB.Signal), (ulong)CollisionScopeB.Signal.Ready))));
+            Assert.AreEqual(4, snapshot.Registrations.Count);
+            Assert.Greater(provider.StateVersion, 0L);
         }
 
         /// <summary>验证不存在的直接注销不会制造活动或推进诊断版本。</summary>
@@ -167,11 +180,13 @@ namespace YokiFrame
             EventKit.Type.Register<SamplePayload>(_ => { });
 
             EventKit.Type.Clear();
-            string payloadJson = provider.CreateSnapshot("state");
 
-            StringAssert.Contains("\"kind\":\"clear\"", payloadJson);
-            StringAssert.Contains("\"eventKey\":\"*\"", payloadJson);
-            StringAssert.Contains("\"lastSequence\":2", payloadJson);
+            EventKitWorkbenchSnapshot snapshot = EventKitSnapshotBuilder.Create();
+            EventKitRegistrationSnapshot registration = FindRegistration(snapshot, typeof(SamplePayload).FullName);
+            Assert.IsTrue(HasActivity(snapshot, "clear", "*"));
+            Assert.IsNotNull(registration);
+            Assert.AreEqual(2L, registration.LastSequence);
+            Assert.AreEqual(2L, provider.StateVersion);
         }
 
         /// <summary>验证活动历史固定保留最新两百条，同时全局 sequence 不回退。</summary>
@@ -215,9 +230,9 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>验证 capability 与 Provider 一样声明只读快照和用户触发的追踪开关。</summary>
+        /// <summary>验证 capability 命令 action 与 Provider 目录一致。</summary>
         [Test]
-        public void CapabilityDescriptorMatchesProviderCatalog()
+        public void CapabilityDescriptor_与Provider目录_命令一致()
         {
             string path = Path.Combine(
                 Application.dataPath,
@@ -227,10 +242,112 @@ namespace YokiFrame
                 "EventKit",
                 "Capabilities",
                 "capability.json");
-            string descriptor = File.ReadAllText(path);
+            using (JsonDocument document = JsonDocument.Parse(File.ReadAllText(path)))
+            {
+                CollectionAssert.AreEquivalent(
+                    GetEventKitProvider().Commands.Select(static command => command.Action).ToArray(),
+                    ReadActions(document.RootElement.GetProperty("kit").GetProperty("commands")));
+            }
+        }
 
-            StringAssert.Contains("\"get_workbench_snapshot\"", descriptor);
-            StringAssert.Contains("\"set_tracking\"", descriptor);
+        /// <summary>
+        /// 按事件键查找工作台注册行。
+        /// </summary>
+        /// <param name="snapshot">当前工作台快照。</param>
+        /// <param name="eventKey">完整事件键。</param>
+        /// <returns>匹配行；不存在时返回 null。</returns>
+        private static EventKitRegistrationSnapshot FindRegistration(EventKitWorkbenchSnapshot snapshot, string eventKey)
+        {
+            for (var index = 0; index < snapshot.Registrations.Count; index++)
+            {
+                EventKitRegistrationSnapshot registration = snapshot.Registrations[index];
+                if (registration.EventKey == eventKey || registration.PayloadType == eventKey)
+                {
+                    return registration;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 判断活动历史是否包含指定种类。
+        /// </summary>
+        /// <param name="snapshot">当前工作台快照。</param>
+        /// <param name="kind">活动种类。</param>
+        /// <param name="eventKey">可选事件键；为空时只匹配种类。</param>
+        /// <returns>存在匹配活动时返回 true。</returns>
+        private static bool HasActivity(EventKitWorkbenchSnapshot snapshot, string kind, string eventKey = null)
+        {
+            for (var index = 0; index < snapshot.Activities.Length; index++)
+            {
+                EventKitActivityRecord activity = snapshot.Activities[index];
+                if (activity.Kind != kind)
+                {
+                    continue;
+                }
+
+                if (eventKey == null || activity.EventKey == eventKey)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>读取 capability 命令 action。</summary>
+        /// <param name="commands">命令数组。</param>
+        /// <returns>action 列表。</returns>
+        private static string[] ReadActions(JsonElement commands)
+        {
+            var actions = new string[commands.GetArrayLength()];
+            for (var index = 0; index < actions.Length; index++)
+            {
+                actions[index] = commands[index].GetProperty("action").GetString();
+            }
+
+            return actions;
+        }
+
+        /// <summary>判断活动数组是否包含指定种类。</summary>
+        /// <param name="events">recentEvents.events。</param>
+        /// <param name="kind">活动种类。</param>
+        /// <returns>存在匹配种类时返回 true。</returns>
+        private static bool HasJsonKind(JsonElement events, string kind)
+        {
+            int length = events.GetArrayLength();
+            for (var index = 0; index < length; index++)
+            {
+                if (events[index].GetProperty("kind").GetString() == kind)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>读取 JSON 整数。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>整数值。</returns>
+        private static int ReadJsonInt32(JsonElement element, string propertyName)
+        {
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
+        }
+
+        /// <summary>读取 JSON 64 位整数。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>整数值。</returns>
+        private static long ReadJsonInt64(JsonElement element, string propertyName)
+        {
+            long value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt64(out value), propertyName);
+            return value;
         }
 
         /// <summary>从 Core 默认组合中取得 EventKit versioned Provider。</summary>

@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -40,7 +41,7 @@ namespace YokiFrame.Tests
 
         /// <summary>完成真实迁移及 Element/Component 双向转换，检查业务方法、序列化值、GUID 和子元素归属。</summary>
         [UnityTest]
-        public IEnumerator MigrationAndBidirectionalConversionPreserveIdentity()
+        public IEnumerator Execute_迁移并双向转换_保留类型字段方法和GUID()
         {
             UIKitCodeLayoutMigrationPlan plan = UIKitCodeLayoutMigration.Build(ROOT);
             Assert.Greater(plan.Moves.Count, 0);
@@ -100,7 +101,7 @@ namespace YokiFrame.Tests
                 GameObject row = AddOwner(view, "SmokeRow", BindType.Element, "UIKitLayoutSmoke.SmokeViewUIElement.SmokeRow");
                 AddOwner(row, "SmokeBadge", BindType.Element, "UIKitLayoutSmoke.SmokeViewUIElement.SmokeBadge");
                 UIElement owner = row.GetComponent<UIElement>();
-                owner.GetType().GetField("Count").SetValue(owner, 19);
+                RequirePublicField(owner, "Count").SetValue(owner, 19);
                 PrefabUtility.SaveAsPrefabAsset(root, PREFAB);
                 mRowGuid = AssetDatabase.AssetPathToGUID(ROOT + "/UIComponent/SmokeView/UIElement/SmokeRow.cs");
                 mBadgeGuid = AssetDatabase.AssetPathToGUID(ROOT + "/UIComponent/SmokeView/UIElement/SmokeBadge.cs");
@@ -134,9 +135,26 @@ namespace YokiFrame.Tests
             UIElement owner = RowBind().GetComponent<UIElement>();
             Assert.IsNotNull(owner);
             Assert.AreEqual(fullName, owner.GetType().FullName);
-            Assert.AreEqual(19, owner.GetType().GetField("Count").GetValue(owner));
-            Assert.AreEqual(38, owner.GetType().GetMethod("Value").Invoke(owner, null));
+            Assert.AreEqual(19, RequirePublicField(owner, "Count").GetValue(owner));
+            Assert.AreEqual(38, InvokePublicMethod(owner, "Value"));
             Assert.AreEqual(mRowGuid, AssetDatabase.AssetPathToGUID(path));
+        }
+
+
+        /// <summary>读取动态编译夹具的公开字段。测试程序集不能静态引用 Assembly-CSharp 里的临时类型。</summary>
+        private static FieldInfo RequirePublicField(object owner, string fieldName)
+        {
+            FieldInfo field = owner.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
+            Assert.IsNotNull(field, owner.GetType().FullName + "." + fieldName);
+            return field;
+        }
+
+        /// <summary>调用动态编译夹具的公开无参方法。只访问公开成员，不反射私有实现。</summary>
+        private static object InvokePublicMethod(object owner, string methodName)
+        {
+            MethodInfo method = owner.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null);
+            Assert.IsNotNull(method, owner.GetType().FullName + "." + methodName);
+            return method.Invoke(owner, null);
         }
 
         /// <summary>给编译后校验与回填有限完成窗口，超时直接失败而非宣称迁移成功。</summary>

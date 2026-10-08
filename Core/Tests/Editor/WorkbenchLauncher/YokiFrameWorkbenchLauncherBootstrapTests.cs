@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Reflection;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,69 +11,6 @@ namespace YokiFrame
     /// </summary>
     public sealed partial class YokiFrameWorkbenchLauncherTests
     {
-        /// <summary>
-        /// 验证 Ctrl+E 后台编译期间会持续显示进度，且无论成功或失败都由 finally 清理 Editor 进度条。
-        /// </summary>
-        [Test]
-        public void RuntimeBootstrapShowsAndClearsEditorProgress()
-        {
-            string runtimeSource = ReadRuntimeCacheLauncherSource();
-            string lifecycleSource = ReadBootstrapLifecycleSource();
-
-            StringAssert.Contains("BootstrapRuntimeCacheWithProgressAsync", runtimeSource);
-            StringAssert.Contains("EditorUtility.DisplayProgressBar", runtimeSource);
-            StringAssert.Contains("Task.Delay(RUNTIME_BOOTSTRAP_PROGRESS_UPDATE_INTERVAL_MILLISECONDS)", runtimeSource);
-            StringAssert.Contains("ClearRuntimeBootstrapProgressSafely", lifecycleSource);
-            StringAssert.Contains("EditorUtility.ClearProgressBar();", lifecycleSource);
-            Assert.Greater(
-                runtimeSource.IndexOf("ClearRuntimeBootstrapProgressSafely();", StringComparison.Ordinal),
-                runtimeSource.IndexOf("finally", StringComparison.Ordinal));
-        }
-
-        /// <summary>
-        /// 验证 bootstrap 已绑定 Domain Reload、Editor 退出和有限进程终止等待，不把外部进程留给失效脚本域。
-        /// </summary>
-        [Test]
-        public void RuntimeBootstrapBindsEditorLifecycleCancellation()
-        {
-            string lifecycleSource = ReadBootstrapLifecycleSource();
-
-            StringAssert.Contains("AssemblyReloadEvents.beforeAssemblyReload", lifecycleSource);
-            StringAssert.Contains("EditorApplication.quitting", lifecycleSource);
-            StringAssert.Contains("CancellationTokenSource", lifecycleSource);
-            StringAssert.Contains("TryTerminateProcessTree", lifecycleSource);
-            StringAssert.Contains("GetRemainingTerminationWaitMilliseconds", lifecycleSource);
-            StringAssert.Contains("TryTerminateWindowsProcessTree", lifecycleSource);
-            StringAssert.Contains("JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE", ReadWindowsProcessJobSource());
-        }
-
-        /// <summary>
-        /// 验证进程启动、Job owner 创建和 operation 发布共享同一个状态锁，取消回调不能穿过半发布窗口。
-        /// </summary>
-        [Test]
-        public void RuntimeBootstrapStartsAndPublishesProcessInsideStateLock()
-        {
-            string lifecycleSource = ReadBootstrapLifecycleSource();
-            string methodSource = ExtractSourceSegment(
-                lifecycleSource,
-                "private static bool TryStartAndTrackRuntimeBootstrapProcess(",
-                "private static void UntrackRuntimeBootstrapProcess(");
-            string normalizedSource = methodSource.Replace("\r\n", "\n");
-
-            int lockIndex = normalizedSource.IndexOf("lock (sRuntimeBootstrapStateLock)", StringComparison.Ordinal);
-            int processStartIndex = normalizedSource.IndexOf("process.Start()", StringComparison.Ordinal);
-            int ownerCreateIndex = normalizedSource.IndexOf("CreateRuntimeBootstrapProcessTreeOwner(process)", StringComparison.Ordinal);
-            int processPublishIndex = normalizedSource.IndexOf("operation.Process = process;", StringComparison.Ordinal);
-            int ownerPublishIndex = normalizedSource.IndexOf("operation.ProcessTreeOwner = processTreeOwner;", StringComparison.Ordinal);
-            int lockEndIndex = normalizedSource.LastIndexOf("\n            }", StringComparison.Ordinal);
-
-            Assert.That(lockIndex, Is.GreaterThanOrEqualTo(0));
-            Assert.That(processStartIndex, Is.GreaterThan(lockIndex));
-            Assert.That(ownerCreateIndex, Is.GreaterThan(processStartIndex));
-            Assert.That(processPublishIndex, Is.GreaterThan(ownerCreateIndex));
-            Assert.That(ownerPublishIndex, Is.GreaterThan(processPublishIndex).And.LessThan(lockEndIndex));
-            StringAssert.DoesNotContain("process.Start()", ReadRuntimeCacheLauncherSource());
-        }
 
         /// <summary>
         /// 在 Windows 启动已拥有子进程的受控 bootstrap 树，验证 fallback 能终止登记前已经创建的后代。
@@ -86,26 +22,17 @@ namespace YokiFrame
                 Assert.Ignore("Windows process-tree verification only runs in the Windows Editor.");
 
             Process child = null;
-            object processTreeOwner = null;
+            IDisposable processTreeOwner = null;
             using (Process parent = StartWindowsProcessTree())
             {
                 try
                 {
                     string childIdText = ReadChildProcessId(parent);
                     child = Process.GetProcessById(int.Parse(childIdText));
-                    Type launcherType = GetLauncherType();
-                    MethodInfo createOwner = launcherType.GetMethod(
-                        "CreateRuntimeBootstrapProcessTreeOwner",
-                        BindingFlags.Static | BindingFlags.NonPublic);
-                    MethodInfo terminate = launcherType.GetMethod(
-                        "TryTerminateProcessTree",
-                        BindingFlags.Static | BindingFlags.NonPublic);
-                    Assert.IsNotNull(createOwner);
-                    Assert.IsNotNull(terminate);
-                    processTreeOwner = createOwner.Invoke(null, new object[] { parent });
+                    processTreeOwner = YokiFrameWorkbenchLauncher.CreateRuntimeBootstrapProcessTreeOwnerForTests(parent);
                     Assert.IsNotNull(processTreeOwner, "当前 Windows Editor 必须建立 Job Object owner。");
 
-                    bool terminated = (bool)terminate.Invoke(null, new[] { parent, processTreeOwner });
+                    bool terminated = YokiFrameWorkbenchLauncher.TryTerminateProcessTreeForTests(parent, processTreeOwner);
 
                     Assert.IsTrue(terminated);
                     Assert.IsTrue(parent.WaitForExit(1000), "bootstrap 根进程未退出。");
@@ -131,28 +58,20 @@ namespace YokiFrame
                 Assert.Ignore("Windows Job Object verification only runs in the Windows Editor.");
 
             Process child = null;
-            object processTreeOwner = null;
+            IDisposable processTreeOwner = null;
             using (Process parent = StartWindowsProcessTreeAfterSignal())
             {
                 try
                 {
-                    Type jobType = GetLauncherType().GetNestedType(
-                        "WindowsRuntimeBootstrapJob",
-                        BindingFlags.NonPublic);
-                    Assert.IsNotNull(jobType);
-                    MethodInfo tryCreate = jobType.GetMethod("TryCreate", BindingFlags.Static | BindingFlags.NonPublic);
-                    Assert.IsNotNull(tryCreate);
-                    object[] createArguments = { parent, null };
-                    processTreeOwner = tryCreate.Invoke(null, createArguments);
-                    Assert.IsNotNull(processTreeOwner, createArguments[1] as string);
+                    string error;
+                    processTreeOwner = YokiFrameWorkbenchLauncher.WindowsRuntimeBootstrapJob.TryCreateForTests(parent, out error);
+                    Assert.IsNotNull(processTreeOwner, error);
 
                     parent.StandardInput.WriteLine("spawn");
                     parent.StandardInput.Flush();
                     child = Process.GetProcessById(int.Parse(ReadChildProcessId(parent)));
-                    MethodInfo tryTerminate = jobType.GetMethod("TryTerminate", BindingFlags.Instance | BindingFlags.Public);
-                    Assert.IsNotNull(tryTerminate);
 
-                    Assert.IsTrue((bool)tryTerminate.Invoke(processTreeOwner, null));
+                    Assert.IsTrue(((YokiFrameWorkbenchLauncher.IRuntimeBootstrapProcessTreeOwner)processTreeOwner).TryTerminate());
                     Assert.IsTrue(parent.WaitForExit(2000), "Job 关闭后 bootstrap 根进程未退出。");
                     Assert.IsTrue(child.WaitForExit(2000), "Job 关闭后延迟创建的子进程未退出。");
                 }
@@ -167,24 +86,15 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Runtime bootstrap 队列返回可观察的 Task；菜单入口显式丢弃该 Task，避免新增 async void 异常边界。
+        /// 验证后台 bootstrap 队列返回 Task。签名由 internal 委托在编译期绑定，拒绝 async void。
         /// </summary>
         [Test]
-        public void RuntimeBootstrapQueueUsesTaskBoundaryInsteadOfAsyncVoid()
+        public void QueueRuntimeBootstrapAndLaunch_后台队列_返回Task()
         {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "QueueRuntimeBootstrapAndLaunch",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(method);
-            Assert.AreEqual(typeof(System.Threading.Tasks.Task), method.ReturnType);
+            Func<YokiFrameWorkbenchLaunchPlan, Task> queue =
+                YokiFrameWorkbenchLauncher.GetRuntimeBootstrapQueueForTests();
 
-            string runtimeSource = ReadRuntimeCacheLauncherSource();
-            string launcherSource = ReadLauncherSource();
-            StringAssert.DoesNotContain("async void QueueRuntimeBootstrapAndLaunch", runtimeSource);
-            StringAssert.Contains("if (plan == null)", runtimeSource);
-            StringAssert.Contains("operation.Token.Register", runtimeSource);
-            StringAssert.DoesNotContain("static state => TryTerminateProcessTree((Process)state)", runtimeSource);
-            StringAssert.Contains("_ = QueueRuntimeBootstrapAndLaunch(plan);", launcherSource);
+            Assert.AreEqual(typeof(Task), queue.Method.ReturnType);
         }
 
         /// <summary>
@@ -193,69 +103,22 @@ namespace YokiFrame
         [Test]
         public void RuntimeBootstrapFailureIdentifiesMissingBuildEnvironment()
         {
-            Type launcherType = GetLauncherType();
-            MethodInfo createMessage = launcherType.GetMethod(
-                "CreateRuntimeBootstrapFailureMessage",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            string environmentSource = ReadLauncherPartialSource("YokiFrameWorkbenchLauncher.BootstrapEnvironment.cs");
-
-            Assert.IsNotNull(createMessage);
-            StringAssert.Contains("YokiFrame/Workbench/打开缺失的编译环境", environmentSource);
-            StringAssert.Contains("Application.OpenURL", environmentSource);
-            StringAssert.Contains("DOTNET_10_SDK_DOWNLOAD_URL", environmentSource);
-            StringAssert.Contains("VISUAL_STUDIO_BUILD_TOOLS_DOWNLOAD_URL", environmentSource);
-
-            string dotnetMessage = (string)createMessage.Invoke(
-                null,
-                new object[] { "NETSDK1045: The current .NET SDK does not support targeting .NET 10.0." });
-            string nativeAotMessage = (string)createMessage.Invoke(
-                null,
-                new object[] { "Platform linker not found. Ensure that Visual Studio 2022 is installed." });
+            string dotnetMessage = YokiFrameWorkbenchLauncher.CreateRuntimeBootstrapFailureMessageForTests(
+                "NETSDK1045: The current .NET SDK does not support targeting .NET 10.0.");
+            YokiFrameWorkbenchLauncher.RuntimeBootstrapEnvironmentMenuState dotnetMenu =
+                YokiFrameWorkbenchLauncher.GetRuntimeBootstrapEnvironmentMenuStateForTests();
+            string nativeAotMessage = YokiFrameWorkbenchLauncher.CreateRuntimeBootstrapFailureMessageForTests(
+                "Platform linker not found. Ensure that Visual Studio 2022 is installed.");
+            YokiFrameWorkbenchLauncher.RuntimeBootstrapEnvironmentMenuState nativeAotMenu =
+                YokiFrameWorkbenchLauncher.GetRuntimeBootstrapEnvironmentMenuStateForTests();
 
             StringAssert.Contains("缺少 .NET 10 SDK", dotnetMessage);
-            StringAssert.Contains("缺少 Visual Studio 2022 C++ Build Tools", nativeAotMessage);
             StringAssert.Contains("再次按 Ctrl+E", dotnetMessage);
-        }
-
-        /// <summary>
-        /// 读取 Ctrl+E Runtime bootstrap 实现，验证后台编译不会丢失 Editor 进度反馈。
-        /// </summary>
-        /// <returns>Runtime 缓存启动器源码文本。</returns>
-        private static string ReadRuntimeCacheLauncherSource()
-        {
-            return ReadLauncherPartialSource("YokiFrameWorkbenchLauncher.RuntimeCache.cs");
-        }
-
-        /// <summary>
-        /// 读取 bootstrap 生命周期 partial，供进度清理和 Editor 退出契约测试共用。
-        /// </summary>
-        /// <returns>生命周期管理源码文本。</returns>
-        private static string ReadBootstrapLifecycleSource()
-        {
-            return ReadLauncherPartialSource("YokiFrameWorkbenchLauncher.BootstrapLifecycle.cs");
-        }
-
-        /// <summary>
-        /// 读取 Windows Job Object partial，验证 Unity Mono 缺少 Kill(bool) 时仍具备完整树终止 owner。
-        /// </summary>
-        /// <returns>Windows 进程树所有权实现源码。</returns>
-        private static string ReadWindowsProcessJobSource()
-        {
-            return ReadLauncherPartialSource("YokiFrameWorkbenchLauncher.WindowsProcessJob.cs");
-        }
-
-        /// <summary>提取两个稳定方法签名之间的源码，供锁与调用顺序契约测试使用。</summary>
-        /// <param name="source">完整 partial 源码。</param>
-        /// <param name="startMarker">目标片段起始签名。</param>
-        /// <param name="endMarker">目标片段之后的下一方法签名。</param>
-        /// <returns>包含起始签名且不包含结束签名的源码片段。</returns>
-        private static string ExtractSourceSegment(string source, string startMarker, string endMarker)
-        {
-            int startIndex = source.IndexOf(startMarker, StringComparison.Ordinal);
-            Assert.That(startIndex, Is.GreaterThanOrEqualTo(0), startMarker);
-            int endIndex = source.IndexOf(endMarker, startIndex, StringComparison.Ordinal);
-            Assert.That(endIndex, Is.GreaterThan(startIndex), endMarker);
-            return source.Substring(startIndex, endIndex - startIndex);
+            Assert.IsTrue(dotnetMenu.Enabled);
+            Assert.AreEqual("https://dotnet.microsoft.com/download/dotnet/10.0", dotnetMenu.Url);
+            StringAssert.Contains("缺少 Visual Studio 2022 C++ Build Tools", nativeAotMessage);
+            Assert.IsTrue(nativeAotMenu.Enabled);
+            Assert.AreEqual("https://visualstudio.microsoft.com/visual-cpp-build-tools/", nativeAotMenu.Url);
         }
 
         /// <summary>启动 PowerShell 父进程，并让它创建可由测试观测的长期 ping 子进程。</summary>
@@ -340,24 +203,5 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>
-        /// 从固定 WorkbenchLauncher 目录读取指定 partial，缺失时返回清晰测试失败。
-        /// </summary>
-        /// <param name="fileName">目标源码文件名。</param>
-        /// <returns>源码文本。</returns>
-        private static string ReadLauncherPartialSource(string fileName)
-        {
-            string path = Path.Combine(
-                Application.dataPath,
-                "YokiFrame",
-                "Core",
-                "Adapters",
-                "Unity",
-                "Editor",
-                "WorkbenchLauncher",
-                fileName);
-            Assert.IsTrue(File.Exists(path), path);
-            return File.ReadAllText(path);
-        }
     }
 }

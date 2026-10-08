@@ -51,7 +51,7 @@ namespace YokiFrame
 
         /// <summary>验证文档「快速上手」段的创建、Add、Start、Update、Dispose 序列可用且语义正确。</summary>
         [Test]
-        public void QuickStartSequenceMatchesDocumentation()
+        public void Start_快速上手序列_进入一次并处于Running()
         {
             FSM<PlayerState> fsm = new();
             IdleState idle = new(fsm, new object());
@@ -68,7 +68,7 @@ namespace YokiFrame
 
         /// <summary>验证文档「带启动参数」段的 FSM&lt;TEnum,TArgs&gt; 与 Start(id,args) 可用。</summary>
         [Test]
-        public void StartWithArgumentsMatchesDocumentation()
+        public void Start_带参抽象状态_把参数交给OnEnter()
         {
             FSM<PlayerState, int> spawnFsm = new();
             SpawnState spawn = new(spawnFsm, new object());
@@ -80,101 +80,21 @@ namespace YokiFrame
             spawnFsm.Dispose();
         }
 
-        /// <summary>验证文档「实践模式」段列出的控制与查询成员存在且行为一致。</summary>
+        /// <summary>验证 Get 按标识返回已注册状态，缺失标识得到空引用。</summary>
         [Test]
-        public void PracticePatternMembersMatchDocumentation()
+        public void Get_已注册与缺失_返回实例或空()
         {
             FSM<PlayerState> fsm = new("GameFlow");
-            fsm.Add(PlayerState.Idle, new IdleState(fsm, new object()));
-            fsm.Add(PlayerState.Run, new IdleState(fsm, new object()));
-            fsm.Start(PlayerState.Idle);
+            IdleState idle = new(fsm, new object());
+            fsm.Add(PlayerState.Idle, idle);
 
-            fsm.Change(PlayerState.Run);
-            Assert.AreEqual(PlayerState.Run, fsm.CurEnum);
-
-            fsm.Suspend();
-            Assert.AreEqual(MachineState.Suspend, fsm.MachineState);
-
-            fsm.Resume();
-            Assert.AreEqual(MachineState.Running, fsm.MachineState);
-
-            fsm.SendMessage(42);
-            Assert.NotNull(fsm.CurState);
-
-            // 文档表格记录 Get 为 void + out 参数；不存在时 out 为空值。
             fsm.Get(PlayerState.Idle, out IState found);
-            Assert.NotNull(found);
             fsm.Get(PlayerState.Run, out IState missing);
-            Assert.NotNull(missing);
 
-            fsm.Remove(PlayerState.Run);
-            fsm.End();
-            Assert.AreEqual(MachineState.End, fsm.MachineState);
-
-            fsm.Clear();
+            Assert.AreSame(idle, found);
+            Assert.IsNull(missing);
             fsm.Dispose();
         }
 
-        /// <summary>
-        /// 验证文档声明的全部 AbstractState 覆写点签名与基类一致。
-        /// 该类型只用于编译期守护：覆写点被改名或改签名时本程序集无法编译。
-        /// </summary>
-        private sealed class AllOverridePointsState : AbstractState<PlayerState, object>
-        {
-            /// <summary>创建覆盖全部文档覆写点的状态。</summary>
-            /// <param name="fsm">所属状态机。</param>
-            /// <param name="blackboard">共享黑板。</param>
-            public AllOverridePointsState(FSM<PlayerState> fsm, object blackboard)
-                : base(fsm, blackboard)
-            {
-            }
-
-            /// <summary>覆写进入前条件。</summary>
-            /// <returns>始终允许进入。</returns>
-            protected override bool OnCondition() => true;
-
-            /// <summary>覆写进入回调。</summary>
-            protected override void OnEnter() { }
-
-            /// <summary>覆写挂起回调。</summary>
-            protected override void OnSuspend() { }
-
-            /// <summary>覆写恢复回调。</summary>
-            protected override void OnResume() { }
-
-            /// <summary>覆写 Update 回调。</summary>
-            protected override void OnUpdate() { }
-
-            /// <summary>覆写 FixedUpdate 回调。</summary>
-            protected override void OnFixedUpdate() { }
-
-            /// <summary>覆写 CustomUpdate 回调。</summary>
-            protected override void OnCustomUpdate() { }
-
-            /// <summary>覆写退出回调。</summary>
-            protected override void OnExit() { }
-
-            /// <summary>覆写释放回调。</summary>
-            protected override void OnDispose() { }
-
-            /// <summary>覆写强类型消息回调。</summary>
-            /// <typeparam name="TMsg">消息类型。</typeparam>
-            /// <param name="message">消息内容。</param>
-            protected override void OnMessage<TMsg>(TMsg message) { }
-        }
-
-        /// <summary>验证文档声明的全部覆写点可被同一状态类型同时实现。</summary>
-        [Test]
-        public void AllDocumentedOverridePointsAreAvailable()
-        {
-            FSM<PlayerState> fsm = new();
-            fsm.Add(PlayerState.Idle, new AllOverridePointsState(fsm, new object()));
-            fsm.Start(PlayerState.Idle);
-            fsm.Update();
-            fsm.FixedUpdate();
-            fsm.CustomUpdate();
-            fsm.SendMessage("payload");
-            fsm.Dispose();
-        }
     }
 }

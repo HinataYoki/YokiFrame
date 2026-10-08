@@ -13,28 +13,18 @@ public sealed class YokiFrameClientTelemetryCursorTests
     private const long WRITTEN_AT_UTC_TICKS = 638880000000000000L;
 
     /// <summary>验证已消费帧在 CRC 校验和 UTF-8 解码前返回空，避免 100ms 轮询重复复制 payload。</summary>
-    [Fact]
+    [WindowsFact]
     public void UnchangedCommittedHeaderSkipsPayloadRead()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrameIfChanged("{\"kit\":\"FsmKit\"}", true, SEQUENCE);
 
         Assert.Null(result);
     }
 
     /// <summary>验证 header 较游标更新时仍执行完整 payload 校验，不会把损坏的新帧误判为未变化。</summary>
-    [Fact]
+    [WindowsFact]
     public void NewHeaderStillValidatesPayload()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrameIfChanged("{\"kit\":\"FsmKit\"}", true, SEQUENCE - 1L);
 
         Assert.NotNull(result);
@@ -42,14 +32,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证同一 generation 内 sequence 未前进时，即使系统时间前进也不会重复接受旧帧。</summary>
-    [Fact]
+    [WindowsFact]
     public void NewerTimestampDoesNotAcceptLowerSequence()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrameIfChanged(
             "{\"kit\":\"FsmKit\"}",
             false,
@@ -61,14 +46,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证 sequence 前进时即使系统时间回拨也会完整校验新帧。</summary>
-    [Fact]
+    [WindowsFact]
     public void OlderTimestampStillReadsHigherSequence()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrameIfChanged(
             "{\"kit\":\"FsmKit\"}",
             true,
@@ -81,14 +61,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证 frame 的 engineIdHash 不属于请求 engine 时不会接受伪归属 payload。</summary>
-    [Fact]
+    [WindowsFact]
     public void EngineIdHashMismatchIsRejected()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var result = ReadFrameIfChanged(
             "{\"kit\":\"FsmKit\"}", false, SEQUENCE, useWrongEngineHash: true);
 
@@ -97,14 +72,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证 Writing 与随后同 sequence 的 Committed 帧可连续读取，不把写入中状态当成已消费帧。</summary>
-    [Fact]
+    [WindowsFact]
     public void WritingFrameCanBeRetriedAfterCommit()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         const string payloadJson = "{\"kit\":\"FsmKit\"}";
         var engineId = "cursor-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
@@ -132,14 +102,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证预热后 1000 次稳定空闲轮询无托管分配，且只打开一次 map/accessor。</summary>
-    [Fact]
+    [WindowsFact]
     public void UnchangedPollingReusesOneMapLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = "lease-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);
@@ -179,14 +144,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证并发读取同一目标时仍只创建一个 accessor，缓存与 lease 生命周期不会发生竞态。</summary>
-    [Fact]
+    [WindowsFact]
     public void ConcurrentPollingSharesOneMapLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = "concurrent-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);
@@ -206,14 +166,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证 generation 改变会先释放旧映射，再打开并接受新一代帧。</summary>
-    [Fact]
+    [WindowsFact]
     public void GenerationChangeReopensMapLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = "generation-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);
@@ -240,14 +195,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证稳定身份校验失败后立即关闭 accessor，避免坏 segment 被 100ms 轮询长期钉住。</summary>
-    [Fact]
+    [WindowsFact]
     public void IdentityFailureReleasesMapLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = "identity-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);
@@ -268,14 +218,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证 Client Dispose 会确定性关闭全部活动 accessor，并拒绝生命周期结束后的重新读取。</summary>
-    [Fact]
+    [WindowsFact]
     public void DisposeReleasesActiveMapLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = "dispose-" + Guid.NewGuid().ToString("N");
         var projectRoot = CreateProjectRoot();
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);
@@ -302,14 +247,9 @@ public sealed class YokiFrameClientTelemetryCursorTests
     }
 
     /// <summary>验证有界缓存重置时会 Dispose 已打开目标，不会只清字典后遗留 OS accessor。</summary>
-    [Fact]
+    [WindowsFact]
     public void BoundedCacheCleanupDisposesOpenedLease()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var projectRoot = CreateProjectRoot();
         var engineId = "active-" + Guid.NewGuid().ToString("N");
         var engineIdHash = YokiFrameSharedMemoryTelemetryEngineIdHash.Compute(engineId);

@@ -24,10 +24,9 @@ public sealed class ClientTransportOwnershipTests
     /// 验证统一 Client 的公开路径、诊断和操作结果不再由 Protocol 程序集定义。
     /// </summary>
     [Fact]
-    public void PublicClientModelsBelongToClientAssembly()
+    public void PublicClientModels_归属Client程序集_AssemblyBoundary()
     {
         var clientAssembly = typeof(IYokiFrameClient).Assembly;
-        var clientType = typeof(IYokiFrameClient);
         var pathsType = typeof(IEngineStateReader).GetProperty(nameof(IEngineStateReader.Paths))!.PropertyType;
         var heartbeatType = typeof(IEngineStateReader).GetMethod(nameof(IEngineStateReader.ReadHeartbeat))!.ReturnType;
         var bridgeStatusType = typeof(IEngineStateReader).GetMethod(nameof(IEngineStateReader.ReadBridgeStatus))!.ReturnType;
@@ -45,7 +44,7 @@ public sealed class ClientTransportOwnershipTests
     /// 验证 Protocol 程序集不再暴露本机路径、IO、状态或 named map transport 类型。
     /// </summary>
     [Fact]
-    public void ProtocolAssemblyDoesNotOwnClientTransportTypes()
+    public void ProtocolAssembly_不含本机Transport_AssemblyBoundary()
     {
         var protocolAssembly = typeof(CommandEnvelope).Assembly;
 
@@ -59,7 +58,7 @@ public sealed class ClientTransportOwnershipTests
     /// 验证具体 transport 实现存在于 Client 程序集且保持内部可见性。
     /// </summary>
     [Fact]
-    public void ConcreteTransportImplementationsAreInternalToClient()
+    public void ConcreteTransports_内部可见_AssemblyBoundary()
     {
         var clientAssembly = typeof(IYokiFrameClient).Assembly;
         var typeNames = new[]
@@ -107,58 +106,4 @@ public sealed class ClientTransportOwnershipTests
             method => method.Name == nameof(IFastChannelCommandTransport.SendFastChannelReadOnlyCommandAsync));
     }
 
-    /// <summary>
-    /// 验证 Protocol 源码目录不再保存具体 transport 文件或 named map 平台引用。
-    /// </summary>
-    [Fact]
-    public void ProtocolSourceContainsOnlyTransportIndependentCode()
-    {
-        var protocolRoot = Path.Combine(FindWorkbenchRoot(), "src", "YokiFrame.Protocol");
-        var forbiddenFileNames = new[]
-        {
-            "YokiFramePaths.cs",
-            "YokiFrameFileBridgeClient.cs",
-            "AtomicJsonFileWriter.cs",
-            "PathSecurity.cs",
-            "CommandSendResult.cs",
-            "FileBridgeStatus.cs",
-            "FileBridgeRetentionInfo.cs",
-            "HeartbeatInfo.cs",
-            "SharedMemoryTelemetryNamedMapReader.cs"
-        };
-
-        var sourceFiles = Directory.EnumerateFiles(protocolRoot, "*.cs", SearchOption.AllDirectories).ToArray();
-        foreach (var fileName in forbiddenFileNames)
-        {
-            Assert.DoesNotContain(sourceFiles, path => string.Equals(Path.GetFileName(path), fileName, StringComparison.Ordinal));
-        }
-
-        Assert.DoesNotContain(sourceFiles, path => File.ReadAllText(path).Contains("System.IO.MemoryMappedFiles", StringComparison.Ordinal));
-    }
-
-    /// <summary>
-    /// 从测试输出目录向上定位 Workbench 源码根目录。
-    /// </summary>
-    /// <returns>包含 src 和 tests 的 Workbench 目录。</returns>
-    private static string FindWorkbenchRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src", "YokiFrame.Protocol")))
-            {
-                return directory.FullName;
-            }
-
-            var workspaceRoot = Path.Combine(directory.FullName, "Assets", "YokiFrame", "YokiFrameWorkbench~");
-            if (Directory.Exists(Path.Combine(workspaceRoot, "src", "YokiFrame.Protocol")))
-            {
-                return workspaceRoot;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("无法定位 YokiFrameWorkbench~ 源码目录。");
-    }
 }

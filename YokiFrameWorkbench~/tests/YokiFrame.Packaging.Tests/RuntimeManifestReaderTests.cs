@@ -6,8 +6,10 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 覆盖 manifest 合并读取器对损坏和结构无效缓存的降级行为。
 /// </summary>
-public sealed class RuntimeManifestReaderTests
+public sealed class RuntimeManifestReaderTests : IDisposable
 {
+    private readonly List<string> mCleanupRoots = new();
+
     private const string VALID_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     /// <summary>
@@ -99,12 +101,27 @@ public sealed class RuntimeManifestReaderTests
     /// </summary>
     /// <param name="content">文件内容。</param>
     /// <returns>manifest 完整路径。</returns>
-    private static string WriteManifest(string content)
+    private string WriteManifest(string content)
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-manifest-reader-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        mCleanupRoots.Add(root);
         var path = Path.Combine(root, "tool-manifest.json");
         File.WriteAllText(path, content);
         return path;
+    }
+
+    /// <summary>
+    /// 删除当前测试写出的 manifest 目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var cleanupRoot in mCleanupRoots)
+        {
+            if (Directory.Exists(cleanupRoot))
+            {
+                Directory.Delete(cleanupRoot, recursive: true);
+            }
+        }
     }
 }

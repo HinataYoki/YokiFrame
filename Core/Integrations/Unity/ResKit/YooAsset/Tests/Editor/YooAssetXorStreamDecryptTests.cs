@@ -1,7 +1,5 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_3
-using System;
 using System.IO;
-using System.Reflection;
 using NUnit.Framework;
 using YokiFrame.Unity;
 
@@ -13,9 +11,6 @@ namespace YokiFrame.Unity.Tests
     /// </summary>
     public sealed class YooAssetXorStreamDecryptTests
     {
-        /// <summary>被测流的完整类型名。</summary>
-        private const string STREAM_TYPE_NAME = "YokiFrame.Unity.YooAssetXorDecryptStreamV3";
-
         /// <summary>两字节循环密钥，用于验证按绝对位置循环取模。</summary>
         private static readonly byte[] KEY = { 0x0F, 0xF0 };
 
@@ -36,27 +31,18 @@ namespace YokiFrame.Unity.Tests
             if (File.Exists(mPath)) File.Delete(mPath);
         }
 
-        /// <summary>按类型名与内部构造函数创建被测解密流。</summary>
+        /// <summary>直接创建内部解密流。</summary>
         /// <param name="path">目标文件路径。</param>
         /// <param name="key">循环 XOR 密钥。</param>
         /// <returns>可直接按 Stream 使用的解密流。</returns>
         private static Stream CreateStream(string path, byte[] key)
         {
-            Type type = typeof(YooAssetInitializer).Assembly.GetType(STREAM_TYPE_NAME);
-            Assert.IsNotNull(type, "未找到 " + STREAM_TYPE_NAME);
-
-            ConstructorInfo ctor = type.GetConstructor(
-                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
-                null,
-                new[] { typeof(string), typeof(byte[]) },
-                null);
-            Assert.IsNotNull(ctor, "未找到接受 (string, byte[]) 的构造函数");
-            return (Stream)ctor.Invoke(new object[] { path, key });
+            return new YooAssetXorDecryptStreamV3(path, key);
         }
 
-        /// <summary>基线：经典重载读取按绝对位置循环 XOR 解密。</summary>
+        /// <summary>验证经典重载按绝对位置循环 XOR 解密。</summary>
         [Test]
-        public void ClassicReadDecryptsWithCyclicKey()
+        public void Read_循环密钥_按绝对位置解密()
         {
             using Stream stream = CreateStream(mPath, KEY);
             byte[] buffer = new byte[3];
@@ -70,11 +56,11 @@ namespace YokiFrame.Unity.Tests
         }
 
         /// <summary>
-        /// 核心回归：单字节读取必须解密，并按绝对位置使用循环密钥。
+        /// 验证单字节读取必须解密，并在读完后返回 -1。
         /// 未覆写 ReadByte 时该路径会把密文交给调用方。
         /// </summary>
         [Test]
-        public void ReadByteDecryptsWithCyclicKey()
+        public void ReadByte_循环密钥_按绝对位置解密并在结束返回负一()
         {
             using Stream stream = CreateStream(mPath, KEY);
 

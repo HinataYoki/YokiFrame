@@ -1,5 +1,4 @@
 using System.IO.Pipes;
-using System.Reflection;
 using System.Text.Json;
 using YokiFrame.Client.FastChannel;
 using YokiFrame.Client.FastChannel.IO;
@@ -18,19 +17,13 @@ public sealed class YokiFrameClientFastChannelTests
     private const string SOURCE = "client-tests";
     private const int COMMAND_TIMEOUT_MS = 1000;
     private const int FAST_CHANNEL_OPERATION_TIMEOUT_MS = 750;
-    private const string FAST_CHANNEL_METHOD_NAME = "SendFastChannelReadOnlySystemCommandAsync";
 
     /// <summary>
     /// 验证同一 registry endpoint 上连续发送 ping 和 bridge_status 时，Client 只完成一次 Hello 并复用该连接。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task ReadOnlySystemCommandsReuseSingleHelloForUnchangedRegistryEndpoint()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? serverTask = null;
@@ -39,12 +32,13 @@ public sealed class YokiFrameClientFastChannelTests
             var endpoint = FastChannelEndpoint.CreateNamedPipe(ENGINE_ID, "session-a", 1, CreatePipeName());
             await WriteEngineRegistryAsync(projectRoot, endpoint);
             using YokiFrameClient client = new(projectRoot);
-            var api = GetFastChannelReadOnlySystemCommandApi();
             var server = new NamedPipeReadOnlySystemHost(endpoint, new[] { "ping", "bridge_status" }, false, cancellationSource.Token);
             serverTask = server.ServeAsync();
 
-            var pingResponse = await InvokeFastChannelReadOnlySystemCommandAsync(client, api, "ping", cancellationSource.Token);
-            var statusResponse = await InvokeFastChannelReadOnlySystemCommandAsync(client, api, "bridge_status", cancellationSource.Token);
+            var pingResponse = await client.SendFastChannelReadOnlySystemCommandAsync(
+                ENGINE_ID, "ping", SOURCE, COMMAND_TIMEOUT_MS, cancellationSource.Token);
+            var statusResponse = await client.SendFastChannelReadOnlySystemCommandAsync(
+                ENGINE_ID, "bridge_status", SOURCE, COMMAND_TIMEOUT_MS, cancellationSource.Token);
 
             await serverTask;
             Assert.Equal(1, server.HelloCount);
@@ -62,14 +56,9 @@ public sealed class YokiFrameClientFastChannelTests
     /// <summary>
     /// 验证 registry 改变 session、generation 和 Named Pipe endpoint 后，Client 释放旧连接并在新 endpoint 完成新的 Hello。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task ReadOnlySystemCommandReconnectsAfterRegistrySessionGenerationAndEndpointChange()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? firstServerTask = null;
@@ -79,17 +68,18 @@ public sealed class YokiFrameClientFastChannelTests
             var firstEndpoint = FastChannelEndpoint.CreateNamedPipe(ENGINE_ID, "session-a", 1, CreatePipeName());
             await WriteEngineRegistryAsync(projectRoot, firstEndpoint);
             using YokiFrameClient client = new(projectRoot);
-            var api = GetFastChannelReadOnlySystemCommandApi();
             var firstServer = new NamedPipeReadOnlySystemHost(firstEndpoint, new[] { "ping" }, true, cancellationSource.Token);
             firstServerTask = firstServer.ServeAsync();
 
-            var pingResponse = await InvokeFastChannelReadOnlySystemCommandAsync(client, api, "ping", cancellationSource.Token);
+            var pingResponse = await client.SendFastChannelReadOnlySystemCommandAsync(
+                ENGINE_ID, "ping", SOURCE, COMMAND_TIMEOUT_MS, cancellationSource.Token);
             var secondEndpoint = FastChannelEndpoint.CreateNamedPipe(ENGINE_ID, "session-b", 2, CreatePipeName());
             await WriteEngineRegistryAsync(projectRoot, secondEndpoint);
             var secondServer = new NamedPipeReadOnlySystemHost(secondEndpoint, new[] { "bridge_status" }, false, cancellationSource.Token);
             secondServerTask = secondServer.ServeAsync();
 
-            var statusResponse = await InvokeFastChannelReadOnlySystemCommandAsync(client, api, "bridge_status", cancellationSource.Token);
+            var statusResponse = await client.SendFastChannelReadOnlySystemCommandAsync(
+                ENGINE_ID, "bridge_status", SOURCE, COMMAND_TIMEOUT_MS, cancellationSource.Token);
 
             await secondServerTask;
             await EnsureServerCompletesAsync(firstServerTask);
@@ -108,14 +98,9 @@ public sealed class YokiFrameClientFastChannelTests
     }
 
     /// <summary>验证并发 Dispose 会关闭已缓存连接，且生命周期结束后不能在同一 endpoint 上重新建连。</summary>
-    [Fact]
+    [WindowsFact]
     public async Task DisposeClosesCachedConnectionAndPreventsReconnection()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? serverTask = null;
@@ -152,14 +137,9 @@ public sealed class YokiFrameClientFastChannelTests
     /// <summary>
     /// 验证 Host 返回损坏 Response JSON 时 Client 会把解析失败转换为可回退的协议异常，而不是将 JSON 实现细节泄漏给 Workbench。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task ReadOnlySystemCommandConvertsMalformedResponseToProtocolError()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? serverTask = null;
@@ -168,7 +148,6 @@ public sealed class YokiFrameClientFastChannelTests
             var endpoint = FastChannelEndpoint.CreateNamedPipe(ENGINE_ID, "session-a", 1, CreatePipeName());
             await WriteEngineRegistryAsync(projectRoot, endpoint);
             using YokiFrameClient client = new(projectRoot);
-            var api = GetFastChannelReadOnlySystemCommandApi();
             var server = new NamedPipeReadOnlySystemHost(
                 endpoint,
                 new[] { "ping" },
@@ -178,7 +157,8 @@ public sealed class YokiFrameClientFastChannelTests
             serverTask = server.ServeAsync();
 
             var exception = await Assert.ThrowsAsync<YokiFrameProtocolException>(() =>
-                InvokeFastChannelReadOnlySystemCommandAsync(client, api, "ping", cancellationSource.Token));
+                client.SendFastChannelReadOnlySystemCommandAsync(
+                    ENGINE_ID, "ping", SOURCE, COMMAND_TIMEOUT_MS, cancellationSource.Token));
 
             Assert.Equal("FastChannelResponseInvalid", exception.Error.Code);
             await serverTask;
@@ -194,14 +174,9 @@ public sealed class YokiFrameClientFastChannelTests
     /// <summary>
     /// 验证 FastChannel 的本地短期限不会把非法的 timeoutMs 写入协议；Host 收到的信封仍使用协议最小值。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task ReadOnlySystemCommandKeepsWireTimeoutAtProtocolMinimumForShortOperation()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? serverTask = null;
@@ -258,54 +233,6 @@ public sealed class YokiFrameClientFastChannelTests
         {
             DeleteProjectRoot(projectRoot);
         }
-    }
-
-    /// <summary>
-    /// 反射定位未来公开在统一 Client 边界上的 FastChannel 只读命令 API，并固定其参数和返回类型契约。
-    /// </summary>
-    /// <returns>与目标公开方法完全匹配的反射信息。</returns>
-    private static MethodInfo GetFastChannelReadOnlySystemCommandApi()
-    {
-        var parameterTypes = new[]
-        {
-            typeof(string),
-            typeof(string),
-            typeof(string),
-            typeof(int),
-            typeof(CancellationToken)
-        };
-        var method = typeof(IFastChannelCommandTransport).GetMethod(FAST_CHANNEL_METHOD_NAME, parameterTypes);
-        Assert.True(
-            method != null,
-            "IFastChannelCommandTransport 必须公开 Task<CommandResponse> SendFastChannelReadOnlySystemCommandAsync(string engineId, string action, string source, int timeoutMs, CancellationToken cancellationToken)。");
-        Assert.Equal(typeof(Task<CommandResponse>), method!.ReturnType);
-        return method;
-    }
-
-    /// <summary>
-    /// 通过公开 Client API 调用只读 System FastChannel 命令，并保留真实异步异常和返回值供集成断言使用。
-    /// </summary>
-    /// <param name="client">统一 Client 实例。</param>
-    /// <param name="api">已验证的目标公开 API。</param>
-    /// <param name="action">允许走 FastChannel 的 System action。</param>
-    /// <param name="cancellationToken">本次测试调用的取消令牌。</param>
-    /// <returns>Host 返回并由 Client 解析后的命令响应。</returns>
-    private static async Task<CommandResponse> InvokeFastChannelReadOnlySystemCommandAsync(
-        IYokiFrameClient client,
-        MethodInfo api,
-        string action,
-        CancellationToken cancellationToken)
-    {
-        var invocation = api.Invoke(client, new object?[]
-        {
-            ENGINE_ID,
-            action,
-            SOURCE,
-            COMMAND_TIMEOUT_MS,
-            cancellationToken
-        });
-        var commandTask = Assert.IsAssignableFrom<Task<CommandResponse>>(invocation);
-        return await commandTask.ConfigureAwait(false);
     }
 
     /// <summary>

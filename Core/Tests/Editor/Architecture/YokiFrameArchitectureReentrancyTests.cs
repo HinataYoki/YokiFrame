@@ -12,7 +12,7 @@ namespace YokiFrame
         /// 验证 OnInit 内部取回同型 Interface 时，初始化只发布一次。
         /// </summary>
         [Test]
-        public void InterfaceAccessDuringOnInitRunsOnInitOnce()
+        public void Interface_初始化期间重入_只执行一次OnInit()
         {
             // Architecture<T> 是进程级单例，同一 Editor 域内跨次运行会保留已发布实例，
             // 因此这里分别断言「首次初始化」与「已发布后再次取回」两种情况，保证用例可重复执行。
@@ -36,7 +36,7 @@ namespace YokiFrame
         /// 验证服务 OnInit 内部取回所属架构 Interface 时，架构与服务的初始化各自只发布一次。
         /// </summary>
         [Test]
-        public void InterfaceAccessDuringServiceInitRunsEachInitOnce()
+        public void Interface_服务初始化期间重入_架构和服务各初始化一次()
         {
             int architectureBefore = ReentrancedByServiceArchitecture.OnInitCount;
             int serviceBefore = ReentrancedByServiceArchitecture.ServiceInitCount;

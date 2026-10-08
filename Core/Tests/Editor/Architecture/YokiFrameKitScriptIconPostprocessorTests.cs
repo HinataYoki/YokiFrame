@@ -1,8 +1,9 @@
 #if UNITY_EDITOR
-
-using System.IO;
+using System;
+using System.Reflection;
 using NUnit.Framework;
-using UnityEngine;
+using UnityEditor;
+using YokiFrame.Unity.Editor;
 
 namespace YokiFrame.Tests
 {
@@ -11,37 +12,31 @@ namespace YokiFrame.Tests
     /// </summary>
     public sealed class YokiFrameKitScriptIconPostprocessorTests
     {
-        private const string ICON_PROCESSOR_RELATIVE_PATH =
-            "YokiFrame/Core/Adapters/Unity/Editor/Icons/YokiFrameKitScriptIconPostprocessor.cs";
-
         /// <summary>
-        /// 验证图标更新只保留源码开发菜单，不注册自动导入或延迟回调。
+        /// SourceGuard：确认图标维护类型不是 AssetPostprocessor，且类型和方法没有域加载特性。
+        /// 只读取特性，不调用私有方法；Unity 没有公开 API 能列出未注册的导入回调。
         /// </summary>
         [Test]
-        public void InstalledPackagesDoNotRegisterAutomaticIconReimports()
+        public void SourceGuard_没有导入和域加载入口_不会自动改写图标()
         {
-            var sourcePath = GetIconProcessorSourcePath();
-            Assert.IsTrue(File.Exists(sourcePath), "缺少脚本图标处理器: " + sourcePath);
-            var source = File.ReadAllText(sourcePath);
+            Type type = typeof(YokiFrameKitScriptIconPostprocessor);
+            Assert.IsFalse(typeof(AssetPostprocessor).IsAssignableFrom(type));
+            Assert.AreEqual(0, type.GetCustomAttributes(typeof(InitializeOnLoadAttribute), false).Length);
 
-            StringAssert.Contains("[MenuItem(APPLY_SCRIPT_ICONS_MENU)]", source);
-            StringAssert.Contains("[MenuItem(APPLY_SCRIPT_ICONS_MENU, true)]", source);
-            StringAssert.Contains("SOURCE_ROOT = \"Assets/YokiFrame/\"", source);
-            StringAssert.Contains("private static void ApplyExistingScriptIcons()", source);
-            StringAssert.Contains("importer.SaveAndReimport();", source);
-        }
-
-        /// <summary>
-        /// 获取图标处理器生产源码的绝对路径。
-        /// </summary>
-        /// <returns>当前源码开发目录内的图标处理器路径。</returns>
-        private static string GetIconProcessorSourcePath()
-        {
-            return Path.Combine(
-                Application.dataPath,
-                ICON_PROCESSOR_RELATIVE_PATH.Replace('/', Path.DirectorySeparatorChar));
+            const BindingFlags flags = BindingFlags.DeclaredOnly
+                | BindingFlags.Instance
+                | BindingFlags.Static
+                | BindingFlags.Public
+                | BindingFlags.NonPublic;
+            MethodInfo[] methods = type.GetMethods(flags);
+            for (int index = 0; index < methods.Length; index++)
+            {
+                Assert.AreEqual(
+                    0,
+                    methods[index].GetCustomAttributes(typeof(InitializeOnLoadMethodAttribute), false).Length,
+                    methods[index].Name);
+            }
         }
     }
 }
-
 #endif

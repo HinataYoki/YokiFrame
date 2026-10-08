@@ -43,7 +43,7 @@ namespace YokiFrame
         /// 验证首次访问 Interface 会创建类型级单例，执行 OnInit，并初始化已注册服务。
         /// </summary>
         [Test]
-        public void InterfaceCreatesSingletonAndInitializesRegisteredServicesOnce()
+        public void Interface_首次访问_创建单例并初始化已注册服务()
         {
             IArchitecture first = GetArchitecture<LifecycleArchitecture>();
             IArchitecture second = GetArchitecture<LifecycleArchitecture>();
@@ -65,7 +65,7 @@ namespace YokiFrame
         /// 验证重复注册同一服务类型会释放旧实例，并只保留最后注册的服务。
         /// </summary>
         [Test]
-        public void RegisterReplacesExistingServiceAndDisposesOldService()
+        public void Register_重复注册同类型_释放旧实例并保留最后服务()
         {
             IArchitecture architecture = GetArchitecture<ReplacementArchitecture>();
             ReplacementService service = architecture.GetService<ReplacementService>();
@@ -81,7 +81,7 @@ namespace YokiFrame
         /// 验证 force 获取未注册服务时会创建、注册并初始化服务。
         /// </summary>
         [Test]
-        public void GetServiceForceCreatesRegistersAndInitializesMissingService()
+        public void GetService_强制获取缺失服务_创建注册并初始化()
         {
             IArchitecture architecture = GetArchitecture<EmptyArchitecture>();
             ForcedService service = architecture.GetService<ForcedService>(true);
@@ -97,7 +97,7 @@ namespace YokiFrame
         /// 验证普通获取未注册服务时返回 null，不偷偷创建生命周期不清的服务。
         /// </summary>
         [Test]
-        public void GetServiceWithoutForceReturnsNullWhenServiceMissing()
+        public void GetService_未强制且服务缺失_返回空且不初始化()
         {
             IArchitecture architecture = GetArchitecture<EmptyArchitecture>();
 
@@ -109,7 +109,7 @@ namespace YokiFrame
         /// 验证架构释放会继续处理其它服务，并在全部清理后汇总多个异常。
         /// </summary>
         [Test]
-        public void DisposeContinuesAfterIndividualServiceFailures()
+        public void Dispose_单个服务释放失败_继续清理其余服务()
         {
             IArchitecture architecture = GetArchitecture<CleanupFailureArchitecture>();
 
@@ -123,7 +123,7 @@ namespace YokiFrame
         /// 验证诊断注册表记录架构和服务状态，并且返回的是可安全修改的副本。
         /// </summary>
         [Test]
-        public void RegistryReportsArchitectureAndReturnsCopies()
+        public void GetAll_已注册架构_返回可独立修改的副本()
         {
             IArchitecture architecture = GetArchitecture<RegistryArchitecture>();
             var infos = new List<ArchitectureDebugInfo>();

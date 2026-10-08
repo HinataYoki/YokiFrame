@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Installer;
 using YokiFrame.Installer.Core.Models;
 using YokiFrame.Installer.Core.Services;
@@ -104,7 +105,7 @@ public sealed class InstallerCoreWorkflowGatewayTests
     /// 验证预览生成后输入变化会拒绝旧 token，避免执行已过期 Git URL。
     /// </summary>
     [Fact]
-    public async Task ExecuteAsyncRejectsPlanWhenGitUrlChangedAfterPreview()
+    public async Task ExecuteAsync_预览后GitUrl变化_不写入Manifest依赖()
     {
         using var fixture = InstallerApplicationFixture.Create();
         var gateway = new InstallerCoreWorkflowGateway();
@@ -120,7 +121,9 @@ public sealed class InstallerCoreWorkflowGatewayTests
             new ProgressRecorder(new List<InstallerProgressStage>()),
             CancellationToken.None));
 
-        Assert.DoesNotContain("com.hinatayoki.yokiframe", File.ReadAllText(fixture.UnityManifestPath), StringComparison.Ordinal);
+        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(fixture.UnityManifestPath));
+        Assert.False(manifest.RootElement.GetProperty("dependencies").TryGetProperty("com.hinatayoki.yokiframe", out _));
+        Assert.Equal("3.0.6", manifest.RootElement.GetProperty("dependencies").GetProperty("com.unity.textmeshpro").GetString());
     }
 
     /// <summary>
@@ -176,11 +179,11 @@ public sealed class InstallerCoreWorkflowGatewayTests
     /// 验证 Godot 执行结果包含包和插件 owner 证据，并尊重关闭的 project.godot 修复选项。
     /// </summary>
     [Fact]
-    public async Task ExecuteAsyncMapsGodotResultWithoutDisabledProjectSettingsEvidence()
+    public async Task ExecuteAsync_关闭Godot设置修复_不改写projectGodot字节()
     {
         using var fixture = InstallerApplicationFixture.Create();
         var projectSettingsPath = Path.Combine(fixture.GodotProjectRoot, "project.godot");
-        var originalProjectSettings = File.ReadAllText(projectSettingsPath);
+        byte[] originalProjectSettings = File.ReadAllBytes(projectSettingsPath);
         GodotInstallOptions godotOptions = new(repairProjectSettings: false, enablePlugin: false);
         var options = InstallerInstallOptions.CreateGodotLocal(
             fixture.SourcePackageRoot,
@@ -199,7 +202,7 @@ public sealed class InstallerCoreWorkflowGatewayTests
         Assert.Contains(result.EvidencePaths, path => path.EndsWith("YokiFrameGodotBootstrap.cs", StringComparison.Ordinal));
         Assert.Contains(result.EvidencePaths, path => path.EndsWith("YokiFrameGodotBootstrap.cs.uid", StringComparison.Ordinal));
         Assert.DoesNotContain(projectSettingsPath, result.EvidencePaths);
-        Assert.Equal(originalProjectSettings, File.ReadAllText(projectSettingsPath));
+        Assert.Equal(originalProjectSettings, File.ReadAllBytes(projectSettingsPath));
         Assert.Equal(new[] { InstallerProgressStage.Applying, InstallerProgressStage.Verifying }, stages);
     }
 
@@ -240,7 +243,7 @@ public sealed class InstallerCoreWorkflowGatewayTests
     /// 验证 Godot 在构建竞态中移除插件登记后，安装器会以最新 project.godot 内容恢复自动启用项。
     /// </summary>
     [Fact]
-    public async Task ExecuteAsyncRestoresGodotPluginRegistrationAfterBuild()
+    public async Task ExecuteAsync_构建后插件被移除_恢复启用登记()
     {
         using var fixture = InstallerApplicationFixture.Create();
         Directory.CreateDirectory(Path.Combine(fixture.GodotProjectRoot, ".godot", "mono", "temp"));
@@ -266,8 +269,13 @@ public sealed class InstallerCoreWorkflowGatewayTests
             new ProgressRecorder(new List<InstallerProgressStage>()),
             CancellationToken.None);
 
-        var finalSettings = File.ReadAllText(Path.Combine(fixture.GodotProjectRoot, "project.godot"));
-        Assert.Contains("res://addons/yokiframe/plugin.cfg", finalSettings, StringComparison.Ordinal);
+        string[] lines = System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(
+                Path.Combine(fixture.GodotProjectRoot, "project.godot")))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n');
+        Assert.Contains(
+            lines,
+            static line => line.TrimEnd('\r') == "enabled=PackedStringArray(\"res://addons/yokiframe/plugin.cfg\")");
     }
 
     /// <summary>

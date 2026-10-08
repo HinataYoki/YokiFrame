@@ -31,9 +31,10 @@ namespace YokiFrame
         private const int ACTIVATION_RESPONSE_TIMEOUT_MS = 750;
         /// <summary>
         /// 从 Unity 菜单启动 Workbench；无法启动时展示可操作的错误和证据路径。
+        /// 保持 internal，测试只通过方法组读取 MenuItem，禁止直接调用以免启动进程。
         /// </summary>
         [MenuItem(MENU_PATH)]
-        private static void OpenWorkbenchFromMenu()
+        internal static void OpenWorkbenchFromMenu()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             var projectRoot = GetProjectRoot();

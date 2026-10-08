@@ -87,7 +87,7 @@ public sealed partial class WorkbenchShellViewModel
     public string SkillInstallStatusText
     {
         get => mSkillInstallStatusText;
-        private set => SetProperty(ref mSkillInstallStatusText, value);
+        internal set => SetProperty(ref mSkillInstallStatusText, value);
     }
 
     /// <summary>

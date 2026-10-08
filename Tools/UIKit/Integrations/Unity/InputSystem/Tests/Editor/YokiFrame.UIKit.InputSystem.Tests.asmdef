@@ -1,0 +1,31 @@
+{
+    "name": "YokiFrame.UIKit.InputSystem.Tests",
+    "rootNamespace": "YokiFrame.Tests",
+    "references": [
+        "YokiFrame",
+        "YokiFrame.Unity.Runtime",
+        "YokiFrame.UIKit.Unity",
+        "YokiFrame.UIKit.InputSystem",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "UNITY_2022_3_OR_NEWER",
+        "YOKIFRAME_INPUTSYSTEM_SUPPORT",
+        "!ENABLE_LEGACY_INPUT_MANAGER"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

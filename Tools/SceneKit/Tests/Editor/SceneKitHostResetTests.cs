@@ -8,84 +8,73 @@ using YokiFrame.Unity;
 namespace YokiFrame.Tests
 {
     /// <summary>
-    /// 守护 SceneKit 在关闭 Domain Reload 后重进 Play Mode 时会清理上一会话的静态场景状态。
+    /// 验证 SceneKit 宿主重置钩子会在会话开始时清除显式后端。
     /// </summary>
     public sealed class SceneKitHostResetTests
     {
-        /// <summary>宿主钩子的方法名，反射断言与调用共用。</summary>
-        private const string HOOK_METHOD_NAME = "RegisterSceneKitReset";
-
-        /// <summary>
-        /// 验证 Unity 适配器存在且注册在 SubsystemRegistration 阶段。
-        /// 缺少该钩子时，sSceneCache / sLoadedScenes / sActiveSceneHandler 会跨 Play 会话存活。
-        /// </summary>
-        [Test]
-        public void SubsystemRegistrationHookIsDeclaredOnUnityAdapter()
+        /// <summary>每个测试前清掉上一用例留下的显式后端，并恢复 SceneKit 会话登记。</summary>
+        [SetUp]
+        public void SetUp()
         {
-            MethodInfo hook = GetHookMethod();
+            UnitySceneKitRuntimeInstaller.RegisterSceneKitResetForTests();
+            SceneKit.Reset();
+        }
 
-            RuntimeInitializeOnLoadMethodAttribute attribute =
-                hook.GetCustomAttribute<RuntimeInitializeOnLoadMethodAttribute>();
-
-            Assert.IsNotNull(attribute, "宿主重置钩子必须带有 RuntimeInitializeOnLoadMethodAttribute");
-            Assert.AreEqual(
-                RuntimeInitializeLoadType.SubsystemRegistration,
-                attribute!.loadType,
-                "钩子必须先在 SubsystemRegistration 阶段登记，统一会话才能在之后清理上一会话状态");
+        /// <summary>每个测试后恢复会话登记并清掉显式后端，避免空回调残留到其他测试。</summary>
+        [TearDown]
+        public void TearDown()
+        {
+            UnitySceneKitRuntimeInstaller.RegisterSceneKitResetForTests();
+            SceneKit.Reset();
         }
 
         /// <summary>
-        /// 验证钩子确实调用 SceneKit.Reset()，这是 C9 的回归断言。
-        /// 显式后端是公开可注入且被 Reset 清除的状态，因此用它作为可观测代理。
+        /// 验证宿主钩子会把被替换掉的 SceneKit 会话回调重新登记为 Reset。
+        /// SceneKit 静态构造也会登记同名回调，因此必须先覆盖成空回调，否则钩子失效时测试仍会通过。
         /// </summary>
         [Test]
-        public void SubsystemRegistrationHookResetsSceneKitState()
+        public void RegisterSceneKitResetForTests_覆盖空回调后开始会话_清除显式后端()
         {
             ISceneBackend backend = new StubSceneBackend();
             SceneKit.SetBackend(backend);
-            Assert.AreSame(backend, SceneKit.GetBackend(), "前置：显式后端应已生效");
+            YokiFrameSession.Register(YokiFrameSession.RELEASE_HOSTS_ORDER, "scenekit", static () => { });
 
-            InvokeHook();
+            UnitySceneKitRuntimeInstaller.RegisterSceneKitResetForTests();
             YokiFrameSession.Begin();
 
-            Assert.AreNotSame(
-                backend,
-                SceneKit.GetBackend(),
-                "钩子必须调用 SceneKit.Reset()，否则显式后端会跨 Play 会话残留");
+            Assert.AreNotSame(backend, SceneKit.GetBackend());
         }
 
-        /// <summary>
-        /// 验证公开的 SceneKit.Reset() 语义未被改动：它仍然清除显式后端。
-        /// </summary>
+        /// <summary>验证公开 Reset 会清除已设置的显式后端。</summary>
         [Test]
-        public void PublicResetStillClearsExplicitBackend()
+        public void Reset_已设置显式后端_清除该后端()
         {
             ISceneBackend backend = new StubSceneBackend();
             SceneKit.SetBackend(backend);
 
             SceneKit.Reset();
 
-            Assert.AreNotSame(backend, SceneKit.GetBackend(), "公开 Reset 必须清除显式后端");
-        }
-
-        /// <summary>获取私有宿主钩子方法。</summary>
-        /// <returns>钩子方法信息。</returns>
-        private static MethodInfo GetHookMethod()
-        {
-            MethodInfo hook = typeof(UnitySceneKitRuntimeInstaller).GetMethod(
-                HOOK_METHOD_NAME,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(hook, "UnitySceneKitRuntimeInstaller 缺少宿主重置钩子 " + HOOK_METHOD_NAME);
-            return hook!;
-        }
-
-        /// <summary>直接调用私有宿主钩子，避免依赖 Play Mode 进入时机。</summary>
-        private static void InvokeHook()
-        {
-            _ = GetHookMethod().Invoke(null, null);
+            Assert.AreNotSame(backend, SceneKit.GetBackend());
         }
 
         /// <summary>仅用于注入显式后端的最小场景后端替身。</summary>
+        /// <summary>
+        /// 验证会话重置方法仍由 Unity 在 SubsystemRegistration 阶段调用。
+        /// 只读取 internal 测试缝上的 Unity 特性，不反射本仓库 private 方法。
+        /// </summary>
+        [Test]
+        public void RegisterSceneKitResetForTests_SubsystemRegistration特性_仍由宿主调用()
+        {
+            MethodInfo method = typeof(UnitySceneKitRuntimeInstaller).GetMethod(
+                nameof(UnitySceneKitRuntimeInstaller.RegisterSceneKitResetForTests),
+                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            Assert.IsNotNull(method, "缺少会话重置测试缝");
+            RuntimeInitializeOnLoadMethodAttribute attribute =
+                method.GetCustomAttribute<RuntimeInitializeOnLoadMethodAttribute>();
+            Assert.IsNotNull(attribute, "会话重置必须带 RuntimeInitializeOnLoadMethodAttribute，否则宿主不会调用");
+            Assert.AreEqual(RuntimeInitializeLoadType.SubsystemRegistration, attribute.loadType);
+        }
+
         private sealed class StubSceneBackend : ISceneBackend
         {
             /// <summary>获取后端名称。</summary>

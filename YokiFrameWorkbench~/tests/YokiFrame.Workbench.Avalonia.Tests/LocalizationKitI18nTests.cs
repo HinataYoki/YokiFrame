@@ -1,3 +1,5 @@
+using System.IO;
+using YokiFrame.Tooling.Application.Services.LocalizationKit;
 using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 using Xunit;
@@ -17,12 +19,14 @@ public sealed class LocalizationKitI18nTests
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
             WorkbenchI18nService service = WorkbenchI18nService.Instance;
-            service.SetCulture("zh-CN");
-            LocalizationKitPageViewModel viewModel = new(
-                System.IO.Directory.GetCurrentDirectory(),
-                new YokiFrame.Tooling.Application.Services.LocalizationKit.LocalizationKitApplicationService());
+            string previousCulture = service.CurrentCultureName;
+            string projectRoot = Path.Combine(Path.GetTempPath(), "yokiframe-localization-i18n-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(projectRoot);
+            LocalizationKitPageViewModel? viewModel = null;
             try
             {
+                service.SetCulture("zh-CN");
+                viewModel = new LocalizationKitPageViewModel(projectRoot, new LocalizationKitApplicationService());
                 Assert.Equal("等待刷新", viewModel.StatusText);
                 Assert.Equal("全部", viewModel.LanguageOptions[0]);
                 Assert.False(viewModel.HasActiveFilters);
@@ -32,21 +36,34 @@ public sealed class LocalizationKitI18nTests
                 Assert.Equal("Waiting for refresh", viewModel.StatusText);
                 Assert.Equal("All", viewModel.LanguageOptions[0]);
                 Assert.False(viewModel.HasActiveFilters);
-                // 哨兵语义稳定：切换语言后仍视为“全部”筛选。
-                Assert.Equal(
-                    LocalizationKitPageViewModel.LANGUAGE_ALL,
-                    viewModel.GetType()
-                        .GetProperty("SelectedLanguage")!.GetValue(viewModel) is string selected
-                        ? selected.Trim().ToLowerInvariant() == "all" || selected == "全部"
-                            ? LocalizationKitPageViewModel.LANGUAGE_ALL
-                            : selected
-                        : string.Empty);
+                string selectedLanguage = viewModel.SelectedLanguage.Trim();
+                Assert.True(
+                    string.Equals(selectedLanguage, "all", StringComparison.OrdinalIgnoreCase)
+                    || selectedLanguage == "全部");
             }
             finally
             {
-                viewModel.Dispose();
-                service.SetCulture("zh-CN");
+                viewModel?.Dispose();
+                service.SetCulture(previousCulture);
+                DeleteTemporaryRoot(projectRoot);
             }
         });
+    }
+
+    /// <summary>删除临时项目目录。清理失败只记录，不覆盖断言异常。</summary>
+    /// <param name="projectRoot">临时项目根目录。</param>
+    private static void DeleteTemporaryRoot(string projectRoot)
+    {
+        try
+        {
+            if (Directory.Exists(projectRoot))
+            {
+                Directory.Delete(projectRoot, true);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception);
+        }
     }
 }

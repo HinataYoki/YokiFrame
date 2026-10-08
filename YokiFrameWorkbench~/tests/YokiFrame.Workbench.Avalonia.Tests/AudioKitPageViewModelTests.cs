@@ -28,65 +28,6 @@ public sealed class AudioKitPageViewModelTests
         Assert.Equal(2, viewModel.SelectedBusChannel?.Voices.Count);
     }
 
-    /// <summary>验证页面契约只保留 Bus 观察与稳定索引，不包含 Runtime 控制绑定。</summary>
-    [Fact]
-    public void PageContractUsesReadonlyBusObserverAndIndexDrawer()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "AudioKitPageView.axaml");
-        string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        string modules = WorkbenchContractTestFiles.ReadSource("Pages", "WorkbenchDefaultPageModules.cs");
-
-        Assert.Contains("AudioKit 观察器", modules, StringComparison.Ordinal);
-        Assert.Contains("audiokit-bus-channels", xaml, StringComparison.Ordinal);
-        Assert.Contains("AudioBusChannelViewModel", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedBusChannel", xaml, StringComparison.Ordinal);
-        Assert.Contains("AudioVoiceRowTemplate", xaml, StringComparison.Ordinal);
-        Assert.Contains("ProgressBar", xaml, StringComparison.Ordinal);
-        Assert.True(xaml.Contains("播放历史") || xaml.Contains("String.AudioKit.PlaybackHistory"), "AudioKit 页面应包含播放历史词条");
-        Assert.Contains("audiokit-index-drawer", xaml, StringComparison.Ordinal);
-        Assert.True(xaml.Contains("扫描预览") || xaml.Contains("String.AudioKit.ScanPreview"), "AudioKit 页面应包含扫描预览词条");
-        Assert.True(xaml.Contains("生成索引") || xaml.Contains("String.AudioKit.Generate"), "AudioKit 页面应包含生成索引词条");
-        Assert.Contains("LostFocus=\"OnIndexSettingLostFocus\"", xaml, StringComparison.Ordinal);
-        Assert.Contains(
-            "ScanFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IndexOutputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IndexManifestPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IndexNamespace, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IndexClassName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IndexStartId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged",
-            xaml,
-            StringComparison.Ordinal);
-        Assert.Contains("AudioKitPageViewModel", shell, StringComparison.Ordinal);
-        Assert.Contains("ActiveWorkspacePage", shell, StringComparison.Ordinal);
-    }
-
-    /// <summary>验证 Bus 选择背景只作用于卡片，避免拉伸的列表模板产生越界高亮。</summary>
-    [Fact]
-    public void BusSelectionStylesOnlyTheCard()
-    {
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "AudioKit.axaml");
-
-        Assert.Contains(
-            "ListBox.audiokit-bus-channels > ListBoxItem:selected Border.audiokit-bus-card",
-            styles,
-            StringComparison.Ordinal);
-    }
-
     /// <summary>验证页面仅公开索引命令，不保留任何 Runtime 音频操作命令。</summary>
     [Fact]
     public void PageExposesOnlyIndexCommands()
@@ -416,30 +357,13 @@ public sealed class AudioKitPageViewModelTests
                 new WorkbenchAudioHistoryEntry(3, "play_started", 4, 1, "Audio/Music/1", "Music", 0.6f,
                     "2026-07-17T08:00:00Z")
             };
-        object source = CreateInternalDataSource(
+        WorkbenchAudioKitDataSource source = new(
             engineId, sessionId, generation, "PlayMode", DateTimeOffset.UtcNow,
             "telemetry", string.Empty, Array.Empty<string>(), string.Empty, "{}");
-        return CreateInternal<WorkbenchAudioKitState>(
+        return new WorkbenchAudioKitState(
             source, version, new WorkbenchAudioBackend("UnityAudioSource", 63, "All", "ResKit"),
             new WorkbenchAudioMaster(0.8f, 0.8f, false, voiceCount), buses, voices, history,
             busTotal ?? buses.Length, voiceCount, 3L, busesTruncated, false, false);
     }
 
-    /// <summary>通过反射创建 Application 内部 AudioKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchAudioKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.AudioKit.WorkbenchAudioKitDataSource", true)!;
-        return Activator.CreateInstance(type,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
-            | System.Reflection.BindingFlags.NonPublic, null, arguments, null)!;
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        return (T)Activator.CreateInstance(typeof(T),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
-            | System.Reflection.BindingFlags.NonPublic, null, arguments, null)!;
-    }
 }

@@ -1,6 +1,7 @@
 #if UNITY_5_3_OR_NEWER && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 #if YOKIFRAME_UNITASK_SUPPORT
 using Cysharp.Threading.Tasks;
@@ -176,10 +177,56 @@ namespace YokiFrame.Unity
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRegistrationOnSubsystemRegistration()
         {
+            RegisterSessionResetForTests();
+        }
+
+        /// <summary>
+        /// 把 YooAsset 会话重置登记到统一会话。测试直接调用此缝，避免反射私有宿主钩子。
+        /// </summary>
+        internal static void RegisterSessionResetForTests()
+        {
             YokiFrameSession.Register(
                 YokiFrameSession.RELEASE_HOSTS_ORDER,
                 "yooasset",
                 ResetForSession);
+        }
+
+        /// <summary>
+        /// 注入已初始化标志，供测试模拟关闭 Domain Reload 后残留的上一会话状态。
+        /// </summary>
+        /// <param name="value">待注入的值。</param>
+        internal static void SetInitializedForTests(bool value)
+        {
+            IsInitialized = value;
+        }
+
+        /// <summary>
+        /// 读取子系统登记钩子上的真实 RuntimeInitializeOnLoadMethod.loadType。
+        /// 该特性没有公开查询；测试不得反射本仓库 private，只能由声明类型读取。
+        /// </summary>
+        /// <param name="loadType">钩子登记的加载阶段。</param>
+        /// <returns>钩子存在且带有该特性时返回 true。</returns>
+        internal static bool TryGetSubsystemRegistrationHookLoadTypeForTests(out RuntimeInitializeLoadType loadType)
+        {
+            loadType = default;
+            MethodInfo hook = typeof(YooAssetInitializer).GetMethod(
+                nameof(ResetRegistrationOnSubsystemRegistration),
+                BindingFlags.Static | BindingFlags.NonPublic);
+            if (hook == null)
+            {
+                return false;
+            }
+
+            RuntimeInitializeOnLoadMethodAttribute attribute =
+                Attribute.GetCustomAttribute(hook, typeof(RuntimeInitializeOnLoadMethodAttribute))
+                as RuntimeInitializeOnLoadMethodAttribute;
+            if (attribute == null)
+            {
+                return false;
+            }
+
+            loadType = attribute.loadType;
+            return true;
         }
 
         /// <summary>

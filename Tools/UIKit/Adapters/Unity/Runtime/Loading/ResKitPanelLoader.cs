@@ -106,7 +106,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="panelType">需要加载的具体面板类型。</param>
         /// <returns>类型名 location，或路径前缀与类型名组合后的 Resources 路径。</returns>
-        private string BuildLocation(Type panelType)
+        internal string BuildLocation(Type panelType)
         {
             if (panelType == null) throw new ArgumentNullException(nameof(panelType));
             if (mUseAddressableLocation) return panelType.Name;

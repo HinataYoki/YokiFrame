@@ -45,7 +45,7 @@ public sealed class WorkbenchTelemetryReadResult<TState>
     /// <param name="sequence">本次已检查帧的序号。</param>
     /// <param name="hasCursor">是否携带可推进游标。</param>
     /// <param name="diagnostic">有界诊断文本。</param>
-    private WorkbenchTelemetryReadResult(
+    internal WorkbenchTelemetryReadResult(
         WorkbenchTelemetryReadStatus status,
         TState? state,
         long sequence,

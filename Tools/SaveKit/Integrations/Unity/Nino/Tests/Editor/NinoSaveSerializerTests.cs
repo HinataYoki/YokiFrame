@@ -9,7 +9,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证 Nino 模块可以跨实例往返。</summary>
         [Test]
-        public void SerializeDeserialize_RoundTripsModule()
+        public void Serialize_再反序列化新实例_还原模块等级()
         {
             var serializer = new NinoSaveSerializer();
             var source = new NinoModule { Level = 12 };
@@ -24,7 +24,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Nino overwrite 入口由 Nino 后端负责。</summary>
         [Test]
-        public void DeserializeOverwrite_UpdatesExistingModule()
+        public void DeserializeOverwrite_目标模块已有值_覆盖为源等级()
         {
             var serializer = new NinoSaveSerializer();
             var bytes = serializer.Serialize(new NinoModule { Level = 33 });

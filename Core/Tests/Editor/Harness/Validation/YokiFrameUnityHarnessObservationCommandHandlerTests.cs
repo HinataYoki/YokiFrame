@@ -7,7 +7,7 @@ namespace YokiFrame
     {
         /// <summary>验证两个诊断 action 均被描述为只读命令。</summary>
         [Test]
-        public void CreateCommandDescriptorsContainsOnlyValidationActions()
+        public void CreateCommandDescriptors_默认描述_只包含两个只读诊断命令()
         {
             var descriptors = YokiFrameUnityHarnessObservationCommandHandler.CreateCommandDescriptors();
 
@@ -22,7 +22,7 @@ namespace YokiFrame
 
         /// <summary>验证非对象 payload 被拒绝，不会触发 Unity 状态查询。</summary>
         [Test]
-        public void HandleRejectsNonObjectPayload()
+        public void Handle_载荷不是对象_返回无效载荷()
         {
             var handler = new YokiFrameUnityHarnessObservationCommandHandler(CreateContext);
             var result = handler.Handle(CreateRequest("Validation", "inspect_status", "[]"));
@@ -33,7 +33,7 @@ namespace YokiFrame
 
         /// <summary>验证花括号包裹但结构损坏的 JSON 也会被拒绝。</summary>
         [Test]
-        public void HandleRejectsMalformedObjectPayload()
+        public void Handle_对象JSON损坏_返回无效载荷()
         {
             var handler = new YokiFrameUnityHarnessObservationCommandHandler(CreateContext);
             var result = handler.Handle(CreateRequest("Validation", "get_console_errors", "{\"invalid\":}"));
@@ -44,7 +44,7 @@ namespace YokiFrame
 
         /// <summary>验证 Console 返回明细不能突破协议固定上限。</summary>
         [Test]
-        public void HandleRejectsConsoleCountAboveLimit()
+        public void Handle_明细数量超过协议上限_返回无效载荷()
         {
             var handler = new YokiFrameUnityHarnessObservationCommandHandler(CreateContext);
             var result = handler.Handle(CreateRequest(
@@ -58,7 +58,7 @@ namespace YokiFrame
 
         /// <summary>验证缺失 session/generation 时拒绝生成无法关联的结果。</summary>
         [Test]
-        public void HandleRejectsUnavailableIdentity()
+        public void Handle_缺少会话身份_拒绝生成诊断结果()
         {
             var handler = new YokiFrameUnityHarnessObservationCommandHandler(
                 () => new YokiFrameUnityHarnessContext { sessionId = string.Empty, generation = 0L });

@@ -1,5 +1,4 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -10,56 +9,51 @@ namespace YokiFrame.Unity.Tests
     /// </summary>
     public sealed class YooAssetInitializerLifecycleTests
     {
-        /// <summary>宿主钩子的方法名，反射断言与调用共用。</summary>
-        private const string HOOK_METHOD_NAME = "ResetRegistrationOnSubsystemRegistration";
-
         /// <summary>
-        /// 验证宿主钩子存在且注册在 SubsystemRegistration 阶段。
-        /// 缺少该钩子时，关闭 Domain Reload 后 IsInitialized 会跨会话残留，
-        /// 使 InitializeAsync 静默提前返回、ResKit 静默退回 Unity Resources。
+        /// 验证关闭 Domain Reload 的宿主钩子登记在 SubsystemRegistration。
+        /// 通过声明类型的 internal 测试缝读取真实特性，不反射本仓库 private。
         /// </summary>
         [Test]
-        public void SubsystemRegistrationHookIsDeclaredOnInitializer()
+        public void ResetRegistrationOnSubsystemRegistration_关闭域重载钩子_登记SubsystemRegistration()
         {
-            MethodInfo hook = GetHookMethod();
+            bool found = YooAssetInitializer.TryGetSubsystemRegistrationHookLoadTypeForTests(
+                out RuntimeInitializeLoadType loadType);
 
-            RuntimeInitializeOnLoadMethodAttribute attribute =
-                hook.GetCustomAttribute<RuntimeInitializeOnLoadMethodAttribute>();
-
-            Assert.IsNotNull(attribute, "宿主重置钩子必须带有 RuntimeInitializeOnLoadMethodAttribute");
+            Assert.IsTrue(found, "宿主重置钩子必须带有 RuntimeInitializeOnLoadMethodAttribute");
             Assert.AreEqual(
                 RuntimeInitializeLoadType.SubsystemRegistration,
-                attribute!.loadType,
+                loadType,
                 "钩子必须先在 SubsystemRegistration 阶段登记，统一会话才能在之后清除上一会话状态");
         }
 
-        /// <summary>
-        /// 验证钩子确实清除上一会话的 IsInitialized 标志，这是 C36 的回归断言。
-        /// </summary>
+        /// <summary>验证会话重置会清除上一会话注入的已初始化标志。</summary>
         [Test]
-        public void SubsystemRegistrationHookClearsInitializedFlag()
+        public void RegisterSessionResetForTests_登记后开始会话_清除已初始化标志()
         {
-            SetIsInitialized(true);
+            YooAssetInitializer.SetInitializedForTests(true);
             Assert.IsTrue(YooAssetInitializer.IsInitialized, "前置：测试需要先注入上一会话的已初始化状态");
 
-            InvokeHook();
-            YokiFrameSession.Begin();
+            try
+            {
+                YooAssetInitializer.RegisterSessionResetForTests();
+                YokiFrameSession.Begin();
 
-            Assert.IsFalse(
-                YokiFrame.Unity.YooAssetInitializer.IsInitialized,
-                "钩子必须清除 IsInitialized，否则 InitializeAsync 会静默提前返回");
-            Assert.IsNull(YooAssetInitializer.DefaultPackage, "钩子应同时释放上一会话的默认 package 引用");
-            Assert.IsNull(YooAssetInitializer.DefaultPackageName, "钩子应同时释放上一会话的默认 package 名称");
-            Assert.AreEqual(0, YooAssetInitializer.Packages.Count, "钩子应同时释放上一会话的 package 登记");
+                Assert.IsFalse(
+                    YooAssetInitializer.IsInitialized,
+                    "钩子必须清除 IsInitialized，否则 InitializeAsync 会静默提前返回");
+                Assert.IsNull(YooAssetInitializer.DefaultPackage, "钩子应同时释放上一会话的默认 package 引用");
+                Assert.IsNull(YooAssetInitializer.DefaultPackageName, "钩子应同时释放上一会话的默认 package 名称");
+                Assert.AreEqual(0, YooAssetInitializer.Packages.Count, "钩子应同时释放上一会话的 package 登记");
+            }
+            finally
+            {
+                YooAssetInitializer.SetInitializedForTests(false);
+            }
         }
 
-        /// <summary>
-        /// 验证钩子刻意**不**清除项目配置的三个初始化回调。
-        /// Unity 对同一 SubsystemRegistration 阶段多个钩子的调用顺序不作保证，
-        /// 若框架清除回调而项目的注册钩子先于本钩子执行，会永久丢失项目配置。
-        /// </summary>
+        /// <summary>验证会话重置保留项目配置的三个初始化回调。</summary>
         [Test]
-        public void SubsystemRegistrationHookPreservesConfiguredInitializationHandlers()
+        public void RegisterSessionResetForTests_已配置初始化回调_保留三个回调()
         {
             YooAssetPackageInitializationHandler handler = (package, options) => null;
             YooAssetInitializer.CustomInitializationHandler = handler;
@@ -68,7 +62,7 @@ namespace YokiFrame.Unity.Tests
 
             try
             {
-                InvokeHook();
+                YooAssetInitializer.RegisterSessionResetForTests();
                 YokiFrameSession.Begin();
 
                 Assert.AreSame(handler, YooAssetInitializer.CustomInitializationHandler, "钩子不得清除 CustomInitializationHandler");
@@ -83,52 +77,32 @@ namespace YokiFrame.Unity.Tests
             }
         }
 
-        /// <summary>
-        /// 验证公开的 ResetRegistration 语义未被改动：它仍然同时清除会话状态与三个初始化回调。
-        /// </summary>
+        /// <summary>验证公开 ResetRegistration 会清除已初始化标志，并清除三个初始化回调。</summary>
         [Test]
-        public void PublicResetRegistrationStillClearsHandlers()
+        public void ResetRegistration_已初始化且已配置回调_清除标志和回调()
         {
-            SetIsInitialized(true);
             YooAssetPackageInitializationHandler handler = (package, options) => null;
+            YooAssetInitializer.SetInitializedForTests(true);
             YooAssetInitializer.CustomInitializationHandler = handler;
+            YooAssetInitializer.HostInitializationHandler = handler;
+            YooAssetInitializer.WebInitializationHandler = handler;
 
-            YooAssetInitializer.ResetRegistration();
+            try
+            {
+                YooAssetInitializer.ResetRegistration();
 
-            Assert.IsFalse(YooAssetInitializer.IsInitialized, "公开 API 必须清除 IsInitialized");
-            Assert.IsNull(YooAssetInitializer.CustomInitializationHandler, "公开 API 仍应清除初始化回调，保持既有契约");
-        }
-
-        /// <summary>获取私有宿主钩子方法。</summary>
-        /// <returns>钩子方法信息。</returns>
-        private static MethodInfo GetHookMethod()
-        {
-            MethodInfo hook = typeof(YooAssetInitializer).GetMethod(
-                HOOK_METHOD_NAME,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(hook, "YooAssetInitializer 缺少宿主重置钩子 " + HOOK_METHOD_NAME);
-            return hook!;
-        }
-
-        /// <summary>直接调用私有宿主钩子，避免依赖 Play Mode 进入时机。</summary>
-        private static void InvokeHook()
-        {
-            _ = GetHookMethod().Invoke(null, null);
-        }
-
-        /// <summary>
-        /// 通过私有 setter 注入 IsInitialized，模拟上一会话在关闭 Domain Reload 时残留的静态状态。
-        /// </summary>
-        /// <param name="value">待注入的值。</param>
-        private static void SetIsInitialized(bool value)
-        {
-            PropertyInfo property = typeof(YooAssetInitializer).GetProperty(
-                nameof(YooAssetInitializer.IsInitialized),
-                BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(property, "未找到 IsInitialized 属性");
-            MethodInfo setter = property!.GetSetMethod(nonPublic: true);
-            Assert.IsNotNull(setter, "未找到 IsInitialized 的私有 setter，测试无法注入上一会话状态");
-            _ = setter!.Invoke(null, new object[] { value });
+                Assert.IsFalse(YooAssetInitializer.IsInitialized, "公开 API 必须清除 IsInitialized");
+                Assert.IsNull(YooAssetInitializer.CustomInitializationHandler, "公开 API 必须清除 CustomInitializationHandler");
+                Assert.IsNull(YooAssetInitializer.HostInitializationHandler, "公开 API 必须清除 HostInitializationHandler");
+                Assert.IsNull(YooAssetInitializer.WebInitializationHandler, "公开 API 必须清除 WebInitializationHandler");
+            }
+            finally
+            {
+                YooAssetInitializer.CustomInitializationHandler = null;
+                YooAssetInitializer.HostInitializationHandler = null;
+                YooAssetInitializer.WebInitializationHandler = null;
+                YooAssetInitializer.SetInitializedForTests(false);
+            }
         }
     }
 }

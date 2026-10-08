@@ -73,7 +73,7 @@ namespace YokiFrame
         /// 解析固定 Asset 路径并验证结果仍位于当前项目 Assets 下，阻止跨项目写入。
         /// </summary>
         /// <returns>当前项目 Runtime Settings 绝对路径。</returns>
-        private static string GetAbsolutePath()
+        internal static string GetAbsolutePath()
         {
             string assetsRoot = Path.GetFullPath(Application.dataPath);
             string relativePath = ASSET_PATH.Substring("Assets/".Length).Replace('/', Path.DirectorySeparatorChar);

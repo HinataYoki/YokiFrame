@@ -11,7 +11,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证后登记的同名参与者替换旧回调，并按顺序执行。</summary>
         [Test]
-        public void BeginInvokesParticipantsInOrderAndReplacesSameId()
+        public void Begin_重复登记同名参与者_替换旧回调并按顺序执行()
         {
             string order = string.Empty;
             YokiFrameSession.Register(1, "session-probe-order", () => order += "a");
@@ -20,14 +20,14 @@ namespace YokiFrame.Tests
 
             YokiFrameSession.Begin();
 
-            StringAssert.Contains("bc", order);
+            Assert.AreEqual("bc", order);
             YokiFrameSession.Register(1, "session-probe-order", static () => { });
             YokiFrameSession.Register(2, "session-probe-later", static () => { });
         }
 
         /// <summary>验证换代会清掉上一会话的类型事件订阅。</summary>
         [Test]
-        public void BeginClearsEventSubscriptions()
+        public void Begin_换代_清掉上一会话的类型事件()
         {
             bool delivered = false;
             EventKit.Type.Register<YokiFrameSessionProbeEvent>(_ => delivered = true);
@@ -40,7 +40,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证换代会释放架构静态实例，下一次访问创建新实例。</summary>
         [Test]
-        public void BeginDisposesArchitectureInstance()
+        public void Begin_换代_释放架构并创建新实例()
         {
             IArchitecture first = YokiFrameSessionProbeArchitecture.Interface;
 
@@ -52,7 +52,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证换代会丢掉纯 C# 单例缓存。</summary>
         [Test]
-        public void BeginDisposesSingletonInstance()
+        public void Begin_换代_丢掉SingletonKit缓存()
         {
             YokiFrameSessionProbeSingleton first = SingletonKit<YokiFrameSessionProbeSingleton>.Instance;
             Assert.IsNotNull(first);
@@ -64,7 +64,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证换代释放全局共享池，但不影响调用方持有的局部池。</summary>
         [Test]
-        public void BeginClearsSharedPoolsOnly()
+        public void Begin_换代_只释放全局共享池()
         {
             ObjectPool<YokiFrameSessionProbePoolItem> shared = PoolKit.Shared.Register<YokiFrameSessionProbePoolItem>();
             ObjectPool<YokiFrameSessionProbePoolItem> local = PoolKit.Create<YokiFrameSessionProbePoolItem>();

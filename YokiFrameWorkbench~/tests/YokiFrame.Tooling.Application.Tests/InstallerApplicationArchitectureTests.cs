@@ -1,3 +1,5 @@
+using YokiFrame.Tooling.Application.Installer;
+
 namespace YokiFrame.Tooling.Application.Tests;
 
 /// <summary>
@@ -6,10 +8,10 @@ namespace YokiFrame.Tooling.Application.Tests;
 public sealed class InstallerApplicationArchitectureTests
 {
     /// <summary>
-    /// 验证 Tooling.Application 直接依赖 Installer.Core，且不把 Avalonia 带入应用层。
+    /// 源码结构守卫：csproj 直接引用 Installer.Core，且不把 Avalonia 带入应用层。
     /// </summary>
     [Fact]
-    public void ToolingApplicationReferencesInstallerCoreWithoutAvalonia()
+    public void ToolingApplicationCsproj_引用InstallerCore_SourceGuard不含Avalonia()
     {
         var projectSource = File.ReadAllText(FindApplicationProject()).Replace('\\', '/');
 
@@ -18,10 +20,10 @@ public sealed class InstallerApplicationArchitectureTests
     }
 
     /// <summary>
-    /// 验证 Installer 公开契约不会把 Installer.Core 类型泄漏给 Avalonia 或 CLI。
+    /// 程序集边界：只检查 Installer 公开类型表面，不把 Installer.Core 类型泄漏给 Avalonia 或 CLI。
     /// </summary>
     [Fact]
-    public void InstallerPublicApiDoesNotExposeInstallerCoreTypes()
+    public void Installer公开类型_程序集边界_AssemblyBoundary不暴露Core类型()
     {
         var installerTypes = typeof(YokiFrame.Tooling.Application.Installer.InstallerSessionService)
             .Assembly
@@ -44,15 +46,27 @@ public sealed class InstallerApplicationArchitectureTests
     }
 
     /// <summary>
-    /// 验证 Core 发现未迁移 Kit 引用时，Application 将其投影为可在 CLI 和 UI 展示的安装冲突。
+    /// 验证 Godot 脚本引用当前源包没有的 Kit 时，预览把 Core 拒绝投影为 Application 冲突。
     /// </summary>
     [Fact]
-    public void UnsupportedKitReferencesAreProjectedAsInstallerConflicts()
+    public async Task CreatePlanAsync_Godot脚本引用缺失Kit_投影为安装冲突()
     {
-        var source = File.ReadAllText(FindApplicationSource("InstallerCoreWorkflowGateway.cs"));
+        using InstallerApplicationFixture fixture = InstallerApplicationFixture.Create();
+        File.WriteAllText(
+            Path.Combine(fixture.GodotProjectRoot, "LegacyAudio.cs"),
+            "using YokiFrame;\npublic sealed class LegacyAudio { void Run() => AudioKit.Play(); }\n");
+        InstallerInstallOptions options = InstallerInstallOptions.CreateGodotLocal(
+            fixture.SourcePackageRoot,
+            fixture.GodotProjectRoot,
+            new GodotInstallOptions(repairProjectSettings: false, enablePlugin: false),
+            InstallerLegacyPackagePolicy.Reject);
 
-        Assert.Contains("UnsupportedKitReferenceException", source, StringComparison.Ordinal);
-        Assert.Contains("CreateConflict(exception)", source, StringComparison.Ordinal);
+        InstallerConflictException exception = await Assert.ThrowsAsync<InstallerConflictException>(() =>
+            new YokiFrame.Tooling.Application.Installer.InstallerCoreWorkflowGateway().CreatePlanAsync(
+                options,
+                CancellationToken.None));
+
+        Assert.Equal("LegacyAudio.cs:2 [AudioKit]", Assert.Single(exception.ConflictPaths));
     }
 
     /// <summary>
@@ -97,32 +111,5 @@ public sealed class InstallerApplicationArchitectureTests
         }
 
         throw new FileNotFoundException("无法定位 YokiFrame.Tooling.Application.csproj。");
-    }
-
-    /// <summary>
-    /// 从测试输出目录向上定位 Tooling.Application 源文件。
-    /// </summary>
-    /// <param name="fileName">需要定位的源文件名。</param>
-    /// <returns>源文件绝对路径。</returns>
-    private static string FindApplicationSource(string fileName)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            var candidate = Path.Combine(
-                directory.FullName,
-                "src",
-                "YokiFrame.Tooling.Application",
-                "Installer",
-                fileName);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new FileNotFoundException("无法定位 Tooling.Application 源文件: " + fileName);
     }
 }

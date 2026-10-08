@@ -27,7 +27,7 @@ public sealed class YokiFrameClientCommandTests
                 2000,
                 CancellationToken.None);
             var commandPath = await WaitForPendingCommandAsync(client.Paths.GetCommandsRoot("unity-editor"));
-            var envelope = CommandEnvelope.FromJson(await File.ReadAllTextAsync(commandPath));
+            var envelope = CommandEnvelope.FromJson(System.Text.Encoding.UTF8.GetString(await File.ReadAllBytesAsync(commandPath)));
             var responsePath = client.Paths.GetResponsePath("unity-editor", envelope.RequestId);
             Directory.CreateDirectory(Path.GetDirectoryName(responsePath)!);
             await File.WriteAllTextAsync(responsePath, CreateSuccessResponseJson(envelope));
@@ -70,7 +70,7 @@ public sealed class YokiFrameClientCommandTests
                 2000,
                 CancellationToken.None);
             var commandPath = await WaitForPendingCommandAsync(client.Paths.GetCommandsRoot("unity-editor"));
-            var envelope = CommandEnvelope.FromJson(await File.ReadAllTextAsync(commandPath));
+            var envelope = CommandEnvelope.FromJson(System.Text.Encoding.UTF8.GetString(await File.ReadAllBytesAsync(commandPath)));
             var responsePath = client.Paths.GetResponsePath("unity-editor", envelope.RequestId);
             Directory.CreateDirectory(Path.GetDirectoryName(responsePath)!);
             await File.WriteAllTextAsync(responsePath, CreateMismatchedResponseJson(envelope, invalidField));

@@ -42,7 +42,7 @@ public sealed class HeartbeatInfoTests
         var heartbeat = HeartbeatInfo.FromJson("heartbeat.json", node);
 
         Assert.Equal("unity-editor", heartbeat.EngineId);
-        Assert.NotEqual(DateTimeOffset.MinValue, heartbeat.CreatedAtUtc);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1783299815), heartbeat.CreatedAtUtc);
     }
 
     /// <summary>

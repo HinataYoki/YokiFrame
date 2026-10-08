@@ -19,12 +19,33 @@ namespace YokiFrame.Tests
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string requestPath = Path.Combine(projectRoot, REQUEST_PATH);
-            if (!File.Exists(requestPath)
-                || !string.Equals(File.ReadAllText(requestPath).Trim(), "default", StringComparison.Ordinal)) return;
+            if (!File.Exists(requestPath) || !IsDefaultRequest(File.ReadAllBytes(requestPath))) return;
             var runner = new GameObject("AudioKit Unity Playback Smoke");
             UnityEngine.Object.DontDestroyOnLoad(runner);
             runner.AddComponent<AudioKitUnityPlaybackSmokeRunner>();
         }
+
+        /// <summary>判断请求文件去掉首尾 ASCII 空白后是否为 default。只比较字节，不把文本读取当作播放断言。</summary>
+        private static bool IsDefaultRequest(byte[] content)
+        {
+            int start = 0;
+            int end = content.Length;
+            while (start < end && IsRequestWhitespace(content[start])) start++;
+            while (end > start && IsRequestWhitespace(content[end - 1])) end--;
+            byte[] expected = { (byte)'d', (byte)'e', (byte)'f', (byte)'a', (byte)'u', (byte)'l', (byte)'t' };
+            if (end - start != expected.Length) return false;
+            for (var index = 0; index < expected.Length; index++)
+            {
+                if (content[start + index] != expected[index]) return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>识别请求文件首尾空白，保持与原先 Trim 门控相同的接受范围。</summary>
+        private static bool IsRequestWhitespace(byte value) =>
+            value == (byte)' ' || value == (byte)'\t' || value == (byte)'\r' || value == (byte)'\n';
+
     }
 
     /// <summary>在真实 Play Mode 中验证 ResKit 和自定义 Loader 的 AudioSource 播放状态。</summary>

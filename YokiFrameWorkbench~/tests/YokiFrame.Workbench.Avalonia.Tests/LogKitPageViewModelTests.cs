@@ -1,4 +1,3 @@
-using System.Reflection;
 using YokiFrame.Tooling.Application.Models.LogKit;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -342,15 +341,11 @@ public sealed class LogKitPageViewModelTests
         {
             string? openedPath = null;
             using var viewModel = new LogKitPageViewModel();
-            var setter = typeof(LogKitPageViewModel).GetMethod(
-                "SetOpenDirectoryHandler",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.NotNull(setter);
-            setter.Invoke(viewModel, new object?[] { (Func<string, Task>)(path =>
+            viewModel.SetOpenDirectoryHandler(path =>
             {
                 openedPath = path;
                 return Task.CompletedTask;
-            }) });
+            });
 
             viewModel.ApplyPeriodicState(LogKitContractTestData.CreateState(directory: directory));
 

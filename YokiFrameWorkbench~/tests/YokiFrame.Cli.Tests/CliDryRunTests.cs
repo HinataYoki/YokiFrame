@@ -56,7 +56,7 @@ public sealed class CliDryRunTests
     {
         using var project = CliTestHelpers.CreateProjectRoot("dry-run-localization");
         var sourcePath = WriteLocalizationSource(project.Path);
-        var original = File.ReadAllText(sourcePath);
+        var original = File.ReadAllBytes(sourcePath);
 
         var rejected = await CliTestHelpers.RunCliAsync(
             "localization", "add", "--project", project.Path,
@@ -67,7 +67,7 @@ public sealed class CliDryRunTests
         Assert.Equal("LocalizationAddRejected", rejectedJson["error"]!["code"]!.GetValue<string>());
         Assert.True(rejectedJson["dryRun"]!.GetValue<bool>());
         Assert.Empty(rejectedJson["writes"]!.AsArray());
-        Assert.Equal(original, File.ReadAllText(sourcePath));
+        Assert.Equal(original, File.ReadAllBytes(sourcePath));
 
         var forced = await CliTestHelpers.RunCliAsync(
             "localization", "add", "--project", project.Path,
@@ -78,7 +78,7 @@ public sealed class CliDryRunTests
         Assert.True(forcedJson["requiresForce"]!.GetValue<bool>());
         Assert.Equal("overwrite", forcedJson["writes"]![0]!["action"]!.GetValue<string>());
         Assert.Equal("Assets/Settings/YokiFrame/localization.json", forcedJson["writes"]![0]!["path"]!.GetValue<string>());
-        Assert.Equal(original, File.ReadAllText(sourcePath));
+        Assert.Equal(original, File.ReadAllBytes(sourcePath));
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public sealed class CliDryRunTests
     {
         using var project = CliTestHelpers.CreateProjectRoot("dry-run-localization-new");
         var sourcePath = WriteLocalizationSource(project.Path);
-        var original = File.ReadAllText(sourcePath);
+        var original = File.ReadAllBytes(sourcePath);
 
         var result = await CliTestHelpers.RunCliAsync(
             "localization", "add", "--project", project.Path,
@@ -99,7 +99,7 @@ public sealed class CliDryRunTests
         var json = JsonNode.Parse(result.StandardOutput)!;
         Assert.False(json["requiresForce"]!.GetValue<bool>());
         Assert.Equal("create", json["writes"]![0]!["action"]!.GetValue<string>());
-        Assert.Equal(original, File.ReadAllText(sourcePath));
+        Assert.Equal(original, File.ReadAllBytes(sourcePath));
     }
 
     /// <summary>

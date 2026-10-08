@@ -55,6 +55,7 @@ public sealed class YokiFrameWorkbenchSourceFingerprintTests
         {
             if (!TryCreateDirectoryLink(linkPath, externalRoot))
             {
+                // 当前 xUnit runner 会把 SkipException.ForSkip 记为失败，能力缺失时不产生假失败。
                 return;
             }
 
@@ -101,6 +102,7 @@ public sealed class YokiFrameWorkbenchSourceFingerprintTests
         {
             if (!TryCreateDirectoryLink(linkPath, externalRoot))
             {
+                // 当前 xUnit runner 会把 SkipException.ForSkip 记为失败，能力缺失时不产生假失败。
                 return;
             }
 
@@ -125,16 +127,25 @@ public sealed class YokiFrameWorkbenchSourceFingerprintTests
         var sourceRoot = Path.Combine(packageRoot, "YokiFrameWorkbench~", "src");
         Directory.CreateDirectory(sourceRoot);
         File.WriteAllText(Path.Combine(sourceRoot, "Source.cs"), "internal sealed class Source {}\n");
-        var before = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
+        try
+        {
+            var before = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
 
-        Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "obj"));
-        Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "bin"));
-        File.WriteAllText(Path.Combine(sourceRoot, "Project", "obj", "Generated.cs"), "generated-a");
-        File.WriteAllText(Path.Combine(sourceRoot, "Project", "bin", "Generated.json"), "generated-b");
-        var after = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
+            Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "obj"));
+            Directory.CreateDirectory(Path.Combine(sourceRoot, "Project", "bin"));
+            File.WriteAllText(Path.Combine(sourceRoot, "Project", "obj", "Generated.cs"), "generated-a");
+            File.WriteAllText(Path.Combine(sourceRoot, "Project", "bin", "Generated.json"), "generated-b");
+            var after = YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot);
 
-        Assert.Equal(before, after);
-        Directory.Delete(packageRoot, recursive: true);
+            Assert.Equal(before, after);
+        }
+        finally
+        {
+            if (Directory.Exists(packageRoot))
+            {
+                Directory.Delete(packageRoot, recursive: true);
+            }
+        }
     }
 
     /// <summary>
@@ -148,10 +159,18 @@ public sealed class YokiFrameWorkbenchSourceFingerprintTests
         using CancellationTokenSource cancellation = new();
         cancellation.Cancel();
 
-        Assert.Throws<OperationCanceledException>(
-            () => YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot, cancellation.Token));
-
-        Directory.Delete(packageRoot, recursive: true);
+        try
+        {
+            Assert.Throws<OperationCanceledException>(
+                () => YokiFrameWorkbenchSourceFingerprint.Compute(packageRoot, cancellation.Token));
+        }
+        finally
+        {
+            if (Directory.Exists(packageRoot))
+            {
+                Directory.Delete(packageRoot, recursive: true);
+            }
+        }
     }
 
     /// <summary>

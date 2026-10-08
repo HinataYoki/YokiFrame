@@ -8,11 +8,11 @@ public sealed class FsmKitDetailsQueryLifecycleTests
 {
     /// <summary>验证页面释放会取消未完成查询，且取消不会被显示为用户错误。</summary>
     [Fact]
-    public async Task DisposeCancelsPendingDetailsQuery()
+    public async Task Dispose_未完成详情查询_取消查询且不显示失败()
     {
         TaskCompletionSource queryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CancellationToken queryCancellationToken = default;
-        FsmKitPageViewModel viewModel = new(async (_, cancellationToken) =>
+        using FsmKitPageViewModel viewModel = new(async (_, cancellationToken) =>
         {
             queryCancellationToken = cancellationToken;
             queryStarted.SetResult();
@@ -32,13 +32,13 @@ public sealed class FsmKitDetailsQueryLifecycleTests
 
     /// <summary>验证命名 Telemetry 先取得详情后，稍晚的 FileBridge 初始化响应不会回退来源与图。</summary>
     [Fact]
-    public async Task TelemetryDetailsWinOverLateCommandResponse()
+    public async Task ApplyPeriodicState_Telemetry先于迟到命令_保留Telemetry并取消查询()
     {
         TaskCompletionSource<WorkbenchFsmKitState> commandResponse = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource queryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CancellationToken queryCancellationToken = default;
-        FsmKitPageViewModel viewModel = new(async (_, cancellationToken) =>
+        using FsmKitPageViewModel viewModel = new(async (_, cancellationToken) =>
         {
             queryCancellationToken = cancellationToken;
             queryStarted.SetResult();

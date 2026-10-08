@@ -1,6 +1,8 @@
-using YokiFrame;
+using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using YokiFrame;
+using YokiFrame.Installer.Core.Tests;
 using YokiFrame.Installer.Core.Models;
 using YokiFrame.Installer.Core.Services;
 using YokiFrame.Installer.Core.Tests.Transactions;
@@ -10,7 +12,7 @@ namespace YokiFrame.Installer.Core.Tests.Godot;
 /// <summary>
 /// 锁定 Godot 本地安装的完整 add-on 替换、项目 owner 文件与回滚事务契约。
 /// </summary>
-public sealed class GodotInstallServiceTests
+public sealed partial class GodotInstallServiceTests
 {
     /// <summary>
     /// 验证成功安装会提交目标 profile、插件入口、唯一主 csproj owner group 和 project.godot owner 项。
@@ -197,11 +199,7 @@ public sealed class GodotInstallServiceTests
         _ = new GodotInstallService().Execute(request);
 
         Assert.Equal(beforeSettings, File.ReadAllBytes(fixture.ProjectSettingsPath));
-        Assert.True(File.Exists(fixture.PluginConfigPath));
-        Assert.True(File.Exists(fixture.PluginScriptPath));
-        Assert.True(File.Exists(fixture.PluginScriptUidPath));
-        Assert.True(File.Exists(fixture.RuntimeBootstrapPath));
-        Assert.True(File.Exists(fixture.RuntimeBootstrapUidPath));
+        AssertPluginEntryPoints(fixture);
     }
 
     /// <summary>
@@ -215,11 +213,19 @@ public sealed class GodotInstallServiceTests
 
         _ = new GodotInstallService().Execute(request);
 
-        var settings = File.ReadAllText(fixture.ProjectSettingsPath);
-        Assert.Contains("YokiFrameGodotBootstrap", settings, StringComparison.Ordinal);
-        Assert.Contains("[yokiframe]", settings, StringComparison.Ordinal);
-        Assert.Contains("res://addons/other/plugin.cfg", settings, StringComparison.Ordinal);
-        Assert.DoesNotContain("res://addons/yokiframe/plugin.cfg", settings, StringComparison.Ordinal);
+        var settings = Encoding.UTF8.GetString(File.ReadAllBytes(fixture.ProjectSettingsPath));
+        Assert.Equal(
+            new[] { "enabled=PackedStringArray(\"res://addons/other/plugin.cfg\")" },
+            GodotProjectSettingsReader.ReadNonEmptyLines(settings, "editor_plugins"));
+        Assert.Equal(
+            "\"*res://autoloads/user_service.cs\"",
+            GodotProjectSettingsReader.ReadSingleValue(settings, "autoload", "UserService"));
+        Assert.Equal(
+            "\"*res://addons/yokiframe/YokiFrameGodotBootstrap.cs\"",
+            GodotProjectSettingsReader.ReadSingleValue(settings, "autoload", "YokiFrameGodotBootstrap"));
+        Assert.Equal(
+            "\"res://addons/yokiframe/package/YokiFrame\"",
+            GodotProjectSettingsReader.ReadSingleValue(settings, "yokiframe", "package_root"));
     }
 
     /// <summary>
@@ -234,7 +240,7 @@ public sealed class GodotInstallServiceTests
 
         _ = new GodotInstallService().Execute(CreateRequest(fixture));
 
-        Assert.Equal(existingUid, File.ReadAllText(fixture.PluginScriptUidPath));
+        InstallerFileAssert.EqualUtf8(fixture.PluginScriptUidPath, existingUid);
     }
 
     /// <summary>
@@ -249,30 +255,9 @@ public sealed class GodotInstallServiceTests
 
         _ = new GodotInstallService().Execute(CreateRequest(fixture));
 
-        var content = File.ReadAllText(fixture.PluginScriptUidPath);
-        Assert.Equal(generator.Generate("res://addons/yokiframe/YokiFrameGodotEditorPlugin.cs") + "\n", content);
-        Assert.True(generator.IsValid(content));
-    }
-
-    /// <summary>
-    /// 验证更新会整目录替换旧 add-on，删除不再加载的 plugin.gd 与 UID，只保留正式 C# EditorPlugin。
-    /// </summary>
-    [Fact]
-    public void ExecuteRemovesLegacyGdscriptEntryPointDuringDirectoryReplacement()
-    {
-        using GodotInstallServiceFixture fixture = GodotInstallServiceFixture.Create();
-        fixture.SeedLegacyInstallation();
-
-        _ = new GodotInstallService().Execute(
-            fixture.SourcePackageRoot,
-            fixture.ProjectRoot,
-            GodotInstallServiceFixture.RUNTIME_PROFILE,
-            UnmanagedPackagePolicy.Reject);
-
-        Assert.False(File.Exists(fixture.LegacyPluginScriptPath));
-        Assert.False(File.Exists(fixture.LegacyPluginScriptUidPath));
-        Assert.True(File.Exists(fixture.PluginScriptPath));
-        Assert.True(File.Exists(fixture.PluginScriptUidPath));
+        var expectedUid = generator.Generate("res://addons/yokiframe/YokiFrameGodotEditorPlugin.cs") + "\n";
+        InstallerFileAssert.EqualUtf8(fixture.PluginScriptUidPath, expectedUid);
+        Assert.True(generator.IsValid(expectedUid));
     }
 
     /// <summary>
@@ -291,9 +276,7 @@ public sealed class GodotInstallServiceTests
 
         Assert.True(result.PackageResult.ReplacedExistingPackage);
         Assert.False(File.Exists(fixture.GetTargetPackagePath("legacy.marker")));
-        Assert.False(File.Exists(fixture.LegacyPluginScriptPath));
-        Assert.False(File.Exists(fixture.LegacyPluginScriptUidPath));
-        Assert.True(File.Exists(fixture.PluginScriptPath));
+        fixture.AssertReplacedLegacyEntryPoints();
     }
 
     /// <summary>
@@ -311,7 +294,11 @@ public sealed class GodotInstallServiceTests
 
         Assert.True(plan.ProjectFileWasGenerated);
         Assert.Equal(fixture.ProjectFilePath, plan.ProjectFilePath);
-        Assert.Contains("Godot.NET.Sdk/4.7.0", plan.ProjectFileContent, StringComparison.Ordinal);
+        var generatedProject = XDocument.Parse(plan.ProjectFileContent);
+        Assert.Equal("Godot.NET.Sdk/4.7.0", (string?)generatedProject.Root?.Attribute("Sdk"));
+        Assert.Equal(
+            "net8.0",
+            Assert.Single(generatedProject.Descendants(), static element => element.Name.LocalName == "TargetFramework").Value);
         before.AssertMatches(DirectoryTreeSnapshot.Capture(fixture.Root));
 
         service.Execute(CreateRequest(fixture));
@@ -401,141 +388,5 @@ public sealed class GodotInstallServiceTests
         Assert.True(exception.RollbackSucceeded);
         fixture.AssertLegacyInstallationRestored();
         AssertFailureEvidence(exception.DiagnosticEvidencePath, faultCheckpoint);
-    }
-
-    /// <summary>
-    /// 验证受控投影不携带任何 Runtime 产物，并排除测试、工具源码和 Unity meta。
-    /// </summary>
-    /// <param name="fixture">已完成安装的测试项目。</param>
-    private static void AssertProjectedPackage(GodotInstallServiceFixture fixture)
-    {
-        Assert.True(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/CoreMarker.cs")));
-        Assert.True(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/CoreMarker.cs.uid")));
-        Assert.True(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/ScriptTool.gd.uid")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/ProjectConfig.cfg.uid")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("WorkbenchRuntime~/win-x64/yoki.dll")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("WorkbenchRuntime~/linux-x64/yoki.dll")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("Tests/Ignored.cs")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("YokiFrameWorkbench~/ignored.txt")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath("Core/Runtime/CoreMarker.cs.meta")));
-        Assert.True(File.Exists(fixture.GetTargetPackagePath(
-            "Tools/RoslynKit/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll")));
-        Assert.False(File.Exists(fixture.GetTargetPackagePath(
-            "Tools/RoslynKit/Adapters/Unity/Editor/Dependencies~/roslyn-4.8.0/YokiFrame.RoslynKit.Compiler.dll")));
-        var ownerManifest = new PackageOwnerManifestStore().Read(fixture.AddonRoot);
-        Assert.Contains(ownerManifest.Files, static file => file.RelativePath == "package/YokiFrame/Core/Runtime/CoreMarker.cs.uid");
-        Assert.Contains(ownerManifest.Files, static file => file.RelativePath == "package/YokiFrame/Core/Runtime/ScriptTool.gd.uid");
-        Assert.DoesNotContain(ownerManifest.Files, static file => file.RelativePath.EndsWith(".cfg.uid", StringComparison.Ordinal));
-    }
-
-    /// <summary>
-    /// 验证外层插件入口来自统一 builder，且不保留旧工具启动逻辑。
-    /// </summary>
-    /// <param name="fixture">已完成安装的测试项目。</param>
-    private static void AssertPluginEntryPoints(GodotInstallServiceFixture fixture)
-    {
-        GodotPluginEntryPointBuilder builder = new();
-        Assert.Equal(builder.BuildPluginConfig(fixture.SourcePackageRoot), File.ReadAllText(fixture.PluginConfigPath));
-        Assert.Equal(builder.BuildEditorBootstrapScript(), File.ReadAllText(fixture.PluginScriptPath));
-        Assert.Equal(builder.BuildRuntimeBootstrapScript(), File.ReadAllText(fixture.RuntimeBootstrapPath));
-        var uidContent = File.ReadAllText(fixture.PluginScriptUidPath);
-        var runtimeUidContent = File.ReadAllText(fixture.RuntimeBootstrapUidPath);
-        Assert.True(new GodotUidGenerator().IsValid(uidContent));
-        Assert.True(new GodotUidGenerator().IsValid(runtimeUidContent));
-        Assert.False(File.Exists(fixture.PluginConfigPath + ".uid"));
-    }
-
-    /// <summary>
-    /// 验证唯一顶层项目被 patch，嵌套 csproj 保持原样，project.godot 拥有约定的三类 owner 项。
-    /// </summary>
-    /// <param name="fixture">已完成安装的测试项目。</param>
-    private static void AssertOwnedProjectFiles(GodotInstallServiceFixture fixture)
-    {
-        var project = XDocument.Load(fixture.ProjectFilePath);
-        var ownerGroup = Assert.Single(project.Root!.Elements(), static element =>
-            element.Name.LocalName == "ItemGroup"
-            && string.Equals((string?)element.Attribute("Label"), "YokiFrame", StringComparison.Ordinal));
-        var projectReferences = ownerGroup.Elements()
-            .Where(static element => element.Name.LocalName == "ProjectReference")
-            .Select(static element => (string?)element.Attribute("Include") ?? string.Empty)
-            .ToArray();
-        Assert.Equal(
-            [
-                "addons/yokiframe/package/YokiFrame/Core/Runtime/YokiFrame.csproj",
-                "addons/yokiframe/package/YokiFrame/Core/Editor/YokiFrame.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Core/Adapters/Godot/Runtime/YokiFrame.Godot.Runtime.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/ActionKit/Runtime/YokiFrame.ActionKit.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/AudioKit/Runtime/YokiFrame.AudioKit.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/AudioKit/Adapters/Godot/Runtime/YokiFrame.AudioKit.Godot.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SaveKit/Runtime/YokiFrame.SaveKit.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SaveKit/Adapters/Godot/Runtime/YokiFrame.SaveKit.Godot.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Runtime/YokiFrame.SpatialKit.csproj",
-                "addons/yokiframe/package/YokiFrame/Core/Adapters/Godot/Editor/YokiFrame.Godot.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/ActionKit/Editor/YokiFrame.ActionKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/AudioKit/Editor/YokiFrame.AudioKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SaveKit/Editor/YokiFrame.SaveKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/SpatialKit/Editor/YokiFrame.SpatialKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Editor/YokiFrame.RoslynKit.Editor.csproj",
-                "addons/yokiframe/package/YokiFrame/Tools/RoslynKit/Adapters/Godot/Runtime/YokiFrame.RoslynKit.Godot.csproj"
-            ],
-            projectReferences);
-        var editorReference = Assert.Single(ownerGroup.Elements(), static element =>
-            element.Name.LocalName == "ProjectReference"
-            && ((string?)element.Attribute("Include"))?.EndsWith(
-                "/YokiFrame.Godot.Editor.csproj",
-                StringComparison.Ordinal) == true);
-        Assert.Equal(
-            "$([System.String]::Copy(';$(DefineConstants);').Contains(';TOOLS;'))",
-            (string?)editorReference.Attribute("Condition"));
-        Assert.Equal(
-            "GodotProjectDir=$(MSBuildProjectDirectory);YokiFrameToolsBuild=True",
-            Assert.Single(editorReference.Elements()).Value);
-        Assert.Equal("<Project Sdk=\"Microsoft.NET.Sdk\" />", File.ReadAllText(fixture.NestedProjectFilePath));
-
-        var settings = File.ReadAllText(fixture.ProjectSettingsPath);
-        Assert.Contains("res://addons/yokiframe/plugin.cfg", settings, StringComparison.Ordinal);
-        Assert.Contains("YokiFrameGodotBootstrap", settings, StringComparison.Ordinal);
-        Assert.Contains("[yokiframe]", settings, StringComparison.Ordinal);
-        Assert.Contains("config/name=\"Fixture\"", settings, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// 验证失败异常引用持久化 JSON，并准确记录目录替换检查点与回滚结果。
-    /// </summary>
-    /// <param name="evidencePath">安装异常公开的诊断证据路径。</param>
-    /// <param name="checkpoint">预期故障检查点。</param>
-    private static void AssertFailureEvidence(string evidencePath, GodotInstallCheckpoint checkpoint)
-    {
-        Assert.True(File.Exists(evidencePath));
-        using var document = JsonDocument.Parse(File.ReadAllText(evidencePath));
-        Assert.Equal(checkpoint.ToString(), document.RootElement.GetProperty("checkpoint").GetString());
-        Assert.True(document.RootElement.GetProperty("rollbackSucceeded").GetBoolean());
-        Assert.Contains(
-            "Injected Godot transaction failure.",
-            document.RootElement.GetProperty("error").GetString(),
-            StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// 创建 typed Godot 安装请求，统一测试默认的 repair、enable 和接管策略。
-    /// </summary>
-    /// <param name="fixture">Godot 安装 fixture。</param>
-    /// <param name="repairProjectSettings">是否提交 project.godot owner 修复。</param>
-    /// <param name="enablePlugin">repair 开启时是否登记 editor plugin。</param>
-    /// <param name="policy">legacy 包接管策略。</param>
-    /// <returns>可直接用于计划或执行的 typed 请求。</returns>
-    private static GodotInstallRequest CreateRequest(
-        GodotInstallServiceFixture fixture,
-        bool repairProjectSettings = true,
-        bool enablePlugin = true,
-        UnmanagedPackagePolicy policy = UnmanagedPackagePolicy.Reject)
-    {
-        return new GodotInstallRequest(
-            fixture.SourcePackageRoot,
-            fixture.ProjectRoot,
-            GodotInstallServiceFixture.RUNTIME_PROFILE,
-            repairProjectSettings,
-            enablePlugin,
-            policy);
     }
 }

@@ -1,6 +1,6 @@
+using System.Xml.Linq;
 using System.IO.Compression;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using YokiFrame;
 using YokiFrame.Tooling.Application.Models.LocalizationKit;
 using YokiFrame.Tooling.Application.Models.Luban;
@@ -9,7 +9,7 @@ using YokiFrame.Tooling.Application.Services.LocalizationKit;
 namespace YokiFrame.Tooling.Application.Tests.LocalizationKit;
 
 /// <summary>验证 LocalizationKit Application 目录、缺失、写入和模板用例。</summary>
-public sealed class LocalizationKitApplicationServiceTests
+public sealed partial class LocalizationKitApplicationServiceTests
 {
     /// <summary>搜索应同时匹配 ID、语言值并返回缺失诊断。</summary>
     [Fact]
@@ -26,22 +26,23 @@ public sealed class LocalizationKitApplicationServiceTests
 
     /// <summary>补充值应写入 JSON 且已有值默认拒绝覆盖。</summary>
     [Fact]
-    public void AddWritesAtomicallyAndRejectsAccidentalOverwrite()
+    public void Add_新文本_原子写入并拒绝覆盖()
     {
         using TemporaryProject project = TemporaryProject.Create();
         LocalizationKitApplicationService service = new();
         LocalizationOperationResult add = service.Add(new LocalizationAddRequest { Options = project.Options, TextId = 1, Language = "English", Value = "Start" });
         Assert.True(add.Succeeded, string.Join("; ", add.Diagnostics));
         Assert.False(service.Add(new LocalizationAddRequest { Options = project.Options, TextId = 1, Language = "English", Value = "Override" }).Succeeded);
-        Assert.Contains("Start", File.ReadAllText(project.SourcePath));
+        using JsonDocument written = ToolingFileObservation.OpenJson(project.SourcePath);
+        Assert.Equal("Start", written.RootElement.GetProperty("texts")[0].GetProperty("values").GetProperty("English").GetString());
     }
 
     /// <summary>无效复数分类必须在写入前失败，避免 Tooling 生成 Runtime 无法加载的 JSON。</summary>
     [Fact]
-    public void AddRejectsInvalidPluralCategoryBeforeWriting()
+    public void Add_无效复数分类_写入前失败且不改文件()
     {
         using TemporaryProject project = TemporaryProject.Create();
-        string original = File.ReadAllText(project.SourcePath);
+        byte[] original = File.ReadAllBytes(project.SourcePath);
 
         LocalizationOperationResult result = new LocalizationKitApplicationService().Add(new LocalizationAddRequest
         {
@@ -53,12 +54,12 @@ public sealed class LocalizationKitApplicationServiceTests
         });
 
         Assert.False(result.Succeeded);
-        Assert.Equal(original, File.ReadAllText(project.SourcePath));
+        Assert.Equal(original, File.ReadAllBytes(project.SourcePath));
     }
 
     /// <summary>Tooling 应规范化枚举名称，避免同一语言因大小写差异产生重复 JSON 键。</summary>
     [Fact]
-    public void AddNormalizesLanguageIdentifier()
+    public void Add_语言枚举小写_归一为English()
     {
         using TemporaryProject project = TemporaryProject.Create();
 
@@ -71,7 +72,7 @@ public sealed class LocalizationKitApplicationServiceTests
         });
 
         Assert.True(result.Succeeded, string.Join("; ", result.Diagnostics));
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(project.SourcePath));
+        using JsonDocument document = ToolingFileObservation.OpenJson(project.SourcePath);
         JsonElement values = document.RootElement.GetProperty("texts")[0].GetProperty("values");
         Assert.True(values.TryGetProperty("English", out JsonElement english));
         Assert.Equal("Start", english.GetString());
@@ -80,7 +81,7 @@ public sealed class LocalizationKitApplicationServiceTests
 
     /// <summary>Luban 模板生成应输出已注册的 XML schema 与单一 Localization 工作表。</summary>
     [Fact]
-    public void GenerateLubanTemplateWritesSchemaAndWorkbook()
+    public void GenerateLubanTemplate_已注册语言_写出单表schema()
     {
         using TemporaryProject project = TemporaryProject.CreateLubanProject();
         LocalizationOperationResult result = new LocalizationKitApplicationService().GenerateLubanTemplate(new LocalizationLubanTemplateRequest
@@ -93,36 +94,35 @@ public sealed class LocalizationKitApplicationServiceTests
         string schema = Path.Combine(project.Root, "Luban", "MiniTemplate", "Defines", "LocalizationKit.xml");
         string workbook = Path.Combine(project.Root, "Luban", "MiniTemplate", "Datas", "LocalizationKit", "LocalizationKit.xlsx");
         Assert.True(File.Exists(schema));
-        string schemaContent = File.ReadAllText(schema);
-        Assert.Contains("LocalizationEntry", schemaContent);
-        Assert.Contains("name=\"LocalizationEntryTable\"", schemaContent);
-        Assert.Contains("index=\"id\"", schemaContent);
-        Assert.Contains("name=\"LocalizationValueKind\"", schemaContent);
-        Assert.Contains("name=\"variants\"", schemaContent);
-        Assert.Contains("map,LocalizationValueKind,LocalizationTranslations", schemaContent);
-        Assert.DoesNotContain("id+pluralCategory", schemaContent);
-        Assert.DoesNotContain("LocalizationLanguageTable", schemaContent);
-        Assert.DoesNotContain("LocalizationTextTable", schemaContent);
-        Assert.DoesNotContain("LocalizationPluralTable", schemaContent);
+        XDocument schemaDocument = XDocument.Load(schema);
+        XElement table = Assert.Single(schemaDocument.Descendants("table"));
+        Assert.Equal("LocalizationEntryTable", (string?)table.Attribute("name"));
+        Assert.Equal("LocalizationEntry", (string?)table.Attribute("value"));
+        Assert.Equal("id", (string?)table.Attribute("index"));
+        Assert.Equal("LocalizationValueKind", (string?)Assert.Single(schemaDocument.Descendants("enum")).Attribute("name"));
+        XElement variants = Assert.Single(schemaDocument.Descendants("var"), static element => (string?)element.Attribute("name") == "variants");
+        Assert.Equal("map,LocalizationValueKind,LocalizationTranslations", (string?)variants.Attribute("type"));
+        string[] forbidden = { "id+pluralCategory", "LocalizationLanguageTable", "LocalizationTextTable", "LocalizationPluralTable" };
+        string[] observed = schemaDocument.Descendants()
+            .SelectMany(static element => element.Attributes().Select(static attribute => attribute.Value).Prepend(element.Name.LocalName))
+            .ToArray();
+        Assert.All(forbidden, token => Assert.DoesNotContain(observed, value => value == token));
         using ZipArchive archive = ZipFile.OpenRead(workbook);
-        ZipArchiveEntry? workbookEntry = archive.GetEntry("xl/workbook.xml");
-        Assert.NotNull(workbookEntry);
-        using StreamReader workbookReader = new(workbookEntry!.Open());
-        Assert.Contains("sheet name=\"Localization\"", workbookReader.ReadToEnd());
-        ZipArchiveEntry? sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml");
-        Assert.NotNull(sheetEntry);
-        using StreamReader sheetReader = new(sheetEntry!.Open());
-        string sheetContent = sheetReader.ReadToEnd();
-        Assert.Contains("*variants", sheetContent);
-        Assert.Contains("$key", sheetContent);
-        Assert.Single(Regex.Matches(sheetContent, ">2000<").Cast<Match>());
+        XDocument workbookDocument = ReadWorkbookXml(archive, "xl/workbook.xml");
+        XElement sheet = Assert.Single(workbookDocument.Descendants().Where(static element => element.Name.LocalName == "sheet"));
+        Assert.Equal("Localization", (string?)sheet.Attribute("name"));
+        XDocument sheetDocument = ReadWorkbookXml(archive, "xl/worksheets/sheet1.xml");
+        string[] cells = ReadCellValues(sheetDocument);
+        Assert.Contains(cells, static text => text == "*variants");
+        Assert.Contains(cells, static text => text == "$key");
+        Assert.Single(cells, static value => value == "2000");
         Assert.Null(archive.GetEntry("xl/worksheets/sheet2.xml"));
         Assert.Null(archive.GetEntry("xl/worksheets/sheet3.xml"));
     }
 
     /// <summary>模板应提供完整的本地化样例，并通过样式资源表达字段层级和作者输入区域。</summary>
     [Fact]
-    public void GenerateLubanTemplateWritesStyledComprehensiveExamples()
+    public void GenerateLubanTemplate_完整样例_写出样式和作者区()
     {
         using TemporaryProject project = TemporaryProject.CreateLubanProject();
         LocalizationOperationResult result = new LocalizationKitApplicationService().GenerateLubanTemplate(new LocalizationLubanTemplateRequest
@@ -134,33 +134,37 @@ public sealed class LocalizationKitApplicationServiceTests
         Assert.True(result.Succeeded, string.Join("; ", result.Diagnostics));
         string workbook = Path.Combine(project.Root, "Luban", "MiniTemplate", "Datas", "LocalizationKit", "LocalizationKit.xlsx");
         using ZipArchive archive = ZipFile.OpenRead(workbook);
-        ZipArchiveEntry? stylesEntry = archive.GetEntry("xl/styles.xml");
-        ZipArchiveEntry? relationshipsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels");
-        ZipArchiveEntry? sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml");
-        Assert.NotNull(stylesEntry);
-        Assert.NotNull(relationshipsEntry);
-        Assert.NotNull(sheetEntry);
-        using StreamReader stylesReader = new(stylesEntry!.Open());
-        using StreamReader relationshipsReader = new(relationshipsEntry!.Open());
-        using StreamReader sheetReader = new(sheetEntry!.Open());
-        string stylesContent = stylesReader.ReadToEnd();
-        string relationshipsContent = relationshipsReader.ReadToEnd();
-        string sheetContent = sheetReader.ReadToEnd();
-        Assert.Contains("FFC6EFCE", stylesContent);
-        Assert.Contains("FFFFC7CE", stylesContent);
-        Assert.Contains("horizontal=\"left\"", stylesContent);
-        Assert.Contains("horizontal=\"center\"", stylesContent);
-        Assert.Contains("relationships/styles", relationshipsContent);
-        Assert.Contains("<pane ySplit=\"4\"", sheetContent);
-        Assert.Contains("<cols>", sheetContent);
-        Assert.Contains("player.greeting", sheetContent);
-        Assert.Contains("inventory.summary", sheetContent);
-        Assert.Single(Regex.Matches(sheetContent, ">2000<").Cast<Match>());
-        Assert.Single(Regex.Matches(sheetContent, ">3000<").Cast<Match>());
+        XDocument styles = ReadWorkbookXml(archive, "xl/styles.xml");
+        string[] colors = styles.Descendants()
+            .Where(static element => element.Name.LocalName == "fgColor")
+            .Select(static element => (string?)element.Attribute("rgb") ?? string.Empty)
+            .ToArray();
+        Assert.Contains(colors, static color => color == "FFC6EFCE");
+        Assert.Contains(colors, static color => color == "FFFFC7CE");
+        string[] alignments = styles.Descendants()
+            .Where(static element => element.Name.LocalName == "alignment")
+            .Select(static element => (string?)element.Attribute("horizontal") ?? string.Empty)
+            .ToArray();
+        Assert.Contains(alignments, static alignment => alignment == "left");
+        Assert.Contains(alignments, static alignment => alignment == "center");
+        XDocument relationships = ReadWorkbookXml(archive, "xl/_rels/workbook.xml.rels");
+        Assert.Contains(
+            relationships.Descendants().Where(static element => element.Name.LocalName == "Relationship"),
+            static relationship => (string?)relationship.Attribute("Type") == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles");
+        XDocument sheetDocument = ReadWorkbookXml(archive, "xl/worksheets/sheet1.xml");
+        XElement pane = Assert.Single(sheetDocument.Descendants().Where(static element => element.Name.LocalName == "pane"));
+        Assert.Equal("4", (string?)pane.Attribute("ySplit"));
+        Assert.NotEmpty(sheetDocument.Descendants().Where(static element => element.Name.LocalName == "cols"));
+        string[] texts = ReadCellValues(sheetDocument);
+        Assert.Contains(texts, static text => text == "player.greeting");
+        Assert.Contains(texts, static text => text == "inventory.summary");
         foreach (string valueKind in new[] { "Zero", "One", "Two", "Few", "Many", "Other" })
         {
-            Assert.Contains(">" + valueKind + "<", sheetContent);
+            Assert.Contains(texts, text => text == valueKind);
         }
+
+        Assert.Single(texts, static value => value == "2000");
+        Assert.Single(texts, static value => value == "3000");
     }
 
     /// <summary>显式 Luban 工作目录应定位同一配置下的 LocalizationKit Excel 作者目录。</summary>
@@ -347,11 +351,11 @@ public sealed class LocalizationKitApplicationServiceTests
 
     /// <summary>PlanAdd 必须与 Add 判定一致但不写盘，供 CLI dry-run 复用同一校验。</summary>
     [Fact]
-    public void PlanAddMatchesAddWithoutWriting()
+    public void PlanAdd_与Add判定一致_不写盘()
     {
         using TemporaryProject project = TemporaryProject.Create();
         LocalizationKitApplicationService service = new();
-        string original = File.ReadAllText(project.SourcePath);
+        byte[] original = File.ReadAllBytes(project.SourcePath);
 
         LocalizationOperationResult plan = service.PlanAdd(new LocalizationAddRequest
         {
@@ -362,11 +366,11 @@ public sealed class LocalizationKitApplicationServiceTests
         });
 
         Assert.True(plan.Succeeded, string.Join("; ", plan.Diagnostics));
-        Assert.Equal(original, File.ReadAllText(project.SourcePath));
+        Assert.Equal(original, File.ReadAllBytes(project.SourcePath));
         LocalizationPlannedWrite write = Assert.Single(plan.PlannedWrites);
         Assert.Equal(project.SourcePath, write.Path);
         Assert.False(write.OverwritesExistingValue);
-        Assert.Contains("Start", plan.Catalog!.Entries.Single(static entry => entry.Id == 1).Values["English"]);
+        Assert.Equal("Start", plan.Catalog!.Entries.Single(static entry => entry.Id == 1).Values["English"]);
     }
 
     /// <summary>PlanAdd 必须在已有文本且未 force 时拒绝，避免 dry-run 给出可通过的错误结论。</summary>

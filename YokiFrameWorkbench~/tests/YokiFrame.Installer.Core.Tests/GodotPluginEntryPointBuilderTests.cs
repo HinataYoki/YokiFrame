@@ -27,52 +27,62 @@ public sealed class GodotPluginEntryPointBuilderTests
     }
 
     /// <summary>
-    /// 验证宿主项目 EditorPlugin 脚本只继承独立 Editor Adapter，不复制菜单或 FileBridge 业务。
+    /// 验证宿主项目 EditorPlugin 脚本与生成器约定的薄入口逐字一致，不能再夹带菜单或 FileBridge 业务。
     /// </summary>
     [Fact]
     public void BuildEditorBootstrapCreatesThinHostProjectPlugin()
     {
-        var script = NormalizeLineEndings(
-            new GodotPluginEntryPointBuilder().BuildEditorBootstrapScript()).TrimEnd();
-
-        Assert.StartsWith("#if TOOLS\n", script, StringComparison.Ordinal);
-        Assert.EndsWith("#endif", script, StringComparison.Ordinal);
-        Assert.Contains("using Godot;", script, StringComparison.Ordinal);
-        Assert.Contains("using YokiFrame;", script, StringComparison.Ordinal);
-        Assert.Contains("[Tool]", script, StringComparison.Ordinal);
-        Assert.Contains(
-            "public partial class YokiFrameGodotEditorPlugin : GodotEditorPlugin",
-            script,
-            StringComparison.Ordinal);
-        Assert.Contains("public override void _EnterTree()", script, StringComparison.Ordinal);
-        Assert.Contains("base._EnterTree();", script, StringComparison.Ordinal);
-        Assert.Contains("ActionKitEditorInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.Contains("AudioKitEditorInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.Contains("SaveKitEditorInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.Contains("SpatialKitEditorInstaller.EnsureInstalled();", script, StringComparison.Ordinal);
-        Assert.True(
-            script.IndexOf("base._EnterTree();", StringComparison.Ordinal)
-            < script.IndexOf("ActionKitEditorInstaller.EnsureInstalled();", StringComparison.Ordinal),
-            "Tool Editor 能力只能在 Core Godot Editor Host 完成启动后安装。");
+        Assert.Equal(EDITOR_BOOTSTRAP, new GodotPluginEntryPointBuilder().BuildEditorBootstrapScript());
     }
 
     /// <summary>
-    /// 验证宿主项目脚本只继承独立 Adapter 的 bootstrap，不复制 FileBridge 或生命周期业务。
+    /// 验证宿主项目运行时脚本与生成器约定的薄 bootstrap 逐字一致。
     /// </summary>
     [Fact]
     public void BuildRuntimeBootstrapCreatesThinHostProjectScript()
     {
-        var script = NormalizeLineEndings(
-            new GodotPluginEntryPointBuilder().BuildRuntimeBootstrapScript()).TrimEnd();
-
-        Assert.Contains("using YokiFrame;", script, StringComparison.Ordinal);
-        Assert.Contains(
-            "public partial class YokiFrameGodotBootstrap : GodotBootstrap",
-            script,
-            StringComparison.Ordinal);
-        Assert.Contains("_ = typeof(GodotAudioKitRuntimeInstaller);", script, StringComparison.Ordinal);
-        Assert.Contains("_ = typeof(GodotSaveKitRuntimeInstaller);", script, StringComparison.Ordinal);
+        Assert.Equal(RUNTIME_BOOTSTRAP, new GodotPluginEntryPointBuilder().BuildRuntimeBootstrapScript());
     }
+
+    private const string EDITOR_BOOTSTRAP =
+        "#if TOOLS\n"
+        + "using Godot;\n"
+        + "using YokiFrame;\n\n"
+        + "/// <summary>\n"
+        + "/// 将 Godot EditorPlugin 资源桥接到独立 YokiFrame Editor Adapter。\n"
+        + "/// </summary>\n"
+        + "[Tool]\n"
+        + "public partial class YokiFrameGodotEditorPlugin : GodotEditorPlugin\n"
+        + "{\n"
+        + "    /// <summary>\n"
+        + "    /// 先启动 Core Godot Editor Host，再注册 Tool Editor 能力。\n"
+        + "    /// </summary>\n"
+        + "    public override void _EnterTree()\n"
+        + "    {\n"
+        + "        base._EnterTree();\n"
+        + "        ActionKitEditorInstaller.EnsureInstalled();\n"
+        + "        AudioKitEditorInstaller.EnsureInstalled();\n"
+        + "        SaveKitEditorInstaller.EnsureInstalled();\n"
+        + "        SpatialKitEditorInstaller.EnsureInstalled();\n"
+        + "    }\n"
+        + "}\n"
+        + "#endif\n";
+
+    private const string RUNTIME_BOOTSTRAP =
+        "using YokiFrame;\n"
+        + "using YokiFrame.Godot;\n\n"
+        + "/// <summary>\n"
+        + "/// 将 Godot 主项目脚本注册桥接到独立 YokiFrame Adapter bootstrap。\n"
+        + "/// </summary>\n"
+        + "public partial class YokiFrameGodotBootstrap : GodotBootstrap\n"
+        + "{\n"
+        + "    /// <summary>只触发独立 Tool Adapter 程序集加载。工厂注册由各自的 ModuleInitializer 完成。</summary>\n"
+        + "    static YokiFrameGodotBootstrap()\n"
+        + "    {\n"
+        + "        _ = typeof(GodotAudioKitRuntimeInstaller);\n"
+        + "        _ = typeof(GodotSaveKitRuntimeInstaller);\n"
+        + "    }\n"
+        + "}\n";
 
     /// <summary>按测试项目固定布局定位仓库包根，避免把版本号再写进测试。</summary>
     /// <returns>包含 package.json 的 YokiFrame 包根。</returns>
@@ -93,7 +103,7 @@ public sealed class GodotPluginEntryPointBuilderTests
     /// <returns>package.json 中的版本。</returns>
     private static string ReadPackageVersion(string packageRoot)
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(packageRoot, "package.json")));
+        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(packageRoot, "package.json")));
         return document.RootElement.GetProperty("version").GetString()!;
     }
 

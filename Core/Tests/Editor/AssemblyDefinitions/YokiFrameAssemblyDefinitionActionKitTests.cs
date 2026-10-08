@@ -13,75 +13,85 @@ namespace YokiFrame
             "Assets/YokiFrame/Tools/ActionKit/Integrations/Unity/UniTask/Runtime/YokiFrame.ActionKit.UniTask.asmdef";
         private const string ACTION_KIT_UNITY_ASMDEF =
             "Assets/YokiFrame/Tools/ActionKit/Adapters/Unity/Runtime/YokiFrame.ActionKit.Unity.asmdef";
+        private const string ACTION_KIT_UNITASK_NAMESPACE = "Cysharp.Threading.Tasks";
+        private const string ACTION_KIT_UNITASK_DEFINE = "YOKIFRAME_UNITASK_SUPPORT";
+        private const string UNITY_RUNTIME_GUID = "GUID:57d76a5674b6f474e97d39484877f63c";
 
-        /// <summary>验证纯 ActionKit Runtime 不直接引用 UniTask、Unity Runtime Adapter 或 UnityEngine。</summary>
+        /// <summary>
+        /// 验证纯 ActionKit Runtime 只按 GUID 依赖 Core，源码也不引用 UniTask 或 UnityEngine。
+        /// </summary>
         [Test]
-        public void ActionKitRuntimeRemainsHostAndThirdPartyIndependent()
+        public void AssemblyBoundary_ActionKitRuntime_不引用宿主与UniTask()
         {
-            string asmdef = ReadActionKitProjectFile(ACTION_KIT_RUNTIME_ASMDEF);
-            string references = GetReferencesBlock(asmdef);
-
-            Assert.IsTrue(references.Contains(CORE_RUNTIME_GUID_REFERENCE));
-            Assert.IsFalse(references.Contains("UniTask"));
-            Assert.IsFalse(references.Contains("YokiFrame.Unity.Runtime"));
-
-            string runtimeRoot = ActionKitProjectPath("Assets/YokiFrame/Tools/ActionKit/Runtime");
-            string[] sources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.AllDirectories);
-            foreach (string sourcePath in sources)
-            {
-                string source = File.ReadAllText(sourcePath);
-                Assert.IsFalse(source.Contains("Cysharp.Threading.Tasks"), NormalizePath(sourcePath));
-                Assert.IsFalse(ContainsUnityRuntimeApi(source), NormalizePath(sourcePath));
-            }
+            AssertReferencesEqual(ACTION_KIT_RUNTIME_ASMDEF, CORE_RUNTIME_GUID_REFERENCE);
+            AssertActionKitSourcesAvoidHostAndUniTask("Assets/YokiFrame/Tools/ActionKit/Runtime");
         }
 
-        /// <summary>验证 UniTask Integration 使用程序集名软引用、依赖宏和单向 ActionKit/Core 引用。</summary>
+        /// <summary>
+        /// 验证 UniTask Integration 按名称软引用 UniTask，受存在性宏约束，并且不绑定 UniTask GUID。
+        /// </summary>
         [Test]
-        public void ActionKitUniTaskIntegrationHasOptionalAssemblyBoundary()
+        public void AssemblyBoundary_ActionKitUniTask集成_软引用且受存在性宏约束()
         {
-            string asmdef = ReadActionKitProjectFile(ACTION_KIT_UNITASK_ASMDEF);
-            string references = GetReferencesBlock(asmdef);
-
-            Assert.IsTrue(references.Contains(CORE_RUNTIME_GUID_REFERENCE));
-            Assert.IsTrue(references.Contains(ACTION_KIT_GUID_REFERENCE));
-            Assert.IsTrue(references.Contains("\"UniTask\""));
-            Assert.IsTrue(asmdef.Contains("\"YOKIFRAME_UNITASK_SUPPORT\""));
-            Assert.IsFalse(asmdef.Contains(UNITASK_GUID_REFERENCE));
+            AssertReferencesEqual(
+                ACTION_KIT_UNITASK_ASMDEF,
+                CORE_RUNTIME_GUID_REFERENCE,
+                ACTION_KIT_GUID_REFERENCE,
+                "UniTask");
+            string[] defines = ReadStringArrayProperty(ACTION_KIT_UNITASK_ASMDEF, "defineConstraints");
+            Assert.AreEqual(1, defines.Length, "UniTask Integration 必须且只能受存在性宏约束。");
+            Assert.AreEqual(ACTION_KIT_UNITASK_DEFINE, defines[0], "UniTask Integration 必须使用 YOKIFRAME_UNITASK_SUPPORT。");
+            Assert.IsFalse(
+                AsmdefContainsExactString(ActionKitProjectPath(ACTION_KIT_UNITASK_ASMDEF), UNITASK_GUID_REFERENCE),
+                "UniTask 软依赖禁止绑定具体 asmdef GUID。");
             AssertActionKitWholeFileGuards(
                 "Assets/YokiFrame/Tools/ActionKit/Integrations/Unity/UniTask/Runtime",
                 "#if UNITY_5_3_OR_NEWER && YOKIFRAME_UNITASK_SUPPORT");
         }
 
-        /// <summary>验证 Unity Coroutine Adapter 只依赖 Core、Core Unity Runtime 与 ActionKit。</summary>
+        /// <summary>
+        /// 验证 Unity Coroutine Adapter 只依赖 Core、Unity Runtime 与 ActionKit。
+        /// </summary>
         [Test]
-        public void ActionKitUnityCoroutineHasDedicatedAdapterBoundary()
+        public void AssemblyBoundary_ActionKitUnity适配_只依赖Core与UnityRuntime()
         {
-            string asmdef = ReadActionKitProjectFile(ACTION_KIT_UNITY_ASMDEF);
-            string references = GetReferencesBlock(asmdef);
-
-            Assert.IsTrue(references.Contains(CORE_RUNTIME_GUID_REFERENCE));
-            Assert.IsTrue(references.Contains(ACTION_KIT_GUID_REFERENCE));
-            Assert.IsTrue(references.Contains("GUID:57d76a5674b6f474e97d39484877f63c"));
-            Assert.IsFalse(references.Contains(CORE_EDITOR_GUID_REFERENCE));
-            Assert.IsFalse(references.Contains("UniTask"));
+            AssertReferencesEqual(
+                ACTION_KIT_UNITY_ASMDEF,
+                CORE_RUNTIME_GUID_REFERENCE,
+                UNITY_RUNTIME_GUID,
+                ACTION_KIT_GUID_REFERENCE);
             AssertActionKitWholeFileGuards(
                 "Assets/YokiFrame/Tools/ActionKit/Adapters/Unity/Runtime",
                 UNITY_ADAPTER_DEFINE);
         }
 
-        /// <summary>读取项目相对文件，统一约束架构测试的根路径。</summary>
-        /// <param name="assetPath">Unity 项目内相对路径。</param>
-        /// <returns>文件完整文本。</returns>
-        private static string ReadActionKitProjectFile(string assetPath) =>
-            File.ReadAllText(ActionKitProjectPath(assetPath));
+        /// <summary>
+        /// 验证目录内源码没有 UniTask 或 UnityEngine 引用。按行首 using 和独立限定名判断。
+        /// </summary>
+        /// <param name="assetRoot">Unity 项目内源码根。</param>
+        private static void AssertActionKitSourcesAvoidHostAndUniTask(string assetRoot)
+        {
+            string[] sourcePaths = Directory.GetFiles(ActionKitProjectPath(assetRoot), "*.cs", SearchOption.AllDirectories);
+            Assert.Greater(sourcePaths.Length, 0, "ActionKit Runtime 必须包含源码: " + assetRoot);
+            for (int index = 0; index < sourcePaths.Length; index++)
+            {
+                string source = File.ReadAllText(sourcePaths[index]);
+                string normalizedPath = NormalizePath(sourcePaths[index]);
+                Assert.IsFalse(HasLineStartUsing(source, ACTION_KIT_UNITASK_NAMESPACE), normalizedPath);
+                Assert.IsFalse(HasNamespaceQualifier(source, ACTION_KIT_UNITASK_NAMESPACE, true), normalizedPath);
+                Assert.IsFalse(ContainsUnityRuntimeApi(source), normalizedPath);
+            }
+        }
 
         /// <summary>把 Unity 项目内路径转换为本机绝对路径。</summary>
         /// <param name="assetPath">Unity 项目内相对路径。</param>
         /// <returns>本机绝对路径。</returns>
-        private static string ActionKitProjectPath(string assetPath) =>
-            Path.Combine(Application.dataPath, "..", assetPath);
+        private static string ActionKitProjectPath(string assetPath)
+        {
+            return Path.Combine(Application.dataPath, "..", assetPath);
+        }
 
-        /// <summary>验证目录内全部业务源码都使用指定整文件宏；asmdef 不参与源码宏检查。</summary>
+        /// <summary>验证目录内全部业务源码都使用指定整文件宏。</summary>
         /// <param name="assetRoot">待扫描目录。</param>
         /// <param name="expectedDefine">期望第一条有效行。</param>
         private static void AssertActionKitWholeFileGuards(string assetRoot, string expectedDefine)
@@ -91,8 +101,10 @@ namespace YokiFrame
                 "*.cs",
                 SearchOption.AllDirectories);
             Assert.Greater(sourcePaths.Length, 0, "适配目录必须包含真实源码: " + assetRoot);
-            foreach (string sourcePath in sourcePaths)
-                AssertWholeFileGuard(sourcePath, expectedDefine);
+            for (int index = 0; index < sourcePaths.Length; index++)
+            {
+                AssertWholeFileGuard(sourcePaths[index], expectedDefine);
+            }
         }
     }
 }

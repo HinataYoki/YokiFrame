@@ -21,7 +21,7 @@ namespace YokiFrame.Tests
 
         /// <summary>状态读取和音量配置不得创建默认后端，首次播放只能创建一次。</summary>
         [Test]
-        public void DefaultBackendIsCreatedOnlyByFirstPlayback()
+        public void Play_首次播放_才创建默认后端()
         {
             var createCount = 0;
             AudioKit.RegisterDefaultBackendFactory(() =>
@@ -44,7 +44,7 @@ namespace YokiFrame.Tests
 
         /// <summary>非法预加载路径必须在创建默认后端之前被拒绝。</summary>
         [Test]
-        public void PreloadRejectsInvalidPathBeforeCreatingDefaultBackend()
+        public void Preload_空白路径_拒绝且不创建后端()
         {
             Assert.Throws<ArgumentException>(() => AudioKit.Preload("  "));
             Assert.IsFalse(AudioKit.HasBackend);
@@ -52,7 +52,7 @@ namespace YokiFrame.Tests
 
         /// <summary>提前设置的项目后端必须跳过宿主默认工厂。</summary>
         [Test]
-        public void ExplicitBackendSkipsDefaultFactory()
+        public void SetBackend_已显式设置_跳过默认工厂()
         {
             var createCount = 0;
             FakeAudioBackend explicitBackend = new();
@@ -72,7 +72,7 @@ namespace YokiFrame.Tests
 
         /// <summary>后端替换后旧代次 handle 不得停止新后端的同编号 voice。</summary>
         [Test]
-        public void StaleHandleCannotStopReplacementBackendVoice()
+        public void Stop_旧代次句柄_不能停止新后端()
         {
             FakeAudioBackend firstBackend = new();
             AudioKit.SetBackend(firstBackend);
@@ -91,7 +91,7 @@ namespace YokiFrame.Tests
 
         /// <summary>同步播放期间若后端被替换，旧后端 voice 不得伪装为新代次有效句柄。</summary>
         [Test]
-        public void PlayDoesNotBindHandleAfterBackendReplacement()
+        public void Play_同步播放中替换后端_不绑定旧句柄()
         {
             FakeAudioBackend replacement = new();
             AudioKit.SetBackend(new ReplacingFakeAudioBackend(replacement));
@@ -107,7 +107,7 @@ namespace YokiFrame.Tests
 
         /// <summary>显式注册必须同步已存在后端，并在会话 Reset 后清空声明。</summary>
         [Test]
-        public void RegisteredBusSynchronizesBackendAndResetClearsCatalog()
+        public void RegisterBus_已有后端_同步登记且Reset清空()
         {
             FakeAudioBackend backend = new();
             AudioKit.SetBackend(backend);
@@ -123,7 +123,7 @@ namespace YokiFrame.Tests
 
         /// <summary>宿主自然结束等非门面状态变化必须推进 Tools 状态版本。</summary>
         [Test]
-        public void BackendDiagnosticNotificationAdvancesStateVersion()
+        public void NotifyBackendDiagnosticStateChanged_后端状态变化_推进诊断版本()
         {
             long before = AudioKit.DiagnosticVersion;
 
@@ -134,7 +134,7 @@ namespace YokiFrame.Tests
 
         /// <summary>PlayAsync 完成前若后端被替换，不得用新代次包装旧 voiceId，并应清理孤儿 voice。</summary>
         [Test]
-        public void PlayAsyncDoesNotBindHandleAfterBackendReplacement()
+        public void PlayAsync_完成前替换后端_不绑定旧句柄()
         {
             var firstBackend = new DelayedFakeAudioBackend();
             AudioKit.SetBackend(firstBackend);
@@ -155,7 +155,7 @@ namespace YokiFrame.Tests
 
         /// <summary>后端在返回已创建 voice 后才收到取消时，门面必须回收该 voice 并把取消传给调用方。</summary>
         [Test]
-        public void PlayAsyncCancellationAfterVoiceCreationStopsOrphanVoice()
+        public void PlayAsync_创建后取消_回收孤儿voice()
         {
             using CancellationTokenSource cancellation = new();
             CancellingAfterStartBackend backend = new(cancellation);
@@ -173,7 +173,7 @@ namespace YokiFrame.Tests
 
         /// <summary>后端某一清理阶段失败时仍必须继续卸载资源并调用 Dispose。</summary>
         [Test]
-        public void BackendCleanupContinuesAfterStopFailure()
+        public void ClearBackend_停止失败_仍卸载并释放()
         {
             CleanupFailureBackend backend = new();
             AudioKit.SetBackend(backend);
@@ -200,7 +200,7 @@ namespace YokiFrame.Tests
 
         /// <summary>后端回调重入替换时必须延迟释放当前实例，直到回调返回。</summary>
         [Test]
-        public void BackendReplacementFromSyncCallbackIsDeferred()
+        public void SetBackend_回调内重入_延迟释放当前后端()
         {
             FakeAudioBackend replacement = new();
             ReentrantReplacementBackend first = new(replacement);

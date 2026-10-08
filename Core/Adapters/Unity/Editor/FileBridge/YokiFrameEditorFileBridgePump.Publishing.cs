@@ -313,7 +313,7 @@ namespace YokiFrame
         }
 
         /// <summary>创建指定 Kit 的 state payload JSON。</summary>
-        private static string CreateStatePayloadJson(string kit)
+        internal static string CreateStatePayloadJson(string kit)
         {
             if (sKitInteractions.TryCreateSnapshot(kit, "state", out var payloadJson))
             {

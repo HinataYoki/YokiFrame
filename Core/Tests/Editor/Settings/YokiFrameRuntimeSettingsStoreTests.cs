@@ -21,7 +21,7 @@ namespace YokiFrame
         /// 验证宿主注入的 Store 可以通过统一 KitSettings API 读取不同标量类型。
         /// </summary>
         [Test]
-        public void InjectedStoreProvidesTypedKitSettings()
+        public void SetStore_注入标量_按类型读取()
         {
             YokiFrameRuntimeSettingsStore store = new();
             store.SetValue("LogKit", "enabled", "false");
@@ -36,7 +36,7 @@ namespace YokiFrame
         /// 验证默认宿主工厂在首次访问前不创建 Store，首次访问后只创建一次并复用实例。
         /// </summary>
         [Test]
-        public void DefaultStoreFactoryIsLazyAndReused()
+        public void RegisterDefaultStoreFactory_首次访问_只创建一次并复用()
         {
             var factoryCalls = 0;
             KitSettings.RegisterDefaultStoreFactory(() =>
@@ -58,7 +58,7 @@ namespace YokiFrame
         /// 验证首次访问发生在工厂注册前时先使用内存回退，工厂注册后下一次访问改用工厂 Store。
         /// </summary>
         [Test]
-        public void FactoryReplacesMemoryFallbackAfterEarlyAccess()
+        public void RegisterDefaultStoreFactory_先访问后注册_替换内存回退()
         {
             Assert.AreEqual("fallback", KitSettings.GetString("LogKit", "source", "fallback"));
 
@@ -76,7 +76,7 @@ namespace YokiFrame
         /// 验证清除显式 Store 后，若默认工厂已注册，下一次访问会重新解析工厂而不是长期钉在内存回退。
         /// </summary>
         [Test]
-        public void ClearingExplicitStoreReusesRegisteredFactory()
+        public void SetStore_清除显式Store_重新使用已注册工厂()
         {
             KitSettings.RegisterDefaultStoreFactory(() =>
             {
@@ -99,7 +99,7 @@ namespace YokiFrame
         /// 验证显式注入 Store 优先于已注册的宿主默认工厂。
         /// </summary>
         [Test]
-        public void ExplicitStoreOverridesDefaultFactory()
+        public void SetStore_显式Store_优先于默认工厂()
         {
             var factoryCalls = 0;
             KitSettings.RegisterDefaultStoreFactory(() =>
@@ -116,10 +116,10 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证同一设置重复写入时以最后值为准，并支持移除后回退默认值。
+        /// 验证同一设置重复写入时以最后值为准，移除后读取回退到默认值。
         /// </summary>
         [Test]
-        public void LastWriteWinsAndRemoveRestoresFallback()
+        public void SetValue_重复写入后移除_最后值生效且移除后回退()
         {
             YokiFrameRuntimeSettingsStore store = new();
             store.SetValue("LogKit", "minimumLevel", "Info");
@@ -135,7 +135,7 @@ namespace YokiFrame
         /// 验证非法 Kit 或 key 在进入 Store 时立即拒绝，避免宿主配置注入路径式标识。
         /// </summary>
         [Test]
-        public void InvalidIdentifierIsRejectedBeforeStorage()
+        public void SetValue_非法标识_立即拒绝()
         {
             YokiFrameRuntimeSettingsStore store = new();
 

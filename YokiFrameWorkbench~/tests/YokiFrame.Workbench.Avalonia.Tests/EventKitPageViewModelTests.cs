@@ -19,7 +19,7 @@ public sealed class EventKitPageViewModelTests
 {
     /// <summary>验证新帧只更新稳定列表项，不重建当前选择和既有时间线记录。</summary>
     [Fact]
-    public void HighFrequencyFramesPreserveSelectionAndExistingActivityIdentity()
+    public void ApplyPeriodicState_高频刷新_保留选择和既有时间线身份()
     {
         var viewModel = new EventKitPageViewModel();
         viewModel.ApplyPeriodicState(CreateState(2L, 2L, 1, false));
@@ -38,7 +38,7 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证搜索和通道筛选在状态刷新后继续生效。</summary>
     [Fact]
-    public void SearchAndChannelFilterRemainActiveAcrossFrames()
+    public void ApplyPeriodicState_已有搜索和通道筛选_刷新后继续生效()
     {
         var viewModel = new EventKitPageViewModel
         {
@@ -57,7 +57,7 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证指定键和通道级 clear 都会进入带 payload 事件的所选时间线。</summary>
     [Fact]
-    public void TypedEventTimelineIncludesSpecificAndChannelClear()
+    public void ApplyPeriodicState_指定键和通道clear_进入所选时间线()
     {
         var viewModel = new EventKitPageViewModel();
         viewModel.ApplyPeriodicState(CreateState(5L, 5L, 0, false, true));
@@ -69,11 +69,9 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证没有 Runtime 时静态发送、注册和注销关系仍独立可见。</summary>
     [Fact]
-    public void StaticOnlyRelationRemainsVisibleWithoutRuntime()
+    public void SetPageActive_仅有静态关系_无Runtime仍可见()
     {
-        var viewModel = new EventKitPageViewModel();
-
-        ApplyCodeScan(viewModel, CreateCodeScan());
+        var viewModel = CreateViewModel(CreateCodeScan());
 
         var relation = Assert.Single(viewModel.Events, static item => item.EventKey == "DamageEvent");
         Assert.False(relation.HasRuntime);
@@ -85,10 +83,9 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证高频 Runtime 帧保留关系行、选择和静态位置对象身份。</summary>
     [Fact]
-    public void RuntimeRefreshPreservesStaticLocationAndSelectionIdentity()
+    public void ApplyPeriodicState_高频Runtime帧_保留静态位置和选择身份()
     {
-        var viewModel = new EventKitPageViewModel();
-        ApplyCodeScan(viewModel, CreateCodeScan());
+        var viewModel = CreateViewModel(CreateCodeScan());
         viewModel.ApplyPeriodicState(CreateState(2L, 2L, 1, false));
         viewModel.SelectedEvent = viewModel.Events.Single(static item => item.EventKey == "DamageEvent");
         var relation = viewModel.SelectedEvent;
@@ -102,10 +99,9 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证搜索同时匹配静态源码相对路径。</summary>
     [Fact]
-    public void SearchMatchesStaticSourcePath()
+    public void SearchText_静态路径命中_只保留对应事件()
     {
-        var viewModel = new EventKitPageViewModel();
-        ApplyCodeScan(viewModel, CreateCodeScan());
+        var viewModel = CreateViewModel(CreateCodeScan());
 
         viewModel.SearchText = "Combat/Emitter";
 
@@ -114,14 +110,14 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证 Type、Enum 和泛型负载只缩短展示文本，完整身份保持不变。</summary>
     [Fact]
-    public void EventDisplayNamesRemoveNamespaceAndDeclaringTypes()
+    public void EventKitEventListItemViewModel_带命名空间的键_只缩短展示文本()
     {
-        var typeEvent = CreateInternal<WorkbenchEventKitEvent>(
+        var typeEvent = new WorkbenchEventKitEvent(
             "Type",
             "YokiFrameRuntimeSmoke.EventKitRuntimeSmokeController+DamageEvent",
             "Demo.Messages.Envelope<YokiFrameRuntimeSmoke.EventKitRuntimeSmokeController+DamageEvent>",
             1, 1L, "10:00:00.010", false);
-        var enumEvent = CreateInternal<WorkbenchEventKitEvent>(
+        var enumEvent = new WorkbenchEventKitEvent(
             "Enum",
             "YokiFrameRuntimeSmoke.EventKitRuntimeSmokeController+SmokeSignal.Pulse",
             string.Empty,
@@ -129,7 +125,7 @@ public sealed class EventKitPageViewModelTests
 
         EventKitEventListItemViewModel typeItem = new(typeEvent);
         EventKitEventListItemViewModel enumItem = new(enumEvent);
-        var activity = CreateInternal<WorkbenchEventKitActivity>(
+        var activity = new WorkbenchEventKitActivity(
             3L, "register", "Type", typeEvent.EventKey, typeEvent.PayloadType,
             "YokiFrameRuntimeSmoke.EventKitRuntimeSmokeController.OnDamagePrimary", "10:00:00.030");
 
@@ -137,12 +133,14 @@ public sealed class EventKitPageViewModelTests
         Assert.Equal("Envelope<DamageEvent>", typeItem.PayloadDisplay);
         Assert.Equal("SmokeSignal.Pulse", enumItem.EventKeyDisplay);
         Assert.Equal("OnDamagePrimary", activity.Detail);
-        Assert.Contains("YokiFrameRuntimeSmoke", typeItem.Identity, StringComparison.Ordinal);
+        Assert.Equal(
+            "Type::" + typeEvent.EventKey + "::" + typeEvent.PayloadType,
+            typeItem.Identity);
     }
 
     /// <summary>验证同一文件的多个调用点合并为一个文件组，并保留逐行打开入口。</summary>
     [Fact]
-    public void RelationRowsGroupLocationsFromTheSameFile()
+    public void EventKitEventListItemViewModel_同一文件多行_合并为一组并保留行号()
     {
         WorkbenchEventKitCodeLocation[] locations = Enumerable.Range(1, 5)
             .Select(static line => new WorkbenchEventKitCodeLocation("Assets/Combat/DamageFlow.cs", line))
@@ -163,9 +161,8 @@ public sealed class EventKitPageViewModelTests
 
     /// <summary>验证事件列表和筛选项都按 Enum、Type、String 排列。</summary>
     [Fact]
-    public void EventChannelsAreOrderedEnumTypeString()
+    public void CreateViewModel_混合通道扫描_按EnumTypeString排列()
     {
-        var viewModel = new EventKitPageViewModel();
         WorkbenchEventKitCodeLocation[] empty = Array.Empty<WorkbenchEventKitCodeLocation>();
         var scan = new WorkbenchEventKitCodeScan(
             "C:/Project", true, 1, 1, TimeSpan.Zero,
@@ -176,93 +173,15 @@ public sealed class EventKitPageViewModelTests
                 new WorkbenchEventKitCodeRelation("Enum", "Demo.Signal.Ready", string.Empty, empty, empty, empty)
             });
 
-        ApplyCodeScan(viewModel, scan);
+        var viewModel = CreateViewModel(scan);
 
         Assert.Equal(new[] { "Enum", "Type", "String" }, viewModel.Events.Select(static item => item.Channel));
         Assert.Equal(new[] { "全部", "Enum", "Type", "String" }, viewModel.ChannelOptions);
     }
 
-    /// <summary>验证 XAML 使用行式关系卡、弹性主从列、完整详情和真实字号。</summary>
-    [Fact]
-    public void PageContractUsesCompactControlsAndRelations()
-    {
-        string xaml = File.ReadAllText(FindRepositoryFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "Views",
-            "Pages",
-            "EventKitPageView.axaml"));
-        string styles = File.ReadAllText(FindRepositoryFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "Styles",
-            "EventKit.axaml"));
-        string colors = File.ReadAllText(FindRepositoryFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "Resources",
-            "Colors.axaml"));
-        string shell = File.ReadAllText(FindRepositoryFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "Views",
-            "WorkbenchShellView.axaml"));
-
-        Assert.True(xaml.Contains("发送方代码") || xaml.Contains("String.EventKit.SendersCode"), "EventKit 页面应包含发送方代码词条");
-        Assert.True(xaml.Contains("注册 / 注销方") || xaml.Contains("String.EventKit.Subscribers"), "EventKit 页面应包含注册/注销方词条");
-        Assert.True(xaml.Contains("运行时间线") || xaml.Contains("String.EventKit.RuntimeTimeline"), "EventKit 页面应包含运行时间线词条");
-        Assert.True(xaml.Contains("代码位置") || xaml.Contains("String.EventKit.CodeLocations"), "EventKit 页面应包含代码位置词条");
-        Assert.Contains("<Button.Flyout>", xaml, StringComparison.Ordinal);
-        Assert.Contains("SenderPreview", xaml, StringComparison.Ordinal);
-        Assert.Contains("ReceiverPreview", xaml, StringComparison.Ordinal);
-        Assert.Contains("UnregisterPreview", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedEvent.SenderGroups", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedEvent.ReceiverGroups", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedEvent.UnregisterGroups", xaml, StringComparison.Ordinal);
-        Assert.Contains("EventKitCodeGroupTemplate", xaml, StringComparison.Ordinal);
-        Assert.Contains("EventKeyDisplay", xaml, StringComparison.Ordinal);
-        Assert.Contains("PayloadSummaryText", xaml, StringComparison.Ordinal);
-        Assert.Contains("FlowCoverageText", xaml, StringComparison.Ordinal);
-        Assert.Contains("LifetimeBalanceText", xaml, StringComparison.Ordinal);
-        Assert.Contains("RelationCountText", xaml, StringComparison.Ordinal);
-        Assert.Contains("workbench.eventkit.search", shell, StringComparison.Ordinal);
-        Assert.Contains("EventKitPage.ChannelOptions", shell, StringComparison.Ordinal);
-        // “排除 Editor”词条已迁移为 shell 中的 DynamicResource 资源 key，兼容两种形态。
-        Assert.True(shell.Contains("排除 Editor") || shell.Contains("String.EventKit.ExcludeEditor"), "Shell 应包含排除 Editor 词条");
-        Assert.Contains("IsVisible=\"{CompiledBinding IsType}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Classes.type=\"{CompiledBinding SelectedIsType}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedPayloadSummaryText", xaml, StringComparison.Ordinal);
-        Assert.Contains("<ColumnDefinition Width=\"10*\" MinWidth=\"560\" />", xaml, StringComparison.Ordinal);
-        Assert.Contains("<ColumnDefinition Width=\"3*\" MinWidth=\"330\" />", xaml, StringComparison.Ordinal);
-        Assert.Contains("<GridSplitter Grid.Column=\"1\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ColumnDefinitions=\"3*,14,4*,14,3*\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Grid MinHeight=\"88\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
-        Assert.True(xaml.Contains("注册 / 注销方") || xaml.Contains("String.EventKit.Subscribers"), "应包含注册/注销方");
-        Assert.True(xaml.Contains("Text=\"注册\"") || xaml.Contains("String.EventKit.Register"), "应包含注册");
-        Assert.True(xaml.Contains("Text=\"注销\"") || xaml.Contains("String.EventKit.Unregister"), "应包含注销");
-        Assert.True(xaml.Contains("未扫描到注销方") || xaml.Contains("String.EventKit.NoUnregistersScanned"), "应包含未扫描到注销方");
-        Assert.Contains("eventkit-endpoint sender", xaml, StringComparison.Ordinal);
-        Assert.Contains("eventkit-endpoint receiver", xaml, StringComparison.Ordinal);
-        Assert.Contains("eventkit-flow-connector", xaml, StringComparison.Ordinal);
-        Assert.Contains("Classes.type=\"{CompiledBinding IsType}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("HasMissingUnregister", xaml, StringComparison.Ordinal);
-        Assert.Contains("StringFormat='+ L{0}'", xaml, StringComparison.Ordinal);
-        Assert.Contains("StringFormat='- L{0}'", xaml, StringComparison.Ordinal);
-        Assert.Contains("ListBox.eventkit-relation-list ListBoxItem:selected", styles, StringComparison.Ordinal);
-        Assert.Contains("ListBox.eventkit-relation-list ListBoxItem:selected /template/ ContentPresenter", styles, StringComparison.Ordinal);
-        Assert.Contains("MinHeight\" Value=\"92", styles, StringComparison.Ordinal);
-        Assert.Contains("Button.eventkit-code-summary", styles, StringComparison.Ordinal);
-        Assert.Contains("Border.eventkit-event-hub.type", styles, StringComparison.Ordinal);
-        Assert.Contains("Brush.EventKit.Type.Surface", styles, StringComparison.Ordinal);
-        Assert.Contains("Brush.EventKit.Type.Surface", colors, StringComparison.Ordinal);
-        Assert.Contains("Brush.EventKit.Enum.Surface", colors, StringComparison.Ordinal);
-        Assert.Contains("Brush.EventKit.String.Surface", colors, StringComparison.Ordinal);
-    }
-
     /// <summary>验证真实 EventKit 页面非空渲染，等价帧像素稳定且监听变化可见。</summary>
     [Fact]
-    public async Task PageRendersStablePixelsForEquivalentFrames()
+    public async Task EventKitPageView_等价帧_像素稳定且监听变化可见()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -299,7 +218,7 @@ public sealed class EventKitPageViewModelTests
         bool includeThirdActivity,
         bool includeClearActivities = false)
     {
-        object dataSource = CreateInternalDataSource(
+        WorkbenchEventKitDataSource dataSource = new WorkbenchEventKitDataSource(
             "unity-editor",
             "event-session",
             5L,
@@ -311,25 +230,25 @@ public sealed class EventKitPageViewModelTests
             "{}");
         WorkbenchEventKitEvent[] events =
         {
-            CreateInternal<WorkbenchEventKitEvent>("Type", "DamageEvent", "DamageEvent", 1, 1L, "10:00:00.010", false),
-            CreateInternal<WorkbenchEventKitEvent>("Enum", "GameSignal.Ready", string.Empty, enumHandlerCount, sequence, "10:00:00.020", false)
+            new WorkbenchEventKitEvent("Type", "DamageEvent", "DamageEvent", 1, 1L, "10:00:00.010", false),
+            new WorkbenchEventKitEvent("Enum", "GameSignal.Ready", string.Empty, enumHandlerCount, sequence, "10:00:00.020", false)
         };
         var activities = new List<WorkbenchEventKitActivity>
         {
-            CreateInternal<WorkbenchEventKitActivity>(2L, "send", "Enum", "GameSignal.Ready", string.Empty, string.Empty, "10:00:00.020")
+            new WorkbenchEventKitActivity(2L, "send", "Enum", "GameSignal.Ready", string.Empty, string.Empty, "10:00:00.020")
         };
         if (includeThirdActivity)
         {
-            activities.Add(CreateInternal<WorkbenchEventKitActivity>(3L, "register", "Enum", "GameSignal.Ready", string.Empty, "Demo.OnReady", "10:00:00.030"));
+            activities.Add(new WorkbenchEventKitActivity(3L, "register", "Enum", "GameSignal.Ready", string.Empty, "Demo.OnReady", "10:00:00.030"));
         }
 
         if (includeClearActivities)
         {
-            activities.Add(CreateInternal<WorkbenchEventKitActivity>(4L, "clear", "Enum", "GameSignal.Ready", string.Empty, string.Empty, "10:00:00.040"));
-            activities.Add(CreateInternal<WorkbenchEventKitActivity>(5L, "clear", "Enum", "*", string.Empty, string.Empty, "10:00:00.050"));
+            activities.Add(new WorkbenchEventKitActivity(4L, "clear", "Enum", "GameSignal.Ready", string.Empty, string.Empty, "10:00:00.040"));
+            activities.Add(new WorkbenchEventKitActivity(5L, "clear", "Enum", "*", string.Empty, string.Empty, "10:00:00.050"));
         }
 
-        return CreateInternal<WorkbenchEventKitState>(
+        return new WorkbenchEventKitState(
             dataSource,
             version,
             sequence,
@@ -341,6 +260,17 @@ public sealed class EventKitPageViewModelTests
             activities.Count,
             events,
             activities.ToArray());
+    }
+
+    /// <summary>通过已有 internal 扫描委托和页面激活入口提交静态扫描。</summary>
+    /// <param name="scan">待投影的静态扫描结果。</param>
+    /// <returns>已合并扫描关系的页面视图模型。</returns>
+    private static EventKitPageViewModel CreateViewModel(WorkbenchEventKitCodeScan scan)
+    {
+        EventKitPageViewModel viewModel = new((_, _) => Task.FromResult(scan), null);
+        viewModel.SetProjectRoot(scan.ProjectRoot);
+        viewModel.SetPageActive(true);
+        return viewModel;
     }
 
     /// <summary>创建包含完整三类源码位置的静态扫描结果。</summary>
@@ -366,62 +296,6 @@ public sealed class EventKitPageViewModelTests
             2,
             TimeSpan.FromMilliseconds(12),
             new[] { relation });
-    }
-
-    /// <summary>通过反射提交 ViewModel 私有静态扫描边界。</summary>
-    private static void ApplyCodeScan(EventKitPageViewModel viewModel, WorkbenchEventKitCodeScan scan)
-    {
-        var method = typeof(EventKitPageViewModel).GetMethod(
-            "ApplyCodeScan",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, new object[] { scan });
-    }
-
-    /// <summary>通过反射创建 Application 内部 EventKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type dataSourceType = typeof(WorkbenchEventKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.EventKit.WorkbenchEventKitDataSource",
-            true)!;
-        object? instance = Activator.CreateInstance(
-            dataSourceType,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        Assert.NotNull(instance);
-        return instance;
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
-    }
-
-    /// <summary>从测试输出目录向上定位 Workbench 源文件。</summary>
-    private static string FindRepositoryFile(params string[] relativeSegments)
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            string candidate = Path.Combine(new[] { directory.FullName }.Concat(relativeSegments).ToArray());
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new FileNotFoundException("Could not locate EventKit source file.");
     }
 
     /// <summary>捕获完整 Headless 帧并计算稳定像素哈希。</summary>

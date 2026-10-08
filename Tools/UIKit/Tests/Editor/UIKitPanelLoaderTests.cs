@@ -1,6 +1,4 @@
 #if UNITY_2022_3_OR_NEWER
-using System;
-using System.Reflection;
 using NUnit.Framework;
 
 namespace YokiFrame.Tests
@@ -21,22 +19,18 @@ namespace YokiFrame.Tests
             {
                 UIKit.SetPanelLoader(new ResKitPanelLoader("Art/UIPrefab", false));
                 IPanelLoader loader = UIKit.GetPanelLoader();
-                Assert.IsNotNull(loader);
+                var resKitLoader = loader as ResKitPanelLoader;
+                Assert.IsNotNull(resKitLoader);
                 Assert.IsFalse(loader.UseAddressableLocation);
-
-                MethodInfo buildLocation = typeof(ResKitPanelLoader).GetMethod(
-                    "BuildLocation",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.IsNotNull(buildLocation, "默认 loader 必须保持统一的 ResKit location 构建路径。");
                 Assert.AreEqual(
                     "Art/UIPrefab/UIKitLifecycleTestPanel",
-                    buildLocation.Invoke(loader, new object[] { typeof(UIKitLifecycleTestPanel) }));
+                    resKitLoader.BuildLocation(typeof(UIKitLifecycleTestPanel)));
 
                 loader.UseAddressableLocation = true;
 
                 Assert.AreEqual(
                     nameof(UIKitLifecycleTestPanel),
-                    buildLocation.Invoke(loader, new object[] { typeof(UIKitLifecycleTestPanel) }));
+                    resKitLoader.BuildLocation(typeof(UIKitLifecycleTestPanel)));
             }
             finally
             {

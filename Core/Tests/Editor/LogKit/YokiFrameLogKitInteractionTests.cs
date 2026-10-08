@@ -4,12 +4,16 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
     /// <summary>验证 LogKit 统一 Interaction、固定 state 和高频快照体积边界。</summary>
     public sealed class YokiFrameLogKitInteractionTests
     {
+        private const int SNAPSHOT_HISTORY_LIMIT = 32;
+        private const int MESSAGE_MAX_BYTES = 220;
+
         /// <summary>每个测试前恢复 Core 全局状态，避免设置和历史相互污染。</summary>
         [SetUp]
         public void SetUp()
@@ -29,9 +33,9 @@ namespace YokiFrame
             KitSettings.Reset();
         }
 
-        /// <summary>验证 Provider 只声明两个只读和三个显式用户操作命令。</summary>
+        /// <summary>验证默认 Provider 只声明固定的只读命令、用户操作和 state 快照。</summary>
         [Test]
-        public void ProviderDeclaresFixedCommandsAndRiskKinds()
+        public void Commands_默认Provider_声明固定命令和风险()
         {
             IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
 
@@ -58,35 +62,24 @@ namespace YokiFrame
             CollectionAssert.AreEqual(new[] { "state" }, provider.SnapshotNames);
         }
 
-        /// <summary>验证 state 顶层结构、子对象和未实现能力始终明确存在。</summary>
+        /// <summary>验证默认宿主的 state 具有固定对象，且未实现能力明确为 false。</summary>
         [Test]
-        public void StateSnapshotUsesFixedSchemaAndTruthfulCapabilities()
+        public void CreateSnapshot_默认宿主_固定结构且未实现能力为假()
         {
-            IYokiFrameVersionedKitInteractionProvider provider = GetProvider();
-
-            string json = provider.CreateSnapshot("state");
-            WorkbenchState state = JsonUtility.FromJson<WorkbenchState>(json);
-
-            StringAssert.StartsWith("{\"schemaVersion\":", json);
-            Assert.AreEqual(1, state.schemaVersion);
-            Assert.IsNotNull(state.stats);
-            Assert.IsNotNull(state.settings);
-            Assert.IsNotNull(state.capabilities);
-            Assert.IsNotNull(state.files);
-            Assert.IsNotNull(state.files.editor);
-            Assert.IsNotNull(state.files.player);
-            Assert.IsNotNull(state.history);
-            Assert.IsNotNull(state.history.entries);
-            Assert.IsFalse(state.capabilities.settingsApply);
-            Assert.IsFalse(state.capabilities.filePreview);
-            Assert.IsFalse(state.capabilities.fileWriter);
-            Assert.IsFalse(state.capabilities.playerImGui);
-            Assert.IsFalse(state.capabilities.encryption);
+            using (JsonDocument document = JsonDocument.Parse(GetProvider().CreateSnapshot("state")))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual(1, ReadInt32(root, "schemaVersion"));
+                Assert.AreEqual(JsonValueKind.Number, root.GetProperty("diagnosticVersion").ValueKind);
+                Assert.AreEqual(JsonValueKind.Number, root.GetProperty("settingsVersion").ValueKind);
+                AssertSnapshotObjects(root);
+                AssertCapabilitiesAreUnavailable(root.GetProperty("capabilities"));
+            }
         }
 
-        /// <summary>验证快照只复制最新 32 条、保留总量事实并始终低于 Shared Memory 上限。</summary>
+        /// <summary>验证历史超过快照窗口时只输出最新 32 条，并保持 UTF-8 载荷可编码。</summary>
         [Test]
-        public void SnapshotBoundsRecentHistoryAndUtf8Payload()
+        public void CreateSnapshot_历史超过上限_只保留最新且载荷有界()
         {
             for (var index = 0; index < 130; index++)
             {
@@ -94,26 +87,21 @@ namespace YokiFrame
             }
 
             string json = GetProvider().CreateSnapshot("state");
-            WorkbenchState state = JsonUtility.FromJson<WorkbenchState>(json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement history = document.RootElement.GetProperty("history");
+                AssertHistoryWindow(history);
+                AssertBoundedMessages(history.GetProperty("entries"));
+            }
 
-            Assert.AreEqual(32, state.history.entries.Length);
-            Assert.AreEqual(32, state.history.count);
-            Assert.AreEqual(130, state.history.totalCount);
-            Assert.AreEqual(2, state.history.droppedCount);
-            Assert.IsTrue(state.history.truncated);
-            StringAssert.StartsWith("entry-129:", state.history.entries[0].message);
-            StringAssert.StartsWith("entry-98:", state.history.entries[31].message);
             Assert.LessOrEqual(
                 Encoding.UTF8.GetByteCount(json),
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
-            Assert.IsTrue(state.history.entries.All(entry =>
-                Encoding.UTF8.GetByteCount(entry.message) <= 220
-                && !ContainsUnpairedSurrogate(entry.message)));
         }
 
-        /// <summary>验证快照专用入口跳过旧项并返回独立的最新优先副本。</summary>
+        /// <summary>验证请求指定数量时返回独立的最新优先副本，且不改写运行时历史。</summary>
         [Test]
-        public void RecentHistoryCopiesOnlyRequestedNewestEntries()
+        public void GetRecentHistory_请求三条_返回独立的最新副本()
         {
             for (var index = 0; index < 5; index++)
             {
@@ -130,9 +118,9 @@ namespace YokiFrame
             Assert.AreEqual(5, stats.HistoryCount);
         }
 
-        /// <summary>验证 capability descriptor 同步声明当前五个命令。</summary>
+        /// <summary>验证 capability 描述中的命令 action 与当前 Provider 目录一致。</summary>
         [Test]
-        public void CapabilityDescriptorMatchesProviderCatalog()
+        public void Commands_capability描述_与Provider目录一致()
         {
             string path = Path.Combine(
                 Application.dataPath,
@@ -142,16 +130,83 @@ namespace YokiFrame
                 "LogKit",
                 "Capabilities",
                 "capability.json");
-            string descriptor = File.ReadAllText(path);
+            using (JsonDocument document = JsonDocument.Parse(File.ReadAllText(path)))
+            {
+                CollectionAssert.AreEquivalent(
+                    GetProvider().Commands.Select(static command => command.Action).ToArray(),
+                    ReadActions(document.RootElement.GetProperty("kit").GetProperty("commands")));
+            }
+        }
 
-            StringAssert.Contains("\"get_workbench_snapshot\"", descriptor);
-            StringAssert.Contains("\"read_log_file\"", descriptor);
-            StringAssert.Contains("\"set_settings\"", descriptor);
-            StringAssert.Contains("\"reset_settings\"", descriptor);
-            StringAssert.Contains("\"clear_history\"", descriptor);
+        /// <summary>确认 state 的统计、设置、文件和历史都是固定结构。</summary>
+        /// <param name="root">state 根对象。</param>
+        private static void AssertSnapshotObjects(JsonElement root)
+        {
+            Assert.AreEqual(JsonValueKind.Object, root.GetProperty("stats").ValueKind);
+            Assert.AreEqual(JsonValueKind.Object, root.GetProperty("settings").ValueKind);
+            JsonElement files = root.GetProperty("files");
+            Assert.AreEqual(JsonValueKind.Object, files.ValueKind);
+            Assert.AreEqual(JsonValueKind.Object, files.GetProperty("editor").ValueKind);
+            Assert.AreEqual(JsonValueKind.Object, files.GetProperty("player").ValueKind);
+            JsonElement history = root.GetProperty("history");
+            Assert.AreEqual(JsonValueKind.Object, history.ValueKind);
+            Assert.AreEqual(JsonValueKind.Array, history.GetProperty("entries").ValueKind);
+        }
+
+        /// <summary>确认默认宿主没有声明设置应用、文件、界面或加密能力。</summary>
+        /// <param name="capabilities">capabilities 对象。</param>
+        private static void AssertCapabilitiesAreUnavailable(JsonElement capabilities)
+        {
+            Assert.AreEqual(JsonValueKind.Object, capabilities.ValueKind);
+            Assert.IsFalse(ReadBool(capabilities, "settingsApply"));
+            Assert.IsFalse(ReadBool(capabilities, "filePreview"));
+            Assert.IsFalse(ReadBool(capabilities, "fileWriter"));
+            Assert.IsFalse(ReadBool(capabilities, "playerImGui"));
+            Assert.IsFalse(ReadBool(capabilities, "encryption"));
+        }
+
+        /// <summary>确认快照历史窗口保留总量、丢弃量和裁剪事实。</summary>
+        /// <param name="history">history 对象。</param>
+        private static void AssertHistoryWindow(JsonElement history)
+        {
+            Assert.AreEqual(SNAPSHOT_HISTORY_LIMIT, history.GetProperty("entries").GetArrayLength());
+            Assert.AreEqual(SNAPSHOT_HISTORY_LIMIT, ReadInt32(history, "count"));
+            Assert.AreEqual(130, ReadInt32(history, "totalCount"));
+            Assert.AreEqual(2, ReadInt32(history, "droppedCount"));
+            Assert.IsTrue(ReadBool(history, "truncated"));
+        }
+
+        /// <summary>确认每条快照消息都可编码，并且首尾仍指向最新窗口。</summary>
+        /// <param name="entries">历史条目数组。</param>
+        private static void AssertBoundedMessages(JsonElement entries)
+        {
+            for (var index = 0; index < SNAPSHOT_HISTORY_LIMIT; index++)
+            {
+                string message = ReadString(entries[index], "message");
+                Assert.LessOrEqual(Encoding.UTF8.GetByteCount(message), MESSAGE_MAX_BYTES);
+                Assert.IsFalse(ContainsUnpairedSurrogate(message));
+            }
+
+            Assert.IsTrue(ReadString(entries[0], "message").StartsWith("entry-129:", StringComparison.Ordinal));
+            Assert.IsTrue(ReadString(entries[SNAPSHOT_HISTORY_LIMIT - 1], "message").StartsWith("entry-98:", StringComparison.Ordinal));
+        }
+
+        /// <summary>读取 capability 命令 action。</summary>
+        /// <param name="commands">命令数组。</param>
+        /// <returns>action 列表。</returns>
+        private static string[] ReadActions(JsonElement commands)
+        {
+            var actions = new string[commands.GetArrayLength()];
+            for (var index = 0; index < actions.Length; index++)
+            {
+                actions[index] = commands[index].GetProperty("action").GetString();
+            }
+
+            return actions;
         }
 
         /// <summary>从 Core 默认 Registry 获取唯一 LogKit versioned Provider。</summary>
+        /// <returns>LogKit 版本化 Interaction Provider。</returns>
         private static IYokiFrameVersionedKitInteractionProvider GetProvider()
         {
             IYokiFrameKitInteractionProvider provider = YokiFrameCoreKitInteractions.CreateDefault()
@@ -162,6 +217,8 @@ namespace YokiFrame
         }
 
         /// <summary>检查文本是否包含破损 UTF-16 代理，避免裁剪输出不可编码文本。</summary>
+        /// <param name="value">待检查文本。</param>
+        /// <returns>存在不成对代理时返回 true。</returns>
         private static bool ContainsUnpairedSurrogate(string value)
         {
             for (var index = 0; index < value.Length; index++)
@@ -179,93 +236,33 @@ namespace YokiFrame
             return false;
         }
 
-        /// <summary>映射 LogKit 完整 Workbench state，字段名与协议保持一致。</summary>
-        [Serializable]
-        private sealed class WorkbenchState
+        /// <summary>读取 JSON 布尔字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段值。</returns>
+        private static bool ReadBool(JsonElement element, string propertyName)
         {
-            public int schemaVersion;
-            public long diagnosticVersion;
-            public long settingsVersion;
-            public StatsState stats;
-            public SettingsState settings;
-            public CapabilitiesState capabilities;
-            public FilesState files;
-            public HistoryState history;
+            return element.GetProperty(propertyName).GetBoolean();
         }
 
-        /// <summary>映射运行统计。</summary>
-        [Serializable]
-        private sealed class StatsState
+        /// <summary>读取 JSON 字符串字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段文本。</returns>
+        private static string ReadString(JsonElement element, string propertyName)
         {
-            public string loggerName;
-            public bool hasLogger;
-            public bool enabled;
-            public string minimumLevel;
-            public int historyCount;
-            public int droppedCount;
+            return element.GetProperty(propertyName).GetString();
         }
 
-        /// <summary>映射完整 Runtime Settings；测试只需确认对象存在。</summary>
-        [Serializable]
-        private sealed class SettingsState
+        /// <summary>读取 JSON 整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static int ReadInt32(JsonElement element, string propertyName)
         {
-            public bool enabled;
-        }
-
-        /// <summary>映射宿主真实能力。</summary>
-        [Serializable]
-        private sealed class CapabilitiesState
-        {
-            public bool settingsApply;
-            public bool filePreview;
-            public bool fileWriter;
-            public bool playerImGui;
-            public bool encryption;
-        }
-
-        /// <summary>映射 Editor/Player 文件状态。</summary>
-        [Serializable]
-        private sealed class FilesState
-        {
-            public string directory;
-            public FileState editor;
-            public FileState player;
-        }
-
-        /// <summary>映射单个日志文件元数据。</summary>
-        [Serializable]
-        private sealed class FileState
-        {
-            public string kind;
-            public string path;
-            public string fileName;
-            public bool exists;
-            public long sizeBytes;
-            public string modifiedUtc;
-        }
-
-        /// <summary>映射有界历史及总量统计。</summary>
-        [Serializable]
-        private sealed class HistoryState
-        {
-            public HistoryEntry[] entries;
-            public int count;
-            public int totalCount;
-            public int droppedCount;
-            public bool truncated;
-        }
-
-        /// <summary>映射一条历史文本。</summary>
-        [Serializable]
-        private sealed class HistoryEntry
-        {
-            public string level;
-            public string message;
-            public string context;
-            public string exceptionType;
-            public string exceptionMessage;
-            public string stackTrace;
-            public string timestampUtc;
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
         }
     }
 }

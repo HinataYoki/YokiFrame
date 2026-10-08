@@ -93,6 +93,11 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 获取注销后进入节点池的数量，供测试确认真实池化实现。
+        /// </summary>
+        internal int PooledNodeCount => mEventList.PoolSize;
+
+        /// <summary>
         /// 枚举当前已注册监听器，跳过派发中已标记待移除的空节点。
         /// </summary>
         /// <returns>当前容器内仍有效的监听器。</returns>

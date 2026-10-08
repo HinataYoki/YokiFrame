@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Globalization;
 using NUnit.Framework;
@@ -8,20 +9,23 @@ namespace YokiFrame.Tests
     /// <summary>验证 LocalizationKit JSON/Table Runtime 契约和旧版缺陷修复。</summary>
     public sealed class LocalizationKitRuntimeTests
     {
+        /// <summary>每个测试前清空本地化会话，避免语言、缓存和 Binder 串扰。</summary>
         [SetUp]
         public void SetUp()
         {
             LocalizationKit.Reset();
         }
 
+        /// <summary>每个测试后清空本地化会话，避免语言、缓存和 Binder 残留。</summary>
         [TearDown]
         public void TearDown()
         {
             LocalizationKit.Reset();
         }
 
+        /// <summary>验证合法 JSON 文本表可按当前语言、指定语言、复数和语言信息读取。</summary>
         [Test]
-        public void JsonProvider_LoadsKeyedTextPluralAndLanguageInfo()
+        public void TryLoadFromJson_合法文本表_可查询文本复数和语言信息()
         {
             var provider = new JsonLocalizationProvider();
             bool loaded = provider.TryLoadFromJson(
@@ -44,8 +48,9 @@ namespace YokiFrame.Tests
             Assert.AreEqual(10, provider.GetLanguageInfo(LanguageId.English).DisplayNameTextId);
         }
 
+        /// <summary>验证成功重载替换上一份快照，非法输入失败时保留该快照。</summary>
         [Test]
-        public void JsonProvider_ReloadReplacesPreviousSnapshotAndRejectsInvalidInput()
+        public void TryLoadFromJson_再次加载_成功替换且失败保留()
         {
             var provider = new JsonLocalizationProvider();
             Assert.IsTrue(provider.TryLoadFromJson(
@@ -66,8 +71,9 @@ namespace YokiFrame.Tests
             Assert.AreEqual("new", text);
         }
 
+        /// <summary>验证小数文本 ID 被拒绝，且失败后不登记任何语言。</summary>
         [Test]
-        public void JsonProvider_RejectsFractionalTextId()
+        public void TryLoadFromJson_小数文本ID_拒绝且不登记语言()
         {
             var provider = new JsonLocalizationProvider();
 
@@ -82,7 +88,7 @@ namespace YokiFrame.Tests
 
         /// <summary>重复文本 ID 必须被拒绝，且失败解析不能破坏之前已加载的完整快照。</summary>
         [Test]
-        public void JsonProvider_RejectsDuplicateTextIdsWithoutReplacingSnapshot()
+        public void TryLoadFromJson_重复文本ID_拒绝且保留旧快照()
         {
             var provider = new JsonLocalizationProvider();
             Assert.IsTrue(provider.TryLoadFromJson(
@@ -99,7 +105,7 @@ namespace YokiFrame.Tests
 
         /// <summary>JSON 对象中的重复键必须在解析阶段失败，避免同一语言译文被后写值静默覆盖。</summary>
         [Test]
-        public void JsonProvider_RejectsDuplicateObjectKeys()
+        public void TryLoadFromJson_重复对象键_拒绝且不登记语言()
         {
             var provider = new JsonLocalizationProvider();
 
@@ -112,14 +118,23 @@ namespace YokiFrame.Tests
             Assert.IsEmpty(provider.GetSupportedLanguages());
         }
 
+        /// <summary>
+        /// 验证 LocalizationKit 公开表面不存在 DiagnosticVersion。
+        /// 成员缺失没有运行时返回值，只能反射公开实例和静态属性与字段，不访问 private 成员。
+        /// </summary>
         [Test]
-        public void RuntimeFacade_DoesNotExposeEditorOnlyDiagnosticState()
+        public void AssemblyBoundary_LocalizationKit_不公开DiagnosticVersion()
         {
-            Assert.IsNull(typeof(LocalizationKit).GetProperty("DiagnosticVersion"));
+            const BindingFlags PUBLIC_SURFACE =
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
+
+            Assert.IsNull(typeof(LocalizationKit).GetProperty("DiagnosticVersion", PUBLIC_SURFACE));
+            Assert.IsNull(typeof(LocalizationKit).GetField("DiagnosticVersion", PUBLIC_SURFACE));
         }
 
+        /// <summary>验证缺少精确复数类别时回退 Other，且支持语言列表不是可变 List。</summary>
         [Test]
-        public void TableProvider_FallsBackToOtherPluralCategoryAndExposesReadOnlyLanguages()
+        public void GetPlural_缺少精确类别_回退Other且语言列表只读()
         {
             var provider = new TableLocalizationProvider(
                 new[] { LanguageId.English },
@@ -133,8 +148,9 @@ namespace YokiFrame.Tests
             Assert.IsFalse(provider.GetSupportedLanguages() is List<LanguageId>);
         }
 
+        /// <summary>验证替换 Provider 会刷新已经注册的 Binder。</summary>
         [Test]
-        public void ProviderReplacement_RefreshesRegisteredBinder()
+        public void SetProvider_替换Provider_刷新已注册Binder()
         {
             var first = new TableLocalizationProvider(new[] { LanguageId.English }, (language, id) => "first");
             var second = new TableLocalizationProvider(new[] { LanguageId.English }, (language, id) => "second");
@@ -149,7 +165,7 @@ namespace YokiFrame.Tests
 
         /// <summary>fallback 语言会影响未翻译条目的显示，因此切换后必须刷新已注册 Binder。</summary>
         [Test]
-        public void DefaultLanguageChange_RefreshesRegisteredBinder()
+        public void SetDefaultLanguage_相同语言重复设置_只刷新一次()
         {
             var binder = new CountingBinder();
             LocalizationKit.RegisterBinder(binder);
@@ -160,8 +176,9 @@ namespace YokiFrame.Tests
             Assert.AreEqual(1, binder.RefreshCount);
         }
 
+        /// <summary>验证索引占位、命名占位和标签处理按 Formatter 配置输出。</summary>
         [Test]
-        public void Formatter_FormatsIndexedNamedAndTags()
+        public void Format_索引命名和标签_按配置输出()
         {
             var formatter = new DefaultTextFormatter();
             formatter.Culture = CultureInfo.InvariantCulture;
@@ -176,7 +193,7 @@ namespace YokiFrame.Tests
 
         /// <summary>参数格式化必须跟随 Formatter 配置文化，而不是宿主进程区域。</summary>
         [Test]
-        public void Formatter_UsesConfiguredCultureForBothPlaceholderBranches()
+        public void Format_指定文化_索引和命名都跟随()
         {
             var formatter = new DefaultTextFormatter();
 
@@ -195,8 +212,9 @@ namespace YokiFrame.Tests
                 "{count}", new Dictionary<string, object> { { "count", 3.5 } }));
         }
 
+        /// <summary>验证保存数据捕获当前语言，并在该语言仍受支持时恢复。</summary>
         [Test]
-        public void SaveData_CapturesAndAppliesCurrentLanguage()
+        public void Apply_已保存语言仍受支持_恢复该语言()
         {
             LocalizationKit.SetProvider(new TableLocalizationProvider(
                 new[] { LanguageId.Japanese, LanguageId.ChineseSimplified }, (language, id) => "text"));
@@ -212,7 +230,7 @@ namespace YokiFrame.Tests
 
         /// <summary>保存语言不在 Provider 支持列表时，Apply 必须失败且不改变当前语言。</summary>
         [Test]
-        public void SaveData_ApplyFailsForUnsupportedLanguage()
+        public void Apply_语言不受支持_失败且保持当前语言()
         {
             LocalizationKit.SetProvider(new TableLocalizationProvider(
                 new[] { LanguageId.ChineseSimplified }, (language, id) => "text"));
@@ -224,7 +242,7 @@ namespace YokiFrame.Tests
 
         /// <summary>枚举名称列表会被 Enum.TryParse 按位或成另一个合法值，必须在 schema 层拒绝。</summary>
         [Test]
-        public void JsonProvider_RejectsCommaSeparatedEnumNames()
+        public void TryLoadFromJson_逗号枚举名_拒绝且不登记语言()
         {
             var provider = new JsonLocalizationProvider();
 
@@ -242,7 +260,7 @@ namespace YokiFrame.Tests
 
         /// <summary>深层嵌套输入必须被深度上限拒绝，而不是递归耗尽栈终止进程。</summary>
         [Test]
-        public void JsonProvider_RejectsDeeplyNestedInput()
+        public void TryLoadFromJson_嵌套过深_拒绝加载()
         {
             var provider = new JsonLocalizationProvider();
 
@@ -254,7 +272,7 @@ namespace YokiFrame.Tests
 
         /// <summary>formatVersion 存在但非整数时必须报错，而不是静默退化成当前版本。</summary>
         [Test]
-        public void JsonProvider_RejectsInvalidFormatVersion()
+        public void TryLoadFromJson_格式版本非法_拒绝且缺省版本可加载()
         {
             var provider = new JsonLocalizationProvider();
 
@@ -272,7 +290,7 @@ namespace YokiFrame.Tests
 
         /// <summary>字符串解析必须覆盖转义、Unicode、控制字符与未闭合四类语义。</summary>
         [Test]
-        public void JsonParser_HandlesStringEscapesAndRejectsMalformedStrings()
+        public void TryLoadFromJson_字符串转义_还原合法值并拒绝残缺()
         {
             var provider = new JsonLocalizationProvider();
             string longText = new string('x', 512);
@@ -318,7 +336,7 @@ namespace YokiFrame.Tests
 
         /// <summary>只配普通文本的条目走复数查询时，必须回退普通文本而非返回缺失标记。</summary>
         [Test]
-        public void JsonProvider_PluralQueryFallsBackToPlainText()
+        public void GetPlural_只有普通文本_回退该文本()
         {
             var provider = new JsonLocalizationProvider();
             Assert.IsTrue(provider.TryLoadFromJson(
@@ -332,7 +350,7 @@ namespace YokiFrame.Tests
 
         /// <summary>手动写入的语言即使没有元数据，GetLanguageInfo 也必须返回正确的语言标识。</summary>
         [Test]
-        public void JsonProvider_GetLanguageInfoKeepsIdForSupportedLanguage()
+        public void GetLanguageInfo_已支持但无元数据_保留语言标识()
         {
             var provider = new JsonLocalizationProvider();
             provider.AddText(LanguageId.English, 1, "x");
@@ -346,7 +364,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 LanguageInfo 满足值相等语义，重载运算符与 Equals 行为一致。</summary>
         [Test]
-        public void LanguageInfo_EqualityAndOperatorsUseValueSemantics()
+        public void Equals_相同语言信息_值相等且空值一致()
         {
             var info1 = new LanguageInfo(LanguageId.English, 10, 20, 30);
             var info2 = new LanguageInfo(LanguageId.English, 10, 20, 30);
@@ -369,7 +387,7 @@ namespace YokiFrame.Tests
 
         /// <summary>失效 Binder 必须在刷新时被移除，避免静态注册表无界增长。</summary>
         [Test]
-        public void NotifyBinders_RemovesInvalidBinders()
+        public void SetLanguage_Binder失效_刷新时移除()
         {
             var binder = new ToggleBinder();
             LocalizationKit.RegisterBinder(binder);
@@ -387,7 +405,7 @@ namespace YokiFrame.Tests
 
         /// <summary>ResetRules 必须清除自定义复数规则并恢复内置规则。</summary>
         [Test]
-        public void PluralRuleFactory_ResetRulesRestoresBuiltinRules()
+        public void ResetRules_存在自定义规则_恢复内置分类()
         {
             try
             {

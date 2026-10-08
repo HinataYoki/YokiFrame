@@ -33,14 +33,9 @@ public sealed class YokiFrameClientTelemetryTests
     /// <summary>
     /// 验证 Windows named memory map 中的已提交帧可以被读取。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void ExistingNamedMapFrameCanBeRead()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = CreateUniqueEngineId();
         var projectRoot = CreateProjectRoot();
         var segmentName = SharedMemoryTelemetrySegmentName.Create(projectRoot, engineId, "System", "state");
@@ -68,14 +63,9 @@ public sealed class YokiFrameClientTelemetryTests
     /// <summary>
     /// 验证不同项目的 Client 不会打开另一项目的同名 telemetry segment。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void NamedMapFrameDoesNotCrossProjectBoundary()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = CreateUniqueEngineId();
         var firstProjectRoot = CreateProjectRoot();
         var secondProjectRoot = CreateProjectRoot();
@@ -119,14 +109,9 @@ public sealed class YokiFrameClientTelemetryTests
     /// <summary>
     /// 验证相对项目根经 Client 规范化后可读取绝对项目根对应的同一 telemetry segment。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void EquivalentAbsoluteAndRelativeProjectRootsReadSameNamedMap()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var engineId = CreateUniqueEngineId();
         var absoluteProjectRoot = Path.Combine(
             Environment.CurrentDirectory,

@@ -38,12 +38,12 @@ public sealed class GodotProjectSettingsPatcherTests
             """;
 
         var patched = new GodotProjectSettingsPatcher().Patch(source);
+        var lines = NormalizeLineEndings(patched).Split('\n');
 
-        Assert.Contains("; user-owned header", patched, StringComparison.Ordinal);
+        Assert.Contains(lines, static line => line == "; user-owned header");
         Assert.Contains(
-            "; owner-like text must remain untouched: res://addons/yokiframe/plugin.cfg",
-            patched,
-            StringComparison.Ordinal);
+            lines,
+            static line => line == "; owner-like text must remain untouched: res://addons/yokiframe/plugin.cfg");
         Assert.Equal("\"autoload/YokiFrameGodotBootstrap=[yokiframe]\"", ReadSingleValue(patched, "application", "run/metadata"));
         Assert.Equal(
             "PackedStringArray(\"res://addons/other/plugin.cfg\", \"" + PLUGIN_CONFIG_PATH + "\")",
@@ -85,8 +85,17 @@ public sealed class GodotProjectSettingsPatcherTests
         Assert.Equal("\"" + AUTOLOAD_PATH + "\"", ReadSingleValue(patched, "autoload", AUTOLOAD_NAME));
         Assert.Equal("\"*res://autoloads/last.cs\"", ReadSingleValue(patched, "autoload", "Last"));
         Assert.Equal("\"" + PACKAGE_ROOT + "\"", ReadSingleValue(patched, "yokiframe", "package_root"));
-        Assert.DoesNotContain("legacy_owner_value", patched, StringComparison.Ordinal);
-        Assert.DoesNotContain("res://legacy", patched, StringComparison.Ordinal);
+        Assert.Equal(
+            new[] { "package_root=\"" + PACKAGE_ROOT + "\"" },
+            ReadNonEmptyLines(patched, "yokiframe"));
+        Assert.Equal(
+            new[]
+            {
+                "First=\"*res://autoloads/first.cs\"",
+                AUTOLOAD_NAME + "=\"" + AUTOLOAD_PATH + "\"",
+                "Last=\"*res://autoloads/last.cs\"",
+            },
+            ReadNonEmptyLines(patched, "autoload"));
     }
 
     /// <summary>
@@ -112,7 +121,9 @@ public sealed class GodotProjectSettingsPatcherTests
             ReadSingleValue(patched, "editor_plugins", "enabled"));
         Assert.Equal("\"" + AUTOLOAD_PATH + "\"", ReadSingleValue(patched, "autoload", AUTOLOAD_NAME));
         Assert.Equal("\"" + PACKAGE_ROOT + "\"", ReadSingleValue(patched, "yokiframe", "package_root"));
-        Assert.DoesNotContain(PLUGIN_CONFIG_PATH, patched, StringComparison.Ordinal);
+        Assert.Equal(
+            new[] { "enabled=PackedStringArray(\"res://addons/first/plugin.cfg\")" },
+            ReadNonEmptyLines(patched, "editor_plugins"));
     }
 
     /// <summary>
@@ -133,7 +144,9 @@ public sealed class GodotProjectSettingsPatcherTests
         var secondPatch = patcher.Patch(firstPatch);
 
         Assert.Equal(firstPatch, secondPatch);
-        Assert.Equal(1, CountValueOccurrences(firstPatch, PLUGIN_CONFIG_PATH));
+        Assert.Equal(
+            "PackedStringArray(\"" + PLUGIN_CONFIG_PATH + "\")",
+            ReadSingleValue(firstPatch, "editor_plugins", "enabled"));
         Assert.Single(ReadValues(firstPatch, "autoload", AUTOLOAD_NAME));
         Assert.Single(ReadSections(firstPatch, "yokiframe"));
     }
@@ -289,22 +302,16 @@ public sealed class GodotProjectSettingsPatcherTests
     }
 
     /// <summary>
-    /// 统计固定 owner 文本出现次数，用于验证幂等 patch 不会累加插件路径。
+    /// 返回指定 section 去掉空行后的内容，避免用全文子串判断 owner 是否残留。
     /// </summary>
-    /// <param name="content">待检查文本。</param>
-    /// <param name="value">目标文本。</param>
-    /// <returns>非重叠出现次数。</returns>
-    private static int CountValueOccurrences(string content, string value)
+    /// <param name="content">完整 project.godot 文本。</param>
+    /// <param name="sectionName">目标 section 名称。</param>
+    /// <returns>非空配置行。</returns>
+    private static IReadOnlyList<string> ReadNonEmptyLines(string content, string sectionName)
     {
-        var count = 0;
-        var searchIndex = 0;
-        while ((searchIndex = content.IndexOf(value, searchIndex, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            searchIndex += value.Length;
-        }
-
-        return count;
+        return Assert.Single(ReadSections(content, sectionName))
+            .Where(static line => line.Length > 0)
+            .ToArray();
     }
 
     /// <summary>

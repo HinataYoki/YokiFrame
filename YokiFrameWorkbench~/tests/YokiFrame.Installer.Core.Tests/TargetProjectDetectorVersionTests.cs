@@ -6,8 +6,24 @@ namespace YokiFrame.Installer.Core.Tests;
 /// <summary>
 /// 验证 Installer 在生成计划前执行 Unity、Godot .NET SDK 与目标框架下限门控。
 /// </summary>
-public sealed class TargetProjectDetectorVersionTests
+public sealed class TargetProjectDetectorVersionTests : IDisposable
 {
+    private readonly List<string> mRoots = new();
+
+    /// <summary>
+    /// 删除本用例写入的临时目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var root in mRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     /// <summary>
     /// 验证 Unity 2022.3.x 是允许安装的最低版本。
     /// </summary>
@@ -170,7 +186,7 @@ public sealed class TargetProjectDetectorVersionTests
     /// </summary>
     /// <param name="editorVersion">写入 ProjectVersion.txt 的 Unity 版本。</param>
     /// <returns>Unity 项目根目录。</returns>
-    private static string CreateUnityProject(string editorVersion)
+    private string CreateUnityProject(string editorVersion)
     {
         var root = CreateTempRoot("unity-version");
         Directory.CreateDirectory(Path.Combine(root, "Assets"));
@@ -189,7 +205,7 @@ public sealed class TargetProjectDetectorVersionTests
     /// <param name="sdkVersion">Godot.NET.Sdk 版本。</param>
     /// <param name="targetFramework">桌面目标框架。</param>
     /// <returns>Godot 项目根目录。</returns>
-    private static string CreateGodotProject(string sdkVersion, string targetFramework)
+    private string CreateGodotProject(string sdkVersion, string targetFramework)
     {
         var root = CreateTempRoot("godot-version");
         File.WriteAllText(Path.Combine(root, "project.godot"), "config_version=5");
@@ -204,7 +220,7 @@ public sealed class TargetProjectDetectorVersionTests
     /// 创建只包含 Godot .NET 配置证据、尚未由编辑器生成 csproj 的新项目。
     /// </summary>
     /// <returns>临时 Godot .NET 项目根目录。</returns>
-    private static string CreateGodotDotNetProjectWithoutCsproj()
+    private string CreateGodotDotNetProjectWithoutCsproj()
     {
         var root = CreateTempRoot("godot-dotnet-no-csproj");
         File.WriteAllText(
@@ -218,10 +234,11 @@ public sealed class TargetProjectDetectorVersionTests
     /// </summary>
     /// <param name="prefix">目录名称前缀。</param>
     /// <returns>临时根目录。</returns>
-    private static string CreateTempRoot(string prefix)
+    private string CreateTempRoot(string prefix)
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-installer-tests", prefix + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        mRoots.Add(root);
         return root;
     }
 }

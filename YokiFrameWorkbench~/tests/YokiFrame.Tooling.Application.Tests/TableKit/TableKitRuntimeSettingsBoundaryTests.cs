@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Models.TableKit;
 using YokiFrame.Tooling.Application.Services.TableKit;
 
@@ -34,7 +35,7 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
 
     /// <summary>Unity 保存只投影两个真实运行时设置，并清理历史死键。</summary>
     [Fact]
-    public void UnitySaveWritesRuntimeSettingsAndExcludesEditorFields()
+    public void Save_Unity运行时字段_写入设置并排除编辑器路径()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-runtime-unity-" + Guid.NewGuid().ToString("N"));
         try
@@ -67,16 +68,7 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
 
             new TableKitSettingsService().Save(root, options);
 
-            string runtimeJson = File.ReadAllText(runtimePath);
-            Assert.Contains("\"runtimePathPattern\"", runtimeJson, StringComparison.Ordinal);
-            Assert.Contains("\"Art/Config/{0}\"", runtimeJson, StringComparison.Ordinal);
-            Assert.Contains("\"useRawResourceLoading\"", runtimeJson, StringComparison.Ordinal);
-            Assert.Contains("\"OtherKit\"", runtimeJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("resourceRoot", runtimeJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("dataExtension", runtimeJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("useAsyncLoading", runtimeJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("EditorOnly", runtimeJson, StringComparison.Ordinal);
-            Assert.DoesNotContain("LubanConfigPath", runtimeJson, StringComparison.Ordinal);
+            AssertUnityRuntimeProjection(runtimePath);
         }
         finally
         {
@@ -124,7 +116,7 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
 
     /// <summary>Godot 保存使用 ProjectSettings 路径，并保持其它 project.godot section 不变。</summary>
     [Fact]
-    public void GodotSaveWritesRuntimeSettingsSection()
+    public void Save_Godot运行时区_写入表路径并保留应用区()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-runtime-godot-" + Guid.NewGuid().ToString("N"));
         try
@@ -144,14 +136,17 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
 
             new TableKitSettingsService().Save(root, options);
 
-            string projectSettings = File.ReadAllText(projectPath);
-            Assert.Contains("[application]", projectSettings, StringComparison.Ordinal);
-            Assert.Contains("[yokiframe/runtime]", projectSettings, StringComparison.Ordinal);
-            Assert.Contains("table_kit/runtime_path_pattern=\"res://Data/Tables/{0}\"", projectSettings, StringComparison.Ordinal);
-            Assert.Contains("table_kit/use_raw_resource_loading=\"true\"", projectSettings, StringComparison.Ordinal);
-            Assert.DoesNotContain("table_kit/use_async_loading", projectSettings, StringComparison.Ordinal);
-            Assert.Contains("tablekit/document=", projectSettings, StringComparison.Ordinal);
-            Assert.DoesNotContain(".yokiframe", projectSettings, StringComparison.Ordinal);
+            Dictionary<string, Dictionary<string, string>> projectSettings = ToolingFileObservation.ReadGodot(projectPath);
+            Assert.Equal("\"Game\"", projectSettings["[application]"]["config/name"]);
+            Assert.Equal("\"res://Data/Tables/{0}\"", projectSettings["[yokiframe/runtime]"]["table_kit/runtime_path_pattern"]);
+            Assert.Equal("\"true\"", projectSettings["[yokiframe/runtime]"]["table_kit/use_raw_resource_loading"]);
+            Assert.False(projectSettings["[yokiframe/runtime]"].ContainsKey("table_kit/use_async_loading"));
+            Assert.True(projectSettings.Values.SelectMany(static section => section.Keys).Contains("tablekit/document"));
+            Assert.All(
+                projectSettings.Values.SelectMany(static section => section),
+                static setting => Assert.DoesNotContain(
+                    ".yokiframe",
+                    setting.Value.Split('/', '\\', '"')));
             Assert.False(Directory.Exists(Path.Combine(root, "ProjectSettings")));
             Assert.False(Directory.Exists(Path.Combine(root, "Assets")));
         }
@@ -163,7 +158,7 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
 
     /// <summary>验证 Godot 改写过的相同 TableKit 草稿不会再次替换 project.godot。</summary>
     [Fact]
-    public void UnchangedGodotDraftDoesNotTouchProjectFile()
+    public void Save_草稿未变_不改写project字节()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-tablekit-unchanged-" + Guid.NewGuid().ToString("N"));
         try
@@ -181,19 +176,47 @@ public sealed class TableKitRuntimeSettingsBoundaryTests
             };
             service.Save(root, options);
             // 只模拟 Godot 重写 JSON 内部引号，保留 project.godot 字符串自己的外层引号。
-            string escaped = File.ReadAllText(projectPath).Replace("\\\"", "\\u0022", StringComparison.Ordinal);
+            string escaped = ToolingFileObservation.ReadUtf8(projectPath).Replace("\\\"", "\\u0022", StringComparison.Ordinal);
             File.WriteAllText(projectPath, escaped);
             DateTime timestamp = new(2002, 3, 4, 5, 6, 7, DateTimeKind.Utc);
             File.SetLastWriteTimeUtc(projectPath, timestamp);
 
             service.Save(root, service.Load(root, options));
 
-            Assert.Equal(escaped, File.ReadAllText(projectPath));
+            ToolingFileObservation.AssertUtf8(projectPath, escaped);
             Assert.Equal(timestamp, File.GetLastWriteTimeUtc(projectPath));
         }
         finally
         {
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
+    }
+
+    /// <summary>断言 Unity Runtime Settings 只保留现行 TableKit 字段和其它 Kit。</summary>
+    /// <param name="runtimePath">runtime-settings.json 路径。</param>
+    private static void AssertUnityRuntimeProjection(string runtimePath)
+    {
+        using JsonDocument runtimeJson = ToolingFileObservation.OpenJson(runtimePath);
+        JsonElement[] settings = runtimeJson.RootElement.GetProperty("settings").EnumerateArray().ToArray();
+        Assert.Contains(settings, static entry =>
+            entry.GetProperty("kit").GetString() == "TableKit"
+            && entry.GetProperty("key").GetString() == "runtimePathPattern"
+            && entry.GetProperty("value").GetString() == "Art/Config/{0}");
+        Assert.Contains(settings, static entry =>
+            entry.GetProperty("kit").GetString() == "TableKit"
+            && entry.GetProperty("key").GetString() == "useRawResourceLoading"
+            && entry.GetProperty("value").GetString() == "false");
+        Assert.Contains(settings, static entry =>
+            entry.GetProperty("kit").GetString() == "OtherKit"
+            && entry.GetProperty("key").GetString() == "enabled"
+            && entry.GetProperty("value").GetString() == "true");
+        string[] keys = settings.Select(static entry => entry.GetProperty("key").GetString() ?? string.Empty).ToArray();
+        Assert.DoesNotContain("resourceRoot", keys);
+        Assert.DoesNotContain("dataExtension", keys);
+        Assert.DoesNotContain("useAsyncLoading", keys);
+        Assert.DoesNotContain("LubanConfigPath", keys);
+        Assert.All(settings, static entry => Assert.DoesNotContain(
+            "EditorOnly",
+            (entry.GetProperty("value").GetString() ?? string.Empty).Split('/')));
     }
 }

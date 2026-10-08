@@ -18,6 +18,7 @@ namespace YokiFrame.Tests
         [TearDown]
         public void TearDown()
         {
+            UIKitEditorSettingsReader.SetSettingsPathForTests(null);
             if (AssetDatabase.IsValidFolder(TEST_ROOT)) AssetDatabase.DeleteAsset(TEST_ROOT);
             string absoluteRoot = UIKitPanelCodeLayout.ToAbsolutePath(TEST_ROOT);
             if (Directory.Exists(absoluteRoot)) Directory.Delete(absoluteRoot, true);
@@ -32,57 +33,41 @@ namespace YokiFrame.Tests
             UIKitBindScanResult scan = new("GeneratedPanel");
             Dictionary<string, string> firstSources = UIKitPanelCodeGenerator.BuildSources(layout, scan);
             string designerSource = firstSources[layout.PanelDesignerPath];
-            StringAssert.Contains("public GeneratedPanelData Data => mData;", designerSource);
-            StringAssert.DoesNotContain("public new GeneratedPanelData Data", designerSource);
+            AssertDeclaration(designerSource, "public GeneratedPanelData Data => mData;");
             Assert.IsTrue(UIKitPanelCodeGenerator.CommitSources(firstSources));
             string designerPath = UIKitPanelCodeLayout.ToAbsolutePath(layout.PanelDesignerPath);
             long firstTimestamp = File.GetLastWriteTimeUtc(designerPath).Ticks;
             string userPath = UIKitPanelCodeLayout.ToAbsolutePath(layout.PanelScriptPath);
             File.WriteAllText(userPath, "// user-owned\n");
+            byte[] userBytes = File.ReadAllBytes(userPath);
 
             Dictionary<string, string> secondSources = UIKitPanelCodeGenerator.BuildSources(layout, scan);
             Assert.IsFalse(secondSources.ContainsKey(layout.PanelScriptPath));
             Assert.IsFalse(UIKitPanelCodeGenerator.CommitSources(secondSources));
-            Assert.AreEqual("// user-owned\n", File.ReadAllText(userPath));
+            CollectionAssert.AreEqual(userBytes, File.ReadAllBytes(userPath));
             Assert.AreEqual(firstTimestamp, File.GetLastWriteTimeUtc(designerPath).Ticks);
         }
 
-        /// <summary>验证 Inspector 生成默认值会读取当前项目保存的 UIKit 命名空间。</summary>
+        /// <summary>验证显式保存的 UIKit 命名空间会覆盖生成请求默认值，且不会改掉其它默认项。</summary>
         [Test]
-        public void DefaultGenerationRequestUsesSavedProjectNamespace()
+        public void CreateDefault_项目配置指定命名空间_覆盖默认值()
         {
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-            string settingsPath = Path.Combine(
-                projectRoot,
-                "ProjectSettings",
-                "Packages",
-                "com.hinatayoki.yokiframe",
-                "editor-settings.json");
-            if (!File.Exists(settingsPath)) Assert.Ignore("当前项目没有统一 Editor Settings 文件。");
-
-            EditorSettingsDocument document = JsonUtility.FromJson<EditorSettingsDocument>(
-                File.ReadAllText(settingsPath));
-            string expectedNamespace = string.Empty;
-            EditorSettingsEntry[] entries = document == null ? null : document.settings;
-            if (entries != null)
+            string settingsPath = UIKitPanelCodeLayout.ToAbsolutePath(TEST_ROOT + "/editor-settings.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
+            File.WriteAllText(
+                settingsPath,
+                "{\"formatVersion\":1,\"settings\":[{\"kit\":\"UIKit\",\"key\":\"editor.scriptNamespace\",\"value\":\"Saved.Namespace\"}]}");
+            UIKitEditorSettingsReader.SetSettingsPathForTests(settingsPath);
+            try
             {
-                for (var index = 0; index < entries.Length; index++)
-                {
-                    EditorSettingsEntry entry = entries[index];
-                    if (entry != null
-                        && entry.kit == "UIKit"
-                        && entry.key == "editor.scriptNamespace")
-                    {
-                        expectedNamespace = entry.value;
-                        break;
-                    }
-                }
+                UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault("SavedSettingsPanel");
+                Assert.AreEqual("Saved.Namespace", request.scriptNamespace);
+                Assert.AreEqual(UIKitPanelGenerationRequest.DEFAULT_PREFAB_FOLDER, request.prefabFolder);
             }
-
-            if (string.IsNullOrWhiteSpace(expectedNamespace))
-                Assert.Ignore("当前项目没有保存 UIKit 命名空间覆盖值。");
-            UIKitPanelGenerationRequest request = UIKitPanelGenerationRequest.CreateDefault("SavedSettingsPanel");
-            Assert.AreEqual(expectedNamespace, request.scriptNamespace);
+            finally
+            {
+                UIKitEditorSettingsReader.SetSettingsPathForTests(null);
+            }
         }
 
         /// <summary>验证已有用户 Panel 与新配置不一致时拒绝拆分 partial 命名空间。</summary>
@@ -101,8 +86,14 @@ namespace YokiFrame.Tests
             {
                 InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
                     () => UIKitPanelPrefabService.GenerateForPrefab(layout, root));
-                StringAssert.Contains("不会自动迁移或覆盖用户 partial", exception.Message);
-                StringAssert.Contains("Project.Renamed.UI", exception.Message);
+                Type panelType = typeof(UIKitMultiMemberTestPanel);
+                Assert.AreEqual(
+                    "Panel 已由用户脚本 " + panelType.FullName
+                    + " [" + panelType.Assembly.GetName().Name + "] 持有，"
+                    + "当前生成配置目标为 Project.Renamed.UI." + panelType.Name
+                    + " [Assembly-CSharp]。UIKit 不会自动迁移或覆盖用户 partial；"
+                    + "请先显式迁移现有用户脚本，或恢复原命名空间和程序集配置。",
+                    exception.Message);
             }
             finally
             {
@@ -128,8 +119,8 @@ namespace YokiFrame.Tests
                 + "// </auto-generated>\n"
                 + "//------------------------------------------------------------------------------\n\n"
                 + "using UnityEngine;\nusing UnityEngine.UI;\nusing YokiFrame;\n\n"));
-            foreach (string source in sources.Values)
-                Assert.That(source, Does.Not.Contain("global::YokiFrame."));
+            AssertDeclaration(sources[layout.PanelScriptPath], "public partial class NamespacePanel : UIPanel");
+            AssertDeclaration(sources[layout.PanelDesignerPath], "public partial class NamespacePanel");
         }
 
         /// <summary>验证后续文件提交失败时，先前更新和新建文件都恢复原状态。</summary>
@@ -142,6 +133,7 @@ namespace YokiFrame.Tests
             string blockedPath = UIKitPanelCodeLayout.ToAbsolutePath(blockedAssetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(firstPath));
             File.WriteAllText(firstPath, "before");
+            byte[] beforeBytes = File.ReadAllBytes(firstPath);
             Directory.CreateDirectory(blockedPath);
             Dictionary<string, string> sources = new()
             {
@@ -150,7 +142,7 @@ namespace YokiFrame.Tests
             };
 
             Assert.Throws<IOException>(() => UIKitPanelCodeGenerator.CommitSources(sources));
-            Assert.AreEqual("before", File.ReadAllText(firstPath));
+            CollectionAssert.AreEqual(beforeBytes, File.ReadAllBytes(firstPath));
             Assert.IsTrue(Directory.Exists(blockedPath));
         }
 
@@ -204,10 +196,8 @@ namespace YokiFrame.Tests
 
                 UIKitPanelCodeLayout layout = CreateLayout("GeneratedPanel");
                 string designer = UIKitPanelCodeGenerator.BuildSources(layout, scan)[layout.PanelDesignerPath];
-                StringAssert.Contains("ConfirmButton", designer);
-                StringAssert.Contains("ConfirmButtonImage", designer);
-                StringAssert.Contains(typeof(Button).FullName, designer);
-                StringAssert.Contains(typeof(Image).FullName, designer);
+                AssertDeclaration(designer, "public UnityEngine.UI.Button ConfirmButton;");
+                AssertDeclaration(designer, "public UnityEngine.UI.Image ConfirmButtonImage;");
             }
             finally
             {
@@ -429,8 +419,8 @@ namespace YokiFrame.Tests
                 Assert.IsTrue(sources.ContainsKey(designerPath));
                 Assert.IsFalse(sources.ContainsKey(layout.PanelScriptPath));
                 Assert.IsFalse(sources.ContainsKey(layout.PanelDesignerPath));
-                StringAssert.Contains(ownerType.Name, sources[designerPath]);
-                StringAssert.Contains("ConfirmButton", sources[designerPath]);
+                AssertDeclaration(sources[designerPath], "public partial class " + ownerType.Name);
+                AssertDeclaration(sources[designerPath], "public UnityEngine.UI.Button ConfirmButton;");
             }
             finally
             {

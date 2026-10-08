@@ -22,7 +22,7 @@ namespace YokiFrame.Tests
 
         /// <summary>零音量是合法播放参数，不得被旧版默认值修正改成一。</summary>
         [Test]
-        public void ZeroVolumeIsPreserved()
+        public void Play_音量为零_保持为零()
         {
             AudioPlayOptions options = AudioPlayOptions.Default;
             options.Volume = 0f;
@@ -34,7 +34,7 @@ namespace YokiFrame.Tests
 
         /// <summary>宿主统一帧派发器必须推进当前后端。</summary>
         [Test]
-        public void FrameDispatcherUpdatesInstalledBackend()
+        public void Tick_已安装后端_推进更新()
         {
             AudioKit.PlaySfx("sfx/click");
 

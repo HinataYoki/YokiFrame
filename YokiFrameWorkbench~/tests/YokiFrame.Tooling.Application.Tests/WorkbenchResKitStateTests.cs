@@ -38,19 +38,13 @@ public sealed class WorkbenchResKitStateTests
 
     /// <summary>验证按需详情保留原子诊断版本、源码行号和跟踪标记。</summary>
     [Fact]
-    public void ResourceDetailParserPreservesVersionAndSources()
+    public void ParseResourceDetail_完整详情_保留版本和源码行()
     {
         const string payload = """
             {"schemaVersion":1,"diagnosticVersion":27,"resource":{"path":"Audio/Hit","typeName":"UnityEngine.AudioClip","state":"Ready","leaseCount":2,"providerName":"Unity.Resources","providerGeneration":3,"trackedSourceCount":1,"sources":[{"display":"Loader.Load","filePath":"Assets/Audio/Loader.cs","line":42,"refCount":2,"anonymous":false,"tracked":true}],"sourceTotal":1,"sourcesTruncated":false}}
             """;
-        Type parser = typeof(YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitStateParser", true)!;
-        var method = parser.GetMethod(
-            "ParseResourceDetail",
-            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-
-        var detail = Assert.IsType<YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitResourceDetail>(
-            method!.Invoke(null, new object[] { payload }));
+        YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitResourceDetail detail =
+            YokiFrame.Tooling.Application.Models.ResKit.WorkbenchResKitStateParser.ParseResourceDetail(payload);
 
         Assert.Equal(27L, detail.Version);
         var source = Assert.Single(detail.Resource.Sources);

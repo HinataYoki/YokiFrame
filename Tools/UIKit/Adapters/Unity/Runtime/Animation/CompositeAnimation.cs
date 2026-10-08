@@ -28,6 +28,18 @@ namespace YokiFrame
         /// <summary>获取当前组合模式。</summary>
         public CompositeMode Mode { get; }
 
+        /// <summary>
+        /// 获取直接子动画数量，供测试测量真实组合结构。
+        /// </summary>
+        internal int ChildCount => mAnimations.Count;
+
+        /// <summary>
+        /// 获取指定位置的直接子动画。
+        /// </summary>
+        /// <param name="index">子动画序号。</param>
+        /// <returns>直接子动画。</returns>
+        internal IUIAnimation GetChild(int index) => mAnimations[index];
+
         /// <inheritdoc />
         public float Duration => CalculateDuration();
 

@@ -175,6 +175,29 @@ internal abstract class WorkbenchTelemetryChannel<TResult>
         mSequence = long.MinValue;
     }
 
+    /// <summary>测试缝：读取最近一次接受或重置后的帧游标。</summary>
+    internal long ObservedSequence => mSequence;
+
+    /// <summary>测试缝：读取当前后台请求；为空表示高频请求已暂停。</summary>
+    internal object? ActiveRequest => Volatile.Read(ref mCurrentRequest);
+
+    /// <summary>测试缝：捕获 dashboard 身份并写入已接受游标，不发布新请求。</summary>
+    /// <param name="state">用于捕获身份的 dashboard。</param>
+    /// <param name="sequence">已接受的帧序号。</param>
+    internal void SeedCursor(WorkbenchDashboardState state, long sequence)
+    {
+        CaptureIdentity(state);
+        mSequence = sequence;
+    }
+
+    /// <summary>测试缝：按已发布请求应用一帧。</summary>
+    /// <param name="request">先前发布的请求实例。</param>
+    /// <param name="result">读取结果。</param>
+    internal void ApplyObservedResult(object request, TResult result)
+    {
+        ApplyResult((PollRequest)request, result);
+    }
+
     /// <summary>在共享遥测 tick 中执行一次高频读取；空闲或门控关闭时不做任何工作。</summary>
     /// <param name="cancellationToken">绑定窗口关闭生命周期的取消令牌。</param>
     internal async Task PollOnceAsync(CancellationToken cancellationToken)

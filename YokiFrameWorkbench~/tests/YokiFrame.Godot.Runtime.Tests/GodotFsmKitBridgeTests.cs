@@ -74,8 +74,11 @@ public sealed class GodotFsmKitBridgeTests : IDisposable
         Assert.Equal(1, processed);
         var response = GodotFileBridgeHostFixture.ReadObject(fixture.GetResponsePath("fsm-list-001"));
         Assert.Equal("Success", response["status"]?.GetValue<string>());
-        var resultJson = response["resultJson"]?.GetValue<string>() ?? "{}";
-        Assert.Contains("GodotCommand", resultJson, StringComparison.Ordinal);
+        string resultJson = response["resultJson"]?.GetValue<string>() ?? "{}";
+        using YokiFrame.Json.JsonDocument result = YokiFrame.Json.JsonDocument.Parse(resultJson);
+        YokiFrame.Json.JsonElement fsms = result.RootElement.GetProperty("fsms");
+        Assert.Equal(1, fsms.GetArrayLength());
+        Assert.Equal("GodotCommand", fsms[0].GetProperty("name").GetString());
     }
 
     /// <summary>
@@ -96,14 +99,9 @@ public sealed class GodotFsmKitBridgeTests : IDisposable
     /// <summary>
     /// 验证单实例变化只推进自身命名帧，并且 Host 重启会为新 generation 重发全部实例首帧。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public void ChangedFsmOnlyPublishesItsNamedTelemetryAndRestartRepublishesAll()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         FSM<PayloadStateId> changedFsm = CreateTwoStateFsm("ChangedFsm");
         FSM<PayloadStateId> stableFsm = CreateTwoStateFsm("StableFsm");
         using GodotFileBridgeHostFixture fixture = GodotFileBridgeHostFixture.Create();

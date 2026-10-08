@@ -38,7 +38,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 WaitForSeconds 由 Unity 解释，ActionKit 不把它退化为普通一帧等待。</summary>
         [UnityTest]
-        public IEnumerator UnityYieldInstructionControlsCompletion()
+        public IEnumerator Tick_WaitForSeconds_由Unity时间控制完成()
         {
             var callbackCount = 0;
             IActionController controller = ActionKitUnityCoroutine
@@ -55,7 +55,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证嵌套 IEnumerator 仍由 Unity 原生 Coroutine 调用栈解释。</summary>
         [UnityTest]
-        public IEnumerator NestedEnumeratorReturnsToParent()
+        public IEnumerator Tick_嵌套枚举器_回到父级()
         {
             var steps = 0;
             IActionController controller = ActionKitUnityCoroutine
@@ -70,7 +70,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证取消会停止 Unity Coroutine 并且只 Dispose 底层枚举器一次。</summary>
         [UnityTest]
-        public IEnumerator CancellationStopsAndDisposesEnumeratorExactlyOnce()
+        public IEnumerator Cancel_取消_只释放枚举器一次()
         {
             TrackingEnumerator enumerator = new(new WaitForSeconds(10f));
             IActionController controller = ActionKitUnityCoroutine.From(enumerator).Start();
@@ -86,7 +86,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Unity 调用 MoveNext 时的异常在 ActionKit 宿主线程形成一次 Faulted。</summary>
         [Test]
-        public void EnumeratorExceptionBecomesFaultedTerminal()
+        public void MoveNext_枚举器抛错_进入Faulted()
         {
             IActionController controller = ActionKitUnityCoroutine.From(new ThrowingEnumerator()).Start();
 
@@ -98,7 +98,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证宿主从 ActionKit 生命周期外终止 Coroutine 时形成 Faulted，并且只释放一次枚举器。</summary>
         [Test]
-        public void ExternalDisposeBecomesFaultedTerminal()
+        public void Dispose_外部释放_进入Faulted且只一次()
         {
             TrackingEnumerator enumerator = new(new WaitForSeconds(10f));
             IAction action = ActionKitUnityCoroutine.From(enumerator);
@@ -114,7 +114,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证暂停只冻结 ActionKit 终态消费，不伪装成能暂停已经提交的 Unity yield。</summary>
         [UnityTest]
-        public IEnumerator PauseDefersTerminalObservationUntilResume()
+        public IEnumerator Pause_暂停_推迟终态观察直到恢复()
         {
             IActionController controller = ActionKitUnityCoroutine.From(CompleteNextFrame()).Start();
             controller.Pause();
@@ -129,7 +129,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Repeat 每轮调用 factory 创建新的 Unity IEnumerator，并逐轮闭合资源。</summary>
         [UnityTest]
-        public IEnumerator RepeatCreatesAndDisposesEnumeratorPerRound()
+        public IEnumerator Repeat_每一轮_创建并释放枚举器()
         {
             var factoryCount = 0;
             var disposeCount = 0;
@@ -150,7 +150,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证直接 IEnumerator 是一次性租约，Repeat 二次使用时明确 Faulted。</summary>
         [UnityTest]
-        public IEnumerator DirectEnumeratorRejectsSecondRepeatConsumption()
+        public IEnumerator Repeat_直接枚举器第二次_进入Faulted()
         {
             TrackingEnumerator enumerator = new(null);
             IRepeat repeat = ActionKit.Repeat(2);
@@ -166,7 +166,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证等待原生 Coroutine 时，ActionKit 的稳定 Tick 不产生托管分配。</summary>
         [Test]
-        public void PendingCoroutineObservationAllocatesZeroBytes()
+        public void Tick_等待协程_不产生托管分配()
         {
             const int TICK_COUNT = 256;
             IActionController controller = ActionKitUnityCoroutine

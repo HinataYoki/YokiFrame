@@ -8,20 +8,18 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class WorkbenchCommandCatalogContractTests
 {
     /// <summary>
-    /// 验证命令目录过滤不向用户展示随后无法通过 FileBridge 发送的不安全标识。
+    /// 验证不安全 Kit 和 action 会被过滤，目录只保留可发送的 System/ping。
     /// </summary>
     [Fact]
-    public void CommandCatalogRejectsUnsafeIdentifiers()
+    public void UpdateCommandCatalogJson_含不安全标识_只保留System和ping()
     {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
+        using var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, _ => Task.CompletedTask);
         var catalogJson = "{\"kits\":[{\"kit\":\".hidden\",\"actions\":[{\"action\":\"ping\"}]},{\"kit\":\"System\",\"actions\":[{\"action\":\"ping\"},{\"action\":\"bad..name\"},{\"action\":\"tail.\"}]}]}";
 
         viewModel.UpdateCommandCatalogJson(catalogJson);
 
-        Assert.DoesNotContain(".hidden", viewModel.CommandGroups);
-        viewModel.CommandGroup = "System";
-        Assert.Contains("ping", viewModel.CommandActions);
-        Assert.DoesNotContain("bad..name", viewModel.CommandActions);
-        Assert.DoesNotContain("tail.", viewModel.CommandActions);
+        Assert.Equal(new[] { "System" }, viewModel.CommandGroups);
+        Assert.Equal("System", viewModel.CommandGroup);
+        Assert.Equal(new[] { "ping" }, viewModel.CommandActions);
     }
 }

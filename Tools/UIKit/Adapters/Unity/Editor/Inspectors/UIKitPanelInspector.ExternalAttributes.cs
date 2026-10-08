@@ -73,7 +73,7 @@ namespace YokiFrame
         /// <summary>读取字段上第一个可识别标题属性的文本。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>标题文本；不存在时返回空。</returns>
-        private static string ResolveAttributeTitle(MemberInfo memberInfo)
+        internal static string ResolveAttributeTitle(MemberInfo memberInfo)
         {
             object[] attributes = memberInfo == null ? default : memberInfo.GetCustomAttributes(true);
             if (attributes == null)
@@ -124,7 +124,7 @@ namespace YokiFrame
         /// <summary>读取字段上第一个信息框属性的文本。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>信息框文本；不存在时返回空。</returns>
-        private static string ResolveAttributeInfoBoxText(MemberInfo memberInfo)
+        internal static string ResolveAttributeInfoBoxText(MemberInfo memberInfo)
         {
             object[] attributes = memberInfo == null ? default : memberInfo.GetCustomAttributes(true);
             if (attributes == null)
@@ -148,7 +148,7 @@ namespace YokiFrame
         /// <summary>读取字段上第一个信息框属性的 Unity 消息级别。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>Unity 消息类型。</returns>
-        private static MessageType ResolveAttributeInfoBoxType(MemberInfo memberInfo)
+        internal static MessageType ResolveAttributeInfoBoxType(MemberInfo memberInfo)
         {
             object[] attributes = memberInfo == null ? default : memberInfo.GetCustomAttributes(true);
             if (attributes == null)
@@ -196,7 +196,7 @@ namespace YokiFrame
         /// <summary>判断字段是否声明了兼容的只读属性。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>声明只读属性时返回 true。</returns>
-        private static bool HasReadOnlyAttribute(MemberInfo memberInfo)
+        internal static bool HasReadOnlyAttribute(MemberInfo memberInfo)
         {
             if (memberInfo == null)
                 return false;
@@ -215,7 +215,7 @@ namespace YokiFrame
         /// <summary>读取 ListDrawerSettings 的 AlwaysExpanded，保持列表打开状态。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>要求始终展开时返回 true。</returns>
-        private static bool ShouldForceExpandCustomProperty(MemberInfo memberInfo)
+        internal static bool ShouldForceExpandCustomProperty(MemberInfo memberInfo)
         {
             if (memberInfo == null)
                 return false;
@@ -239,7 +239,7 @@ namespace YokiFrame
         /// <summary>解析第三方 LabelText、Label 或 InspectorName 属性的字段名称。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>覆盖后的字段名称；不存在时返回空。</returns>
-        private static string ResolveAttributeLabel(MemberInfo memberInfo)
+        internal static string ResolveAttributeLabel(MemberInfo memberInfo)
         {
             object[] attributes = memberInfo == null ? default : memberInfo.GetCustomAttributes(true);
             if (attributes == null)
@@ -269,7 +269,7 @@ namespace YokiFrame
         /// <summary>解析 Unity Tooltip 和第三方 PropertyTooltip 属性的提示文本。</summary>
         /// <param name="memberInfo">字段或属性的反射信息。</param>
         /// <returns>提示文本；不存在时返回空。</returns>
-        private static string ResolveAttributeTooltip(MemberInfo memberInfo)
+        internal static string ResolveAttributeTooltip(MemberInfo memberInfo)
         {
             if (memberInfo == null)
                 return default;
@@ -299,7 +299,7 @@ namespace YokiFrame
         /// <summary>解析第三方 ButtonAttribute 的按钮文本，未配置文本时回退到方法名。</summary>
         /// <param name="method">按钮方法。</param>
         /// <returns>按钮显示文本。</returns>
-        private static string ResolveButtonLabel(MethodInfo method)
+        internal static string ResolveButtonLabel(MethodInfo method)
         {
             if (method == null)
                 return string.Empty;

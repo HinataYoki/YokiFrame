@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -38,7 +37,7 @@ namespace YokiFrame.Tests
         /// 验证 Task 仅由宿主 Tick 观察完成，不依赖 async continuation 改写 Action 状态。
         /// </summary>
         [Test]
-        public void TaskCompletionIsObservedOnSchedulerTick()
+        public void Tick_Task已完成_在调度帧观察终态()
         {
             TaskCompletionSource<bool> completion = new();
             IAction action = ActionKit.Task(() => completion.Task);
@@ -55,7 +54,7 @@ namespace YokiFrame.Tests
         /// 验证旧 Task 在 Action 取消后完成，不会结束后续 TaskAction 租约。
         /// </summary>
         [Test]
-        public void CancelledTaskCannotCompleteLaterActionLease()
+        public void Complete_取消后的旧Task_不结束新租约()
         {
             TaskCompletionSource<bool> oldCompletion = new();
             IAction oldAction = ActionKit.Task(() => oldCompletion.Task);
@@ -83,7 +82,7 @@ namespace YokiFrame.Tests
         /// 验证 faulted Task 形成 ActionKit Faulted 终态，不调用正常完成回调。
         /// </summary>
         [Test]
-        public void FaultedTaskDoesNotReportNormalCompletion()
+        public void Tick_Task失败_只进入Faulted()
         {
             var finishCount = 0;
             IAction action = ActionKit.Task(() => System.Threading.Tasks.Task.FromException(new InvalidOperationException("expected")));
@@ -100,7 +99,7 @@ namespace YokiFrame.Tests
         /// 验证空 Task factory 在构造阶段明确失败，不创建永久悬挂 Action。
         /// </summary>
         [Test]
-        public void TaskRejectsNullFactory()
+        public void Create_Task工厂为空_立即拒绝()
         {
             Assert.Throws<ArgumentNullException>(() => ActionKit.Task((Func<Task>)null));
         }
@@ -109,7 +108,7 @@ namespace YokiFrame.Tests
         /// 验证 Coroutine 取消会 Dispose 当前枚举器，使 finally/资源释放路径闭合。
         /// </summary>
         [Test]
-        public void CoroutineCancellationDisposesEnumerator()
+        public void Cancel_协程_释放枚举器()
         {
             DisposableEnumerator enumerator = new();
             IActionController controller = ActionKit.Coroutine(() => enumerator).Start();
@@ -124,7 +123,7 @@ namespace YokiFrame.Tests
         /// 验证嵌套 IEnumerator 会在内部结束后返回父枚举器继续推进。
         /// </summary>
         [Test]
-        public void CoroutineSupportsNestedEnumerator()
+        public void Tick_嵌套枚举器_完成后回到父级()
         {
             var steps = 0;
             IAction action = ActionKit.Coroutine(() => ParentRoutine(() => steps++));
@@ -142,7 +141,7 @@ namespace YokiFrame.Tests
         /// 验证超过嵌套深度时，尚未压栈的最深 IEnumerator 也会被释放。
         /// </summary>
         [Test]
-        public void CoroutineDepthFailureDisposesRejectedNestedEnumerator()
+        public void Start_嵌套超深_释放被拒绝枚举器()
         {
             NestedDisposableEnumerator[] enumerators =
                 CreateNestedEnumerators(CoroutineAction.MAX_NESTED_DEPTH + 2);
@@ -159,7 +158,7 @@ namespace YokiFrame.Tests
         /// 验证 Cleanup 同时释放待启动和正在执行的动作，而不是直接丢弃集合引用。
         /// </summary>
         [Test]
-        public void CleanupDeinitializesEveryScheduledAction()
+        public void Cleanup_已调度动作_全部反初始化()
         {
             ProbeAction first = new();
             ProbeAction second = new();
@@ -177,7 +176,7 @@ namespace YokiFrame.Tests
         /// 验证帧计数使用 long，避免长期运行和 DelayFrame 截止值发生 int 溢出。
         /// </summary>
         [Test]
-        public void SchedulerFrameCountUsesLong()
+        public void Tick_帧计数_按long累计()
         {
             Assert.AreEqual(typeof(long), typeof(ActionKitScheduler).GetProperty(nameof(ActionKitScheduler.FrameCount)).PropertyType);
         }
@@ -186,7 +185,7 @@ namespace YokiFrame.Tests
         /// 验证容量预热后纯 Tick 热路径不产生 ActionKit 自身的线程分配。
         /// </summary>
         [Test]
-        public void SteadyStateTickDoesNotAllocate()
+        public void Tick_稳态_不产生托管分配()
         {
             ActionKit.Delay(10000f, null).Start();
             for (var index = 0; index < 16; index++)
@@ -208,7 +207,7 @@ namespace YokiFrame.Tests
         /// 验证 Repeat 每轮都会重新调用 Task factory，而不是重复观察上一轮已经完成的 Task。
         /// </summary>
         [Test]
-        public void RepeatRecreatesFactoryTaskForEveryRound()
+        public void Repeat_每一轮_重新创建Task()
         {
             var factoryCount = 0;
             IRepeat repeat = ActionKit.Repeat(2);
@@ -230,7 +229,7 @@ namespace YokiFrame.Tests
         /// 验证已完成 Action 不能复活，后续分配也不会复用同一公开对象。
         /// </summary>
         [Test]
-        public void CompletedActionCannotBeResurrectedOrReused()
+        public void Start_已完成动作_拒绝复用()
         {
             IAction oldAction = ActionKit.Callback(null);
             oldAction.Start();
@@ -249,7 +248,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证旧 Action 引用的 Finish 不会提前完成后续同类型租约。</summary>
         [Test]
-        public void OldActionReferenceCannotFinishLaterLease()
+        public void Finish_旧动作引用_不能完成新租约()
         {
             IAction oldAction = ActionKit.Delay(0f);
             oldAction.Start();
@@ -271,7 +270,7 @@ namespace YokiFrame.Tests
         /// 验证显式暂停、恢复和时间源切换只遍历现有树，不创建递归闭包或临时集合。
         /// </summary>
         [Test]
-        public void ExplicitControllerChangesDoNotAllocate()
+        public void Pause_显式控制_不产生托管分配()
         {
             IActionController controller = ActionKit.Delay(10000f, null).Start();
             controller.Pause();
@@ -294,7 +293,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证异常并发峰值结束后，Scheduler 静态列表不会永久保留峰值数组。</summary>
         [Test]
-        public void SchedulerBuffersTrimAfterAbnormalPeak()
+        public void Cleanup_异常峰值后_收缩缓冲()
         {
             const int peakActionCount = 1100;
             for (var index = 0; index < peakActionCount; index++)
@@ -304,29 +303,14 @@ namespace YokiFrame.Tests
             ActionKitScheduler.Cleanup();
 
             Assert.LessOrEqual(
-                GetSchedulerListCapacity("sPrepared"),
+                ActionKitScheduler.GetRetainedListCapacityForTests("prepared"),
                 ActionKitScheduler.MAX_RETAINED_PREPARED_CAPACITY);
             Assert.LessOrEqual(
-                GetSchedulerListCapacity("sExecuting"),
+                ActionKitScheduler.GetRetainedListCapacityForTests("executing"),
                 ActionKitScheduler.MAX_RETAINED_EXECUTING_CAPACITY);
             Assert.LessOrEqual(
-                GetSchedulerListCapacity("sPendingRecycle"),
+                ActionKitScheduler.GetRetainedListCapacityForTests("recycle"),
                 ActionKitScheduler.MAX_RETAINED_RECYCLE_CAPACITY);
-        }
-
-        /// <summary>读取指定 Scheduler 私有 List 的 Capacity，验证峰值缩容策略。</summary>
-        /// <param name="fieldName">Scheduler 静态列表字段名。</param>
-        /// <returns>当前底层数组容量。</returns>
-        private static int GetSchedulerListCapacity(string fieldName)
-        {
-            FieldInfo field = typeof(ActionKitScheduler).GetField(
-                fieldName,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(field);
-            object list = field.GetValue(null);
-            PropertyInfo capacity = list.GetType().GetProperty("Capacity");
-            Assert.IsNotNull(capacity);
-            return (int)capacity.GetValue(list);
         }
 
         /// <summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using YokiFrame.Installer.Core.IO;
 
 namespace YokiFrame.Installer.Core.Tests.IO;
@@ -41,10 +42,9 @@ public sealed class InstallerPathGuardTests
         Directory.CreateDirectory(outsideRoot);
         try
         {
-            if (!TryCreateDirectoryLink(linkPath, outsideRoot))
-            {
-                return;
-            }
+            Assert.True(
+                TryCreateDirectoryLink(linkPath, outsideRoot),
+                "当前进程不能创建目录符号链接或 junction，无法观察重解析点拒绝。");
 
             var exception = Assert.Throws<IOException>(() =>
                 InstallerPathGuard.CombineInside(projectRoot, "Packages", "payload.txt"));
@@ -57,12 +57,28 @@ public sealed class InstallerPathGuardTests
     }
 
     /// <summary>
-    /// 尝试创建目录链接；宿主策略禁止创建链接时由发布环境的专项测试继续覆盖。
+    /// 创建目录重解析点。符号链接无权限时，在 Windows 上改用同样会被拒绝的 junction。
     /// </summary>
     /// <param name="linkPath">链接路径。</param>
     /// <param name="targetPath">链接目标。</param>
     /// <returns>链接创建成功时返回 true。</returns>
     private static bool TryCreateDirectoryLink(string linkPath, string targetPath)
+    {
+        if (TryCreateSymbolicLink(linkPath, targetPath))
+        {
+            return true;
+        }
+
+        return OperatingSystem.IsWindows() && TryCreateWindowsJunction(linkPath, targetPath);
+    }
+
+    /// <summary>
+    /// 尝试创建目录符号链接。
+    /// </summary>
+    /// <param name="linkPath">链接路径。</param>
+    /// <param name="targetPath">链接目标。</param>
+    /// <returns>当前进程允许创建符号链接时返回 true。</returns>
+    private static bool TryCreateSymbolicLink(string linkPath, string targetPath)
     {
         try
         {
@@ -73,6 +89,41 @@ public sealed class InstallerPathGuardTests
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// 用 mklink /J 创建不需要管理员权限的目录 junction。
+    /// </summary>
+    /// <param name="linkPath">链接路径。</param>
+    /// <param name="targetPath">已存在的目录目标。</param>
+    /// <returns>junction 创建成功时返回 true。</returns>
+    private static bool TryCreateWindowsJunction(string linkPath, string targetPath)
+    {
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/d /c mklink /J \"" + linkPath + "\" \"" + targetPath + "\"",
+            CreateNoWindow = true,
+            UseShellExecute = false
+        });
+        if (process == null)
+        {
+            return false;
+        }
+
+        process.WaitForExit();
+        return process.ExitCode == 0 && IsDirectoryReparsePoint(linkPath);
+    }
+
+    /// <summary>
+    /// 判断路径是否为目录重解析点。
+    /// </summary>
+    /// <param name="path">待检查路径。</param>
+    /// <returns>存在且带重解析点属性时返回 true。</returns>
+    private static bool IsDirectoryReparsePoint(string path)
+    {
+        return Directory.Exists(path)
+            && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }
 
     /// <summary>

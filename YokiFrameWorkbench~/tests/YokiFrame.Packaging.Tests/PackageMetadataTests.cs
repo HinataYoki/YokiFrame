@@ -1,5 +1,4 @@
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using YokiFrame.Json;
 
 namespace YokiFrame.Packaging.Tests;
 
@@ -11,8 +10,6 @@ public sealed class PackageMetadataTests
     private const string PACKAGE_NAME = "com.hinatayoki.yokiframe";
     private const string UNITY_VERSION = "2022.3";
     private const string REPOSITORY_URL = "https://github.com/HinataYoki/YokiFrame.git";
-    private const string VERSION_PATTERN = @"^2\.0\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$";
-
     private static readonly HashSet<string> sRequiredCapabilityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "avalonia",
@@ -30,20 +27,17 @@ public sealed class PackageMetadataTests
     };
 
     /// <summary>
-    /// 验证包名、2.0 预发布 SemVer 与 Unity 最低版本保持发布契约要求。
+    /// 验证包名、当前版本 2.1.0 与 Unity 最低版本保持发布契约。
     /// </summary>
     [Fact]
-    public void PackageIdentityTargetsExpectedUnityPrerelease()
+    public void PackageIdentity_发布清单_匹配包名最低Unity与当前版本()
     {
         using var manifest = ReadPackageManifest();
-        var root = manifest.RootElement;
+        JsonElement root = manifest.RootElement;
 
         Assert.Equal(PACKAGE_NAME, root.GetProperty("name").GetString());
         Assert.Equal(UNITY_VERSION, root.GetProperty("unity").GetString());
-
-        var version = root.GetProperty("version").GetString();
-        Assert.NotNull(version);
-        Assert.Matches(new Regex(VERSION_PATTERN, RegexOptions.CultureInvariant), version);
+        Assert.Equal("2.1.0", root.GetProperty("version").GetString());
     }
 
     /// <summary>

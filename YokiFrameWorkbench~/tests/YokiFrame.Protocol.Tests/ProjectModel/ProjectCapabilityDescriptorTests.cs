@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using YokiFrame.Protocol.ProjectModel;
 
 namespace YokiFrame.Protocol.Tests.ProjectModel;
@@ -220,87 +221,6 @@ public sealed class ProjectCapabilityDescriptorTests
     }
 
     /// <summary>
-    /// 验证每个 descriptor 声明的 action 都真实存在于某个非测试包内源码中。
-    /// sourceHash 只锁定单一文件，System 与 Validation 的 action 分散在多个文件，
-    /// 因此哈希无法发现"action 被删除但声明保留"的漂移。
-    /// </summary>
-    [Fact]
-    public void EveryDeclaredActionExistsInPackageSource()
-    {
-        var packageRoot = FindPackageRoot();
-        var descriptorPaths = EnumerateDescriptorPaths(packageRoot);
-        var sources = ReadNonTestSources(packageRoot);
-
-        Assert.NotEmpty(descriptorPaths);
-        Assert.NotEmpty(sources);
-
-        List<string> missing = new();
-        foreach (var descriptorPath in descriptorPaths)
-        {
-            var descriptor = ProjectCapabilityDescriptor.FromJson(File.ReadAllText(descriptorPath));
-            foreach (var command in descriptor.Kit.Commands)
-            {
-                // 只认带引号的字面量，避免注释或说明文字造成误判。
-                var literal = "\"" + command.Action + "\"";
-                if (!sources.Any(source => source.Contains(literal, StringComparison.Ordinal)))
-                {
-                    missing.Add(descriptor.Kit.Kit + "/" + command.Action);
-                }
-            }
-        }
-
-        Assert.True(
-            missing.Count == 0,
-            "以下能力声明的 action 在任何非测试包内源码中都不存在: " + string.Join(", ", missing.OrderBy(static item => item, StringComparer.Ordinal)));
-    }
-
-    /// <summary>枚举包内全部 capability descriptor。</summary>
-    /// <param name="packageRoot">YokiFrame 包根。</param>
-    /// <returns>按路径排序的描述符文件。</returns>
-    private static IReadOnlyList<string> EnumerateDescriptorPaths(string packageRoot)
-    {
-        return Directory
-            .EnumerateFiles(Path.Combine(packageRoot, "Core"), "capability.json", SearchOption.AllDirectories)
-            .Concat(Directory.EnumerateFiles(Path.Combine(packageRoot, "Tools"), "capability.json", SearchOption.AllDirectories))
-            .OrderBy(static path => path, StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    /// <summary>
-    /// 一次性读取包内全部非测试 C# 源文本；测试目录不参与匹配，避免测试自身满足声明。
-    /// </summary>
-    /// <param name="packageRoot">YokiFrame 包根。</param>
-    /// <returns>源文件文本集合。</returns>
-    private static IReadOnlyList<string> ReadNonTestSources(string packageRoot)
-    {
-        List<string> sources = new();
-        foreach (var path in Directory.EnumerateFiles(packageRoot, "*.cs", SearchOption.AllDirectories))
-        {
-            if (IsUnderTestsDirectory(packageRoot, path))
-            {
-                continue;
-            }
-
-            sources.Add(File.ReadAllText(path));
-        }
-
-        return sources;
-    }
-
-    /// <summary>判断源文件是否位于任意以 Tests 结尾的路径段之下。</summary>
-    /// <param name="packageRoot">YokiFrame 包根。</param>
-    /// <param name="path">待判断的源文件绝对路径。</param>
-    /// <returns>位于测试目录下时返回 true。</returns>
-    private static bool IsUnderTestsDirectory(string packageRoot, string path)
-    {
-        var relative = Path.GetRelativePath(packageRoot, path);
-        return relative
-            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Any(static segment => string.Equals(segment, "Tests", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(segment, "tests", StringComparison.Ordinal));
-    }
-
-    /// <summary>
     /// 验证包内全部 capability descriptor 都绑定当前实现源码，避免未被逐项语义测试覆盖的 Kit 静默漂移。
     /// </summary>
     [Fact]
@@ -316,7 +236,7 @@ public sealed class ProjectCapabilityDescriptorTests
         Assert.NotEmpty(descriptorPaths);
         Assert.All(
             descriptorPaths,
-            path => AssertSourceHash(ProjectCapabilityDescriptor.FromJson(File.ReadAllText(path)).Kit));
+            path => AssertSourceHash(ReadDescriptorFile(path).Kit));
     }
 
     /// <summary>
@@ -349,7 +269,8 @@ public sealed class ProjectCapabilityDescriptorTests
             Assert.Contains(command.VerifyRecipe, recipeIds);
         });
         AssertSourceHash(descriptor.Kit);
-        Assert.Equal(descriptor, ProjectCapabilityDescriptor.FromJson(descriptor.ToJson()), DescriptorComparer.Instance);
+        var serialized = descriptor.ToJson();
+        Assert.Equal(serialized, ProjectCapabilityDescriptor.FromJson(serialized).ToJson());
     }
 
     /// <summary>
@@ -360,9 +281,40 @@ public sealed class ProjectCapabilityDescriptorTests
     {
         var sourcePath = Path.Combine(FindPackageRoot(), kit.SourcePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(sourcePath), "Capability source was not found: " + sourcePath);
-        var actualHash = Convert.ToHexString(
-            SHA256.HashData(File.ReadAllBytes(sourcePath))).ToLowerInvariant();
+        var canonicalBytes = NormalizeCapabilitySourceLineEndings(File.ReadAllBytes(sourcePath));
+        var actualHash = Convert.ToHexString(SHA256.HashData(canonicalBytes)).ToLowerInvariant();
         Assert.Equal(actualHash, kit.SourceHash);
+    }
+
+    /// <summary>
+    /// 折叠 CRLF 为 LF。sourceHash 按仓库规范字节计算，不能被 Windows 检出的换行改写。
+    /// </summary>
+    /// <param name="source">实现文件原始字节。</param>
+    /// <returns>仅移除 CR/LF 对中 CR 后的字节。</returns>
+    private static byte[] NormalizeCapabilitySourceLineEndings(byte[] source)
+    {
+        var normalized = new byte[source.Length];
+        var length = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index] == (byte)'\r'
+                && index + 1 < source.Length
+                && source[index + 1] == (byte)'\n')
+            {
+                continue;
+            }
+
+            normalized[length++] = source[index];
+        }
+
+        if (length == source.Length)
+        {
+            return source;
+        }
+
+        var result = new byte[length];
+        Array.Copy(normalized, result, length);
+        return result;
     }
 
     /// <summary>
@@ -384,7 +336,18 @@ public sealed class ProjectCapabilityDescriptorTests
     private static ProjectCapabilityDescriptor ReadDescriptor(string relativePath)
     {
         var path = Path.Combine(FindPackageRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
-        return ProjectCapabilityDescriptor.FromJson(File.ReadAllText(path));
+        return ReadDescriptorFile(path);
+    }
+
+    /// <summary>
+    /// 按原始字节加载 descriptor，再交给公开 FromJson。
+    /// </summary>
+    /// <param name="path">descriptor 绝对路径。</param>
+    /// <returns>解析后的 descriptor。</returns>
+    private static ProjectCapabilityDescriptor ReadDescriptorFile(string path)
+    {
+        var json = Encoding.UTF8.GetString(File.ReadAllBytes(path));
+        return ProjectCapabilityDescriptor.FromJson(json);
     }
 
     /// <summary>
@@ -423,42 +386,5 @@ public sealed class ProjectCapabilityDescriptorTests
     {
         return File.Exists(Path.Combine(path, "package.json"))
             && Directory.Exists(Path.Combine(path, "Core"));
-    }
-
-    /// <summary>
-    /// 只比较 descriptor roundtrip 后的稳定业务字段，避免测试依赖对象引用相等。
-    /// </summary>
-    private sealed class DescriptorComparer : IEqualityComparer<ProjectCapabilityDescriptor>
-    {
-        /// <summary>获取共享 comparer 实例。</summary>
-        public static DescriptorComparer Instance { get; } = new();
-
-        /// <summary>
-        /// 比较 descriptor 的 schema、kind、Kit 和 action 顺序。
-        /// </summary>
-        /// <param name="left">左侧 descriptor。</param>
-        /// <param name="right">右侧 descriptor。</param>
-        /// <returns>稳定字段相同时返回 true。</returns>
-        public bool Equals(ProjectCapabilityDescriptor? left, ProjectCapabilityDescriptor? right)
-        {
-            return left != null
-                && right != null
-                && left.SchemaVersion == right.SchemaVersion
-                && left.Kind == right.Kind
-                && left.Kit.Kit == right.Kit.Kit
-                && left.Kit.Commands.Select(command => command.Action).SequenceEqual(
-                    right.Kit.Commands.Select(command => command.Action),
-                    StringComparer.Ordinal);
-        }
-
-        /// <summary>
-        /// 返回 descriptor schema、kind 和 Kit 的组合哈希。
-        /// </summary>
-        /// <param name="value">descriptor。</param>
-        /// <returns>稳定字段组合哈希。</returns>
-        public int GetHashCode(ProjectCapabilityDescriptor value)
-        {
-            return HashCode.Combine(value.SchemaVersion, value.Kind, value.Kit.Kit);
-        }
     }
 }

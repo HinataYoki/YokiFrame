@@ -6,9 +6,9 @@ namespace YokiFrame.Tooling.Application.Tests;
 /// <summary>覆盖 AudioKit 稳定 manifest、冲突检测、路径保护和原子输出。</summary>
 public sealed class AudioIndexServiceTests
 {
-    /// <summary>验证新增排序靠前文件不会改变已有音频 ID。</summary>
+    /// <summary>验证新增排序靠前文件不会改变已有音频 ID，并写出对应常量行。</summary>
     [Fact]
-    public void GeneratePreservesIdsWhenNewFileSortsBeforeExistingEntries()
+    public void Generate_新增文件排序靠前_保持已有音频Id()
     {
         string projectRoot = CreateProjectRoot();
         WriteAudio(projectRoot, "Assets/Audio/Music/Menu.ogg");
@@ -20,11 +20,14 @@ public sealed class AudioIndexServiceTests
         WriteAudio(projectRoot, "Assets/Audio/Ambience/Rain.ogg");
         AudioIndexResult second = service.Generate(request);
 
-        Assert.Equal(1001, first.Entries.Single(entry => entry.Path.EndsWith("Menu.ogg")).Id);
-        Assert.Equal(1001, second.Entries.Single(entry => entry.Path.EndsWith("Menu.ogg")).Id);
-        Assert.Equal(1002, second.Entries.Single(entry => entry.Path.EndsWith("Click.wav")).Id);
-        Assert.Equal(1003, second.Entries.Single(entry => entry.Path.EndsWith("Rain.ogg")).Id);
-        Assert.Contains("public const int MUSIC_MENU = 1001;", File.ReadAllText(second.GeneratedFile));
+        Assert.Equal(1001, first.Entries.Single(entry => entry.Path == "Assets/Audio/Music/Menu.ogg").Id);
+        AudioIndexEntry menu = second.Entries.Single(entry => entry.Path == "Assets/Audio/Music/Menu.ogg");
+        Assert.Equal(1001, menu.Id);
+        Assert.Equal("MUSIC_MENU", menu.ConstantName);
+        Assert.Equal(1002, second.Entries.Single(entry => entry.Path == "Assets/Audio/Sfx/Click.wav").Id);
+        Assert.Equal(1003, second.Entries.Single(entry => entry.Path == "Assets/Audio/Ambience/Rain.ogg").Id);
+        string[] generatedLines = File.ReadAllLines(second.GeneratedFile);
+        Assert.Contains(generatedLines, static line => line == "        public const int MUSIC_MENU = 1001;");
         Assert.Empty(Directory.EnumerateFiles(
             Path.GetDirectoryName(second.GeneratedFile)!, "*.tmp", SearchOption.TopDirectoryOnly));
     }

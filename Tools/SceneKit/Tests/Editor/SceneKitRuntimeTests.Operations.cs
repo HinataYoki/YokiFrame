@@ -3,12 +3,12 @@ using NUnit.Framework;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>承载 SceneKit Runtime 测试复用的同步操作桩，避免测试主文件承担无关实现细节。</summary>
+    /// <summary>承载 SceneKit 句柄值语义测试和同步操作桩，避免运行时测试主文件超过行数上限。</summary>
     public sealed partial class SceneKitRuntimeTests
     {
         /// <summary>验证卸载挂起预加载会先恢复操作，并在完成后合并为一次后端卸载。</summary>
         [Test]
-        public void UnloadSuspendedPreloadResumesAndUnloadsOnce()
+        public void UnloadSceneAsync_挂起预加载_恢复后只卸载一次()
         {
             SceneHandler activeHandler = SceneKit.LoadSceneAsync("Active", SceneLoadMode.Additive);
             var backend = new SuspendedSceneBackend();
@@ -33,7 +33,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证已有激活场景时，挂起预加载的激活意图会在加载完成后执行。</summary>
         [Test]
-        public void ActivateSuspendedAdditivePreloadBecomesActiveAfterCompletion()
+        public void ActivatePreloadedScene_已有激活场景且挂起_完成后成为激活场景()
         {
             SceneHandler previous = SceneKit.LoadSceneAsync("Active", SceneLoadMode.Additive);
             var backend = new SuspendedSceneBackend();
@@ -51,6 +51,39 @@ namespace YokiFrame.Tests
             Assert.AreEqual(handler.Scene, backend.ActiveScene);
             Assert.AreEqual(1, backend.SetActiveCount);
             Assert.IsFalse(handler.IsPreloaded);
+        }
+
+        /// <summary>验证 SceneHandle 与 SceneLoadResult 在 default 状态下的空安全与值相等语义。</summary>
+        [Test]
+        public void Equals_默认句柄和加载结果_值相等且默认安全()
+        {
+            SceneHandle defaultHandle = default;
+            SceneHandle explicitEmpty = new(null, 0, false);
+            SceneHandle validHandle = new("Gameplay", 1, true);
+
+            // 验证 default 句柄 SceneName 永远非空
+            Assert.AreEqual(string.Empty, defaultHandle.SceneName);
+            Assert.AreEqual(0, defaultHandle.SceneName.Length);
+            Assert.IsFalse(defaultHandle.IsValid);
+
+            // 验证值相等性与运算符
+            Assert.AreEqual(defaultHandle, explicitEmpty);
+            Assert.IsTrue(defaultHandle == explicitEmpty);
+            Assert.IsFalse(defaultHandle != explicitEmpty);
+            Assert.IsTrue(defaultHandle != validHandle);
+            Assert.AreEqual(defaultHandle.GetHashCode(), explicitEmpty.GetHashCode());
+
+            // 验证 SceneLoadResult 值相等性
+            SceneLoadResult result1 = new(validHandle);
+            SceneLoadResult result2 = new(new SceneHandle("Gameplay", 1, true));
+            SceneLoadResult defaultResult = default;
+            Assert.IsTrue(result1.Succeeded);
+            Assert.IsFalse(defaultResult.Succeeded);
+            Assert.AreEqual(result1, result2);
+            Assert.IsTrue(result1 == result2);
+            Assert.IsFalse(result1 != result2);
+            Assert.IsTrue(result1 != defaultResult);
+            Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
         }
 
         /// <summary>表示测试 Provider 的同步已完成操作。</summary>

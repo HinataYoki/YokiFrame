@@ -104,27 +104,33 @@ public sealed class YokiFrameClientRegistryTests
     public void EngineListPreservesHealthyEntriesWhenAnotherRegistryIsInvalid()
     {
         var projectRoot = CreateProjectRoot();
-        var healthyRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor");
-        var brokenRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "broken");
-        Directory.CreateDirectory(healthyRoot);
-        Directory.CreateDirectory(brokenRoot);
-        File.WriteAllText(
-            Path.Combine(healthyRoot, "engine.json"),
-            "{\"protocolVersion\":2,\"engineId\":\"unity-editor\",\"engine\":\"Unity\"}");
-        var brokenPath = Path.Combine(brokenRoot, "engine.json");
-        File.WriteAllText(brokenPath, "{ invalid-json");
+        try
+        {
+            var healthyRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor");
+            var brokenRoot = Path.Combine(projectRoot, ".yokiframe", "engines", "broken");
+            Directory.CreateDirectory(healthyRoot);
+            Directory.CreateDirectory(brokenRoot);
+            File.WriteAllText(
+                Path.Combine(healthyRoot, "engine.json"),
+                "{\"protocolVersion\":2,\"engineId\":\"unity-editor\",\"engine\":\"Unity\"}");
+            var brokenPath = Path.Combine(brokenRoot, "engine.json");
+            File.WriteAllText(brokenPath, "{ invalid-json");
+            using var client = new YokiFrameClient(projectRoot);
+            var exception = Assert.Throws<EngineRegistryReadException>(() => client.ReadEngineEntries());
 
-        var exception = Assert.Throws<EngineRegistryReadException>(
-            () => new YokiFrameClient(projectRoot).ReadEngineEntries());
-
-        Assert.Equal("unity-editor", Assert.Single(exception.ValidEntries).EngineId);
-        Assert.Equal(brokenPath, Assert.Single(exception.InvalidPaths));
+            Assert.Equal("unity-editor", Assert.Single(exception.ValidEntries).EngineId);
+            Assert.Equal(brokenPath, Assert.Single(exception.InvalidPaths));
+        }
+        finally
+        {
+            DeleteProjectRoot(projectRoot);
+        }
     }
 
     /// <summary>
     /// 验证 registry 最终文件本身是链接时不会把项目外内容当作 engine 状态读取。
     /// </summary>
-    [Fact]
+    [SymbolicLinkFact(SymbolicLinkProbeKind.File)]
     public void EngineRegistryFileRejectsReparsePoint()
     {
         var testRoot = Path.Combine(Path.GetTempPath(), "yokiframe-engine-tests", Guid.NewGuid().ToString("N"));
@@ -141,10 +147,9 @@ public sealed class YokiFrameClientRegistryTests
 
         try
         {
-            if (!TryCreateFileLink(registryPath, outsideRegistryPath))
-            {
-                return;
-            }
+            Assert.True(
+                TryCreateFileLink(registryPath, outsideRegistryPath),
+                "符号链接能力探测通过后仍无法创建 registry 文件链接。");
 
             var exception = Assert.Throws<YokiFrameProtocolException>(
                 () => new YokiFrameClient(projectRoot).ReadEngineEntries());

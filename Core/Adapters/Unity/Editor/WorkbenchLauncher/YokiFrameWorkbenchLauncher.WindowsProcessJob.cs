@@ -17,7 +17,7 @@ namespace YokiFrame
         /// <summary>
         /// 用 Windows Job Object 接管 bootstrap 进程树；关闭句柄会由系统终止所有成员进程。
         /// </summary>
-        private sealed class WindowsRuntimeBootstrapJob : IRuntimeBootstrapProcessTreeOwner
+        internal sealed class WindowsRuntimeBootstrapJob : IRuntimeBootstrapProcessTreeOwner
         {
             private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
             private const int JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9;
@@ -30,6 +30,17 @@ namespace YokiFrame
             private WindowsRuntimeBootstrapJob(SafeJobHandle handle)
             {
                 mHandle = handle;
+            }
+
+            /// <summary>
+            /// 为测试创建 Job Object 并接管指定进程，失败原因写入 <paramref name="error"/>。
+            /// </summary>
+            /// <param name="process">已经启动的 bootstrap 根进程。</param>
+            /// <param name="error">失败时返回 Win32 或进程生命周期诊断。</param>
+            /// <returns>成功接管进程树时返回 owner，否则返回 null。</returns>
+            internal static IDisposable TryCreateForTests(Process process, out string error)
+            {
+                return TryCreate(process, out error);
             }
 
             /// <summary>创建 Job Object、启用关闭即终止限制，并把指定进程加入该 Job。</summary>

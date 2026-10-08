@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Services.SaveKit;
 
 namespace YokiFrame.Tooling.Application.Tests.SaveKit;
@@ -7,7 +8,7 @@ public sealed class SaveKitWorkbenchSettingsServiceTests
 {
     /// <summary>Unity 保存只替换 SaveKit 条目，并扫描 slots/global 文件。</summary>
     [Fact]
-    public async Task SavesUnitySettingsAndScansSaveFiles()
+    public async Task SaveAsync_已有LogKit_保留其它Kit并扫描存档()
     {
         string root = CreateRoot();
         try
@@ -27,7 +28,11 @@ public sealed class SaveKitWorkbenchSettingsServiceTests
             Assert.Equal(".bin", result.Settings.FileExtension);
             Assert.Equal(1, result.Settings.SlotCount);
             Assert.Equal(1, result.Settings.GlobalCount);
-            Assert.Contains("LogKit", File.ReadAllText(config));
+            using JsonDocument saved = ToolingFileObservation.OpenJson(config);
+            Assert.Contains(saved.RootElement.GetProperty("settings").EnumerateArray(), static entry =>
+                entry.GetProperty("kit").GetString() == "LogKit"
+                && entry.GetProperty("key").GetString() == "enabled"
+                && entry.GetProperty("value").GetString() == "true");
         }
         finally { DeleteRoot(root); }
     }
@@ -100,7 +105,7 @@ public sealed class SaveKitWorkbenchSettingsServiceTests
 
     /// <summary>Godot 保存仅维护 yokiframe/runtime section 并保留其它项目设置。</summary>
     [Fact]
-    public async Task PatchesGodotRuntimeSection()
+    public async Task SaveAsync_Godot运行时补丁_保留其它section()
     {
         string root = CreateRoot();
         try
@@ -110,11 +115,10 @@ public sealed class SaveKitWorkbenchSettingsServiceTests
             var service = new SaveKitWorkbenchSettingsService(root);
             var loaded = service.Load("godot-editor");
             var result = await service.SaveAsync("godot-editor", "Saves", "save", loaded.Fingerprint, CancellationToken.None);
-            string text = File.ReadAllText(path);
+            Dictionary<string, Dictionary<string, string>> sections = ToolingFileObservation.ReadGodot(path);
             Assert.True(result.Saved);
-            Assert.Contains("[display]", text);
-            Assert.Contains("[yokiframe/runtime]", text);
-            Assert.Contains("save_kit/file_extension=\".save\"", text);
+            Assert.Equal("1280", sections["[display]"]["window/size"]);
+            Assert.Equal("\".save\"", sections["[yokiframe/runtime]"]["save_kit/file_extension"]);
         }
         finally { DeleteRoot(root); }
     }

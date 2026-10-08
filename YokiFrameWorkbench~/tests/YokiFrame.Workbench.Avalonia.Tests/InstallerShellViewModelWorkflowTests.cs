@@ -130,19 +130,14 @@ public sealed partial class InstallerShellViewModelWorkflowTests
         using InstallerViewModelFixture fixture = InstallerViewModelFixture.CreateUnity();
         await fixture.ViewModel.InitializeAsync();
 
-        var visibleProperty = typeof(InstallerShellViewModel).GetProperty("IsCompletionSummaryVisible");
-        var summaryProperty = typeof(InstallerShellViewModel).GetProperty("CompletionSummaryText");
-        Assert.NotNull(visibleProperty);
-        Assert.NotNull(summaryProperty);
-
         await fixture.ViewModel.InstallCommand.ExecuteAsync();
 
-        Assert.True((bool)visibleProperty!.GetValue(fixture.ViewModel)!);
-        var summary = Assert.IsType<string>(summaryProperty!.GetValue(fixture.ViewModel));
-        Assert.Contains("Unity", summary);
-        Assert.Contains("Unity 本地包", summary);
-        Assert.Contains(fixture.PackageTarget, summary);
-        Assert.Contains("校验证据", summary);
+        Assert.True(fixture.ViewModel.IsCompletionSummaryVisible);
+        var summary = fixture.ViewModel.CompletionSummaryText;
+        Assert.Contains("Unity", summary, StringComparison.Ordinal);
+        Assert.Contains("Unity 本地包", summary, StringComparison.Ordinal);
+        Assert.Contains(fixture.PackageTarget, summary, StringComparison.Ordinal);
+        Assert.Contains("校验证据", summary, StringComparison.Ordinal);
     }
 
     /// <summary>

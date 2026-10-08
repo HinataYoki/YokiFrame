@@ -8,7 +8,7 @@ public sealed partial class LiveCodeTests
     private const string SnapshotSource = "public int Value = 7;";
 
     [Fact]
-    /// <summary>预算耗尽后快照命令仍持久化。不加载、不调用宿主，结果不含字段文本。</summary>
+    /// <summary>预算耗尽后快照命令仍持久化。不加载、不调用宿主，结果根对象和条目都不含 fields。</summary>
     public void Snapshot_command_persists_after_budget_exhaustion_without_loading_or_invoking()
     {
         using var bed = new LiveBed();
@@ -25,7 +25,10 @@ public sealed partial class LiveCodeTests
             Assert.True(response.IsSuccess);
             var payload = JsonNode.Parse(response.ResultJson)!;
             var snapshot = bed.Manager.ReadSnapshot(payload["snapshotId"]!.GetValue<string>(), bed.Guard);
-            Assert.DoesNotContain("fields", response.ResultJson);
+            var root = payload.AsObject();
+            Assert.False(root.ContainsKey("fields"));
+            foreach (var entry in root["entries"]!.AsArray())
+                Assert.False(entry!.AsObject().ContainsKey("fields"));
             Assert.True(snapshot.Complete);
             Assert.Empty(bed.Host.Events);
             Assert.Equal(RoslynLoadBudget.MaxAssemblies, bed.Budget.LoadedCount);

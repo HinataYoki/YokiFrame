@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -9,6 +10,17 @@ namespace YokiFrame
     /// </summary>
     public sealed partial class YokiFrameFsmKitBehaviorTests
     {
+        /// <summary>
+        /// 读取诊断 JSON 的 count 字段。
+        /// </summary>
+        /// <param name="owner">所属对象。</param>
+        /// <returns>计数值。</returns>
+        private static int ReadCount(JsonElement owner)
+        {
+            Assert.IsTrue(owner.GetProperty("count").TryGetInt32(out int value), "count");
+            return value;
+        }
+
         /// <summary>测试使用的稳定状态标识。</summary>
         private enum SampleStateId
         {
@@ -43,7 +55,7 @@ namespace YokiFrame
         /// 验证首个状态自动选中，普通切换严格执行 Condition、旧 End、新 Start 的顺序。
         /// </summary>
         [Test]
-        public void FsmStartsFirstStateAndChangesInClosedLifecycleOrder()
+        public void Start_首个状态_按Condition旧End新Start切换()
         {
             List<string> calls = new List<string>();
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Player");
@@ -67,7 +79,7 @@ namespace YokiFrame
         /// 验证未运行、条件失败、缺失状态和当前状态重复切换均保持 no-op。
         /// </summary>
         [Test]
-        public void FsmTransitionGatesLeaveSelectionUntouched()
+        public void Change_未运行或条件失败或重复_保持当前选择()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle") { AllowEnter = false };
@@ -96,7 +108,7 @@ namespace YokiFrame
         /// 验证三类 tick 和消息只在 Running 时转发，Suspend 后立即停止转发。
         /// </summary>
         [Test]
-        public void FsmForwardsTicksAndMessagesOnlyWhileRunning()
+        public void Update_仅Running_转发Tick和消息()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle");
@@ -128,7 +140,7 @@ namespace YokiFrame
         /// 验证挂起阶段 Start 其他状态会先闭合被挂起状态的生命周期，再启动目标状态。
         /// </summary>
         [Test]
-        public void StartingDifferentStateWhileSuspendedClosesSuspendedState()
+        public void Start_挂起时切换目标_关闭被挂起状态()
         {
             List<string> calls = new List<string>();
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
@@ -153,7 +165,7 @@ namespace YokiFrame
         /// 验证 Resume 只恢复挂起的机器并继续转发 tick，不重复触发进入逻辑，也不产生第二条 Start 历史。
         /// </summary>
         [Test]
-        public void ResumeRestoresSuspendedMachineWithoutRestartingState()
+        public void Resume_挂起后恢复_不重新Start()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Resume");
             TrackingState idle = new TrackingState("idle");
@@ -172,9 +184,13 @@ namespace YokiFrame
             Assert.AreEqual(1, idle.ResumeCount);
             Assert.AreEqual(1, idle.UpdateCount);
             Assert.AreEqual(MachineState.Running, fsm.MachineState);
-            StringAssert.Contains(
-                "\"count\":1",
-                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"Resume\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"Resume\"}")))
+            {
+                Assert.AreEqual(1, ReadCount(document.RootElement));
+                Assert.AreEqual("Idle", document.RootElement.GetProperty("history")[0].GetProperty("to").GetString());
+            }
+
             GC.KeepAlive(fsm);
         }
 
@@ -182,7 +198,7 @@ namespace YokiFrame
         /// 验证带参启动和切换向匹配状态传参，普通状态则回落无参 Start。
         /// </summary>
         [Test]
-        public void FsmPassesArgumentsAndFallsBackToParameterlessState()
+        public void Start_带参状态_传递参数并回退无参状态()
         {
             FSM<SampleStateId, int> fsm = new FSM<SampleStateId, int>();
             ArgumentState idle = new ArgumentState();
@@ -202,7 +218,7 @@ namespace YokiFrame
         /// 验证运行中替换当前状态会先结束并释放旧状态，再启动满足条件的新状态。
         /// </summary>
         [Test]
-        public void ReplacingRunningCurrentStateClosesOldStateAndStartsReplacement()
+        public void Add_替换运行中的当前状态_先结束旧状态再启动新状态()
         {
             List<string> calls = new List<string>();
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
@@ -223,7 +239,7 @@ namespace YokiFrame
         /// 验证 End 保留一致的状态选择以支持无参重启，只有 Clear 才清空选择。
         /// </summary>
         [Test]
-        public void EndKeepsSelectionConsistentAndAllowsRestart()
+        public void End_结束后_保留选择并允许重启()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle");
@@ -244,7 +260,7 @@ namespace YokiFrame
         /// 验证移除当前状态会闭合生命周期、释放一次并把状态机复位为空 End。
         /// </summary>
         [Test]
-        public void RemovingCurrentStateResetsMachineAndDisposesOnce()
+        public void Remove_移除当前状态_复位并只释放一次()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle");
@@ -265,7 +281,7 @@ namespace YokiFrame
         /// 验证 Clear 结束当前状态、释放每个状态一次并清空诊断快照。
         /// </summary>
         [Test]
-        public void ClearResetsSelectionAndDisposesEveryStateOnce()
+        public void Clear_清空_释放每个状态一次()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle");
@@ -290,7 +306,7 @@ namespace YokiFrame
         /// 验证空状态被立即拒绝，避免在后续 tick 中产生延迟空引用。
         /// </summary>
         [Test]
-        public void AddRejectsNullState()
+        public void Add_空状态_立即拒绝()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
 
@@ -301,7 +317,7 @@ namespace YokiFrame
         /// 验证 GetAllStates 返回独立字典快照，外部清理不会修改内部状态。
         /// </summary>
         [Test]
-        public void StateDictionarySnapshotCannotMutateFsm()
+        public void GetAllStates_外部修改快照_不影响状态机()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>();
             TrackingState idle = new TrackingState("idle");

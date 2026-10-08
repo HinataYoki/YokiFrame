@@ -10,7 +10,7 @@ namespace YokiFrame
     {
         /// <summary>验证未超预算的文本原样返回，不做多余复制。</summary>
         [Test]
-        public void NormalizeTextKeepsTextWithinBudget()
+        public void NormalizeText_未超预算_保持原文()
         {
             const string value = "short";
 
@@ -19,7 +19,7 @@ namespace YokiFrame
 
         /// <summary>验证 ASCII 文本按字节预算精确裁剪。</summary>
         [Test]
-        public void NormalizeTextTruncatesAsciiToBudget()
+        public void NormalizeText_ASCII超预算_截断到预算()
         {
             string value = new string('a', 100);
 
@@ -28,7 +28,7 @@ namespace YokiFrame
 
         /// <summary>验证多字节字符按 UTF-8 字节而非字符数裁剪。</summary>
         [Test]
-        public void NormalizeTextCountsUtf8BytesNotChars()
+        public void NormalizeText_多字节字符_按UTF8字节计预算()
         {
             // 每个 '中' 占 3 字节，预算 7 只能容纳 2 个。
             string value = new string('中', 5);
@@ -41,7 +41,7 @@ namespace YokiFrame
         /// 该语义是修复前后必须保持一致的关键边界（递减实现会额外剔除尾部孤立高代理）。
         /// </summary>
         [Test]
-        public void NormalizeTextNeverEndsWithLoneHighSurrogate()
+        public void NormalizeText_截断代理项_不以孤立高位结束()
         {
             // 表情占 4 字节；预算 3 无法容纳，旧实现返回空串而不是半个代理对。
             string value = "\uD83D\uDE00";
@@ -53,7 +53,7 @@ namespace YokiFrame
 
         /// <summary>验证长文本裁剪结果与逐字节参考实现一致，并覆盖原 O(n²) 会超时的规模。</summary>
         [Test]
-        public void NormalizeTextMatchesReferenceOnLargeInput()
+        public void NormalizeText_大输入_与参考截断一致()
         {
             string value = new string('x', 400000);
 
@@ -65,7 +65,7 @@ namespace YokiFrame
 
         /// <summary>验证空值与非正值预算的既有回落行为。</summary>
         [Test]
-        public void NormalizeTextHandlesEmptyValue()
+        public void NormalizeText_空文本_保持为空()
         {
             Assert.AreEqual(string.Empty, PoolKitSnapshotBuilder.NormalizeText(null, 16));
             Assert.AreEqual(string.Empty, PoolKitSnapshotBuilder.NormalizeText(string.Empty, 16));

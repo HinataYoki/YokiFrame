@@ -11,7 +11,7 @@ namespace YokiFrame.Tests
     {
         /// <summary>验证 HashGrid 的二维投影查询不会把被忽略轴纳入半径距离。</summary>
         [Test]
-        public void HashGrid_QueryRadius_UsesProjectedDistance()
+        public void QueryRadius_忽略轴超出半径_仍命中投影内实体()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(2f, SpatialPlane.XZ);
             grid.Insert(new MutableEntity(1, new YokiVector3(0f, 100f, 0f)));
@@ -24,7 +24,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证极大有限半径不会溢出 cell 循环，并能在线性回退中返回实体。</summary>
         [Test, Timeout(1000)]
-        public void HashGrid_QueryRadius_ExtremeFiniteRangeCompletes()
+        public void QueryRadius_有限极大半径_限时返回实体()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(101, YokiVector3.Zero));
@@ -38,7 +38,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证横跨完整 int cell 范围的 Bounds 查询会限时完成并保留三维过滤。</summary>
         [Test, Timeout(1000)]
-        public void HashGrid_QueryBounds_ExtremeFiniteRangeCompletes()
+        public void QueryBounds_横跨完整cell范围_限时保留三维过滤()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(102, YokiVector3.Zero));
@@ -53,7 +53,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证有限最近邻距离产生 int 极值跨度时不会发生加减溢出或长时间空扫描。</summary>
         [Test, Timeout(1000)]
-        public void HashGrid_QueryNearest_ExtremeFiniteRangeCompletes()
+        public void QueryNearest_有限极大距离_返回最近实体()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(103, new YokiVector3(1f, 0f, 0f)));
@@ -66,7 +66,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Quadtree 通过节点定位正确更新可变引用实体。</summary>
         [Test]
-        public void Quadtree_UpdateMutableEntity_DoesNotDuplicate()
+        public void Update_四叉树实体移动_不重复插入()
         {
             Quadtree<MutableEntity> tree = SpatialKit.CreateQuadtree<MutableEntity>(
                 new YokiRect(-20f, -20f, 40f, 40f),
@@ -87,7 +87,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Octree 通过节点定位正确更新可变引用实体。</summary>
         [Test]
-        public void Octree_UpdateMutableEntity_DoesNotDuplicate()
+        public void Update_八叉树实体移动_不重复插入()
         {
             Octree<MutableEntity> tree = SpatialKit.CreateOctree<MutableEntity>(
                 new YokiBounds(YokiVector3.Zero, new YokiVector3(40f, 40f, 40f)),
@@ -107,7 +107,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证四叉树不会因根边界裁剪而漏掉投影越界实体。</summary>
         [Test]
-        public void Quadtree_QueriesOverflowEntityOutsideRoot()
+        public void QueryRadius_四叉树根外实体_三种查询都能命中()
         {
             Quadtree<MutableEntity> tree = SpatialKit.CreateQuadtree<MutableEntity>(
                 new YokiRect(0f, 0f, 10f, 10f), plane: SpatialPlane.XZ);
@@ -128,7 +128,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证八叉树不会因根边界裁剪而漏掉三维越界实体。</summary>
         [Test]
-        public void Octree_QueriesOverflowEntityOutsideRoot()
+        public void QueryRadius_八叉树根外实体_三种查询都能命中()
         {
             Octree<MutableEntity> tree = SpatialKit.CreateOctree<MutableEntity>(
                 new YokiBounds(YokiVector3.Zero, new YokiVector3(10f, 10f, 10f)));
@@ -149,7 +149,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证相同 SpatialId 插入时替换旧实体而不是增加数量。</summary>
         [Test]
-        public void InsertDuplicateId_ReplacesStoredEntity()
+        public void Insert_相同SpatialId_替换旧实体()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(7, YokiVector3.Zero));
@@ -165,7 +165,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证无效网格尺寸会在构造阶段立即失败。</summary>
         [Test]
-        public void CreateHashGrid_InvalidCellSize_Throws()
+        public void CreateHashGrid_尺寸无效_立即抛出()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => SpatialKit.CreateHashGrid<MutableEntity>(0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => SpatialKit.CreateHashGrid<MutableEntity>(float.NaN));
@@ -173,7 +173,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证快照捕获位置后不受原实体后续移动影响。</summary>
         [Test]
-        public void Snapshot_CapturesPositionsAtCreationTime()
+        public void QueryRadius_快照创建后移动_仍命中旧位置()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             MutableEntity entity = new MutableEntity(11, YokiVector3.Zero);
@@ -191,7 +191,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证并行批量查询按输入索引写入对应结果列表。</summary>
         [Test]
-        public void Snapshot_QueryRadiusBatchParallel_PreservesQuerySlots()
+        public void QueryRadiusBatchParallel_多条查询_按槽位写回()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(21, new YokiVector3(0f, 0f, 0f)));
@@ -218,7 +218,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证两类并行批量查询都会拒绝重复结果容器，避免并发写入同一 List。</summary>
         [Test]
-        public void Snapshot_ParallelBatchQueries_RejectDuplicateResultLists()
+        public void QueryRadiusBatchParallel_结果容器重复_两种批量查询都拒绝()
         {
             SpatialHashGrid<MutableEntity> grid = SpatialKit.CreateHashGrid<MutableEntity>(1f);
             grid.Insert(new MutableEntity(31, YokiVector3.Zero));
@@ -242,7 +242,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 SpatialRadiusQuery 满足泛型值相等契约与重载运算符一致性。</summary>
         [Test]
-        public void SpatialRadiusQuery_EqualityAndOperatorsUseValueSemantics()
+        public void Equals_相同半径查询_值相等()
         {
             var query1 = new SpatialRadiusQuery(new YokiVector3(1f, 2f, 3f), 5f);
             var query2 = new SpatialRadiusQuery(new YokiVector3(1f, 2f, 3f), 5f);

@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
+using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame.Tests
 {
@@ -59,10 +61,14 @@ namespace YokiFrame.Tests
             string json = FindProvider().CreateSnapshot("state");
 
             Assert.IsNull(UIKit.Root);
-            StringAssert.StartsWith("{\"schemaVersion\":1", json);
-            StringAssert.Contains("\"root\":{\"exists\":false}", json);
-            StringAssert.Contains("\"panels\":{\"items\":[]", json);
-            StringAssert.Contains("\"stacks\":{\"items\":[]", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual(1, ReadInt(root, "schemaVersion"));
+                Assert.IsFalse(root.GetProperty("root").GetProperty("exists").GetBoolean());
+                Assert.AreEqual(0, root.GetProperty("panels").GetProperty("items").GetArrayLength());
+                Assert.AreEqual(0, root.GetProperty("stacks").GetProperty("items").GetArrayLength());
+            }
             Assert.LessOrEqual(
                 Encoding.UTF8.GetByteCount(json),
                 YokiFrameSharedMemoryTelemetryContract.DEFAULT_MAX_PAYLOAD_BYTES);
@@ -91,12 +97,16 @@ namespace YokiFrame.Tests
                 CreateRequest("get_editor_context", "{}"));
 
             Assert.IsTrue(result.IsSuccess);
-            StringAssert.Contains(
-                "\"codeTemplateOptions\":[\"Default\",\"Minimal\",\"Dialog\"",
-                result.ResultJson);
-            StringAssert.Contains(
-                "\"assemblyNames\":[\"Assembly-CSharp\"",
-                result.ResultJson);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                CollectionAssert.AreEqual(
+                    new[] { "Default", "Minimal", "Dialog" },
+                    ReadStrings(document.RootElement.GetProperty("codeTemplateOptions")));
+                CollectionAssert.Contains(
+                    ReadStrings(document.RootElement.GetProperty("assemblyNames")),
+                    "Assembly-CSharp");
+            }
+
             Assert.IsNull(UIKit.Root);
         }
 
@@ -169,6 +179,30 @@ namespace YokiFrame.Tests
                 .ToArray();
             Assert.AreEqual(1, providers.Length, "Tool catalog 必须只注册一个 UIKit Provider。");
             return providers[0];
+        }
+
+        /// <summary>
+        /// 读取必需整数属性。
+        /// </summary>
+        /// <param name="owner">所属对象。</param>
+        /// <param name="propertyName">属性名。</param>
+        /// <returns>整数值。</returns>
+        private static int ReadInt(JsonElement owner, string propertyName)
+        {
+            Assert.IsTrue(owner.GetProperty(propertyName).TryGetInt32(out int value), propertyName);
+            return value;
+        }
+
+        /// <summary>
+        /// 读取字符串数组。
+        /// </summary>
+        /// <param name="items">字符串数组。</param>
+        /// <returns>字符串列表。</returns>
+        private static string[] ReadStrings(JsonElement items)
+        {
+            var values = new string[items.GetArrayLength()];
+            for (var index = 0; index < values.Length; index++) values[index] = items[index].GetString();
+            return values;
         }
 
         /// <summary>

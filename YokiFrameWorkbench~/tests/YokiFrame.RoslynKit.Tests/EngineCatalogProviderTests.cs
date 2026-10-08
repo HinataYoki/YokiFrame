@@ -262,8 +262,15 @@ public sealed class EngineCatalogProviderTests
         Assert.True(document.RootElement.GetProperty("recentRunCount").TryGetInt32(out int recorded));
         Assert.True(recorded >= 1);
         Assert.True(after > before, "run activity must bump the snapshot version");
-        string snapshot = provider.CreateSnapshot("state");
-        Assert.Contains(run.RunId, snapshot, StringComparison.Ordinal);
+        using JsonDocument recordedSnapshot = JsonDocument.Parse(provider.CreateSnapshot("state"));
+        JsonElement recentRuns = recordedSnapshot.RootElement.GetProperty("recentRuns");
+        var recordedIds = new List<string>();
+        for (var index = 0; index < recentRuns.GetArrayLength(); index++)
+        {
+            recordedIds.Add(recentRuns[index].GetProperty("runId").GetString());
+        }
+
+        Assert.Contains(run.RunId, recordedIds);
     }
 
     [Fact]

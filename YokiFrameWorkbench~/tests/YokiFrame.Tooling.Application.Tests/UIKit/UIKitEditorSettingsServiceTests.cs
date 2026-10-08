@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Models.UIKit;
 using YokiFrame.Tooling.Application.Services.UIKit;
 
@@ -25,7 +26,7 @@ public sealed class UIKitEditorSettingsServiceTests
 
     /// <summary>保存后由新服务实例回读五个字段，并保留其它 owner 与 UIKit 未知键。</summary>
     [Fact]
-    public async Task SavePersistsEditorToolsSettingsWithoutReplacingUnownedValues()
+    public async Task SaveAsync_已有其它键_保留未拥有值()
     {
         string root = CreateRoot();
         try
@@ -55,10 +56,16 @@ public sealed class UIKitEditorSettingsServiceTests
             Assert.Equal(settings.ScriptNamespace, loaded.ScriptNamespace);
             Assert.Equal(settings.AssemblyName, loaded.AssemblyName);
             Assert.Equal(settings.CodeTemplate, loaded.CodeTemplate);
-            string saved = File.ReadAllText(path);
-            Assert.Contains("\"kit\": \"LogKit\"", saved, StringComparison.Ordinal);
-            Assert.Contains("\"key\": \"editor.futureKey\"", saved, StringComparison.Ordinal);
-            Assert.Contains("\"value\": \"keep\"", saved, StringComparison.Ordinal);
+            using JsonDocument saved = ToolingFileObservation.OpenJson(path);
+            JsonElement[] entries = saved.RootElement.GetProperty("settings").EnumerateArray().ToArray();
+            Assert.Contains(entries, static entry =>
+                entry.GetProperty("kit").GetString() == "LogKit"
+                && entry.GetProperty("key").GetString() == "enabled"
+                && entry.GetProperty("value").GetString() == "true");
+            Assert.Contains(entries, static entry =>
+                entry.GetProperty("kit").GetString() == "UIKit"
+                && entry.GetProperty("key").GetString() == "editor.futureKey"
+                && entry.GetProperty("value").GetString() == "keep");
         }
         finally
         {

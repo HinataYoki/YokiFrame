@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using Xunit;
+using YokiFrame.Json;
 
 namespace YokiFrame.RoslynKit.Tests;
 
@@ -75,7 +76,8 @@ public sealed class AtomicFileWriterTests : IDisposable
         string path = Path.Combine(mRoot, ".yokiframe", "engine", "eval", "eval-2.json");
         byte[] bytes = File.ReadAllBytes(path);
         Assert.False(bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF);
-        Assert.Contains("会话", Encoding.UTF8.GetString(bytes), StringComparison.Ordinal);
+        using JsonDocument document = JsonDocument.Parse(Encoding.UTF8.GetString(bytes));
+        Assert.Equal("会话", document.RootElement.GetProperty("note").GetString());
     }
 
     /// <summary>构造一条可保存的 eval 记录。不写磁盘。</summary>

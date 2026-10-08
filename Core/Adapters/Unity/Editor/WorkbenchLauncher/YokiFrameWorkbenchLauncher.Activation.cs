@@ -57,7 +57,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="projectRoot">Unity 项目根。</param>
         /// <returns>与 Workbench owner 一致的项目级管道名。</returns>
-        private static string CreateActivationPipeName(string projectRoot)
+        internal static string CreateActivationPipeName(string projectRoot)
         {
             var normalizedProjectRoot = Path.GetFullPath(projectRoot)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);

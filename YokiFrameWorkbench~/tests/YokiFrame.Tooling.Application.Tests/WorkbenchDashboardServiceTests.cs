@@ -1,5 +1,7 @@
 using System.IO.MemoryMappedFiles;
 using System.Text;
+using System.Text.Json;
+using YokiFrame.Client.FileBridge;
 using YokiFrame;
 using YokiFrame.Protocol.Telemetry.SharedMemory;
 using YokiFrame.Tooling.Application.Models;
@@ -160,7 +162,7 @@ public sealed class WorkbenchDashboardServiceTests
     /// 验证在线 bridge 存在匹配 generation 的 telemetry 时 Kit 页优先使用 telemetry。
     /// </summary>
     [Fact]
-    public void LoadDashboardPrefersTelemetryWhenAvailable()
+    public void LoadDashboard_匹配代际有遥测_优先采用遥测状态()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -180,18 +182,18 @@ public sealed class WorkbenchDashboardServiceTests
         var logState = state.Snapshots.Single(snapshot => snapshot.Kit == "LogKit");
 
         Assert.Equal("telemetry", systemState.Source);
-        Assert.Contains("system-telemetry", systemState.PayloadPreview);
+        AssertPayloadStatus(systemState, "system-telemetry");
         Assert.Equal("telemetry", fsmState.Source);
-        Assert.Contains("fsm-telemetry", fsmState.PayloadPreview);
+        AssertPayloadStatus(fsmState, "fsm-telemetry");
         Assert.Equal("telemetry", logState.Source);
-        Assert.Contains("log-telemetry", logState.PayloadPreview);
+        AssertPayloadStatus(logState, "log-telemetry");
     }
 
     /// <summary>
     /// 验证 registry 已进入新 generation 而 heartbeat 仍属于旧 generation 时，dashboard 不会接受同样属于旧 generation 的 telemetry。
     /// </summary>
     [Fact]
-    public void LoadDashboardFallsBackToSnapshotWhenRegistryAndHeartbeatGenerationsDiffer()
+    public void LoadDashboard_注册与心跳代际不一致_回落快照状态()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -213,7 +215,7 @@ public sealed class WorkbenchDashboardServiceTests
         Assert.Equal(WorkbenchBridgeConnectionState.Stale, state.BridgeHealth.State);
         Assert.True(state.BridgeHealth.RequiresReconnect);
         Assert.Equal("snapshot", systemState.Source);
-        Assert.DoesNotContain("old-telemetry", systemState.PayloadPreview);
+        AssertPayloadStatus(systemState, "online");
         Assert.NotNull(state.DoctorReport);
         Assert.Contains(state.DoctorReport.Issues, static issue => issue.Code == "HostIdentityMismatch");
     }
@@ -222,7 +224,7 @@ public sealed class WorkbenchDashboardServiceTests
     /// 验证 registry 与 heartbeat 的 session 不一致时，即使 generation 相同也不会接受可能属于旧宿主会话的 telemetry。
     /// </summary>
     [Fact]
-    public void LoadDashboardFallsBackToSnapshotWhenRegistryAndHeartbeatSessionsDiffer()
+    public void LoadDashboard_注册与心跳会话不一致_回落快照状态()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -244,7 +246,7 @@ public sealed class WorkbenchDashboardServiceTests
         Assert.Equal(WorkbenchBridgeConnectionState.Stale, state.BridgeHealth.State);
         Assert.Equal("current-session", state.BridgeHealth.SessionId);
         Assert.Equal("snapshot", systemState.Source);
-        Assert.DoesNotContain("old-session-telemetry", systemState.PayloadPreview);
+        AssertPayloadStatus(systemState, "online");
     }
 
     /// <summary>
@@ -267,7 +269,7 @@ public sealed class WorkbenchDashboardServiceTests
     /// 验证 registry 存在但 heartbeat 缺失时会给出明确 reconnect 状态。
     /// </summary>
     [Fact]
-    public void LoadDashboardReportsMissingHeartbeat()
+    public void LoadDashboard_心跳缺失_证据指向心跳文件()
     {
         var projectRoot = CreateProjectRoot();
         WriteMinimalBridge(projectRoot, writeHeartbeat: false);
@@ -277,7 +279,7 @@ public sealed class WorkbenchDashboardServiceTests
         Assert.Equal(WorkbenchBridgeConnectionState.HeartbeatMissing, state.BridgeHealth.State);
         Assert.True(state.BridgeHealth.RequiresReconnect);
         Assert.Null(state.BridgeHealth.HeartbeatAgeSeconds);
-        Assert.Contains("heartbeat", state.BridgeHealth.EvidencePaths[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(new YokiFramePaths(projectRoot).GetHeartbeatPath("unity-editor"), state.BridgeHealth.EvidencePaths[0]);
     }
 
     /// <summary>
@@ -294,6 +296,17 @@ public sealed class WorkbenchDashboardServiceTests
         Assert.Equal(WorkbenchBridgeConnectionState.Stale, state.BridgeHealth.State);
         Assert.True(state.BridgeHealth.RequiresReconnect);
         Assert.True(state.BridgeHealth.HeartbeatAgeSeconds >= 15);
+    }
+
+    /// <summary>
+    /// 断言快照原始业务载荷的 status 字段，避免用预览子串证明 JSON。
+    /// </summary>
+    /// <param name="state">待观察的 Kit 状态。</param>
+    /// <param name="expectedStatus">预期 status。</param>
+    private static void AssertPayloadStatus(WorkbenchSnapshotState state, string expectedStatus)
+    {
+        using JsonDocument payload = JsonDocument.Parse(state.RawPayloadJson);
+        Assert.Equal(expectedStatus, payload.RootElement.GetProperty("status").GetString());
     }
 
     /// <summary>

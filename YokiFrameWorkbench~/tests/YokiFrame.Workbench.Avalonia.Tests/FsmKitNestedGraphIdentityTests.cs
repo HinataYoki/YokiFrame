@@ -13,10 +13,10 @@ public sealed class FsmKitNestedGraphIdentityTests
     /// 验证父子机器的 Idle/Running 保持为独立节点，根实例历史只连接根机器同名状态。
     /// </summary>
     [Fact]
-    public void SameNamedParentAndChildStatesKeepIndependentGraphIdentity()
+    public void ApplyPeriodicState_父子同名状态_历史只连接根机器()
     {
         var state = CreateNestedState();
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
 
         viewModel.ApplyPeriodicState(state);
 
@@ -67,9 +67,9 @@ public sealed class FsmKitNestedGraphIdentityTests
             "test://nested-fsm-identity",
             "Running",
             transitions: new[] { ("Idle", "Running") });
-        var selected = CreateInternal<WorkbenchFsmMachineDetails>(
+        var selected = new WorkbenchFsmMachineDetails(
             "ChosenFSM", "chosen-instance", "Running", "Running", 1, 5, rootStates);
-        return CreateInternal<WorkbenchFsmKitState>(
+        return new WorkbenchFsmKitState(
             baseline.DataSource,
             baseline.FsmName,
             baseline.InstanceId,
@@ -94,7 +94,7 @@ public sealed class FsmKitNestedGraphIdentityTests
         long entryCount,
         IReadOnlyList<WorkbenchFsmStateNode> children)
     {
-        return CreateInternal<WorkbenchFsmStateNode>(
+        return new WorkbenchFsmStateNode(
             id,
             orderIndex,
             name,
@@ -118,15 +118,4 @@ public sealed class FsmKitNestedGraphIdentityTests
         return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
     }
 
-    /// <summary>调用 Application read model 的内部构造方法，保持生产模型公开边界不因测试扩张。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        var instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
-    }
 }

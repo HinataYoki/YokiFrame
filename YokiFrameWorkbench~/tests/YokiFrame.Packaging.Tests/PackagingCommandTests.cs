@@ -85,6 +85,15 @@ public sealed class PackagingCommandTests
         finally
         {
             Console.SetError(originalError);
+            if (File.Exists(outsidePath))
+            {
+                File.Delete(outsidePath);
+            }
+
+            if (Directory.Exists(runtimeRoot))
+            {
+                Directory.Delete(runtimeRoot, recursive: true);
+            }
         }
     }
 }

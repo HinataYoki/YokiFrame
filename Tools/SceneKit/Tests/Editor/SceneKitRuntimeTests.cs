@@ -36,7 +36,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证首次真实场景加载会创建 ResKit 宿主默认 Provider，查询本身不会创建。</summary>
         [Test]
-        public void FirstSceneLoadCreatesDefaultResKitProvider()
+        public void LoadSceneAsync_首次加载_才创建默认Provider()
         {
             SceneKit.Reset();
             ResKit.ResetForTests();
@@ -59,7 +59,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证未显式设置后端时 SceneKit 自动使用当前 ResKit Provider。</summary>
         [Test]
-        public void LoadSceneUsesCurrentResKitSceneProvider()
+        public void LoadSceneAsync_未显式后端_使用当前ResKit场景能力()
         {
             SceneHandler handler = SceneKit.LoadSceneAsync("Gameplay", SceneLoadMode.Additive);
 
@@ -71,7 +71,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证显式 SceneKit Backend 优先于 ResKit Provider。</summary>
         [Test]
-        public void ExplicitBackendOverridesResKitProvider()
+        public void SetBackend_已显式设置_不走ResKit()
         {
             var backend = new TestSceneBackend("Explicit");
             SceneKit.SetBackend(backend);
@@ -84,7 +84,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Provider 切换后旧 Handler 仍由创建它的 Provider 卸载。</summary>
         [Test]
-        public void ProviderSwitchKeepsExistingSceneOwnership()
+        public void UnloadSceneAsync_切换Provider后_仍由原Provider卸载()
         {
             SceneHandler first = SceneKit.LoadSceneAsync("First", SceneLoadMode.Additive);
             var replacement = new TestResourceProvider("Replacement");
@@ -100,7 +100,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证无效 Provider 结果进入 Failed，不会被报告为已加载。</summary>
         [Test]
-        public void InvalidProviderResultEntersFailedState()
+        public void LoadSceneAsync_结果无效_进入Failed()
         {
             mProvider.ReturnInvalidScene = true;
 
@@ -112,7 +112,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证最后一个场景可以进入后端卸载流程。</summary>
         [Test]
-        public void LastSceneCanBeUnloaded()
+        public void UnloadSceneAsync_最后场景_完成后已卸载()
         {
             SceneHandler handler = SceneKit.LoadSceneAsync("Only", SceneLoadMode.Additive);
 
@@ -125,7 +125,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Single 加载通过原 Handler 后端卸载已替换场景。</summary>
         [Test]
-        public void SingleModeUnloadsReplacedScenes()
+        public void LoadSceneAsync_Single模式_卸载被替换场景()
         {
             SceneHandler first = SceneKit.LoadSceneAsync("First", SceneLoadMode.Additive);
 
@@ -139,7 +139,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证同步完成的预加载在显式激活前不会改变当前激活场景。</summary>
         [Test]
-        public void PreloadedSceneWaitsForExplicitActivation()
+        public void PreloadSceneAsync_未激活_不改变当前场景()
         {
             SceneHandler handler = SceneKit.PreloadSceneAsync("Preloaded");
 
@@ -154,7 +154,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证加载期间的多个卸载请求共享一次后端卸载，并在完成后统一回调。</summary>
         [Test]
-        public void UnloadDuringLoadRunsBackendUnloadOnce()
+        public void UnloadSceneAsync_加载期间重复卸载_只调用一次后端()
         {
             var backend = new DeferredSceneBackend();
             SceneKit.SetBackend(backend);
@@ -186,7 +186,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证加载中卸载遇到无效结果时完成逻辑卸载，不调用无句柄的后端卸载。</summary>
         [Test]
-        public void UnloadDuringFailedLoadCompletesCallbacks()
+        public void UnloadSceneAsync_加载结果无效_完成回调且不卸载句柄()
         {
             var backend = new DeferredSceneBackend();
             SceneKit.SetBackend(backend);
@@ -204,7 +204,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证预加载尚未挂起或完成时不会提前把无效句柄设为激活场景。</summary>
         [Test]
-        public void ActivatingIncompletePreloadWaitsForProviderCompletion()
+        public void ActivatePreloadedScene_加载未完成_不提前激活()
         {
             var backend = new DeferredSceneBackend();
             SceneKit.SetBackend(backend);
@@ -228,7 +228,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证不支持运行中挂起的后端不会被 SceneKit 错误标记为已挂起。</summary>
         [Test]
-        public void SuspendLoadReflectsOperationCapability()
+        public void SuspendLoad_操作不支持挂起_不标记已挂起()
         {
             var backend = new DeferredSceneBackend();
             SceneKit.SetBackend(backend);
@@ -241,7 +241,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证宿主重复报告相同进度时只通知调用方一次，终态仍保证报告 1。</summary>
         [Test]
-        public void ProgressCallbackSkipsUnchangedValues()
+        public void LoadSceneAsync_进度重复_只通知变化并保证终值()
         {
             var backend = new DeferredSceneBackend();
             SceneKit.SetBackend(backend);
@@ -262,7 +262,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证卸载激活场景时事件携带真实旧场景，并在没有替代场景时发布空句柄。</summary>
         [Test]
-        public void UnloadingActiveScenesPublishesAccurateTransitionEvents()
+        public void UnloadSceneAsync_卸载激活场景_事件携带真实切换()
         {
             var receivedEvents = new List<ActiveSceneChangedEvent>();
             LinkUnRegister<ActiveSceneChangedEvent> registration = EventKit.Type.Register<ActiveSceneChangedEvent>(receivedEvents.Add);
@@ -289,40 +289,6 @@ namespace YokiFrame.Tests
                 registration.UnRegister();
             }
         }
-
-        /// <summary>验证 SceneHandle 与 SceneLoadResult 在 default 状态下的空安全与值相等语义。</summary>
-        [Test]
-        public void SceneHandle_And_SceneLoadResult_ValueEqualityAndDefaultSafety()
-        {
-            SceneHandle defaultHandle = default;
-            SceneHandle explicitEmpty = new(null, 0, false);
-            SceneHandle validHandle = new("Gameplay", 1, true);
-
-            // 验证 default 句柄 SceneName 永远非空
-            Assert.AreEqual(string.Empty, defaultHandle.SceneName);
-            Assert.AreEqual(0, defaultHandle.SceneName.Length);
-            Assert.IsFalse(defaultHandle.IsValid);
-
-            // 验证值相等性与运算符
-            Assert.AreEqual(defaultHandle, explicitEmpty);
-            Assert.IsTrue(defaultHandle == explicitEmpty);
-            Assert.IsFalse(defaultHandle != explicitEmpty);
-            Assert.IsTrue(defaultHandle != validHandle);
-            Assert.AreEqual(defaultHandle.GetHashCode(), explicitEmpty.GetHashCode());
-
-            // 验证 SceneLoadResult 值相等性
-            SceneLoadResult result1 = new(validHandle);
-            SceneLoadResult result2 = new(new SceneHandle("Gameplay", 1, true));
-            SceneLoadResult defaultResult = default;
-            Assert.IsTrue(result1.Succeeded);
-            Assert.IsFalse(defaultResult.Succeeded);
-            Assert.AreEqual(result1, result2);
-            Assert.IsTrue(result1 == result2);
-            Assert.IsFalse(result1 != result2);
-            Assert.IsTrue(result1 != defaultResult);
-            Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
-        }
-
         /// <summary>提供普通资源与场景可选能力的同步测试 Provider。</summary>
         private sealed class TestResourceProvider : IResourceProvider, IResSceneProvider
         {

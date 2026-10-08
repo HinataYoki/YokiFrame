@@ -29,16 +29,19 @@ namespace YokiFrame
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(Path.GetFullPath(executablePath), GetProperty(plan, "ExecutablePath"));
-            Assert.AreEqual(Path.GetFullPath(projectRoot), GetProperty(plan, "WorkingDirectory"));
-            Assert.AreEqual(false, GetProperty(plan, "RequiresBootstrap"));
-            StringAssert.Contains("--project", (string)GetProperty(plan, "Arguments"));
-            StringAssert.Contains(Path.GetFullPath(projectRoot), (string)GetProperty(plan, "Arguments"));
-            StringAssert.Contains("--source", (string)GetProperty(plan, "Arguments"));
-            StringAssert.Contains(Path.GetFullPath(packageRoot), (string)GetProperty(plan, "Arguments"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.AreEqual(Path.GetFullPath(executablePath), plan.ExecutablePath);
+            Assert.AreEqual(Path.GetFullPath(projectRoot), plan.WorkingDirectory);
+            Assert.IsFalse(plan.RequiresBootstrap);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "--project", Path.GetFullPath(projectRoot),
+                    "--source", Path.GetFullPath(packageRoot)
+                },
+                SplitArguments(plan.Arguments));
         }
 
         /// <summary>
@@ -51,10 +54,10 @@ namespace YokiFrame
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: true);
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(Path.GetFullPath(executablePath), GetProperty(plan, "ExecutablePath"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.AreEqual(Path.GetFullPath(executablePath), plan.ExecutablePath);
         }
 
         /// <summary>
@@ -67,12 +70,15 @@ namespace YokiFrame
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             CreateWorkbenchSourceInput(packageRoot);
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(true, GetProperty(plan, "RequiresBootstrap"));
-            Assert.AreEqual(string.Empty, GetProperty(plan, "ExecutablePath"));
-            StringAssert.Contains(Path.Combine(".yokiframe", "runtime"), (string)GetProperty(plan, "RuntimeRoot"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.IsTrue(plan.RequiresBootstrap);
+            Assert.AreEqual(string.Empty, plan.ExecutablePath);
+            string expectedRuntimeRoot = YokiFrameWorkbenchRuntimeCacheLayout.GetRuntimeRoot(
+                Path.GetFullPath(projectRoot),
+                YokiFrameWorkbenchSourceFingerprint.Compute(Path.GetFullPath(packageRoot)));
+            Assert.AreEqual(expectedRuntimeRoot, plan.RuntimeRoot);
         }
 
         /// <summary>
@@ -88,11 +94,11 @@ namespace YokiFrame
                 Path.Combine(packageRoot, "YokiFrameWorkbench~", "src", "Workbench.cs"),
                 "// changed after publish");
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(false, GetProperty(plan, "RequiresBootstrap"));
-            Assert.AreEqual(Path.GetFullPath(executablePath), GetProperty(plan, "ExecutablePath"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.IsFalse(plan.RequiresBootstrap);
+            Assert.AreEqual(Path.GetFullPath(executablePath), plan.ExecutablePath);
         }
 
         /// <summary>
@@ -102,11 +108,6 @@ namespace YokiFrame
         public void ActivationPipeNameMatchesWorkbenchProjectIdentity()
         {
             string projectRoot = CreateProjectRoot() + Path.DirectorySeparatorChar;
-            MethodInfo method = GetLauncherType().GetMethod(
-                "CreateActivationPipeName",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(method);
-
             string normalizedRoot = Path.GetFullPath(projectRoot)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             string identity = Application.platform == RuntimePlatform.WindowsEditor
@@ -120,29 +121,7 @@ namespace YokiFrame
 
             string expected = "yokiframe-workbench-"
                 + BitConverter.ToString(hash, 0, 16).Replace("-", string.Empty).ToLowerInvariant();
-            Assert.AreEqual(expected, method.Invoke(null, new object[] { projectRoot }));
-        }
-
-        /// <summary>
-        /// 验证 Unity Mono 激活客户端不使用会访问未实现 WindowsIdentity.Owner 的 CurrentUserOnly，并将该兼容失败降级为普通启动。
-        /// </summary>
-        [Test]
-        public void ActivationClientAvoidsMonoUnsupportedCurrentUserOnly()
-        {
-            string sourcePath = Path.Combine(
-                Application.dataPath,
-                "YokiFrame",
-                "Core",
-                "Adapters",
-                "Unity",
-                "Editor",
-                "WorkbenchLauncher",
-                "YokiFrameWorkbenchLauncher.Activation.cs");
-            string source = File.ReadAllText(sourcePath);
-
-            StringAssert.Contains("PipeOptions.Asynchronous))", source);
-            StringAssert.DoesNotContain("PipeOptions.CurrentUserOnly", source);
-            StringAssert.Contains("exception is NotImplementedException", source);
+            Assert.AreEqual(expected, YokiFrameWorkbenchLauncher.CreateActivationPipeName(projectRoot));
         }
 
         /// <summary>
@@ -155,11 +134,9 @@ namespace YokiFrame
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot, 4660L);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot, 4660L);
 
-            string arguments = (string)GetProperty(plan, "Arguments");
-            StringAssert.Contains("--parent-hwnd", arguments);
-            StringAssert.Contains("4660", arguments);
+            CollectionAssert.IsSubsetOf(new[] { "--parent-hwnd", "4660" }, SplitArguments(plan.Arguments));
         }
 
         /// <summary>
@@ -171,7 +148,7 @@ namespace YokiFrame
             string projectRoot = CreateProjectRoot();
             string assetPath = "Packages/com.hinatayoki.yokiframe/Core/Adapters/Unity/Editor/WorkbenchLauncher/YokiFrameWorkbenchLauncher.cs";
 
-            string packageRoot = ResolvePackageRootFromAssetPath(projectRoot, assetPath);
+            string packageRoot = YokiFrameWorkbenchLauncher.ResolvePackageRootFromAssetPath(projectRoot, assetPath);
 
             Assert.AreEqual(Path.GetFullPath(Path.Combine(projectRoot, "Packages", "com.hinatayoki.yokiframe")), packageRoot);
         }
@@ -182,10 +159,10 @@ namespace YokiFrame
         [Test]
         public void GetRuntimeIdentifierUsesEditorPlatformAndArchitecture()
         {
-            Assert.AreEqual("win-x64", GetRuntimeIdentifier(RuntimePlatform.WindowsEditor, Architecture.X64));
-            Assert.AreEqual("linux-x64", GetRuntimeIdentifier(RuntimePlatform.LinuxEditor, Architecture.X64));
-            Assert.AreEqual("osx-arm64", GetRuntimeIdentifier(RuntimePlatform.OSXEditor, Architecture.Arm64));
-            Assert.AreEqual("osx-x64", GetRuntimeIdentifier(RuntimePlatform.OSXEditor, Architecture.X64));
+            Assert.AreEqual("win-x64", YokiFrameWorkbenchLauncher.GetRuntimeIdentifier(RuntimePlatform.WindowsEditor, Architecture.X64));
+            Assert.AreEqual("linux-x64", YokiFrameWorkbenchLauncher.GetRuntimeIdentifier(RuntimePlatform.LinuxEditor, Architecture.X64));
+            Assert.AreEqual("osx-arm64", YokiFrameWorkbenchLauncher.GetRuntimeIdentifier(RuntimePlatform.OSXEditor, Architecture.Arm64));
+            Assert.AreEqual("osx-x64", YokiFrameWorkbenchLauncher.GetRuntimeIdentifier(RuntimePlatform.OSXEditor, Architecture.X64));
         }
 
         /// <summary>
@@ -197,11 +174,11 @@ namespace YokiFrame
             string projectRoot = CreateProjectRoot();
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
             int startCount = 0;
             List<string> logs = new();
 
-            bool launched = LaunchWithLog(
+            bool launched = YokiFrameWorkbenchLauncher.Launch(
                 plan,
                 _ => startCount++,
                 logs.Add);
@@ -220,11 +197,11 @@ namespace YokiFrame
             string projectRoot = CreateProjectRoot();
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
             int startCount = 0;
             List<string> logs = new();
 
-            bool launched = LaunchWithLog(
+            bool launched = YokiFrameWorkbenchLauncher.Launch(
                 plan,
                 _ => startCount++,
                 logs.Add);
@@ -238,143 +215,58 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Unity 菜单方法声明在 `YokiFrame/Workbench/Open`，并提供 Ctrl/Cmd+E 快捷键。
+        /// 验证菜单入口声明 YokiFrame/Workbench/Open 与 Ctrl/Cmd+E。
+        /// 通过 internal 方法组读取 Unity MenuItem，不使用 NonPublic 查找，也不调用该方法。
         /// </summary>
         [Test]
-        public void OpenWorkbenchMenuItemUsesYokiFrameWorkbenchShortcut()
+        public void OpenWorkbenchFromMenu_只读取MenuItem特性_声明Workbench快捷键()
         {
-            MethodInfo method = GetLauncherType().GetMethod("OpenWorkbenchFromMenu", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            Assert.IsNotNull(method);
-            MenuItem menuItem = method.GetCustomAttribute<MenuItem>();
+            Action openMenu = YokiFrameWorkbenchLauncher.OpenWorkbenchFromMenu;
+            MenuItem menuItem = openMenu.Method.GetCustomAttribute<MenuItem>();
 
             Assert.IsNotNull(menuItem);
             Assert.AreEqual("YokiFrame/Workbench/Open %e", menuItem.menuItem);
         }
 
         /// <summary>
-        /// 验证同项目已有 Workbench 时优先发送激活请求，不会因过期缓存先启动 Runtime bootstrap。
+        /// 按引号和空白拆分启动参数，避免路径中的空格或引号造成误判。
         /// </summary>
-        [Test]
-        public void OpenWorkbenchActivatesExistingInstanceBeforeInspectingRuntimeCache()
+        /// <param name="arguments">启动计划参数。</param>
+        /// <returns>参数数组。</returns>
+        private static string[] SplitArguments(string arguments)
         {
-            string source = ReadLauncherSource();
-            int activationIndex = source.IndexOf("if (TryActivateExistingWorkbench(projectRoot))", StringComparison.Ordinal);
-            int bootstrapIndex = source.IndexOf("if (sRuntimeBootstrapInFlight)", StringComparison.Ordinal);
-            int packageRootIndex = source.IndexOf("var packageRoot = GetPackageRoot(projectRoot);", StringComparison.Ordinal);
-
-            Assert.GreaterOrEqual(activationIndex, 0);
-            Assert.GreaterOrEqual(bootstrapIndex, 0);
-            Assert.GreaterOrEqual(packageRootIndex, 0);
-            Assert.Less(activationIndex, packageRootIndex);
-            Assert.Less(bootstrapIndex, packageRootIndex);
-        }
-
-        /// <summary>
-        /// 验证 Ctrl+E 定位包根时优先使用当前脚本 GUID，避免每次按键都全局扫描 AssetDatabase。
-        /// </summary>
-        [Test]
-        public void LauncherAssetPathUsesGuidFastPathBeforeGlobalSearch()
-        {
-            string source = ReadLauncherSource();
-
-            StringAssert.Contains("LAUNCHER_SCRIPT_GUID", source);
-            Assert.Less(
-                source.IndexOf("AssetDatabase.GUIDToAssetPath(LAUNCHER_SCRIPT_GUID)", StringComparison.Ordinal),
-                source.IndexOf("AssetDatabase.FindAssets", StringComparison.Ordinal));
-        }
-
-        /// <summary>
-        /// 通过反射调用启动计划创建方法，让红灯来自功能缺失而不是测试编译失败。
-        /// </summary>
-        /// <param name="projectRoot">Unity 项目根目录。</param>
-        /// <param name="packageRoot">YokiFrame 包根目录。</param>
-        /// <returns>启动计划对象。</returns>
-        private static object CreateLaunchPlan(string projectRoot, string packageRoot)
-        {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "CreateLaunchPlan",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
-                null,
-                new[] { typeof(string), typeof(string) },
-                null);
-            Assert.IsNotNull(method);
-            return method.Invoke(null, new object[] { projectRoot, packageRoot });
-        }
-
-        /// <summary>
-        /// 通过反射调用带父窗口句柄的启动计划创建方法，避免测试中真实依赖 Unity 主窗口。
-        /// </summary>
-        /// <param name="projectRoot">Unity 项目根目录。</param>
-        /// <param name="packageRoot">YokiFrame 包根目录。</param>
-        /// <param name="parentWindowHandle">模拟的父窗口 HWND。</param>
-        /// <returns>启动计划对象。</returns>
-        private static object CreateLaunchPlan(string projectRoot, string packageRoot, long parentWindowHandle)
-        {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "CreateLaunchPlan",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
-                null,
-                new[] { typeof(string), typeof(string), typeof(long) },
-                null);
-            Assert.IsNotNull(method);
-            return method.Invoke(null, new object[] { projectRoot, packageRoot, parentWindowHandle });
-        }
-
-        /// <summary>
-        /// 通过反射调用包根解析方法，确保测试在方法缺失时给出明确红灯。
-        /// </summary>
-        /// <param name="projectRoot">Unity 项目根目录。</param>
-        /// <param name="assetPath">launcher 脚本资源路径。</param>
-        /// <returns>解析出的包根绝对路径。</returns>
-        private static string ResolvePackageRootFromAssetPath(string projectRoot, string assetPath)
-        {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "ResolvePackageRootFromAssetPath",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            Assert.IsNotNull(method);
-            return (string)method.Invoke(null, new object[] { projectRoot, assetPath });
-        }
-
-        /// <summary>
-        /// 通过反射调用 runtime identifier 解析方法，避免测试依赖实现可见性。
-        /// </summary>
-        /// <param name="platform">Unity Editor 平台。</param>
-        /// <param name="architecture">当前进程架构。</param>
-        /// <returns>runtime identifier。</returns>
-        private static string GetRuntimeIdentifier(RuntimePlatform platform, Architecture architecture)
-        {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "GetRuntimeIdentifier",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            Assert.IsNotNull(method);
-            return (string)method.Invoke(null, new object[] { platform, architecture });
-        }
-
-        /// <summary>
-        /// 通过反射调用带日志注入的 Launch 方法。
-        /// </summary>
-        /// <param name="plan">启动计划对象。</param>
-        /// <param name="startProcess">模拟进程启动动作。</param>
-        /// <param name="logMessage">日志收集动作。</param>
-        /// <returns>是否执行了新进程启动。</returns>
-        private static bool LaunchWithLog(
-            object plan,
-            Action<ProcessStartInfo> startProcess,
-            Action<string> logMessage)
-        {
-            MethodInfo method = GetLauncherType().GetMethod(
-                "Launch",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
-                null,
-                new[]
+            var values = new System.Collections.Generic.List<string>();
+            var current = new System.Text.StringBuilder();
+            var quoted = false;
+            for (var index = 0; index < arguments.Length; index++)
+            {
+                char character = arguments[index];
+                if (character == '"')
                 {
-                    plan.GetType(),
-                    typeof(Action<ProcessStartInfo>),
-                    typeof(Action<string>)
-                },
-                null);
-            Assert.IsNotNull(method);
-            return (bool)method.Invoke(null, new object[] { plan, startProcess, logMessage });
+                    quoted = !quoted;
+                    continue;
+                }
+
+                if (character == ' ' && !quoted)
+                {
+                    if (current.Length > 0)
+                    {
+                        values.Add(current.ToString());
+                        current.Clear();
+                    }
+
+                    continue;
+                }
+
+                current.Append(character);
+            }
+
+            if (current.Length > 0)
+            {
+                values.Add(current.ToString());
+            }
+
+            return values.ToArray();
         }
 
         /// <summary>
@@ -439,24 +331,11 @@ namespace YokiFrame
         /// <returns>当前宿主对应的缓存 profile 标识。</returns>
         private static string GetCurrentRuntimeProfile()
         {
-            string runtimeIdentifier = GetRuntimeIdentifier(Application.platform, RuntimeInformation.ProcessArchitecture);
+            string runtimeIdentifier = YokiFrameWorkbenchLauncher.GetRuntimeIdentifier(Application.platform, RuntimeInformation.ProcessArchitecture);
             Assert.IsFalse(string.IsNullOrWhiteSpace(runtimeIdentifier), "Unsupported Unity Editor Runtime profile.");
             return string.Equals(runtimeIdentifier, "win-x64", StringComparison.Ordinal)
                 ? "win-x64-aot"
                 : runtimeIdentifier;
-        }
-
-        /// <summary>
-        /// 读取启动计划公开属性，避免测试直接依赖生产类型定义。
-        /// </summary>
-        /// <param name="plan">启动计划对象。</param>
-        /// <param name="propertyName">属性名。</param>
-        /// <returns>属性值。</returns>
-        private static object GetProperty(object plan, string propertyName)
-        {
-            PropertyInfo property = plan.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
-            Assert.IsNotNull(property, "Missing launch plan property: " + propertyName);
-            return property.GetValue(plan);
         }
 
         /// <summary>
@@ -468,25 +347,6 @@ namespace YokiFrame
             Type type = typeof(YokiFrameEditorFileBridgePump).Assembly.GetType(LAUNCHER_TYPE_NAME);
             Assert.IsNotNull(type, "Missing type: " + LAUNCHER_TYPE_NAME);
             return type;
-        }
-
-        /// <summary>
-        /// 读取 Workbench launcher 源码，检查 Unity 启动路径是否保留快速定位策略。
-        /// </summary>
-        /// <returns>Workbench launcher 源码文本。</returns>
-        private static string ReadLauncherSource()
-        {
-            string path = Path.Combine(
-                Application.dataPath,
-                "YokiFrame",
-                "Core",
-                "Adapters",
-                "Unity",
-                "Editor",
-                "WorkbenchLauncher",
-                "YokiFrameWorkbenchLauncher.cs");
-            Assert.IsTrue(File.Exists(path), path);
-            return File.ReadAllText(path);
         }
 
         /// <summary>

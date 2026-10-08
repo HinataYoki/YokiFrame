@@ -1,4 +1,7 @@
+using Avalonia.Threading;
 using YokiFrame.Tooling.Application.Services;
+using YokiFrame.Workbench.Avalonia.Services;
+using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
 namespace YokiFrame.Workbench.Avalonia.Tests;
@@ -9,43 +12,10 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class WorkbenchEngineSessionTests
 {
     /// <summary>
-    /// 验证 Workbench 窗口启动时不再预设 Unity engine，让 Application 统一执行在线选择。
-    /// </summary>
-    [Fact]
-    public void WorkbenchWindowStartsWithoutConcreteEngineDefault()
-    {
-        var source = ReadProjectFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "WorkbenchWindow.cs");
-        Assert.Contains("private string mSelectedEngineId = string.Empty;", source);
-    }
-
-    /// <summary>
-    /// 验证刷新进行中发生 engine 切换时会保留一次后续刷新，并阻止旧结果覆盖新选择。
-    /// </summary>
-    [Fact]
-    public void WorkbenchWindowCoalescesEngineChangesDuringDashboardRefresh()
-    {
-        var source = ReadProjectFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "WorkbenchWindow.cs");
-
-        Assert.Contains("TelemetryRefreshPolicy", source);
-        Assert.Contains("TelemetryRefreshTrigger.EngineLifecycle", source);
-        Assert.Contains("CompleteDashboardRefresh", source);
-        Assert.Contains("string.Equals(engineId, mSelectedEngineId, StringComparison.Ordinal)", source);
-        Assert.Contains("StartDashboardRefresh", source);
-        Assert.Contains("currentIdentity == null || result.TargetIdentity != currentIdentity", source);
-        Assert.Contains("当前宿主身份尚未收敛，命令未发送", source);
-    }
-
-    /// <summary>
     /// 验证等待宿主上线时 selector 只显示真实 registry 条目，不插入空选项或触发切换回调。
     /// </summary>
     [Fact]
-    public void EngineSelectorExcludesEmptyPendingSelection()
+    public void UpdateDashboard_等待上线_选择器不含空项且不触发切换()
     {
         var state = CreatePendingDashboardState();
         List<string> changes = new();
@@ -53,35 +23,51 @@ public sealed class WorkbenchEngineSessionTests
             () => { },
             changes.Add,
             (_, _) => Task.CompletedTask);
+        try
+        {
+            viewModel.UpdateDashboard(state);
 
-        viewModel.UpdateDashboard(state);
-
-        Assert.Equal(string.Empty, viewModel.SelectedEngineId);
-        Assert.Equal(new[] { "unity-editor" }, viewModel.EngineIds);
-        Assert.DoesNotContain(string.Empty, viewModel.EngineIds);
-        Assert.Empty(changes);
+            Assert.Equal(string.Empty, viewModel.SelectedEngineId);
+            Assert.Equal(new[] { "unity-editor" }, viewModel.EngineIds);
+            Assert.DoesNotContain(string.Empty, viewModel.EngineIds);
+            Assert.Empty(changes);
+        }
+        finally
+        {
+            viewModel.Dispose();
+        }
     }
 
     /// <summary>
     /// 验证已加载但尚未选择 engine 时，Header 和总览卡使用明确中性文本而不是空字符串。
     /// </summary>
     [Fact]
-    public void PendingEngineSessionUsesExplicitNeutralLabels()
+    public void UpdateDashboard_尚未选择引擎_使用明确中性文本()
     {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, (_, _) => Task.CompletedTask);
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        WorkbenchShellViewModel? viewModel = null;
+        try
+        {
+            viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, (_, _) => Task.CompletedTask);
+            viewModel.UpdateDashboard(CreatePendingDashboardState());
 
-        viewModel.UpdateDashboard(CreatePendingDashboardState());
-
-        var engineCard = Assert.Single(viewModel.SummaryCards, static card => card.Title == "引擎");
-        Assert.Equal("等待选择", engineCard.Value);
-        Assert.Contains("Engine: not selected", viewModel.HeaderText, StringComparison.Ordinal);
+            var engineCard = Assert.Single(viewModel.SummaryCards, static card => card.Title == "引擎");
+            Assert.Equal("等待选择", engineCard.Value);
+            Assert.Contains("Engine: not selected", viewModel.HeaderText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            viewModel?.Dispose();
+            Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        }
     }
 
     /// <summary>
     /// 验证自动命令目录读取等待有效选择，并且每个新 engine 只自动触发一次。
     /// </summary>
     [Fact]
-    public void CommandCatalogRefreshRunsOncePerSelectedEngine()
+    public void UpdateDashboard_每个新引擎_只自动刷新一次命令目录()
     {
         List<string> commands = new();
         var viewModel = new WorkbenchShellViewModel(
@@ -92,32 +78,47 @@ public sealed class WorkbenchEngineSessionTests
                 commands.Add(kit + "/" + action);
                 return Task.CompletedTask;
             });
+        try
+        {
+            viewModel.UpdateDashboard(CreatePendingDashboardState());
+            Assert.Empty(commands);
 
-        viewModel.UpdateDashboard(CreatePendingDashboardState());
-        Assert.Empty(commands);
+            var unityState = CreateOnlineDashboardState("unity-editor");
+            viewModel.UpdateDashboard(unityState);
+            viewModel.UpdateDashboard(unityState);
+            Assert.Equal(new[] { "System/list_commands" }, commands);
 
-        var unityState = CreateOnlineDashboardState("unity-editor");
-        viewModel.UpdateDashboard(unityState);
-        viewModel.UpdateDashboard(unityState);
-        Assert.Equal(new[] { "System/list_commands" }, commands);
-
-        viewModel.UpdateDashboard(CreateOnlineDashboardState("godot-editor"));
-        Assert.Equal(new[] { "System/list_commands", "System/list_commands" }, commands);
+            viewModel.UpdateDashboard(CreateOnlineDashboardState("godot-editor"));
+            Assert.Equal(new[] { "System/list_commands", "System/list_commands" }, commands);
+        }
+        finally
+        {
+            viewModel.Dispose();
+        }
     }
 
     /// <summary>
-    /// 验证 dashboard 尚未加载时总览使用中性占位，不向用户显示并不存在的 Unity session。
+    /// 验证 dashboard 尚未加载时，总览引擎卡显示等待发现，而不是预设 Unity session。
     /// </summary>
     [Fact]
-    public void FrameworkOverviewDoesNotAssumeUnityEngine()
+    public void CreateSummaryCards_未加载Dashboard_引擎卡显示等待发现()
     {
-        var source = ReadProjectFile(
-            "src",
-            "YokiFrame.Workbench.Avalonia",
-            "ViewModels",
-            "WorkbenchShellViewModel.Overview.cs");
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        WorkbenchShellViewModel? viewModel = null;
+        try
+        {
+            viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, (_, _) => Task.CompletedTask);
+            var engineCard = Assert.Single(viewModel.SummaryCards, static card => card.Title == "引擎");
 
-        Assert.Contains("等待发现", source);
+            Assert.Equal("等待发现", engineCard.Value);
+            Assert.Equal("0 registry", engineCard.Detail);
+        }
+        finally
+        {
+            viewModel?.Dispose();
+            Dispatcher.UIThread.Invoke(static () => WorkbenchI18nService.Instance.SetCulture("zh-CN"));
+        }
     }
 
     /// <summary>
@@ -153,53 +154,30 @@ public sealed class WorkbenchEngineSessionTests
             Path.GetTempPath(),
             "yokiframe-workbench-engine-session-tests",
             Guid.NewGuid().ToString("N"));
-        var engineRoot = Path.Combine(projectRoot, ".yokiframe", "engines", engineId);
-        Directory.CreateDirectory(engineRoot);
-        File.WriteAllText(
-            Path.Combine(engineRoot, "engine.json"),
-            "{\"protocolVersion\":2,\"engineId\":\"" + engineId + "\",\"engine\":\"Test\"}");
-        if (writeHeartbeat)
+        Directory.CreateDirectory(projectRoot);
+        try
         {
-            var statusRoot = Path.Combine(engineRoot, "status");
-            Directory.CreateDirectory(statusRoot);
+            var engineRoot = Path.Combine(projectRoot, ".yokiframe", "engines", engineId);
+            Directory.CreateDirectory(engineRoot);
             File.WriteAllText(
-                Path.Combine(statusRoot, "heartbeat.json"),
-                "{\"protocolVersion\":2,\"engineId\":\"" + engineId
-                + "\",\"sessionId\":\"test\",\"generation\":1,\"mode\":\"Test\",\"sequence\":1,\"createdAtUtc\":\""
-                + DateTimeOffset.UtcNow.ToString("O") + "\"}");
+                Path.Combine(engineRoot, "engine.json"),
+                "{\"protocolVersion\":2,\"engineId\":\"" + engineId + "\",\"engine\":\"Test\"}");
+            if (writeHeartbeat)
+            {
+                var statusRoot = Path.Combine(engineRoot, "status");
+                Directory.CreateDirectory(statusRoot);
+                File.WriteAllText(
+                    Path.Combine(statusRoot, "heartbeat.json"),
+                    "{\"protocolVersion\":2,\"engineId\":\"" + engineId
+                    + "\",\"sessionId\":\"test\",\"generation\":1,\"mode\":\"Test\",\"sequence\":1,\"createdAtUtc\":\""
+                    + DateTimeOffset.UtcNow.ToString("O") + "\"}");
+            }
+
+            return new WorkbenchDashboardService(projectRoot).LoadDashboard(string.Empty);
         }
-
-        return new WorkbenchDashboardService(projectRoot).LoadDashboard(string.Empty);
-    }
-
-    /// <summary>
-    /// 从测试输出目录向上查找 Workbench 源码树，并读取指定项目文件。
-    /// </summary>
-    /// <param name="segments">相对 `YokiFrameWorkbench~` 根目录的路径段。</param>
-    /// <returns>目标文件文本。</returns>
-    private static string ReadProjectFile(params string[] segments)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
+        finally
         {
-            var directCandidate = Path.Combine(new[] { directory.FullName }.Concat(segments).ToArray());
-            if (File.Exists(directCandidate))
-            {
-                return File.ReadAllText(directCandidate);
-            }
-
-            var workspaceCandidate = Path.Combine(
-                new[] { directory.FullName, "Assets", "YokiFrame", "YokiFrameWorkbench~" }
-                    .Concat(segments)
-                    .ToArray());
-            if (File.Exists(workspaceCandidate))
-            {
-                return File.ReadAllText(workspaceCandidate);
-            }
-
-            directory = directory.Parent;
+            Directory.Delete(projectRoot, recursive: true);
         }
-
-        throw new FileNotFoundException("无法定位 Workbench 项目文件：" + string.Join("/", segments));
     }
 }

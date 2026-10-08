@@ -1,5 +1,6 @@
 using YokiFrame;
 using YokiFrame.Installer.Core.Services;
+using YokiFrame.Installer.Core.Tests;
 using System.Text.Json;
 
 namespace YokiFrame.Installer.Core.Tests.Godot;
@@ -171,6 +172,25 @@ internal sealed class GodotInstallServiceFixture : IDisposable
     }
 
     /// <summary>
+    /// 断言整目录替换后的正式入口：合法既有 Editor UID 保留，缺失的 Runtime UID 按资源路径生成，旧 GDScript 入口删除。
+    /// </summary>
+    internal void AssertReplacedLegacyEntryPoints()
+    {
+        GodotPluginEntryPointBuilder builder = new();
+        GodotUidGenerator generator = new();
+        InstallerFileAssert.EqualUtf8(PluginConfigPath, builder.BuildPluginConfig(SourcePackageRoot));
+        InstallerFileAssert.EqualUtf8(PluginScriptPath, builder.BuildEditorBootstrapScript());
+        InstallerFileAssert.EqualUtf8(RuntimeBootstrapPath, builder.BuildRuntimeBootstrapScript());
+        InstallerFileAssert.EqualUtf8(PluginScriptUidPath, ORIGINAL_PLUGIN_SCRIPT_UID);
+        var runtimeUid = generator.Generate("res://addons/yokiframe/YokiFrameGodotBootstrap.cs") + "\n";
+        InstallerFileAssert.EqualUtf8(RuntimeBootstrapUidPath, runtimeUid);
+        Assert.True(generator.IsValid(runtimeUid));
+        Assert.False(File.Exists(LegacyPluginScriptPath));
+        Assert.False(File.Exists(LegacyPluginScriptUidPath));
+        Assert.False(File.Exists(PluginConfigPath + ".uid"));
+    }
+
+    /// <summary>
     /// 写入指定 EditorPlugin bootstrap UID 内容，用于合法保留和无效修复测试。
     /// </summary>
     /// <param name="content">完整 UID sidecar 文本。</param>
@@ -238,18 +258,18 @@ internal sealed class GodotInstallServiceFixture : IDisposable
     /// </summary>
     internal void AssertLegacyInstallationRestored()
     {
-        Assert.Equal(ORIGINAL_PACKAGE_MARKER, File.ReadAllText(GetTargetPackagePath("legacy.marker")));
+        InstallerFileAssert.EqualUtf8(GetTargetPackagePath("legacy.marker"), ORIGINAL_PACKAGE_MARKER);
         Assert.False(File.Exists(GetTargetPackagePath("Core/Runtime/CoreMarker.cs")));
         Assert.False(File.Exists(new PackageOwnerManifestStore().GetManifestPath(AddonRoot)));
-        Assert.Equal(ORIGINAL_PLUGIN_CONFIG, File.ReadAllText(PluginConfigPath));
-        Assert.Equal(ORIGINAL_PLUGIN_SCRIPT, File.ReadAllText(PluginScriptPath));
-        Assert.Equal(ORIGINAL_PLUGIN_SCRIPT_UID, File.ReadAllText(PluginScriptUidPath));
-        Assert.Equal(ORIGINAL_LEGACY_PLUGIN_SCRIPT, File.ReadAllText(LegacyPluginScriptPath));
-        Assert.Equal(ORIGINAL_LEGACY_PLUGIN_SCRIPT_UID, File.ReadAllText(LegacyPluginScriptUidPath));
+        InstallerFileAssert.EqualUtf8(PluginConfigPath, ORIGINAL_PLUGIN_CONFIG);
+        InstallerFileAssert.EqualUtf8(PluginScriptPath, ORIGINAL_PLUGIN_SCRIPT);
+        InstallerFileAssert.EqualUtf8(PluginScriptUidPath, ORIGINAL_PLUGIN_SCRIPT_UID);
+        InstallerFileAssert.EqualUtf8(LegacyPluginScriptPath, ORIGINAL_LEGACY_PLUGIN_SCRIPT);
+        InstallerFileAssert.EqualUtf8(LegacyPluginScriptUidPath, ORIGINAL_LEGACY_PLUGIN_SCRIPT_UID);
         Assert.False(File.Exists(RuntimeBootstrapPath));
         Assert.False(File.Exists(RuntimeBootstrapUidPath));
-        Assert.Equal(ORIGINAL_PROJECT_FILE, File.ReadAllText(ProjectFilePath));
-        Assert.Equal(ORIGINAL_PROJECT_SETTINGS, File.ReadAllText(ProjectSettingsPath));
+        InstallerFileAssert.EqualUtf8(ProjectFilePath, ORIGINAL_PROJECT_FILE);
+        InstallerFileAssert.EqualUtf8(ProjectSettingsPath, ORIGINAL_PROJECT_SETTINGS);
     }
 
     /// <summary>

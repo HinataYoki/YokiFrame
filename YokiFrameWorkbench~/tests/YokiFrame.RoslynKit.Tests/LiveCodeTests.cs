@@ -171,7 +171,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
-    /// <summary>补丁更新生效，编译失败保留上一补丁，移除后恢复原方法返回值。</summary>
+    /// <summary>补丁更新生效，编译失败保留上一补丁，移除后恢复原方法返回值。动态程序集没有编译期类型，只反射其公开静态 Read，不调用本仓库私有成员。</summary>
     public void Harmony_patch_update_failed_compile_and_removal_restore_original()
     {
         using var bed = new LiveBed();
@@ -219,7 +219,7 @@ public sealed partial class LiveCodeTests
     }
 
     [Fact]
-    /// <summary>已有源码不被覆盖，逃逸记录号被拒绝，非方法补丁目标抛出 NotSupportedException。</summary>
+    /// <summary>已有源码不被覆盖，逃逸记录号被拒绝。框架公开方法 Hash 的 MethodInfo 不是允许的补丁目标，因此抛出 NotSupportedException。不调用私有方法。</summary>
     public void Export_never_overwrites_existing_source_and_manifest_ids_are_validated()
     {
         using var bed = new LiveBed();

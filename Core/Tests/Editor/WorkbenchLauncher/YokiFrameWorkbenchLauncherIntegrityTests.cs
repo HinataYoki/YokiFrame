@@ -24,10 +24,10 @@ namespace YokiFrame
             string packageRoot = Path.Combine(projectRoot, "Assets", "YokiFrame");
             string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: true);
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(Path.GetFullPath(executablePath), GetProperty(plan, "ExecutablePath"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.AreEqual(Path.GetFullPath(executablePath), plan.ExecutablePath);
         }
 
         /// <summary>
@@ -41,10 +41,10 @@ namespace YokiFrame
             string executablePath = CreateProjectRuntime(projectRoot, packageRoot, preferGuiEntry: false);
             File.AppendAllText(executablePath, "tampered");
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(true, GetProperty(plan, "RequiresBootstrap"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.IsTrue(plan.RequiresBootstrap);
         }
 
         /// <summary>
@@ -74,10 +74,10 @@ namespace YokiFrame
                 + ComputeFileSha256(executablePath)
                 + "\"}]}]}");
 
-            object plan = CreateLaunchPlan(projectRoot, packageRoot);
+            YokiFrameWorkbenchLaunchPlan plan = YokiFrameWorkbenchLauncher.CreateLaunchPlan(projectRoot, packageRoot);
 
-            Assert.AreEqual(true, GetProperty(plan, "CanLaunch"));
-            Assert.AreEqual(true, GetProperty(plan, "RequiresBootstrap"));
+            Assert.IsTrue(plan.CanLaunch);
+            Assert.IsTrue(plan.RequiresBootstrap);
         }
     }
 }

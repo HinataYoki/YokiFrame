@@ -19,14 +19,9 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
     /// <summary>
     /// 验证旧 endpoint 握手被新 registry 身份抢占后，不会阻塞或释放健康连接。
     /// </summary>
-    [Fact]
+    [WindowsFact]
     public async Task FailedStaleHandshakeDoesNotDiscardNewEndpointConnection()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? staleServerTask = null;
@@ -86,18 +81,13 @@ public sealed class YokiFrameClientFastChannelConcurrencyTests
     /// </summary>
     /// <param name="changeSession">是否只变更 sessionId。</param>
     /// <param name="changeGeneration">是否只变更 generation。</param>
-    [Theory]
+    [WindowsTheory]
     [InlineData(true, false)]
     [InlineData(false, true)]
     public async Task SessionOrGenerationChangeReconnectsWhenPipeNameIsUnchanged(
         bool changeSession,
         bool changeGeneration)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         Task? serverTask = null;

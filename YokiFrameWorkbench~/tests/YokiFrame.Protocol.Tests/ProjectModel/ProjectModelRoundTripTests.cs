@@ -1,3 +1,4 @@
+using YokiFrame.Json;
 using YokiFrame.Protocol.ProjectModel;
 
 namespace YokiFrame.Protocol.Tests.ProjectModel;
@@ -30,7 +31,7 @@ public sealed class ProjectModelRoundTripTests
     }
 
     /// <summary>
-    /// 验证每个持久文档的公开序列化入口均可独立 roundtrip，并保持固定 kind。
+    /// 验证每个持久文档的公开序列化入口均可独立 roundtrip，并保持固定 kind 与 manifest 的 engineVersion 字段。
     /// </summary>
     [Fact]
     public void PersistentDocumentsRoundTripThroughTheirSourceGeneratedEntryPoints()
@@ -48,7 +49,8 @@ public sealed class ProjectModelRoundTripTests
         Assert.Equal(ProjectModelContract.CAPABILITIES_KIND, capabilities.Kind);
         Assert.Equal(ProjectModelContract.DEPENDENCIES_KIND, dependencies.Kind);
         Assert.Equal(ProjectModelContract.VALIDATION_PROFILE_KIND, validation.Kind);
-        Assert.Contains("\"engineVersion\":\"6000.7.0a1\"", bundle.Manifest.ToJson(), StringComparison.Ordinal);
+        using var manifestJson = JsonDocument.Parse(bundle.Manifest.ToJson());
+        Assert.Equal("6000.7.0a1", manifestJson.RootElement.GetProperty("project").GetProperty("engineVersion").GetString());
     }
 
     /// <summary>

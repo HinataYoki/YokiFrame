@@ -5,8 +5,24 @@ namespace YokiFrame.Installer.Core.Tests;
 /// <summary>
 /// 锁定 Godot 本地安装使用的受控包投影规则。
 /// </summary>
-public sealed class GodotPackageProjectionTests
+public sealed class GodotPackageProjectionTests : IDisposable
 {
+    private readonly List<string> mRoots = new();
+
+    /// <summary>
+    /// 删除本用例写入的临时目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var root in mRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     /// <summary>
     /// 验证 Godot 投影只保留可交付源码，并排除工具源码、测试、包内 Runtime、缓存与废弃 Kit。
     /// </summary>
@@ -52,9 +68,11 @@ public sealed class GodotPackageProjectionTests
     /// 创建同时包含应保留内容与全部已确认排除类型的源包 fixture。
     /// </summary>
     /// <returns>测试专用源包根目录。</returns>
-    private static string CreateSourcePackageRoot()
+    private string CreateSourcePackageRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-godot-projection-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        mRoots.Add(root);
         Directory.CreateDirectory(Path.Combine(root, "Documentation~"));
         WriteFixtureFiles(root, new[]
         {

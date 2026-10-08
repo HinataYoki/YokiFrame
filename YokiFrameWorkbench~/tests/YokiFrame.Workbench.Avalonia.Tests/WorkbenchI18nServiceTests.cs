@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.Threading;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Xunit;
@@ -17,32 +18,46 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 /// </summary>
 public sealed class WorkbenchI18nServiceTests
 {
+    /// <summary>
+    /// 语言选项只暴露中文和英文，避免多出一个未实现文化仍能通过包含断言。
+    /// </summary>
     [Fact]
-    public void CultureOptions_ContainsSupportedLanguages()
+    public void CultureOptions_默认服务_只提供中文和英文()
     {
         var service = WorkbenchI18nService.Instance;
-        Assert.Contains("中文", service.CultureOptions);
-        Assert.Contains("English", service.CultureOptions);
+        Assert.Equal(new[] { "中文", "English" }, service.CultureOptions);
     }
 
     /// <summary>
     /// 未知显示名称或文化名称不得静默改变当前语言，避免输入错误触发意外的资源重投影。
     /// </summary>
     [Fact]
-    public void UnknownCulture_IsRejectedWithoutChangingCurrentCulture()
+    public void SetCulture_未知文化_拒绝且不改变当前文化()
     {
-        var service = WorkbenchI18nService.Instance;
-        service.SetCulture("en-US");
-
-        Assert.False(service.SetCultureByDisplayName("日本語"));
-        Assert.False(service.SetCulture("ja-JP"));
-        Assert.Equal("en-US", service.CurrentCultureName);
-
-        service.SetCulture("zh-CN");
+        InstallerHeadlessTestApplication.EnsureInitialized();
+        Dispatcher.UIThread.Invoke(() =>
+        {
+            var service = WorkbenchI18nService.Instance;
+            service.SetCulture("zh-CN");
+            try
+            {
+                service.SetCulture("en-US");
+                Assert.False(service.SetCultureByDisplayName("日本語"));
+                Assert.False(service.SetCulture("ja-JP"));
+                Assert.Equal("en-US", service.CurrentCultureName);
+            }
+            finally
+            {
+                service.SetCulture("zh-CN");
+            }
+        });
     }
 
+    /// <summary>
+    /// 已知显示名必须切换当前文化，并在每次成功切换时触发文化事件。
+    /// </summary>
     [Fact]
-    public async Task SetCultureByDisplayName_SwitchesCultureAndFiresEvent()
+    public async Task SetCultureByDisplayName_已知显示名_切换文化并触发事件()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -68,7 +83,7 @@ public sealed class WorkbenchI18nServiceTests
             finally
             {
                 service.CultureChanged -= OnCultureChanged;
-                service.SetCultureByDisplayName("中文");
+                service.SetCulture("zh-CN");
             }
         });
     }
@@ -79,60 +94,37 @@ public sealed class WorkbenchI18nServiceTests
     /// 该调用缺失会让全部界面文案退化为资源键。
     /// </summary>
     [Fact]
-    public async Task ApplicationResources_ArePopulatedAtStartup()
+    public async Task SetCulture_启动后切换语言_重新注入资源表()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
             var service = WorkbenchI18nService.Instance;
             service.SetCulture("zh-CN");
+            try
+            {
+                var resources = Application.Current?.Resources;
+                Assert.NotNull(resources);
 
-            var resources = Application.Current?.Resources;
-            Assert.NotNull(resources);
+                Assert.True(resources!.TryGetResource("String.Nav.Workspace", null, out var zhValue));
+                Assert.Equal("工作台", Assert.IsType<string>(zhValue));
 
-            Assert.True(resources!.TryGetResource("String.Nav.Workspace", null, out var zhValue));
-            Assert.Equal("工作台", Assert.IsType<string>(zhValue));
-
-            // 语言切换后必须重新注入，否则 DynamicResource 仍停留在旧语言。
-            service.SetCulture("en-US");
-            Assert.True(resources.TryGetResource("String.Nav.Workspace", null, out var enValue));
-            Assert.Equal("Workspace", Assert.IsType<string>(enValue));
-
-            service.SetCulture("zh-CN");
+                service.SetCulture("en-US");
+                Assert.True(resources.TryGetResource("String.Nav.Workspace", null, out var enValue));
+                Assert.Equal("Workspace", Assert.IsType<string>(enValue));
+            }
+            finally
+            {
+                service.SetCulture("zh-CN");
+            }
         });
     }
 
     /// <summary>
-    /// 验证 zh/en 两份字符串表键集对齐；表已从 axaml 迁到 C#，此处直接比较两份表源码。
+    /// Shell 文化显示名切换后，导航分组标题必须跟随当前语言重投影。
     /// </summary>
     [Fact]
-    public void StringTables_ZhAndEnKeysAreAligned()
-    {
-        var zhSource = WorkbenchContractTestFiles.ReadSource("Services", "WorkbenchI18nService.Strings.Zh.cs");
-        var enSource = WorkbenchContractTestFiles.ReadSource("Services", "WorkbenchI18nService.Strings.En.cs");
-
-        var zhKeys = ExtractStringKeys(zhSource);
-        var enKeys = ExtractStringKeys(enSource);
-
-        Assert.NotEmpty(zhKeys);
-        Assert.NotEmpty(enKeys);
-        Assert.Equal(zhKeys, enKeys);
-    }
-
-    /// <summary>从字符串表源码提取按序排列的资源键。</summary>
-    /// <param name="source">字符串表源码文本。</param>
-    /// <returns>按序排列的资源键。</returns>
-    private static string[] ExtractStringKeys(string source)
-    {
-        return System.Text.RegularExpressions.Regex
-            .Matches(source, "\\[\"(String\\.[^\"]+)\"\\]\\s*=")
-            .Select(static match => match.Groups[1].Value)
-            .OrderBy(static key => key, StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    [Fact]
-    public async Task WorkbenchShellViewModel_CultureText_TogglesLanguage()
+    public async Task CultureText_切换显示名_同步导航标题()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -147,21 +139,21 @@ public sealed class WorkbenchI18nServiceTests
             try
             {
                 Assert.Equal("中文", viewModel.CultureText);
-                Assert.Contains(viewModel.NavigationGroups, g => g.Title == "工作台");
+                Assert.Contains(viewModel.NavigationGroups, static group => group.Title == "工作台");
 
                 viewModel.CultureText = "English";
                 Assert.Equal("English", viewModel.CultureText);
                 Assert.Equal("en-US", service.CurrentCultureName);
-                Assert.Contains(viewModel.NavigationGroups, g => g.Title == "Workspace");
+                Assert.Contains(viewModel.NavigationGroups, static group => group.Title == "Workspace");
 
-                // 切回默认
                 viewModel.CultureText = "中文";
                 Assert.Equal("中文", viewModel.CultureText);
-                Assert.Contains(viewModel.NavigationGroups, g => g.Title == "工作台");
+                Assert.Contains(viewModel.NavigationGroups, static group => group.Title == "工作台");
             }
             finally
             {
                 viewModel.Dispose();
+                service.SetCulture("zh-CN");
             }
         });
     }
@@ -170,7 +162,7 @@ public sealed class WorkbenchI18nServiceTests
     /// 页面释放后不应再收到静态语言服务事件，防止关闭窗口后的幽灵通知。
     /// </summary>
     [Fact]
-    public async Task UIKitPageViewModel_DisposeDetachesCultureSubscription()
+    public async Task Dispose_已释放UIKit页_不再接收文化事件()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -178,14 +170,20 @@ public sealed class WorkbenchI18nServiceTests
             var service = WorkbenchI18nService.Instance;
             service.SetCulture("zh-CN");
             var viewModel = new UIKitPageViewModel();
-            var notificationCount = 0;
-            viewModel.PropertyChanged += (_, _) => notificationCount++;
+            try
+            {
+                var notificationCount = 0;
+                viewModel.PropertyChanged += (_, _) => notificationCount++;
 
-            viewModel.Dispose();
-            service.SetCulture("en-US");
+                viewModel.Dispose();
+                service.SetCulture("en-US");
 
-            Assert.Equal(0, notificationCount);
-            service.SetCulture("zh-CN");
+                Assert.Equal(0, notificationCount);
+            }
+            finally
+            {
+                service.SetCulture("zh-CN");
+            }
         });
     }
 
@@ -193,7 +191,7 @@ public sealed class WorkbenchI18nServiceTests
     /// 验证 UIKit 无 Runtime 数据时的来源占位文本随当前语言初始化、重置和切换。
     /// </summary>
     [Fact]
-    public async Task UIKitPageViewModel_LocalizesWaitingSource()
+    public async Task Source_无运行时数据_跟随当前语言()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -223,7 +221,7 @@ public sealed class WorkbenchI18nServiceTests
     /// 验证 Shell 释放后不再响应静态语言事件，避免关闭窗口后的幽灵布局刷新。
     /// </summary>
     [Fact]
-    public async Task WorkbenchShellViewModel_DisposeDetachesCultureSubscription()
+    public async Task Dispose_已释放Shell_不再接收文化事件()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -234,19 +232,28 @@ public sealed class WorkbenchI18nServiceTests
                 () => { },
                 _ => { },
                 (_, _) => Task.CompletedTask);
-            var notificationCount = 0;
-            viewModel.PropertyChanged += (_, _) => notificationCount++;
+            try
+            {
+                var notificationCount = 0;
+                viewModel.PropertyChanged += (_, _) => notificationCount++;
 
-            viewModel.Dispose();
-            service.SetCulture("en-US");
+                viewModel.Dispose();
+                service.SetCulture("en-US");
 
-            Assert.Equal(0, notificationCount);
-            service.SetCulture("zh-CN");
+                Assert.Equal(0, notificationCount);
+            }
+            finally
+            {
+                service.SetCulture("zh-CN");
+            }
         });
     }
 
+    /// <summary>
+    /// 标题栏文化组合框显示当前文化名称，并列出全部支持的显示名。测试结束恢复文化和临时目录。
+    /// </summary>
     [Fact]
-    public async Task WorkbenchWindow_AppTitleBar_ComboBox_DisplaysCultureDisplayName()
+    public async Task AppTitleBar_当前为中文_组合框显示文化名称()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -275,7 +282,11 @@ public sealed class WorkbenchI18nServiceTests
             finally
             {
                 window.Close();
-                service.SetCultureByDisplayName("中文");
+                service.SetCulture("zh-CN");
+                if (Directory.Exists(projectRoot))
+                {
+                    Directory.Delete(projectRoot, recursive: true);
+                }
             }
         });
     }

@@ -1,4 +1,3 @@
-using System.Reflection;
 using YokiFrame.Tooling.Application.Models.PoolKit;
 using YokiFrame.Workbench.Avalonia.Services;
 using YokiFrame.Workbench.Avalonia.ViewModels;
@@ -64,11 +63,11 @@ public sealed class PoolKitI18nTests
         {
             new("Spawn", 16.85d, "PanelHandler", "Panel-0", "Assets/UI/Panel.cs", 18)
         };
-        object dataSource = CreateInternalDataSource(
+        WorkbenchPoolKitDataSource dataSource = new(
             "unity-editor", "pool-session", 8L, "PlayMode",
             DateTimeOffset.Parse("2026-07-16T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.PoolKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchPoolKitState>(
+        return new WorkbenchPoolKitState(
             dataSource,
             1L,
             new WorkbenchPoolKitStats(1, 1, 0, 3, 5, true, false, true, 1),
@@ -96,25 +95,5 @@ public sealed class PoolKitI18nTests
             name, typeName, total, activeCount, inactiveCount, Math.Max(total, 4), 20,
             total > 0 ? (double)activeCount / total : 0d,
             "Normal", activeCount, false, inactiveCount, false, active, inactive);
-    }
-
-    /// <summary>通过反射创建 Application 内部 PoolKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchPoolKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.PoolKit.WorkbenchPoolKitDataSource", true)!;
-        return Activator.CreateInstance(
-            type,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null, arguments, null)!;
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        return Assert.IsType<T>(Activator.CreateInstance(
-            typeof(T),
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null, arguments, null));
     }
 }

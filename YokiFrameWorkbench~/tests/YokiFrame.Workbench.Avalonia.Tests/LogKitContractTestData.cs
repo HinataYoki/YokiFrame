@@ -1,4 +1,3 @@
-using System.Reflection;
 using YokiFrame.Tooling.Application.Models.LogKit;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -21,26 +20,26 @@ internal static class LogKitContractTestData
         string directory = "C:/Project/Logs")
     {
         var historyEntries = entries ?? Array.Empty<WorkbenchLogKitHistoryEntry>();
-        object dataSource = CreateDataSource(engineId, sessionId, generation, source);
-        var stats = CreateInternal<WorkbenchLogKitStats>(
+        WorkbenchLogKitDataSource dataSource = CreateDataSource(engineId, sessionId, generation, source);
+        var stats = new WorkbenchLogKitStats(
             "UnityEngineLogger",
             true,
             true,
             settings?.MinimumLevel ?? "Debug",
             historyEntries.Count,
             0);
-        var capabilities = CreateInternal<WorkbenchLogKitCapabilities>(true, filePreview, true, true, true);
-        var files = CreateInternal<WorkbenchLogKitFiles>(
+        var capabilities = new WorkbenchLogKitCapabilities(true, filePreview, true, true, true);
+        var files = new WorkbenchLogKitFiles(
             directory,
             CreateFile("editor", "yoki_editor.log", directory),
             CreateFile("player", "yoki_player.log", directory));
-        var history = CreateInternal<WorkbenchLogKitHistory>(
+        var history = new WorkbenchLogKitHistory(
             historyEntries,
             historyEntries.Count,
             historyEntries.Count,
             0,
             false);
-        return CreateInternal<WorkbenchLogKitState>(
+        return new WorkbenchLogKitState(
             dataSource,
             1,
             diagnosticVersion,
@@ -60,7 +59,7 @@ internal static class LogKitContractTestData
         string context = "",
         string exceptionMessage = "")
     {
-        return CreateInternal<WorkbenchLogKitHistoryEntry>(
+        return new WorkbenchLogKitHistoryEntry(
             level,
             message,
             context,
@@ -77,7 +76,7 @@ internal static class LogKitContractTestData
         string engineId = "unity-editor",
         bool canPersist = true)
     {
-        return CreateInternal<WorkbenchLogKitProjectSettings>(
+        return new WorkbenchLogKitProjectSettings(
             engineId,
             "Unity",
             canPersist,
@@ -93,7 +92,7 @@ internal static class LogKitContractTestData
         WorkbenchLogKitProjectSettings projectSettings,
         WorkbenchLogKitState? state)
     {
-        return CreateInternal<WorkbenchLogKitSettingsSaveResult>(
+        return new WorkbenchLogKitSettingsSaveResult(
             true,
             state != null,
             false,
@@ -105,7 +104,7 @@ internal static class LogKitContractTestData
     /// <summary>创建确定内容的文件尾部预览。</summary>
     internal static WorkbenchLogKitFilePreview CreatePreview(string kind, string content)
     {
-        return CreateInternal<WorkbenchLogKitFilePreview>(
+        return new WorkbenchLogKitFilePreview(
             kind,
             "C:/Project/Logs/yoki_" + kind + ".log",
             "yoki_" + kind + ".log",
@@ -127,19 +126,13 @@ internal static class LogKitContractTestData
         Func<string, CancellationToken, Task<WorkbenchLogKitState>>? clear = null,
         Func<string, string, CancellationToken, Task<WorkbenchLogKitFilePreview>>? read = null)
     {
-        var constructor = typeof(LogKitPageViewModel).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(static item => item.GetParameters().Length == 4);
-        return Assert.IsType<LogKitPageViewModel>(constructor.Invoke(new object?[] { load, save, clear, read }));
+        return new LogKitPageViewModel(load, save, clear, read);
     }
 
     /// <summary>通过页面内部生命周期入口切换激活状态。</summary>
     internal static void SetPageActive(LogKitPageViewModel viewModel, bool isActive)
     {
-        var method = typeof(LogKitPageViewModel).GetMethod(
-            "SetPageActive",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, new object[] { isActive });
+        viewModel.SetPageActive(isActive);
     }
 
     /// <summary>等待异步页面条件成立并提供明确超时。</summary>
@@ -157,7 +150,7 @@ internal static class LogKitContractTestData
     /// <summary>创建一个存在但内容为空的日志文件元数据。</summary>
     private static WorkbenchLogKitFileMetadata CreateFile(string kind, string fileName, string directory)
     {
-        return CreateInternal<WorkbenchLogKitFileMetadata>(
+        return new WorkbenchLogKitFileMetadata(
             kind,
             directory.TrimEnd('/', '\\') + "/" + fileName,
             fileName,
@@ -166,44 +159,24 @@ internal static class LogKitContractTestData
             "2026-07-15T08:00:00Z");
     }
 
-    /// <summary>通过反射创建 Application 内部数据源。</summary>
-    private static object CreateDataSource(string engineId, string sessionId, long generation, string source)
+    /// <summary>通过已对测试程序集可见的内部记录构造数据源。</summary>
+    /// <param name="engineId">宿主标识。</param>
+    /// <param name="sessionId">会话标识。</param>
+    /// <param name="generation">宿主代际。</param>
+    /// <param name="source">数据来源。</param>
+    /// <returns>可供状态构造使用的数据源。</returns>
+    private static WorkbenchLogKitDataSource CreateDataSource(string engineId, string sessionId, long generation, string source)
     {
-        Type dataSourceType = typeof(WorkbenchLogKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.LogKit.WorkbenchLogKitDataSource",
-            true)!;
-        object? instance = Activator.CreateInstance(
-            dataSourceType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[]
-            {
-                engineId,
-                sessionId,
-                generation,
-                "PlayMode",
-                DateTimeOffset.Parse("2026-07-15T08:00:00Z"),
-                source,
-                string.Empty,
-                new[] { "Global/YokiFrame.LogKit" },
-                string.Empty,
-                "{}"
-            },
-            null);
-        Assert.NotNull(instance);
-        Assert.Equal(dataSourceType, instance.GetType());
-        return instance;
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
+        return new WorkbenchLogKitDataSource(
+            engineId,
+            sessionId,
+            generation,
+            "PlayMode",
+            DateTimeOffset.Parse("2026-07-15T08:00:00Z"),
+            source,
+            string.Empty,
+            new[] { "Global/YokiFrame.LogKit" },
+            string.Empty,
+            "{}");
     }
 }

@@ -4,6 +4,8 @@ using System.IO;
 using System.Text;
 using NUnit.Framework;
 using UnityEngine;
+using JsonDocument = YokiFrame.Json.JsonDocument;
+using JsonElement = YokiFrame.Json.JsonElement;
 
 namespace YokiFrame
 {
@@ -84,21 +86,24 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证完整 settings payload 能同步运行时开关、等级和日志文件字段。
+        /// 验证完整 settings payload 同步运行时开关，并且 JSON 快照写出同一组字段。
         /// </summary>
         [Test]
-        public void SettingsPayloadUpdatesRuntimeAndJsonSnapshot()
+        public void ApplyPayload_完整设置_运行时与JSON字段一致()
         {
             LogKitSettings.ApplyPayload(CreateCompleteSettingsPayload());
 
-            string settingsJson = LogKitSettings.BuildJson();
             Assert.IsFalse(LogKit.Enabled);
             Assert.AreEqual(LogLevel.Error, LogKit.MinimumLevel);
-            Assert.IsTrue(settingsJson.Contains("\"enabled\":false"));
-            Assert.IsTrue(settingsJson.Contains("\"minimumLevel\":\"Error\""));
-            Assert.IsTrue(settingsJson.Contains("\"maxQueueSize\":4096"));
-            Assert.IsTrue(settingsJson.Contains("\"maxSameLogCount\":12"));
-            Assert.IsTrue(settingsJson.Contains("\"editorFileName\":\"editor-custom.log\""));
+            using (JsonDocument document = JsonDocument.Parse(LogKitSettings.BuildJson()))
+            {
+                JsonElement root = document.RootElement;
+                Assert.IsFalse(ReadBool(root, "enabled"));
+                Assert.AreEqual("Error", ReadString(root, "minimumLevel"));
+                Assert.AreEqual(4096, ReadInt32(root, "maxQueueSize"));
+                Assert.AreEqual(12, ReadInt32(root, "maxSameLogCount"));
+                Assert.AreEqual("editor-custom.log", ReadString(root, "editorFileName"));
+            }
         }
 
         /// <summary>
@@ -187,10 +192,10 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证 Player 预处理后的 LogKit 源码不再包含 Workbench 历史、堆栈、Provider 或 Editor 配置。
+        /// 验证按整文件工具宏剥离后，LogKit 运行时源码不再包含 Workbench 观察标识。这是源码守卫，不能代替真实 Player DLL。
         /// </summary>
         [Test]
-        public void PlayerLogKitSourcesExcludeWorkbenchObservationCode()
+        public void SourceGuard_LogKit运行时源码_Player预处理后不含观察代码()
         {
             string packageRoot = Path.Combine(Application.dataPath, "YokiFrame");
             string[] roots =
@@ -224,9 +229,9 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>验证所有纯 Workbench 观察类型均使用统一整文件条件编译边界。</summary>
+        /// <summary>验证纯 Workbench 观察源码的首尾行组成整文件工具宏。</summary>
         [Test]
-        public void WorkbenchObservationTypesUseWholeFileEditorGuards()
+        public void SourceGuard_Workbench观察源码_整文件使用工具宏()
         {
             string runtimeRoot = Path.Combine(Application.dataPath, "YokiFrame", "Core", "Runtime", "LogKit");
             var sourcePaths = new List<string>();
@@ -253,6 +258,34 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>读取 JSON 布尔字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段值。</returns>
+        private static bool ReadBool(JsonElement element, string propertyName)
+        {
+            return element.GetProperty(propertyName).GetBoolean();
+        }
+
+        /// <summary>读取 JSON 字符串字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段文本。</returns>
+        private static string ReadString(JsonElement element, string propertyName)
+        {
+            return element.GetProperty(propertyName).GetString();
+        }
+
+        /// <summary>读取 JSON 整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static int ReadInt32(JsonElement element, string propertyName)
+        {
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
+        }
         /// <summary>创建覆盖全部固定字段的有效设置对象，供公开 ApplyPayload 契约验证。</summary>
         private static string CreateCompleteSettingsPayload()
         {

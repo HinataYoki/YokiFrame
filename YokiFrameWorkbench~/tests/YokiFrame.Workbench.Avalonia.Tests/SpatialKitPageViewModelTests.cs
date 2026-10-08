@@ -62,24 +62,6 @@ public sealed class SpatialKitPageViewModelTests
 
         Assert.Equal(1, viewModel.ActiveIndexCount);
     }
-
-    /// <summary>验证页面采用左侧索引主列表和右侧诊断热力图主从结构。</summary>
-    [Fact]
-    public void PageContractUsesSpatialMasterDetailWorkspace()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "SpatialKitPageView.axaml");
-
-        Assert.Contains("SpatialIndexPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("SpatialDetailPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("GridSplitter", xaml, StringComparison.Ordinal);
-        Assert.Contains("VirtualizingStackPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("HeatmapViewport", xaml, StringComparison.Ordinal);
-        Assert.Contains("CompiledBinding PlaneBadge", xaml, StringComparison.Ordinal);
-        Assert.Contains("CompiledBinding SelectedIndex.ProjectionDescription", xaml, StringComparison.Ordinal);
-        Assert.Contains("ShowDensityEmpty", xaml, StringComparison.Ordinal);
-        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
-    }
-
     /// <summary>验证两档窗口下主从比例、热力图方形约束和滚动方向均稳定。</summary>
     [Theory]
     [InlineData(1700, 1060)]

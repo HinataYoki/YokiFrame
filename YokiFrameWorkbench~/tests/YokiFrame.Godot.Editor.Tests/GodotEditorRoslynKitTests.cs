@@ -285,28 +285,49 @@ public sealed class GodotEditorRoslynKitTests
         string snapshotPath = Path.Combine(fixture.EngineRoot, "snapshots", "ProbeSnapshotKit", "state.json");
         Assert.True(File.Exists(snapshotPath), "snapshot file is missing: " + snapshotPath);
 
-        var envelope = JsonNode.Parse(File.ReadAllText(snapshotPath))!.AsObject();
-        Assert.Equal("ProbeSnapshotKit", envelope["kit"]!.GetValue<string>());
-        Assert.Equal("state", envelope["name"]!.GetValue<string>());
-        Assert.Equal("godot-editor", envelope["engineId"]!.GetValue<string>());
-        Assert.Contains("\"probe\":1", envelope["payloadJson"]!.GetValue<string>());
-        long firstSequence = envelope["sequence"]!.GetValue<long>();
-        Assert.True(firstSequence > 0);
+        long firstSequence;
+        using (YokiFrame.Json.JsonDocument envelope = YokiFrame.Json.JsonDocument.Parse(File.ReadAllText(snapshotPath)))
+        {
+            YokiFrame.Json.JsonElement root = envelope.RootElement;
+            Assert.Equal("ProbeSnapshotKit", root.GetProperty("kit").GetString());
+            Assert.Equal("state", root.GetProperty("name").GetString());
+            Assert.Equal("godot-editor", root.GetProperty("engineId").GetString());
+            Assert.True(root.GetProperty("sequence").TryGetInt64(out firstSequence));
+            Assert.True(firstSequence > 0);
+            AssertSnapshotProbe(root.GetProperty("payloadJson").GetString(), 1);
+        }
 
-        // 版本未变：不重写文件（序列号保持不变）
         fixture.WriteSystemCommand("editor-snapshot-002", "list_commands");
         host.ProcessPendingCommands();
-        var unchanged = JsonNode.Parse(File.ReadAllText(snapshotPath))!.AsObject();
-        Assert.Equal(firstSequence, unchanged["sequence"]!.GetValue<long>());
+        using (YokiFrame.Json.JsonDocument unchanged = YokiFrame.Json.JsonDocument.Parse(File.ReadAllText(snapshotPath)))
+        {
+            Assert.True(unchanged.RootElement.GetProperty("sequence").TryGetInt64(out long sequence));
+            Assert.Equal(firstSequence, sequence);
+        }
 
-        // 版本推进：重写并带上新 payload
         probe.Version = 2;
         probe.Payload = "{\"probe\":2}";
         fixture.WriteSystemCommand("editor-snapshot-003", "list_commands");
         host.ProcessPendingCommands();
-        var updated = JsonNode.Parse(File.ReadAllText(snapshotPath))!.AsObject();
-        Assert.True(updated["sequence"]!.GetValue<long>() > firstSequence);
-        Assert.Contains("\"probe\":2", updated["payloadJson"]!.GetValue<string>());
+        using (YokiFrame.Json.JsonDocument updated = YokiFrame.Json.JsonDocument.Parse(File.ReadAllText(snapshotPath)))
+        {
+            YokiFrame.Json.JsonElement root = updated.RootElement;
+            Assert.True(root.GetProperty("sequence").TryGetInt64(out long sequence));
+            Assert.True(sequence > firstSequence);
+            AssertSnapshotProbe(root.GetProperty("payloadJson").GetString(), 2);
+        }
+    }
+
+    /// <summary>
+    /// 断言快照 payload 中的 probe 数值，避免用 JSON 子串证明字段。
+    /// </summary>
+    /// <param name="payloadJson">快照信封里的 payloadJson。</param>
+    /// <param name="expected">期望的 probe 数值。</param>
+    private static void AssertSnapshotProbe(string payloadJson, int expected)
+    {
+        using YokiFrame.Json.JsonDocument payload = YokiFrame.Json.JsonDocument.Parse(payloadJson);
+        Assert.True(payload.RootElement.GetProperty("probe").TryGetInt32(out int probe));
+        Assert.Equal(expected, probe);
     }
 
     /// <summary>构造一条 cli 来源的 RoslynKit 请求。不发送。</summary>

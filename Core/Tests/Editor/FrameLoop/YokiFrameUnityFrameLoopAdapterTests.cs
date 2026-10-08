@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using NUnit.Framework;
-using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
 
@@ -19,7 +17,7 @@ namespace YokiFrame
         /// 验证 YokiFrame 更新节点位于 ScriptRunBehaviourUpdate 后，保持与 2.0-pre 相同的业务 Update 时序。
         /// </summary>
         [Test]
-        public void InstallerAddsUpdateSystemAfterScriptRunBehaviourUpdate()
+        public void TryInstall_标准Update_插在脚本Update之后()
         {
             PlayerLoopSystem playerLoop = CreatePlayerLoop();
 
@@ -37,7 +35,7 @@ namespace YokiFrame
         /// 验证重复安装只识别现有节点，不累加第二个委托或改写 PlayerLoop 数组。
         /// </summary>
         [Test]
-        public void InstallerKeepsRepeatedInstallationIdempotent()
+        public void TryInstall_重复调用_不新增节点()
         {
             PlayerLoopSystem playerLoop = CreatePlayerLoop();
             Assert.IsTrue(Unity.UnityFrameLoopInstaller.TryInstall(ref playerLoop, out bool firstChanged));
@@ -52,32 +50,82 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证宿主入口使用两个 Unity 时间源，并由统一会话在程序集加载完成后重置上一代监听者。
+        /// 验证宿主入口分别投递缩放与非缩放时间，而不是把两个时间源合并成一个值。
         /// </summary>
         [Test]
-        public void InstallerDispatchesUnityTimesAndResetsRuntimeListeners()
+        public void DispatchFrame_两种时间_分别投递()
         {
-            string installerPath = Path.Combine(
-                Application.dataPath,
-                "YokiFrame", "Core", "Adapters", "Unity", "Runtime", "FrameLoop",
-                "UnityFrameLoopInstaller.cs");
-            string installerSource = File.ReadAllText(installerPath);
-            string sessionHostPath = Path.Combine(
-                Application.dataPath,
-                "YokiFrame", "Core", "Adapters", "Unity", "Runtime", "Hosting",
-                "UnityYokiFrameSessionHost.cs");
-            string sessionSource = File.ReadAllText(sessionHostPath);
+            var listener = new RecordingListener();
+            YokiFrameUpdateDispatcher.Register(listener);
 
-            StringAssert.StartsWith("#if UNITY_5_3_OR_NEWER", installerSource.TrimStart());
-            StringAssert.Contains(
-                "YokiFrameUpdateDispatcher.Tick(Time.deltaTime, Time.unscaledDeltaTime);",
-                installerSource);
-            StringAssert.EndsWith("#endif", installerSource.TrimEnd());
-            StringAssert.Contains(
-                "RuntimeInitializeLoadType.AfterAssembliesLoaded",
-                sessionSource);
-            StringAssert.Contains("YokiFrameSession.Begin();", sessionSource);
+            try
+            {
+                Unity.UnityFrameLoopInstaller.DispatchFrame(0.25f, 0.5f);
+            }
+            finally
+            {
+                YokiFrameUpdateDispatcher.Unregister(listener);
+            }
+
+            Assert.AreEqual(1, listener.CallCount);
+            Assert.AreEqual(0.25f, listener.ScaledDeltaTime);
+            Assert.AreEqual(0.5f, listener.UnscaledDeltaTime);
         }
+
+        /// <summary>
+        /// 验证程序集加载后的宿主入口会换代，上一会话的监听不再被调用。
+        /// </summary>
+        [Test]
+        public void BeginSessionForTests_已有监听_不再收到事件()
+        {
+            bool delivered = false;
+            EventKit.Type.Register<FrameLoopSessionProbe>(_ => delivered = true);
+
+            Unity.UnityYokiFrameSessionHost.BeginSessionForTests();
+            EventKit.Type.Send(new FrameLoopSessionProbe());
+
+            Assert.IsFalse(delivered);
+        }
+
+        /// <summary>
+        /// 记录宿主投递的两个时间源，避免测试依赖 Unity 的真实帧时间。
+        /// </summary>
+        private sealed class RecordingListener : IYokiFrameUpdateListener
+        {
+            /// <summary>收到的帧次数。</summary>
+            public int CallCount { get; private set; }
+
+            /// <summary>最近一次缩放时间。</summary>
+            public float ScaledDeltaTime { get; private set; }
+
+            /// <summary>最近一次非缩放时间。</summary>
+            public float UnscaledDeltaTime { get; private set; }
+
+            /// <summary>
+            /// 记录宿主投递的两个时间源。
+            /// </summary>
+            /// <param name="scaledDeltaTime">受时间缩放影响的秒数。</param>
+            /// <param name="unscaledDeltaTime">不受时间缩放影响的秒数。</param>
+            public void OnFrameUpdate(float scaledDeltaTime, float unscaledDeltaTime)
+            {
+                CallCount++;
+                ScaledDeltaTime = scaledDeltaTime;
+                UnscaledDeltaTime = unscaledDeltaTime;
+            }
+
+            /// <summary>
+            /// 宿主重置时不保留本测试记录，避免跨用例污染。
+            /// </summary>
+            public void OnHostReset()
+            {
+                CallCount = 0;
+                ScaledDeltaTime = 0f;
+                UnscaledDeltaTime = 0f;
+            }
+        }
+
+        /// <summary>只用于验证会话换代会清掉上一会话订阅。</summary>
+        private readonly struct FrameLoopSessionProbe { }
 
         /// <summary>
         /// 创建带标准 Unity Update 子系统的最小 PlayerLoop，用于隔离安装算法测试。

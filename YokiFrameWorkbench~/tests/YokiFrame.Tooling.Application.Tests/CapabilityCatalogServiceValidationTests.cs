@@ -183,7 +183,7 @@ public sealed partial class CapabilityCatalogServiceTests
     /// 验证一个损坏 registry 不会抹掉其它健康 engine，并保留坏文件路径证据。
     /// </summary>
     [Fact]
-    public async Task BuildPreservesHealthyEngineWhenAnotherRegistryIsInvalid()
+    public async Task BuildAsync_部分Registry损坏_保留坏文件路径()
     {
         var client = new CatalogTestClient(sNowUtc)
         {
@@ -200,6 +200,6 @@ public sealed partial class CapabilityCatalogServiceTests
         Assert.Equal("Partial", result.State);
         Assert.Single(result.Catalog.Engines);
         var issue = Assert.Single(result.Catalog.Issues, candidate => candidate.Code == "EngineRegistryInvalid");
-        Assert.Contains("broken", issue.EvidencePaths.Single(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Path.Combine(client.Paths.EnginesRoot, "broken", "engine.json"), issue.EvidencePaths.Single());
     }
 }

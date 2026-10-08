@@ -28,7 +28,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证查询和未知对象释放不创建默认 Provider，首次同步加载只创建一次。</summary>
         [Test]
-        public void DefaultProviderWaitsForFirstSynchronousLoad()
+        public void Load_首次同步加载_才创建默认Provider()
         {
             LazyResourceProvider provider = new();
             var factoryCount = 0;
@@ -55,7 +55,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证用户提前设置 Provider 后，首次资源调用完全跳过宿主默认工厂。</summary>
         [Test]
-        public void ExplicitProviderSkipsDefaultFactory()
+        public void SetProvider_已显式注入_不调用默认工厂()
         {
             LazyResourceProvider explicitProvider = new();
             var factoryCount = 0;
@@ -76,7 +76,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证并发首次异步加载共享同一个默认 Provider 和同一次底层加载。</summary>
         [Test]
-        public async Task ConcurrentFirstLoadsCreateDefaultProviderOnce()
+        public async Task LoadAsync_并发首次加载_只创建一次Provider()
         {
             LazyResourceProvider provider = new();
             provider.BeginGatedLoad();
@@ -101,7 +101,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 raw API 也复用同一惰性 Provider 入口。</summary>
         [Test]
-        public void RawLoadCreatesDefaultProviderOnDemand()
+        public void LoadRaw_首次原始加载_按需创建Provider()
         {
             LazyResourceProvider provider = new();
             var factoryCount = 0;
@@ -120,7 +120,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证默认工厂在创建期间重入 ResKit 会失败，而不是在状态锁内递归。</summary>
         [Test]
-        public void DefaultFactoryMustNotReenterResKit()
+        public void Load_默认工厂重入_被拒绝()
         {
             ResKit.RegisterDefaultProviderFactory(() =>
             {

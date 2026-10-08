@@ -142,7 +142,7 @@ namespace YokiFrame
         /// <param name="panel">所属面板，用于问题定位。</param>
         /// <param name="result">校验结果收集器。</param>
         /// <param name="depth">当前已下钻层数。</param>
-        private static void ValidateAnimationConfig(
+        internal static void ValidateAnimationConfig(
             UIAnimationConfig config,
             string label,
             UIPanel panel,

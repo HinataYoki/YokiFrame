@@ -1,7 +1,6 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using YooAsset;
@@ -9,12 +8,12 @@ using YooAsset.Editor;
 
 namespace YokiFrame.Unity.Tests
 {
-    /// <summary>验证 YooAsset 初始化参数的默认值和规范化行为。</summary>
+    /// <summary>验证 YooAsset 初始化参数的默认值、策略校验和加密映射。</summary>
     public sealed class YooAssetInitializationOptionsTests
     {
         /// <summary>空 package 列表必须回退到稳定的默认 package 名称。</summary>
         [Test]
-        public void EmptyPackageListUsesDefaultPackageName()
+        public void PrimaryPackageName_空列表_回退默认包名()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -26,9 +25,9 @@ namespace YokiFrame.Unity.Tests
                 Is.EqualTo(YooAssetInitializationOptions.DEFAULT_PACKAGE_NAME));
         }
 
-        /// <summary>首个有效 package 名称应去除首尾空白并作为默认包。</summary>
+        /// <summary>跳过纯空白项后，使用下一个有效名称并去掉首尾空白。</summary>
         [Test]
-        public void PrimaryPackageNameTrimsFirstValidName()
+        public void PrimaryPackageName_首项只有空白_使用下一个有效名称()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -38,9 +37,9 @@ namespace YokiFrame.Unity.Tests
             Assert.That(options.PrimaryPackageName, Is.EqualTo("RuntimePackage"));
         }
 
-        /// <summary>非正数超时应回退到默认值，正数保持调用方设置。</summary>
+        /// <summary>非正数清单超时回退默认值，正数保持调用方设置。</summary>
         [Test]
-        public void ManifestTimeoutUsesPositiveConfiguredValue()
+        public void GetManifestTimeoutSeconds_非正数与正数_回退默认或保留()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -54,9 +53,9 @@ namespace YokiFrame.Unity.Tests
             Assert.That(options.GetManifestTimeoutSeconds(), Is.EqualTo(15));
         }
 
-        /// <summary>联网策略默认保持兼容行为，下载参数会被限制到安全范围。</summary>
+        /// <summary>默认联网策略保持仅清单，越界下载参数被钳制到安全范围。</summary>
         [Test]
-        public void NetworkDefaultsKeepManifestOnlyAndClampDownloadSettings()
+        public void 构造_默认策略与越界下载参数_清单优先并钳制()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -78,27 +77,9 @@ namespace YokiFrame.Unity.Tests
                 Is.EqualTo(YooAssetInitializationOptions.DEFAULT_DOWNLOAD_NO_PROGRESS_TIMEOUT_SECONDS));
         }
 
-        /// <summary>联网策略枚举必须保留远端直连、缓存回退和离线回退三个明确分支。</summary>
+        /// <summary>编辑器模拟模式应接受仅用于联网运行模式的回退策略。</summary>
         [Test]
-        public void NetworkStrategiesExposeExplicitFallbackModes()
-        {
-            Assert.That(
-                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
-                    YooAssetInitializationStrategy.RemoteOnly),
-                Is.True);
-            Assert.That(
-                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
-                    YooAssetInitializationStrategy.RemoteThenCached),
-                Is.True);
-            Assert.That(
-                Enum.IsDefined(typeof(YooAssetInitializationStrategy),
-                    YooAssetInitializationStrategy.RemoteThenOffline),
-                Is.True);
-        }
-
-        /// <summary>编辑器模拟模式应忽略仅用于 Player 的联网策略，避免正常配置被误判为非法。</summary>
-        [Test]
-        public void EditorSimulationAllowsRuntimeFallbackStrategy()
+        public void ValidateStrategy_编辑器模拟且远端后离线_不抛出()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -106,12 +87,12 @@ namespace YokiFrame.Unity.Tests
                 InitializationStrategy = YooAssetInitializationStrategy.RemoteThenOffline
             };
 
-            InvokeStrategyValidation(options);
+            Assert.DoesNotThrow(() => YooAssetInitializer.ValidateStrategy(options));
         }
 
-        /// <summary>Web 模式不允许复用本地 package 回退，因为其文件系统没有本地缓存语义。</summary>
+        /// <summary>Web 模式不允许复用本地 package 回退。</summary>
         [Test]
-        public void WebModeRejectsLocalFallbackStrategy()
+        public void ValidateStrategy_Web且缓存回退_抛出无效操作()
         {
             YooAssetInitializationOptions options = new()
             {
@@ -119,36 +100,43 @@ namespace YokiFrame.Unity.Tests
                 InitializationStrategy = YooAssetInitializationStrategy.RemoteThenCached
             };
 
-            Assert.That(
-                () => InvokeStrategyValidation(options),
-                Throws.TypeOf<TargetInvocationException>());
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+                () => YooAssetInitializer.ValidateStrategy(options));
+            Assert.AreEqual(
+                "WebPlayMode does not support local package fallback strategies.",
+                exception.Message);
         }
 
-        /// <summary>内置加密方案必须能够映射为当前 YooAsset 主版本的成对服务。</summary>
+        /// <summary>内置加密方案必须映射为当前主版本的成对实现类型。</summary>
         [TestCase(YooAssetEncryptionMode.XorStream)]
         [TestCase(YooAssetEncryptionMode.FileOffset)]
         [TestCase(YooAssetEncryptionMode.Aes)]
-        public void EncryptionModeCreatesMatchingServices(YooAssetEncryptionMode mode)
+        public void 加密工厂_内置方案_返回成对实现(YooAssetEncryptionMode mode)
         {
             YooAssetInitializationOptions options = new() { EncryptionMode = mode };
 
 #if YOKIFRAME_YOOASSET_3
-            IBundleEncryptor encryption = YooAssetEncryptionServices.CreateBundleEncryptor(options);
-            IBundleDecryptor decryption = YooAssetEncryptionServices.CreateBundleDecryptor(options);
+            Assert.IsInstanceOf(
+                EncryptionType(mode),
+                YooAssetEncryptionServices.CreateBundleEncryptor(options));
+            Assert.IsInstanceOf(
+                DecryptionType(mode),
+                YooAssetEncryptionServices.CreateBundleDecryptor(options));
 #else
-            IEncryptionServices encryption = YooAssetEncryptionServices.CreateEncryptionServices(options);
-            IDecryptionServices decryption = YooAssetEncryptionServices.CreateDecryptionServices(options);
+            Assert.IsInstanceOf(
+                EncryptionType(mode),
+                YooAssetEncryptionServices.CreateEncryptionServices(options));
+            Assert.IsInstanceOf(
+                DecryptionType(mode),
+                YooAssetEncryptionServices.CreateDecryptionServices(options));
 #endif
-
-            Assert.That(encryption, Is.Not.Null);
-            Assert.That(decryption, Is.Not.Null);
         }
 
-        /// <summary>构建参数必须直接持有当前方案创建的参数化加密器实例。</summary>
+        /// <summary>构建参数必须直接持有当前方案对应的加密器实例。</summary>
         [TestCase(YooAssetEncryptionMode.XorStream)]
         [TestCase(YooAssetEncryptionMode.FileOffset)]
         [TestCase(YooAssetEncryptionMode.Aes)]
-        public void BuildParametersUseSelectedEncryptionMode(YooAssetEncryptionMode mode)
+        public void CreateBuildParameters_内置方案_安装对应加密器(YooAssetEncryptionMode mode)
         {
             YooAssetInitializationOptions options = new() { EncryptionMode = mode };
             BuildParameters parameters = YooAssetPackageBuilder.CreateBuildParameters(
@@ -159,15 +147,15 @@ namespace YokiFrame.Unity.Tests
                 "test-version");
 
 #if YOKIFRAME_YOOASSET_3
-            Assert.That(parameters.BundleEncryptor, Is.Not.Null);
+            Assert.IsInstanceOf(EncryptionType(mode), parameters.BundleEncryptor);
 #else
-            Assert.That(parameters.EncryptionServices, Is.Not.Null);
+            Assert.IsInstanceOf(EncryptionType(mode), parameters.EncryptionServices);
 #endif
         }
 
-        /// <summary>常用加密和解密实现必须作为公开 Integration API 提供给项目代码复用。</summary>
+        /// <summary>结构守卫：常用加解密实现保持公开，供项目代码直接复用。</summary>
         [Test]
-        public void CommonEncryptionImplementationsArePublic()
+        public void AssemblyBoundary_常用加解密类型_保持公开()
         {
 #if YOKIFRAME_YOOASSET_3
             Assert.That(typeof(YooAssetXorBundleEncryptor).IsPublic, Is.True);
@@ -186,14 +174,66 @@ namespace YokiFrame.Unity.Tests
 #endif
         }
 
-        /// <summary>通过反射调用初始化器内部策略校验，覆盖不暴露给业务的运行模式分支。</summary>
-        private static void InvokeStrategyValidation(YooAssetInitializationOptions options)
+        /// <summary>返回当前主版本中指定内置方案的构建加密类型。</summary>
+        /// <param name="mode">内置加密方案。</param>
+        /// <returns>对应该方案的加密实现类型。</returns>
+        private static Type EncryptionType(YooAssetEncryptionMode mode)
         {
-            MethodInfo method = typeof(YooAssetInitializer).GetMethod(
-                "ValidateStrategy",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.That(method, Is.Not.Null, "YooAssetInitializer 缺少策略校验方法");
-            _ = method.Invoke(null, new object[] { options });
+            switch (mode)
+            {
+                case YooAssetEncryptionMode.XorStream:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetXorBundleEncryptor);
+#else
+                    return typeof(YooAssetXorStreamEncryptionService);
+#endif
+                case YooAssetEncryptionMode.FileOffset:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetFileOffsetBundleEncryptor);
+#else
+                    return typeof(YooAssetFileOffsetEncryptionService);
+#endif
+                case YooAssetEncryptionMode.Aes:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetAesBundleEncryptor);
+#else
+                    return typeof(YooAssetAesEncryptionService);
+#endif
+                default:
+                    Assert.Fail("未覆盖的加密方案：" + mode);
+                    return null;
+            }
+        }
+
+        /// <summary>返回当前主版本中指定内置方案的运行时解密类型。</summary>
+        /// <param name="mode">内置加密方案。</param>
+        /// <returns>对应该方案的解密实现类型。</returns>
+        private static Type DecryptionType(YooAssetEncryptionMode mode)
+        {
+            switch (mode)
+            {
+                case YooAssetEncryptionMode.XorStream:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetXorStreamDecryptor);
+#else
+                    return typeof(YooAssetXorStreamDecryptionService);
+#endif
+                case YooAssetEncryptionMode.FileOffset:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetFileOffsetDecryptor);
+#else
+                    return typeof(YooAssetFileOffsetDecryptionService);
+#endif
+                case YooAssetEncryptionMode.Aes:
+#if YOKIFRAME_YOOASSET_3
+                    return typeof(YooAssetAesDecryptor);
+#else
+                    return typeof(YooAssetAesDecryptionService);
+#endif
+                default:
+                    Assert.Fail("未覆盖的加密方案：" + mode);
+                    return null;
+            }
         }
     }
 }

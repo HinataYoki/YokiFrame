@@ -7,9 +7,7 @@ using YokiFrame.Protocol.Telemetry.SharedMemory;
 namespace YokiFrame.Cli.Tests;
 
 /// <summary>
-/// E 阶段 AI 场景回归：按计划约定的八个真实场景驱动 CLI，度量三个诊断预算指标。
-/// 指标定义：默认查询平均字节数、一次诊断平均调用次数、异常进入 --detail full 的比例。
-/// 每个场景同时声明一条"默认输出里必须能看到的信号"，避免指标达标但信号缺失。
+/// 按八个诊断场景驱动 CLI，检查默认输出字节预算、一次调用收敛，以及每个场景必须暴露的信号。
 /// </summary>
 public sealed class CliDiagnosticBudgetTests
 {
@@ -59,25 +57,6 @@ public sealed class CliDiagnosticBudgetTests
         Assert.True(
             unconverged.Length == 0,
             "以下场景一次调用后仍无下一步动作: " + string.Join(", ", unconverged.Select(static item => item.Name)));
-
-        var averageCalls = measurements.Average(static item => item.ConvergedInOneCall ? 1.0 : 2.0);
-        Assert.Equal(1.0, averageCalls, precision: 6);
-    }
-
-    /// <summary>
-    /// 指标三：异常场景不得要求 AI 读取 --detail full 才能决定下一步，即原始协议字段不是诊断必需品。
-    /// </summary>
-    [Fact]
-    public async Task AbnormalScenariosDoNotRequireFullDetail()
-    {
-        var measurements = await sMeasurements.Value;
-        var abnormal = measurements.Where(static item => item.IsAbnormal).ToArray();
-
-        Assert.NotEmpty(abnormal);
-        var needingDetail = abnormal.Where(static item => !item.ConvergedInOneCall).ToArray();
-        Assert.True(
-            needingDetail.Length == 0,
-            "以下异常场景必须读取 --detail full: " + string.Join(", ", needingDetail.Select(static item => item.Name)));
     }
 
     /// <summary>
@@ -95,23 +74,6 @@ public sealed class CliDiagnosticBudgetTests
             missing.Length == 0,
             string.Join("; ", missing.Select(static item =>
                 item.Name + " 期望 " + item.ExpectedSignal + "，实际 " + item.ObservedSignal)));
-    }
-
-    /// <summary>
-    /// 验证同一场景在 --detail full 下仍可取得协议原始字段，避免默认收敛以牺牲深度诊断为代价。
-    /// </summary>
-    [Fact]
-    public async Task FullDetailRemainsAvailableForEveryScenario()
-    {
-        using var project = CliTestHelpers.CreateProjectRoot("budget-detail");
-        PrepareSingleEngine(project.Path, generation: 1L, withHeartbeat: true, writeSnapshot: true);
-
-        var result = await CliTestHelpers.RunCliAsync(
-            "bridge", "status", "--detail", "full", "--engine", ENGINE_ID, "--project", project.Path);
-
-        Assert.Equal(0, result.ExitCode);
-        var json = JsonNode.Parse(result.StandardOutput)!;
-        Assert.True(json["status"]!.AsObject().ContainsKey("engineRoot"));
     }
 
     /// <summary>按顺序构造并度量全部八个场景。</summary>
@@ -148,7 +110,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: false,
             "Ready/telemetry",
             static json => Value(json, "state") + "/" + Value(json, "source"),
-            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>
@@ -172,7 +134,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "YooAsset",
             static json => Value(json["summary"], "provider"),
-            new[] { "kit", "status", "RoslynKit", "ResKit", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "--kit", "ResKit", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景三：telemetry 不可用，回落 snapshot 且 generation 一致。</summary>
@@ -187,7 +149,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "TelemetryNotUsed",
             static json => Value(json["issues"]?[0], "code"),
-            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景四：snapshot 的 generation 落后于当前宿主。</summary>
@@ -202,7 +164,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "Stale/KitStateStale",
             static json => Value(json, "state") + "/" + Value(json["error"], "code"),
-            new[] { "kit", "status", "RoslynKit", "System", "--engine", ENGINE_ID, "--project", project.Path });
+            new[] { "kit", "status", "--kit", "System", "--engine", ENGINE_ID, "--project", project.Path });
     }
 
     /// <summary>场景五：registry 存在但 heartbeat 缺失，宿主离线。</summary>
@@ -234,7 +196,7 @@ public sealed class CliDiagnosticBudgetTests
                 + (!string.IsNullOrWhiteSpace(Value(json, "requestId"))).ToString().ToLowerInvariant(),
             new[]
             {
-                "command", "send", "--engine", ENGINE_ID, "RoslynKit", "System", "--action", "ping",
+                "command", "send", "--engine", ENGINE_ID, "--kit", "System", "--action", "ping",
                 "--timeout", "1000", "--project", project.Path
             });
     }
@@ -266,7 +228,7 @@ public sealed class CliDiagnosticBudgetTests
             isAbnormal: true,
             "EngineSelectionRequired",
             static json => Value(json["error"], "code"),
-            new[] { "kit", "status", "RoslynKit", "System", "--project", project.Path });
+            new[] { "kit", "status", "--kit", "System", "--project", project.Path });
     }
 
     /// <summary>

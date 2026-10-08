@@ -12,7 +12,7 @@ public sealed class DocumentationPageViewModelTests
     /// 验证 WebView 宿主异常复用现有文档状态，不需要额外的错误状态模型。
     /// </summary>
     [Fact]
-    public void ReportViewErrorProjectsNativeFailureToStatusText()
+    public void ReportViewError_宿主异常_投影到状态文本()
     {
         DocumentationPageViewModel viewModel = new(string.Empty);
 
@@ -25,7 +25,7 @@ public sealed class DocumentationPageViewModelTests
     /// 验证关键词仅存在于 Markdown 正文时，全文搜索仍会将对应文档重新投影到导航目录。
     /// </summary>
     [Fact]
-    public async Task FullTextSearchAddsBodyMatchesToNavigationDocuments()
+    public async Task SearchCommand_正文命中_投影到导航目录()
     {
         var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-docs-search-" + Guid.NewGuid().ToString("N"));
         try
@@ -70,7 +70,7 @@ public sealed class DocumentationPageViewModelTests
     /// 验证正文内部链接可以选择被当前关键词筛选隐藏的文档，并恢复完整导航目录。
     /// </summary>
     [Fact]
-    public async Task SelectDocumentRestoresFullCatalogForInternalDocumentLinks()
+    public async Task SelectDocument_关键词隐藏目标_恢复完整目录()
     {
         var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-docs-link-" + Guid.NewGuid().ToString("N"));
         try
@@ -105,7 +105,7 @@ public sealed class DocumentationPageViewModelTests
     /// 验证 Guides 可由正文链接选择，但不会进入左侧目录或全文搜索。
     /// </summary>
     [Fact]
-    public async Task GuidesRemainReachableButStayOutOfNavigation()
+    public async Task SelectDocument_Guides链接_可打开且不进入导航()
     {
         var packageRoot = Path.Combine(Path.GetTempPath(), "yokiframe-docs-guides-" + Guid.NewGuid().ToString("N"));
         try

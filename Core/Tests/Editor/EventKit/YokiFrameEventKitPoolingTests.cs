@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using NUnit.Framework;
 
 namespace YokiFrame
@@ -17,12 +16,11 @@ namespace YokiFrame
         {
             var easyEvent = new EasyEvent();
             LinkUnRegister token = easyEvent.Register(() => { });
-            var eventList = GetEventList<Action>(easyEvent);
 
             token.UnRegister();
 
-            Assert.AreEqual(0, eventList.Count);
-            Assert.AreEqual(1, eventList.PoolSize);
+            Assert.AreEqual(0, easyEvent.ListenerCount);
+            Assert.AreEqual(1, easyEvent.PooledNodeCount);
         }
 
         /// <summary>
@@ -133,19 +131,5 @@ namespace YokiFrame
             Assert.AreEqual(7, received);
         }
 
-        /// <summary>
-        /// 读取 EasyEvent 私有监听容器，确保测试验证真实池化实现而非等价外观。
-        /// </summary>
-        /// <typeparam name="TDelegate">监听委托类型。</typeparam>
-        /// <param name="easyEvent">要检查的 EasyEvent 实例。</param>
-        /// <returns>EasyEvent 当前持有的池化链表。</returns>
-        private static PooledLinkedList<TDelegate> GetEventList<TDelegate>(object easyEvent)
-        {
-            FieldInfo field = easyEvent.GetType().GetField("mEventList", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field);
-            var eventList = field.GetValue(easyEvent) as PooledLinkedList<TDelegate>;
-            Assert.IsNotNull(eventList);
-            return eventList;
-        }
     }
 }

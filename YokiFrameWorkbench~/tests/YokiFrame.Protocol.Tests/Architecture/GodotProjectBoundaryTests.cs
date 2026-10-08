@@ -22,7 +22,7 @@ public sealed class GodotProjectBoundaryTests
     /// 验证未生成项目不携带固定 TableKit Runtime 或 Contracts 程序集。
     /// </summary>
     [Fact]
-    public void TableKitDoesNotShipFixedRuntimeAssembly()
+    public void TableKitDoesNotShipFixedRuntimeAssembly_AssemblyBoundary()
     {
         string runtimeRoot = Path.Combine(FindPackageRoot(), "Tools", "TableKit", "Runtime");
         Assert.False(File.Exists(Path.Combine(runtimeRoot, "ITableDataLoader.cs")));
@@ -34,7 +34,7 @@ public sealed class GodotProjectBoundaryTests
     /// 验证纯 Core 项目固定使用 netstandard2.1 和 C# 9，并显式排除宿主、编辑器与测试源码。
     /// </summary>
     [Fact]
-    public void CoreProjectDefinesPortableSourceBoundary()
+    public void CoreProjectDefinesPortableSourceBoundary_AssemblyBoundary()
     {
         var project = LoadPackageProject(CORE_PROJECT_RELATIVE_PATH);
 
@@ -58,7 +58,7 @@ public sealed class GodotProjectBoundaryTests
     /// 验证共享 Editor 项目保持纯 C#，并且只单向引用 Core Runtime。
     /// </summary>
     [Fact]
-    public void CoreEditorProjectDefinesPortableToolBoundary()
+    public void CoreEditorProjectDefinesPortableToolBoundary_AssemblyBoundary()
     {
         var project = LoadPackageProject(CORE_EDITOR_PROJECT_RELATIVE_PATH);
 
@@ -78,7 +78,7 @@ public sealed class GodotProjectBoundaryTests
     /// 验证 Godot Adapter 使用 4.7 SDK、net8.0 和独立源码集合，并且只单向引用纯 Core 项目。
     /// </summary>
     [Fact]
-    public void GodotAdapterProjectReferencesOnlyPortableCore()
+    public void GodotAdapterProjectReferencesOnlyPortableCore_AssemblyBoundary()
     {
         var project = LoadPackageProject(GODOT_PROJECT_RELATIVE_PATH);
 
@@ -145,7 +145,7 @@ public sealed class GodotProjectBoundaryTests
     /// 验证 Godot 宿主路径只停留在 Adapter 项目，不能沿项目引用图污染 Core 与 Tool 项目配置。
     /// </summary>
     [Fact]
-    public void GodotAdaptersRemoveHostProjectPropertyFromPortableReferences()
+    public void GodotAdaptersRemoveHostProjectPropertyFromPortableReferences_AssemblyBoundary()
     {
         AssertGlobalPropertyRemoval(
             GODOT_PROJECT_RELATIVE_PATH,
@@ -175,32 +175,20 @@ public sealed class GodotProjectBoundaryTests
     /// 验证安装投影中的 Runtime Adapter 能从固定 addons 层级回到目标 Godot 项目根。
     /// </summary>
     [Fact]
-    public void GodotRuntimeBuildPropsUseTheInstalledProjectRootDepth()
+    public void GodotRuntimeBuildPropsUseTheInstalledProjectRootDepth_AssemblyBoundary()
     {
-        var propsPath = Path.Combine(
-            FindPackageRoot(),
-            "Core",
-            "Adapters",
-            "Godot",
-            "Runtime",
-            "Directory.Build.props");
-        var props = File.ReadAllText(propsPath);
+        var project = LoadPackageProject("Core/Adapters/Godot/Runtime/Directory.Build.props");
+        const string installedRoot =
+            "$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../../../../../../'))";
 
-        Assert.Contains(
-            "$(MSBuildThisFileDirectory)../../../../../../../../",
-            props,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "$(MSBuildThisFileDirectory)../../../../../../../../../",
-            props,
-            StringComparison.Ordinal);
+        Assert.Equal(installedRoot, ReadProperty(project, "YokiFrameInstalledGodotProjectRoot"));
     }
 
     /// <summary>
     /// 验证共享 Directory.Build.props 按 Tools/Runtime profile 和项目名隔离 bin/obj。
     /// </summary>
     [Fact]
-    public void PortableBuildPropsIsolateArtifactsUnderSharedBuildRoot()
+    public void PortableBuildPropsIsolateArtifactsUnderSharedBuildRoot_AssemblyBoundary()
     {
         var project = LoadPackageProject(BUILD_PROPS_RELATIVE_PATH);
 
@@ -227,7 +215,7 @@ public sealed class GodotProjectBoundaryTests
     [InlineData(CORE_PROJECT_RELATIVE_PATH)]
     [InlineData(CORE_EDITOR_PROJECT_RELATIVE_PATH)]
     [InlineData(GODOT_PROJECT_RELATIVE_PATH)]
-    public void PortableProjectsDoNotOverrideBasePathsAfterSdkImport(string relativePath)
+    public void PortableProjectsDoNotOverrideBasePathsAfterSdkImport_AssemblyBoundary(string relativePath)
     {
         var project = LoadPackageProject(relativePath);
 

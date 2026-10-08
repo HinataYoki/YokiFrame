@@ -11,7 +11,7 @@ public sealed class DocumentationI18nTests
     /// <remarks>必须先初始化 Headless UI 线程：SetCulture 只有在 UI 线程上才会同步触发
     /// CultureChanged，否则重投影被 Post 到无人泵的 Dispatcher 队列。</remarks>
     [Fact]
-    public async Task DocsPage_ReprojectsPlaceholdersOnCultureChange()
+    public async Task SetCulture_未加载文档_重投影占位文本()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
         await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>

@@ -8,8 +8,24 @@ namespace YokiFrame.Installer.Core.Tests;
 /// <summary>
 /// 覆盖 Installer 对项目 Runtime 缓存完整性与源码指纹绑定的强制门禁。
 /// </summary>
-public sealed class RuntimeCacheBindingValidatorTests
+public sealed class RuntimeCacheBindingValidatorTests : IDisposable
 {
+    private readonly List<string> mRoots = new();
+
+    /// <summary>
+    /// 删除本用例写入的临时目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var root in mRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     private const string RUNTIME_PROFILE = "win-x64";
 
     /// <summary>
@@ -65,9 +81,10 @@ public sealed class RuntimeCacheBindingValidatorTests
     /// 创建指纹、指针与双入口 manifest 完整一致的最小项目缓存。
     /// </summary>
     /// <returns>可供单项破坏的测试现场。</returns>
-    private static RuntimeCacheFixture CreateFixture()
+    private RuntimeCacheFixture CreateFixture()
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-installer-cache-tests", Guid.NewGuid().ToString("N"));
+        mRoots.Add(root);
         var sourceRoot = Path.Combine(root, "source", "YokiFrame");
         var projectRoot = Path.Combine(root, "project");
         var sourceFile = Path.Combine(sourceRoot, "YokiFrameWorkbench~", "src", "Fixture.cs");

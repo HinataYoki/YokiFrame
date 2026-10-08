@@ -1,3 +1,4 @@
+using YokiFrame.Installer.Core.Tests;
 using System.Text.Json;
 using YokiFrame.Installer.Core.Models;
 using YokiFrame.Installer.Core.Services;
@@ -29,16 +30,16 @@ public sealed class PackageInstallTransactionTests
             }
 
             checkpointObserved = true;
-            Assert.Equal("stable-package", File.ReadAllText(fixture.GetTargetPath("legacy.marker")));
-            Assert.Equal("alpha-v2", File.ReadAllText(fixture.FindTransactionFile("staging", "Core/Runtime/Alpha.cs")));
-            Assert.Equal("beta-v2", File.ReadAllText(fixture.FindTransactionFile("staging", "Tools/ActionKit/Runtime/Beta.cs")));
+            InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("legacy.marker"), "stable-package");
+            InstallerFileAssert.EqualUtf8(fixture.FindTransactionFile("staging", "Core/Runtime/Alpha.cs"), "alpha-v2");
+            InstallerFileAssert.EqualUtf8(fixture.FindTransactionFile("staging", "Tools/ActionKit/Runtime/Beta.cs"), "beta-v2");
             throw new InvalidOperationException("Injected failure after staging verification.");
         });
 
         Assert.Throws<PackageInstallTransactionException>(() => ExecuteTakeOver(fixture, projection, faultInjector));
 
         Assert.True(checkpointObserved);
-        Assert.Equal("stable-package", File.ReadAllText(fixture.GetTargetPath("legacy.marker")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("legacy.marker"), "stable-package");
         Assert.False(File.Exists(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
     }
 
@@ -62,7 +63,7 @@ public sealed class PackageInstallTransactionTests
 
             checkpointObserved = true;
             var backupPath = fixture.FindTransactionFile("backups", "legacy.marker");
-            Assert.Equal("stable-package", File.ReadAllText(backupPath));
+            InstallerFileAssert.EqualUtf8(backupPath, "stable-package");
             throw new InvalidOperationException("Injected failure after package backup.");
         });
 
@@ -70,7 +71,7 @@ public sealed class PackageInstallTransactionTests
 
         Assert.True(checkpointObserved);
         Assert.True(exception.RollbackSucceeded);
-        Assert.Equal("stable-package", File.ReadAllText(fixture.GetTargetPath("legacy.marker")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("legacy.marker"), "stable-package");
         fixture.AssertTransactionAreasClean("staging", "backups");
     }
 
@@ -97,7 +98,7 @@ public sealed class PackageInstallTransactionTests
         Assert.Equal(manifestStore.GetManifestPath(fixture.TargetPackageRoot), result.OwnerManifestPath);
         Assert.False(result.ReplacedExistingPackage);
         Assert.True(File.Exists(result.OwnerManifestPath));
-        Assert.Equal("alpha-v2", File.ReadAllText(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("Core/Runtime/Alpha.cs"), "alpha-v2");
         Assert.Equal(PackageOwnershipState.Clean, new PackageOwnershipInspector().Inspect(fixture.TargetPackageRoot).State);
         fixture.AssertTransactionAreasClean("staging", "backups");
     }
@@ -130,28 +131,23 @@ public sealed class PackageInstallTransactionTests
             postCommitAction: () =>
             {
                 callbackObserved = true;
-                Assert.Equal("alpha-v2", File.ReadAllText(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
-                Assert.Equal("alpha-v1", File.ReadAllText(fixture.FindTransactionFile("backups", "Core/Runtime/Alpha.cs")));
+                InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("Core/Runtime/Alpha.cs"), "alpha-v2");
+                InstallerFileAssert.EqualUtf8(fixture.FindTransactionFile("backups", "Core/Runtime/Alpha.cs"), "alpha-v1");
                 throw new InvalidOperationException("Injected failure after external post-commit verification.");
             }));
 
         Assert.True(callbackObserved);
         Assert.True(exception.RollbackSucceeded);
-        Assert.Equal("alpha-v1", File.ReadAllText(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("Core/Runtime/Alpha.cs"), "alpha-v1");
         fixture.AssertTransactionAreasClean("staging", "backups");
     }
 
     /// <summary>
     /// 验证 Windows 文件扫描器短暂占用 staging 文件时，目录提交会等待占用释放而不是立即回滚失败。
     /// </summary>
-    [Fact]
+    [WindowsOnlyFact]
     public async Task ExecuteRetriesTransientWindowsStagingLock()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using PackageInstallTransactionFixture fixture = PackageInstallTransactionFixture.Create();
         var projection = fixture.CreateProjection(
             new PackageProjectionSpecification("Core/Runtime/Alpha.cs", "Core/Runtime/Alpha.cs", "alpha-v2"));
@@ -191,7 +187,7 @@ public sealed class PackageInstallTransactionTests
         }
 
         Assert.NotNull(result);
-        Assert.Equal("alpha-v2", File.ReadAllText(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("Core/Runtime/Alpha.cs"), "alpha-v2");
         fixture.AssertTransactionAreasClean("staging", "backups");
     }
 
@@ -216,7 +212,7 @@ public sealed class PackageInstallTransactionTests
         var exception = Assert.Throws<PackageInstallTransactionException>(() => ExecuteTakeOver(fixture, projection, faultInjector));
 
         Assert.True(exception.RollbackSucceeded);
-        Assert.Equal("stable-package", File.ReadAllText(fixture.GetTargetPath("legacy.marker")));
+        InstallerFileAssert.EqualUtf8(fixture.GetTargetPath("legacy.marker"), "stable-package");
         Assert.False(File.Exists(fixture.GetTargetPath("Core/Runtime/Alpha.cs")));
         Assert.False(File.Exists(new PackageOwnerManifestStore().GetManifestPath(fixture.TargetPackageRoot)));
         fixture.AssertTransactionAreasClean("staging", "backups");
@@ -338,8 +334,25 @@ public sealed class PackageInstallTransactionTests
     private static void AssertFailureEvidence(string evidencePath)
     {
         Assert.True(File.Exists(evidencePath));
-        using var document = JsonDocument.Parse(File.ReadAllText(evidencePath));
+        using var document = JsonDocument.Parse(File.ReadAllBytes(evidencePath));
         Assert.Equal("TargetCommitted", document.RootElement.GetProperty("checkpoint").GetString());
         Assert.True(document.RootElement.GetProperty("rollbackSucceeded").GetBoolean());
+    }
+
+    /// <summary>
+    /// 只在 Windows 上执行文件锁重试；其它平台没有同语义独占锁，不能把未执行记为通过。
+    /// </summary>
+    private sealed class WindowsOnlyFactAttribute : FactAttribute
+    {
+        /// <summary>
+        /// 非 Windows 在发现阶段标记跳过。
+        /// </summary>
+        public WindowsOnlyFactAttribute()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Skip = "Windows 独占文件锁不可用，跳过 staging 锁重试契约。";
+            }
+        }
     }
 }

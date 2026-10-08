@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using NUnit.Framework;
 
 namespace YokiFrame
@@ -63,22 +64,24 @@ namespace YokiFrame
         /// 验证 CodeGenKit 统一归属共享 Editor 程序集，没有恢复独立 Core Kit asmdef。
         /// </summary>
         [Test]
-        public void PublicFacadeBelongsToSharedEditorAssembly()
+        public void AssemblyBoundary_CodeGenKit_位于共享Editor程序集()
         {
             Assert.AreEqual("YokiFrame.Editor", typeof(CodeGenKit).Assembly.GetName().Name);
         }
 
         /// <summary>
-        /// 验证 XML 文档文本会转义特殊字符并保持有效 XML。
+        /// 验证根 summary 和字段 summary 都转义 XML 保留字符，并生成完整私有字段。
         /// </summary>
         [Test]
-        public void XmlCommentsEscapeSpecialCharacters()
+        public void GenerateToString_含XML保留字符_转义为完整文档和字段()
         {
             string source = CodeGenKit.GenerateToString(root => root
                 .Summary("A < B & C > D")
                 .Field("int", "Value", field => field.WithComment("A < B & C > D")));
 
-            Assert.That(source, Does.Contain("/// A &lt; B &amp; C &gt; D"));
+            Assert.AreEqual(
+                "/// <summary>\n/// A &lt; B &amp; C &gt; D\n/// </summary>\n/// <summary>\n/// A &lt; B &amp; C &gt; D\n/// </summary>\nprivate int Value;\n",
+                source);
         }
 
         /// <summary>
@@ -139,7 +142,9 @@ namespace YokiFrame
                 Assert.AreEqual(CodeGenerationFileResult.Unchanged, GenerateSingleLine(path, "// first"));
                 Assert.AreEqual(timestamp, File.GetLastWriteTimeUtc(path));
                 Assert.AreEqual(CodeGenerationFileResult.Updated, GenerateSingleLine(path, "// second"));
-                Assert.AreEqual("// second\n", File.ReadAllText(path));
+                CollectionAssert.AreEqual(
+                    new UTF8Encoding(false).GetBytes("// second\n"),
+                    File.ReadAllBytes(path));
                 Assert.IsEmpty(Directory.GetFiles(directory, "*.tmp", SearchOption.TopDirectoryOnly));
             }
             finally
@@ -157,6 +162,7 @@ namespace YokiFrame
             string directory = CreateTempDirectory();
             string path = Path.Combine(directory, "Generated.cs");
             File.WriteAllText(path, "original");
+            byte[] originalBytes = File.ReadAllBytes(path);
 
             try
             {
@@ -164,7 +170,7 @@ namespace YokiFrame
                 {
                     throw new InvalidOperationException("expected");
                 }));
-                Assert.AreEqual("original", File.ReadAllText(path));
+                CollectionAssert.AreEqual(originalBytes, File.ReadAllBytes(path));
             }
             finally
             {

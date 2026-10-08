@@ -35,7 +35,7 @@ namespace YokiFrame.Tests
         /// 验证自定义 IAction 可以依赖接口默认调试文本，无需额外实现诊断方法。
         /// </summary>
         [Test]
-        public void IActionProvidesDefaultDebugInfoImplementation()
+        public void GetDebugInfo_未覆写_返回类型名()
         {
             var action = (IAction)new DefaultDebugInfoAction();
 
@@ -46,7 +46,7 @@ namespace YokiFrame.Tests
         /// 验证 Delay 保持公开构造、可继承、字段和可写进度的 2.0-pre 源码契约。
         /// </summary>
         [Test]
-        public void DelayRemainsPubliclyConstructibleInheritableAndMutable()
+        public void Delay_派生与字段赋值_保持公开可写()
         {
             DerivedDelay action = new();
             Assign(ref action.DelayTime, 2f);
@@ -62,7 +62,7 @@ namespace YokiFrame.Tests
         /// 验证 Lerp 保持公开构造、可继承以及可直接配置字段的 2.0-pre 源码契约。
         /// </summary>
         [Test]
-        public void LerpRemainsPubliclyConstructibleInheritableAndMutable()
+        public void Lerp_派生与字段赋值_保持公开可写()
         {
             DerivedLerp action = new();
             Assign(ref action.A, 1f);
@@ -80,7 +80,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证公开构造的 Delay 释放后不会按内部池租约清空公开配置。</summary>
         [Test]
-        public void PublicDelayDoesNotEnterInternalPool()
+        public void Cancel_公开Delay_保留时长并清空回调()
         {
             Delay action = new() { DelayTime = 2f, OnDelayFinish = Ignore };
             IActionController controller = action.Start();
@@ -95,7 +95,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证公开构造的 Lerp 释放后不会按内部池租约清空公开配置。</summary>
         [Test]
-        public void PublicLerpDoesNotEnterInternalPool()
+        public void Cancel_公开Lerp_保留端点并清空回调()
         {
             Lerp action = new() { A = 1f, B = 3f, Duration = 2f, OnLerp = IgnoreValue };
             IActionController controller = action.Start();
@@ -114,7 +114,7 @@ namespace YokiFrame.Tests
         /// 验证恢复可写进度后，运行中写入 NaN 会形成故障终态而不是永久占用调度器。
         /// </summary>
         [Test]
-        public void MutableDelayRejectsNonFiniteProgressWithoutStalling()
+        public void Tick_Delay进度非有限_故障并离开调度()
         {
             Delay action = new() { DelayTime = 1f };
             IActionController controller = action.Start();
@@ -132,7 +132,7 @@ namespace YokiFrame.Tests
         /// 验证恢复可写时长后，运行中写入无穷值会形成故障终态而不是永久插值。
         /// </summary>
         [Test]
-        public void MutableLerpRejectsNonFiniteDurationWithoutStalling()
+        public void Tick_Lerp时长非有限_故障并离开调度()
         {
             Lerp action = new() { A = 0f, B = 1f, Duration = 1f };
             IActionController controller = action.Start();

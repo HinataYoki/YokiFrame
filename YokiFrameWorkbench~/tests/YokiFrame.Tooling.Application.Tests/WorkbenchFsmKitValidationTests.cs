@@ -206,7 +206,7 @@ public sealed partial class WorkbenchFsmKitStateTests
     private static void MutateFsmSnapshot(string projectRoot, Action<JsonObject> mutation)
     {
         var path = Path.Combine(projectRoot, ".yokiframe", "engines", "unity-editor", "snapshots", "FsmKit", "state.json");
-        var snapshot = JsonNode.Parse(File.ReadAllText(path))?.AsObject()
+        var snapshot = JsonNode.Parse(File.ReadAllBytes(path))?.AsObject()
             ?? throw new InvalidOperationException("FsmKit test snapshot is missing.");
         mutation(snapshot);
         File.WriteAllText(path, snapshot.ToJsonString());

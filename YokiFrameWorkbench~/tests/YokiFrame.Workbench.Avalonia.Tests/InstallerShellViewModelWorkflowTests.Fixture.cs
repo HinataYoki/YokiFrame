@@ -132,10 +132,11 @@ public sealed partial class InstallerShellViewModelWorkflowTests
         }
 
         /// <summary>
-        /// 删除测试创建的临时目录。
+        /// 先释放 ViewModel，再删除测试创建的临时目录。
         /// </summary>
         public void Dispose()
         {
+            ViewModel.Dispose();
             if (Directory.Exists(mRoot))
             {
                 Directory.Delete(mRoot, recursive: true);

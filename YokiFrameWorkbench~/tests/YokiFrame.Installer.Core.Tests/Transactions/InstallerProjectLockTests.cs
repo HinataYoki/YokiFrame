@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using YokiFrame.Installer.Core.Models;
 using YokiFrame.Installer.Core.Services;
 
@@ -27,7 +29,12 @@ public sealed class InstallerProjectLockTests
                 exception.LockPath);
 
             firstLease.Dispose();
-            Assert.Contains("pid=", File.ReadAllText(exception.LockPath), StringComparison.Ordinal);
+            var metadata = Encoding.UTF8.GetString(File.ReadAllBytes(exception.LockPath))
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            Assert.Equal("pid=" + Environment.ProcessId, metadata[0]);
+            Assert.Equal("process=" + Process.GetCurrentProcess().ProcessName, metadata[1]);
+            Assert.StartsWith("acquiredUtc=", metadata[2], StringComparison.Ordinal);
             using var secondLease = InstallerProjectLock.Acquire(projectRoot);
             Assert.Equal(Path.GetFullPath(projectRoot), secondLease.ProjectRoot);
         }

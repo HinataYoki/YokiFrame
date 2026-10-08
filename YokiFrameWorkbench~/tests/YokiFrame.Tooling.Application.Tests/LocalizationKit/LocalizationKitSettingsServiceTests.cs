@@ -1,3 +1,4 @@
+using System.Text.Json;
 using YokiFrame.Tooling.Application.Models.LocalizationKit;
 using YokiFrame.Tooling.Application.Services.LocalizationKit;
 
@@ -45,9 +46,9 @@ public sealed class LocalizationKitSettingsServiceTests
         }
     }
 
-    /// <summary>Godot 项目的工作目录草稿写入 .yokiframe，不创建 Unity ProjectSettings。</summary>
+    /// <summary>Godot 项目的工作目录草稿写入 project.godot 编辑区，不创建 Unity 目录。</summary>
     [Fact]
-    public void GodotProjectKeepsWorkbenchDraftOutsideUnityDirectories()
+    public void Save_Godot草稿_写入编辑区且不创建Unity目录()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-localization-godot-" + Guid.NewGuid().ToString("N"));
         try
@@ -59,10 +60,11 @@ public sealed class LocalizationKitSettingsServiceTests
             service.Save(root, new LocalizationKitWorkbenchSettings { LubanWorkDir = "Localization" });
 
             Assert.Equal("Localization", service.Load(root).LubanWorkDir);
-            string project = File.ReadAllText(Path.Combine(root, "project.godot"));
-            Assert.Contains("[yokiframe/editor]", project, StringComparison.Ordinal);
-            Assert.Contains("localizationkit/document=", project, StringComparison.Ordinal);
-            Assert.Contains("Localization", project, StringComparison.Ordinal);
+            Dictionary<string, Dictionary<string, string>> project = ToolingFileObservation.ReadGodot(Path.Combine(root, "project.godot"));
+            string encoded = project["[yokiframe/editor]"]["localizationkit/document"];
+            using JsonDocument wrapped = JsonDocument.Parse(encoded);
+            using JsonDocument document = JsonDocument.Parse(wrapped.RootElement.GetString() ?? string.Empty);
+            Assert.Equal("Localization", document.RootElement.GetProperty("LubanWorkDir").GetString());
             Assert.False(Directory.Exists(Path.Combine(root, "ProjectSettings")));
             Assert.False(Directory.Exists(Path.Combine(root, "Assets")));
         }
@@ -74,7 +76,7 @@ public sealed class LocalizationKitSettingsServiceTests
 
     /// <summary>验证未选择工作目录时，关闭保存不会改写 Godot project.godot。</summary>
     [Fact]
-    public void EmptyGodotDraftDoesNotRewriteProjectFile()
+    public void Save_空草稿_不改写project字节()
     {
         string root = Path.Combine(Path.GetTempPath(), "yokiframe-localization-empty-" + Guid.NewGuid().ToString("N"));
         try
@@ -88,7 +90,7 @@ public sealed class LocalizationKitSettingsServiceTests
             new LocalizationKitSettingsService().Save(root, new LocalizationKitWorkbenchSettings());
 
             Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
-            Assert.Equal("config_version=5\n", File.ReadAllText(path));
+            ToolingFileObservation.AssertUtf8(path, "config_version=5\n");
         }
         finally
         {

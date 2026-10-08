@@ -15,7 +15,7 @@ namespace YokiFrame.Tooling.Application.Tests;
 /// <summary>
 /// 覆盖工具应用层的 engine 选择规则和 Client 注入边界。
 /// </summary>
-public sealed partial class EngineSelectionServiceTests
+public sealed class EngineSelectionServiceTests
 {
     private static readonly DateTimeOffset NowUtc = DateTimeOffset.Parse("2026-07-10T00:00:00Z");
 
@@ -70,84 +70,81 @@ public sealed partial class EngineSelectionServiceTests
     /// 验证没有在线 engine 时可返回可恢复选择结果，而不是强制 Workbench 通过异常分支恢复。
     /// </summary>
     [Fact]
-    public void SelectReturnsUnavailableResultWhenNoEngineIsOnline()
+    public void Select_没有在线Engine_返回不可用结果()
     {
         var client = new StubYokiFrameClient("unity-editor");
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
-        var error = ReadProperty<YokiFrameError>(result, "Error");
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("Unavailable", ReadProperty<object>(result, "Status").ToString());
-        Assert.Equal(string.Empty, ReadProperty<string>(result, "SelectedEngineId"));
-        Assert.Empty(ReadProperty<IReadOnlyList<string>>(result, "OnlineEngineIds"));
-        Assert.Equal("EngineUnavailable", error.Code);
+        Assert.Equal(EngineSelectionStatus.Unavailable, result.Status);
+        Assert.Equal(string.Empty, result.SelectedEngineId);
+        Assert.Empty(result.OnlineEngineIds);
+        Assert.Equal("EngineUnavailable", result.Error!.Code);
     }
 
     /// <summary>
     /// 验证多个在线 engine 时结果保留稳定排序的候选，供 Workbench selector 让用户显式恢复。
     /// </summary>
     [Fact]
-    public void SelectReturnsSortedCandidatesWhenMultipleEnginesAreOnline()
+    public void Select_多个在线Engine_返回稳定排序候选()
     {
         var client = new StubYokiFrameClient("unity-editor", "godot-editor");
         client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
         client.SetHeartbeat("godot-editor", NowUtc.AddSeconds(-2));
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
-        var error = ReadProperty<YokiFrameError>(result, "Error");
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("SelectionRequired", ReadProperty<object>(result, "Status").ToString());
-        Assert.Equal(string.Empty, ReadProperty<string>(result, "SelectedEngineId"));
-        Assert.Equal(new[] { "godot-editor", "unity-editor" }, ReadProperty<IReadOnlyList<string>>(result, "OnlineEngineIds"));
-        Assert.Equal("EngineSelectionRequired", error.Code);
+        Assert.Equal(EngineSelectionStatus.SelectionRequired, result.Status);
+        Assert.Equal(string.Empty, result.SelectedEngineId);
+        Assert.Equal(new[] { "godot-editor", "unity-editor" }, result.OnlineEngineIds);
+        Assert.Equal("EngineSelectionRequired", result.Error!.Code);
     }
 
     /// <summary>
     /// 验证自动选择唯一在线 engine 时结果同时保留该在线列表，便于调用方统一展示会话证据。
     /// </summary>
     [Fact]
-    public void SelectReturnsSelectedResultForOnlyOnlineEngine()
+    public void Select_唯一在线Engine_返回已选择结果()
     {
         var client = new StubYokiFrameClient("unity-editor", "godot-editor");
         client.SetHeartbeat("unity-editor", NowUtc.AddMinutes(-1));
         client.SetHeartbeat("godot-editor", NowUtc.AddSeconds(-2));
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("Selected", ReadProperty<object>(result, "Status").ToString());
-        Assert.Equal("godot-editor", ReadProperty<string>(result, "SelectedEngineId"));
-        Assert.Equal(new[] { "godot-editor" }, ReadProperty<IReadOnlyList<string>>(result, "OnlineEngineIds"));
-        Assert.Null(ReadNullableProperty(result, "Error"));
+        Assert.Equal(EngineSelectionStatus.Selected, result.Status);
+        Assert.Equal("godot-editor", result.SelectedEngineId);
+        Assert.Equal(new[] { "godot-editor" }, result.OnlineEngineIds);
+        Assert.Null(result.Error);
     }
 
     /// <summary>
     /// 验证重复 registry 条目不会把同一个在线 engine 误判为需要用户多选。
     /// </summary>
     [Fact]
-    public void SelectDeduplicatesRegistryEntriesBeforeAssessingAmbiguity()
+    public void Select_重复Registry条目_不误判为多选()
     {
         var client = new StubYokiFrameClient("unity-editor", "unity-editor");
         client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("Selected", ReadProperty<object>(result, "Status").ToString());
-        Assert.Equal("unity-editor", ReadProperty<string>(result, "SelectedEngineId"));
-        Assert.Equal(new[] { "unity-editor" }, ReadProperty<IReadOnlyList<string>>(result, "OnlineEngineIds"));
+        Assert.Equal(EngineSelectionStatus.Selected, result.Status);
+        Assert.Equal("unity-editor", result.SelectedEngineId);
+        Assert.Equal(new[] { "unity-editor" }, result.OnlineEngineIds);
     }
 
     /// <summary>
     /// 验证没有在线 engine 时 Dashboard 仍返回 registry 与 harness 状态，并跳过所有 engine 专属读取。
     /// </summary>
     [Fact]
-    public void DashboardReturnsRecoverableStateWhenNoEngineIsOnline()
+    public void LoadDashboard_没有在线Engine_返回可恢复状态()
     {
         var client = new StubYokiFrameClient("unity-editor");
 
         var state = new WorkbenchDashboardService(client).LoadDashboard(string.Empty);
-        var selection = ReadProperty<object>(state, "EngineSelection");
 
-        Assert.Equal("Unavailable", ReadProperty<object>(selection, "Status").ToString());
+        Assert.Equal(EngineSelectionStatus.Unavailable, state.EngineSelection.Status);
         Assert.Equal(string.Empty, state.SelectedEngineId);
         Assert.Single(state.Engines);
         Assert.Null(state.BridgeStatus);
@@ -164,17 +161,16 @@ public sealed partial class EngineSelectionServiceTests
     /// 验证多个在线 engine 时 Dashboard 保留候选并等待用户选择，不读取任一宿主的状态。
     /// </summary>
     [Fact]
-    public void DashboardReturnsCandidatesWhenEngineSelectionIsRequired()
+    public void LoadDashboard_多个在线Engine_保留候选且不读宿主()
     {
         var client = new StubYokiFrameClient("unity-editor", "godot-editor");
         client.SetHeartbeat("unity-editor", DateTimeOffset.UtcNow);
         client.SetHeartbeat("godot-editor", DateTimeOffset.UtcNow);
 
         var state = new WorkbenchDashboardService(client).LoadDashboard(string.Empty);
-        var selection = ReadProperty<object>(state, "EngineSelection");
 
-        Assert.Equal("SelectionRequired", ReadProperty<object>(selection, "Status").ToString());
-        Assert.Equal(new[] { "godot-editor", "unity-editor" }, ReadProperty<IReadOnlyList<string>>(selection, "OnlineEngineIds"));
+        Assert.Equal(EngineSelectionStatus.SelectionRequired, state.EngineSelection.Status);
+        Assert.Equal(new[] { "godot-editor", "unity-editor" }, state.EngineSelection.OnlineEngineIds);
         Assert.Equal(string.Empty, state.SelectedEngineId);
         Assert.Equal(2, state.Engines.Count);
         Assert.Null(state.BridgeStatus);
@@ -262,36 +258,34 @@ public sealed partial class EngineSelectionServiceTests
     /// 验证 registry 与 heartbeat 指向不同宿主代次时不会进入自动在线候选。
     /// </summary>
     [Fact]
-    public void SelectFiltersRegistryHeartbeatIdentityMismatch()
+    public void Select_身份不一致_排除失配Engine()
     {
         var client = new StubYokiFrameClient("unity-editor", "godot-editor");
         client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
         client.SetHeartbeat("godot-editor", NowUtc.AddSeconds(-2));
         client.SetRegistryIdentity("unity-editor", "old-session", 1L);
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("Selected", ReadProperty<object>(result, "Status").ToString());
-        Assert.Equal("godot-editor", ReadProperty<string>(result, "SelectedEngineId"));
-        var diagnostics = ReadProperty<IReadOnlyList<EngineSessionDiagnostic>>(result, "Diagnostics");
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Code == "HostIdentityMismatch");
+        Assert.Equal(EngineSelectionStatus.Selected, result.Status);
+        Assert.Equal("godot-editor", result.SelectedEngineId);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Code == "HostIdentityMismatch");
     }
 
     /// <summary>
     /// 验证单个 heartbeat 解析失败时仍保留其它健康 engine，并把失败原因作为局部诊断返回。
     /// </summary>
     [Fact]
-    public void SelectPreservesHealthyEngineWhenAnotherHeartbeatIsInvalid()
+    public void Select_单个Heartbeat无效_保留健康Engine()
     {
         var client = new StubYokiFrameClient("unity-editor", "godot-editor");
         client.SetHeartbeat("unity-editor", NowUtc.AddSeconds(-1));
         client.SetInvalidHeartbeat("godot-editor");
 
-        var result = InvokeSelect(new EngineSelectionService(client), string.Empty, NowUtc);
+        EngineSelectionResult result = new EngineSelectionService(client).Select(string.Empty, NowUtc);
 
-        Assert.Equal("unity-editor", ReadProperty<string>(result, "SelectedEngineId"));
-        var diagnostics = ReadProperty<IReadOnlyList<EngineSessionDiagnostic>>(result, "Diagnostics");
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Code == "HeartbeatReadFailed");
+        Assert.Equal("unity-editor", result.SelectedEngineId);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Code == "HeartbeatReadFailed");
     }
 
     /// <summary>

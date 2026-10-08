@@ -43,7 +43,7 @@ public sealed class CliErrorOutputTests
             projectRoot.Path,
             "--engine",
             "unity-editor",
-            "RoslynKit",
+            "--kit",
             "System",
             "--action",
             "ping",
@@ -299,7 +299,7 @@ public sealed class CliErrorOutputTests
     {
         using var process = StartCli(
             "command", "send", "--project", projectRoot, "--engine", "unity-editor",
-            "RoslynKit", "System", "--action", "list_commands", "--timeout", "5000");
+            "--kit", "System", "--action", "list_commands", "--timeout", "5000");
         var standardOutputTask = process.StandardOutput.ReadToEndAsync();
         var standardErrorTask = process.StandardError.ReadToEndAsync();
 
@@ -382,8 +382,15 @@ public sealed class CliErrorOutputTests
         var evidencePaths = json["error"]!["evidencePaths"]!.AsArray()
             .Select(static node => node!.GetValue<string>())
             .ToArray();
-        Assert.Contains(".yokiframe/engines/unity-editor/commands/", string.Join(";", evidencePaths), StringComparison.Ordinal);
-        Assert.All(evidencePaths, static path => Assert.False(Path.IsPathRooted(path)));
+        var engineId = execution.Envelope.EngineId;
+        var requestId = execution.Envelope.RequestId;
+        Assert.Equal(
+            new[]
+            {
+                ".yokiframe/engines/" + engineId + "/commands/" + requestId + YokiFrameFileBridgeLayout.JSON_EXTENSION,
+                ".yokiframe/engines/" + engineId + "/results/" + requestId + YokiFrameFileBridgeLayout.RESPONSE_FILE_SUFFIX
+            },
+            evidencePaths);
     }
 
     /// <summary>启动真实 CLI 程序并捕获标准输出和标准错误。</summary>

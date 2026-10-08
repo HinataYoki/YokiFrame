@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("YokiFrame.UIKit.Unity.Editor")]
 [assembly: InternalsVisibleTo("YokiFrame.UIKit.Tests")]
+[assembly: InternalsVisibleTo("YokiFrame.UIKit.InputSystem.Tests")]
 [assembly: InternalsVisibleTo("YokiFrame.UIKit.PlayMode.Tests")]
 [assembly: InternalsVisibleTo("YokiFrame.UIKit.InputSystem")]
 #endif

@@ -30,13 +30,22 @@ public sealed class RuntimeCachePrunerTests
         Directory.CreateDirectory(Path.Combine(cacheRoot, ".staging"));
         File.WriteAllText(Path.Combine(cacheRoot, "current.json"), "{}");
 
-        var failures = RuntimeCachePruner.PruneObsolete(projectRoot, CURRENT_FINGERPRINT);
+        try
+        {
+            var failures = RuntimeCachePruner.PruneObsolete(projectRoot, CURRENT_FINGERPRINT);
 
-        Assert.Empty(failures);
-        Assert.True(Directory.Exists(currentRoot));
-        Assert.False(Directory.Exists(oldRoot));
-        Assert.True(Directory.Exists(Path.Combine(cacheRoot, ".staging")));
-        Assert.True(File.Exists(Path.Combine(cacheRoot, "current.json")));
-        Directory.Delete(projectRoot, recursive: true);
+            Assert.Empty(failures);
+            Assert.True(Directory.Exists(currentRoot));
+            Assert.False(Directory.Exists(oldRoot));
+            Assert.True(Directory.Exists(Path.Combine(cacheRoot, ".staging")));
+            Assert.True(File.Exists(Path.Combine(cacheRoot, "current.json")));
+        }
+        finally
+        {
+            if (Directory.Exists(projectRoot))
+            {
+                Directory.Delete(projectRoot, recursive: true);
+            }
+        }
     }
 }

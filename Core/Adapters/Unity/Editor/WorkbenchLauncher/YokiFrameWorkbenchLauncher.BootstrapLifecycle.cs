@@ -204,6 +204,29 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 为测试创建平台级进程树 owner，不改变生产终止顺序。
+        /// </summary>
+        /// <param name="process">已经启动的 bootstrap 根进程。</param>
+        /// <returns>成功接管进程树时返回 owner；平台不支持或接管失败时返回 null。</returns>
+        internal static IDisposable CreateRuntimeBootstrapProcessTreeOwnerForTests(Process process)
+        {
+            return CreateRuntimeBootstrapProcessTreeOwner(process);
+        }
+
+        /// <summary>
+        /// 为测试执行与生产相同的进程树终止，不暴露私有终止实现。
+        /// </summary>
+        /// <param name="process">待终止进程。</param>
+        /// <param name="processTreeOwner">启动后接管该进程树的平台 owner；平台不支持时为空。</param>
+        /// <returns>进程已结束或在有限等待内确认退出时返回 true。</returns>
+        internal static bool TryTerminateProcessTreeForTests(
+            Process process,
+            IDisposable processTreeOwner)
+        {
+            return TryTerminateProcessTree(process, processTreeOwner as IRuntimeBootstrapProcessTreeOwner);
+        }
+
+        /// <summary>
         /// 为已启动进程创建平台级进程树 owner；当前 Windows 使用 Job Object 承担硬生命周期所有权。
         /// </summary>
         /// <param name="process">已经启动但尚未进入等待阶段的 bootstrap 进程。</param>
@@ -401,7 +424,7 @@ namespace YokiFrame
         /// <summary>
         /// 表示可在脚本域卸载时终止所拥有完整进程树的平台资源。
         /// </summary>
-        private interface IRuntimeBootstrapProcessTreeOwner : IDisposable
+        internal interface IRuntimeBootstrapProcessTreeOwner : IDisposable
         {
             /// <summary>幂等终止当前 owner 接管的完整进程树。</summary>
             /// <returns>终止请求已提交时返回 true。</returns>

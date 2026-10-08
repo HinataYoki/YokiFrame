@@ -7,10 +7,22 @@ using UnityEngine.TestTools;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>使用真实 Unity AudioClip 验证默认 ResKit 与自定义 Loader 播放链。</summary>
-    public sealed class AudioKitUnityPlaybackTests
+    /// <summary>使用临时导入的 AudioClip 验证默认 ResKit 与自定义 Loader 播放链。</summary>
+    public sealed class AudioKitUnityPlaybackTests : IPrebuildSetup, IPostBuildCleanup
     {
-        private const string AUDIO_PATH = "Audio/测试音频/战斗/击打";
+        private const string AUDIO_PATH = AudioKitPlaybackResourceFixture.RESOURCE_PATH;
+
+        /// <summary>PlayMode 开始前导入临时 AudioClip，避免依赖项目内可能不存在的音频。</summary>
+        public void Setup()
+        {
+            AudioKitPlaybackResourceFixture.EnsureImported();
+        }
+
+        /// <summary>PlayMode 结束后删除临时 AudioClip，不保留测试生成资源。</summary>
+        public void Cleanup()
+        {
+            AudioKitPlaybackResourceFixture.Delete();
+        }
 
         /// <summary>每条测试前恢复 AudioKit 默认资源加载器和宿主默认后端。</summary>
         [SetUp]
@@ -27,9 +39,9 @@ namespace YokiFrame.Tests
             AudioKit.Reset();
         }
 
-        /// <summary>验证默认 AudioSource 后端通过 ResKit 加载真实 Resources AudioClip 并进入播放状态。</summary>
+        /// <summary>验证默认 AudioSource 后端通过 ResKit 加载临时导入的 AudioClip 并进入播放状态。</summary>
         [UnityTest]
-        public IEnumerator DefaultBackendPlaysRealClipThroughResKit()
+        public IEnumerator PlaySfx_默认ResKit_真实片段进入播放()
         {
             Assert.AreEqual("ResKit", AudioKit.ResourceLoaderName);
             AudioVoiceHandle handle = AudioKit.PlaySfx(AUDIO_PATH);
@@ -40,14 +52,14 @@ namespace YokiFrame.Tests
 
             AudioVoiceSnapshot voice = FindVoice(handle);
             Assert.IsNotNull(voice, "默认后端未保留 active voice。");
-            Assert.IsTrue(voice.IsPlaying, "真实 AudioClip 未进入播放状态。");
-            Assert.Greater(voice.Duration, 0f, "真实 AudioClip 时长无效。");
+            Assert.IsTrue(voice.IsPlaying, "临时 AudioClip 未进入播放状态。");
+            Assert.Greater(voice.Duration, 0f, "临时 AudioClip 时长无效。");
             Assert.AreEqual(AUDIO_PATH, voice.Path);
         }
 
         /// <summary>验证显式 Delegate Loader 替换 ResKit，并由创建资源的 Loader 接收释放。</summary>
         [UnityTest]
-        public IEnumerator ExplicitLoaderPlaysAndReleasesRealClip()
+        public IEnumerator PlaySfx_显式Loader_播放后交还资源()
         {
             var loadCount = 0;
             var releaseCount = 0;

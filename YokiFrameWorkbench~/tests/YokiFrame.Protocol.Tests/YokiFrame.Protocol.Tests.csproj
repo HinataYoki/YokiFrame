@@ -1,10 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <DefineConstants>$(DefineConstants);YOKIFRAME_TOOLING</DefineConstants>
+    <!-- 链接的 Core JSON DOM 在可空开启时会报既有 CS8618/CS8603/CS8625。MSBuild 不能按文件关闭可空，因此本测试工程抑制这三项。 -->
+    <NoWarn>$(NoWarn);CS8618;CS8603;CS8625</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +15,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Json\YokiFrameJsonDom.cs" Link="Json\YokiFrameJsonDom.cs" />
+    <Compile Include="..\..\..\Core\Editor\CommandBridge\Json\YokiFrameJsonReader.cs" Link="Json\YokiFrameJsonReader.cs" />
   </ItemGroup>
 
   <ItemGroup>

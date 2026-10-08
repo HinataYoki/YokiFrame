@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -8,25 +9,50 @@ using Object = UnityEngine.Object;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>验证 UIKit Editor 的 UILevel 绘制、只读校验和上下文过期保护。</summary>
+    /// <summary>验证 UILevel 解析、PropertyDrawer 注册、面板校验和选择上下文契约。</summary>
     public sealed class UIKitEditorCompletionTests
     {
-        /// <summary>验证 UILevel 保留预定义层级、自定义值和专有 PropertyDrawer。</summary>
+        /// <summary>验证预定义名称 Pop 解析为排序值 100。</summary>
         [Test]
-        public void UILevelKeepsPredefinedAndCustomEditorContract()
+        public void TryParse_预定义Pop_返回排序100()
         {
-            Assert.IsTrue(UILevel.TryParse("Pop", out UILevel pop));
-            Assert.AreEqual(100, pop.Order);
-            Assert.IsFalse(UILevel.TryParse("Missing", out _));
-            Assert.Greater(
-                typeof(UILevelPropertyDrawer).GetCustomAttributes(
-                    typeof(CustomPropertyDrawer), false).Length,
-                0);
+            bool parsed = UILevel.TryParse("Pop", out UILevel level);
+            Assert.IsTrue(parsed);
+            Assert.AreEqual(100, level.Order);
         }
 
-        /// <summary>验证有效具体 Panel 可以通过公共只读校验且不会伪造问题。</summary>
+        /// <summary>验证未知名称解析失败，并且输出回落到 Common。</summary>
         [Test]
-        public void ValidPanelProducesNoValidationIssues()
+        public void TryParse_未知名称_返回假()
+        {
+            bool parsed = UILevel.TryParse("Missing", out UILevel level);
+            Assert.IsFalse(parsed);
+            Assert.AreEqual(UILevel.Common, level);
+        }
+
+        /// <summary>
+        /// 验证绘制器注册到 UILevel。
+        /// CustomPropertyDrawer.m_Type 是 Unity 内部字段，不是本仓库 private。
+        /// 该特性没有公开 type 属性，编辑器也不提供 PropertyDrawer 注册查询。
+        /// </summary>
+        [Test]
+        public void UILevelPropertyDrawer_只读取Unity内部CustomPropertyDrawer字段_注册到UILevel()
+        {
+            CustomPropertyDrawer attribute = (CustomPropertyDrawer)Attribute.GetCustomAttribute(
+                typeof(UILevelPropertyDrawer),
+                typeof(CustomPropertyDrawer),
+                false);
+            Assert.IsNotNull(attribute);
+            FieldInfo targetType = typeof(CustomPropertyDrawer).GetField(
+                "m_Type",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(targetType);
+            Assert.AreEqual(typeof(UILevel), targetType.GetValue(attribute));
+        }
+
+        /// <summary>验证只挂具体 UIPanel 的根节点不会产生错误或警告。</summary>
+        [Test]
+        public void ValidatePanel_有效具体面板_没有错误和警告()
         {
             GameObject root = new("ValidationPanel");
             try
@@ -42,9 +68,9 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证自动聚焦引用到面板外部控件时报告阻断错误。</summary>
+        /// <summary>验证面板外的默认 Selectable 被报告为唯一焦点错误。</summary>
         [Test]
-        public void PanelValidatorRejectsExternalDefaultSelectable()
+        public void ValidatePanel_外部默认Selectable_报告焦点错误()
         {
             GameObject root = new("ValidationPanel");
             GameObject external = new("ExternalSelectable");
@@ -56,8 +82,12 @@ namespace YokiFrame.Tests
                 panel.SetDefaultSelectable(selectable);
 
                 UIPanelValidationResult result = UIPanelValidator.ValidatePanel(root);
-                Assert.IsTrue(result.HasErrors);
-                StringAssert.Contains("不属于当前面板层级", result.Issues[0].Message);
+                UIPanelValidationIssue focusError = FindSingleFocusError(result);
+                Assert.AreSame(selectable, focusError.Context);
+                Assert.AreEqual("默认 Selectable 不属于当前面板层级。", focusError.Message);
+                Assert.AreEqual(
+                    "将默认 Selectable 移入面板 Prefab，或清空该引用。",
+                    focusError.FixSuggestion);
             }
             finally
             {
@@ -66,9 +96,9 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证携带旧 revision 的生成请求在 Selection 变化后被拒绝。</summary>
+        /// <summary>验证选择 revision 过期时拒绝为当前选择生成代码。</summary>
         [Test]
-        public void StaleSelectionContextRejectsCodeGeneration()
+        public void GenerateCodeForSelection_选择revision过期_拒绝生成()
         {
             Object[] previousSelection = Selection.objects;
             GameObject first = new("FirstSelection");
@@ -84,10 +114,9 @@ namespace YokiFrame.Tests
                     + "\"expectedContextRevision\":" + context.revision + ","
                     + "\"targetGlobalObjectId\":\"" + context.selection.activeGlobalObjectId + "\"}";
 
-                Assert.DoesNotThrow(() => UIKitPayloadValidator.RequirePanelGenerationRequest(payload));
                 InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
                     () => UIKitPanelPrefabService.GenerateCodeForSelection(payload));
-                StringAssert.Contains("选择已变化", exception.Message);
+                Assert.AreEqual("Unity Editor 选择已变化，请刷新当前选择后重试。", exception.Message);
             }
             finally
             {
@@ -97,15 +126,48 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证上下文扩展字段保持严格类型并支持空选择操作。</summary>
+        /// <summary>验证空对象和只含上下文字段的选择 payload 会被接受。</summary>
         [Test]
-        public void SelectionPayloadAcceptsOnlyContextFields()
+        public void RequireSelectionContext_合法字段_通过()
         {
             Assert.DoesNotThrow(() => UIKitPayloadValidator.RequireSelectionContext("{}"));
             Assert.DoesNotThrow(() => UIKitPayloadValidator.RequireSelectionContext(
                 "{\"expectedContextRevision\":12,\"targetGlobalObjectId\":\"GlobalObjectId_V1-test\"}"));
-            Assert.Throws<System.ArgumentException>(() => UIKitPayloadValidator.RequireSelectionContext(
-                "{\"unexpected\":true}"));
+        }
+
+        /// <summary>验证选择 payload 出现未登记字段时抛出参数异常。</summary>
+        [Test]
+        public void RequireSelectionContext_未知字段_抛出参数异常()
+        {
+            ArgumentException exception = Assert.Throws<ArgumentException>(
+                () => UIKitPayloadValidator.RequireSelectionContext("{\"unexpected\":true}"));
+            Assert.AreEqual(
+                "UIKit selection payload may only contain expectedContextRevision and targetGlobalObjectId.",
+                exception.Message);
+        }
+
+        /// <summary>取出唯一焦点错误，避免把其它类别的问题误当成外部 Selectable 契约。</summary>
+        /// <param name="result">面板校验结果。</param>
+        /// <returns>唯一的焦点错误。</returns>
+        private static UIPanelValidationIssue FindSingleFocusError(UIPanelValidationResult result)
+        {
+            Assert.AreEqual(1, result.Count(UIPanelValidationSeverity.Error));
+            UIPanelValidationIssue focusError = null;
+            for (int index = 0; index < result.Issues.Count; index++)
+            {
+                UIPanelValidationIssue issue = result.Issues[index];
+                if (issue.Severity != UIPanelValidationSeverity.Error
+                    || issue.Category != UIPanelValidationCategory.Focus)
+                {
+                    continue;
+                }
+
+                Assert.IsNull(focusError);
+                focusError = issue;
+            }
+
+            Assert.IsNotNull(focusError);
+            return focusError;
         }
 
         /// <summary>供 Editor 校验测试使用的最小具体 UIPanel 类型。</summary>

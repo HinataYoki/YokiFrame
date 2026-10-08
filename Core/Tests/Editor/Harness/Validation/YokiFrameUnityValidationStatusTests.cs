@@ -7,7 +7,7 @@ namespace YokiFrame
     {
         /// <summary>验证空闲状态携带当前 FileBridge 会话身份。</summary>
         [Test]
-        public void InspectReportsIdleCompilationWithCurrentIdentity()
+        public void Inspect_编译空闲_携带当前会话身份()
         {
             var result = YokiFrameUnityValidationStatus.Inspect(
                 CreateContext(),
@@ -23,7 +23,7 @@ namespace YokiFrame
 
         /// <summary>验证正在编译时不会推断任何历史编译结果。</summary>
         [Test]
-        public void InspectReportsCurrentCompilationInProgress()
+        public void Inspect_正在编译_状态为Compiling且不推断历史()
         {
             var result = YokiFrameUnityValidationStatus.Inspect(
                 CreateContext(),
@@ -40,7 +40,7 @@ namespace YokiFrame
 
         /// <summary>验证 Unity 当前失败标记会明确投影为 Failed。</summary>
         [Test]
-        public void InspectReportsCurrentCompilationFailure()
+        public void Inspect_脚本编译失败_状态为Failed()
         {
             var result = YokiFrameUnityValidationStatus.Inspect(
                 CreateContext(),

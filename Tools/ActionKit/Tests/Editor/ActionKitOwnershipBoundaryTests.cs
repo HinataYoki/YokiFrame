@@ -25,7 +25,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证最大可释放深度可组装，额外一层会在写入所有权前被拒绝。</summary>
         [Test]
-        public void AppendRejectsTreeBeyondLifecycleDepth()
+        public void Append_超过生命周期深度_拒绝()
         {
             ISequence root = ActionKit.Sequence();
             ISequence current = root;
@@ -47,7 +47,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证两个活动自定义根不能共享 ID，失败启动也不会删除原根堆栈。</summary>
         [Test]
-        public void ActiveCustomActionsRejectDuplicateIds()
+        public void Start_活动自定义动作_拒绝重复ID()
         {
             const ulong sharedId = 1UL << 61;
             FixedIdAction first = new(sharedId);
@@ -65,7 +65,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证后台线程 Start 被拒绝且不会占用所有权，随后仍可在宿主线程启动。</summary>
         [Test]
-        public void StartRejectsBackgroundThreadWithoutClaimingAction()
+        public void Start_后台线程_拒绝且不占有动作()
         {
             IAction action = ActionKit.Delay(10f);
             Task<Exception> attempt = System.Threading.Tasks.Task.Run(() =>

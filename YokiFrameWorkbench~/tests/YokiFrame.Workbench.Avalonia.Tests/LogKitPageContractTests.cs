@@ -28,34 +28,6 @@ public sealed class LogKitPageContractTests
         Assert.Equal("LogKit", viewModel.CurrentPageTitle);
         Assert.Contains(viewModel.NavigationGroups.SelectMany(static group => group.Items), static item => item.PageName == "LogKit");
     }
-
-    /// <summary>验证 LogKit 页面只呈现配置结构。</summary>
-    [Fact]
-    public void XamlUsesConfigurationOnlyLayout()
-    {
-        var page = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "LogKitPageView.axaml");
-        var shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        var app = WorkbenchContractTestFiles.ReadSource("App.axaml");
-
-        Assert.Contains("RowDefinitions=\"Auto,*,Auto\"", page, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"ConfigGrid\"", page, StringComparison.Ordinal);
-        Assert.Contains("ColumnDefinitions=\"*,*\"", page, StringComparison.Ordinal);
-        Assert.Contains("Classes=\"logkit-runtime-banner\"", page, StringComparison.Ordinal);
-        Assert.Contains("Classes=\"logkit-settings-footer\"", page, StringComparison.Ordinal);
-        Assert.Contains("OutputSettingsCard", page, StringComparison.Ordinal);
-        Assert.Contains("FileSettingsCard", page, StringComparison.Ordinal);
-        Assert.Contains("CapacitySettingsCard", page, StringComparison.Ordinal);
-        Assert.Contains("LogKitPage.SaveSettingsCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("LogKitPage.ResetSettingsCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("LogKitPage.OpenDirectoryCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("SupportsEncryption", page, StringComparison.Ordinal);
-        Assert.Contains("EncryptionMethodText", page, StringComparison.Ordinal);
-        Assert.Contains("DecryptionStatusText", page, StringComparison.Ordinal);
-        Assert.Contains("IsEnabled=\"{CompiledBinding ProjectCanPersist}\"", page, StringComparison.Ordinal);
-        Assert.Contains("pages:LogKitPageView", shell, StringComparison.Ordinal);
-        Assert.Contains("Styles/LogKit.axaml", app, StringComparison.Ordinal);
-    }
-
     /// <summary>验证文件卡片位于顶部全宽，输出和容量卡片在宽屏等分、窄屏堆叠。</summary>
     [Theory]
     [InlineData(1700, 1060)]

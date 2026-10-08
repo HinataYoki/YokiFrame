@@ -16,7 +16,7 @@ namespace YokiFrame.Tests
         /// </summary>
         /// <returns>UnityTest 在进入和退出 Play Mode 时继续执行的迭代器。</returns>
         [UnityTest]
-        public IEnumerator DisabledDomainReloadResetsSessionOnEachPlayEnter()
+        public IEnumerator EnterPlayMode_关闭域重载_每次进入都重置会话()
         {
             SessionObservation first = CreateDirtySession();
             yield return new EnterPlayMode();

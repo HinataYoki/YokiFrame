@@ -6,8 +6,10 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 覆盖 Runtime manifest 与物理发布载荷的共享完整性门禁。
 /// </summary>
-public sealed class RuntimeManifestIntegrityValidatorTests
+public sealed class RuntimeManifestIntegrityValidatorTests : IDisposable
 {
+    private readonly List<string> mCleanupRoots = new();
+
     private const string RUNTIME_PROFILE = "win-x64";
 
     /// <summary>
@@ -69,7 +71,7 @@ public sealed class RuntimeManifestIntegrityValidatorTests
     {
         var fixture = CreateFixture();
         var outsidePath = Path.Combine(fixture.Root, "outside-gui");
-        File.WriteAllText(outsidePath, File.ReadAllText(fixture.GuiPath));
+        File.WriteAllBytes(outsidePath, File.ReadAllBytes(fixture.GuiPath));
         File.Delete(fixture.GuiPath);
         try
         {
@@ -77,6 +79,7 @@ public sealed class RuntimeManifestIntegrityValidatorTests
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
         {
+            // 当前 xUnit runner 会把动态 Skip 记为失败；链接不可用时不产生假失败。
             return;
         }
 
@@ -87,7 +90,7 @@ public sealed class RuntimeManifestIntegrityValidatorTests
     /// 创建由生产 manifest 组件写出的最小双入口 Runtime 缓存。
     /// </summary>
     /// <returns>测试路径集合。</returns>
-    private static RuntimeManifestFixture CreateFixture()
+    private RuntimeManifestFixture CreateFixture()
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-manifest-integrity-tests", Guid.NewGuid().ToString("N"));
         var platformRoot = Path.Combine(root, RUNTIME_PROFILE);
@@ -104,7 +107,22 @@ public sealed class RuntimeManifestIntegrityValidatorTests
             Path.GetFileName(cliPath));
         var manifestPath = Path.Combine(root, "tool-manifest.json");
         new RuntimeManifestWriter().Write(manifest, manifestPath);
+        mCleanupRoots.Add(root);
         return new RuntimeManifestFixture(root, platformRoot, guiPath, cliPath, manifestPath);
+    }
+
+    /// <summary>
+    /// 删除当前测试写出的 Runtime 根。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var cleanupRoot in mCleanupRoots)
+        {
+            if (Directory.Exists(cleanupRoot))
+            {
+                Directory.Delete(cleanupRoot, recursive: true);
+            }
+        }
     }
 
     /// <summary>

@@ -1,11 +1,11 @@
 using System;
 using System.Globalization;
 using System.IO.Pipes;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -31,7 +31,7 @@ namespace YokiFrame
 
             var context = ReadFastChannelContext();
             var responseTask = ExchangeFramesAsync(context.PipeName, CreateHelloAndPingFrames(context));
-            var responses = PumpUntilResponsesComplete(context.PumpType, responseTask);
+            var responses = PumpUntilResponsesComplete(responseTask);
 
             AssertHelloAndPingResponses(responses);
         }
@@ -52,7 +52,7 @@ namespace YokiFrame
             {
                 silentClient.Connect(CONNECT_TIMEOUT_MS);
                 var responseTask = ExchangeFramesAsync(context.PipeName, CreateHelloAndPingFrames(context));
-                var responses = PumpUntilResponsesComplete(context.PumpType, responseTask);
+                var responses = PumpUntilResponsesComplete(responseTask);
 
                 AssertHelloAndPingResponses(responses);
             }
@@ -70,8 +70,15 @@ namespace YokiFrame
                 YokiFrameFastChannelMessageKind.Response,
                 responses[1].MessageKind,
                 responses[1].PayloadJson);
-            StringAssert.Contains("\"status\":\"Success\"", responses[1].PayloadJson);
-            StringAssert.Contains("pong", responses[1].PayloadJson);
+            using (JsonDocument document = JsonDocument.Parse(responses[1].PayloadJson))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual("Success", root.GetProperty("status").GetString());
+                using (JsonDocument result = JsonDocument.Parse(root.GetProperty("resultJson").GetString()))
+                {
+                    Assert.AreEqual("pong", result.RootElement.GetProperty("message").GetString());
+                }
+            }
         }
 
         /// <summary>
@@ -80,24 +87,15 @@ namespace YokiFrame
         /// <returns>当前运行中 FastChannel 的连接与身份上下文。</returns>
         private static FastChannelContext ReadFastChannelContext()
         {
-            var assembly = Assembly.Load("YokiFrame.Unity.Editor");
-            var pumpType = assembly.GetType("YokiFrame.YokiFrameEditorFileBridgePump");
-            Assert.IsNotNull(pumpType, "YokiFrame Unity Editor pump 类型不存在。");
-
-            var hostField = pumpType.GetField("sFastChannelHost", BindingFlags.Static | BindingFlags.NonPublic);
-            object host = hostField.GetValue(null);
+            YokiFrameEditorNamedPipeFastChannelHost host = YokiFrameEditorFileBridgePump.FastChannelHostForTests;
             Assert.IsNotNull(host, "Unity FastChannel host 未创建。");
-
-            var hostType = host.GetType();
-            bool isReady = (bool)hostType.GetProperty("IsReady").GetValue(host, null);
-            Assert.IsTrue(isReady, "Unity FastChannel host 未 ready。");
+            Assert.IsTrue(host.IsReady, "Unity FastChannel host 未 ready。");
 
             return new FastChannelContext
             {
-                PumpType = pumpType,
-                PipeName = (string)hostType.GetProperty("PipeName").GetValue(host, null),
-                SessionId = (string)pumpType.GetField("sSessionId", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null),
-                Generation = (long)pumpType.GetField("sGeneration", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null)
+                PipeName = host.PipeName,
+                SessionId = YokiFrameEditorFileBridgePump.SessionIdForTests,
+                Generation = YokiFrameEditorFileBridgePump.GenerationForTests
             };
         }
 
@@ -153,20 +151,15 @@ namespace YokiFrame
         /// <summary>
         /// 在 Unity 测试主线程主动 drain FastChannel 请求队列，直到后台 Client 收齐响应或达到超时。
         /// </summary>
-        /// <param name="pumpType">承载私有主线程 drain 方法的 Unity pump 类型。</param>
         /// <param name="responseTask">等待 Hello 和 Command response 的后台 Client 任务。</param>
         /// <returns>后台 Client 收到的响应数组。</returns>
         private static YokiFrameFastChannelFrame[] PumpUntilResponsesComplete(
-            Type pumpType,
             Task<YokiFrameFastChannelFrame[]> responseTask)
         {
-            var processMethod = pumpType.GetMethod("ProcessFastChannelRequestsSafely", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(processMethod, "Unity pump 缺少 FastChannel 主线程 drain 方法。");
-
             var deadlineUtc = DateTime.UtcNow.AddMilliseconds(EXCHANGE_TIMEOUT_MS);
             while (!responseTask.IsCompleted && DateTime.UtcNow < deadlineUtc)
             {
-                processMethod.Invoke(null, null);
+                YokiFrameEditorFileBridgePump.ProcessFastChannelRequestsSafely();
                 Thread.Sleep(PUMP_INTERVAL_MS);
             }
 
@@ -180,7 +173,6 @@ namespace YokiFrame
         /// </summary>
         private sealed class FastChannelContext
         {
-            public Type PumpType { get; set; }
             public string PipeName { get; set; }
             public string SessionId { get; set; }
             public long Generation { get; set; }

@@ -87,7 +87,7 @@ namespace YokiFrame
 
         /// <summary>基线：经典重载读取会就地取反（模拟解密生效）。</summary>
         [Test]
-        public void ClassicOverrideDecryptsBuffer()
+        public void Read_经典覆写_解密缓冲区()
         {
             using var stream = new ByteArrayOnlyStream(mPath);
             byte[] buffer = new byte[8];
@@ -104,7 +104,7 @@ namespace YokiFrame
         /// 若成立，则 Span 路径已被解密覆盖，无需（且不得）额外覆写 Span。
         /// </summary>
         [Test]
-        public void SpanReadReachesClassicOverride()
+        public void Read_Span读取_走到经典覆写()
         {
             using var stream = new ByteArrayOnlyStream(mPath);
             byte[] buffer = new byte[8];
@@ -120,7 +120,7 @@ namespace YokiFrame
 
         /// <summary>核心事实二：FileStream.ReadByte() 是否会虚回调到经典重载覆写。</summary>
         [Test]
-        public void ReadByteDoesNotReachClassicOverride()
+        public void ReadByte_单字节_不走到经典覆写()
         {
             using var stream = new ByteArrayOnlyStream(mPath);
 
@@ -137,7 +137,7 @@ namespace YokiFrame
         /// 核心事实三：同时覆写经典与 Span 重载会在 Span 路径上造成双重取反（等价于双重 XOR）。
         /// </summary>
         [Test]
-        public void SpanOverrideTogetherWithClassicOverrideDoubleAppliesXor()
+        public void Read_同时覆写Span和经典_异或被应用两次()
         {
             using var stream = new SpanAndByteArrayStream(mPath);
             byte[] buffer = new byte[8];
@@ -157,7 +157,7 @@ namespace YokiFrame
 
         /// <summary>核心事实四：异步 byte[] 读取是否仍会虚回调经典覆写（异步加载路径是否已解密）。</summary>
         [Test]
-        public void ReadAsyncReachesClassicOverride()
+        public void ReadAsync_异步读取_走到经典覆写()
         {
             using var stream = new ByteArrayOnlyStream(mPath);
             byte[] buffer = new byte[8];
@@ -173,7 +173,7 @@ namespace YokiFrame
 
         /// <summary>核心事实五：异步 Memory 读取是否仍会虚回调经典覆写。</summary>
         [Test]
-        public void ReadAsyncMemoryReachesClassicOverride()
+        public void ReadAsync_Memory读取_走到经典覆写()
         {
             using var stream = new ByteArrayOnlyStream(mPath);
             byte[] buffer = new byte[8];

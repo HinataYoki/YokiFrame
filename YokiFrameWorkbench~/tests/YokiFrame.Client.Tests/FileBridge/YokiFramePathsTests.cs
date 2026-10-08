@@ -41,7 +41,7 @@ public sealed class YokiFramePathsTests
     /// <summary>
     /// 验证 engine 根自身是目录链接时，客户端不会把 FileBridge 读写重定向到项目外。
     /// </summary>
-    [Fact]
+    [SymbolicLinkFact(SymbolicLinkProbeKind.Directory)]
     public void EngineRootRejectsReparsePoint()
     {
         var testRoot = Path.Combine(Path.GetTempPath(), "yokiframe-path-tests", Guid.NewGuid().ToString("N"));
@@ -53,10 +53,9 @@ public sealed class YokiFramePathsTests
         Directory.CreateDirectory(outsideRoot);
         try
         {
-            if (!TryCreateDirectoryLink(engineRoot, outsideRoot))
-            {
-                return;
-            }
+            Assert.True(
+                TryCreateDirectoryLink(engineRoot, outsideRoot),
+                "符号链接能力探测通过后仍无法创建 engine 目录链接。");
 
             var exception = Assert.Throws<YokiFrameProtocolException>(
                 () => new YokiFramePaths(projectRoot).GetEngineRoot("unity-editor"));

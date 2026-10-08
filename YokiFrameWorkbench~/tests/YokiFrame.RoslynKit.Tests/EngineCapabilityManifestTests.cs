@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using YokiFrame;
 
@@ -9,8 +7,8 @@ namespace YokiFrame.RoslynKit.Tests;
 /// RoslynKit 命令面与 capability.json 的一致性（§14 P0 / 风险 R5）。
 /// </summary>
 /// <remarks>
-/// 两条守卫：① capability.json 声明的动作集合必须与 Provider 实际注册的命令面一致；
-/// ② 清单里的 sourceHash 必须等于实现文件（LF 归一化后）的 SHA-256，避免"改了实现忘了改清单"。
+/// 清单动作必须与 Provider 实际注册的命令面一致，并且每个动作引用存在的校验配方。
+/// 不哈希实现源码。
 /// </remarks>
 public sealed class EngineCapabilityManifestTests
 {
@@ -32,16 +30,15 @@ public sealed class EngineCapabilityManifestTests
         }
     }
 
-    /// <summary>核对 capability.json 的动作集合、sourceHash 和校验配方。不改清单或实现文件。</summary>
+    /// <summary>核对 capability.json 的动作集合和校验配方。不改清单，不读取实现源码。</summary>
     [Fact]
-    public void Capability_manifest_matches_registered_commands_and_source_hash()
+    public void Capability_manifest_matches_registered_commands_and_recipes()
     {
         string packageRoot = FindPackageRoot();
         using JsonDocument manifest = ParseCapabilityManifest(packageRoot);
         JsonElement kit = manifest.RootElement.GetProperty("kit");
         JsonElement commands = kit.GetProperty("commands");
         AssertDeclaredActionsMatchRegistration(commands);
-        AssertSourceHashMatchesImplementation(packageRoot, kit);
         AssertCommandsReferenceExistingRecipes(kit, commands);
     }
 
@@ -102,27 +99,12 @@ public sealed class EngineCapabilityManifestTests
         Assert.Equal(declared, registered);
     }
 
-    /// <summary>断言 sourceHash 等于实现文件 LF 归一化后的 SHA-256。只读文件。</summary>
-    /// <param name="packageRoot">YokiFrame 包根。</param>
-    /// <param name="kit">清单中的 kit 对象。</param>
-    private static void AssertSourceHashMatchesImplementation(string packageRoot, JsonElement kit)
-    {
-        // ② sourceHash 与实现文件一致（LF 归一化，和 Workbench 的校验口径相同）
-        string sourcePath = Path.Combine(
-            packageRoot, "Tools", "RoslynKit", "Editor", "RoslynKitProvider.cs");
-        string expected = Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(
-                File.ReadAllText(sourcePath).Replace("\r\n", "\n")))).ToLowerInvariant();
-        string declaredHash = kit.GetProperty("sourceHash").GetString()!;
-        Assert.Equal(expected, declaredHash);
-    }
-
     /// <summary>断言每个动作的 verifyRecipe 都存在于配方表。不改清单。</summary>
     /// <param name="kit">清单中的 kit 对象。</param>
     /// <param name="commands">清单中的 commands 数组。</param>
     private static void AssertCommandsReferenceExistingRecipes(JsonElement kit, JsonElement commands)
     {
-        // ③ 每个动作都指向存在的校验配方
+        // 每个动作都指向存在的校验配方
         var recipeIds = new HashSet<string>(StringComparer.Ordinal);
         JsonElement recipes = kit.GetProperty("verifyRecipes");
         for (var index = 0; index < recipes.GetArrayLength(); index++)

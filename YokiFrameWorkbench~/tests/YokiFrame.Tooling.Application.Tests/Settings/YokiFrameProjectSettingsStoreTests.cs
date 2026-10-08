@@ -77,7 +77,7 @@ public sealed class YokiFrameProjectSettingsStoreTests
 
     /// <summary>验证 Runtime 和 Editor 两个目标可由一个批次同时提交。</summary>
     [Fact]
-    public async Task BatchUpdateCommitsRuntimeAndEditorDocuments()
+    public async Task WriteAsync_批量提交_运行时文档保留LogKit()
     {
         using TestProject project = new();
         YokiFrameProjectSettingsStore store = new(project.Root);
@@ -101,15 +101,14 @@ public sealed class YokiFrameProjectSettingsStoreTests
         Assert.True(result.Saved);
         Assert.True(File.Exists(store.GetPath(YokiFrameProjectSettingsTarget.UnityRuntime)));
         Assert.True(File.Exists(store.GetPath(YokiFrameProjectSettingsTarget.UnityEditor)));
-        using JsonDocument runtime = JsonDocument.Parse(
-            File.ReadAllText(store.GetPath(YokiFrameProjectSettingsTarget.UnityRuntime)));
+        using JsonDocument runtime = ToolingFileObservation.OpenJson(store.GetPath(YokiFrameProjectSettingsTarget.UnityRuntime));
         Assert.Contains(runtime.RootElement.GetProperty("settings").EnumerateArray(), static item =>
             item.GetProperty("kit").GetString() == "LogKit");
     }
 
     /// <summary>验证 Godot 只更新 YokiFrame section 并保留其它 ProjectSettings section。</summary>
     [Fact]
-    public async Task GodotUpdatePreservesOtherProjectSettings()
+    public async Task WriteAsync_Godot运行时补丁_保留其它section()
     {
         using TestProject project = new();
         string path = Path.Combine(project.Root, "project.godot");
@@ -125,16 +124,15 @@ public sealed class YokiFrameProjectSettingsStoreTests
                     new YokiFrameProjectSettingValue("storage_path", "user://Saves"))),
             CancellationToken.None);
 
-        string content = File.ReadAllText(path);
-        Assert.Contains("[application]", content, StringComparison.Ordinal);
-        Assert.Contains("config/name=Demo", content, StringComparison.Ordinal);
-        Assert.Contains("old/key=\"keep\"", content, StringComparison.Ordinal);
-        Assert.Contains("save_kit/storage_path=\"user://Saves\"", content, StringComparison.Ordinal);
+        Dictionary<string, Dictionary<string, string>> content = ToolingFileObservation.ReadGodot(path);
+        Assert.Equal("Demo", content["[application]"]["config/name"]);
+        Assert.Equal("\"keep\"", content["[yokiframe/runtime]"]["old/key"]);
+        Assert.Equal("\"user://Saves\"", content["[yokiframe/runtime]"]["save_kit/storage_path"]);
     }
 
     /// <summary>验证未来 C# 引擎可以通过自定义目标和后端接入，不修改 Store 的目标分支。</summary>
     [Fact]
-    public async Task CustomEngineBackendCanBeInjectedWithoutChangingStore()
+    public async Task WriteAsync_自定义引擎_写入后端文本()
     {
         using TestProject project = new();
         YokiFrameProjectSettingsTarget target = new("stride", YokiFrameProjectSettingsScope.Runtime);
@@ -151,9 +149,7 @@ public sealed class YokiFrameProjectSettingsStoreTests
             CancellationToken.None);
 
         Assert.True(result.Saved);
-        Assert.Equal(
-            "LogKit/enabled=true",
-            File.ReadAllText(store.GetPath(target)));
+        ToolingFileObservation.AssertUtf8(store.GetPath(target), "LogKit/enabled=true");
     }
 
     /// <summary>验证 Godot Editor Project/User 配置与随导出使用的 project.godot Runtime 文档分域。</summary>
@@ -248,7 +244,7 @@ public sealed class YokiFrameProjectSettingsStoreTests
             string path)
         {
             bool exists = File.Exists(path);
-            string content = exists ? File.ReadAllText(path) : string.Empty;
+            string content = exists ? ToolingFileObservation.ReadUtf8(path) : string.Empty;
             return new YokiFrameProjectSettingsBackendDocument(
                 target, path, exists, content, Array.Empty<YokiFrameProjectSetting>());
         }

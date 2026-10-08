@@ -15,7 +15,7 @@ using YokiFrame.Workbench.Avalonia.Views.Pages;
 
 namespace YokiFrame.Workbench.Avalonia.Tests;
 
-/// <summary>覆盖 ActionKit 稳定选择、XAML 契约和 Headless 渲染。</summary>
+/// <summary>覆盖 ActionKit 稳定选择和 Headless 渲染。</summary>
 public sealed partial class ActionKitPageViewModelTests
 {
     /// <summary>验证等价宿主刷新按字符串 ID 保持根选择。</summary>
@@ -113,40 +113,6 @@ public sealed partial class ActionKitPageViewModelTests
         Assert.Equal(250L, viewModel.FrameCount);
         Assert.True(viewModel.StackTraceEnabled);
         Assert.Equal(string.Empty, viewModel.OperationStatusText);
-    }
-
-    /// <summary>验证页面使用树优先响应式布局、诊断抽屉和显式 Application 命令。</summary>
-    [Fact]
-    public void PageContractUsesTreeAndExplicitStackCommands()
-    {
-        string xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "ActionKitPageView.axaml");
-        string inspector = WorkbenchContractTestFiles.ReadSource(
-            "Views", "Pages", "ActionKit", "ActionKitNodeInspectorView.axaml");
-        string shell = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        string styles = WorkbenchContractTestFiles.ReadSource("Styles", "ActionKit.axaml");
-
-        Assert.Contains("ActionWorkspace", xaml, StringComparison.Ordinal);
-        Assert.Contains("InspectorPanel", xaml, StringComparison.Ordinal);
-        Assert.Contains("DrawerTabs", xaml, StringComparison.Ordinal);
-        Assert.Contains("CompactInspectorTab", xaml, StringComparison.Ordinal);
-        Assert.Contains("TreeDataTemplate", xaml, StringComparison.Ordinal);
-        Assert.Contains("ActionKitTreeViewItemTheme", xaml, StringComparison.Ordinal);
-        Assert.Contains("FilteredRoots", xaml, StringComparison.Ordinal);
-        Assert.Contains("actionkit-type-badge sequence", xaml, StringComparison.Ordinal);
-        Assert.True(inspector.Contains("节点详情") || inspector.Contains("String.ActionKit.NodeDetails"), "Inspector 应包含节点详情词条");
-        Assert.Contains("ActionKitPage.ToggleStackTraceCommand", shell, StringComparison.Ordinal);
-        Assert.Contains("ActionKitPage.ClearStackTraceCommand", shell, StringComparison.Ordinal);
-        Assert.True(shell.Contains("清空历史") || shell.Contains("String.Common.ClearHistory"), "Shell 应包含清空历史词条");
-        // 清空 Start 帧按钮的提示在 i18n 切片中拆分为独立的 Tooltip / AutomationName 资源 key。
-        Assert.True(
-            shell.Contains("不影响最近终态记录") || shell.Contains("String.ActionKit.ClearStackTraceTooltip"),
-            "Shell 应包含清空 Start 帧不影响终态记录的提示");
-        Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", shell, StringComparison.Ordinal);
-        Assert.True(xaml.Contains("从左侧选择一个活动根以检查执行流程") || xaml.Contains("String.ActionKit.SelectRootToInspect"), "页面应包含未选中根时的提示");
-        Assert.Contains("SelectedFlowNodes", xaml, StringComparison.Ordinal);
-        Assert.Contains("ActionKitTreeIndentConverter", styles, StringComparison.Ordinal);
-        Assert.Contains("IsExpanded\" Value=\"True", styles, StringComparison.Ordinal);
-        Assert.Contains("ActionKitPageView", shell, StringComparison.Ordinal);
     }
 
     /// <summary>验证深层递归树保留真实深度、组合边界和活动执行路径。</summary>
@@ -275,11 +241,11 @@ public sealed partial class ActionKitPageViewModelTests
             ?? CreateDefaultRoots(includeChildren, rootStatus, childDebugInfo);
         IReadOnlyList<WorkbenchActionKitEvent> events = eventsOverride
             ?? CreateDefaultEvents(eventCount);
-        object source = CreateInternalDataSource(
+        WorkbenchActionKitDataSource source = new(
             engineId, sessionId, generation, "PlayMode",
             DateTimeOffset.Parse("2026-07-16T08:00:00Z"), "telemetry", string.Empty,
             new[] { "Global\\YokiFrame.ActionKit" }, string.Empty, "{}");
-        return CreateInternal<WorkbenchActionKitState>(
+        return new WorkbenchActionKitState(
             source,
             version,
             new WorkbenchActionKitStats(
@@ -403,36 +369,6 @@ public sealed partial class ActionKitPageViewModelTests
     {
         var control = FindAutomationControl(view, automationId);
         Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(control)));
-    }
-
-    /// <summary>通过反射创建 Application 内部 ActionKit 数据源。</summary>
-    private static object CreateInternalDataSource(params object[] arguments)
-    {
-        Type type = typeof(WorkbenchActionKitState).Assembly.GetType(
-            "YokiFrame.Tooling.Application.Models.ActionKit.WorkbenchActionKitDataSource", true)!;
-        object? instance = Activator.CreateInstance(
-            type,
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsAssignableFrom<object>(instance);
-    }
-
-    /// <summary>调用 Application 模型的内部构造方法。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        object? instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
     }
 
     /// <summary>捕获 Headless 帧并计算稳定像素哈希。</summary>

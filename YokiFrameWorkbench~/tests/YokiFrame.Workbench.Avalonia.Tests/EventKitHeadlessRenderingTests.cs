@@ -1,4 +1,3 @@
-using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -23,7 +22,7 @@ public sealed class EventKitHeadlessRenderingTests
     [Theory]
     [InlineData(1280, 820, 6)]
     [InlineData(1700, 1060, 7)]
-    public async Task EventKitMasterDetailFitsTargetViewport(
+    public async Task WorkbenchShellView_目标视口_主从列和事件卡完整可见(
         int width,
         int height,
         int minimumVisibleCards)
@@ -31,8 +30,9 @@ public sealed class EventKitHeadlessRenderingTests
         InstallerHeadlessTestApplication.EnsureInitialized();
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var shellViewModel = CreateShellViewModel();
-            ApplyCodeScan(shellViewModel.EventKitPage, CreateVisualCodeScan());
+            var scan = CreateVisualCodeScan();
+            var shellViewModel = CreateShellViewModel(scan);
+            shellViewModel.EventKitPage.SetProjectRoot(scan.ProjectRoot);
             shellViewModel.SelectedPage = "EventKit";
             Window window = new()
             {
@@ -58,17 +58,20 @@ public sealed class EventKitHeadlessRenderingTests
 
     /// <summary>创建不启动外部刷新循环的 Workbench 壳层视图模型。</summary>
     /// <returns>可切换到 EventKit 页面的壳层视图模型。</returns>
-    private static WorkbenchShellViewModel CreateShellViewModel()
+    private static WorkbenchShellViewModel CreateShellViewModel(WorkbenchEventKitCodeScan scan)
     {
         var packageRoot = Directory.GetParent(FindWorkbenchRoot())?.FullName
             ?? throw new DirectoryNotFoundException("无法定位 YokiFrame 包根。");
         var packageMetadata = YokiFramePackageMetadataReader.Read(packageRoot);
         return new WorkbenchShellViewModel(
-            () => { },
-            _ => { },
-            (_, _) => Task.CompletedTask,
-            packageMetadata,
-            _ => Task.CompletedTask);
+            new WorkbenchShellCallbacks(
+                () => { },
+                _ => { },
+                (_, _) => Task.CompletedTask,
+                _ => Task.CompletedTask),
+            new WorkbenchShellMeta(string.Empty, string.Empty, packageMetadata),
+            new WorkbenchFsmEventDependencies(
+                EventKitCodeScanAsync: (_, _) => Task.FromResult(scan)));
     }
 
     /// <summary>检查主从列宽、卡片密度、字号红线和关键详情区的窗口边界。</summary>
@@ -203,20 +206,6 @@ public sealed class EventKitHeadlessRenderingTests
             new[] { new WorkbenchEventKitCodeLocation("Assets/Runtime/EventEmitter.cs", line) },
             new[] { new WorkbenchEventKitCodeLocation("Assets/Runtime/EventReceiver.cs", line + 2) },
             unregisters);
-    }
-
-    /// <summary>通过页面现有私有边界提交静态扫描结果。</summary>
-    /// <param name="viewModel">目标 EventKit 页面视图模型。</param>
-    /// <param name="scan">待展示的扫描结果。</param>
-    private static void ApplyCodeScan(
-        EventKitPageViewModel viewModel,
-        WorkbenchEventKitCodeScan scan)
-    {
-        MethodInfo? method = typeof(EventKitPageViewModel).GetMethod(
-            "ApplyCodeScan",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, new object[] { scan });
     }
 
     /// <summary>保存 Headless 渲染帧，供 EventKit 两种目标窗口尺寸人工复核。</summary>

@@ -35,7 +35,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证同 key 共享底层资源，但每次获取返回独立且幂等释放的句柄。</summary>
         [Test]
-        public void LoadAssetCreatesIndependentIdempotentLeases()
+        public void Load_同一资源_租约独立且释放幂等()
         {
             var first = ResKit.LoadAsset<TestAsset>("Configs/Main");
             var second = ResKit.LoadAsset<TestAsset>("Configs/Main");
@@ -62,7 +62,7 @@ namespace YokiFrame.Tests
         /// 验证 ResCacheKey 满足值相等语义，重载运算符与 Equals 行为一致。
         /// </summary>
         [Test]
-        public void ResCacheKey_EqualityAndOperatorsUseValueSemantics()
+        public void Equals_缓存键_按值比较()
         {
             var key1 = new ResCacheKey(typeof(TestAsset), "Configs/Main");
             var key2 = new ResCacheKey(typeof(TestAsset), "Configs/Main");
@@ -88,7 +88,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 ResSceneHandle 与 ResSceneLoadResult 在 default 状态下的空安全与值相等语义。</summary>
         [Test]
-        public void ResSceneHandle_And_ResSceneLoadResult_ValueEqualityAndDefaultSafety()
+        public void Equals_场景句柄和加载结果_默认值安全且按值比较()
         {
             ResSceneHandle defaultHandle = default;
             ResSceneHandle explicitEmpty = new(null, 0, false);
@@ -121,7 +121,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证对象式 API 每次只释放一个已登记匿名租约，未知对象不会交给 Provider。</summary>
         [Test]
-        public void ReleaseObjectConsumesOnlyRegisteredAnonymousLeases()
+        public void Release_匿名租约_只消耗已登记对象()
         {
             var first = ResKit.Load<TestAsset>("Configs/Main");
             var second = ResKit.Load<TestAsset>("Configs/Main");
@@ -139,7 +139,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证对象式释放不会消费 handle 的独占租约，handle 持有者不被静默失效。</summary>
         [Test]
-        public void ReleaseObjectDoesNotConsumeHandleExclusiveLease()
+        public void Release_句柄独占租约_不被对象释放消耗()
         {
             var handle = ResKit.LoadAsset<TestAsset>("Configs/Main");
 
@@ -155,7 +155,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证相同 key 的并发异步获取共享一次 Provider 加载并产生独立租约。</summary>
         [Test]
-        public async Task ConcurrentAsyncLoadsUseSingleFlight()
+        public async Task LoadAsync_并发同一资源_只飞行一次()
         {
             mProvider.BeginGatedLoad();
             var firstTask = ResKit.LoadAssetAsync<TestAsset>("Configs/Async");
@@ -177,7 +177,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证单个等待者取消不会取消同 key 的共享底层加载或其它等待者。</summary>
         [Test]
-        public async Task CancellingOneWaiterDoesNotCancelSharedLoad()
+        public async Task Cancel_取消一个等待者_不取消共享加载()
         {
             mProvider.BeginGatedLoad();
             using CancellationTokenSource cancellation = new();
@@ -208,7 +208,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Provider 切换后旧异步结果不会回写，并由创建它的旧 Provider 释放。</summary>
         [Test]
-        public async Task ProviderSwitchRejectsStaleAsyncCompletion()
+        public async Task Complete_切换Provider后_拒绝过期完成()
         {
             mProvider.BeginGatedLoad();
             var staleTask = ResKit.LoadAssetAsync<TestAsset>("Configs/Stale");
@@ -231,7 +231,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 ClearAll 撤销全部句柄，并确保旧句柄后续释放不会触发二次释放。</summary>
         [Test]
-        public void ClearAllInvalidatesAllLeasesWithoutDoubleRelease()
+        public void ClearAll_清空_使租约失效且不重复释放()
         {
             var first = ResKit.LoadAsset<TestAsset>("Configs/First");
             var second = ResKit.LoadAsset<TestAsset>("Configs/Second");
@@ -250,7 +250,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 raw 能力委托到 Provider，缺少能力时明确拒绝。</summary>
         [Test]
-        public async Task RawResourcesUseOptionalProviderCapability()
+        public async Task LoadRaw_Provider无原始能力_按可选能力失败()
         {
             CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, ResKit.LoadRaw("Tables/Main"));
             Assert.AreEqual("raw:Tables/Main", ResKit.LoadRawText("Tables/Main"));
@@ -263,7 +263,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Task 契约消费者可复用 ResKit single-flight，而不直接引用可选 UniTask 类型。</summary>
         [Test]
-        public async Task TaskBridgeLoadsAndRegistersAnonymousLease()
+        public async Task LoadAsync_Task桥_登记匿名租约()
         {
             TestAsset asset = await ResKit.LoadTaskAsync<TestAsset>("Configs/TaskBridge");
 
@@ -277,7 +277,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证全部等待者取消后，忽略取消的旧 Provider 结果仍会被精确释放一次。</summary>
         [Test]
-        public async Task CancellingAllWaitersReleasesLateProviderResult()
+        public async Task Cancel_取消全部等待者_释放迟到结果()
         {
             mProvider.BeginGatedLoad();
             using CancellationTokenSource firstCancellation = new();
@@ -298,7 +298,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 ClearAll 遇到 Provider 异常仍尝试释放全部条目并清空 Core 状态。</summary>
         [Test]
-        public void ClearAllContinuesAfterEveryReleaseFailure()
+        public void ClearAll_释放抛错_继续其余项()
         {
             ResKit.LoadAsset<TestAsset>("Configs/First");
             ResKit.LoadAsset<TestAsset>("Configs/Second");
@@ -315,7 +315,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证卸载历史使用固定容量并按最新记录优先返回隔离副本。</summary>
         [Test]
-        public void UnloadHistoryIsBoundedAndNewestFirst()
+        public void Unload_历史超限_只保留最新且有界()
         {
             for (var index = 0; index < 105; index++)
             {

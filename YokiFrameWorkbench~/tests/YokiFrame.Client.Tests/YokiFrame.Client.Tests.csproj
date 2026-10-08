@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="YokiFrame.Client.Tests" />
   </ItemGroup>
 
   <ItemGroup>

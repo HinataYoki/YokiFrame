@@ -52,7 +52,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Loader 返回资源前一刻取消时，Backend 释放新租约且不提交缓存。</summary>
         [UnityTest]
-        public IEnumerator CancellationAtLoadReturnReleasesLease()
+        public IEnumerator PreloadAsync_返回前取消_释放租约且不缓存()
         {
             using var cancellation = new CancellationTokenSource();
             mLoader.BeforeReturn = cancellation.Cancel;
@@ -70,7 +70,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证主线程提交已排队后再取消时，dispatch 拒绝缓存并释放新租约。</summary>
         [UnityTest]
-        public IEnumerator CancellationBeforeDispatchReleasesLease()
+        public IEnumerator PreloadAsync_提交前取消_拒绝缓存并释放()
         {
             using var cancellation = new CancellationTokenSource();
             Task<bool> pending = mBackend.PreloadAsync(AUDIO_PATH, cancellation.Token);
@@ -89,7 +89,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Dispose 后晚到的资源不会重建缓存、voice 或 Unity 宿主根对象。</summary>
         [UnityTest]
-        public IEnumerator LateResultAfterDisposeDoesNotReviveBackend()
+        public IEnumerator PlayAsync_释放后晚到结果_不重建后端()
         {
             Task<int> pending = mBackend.PlayAsync(
                 AUDIO_PATH,

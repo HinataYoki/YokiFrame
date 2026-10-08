@@ -2,9 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Godot;
 using YokiFrame.RuntimeCache;
+
+[assembly: InternalsVisibleTo("YokiFrame.Godot.Editor.Tests")]
 
 namespace YokiFrame
 {
@@ -83,7 +86,7 @@ namespace YokiFrame
         /// <param name="executablePath">验证成功后的 GUI 入口完整路径。</param>
         /// <param name="error">验证失败原因。</param>
         /// <returns>缓存完整且入口可信时返回 true。</returns>
-        private static bool TryValidateRuntimeManifest(
+        internal static bool TryValidateRuntimeManifest(
             string manifestPath,
             string runtimeRoot,
             string[] runtimeIds,
@@ -107,7 +110,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="projectRoot">当前 Godot 项目根。</param>
         /// <returns>当前有效 Runtime 缓存根。</returns>
-        private static string ResolveRuntimeRoot(string projectRoot)
+        internal static string ResolveRuntimeRoot(string projectRoot)
         {
             var fullProjectRoot = Path.GetFullPath(projectRoot);
             var pointerPath = YokiFrameWorkbenchRuntimeCacheLayout.GetCurrentFilePath(fullProjectRoot);
@@ -222,7 +225,7 @@ namespace YokiFrame
         /// </summary>
         /// <param name="runtimeId">由当前 Godot 宿主解析出的基础 RID。</param>
         /// <returns>按启动优先级排列的 Runtime profile 标识。</returns>
-        private static string[] ResolvePreferredRuntimeIds(string runtimeId)
+        internal static string[] ResolvePreferredRuntimeIds(string runtimeId)
         {
             return string.Equals(runtimeId, WINDOWS_MANAGED_RUNTIME_ID, StringComparison.Ordinal)
                 ? new[] { WINDOWS_NATIVE_AOT_RUNTIME_ID }

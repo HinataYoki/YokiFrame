@@ -1,4 +1,3 @@
-using System.Reflection;
 using YokiFrame.Tooling.Application.Models.FsmKit;
 using YokiFrame.Workbench.Avalonia.ViewModels;
 
@@ -9,9 +8,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 {
     /// <summary>验证 Telemetry 不受墙钟回拨或旧详情未来时间影响，并报告精确提交成功。</summary>
     [Fact]
-    public void TelemetryDetailsIgnoreWallClockRollback()
+    public void TryApplySequencedTelemetryState_墙钟回拨_仍提交较旧Telemetry()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         var futureCommand = CreateState(
             "command", "future-command", DateTimeOffset.Parse("2026-07-15T12:00:00Z"));
         var olderTelemetry = CreateState(
@@ -28,9 +27,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证同实例旧 overview 即使也标记为 telemetry，仍不能回退命名详情。</summary>
     [Fact]
-    public void OlderOverviewDoesNotRollbackSequencedTelemetry()
+    public void ApplyPeriodicState_旧Telemetry总览_不回退命名详情()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         var namedDetails = CreateState(
             "telemetry", "named-live", DateTimeOffset.Parse("2026-07-15T12:00:00Z"));
         var olderOverview = CreateState(
@@ -47,9 +46,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证旧 sequence overview 即使因墙钟回拨带有更晚时间，也只能合并摘要。</summary>
     [Fact]
-    public void FutureWallClockOverviewDoesNotRollbackSequencedTelemetry()
+    public void ApplyPeriodicState_旧sequence带更晚墙钟_不回退命名详情()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         var namedDetails = CreateState(
             "telemetry", "named-sequence", DateTimeOffset.Parse("2026-07-15T12:00:00Z"));
         var delayedOldSequenceOverview = CreateState(
@@ -66,9 +65,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证切换 instanceId 后清除旧权威，新实例可重新采用 dashboard 精确详情。</summary>
     [Fact]
-    public void InstanceChangeResetsSequencedTelemetryAuthority()
+    public void ApplyPeriodicState_实例已切换_新总览可以建立详情()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         Assert.True(viewModel.TryApplySequencedTelemetryState(CreateState(
             "telemetry", "chosen-live", DateTimeOffset.Parse("2026-07-15T12:00:00Z"))));
         viewModel.SelectedMachine = Assert.Single(
@@ -87,9 +86,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证 session/generation 变化会清除旧权威，使新宿主详情可以建立页面基线。</summary>
     [Fact]
-    public void HostChangeResetsSequencedTelemetryAuthority()
+    public void ApplyPeriodicState_宿主代次变化_新总览可以建立详情()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         Assert.True(viewModel.TryApplySequencedTelemetryState(CreateState(
             "telemetry", "old-host-live", DateTimeOffset.Parse("2026-07-15T12:00:00Z"))));
         var newHostOverview = FsmKitContractTestData.CreateState(
@@ -105,20 +104,23 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
         Assert.Equal("{\"source\":\"new-host-overview\"}", viewModel.RawPayload);
     }
 
-    /// <summary>验证历史追加只新增尾项，集合和已存在转换对象均保持稳定。</summary>
+    /// <summary>
+    /// 验证历史追加只新增尾项，集合和已存在转换对象均保持稳定。
+    /// 两帧使用固定递增时刻，避免墙钟回拨使后一帧被判定为过期详情。
+    /// </summary>
     [Fact]
-    public void AppendedHistoryKeepsCollectionAndExistingItems()
+    public void ApplyPeriodicState_历史追加_保留集合和已有项()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(CreateState(
-            "telemetry", "initial", DateTimeOffset.UtcNow,
+            "telemetry", "initial", DateTimeOffset.Parse("2026-07-15T12:00:00Z"),
             new[] { ("Start", "Ready"), ("Ready", "Attack") }));
         var collection = viewModel.Transitions;
         var first = collection[0];
         var second = collection[1];
 
         viewModel.ApplyPeriodicState(CreateState(
-            "telemetry", "append", DateTimeOffset.UtcNow,
+            "telemetry", "append", DateTimeOffset.Parse("2026-07-15T12:00:00Z").AddSeconds(1),
             new[] { ("Start", "Ready"), ("Ready", "Attack"), ("Attack", "Idle") }));
 
         Assert.Same(collection, viewModel.Transitions);
@@ -129,9 +131,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证有界窗口滚动只移除最旧项，并复用重叠后缀的转换对象。</summary>
     [Fact]
-    public void RollingHistoryReusesOverlappingWindow()
+    public void ApplyPeriodicState_历史窗口滚动_复用重叠后缀()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(CreateStateWithTimedHistory(
             "initial",
             new[] { ("A", "B", "10:00:00"), ("B", "C", "10:00:01"), ("C", "D", "10:00:02") }));
@@ -149,9 +151,9 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
 
     /// <summary>验证重复转换跨滚动边界时仍选择最大后缀重叠，并复用正确的重复项实例。</summary>
     [Fact]
-    public void DuplicateHistoryAcrossRollingBoundaryReusesCorrectSuffix()
+    public void ApplyPeriodicState_重复转换跨滚动边界_复用最大后缀()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(CreateStateWithTimedHistory(
             "duplicates-initial",
             new[] { ("A", "B", "10:00:00"), ("A", "B", "10:00:00"), ("B", "C", "10:00:01") }));
@@ -167,24 +169,27 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
         Assert.Equal("D", viewModel.Transitions[2].To);
     }
 
-    /// <summary>验证空窗口和同长度替换不会更换集合，也不会留下越界或旧记录。</summary>
+    /// <summary>
+    /// 验证空窗口和同长度替换不会更换集合，也不会留下越界或旧记录。
+    /// 三帧使用固定递增时刻，确保后帧不早于已接受详情。
+    /// </summary>
     [Fact]
-    public void EmptyAndSameLengthReplacementKeepCollectionValid()
+    public void ApplyPeriodicState_空窗口或同长度替换_集合有效且不越界()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(CreateState(
-            "telemetry", "initial", DateTimeOffset.UtcNow,
+            "telemetry", "initial", DateTimeOffset.Parse("2026-07-15T12:00:00Z"),
             new[] { ("A", "B"), ("B", "C") }));
         var collection = viewModel.Transitions;
 
         viewModel.ApplyPeriodicState(CreateState(
-            "telemetry", "empty", DateTimeOffset.UtcNow,
+            "telemetry", "empty", DateTimeOffset.Parse("2026-07-15T12:00:00Z").AddSeconds(1),
             Array.Empty<(string From, string To)>()));
         Assert.Same(collection, viewModel.Transitions);
         Assert.Empty(viewModel.Transitions);
 
         viewModel.ApplyPeriodicState(CreateState(
-            "telemetry", "replace", DateTimeOffset.UtcNow,
+            "telemetry", "replace", DateTimeOffset.Parse("2026-07-15T12:00:00Z").AddSeconds(2),
             new[] { ("X", "Y"), ("Y", "Z") }));
         Assert.Same(collection, viewModel.Transitions);
         Assert.Equal(new[] { "Y", "Z" }, viewModel.Transitions.Select(static item => item.To));
@@ -217,11 +222,11 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
         for (var index = 0; index < transitions.Count; index++)
         {
             var transition = transitions[index];
-            history[index] = CreateInternal<WorkbenchFsmTransition>(
+            history[index] = new WorkbenchFsmTransition(
                 transition.From, transition.To, transition.Time);
         }
 
-        return CreateInternal<WorkbenchFsmKitState>(
+        return new WorkbenchFsmKitState(
             baseline.DataSource,
             baseline.FsmName,
             baseline.InstanceId,
@@ -234,15 +239,4 @@ public sealed class FsmKitSequenceAndHistoryStabilityTests
             baseline.StateEventDeclaredCount);
     }
 
-    /// <summary>调用 Application 模型的内部构造方法，生成具有精确历史时间的测试对象。</summary>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        var instance = Activator.CreateInstance(
-            typeof(T),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
-    }
 }

@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -8,7 +9,7 @@ namespace YokiFrame
     {
         /// <summary>验证 Dispose 幂等，但释放后的实例不能重新执行查询、tick 或状态修改。</summary>
         [Test]
-        public void DisposedFsmRejectsReuseAndStaysUnregistered()
+        public void Dispose_已释放_拒绝复用且不在注册表()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Disposable");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -21,14 +22,16 @@ namespace YokiFrame
             Assert.Throws<ObjectDisposedException>(() => fsm.Start());
             Assert.Throws<ObjectDisposedException>(() => fsm.Update());
             Assert.Throws<ObjectDisposedException>(() => fsm.Clear());
-            StringAssert.Contains(
-                "\"count\":0",
-                new FsmKitCommandHandler().HandleAction("list_all", "{}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("list_all", "{}")))
+            {
+                Assert.AreEqual(0, ReadCount(document.RootElement));
+            }
         }
 
         /// <summary>验证进入回调失败会向调用方抛出，并把机器收敛为可重试的 End 状态。</summary>
         [Test]
-        public void FailedStartLeavesMachineEndedWithoutSuccessHistory()
+        public void Start_进入失败_收敛为End且无成功历史()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("FailedStart");
             ThrowingStartState state = new ThrowingStartState();
@@ -38,15 +41,18 @@ namespace YokiFrame
 
             Assert.AreEqual(MachineState.End, fsm.MachineState);
             Assert.AreSame(state, fsm.CurState);
-            StringAssert.Contains(
-                "\"count\":0",
-                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"FailedStart\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"FailedStart\"}")))
+            {
+                Assert.AreEqual(0, ReadCount(document.RootElement));
+            }
+
             GC.KeepAlive(fsm);
         }
 
         /// <summary>验证 Start 回调不能嵌套发起 Change，避免一次调用提交两条相互覆盖的转换。</summary>
         [Test]
-        public void LifecycleCallbackCannotReenterTransition()
+        public void Start_回调重入Change_拒绝并保持End()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Reentrant");
             ReentrantStartState idle = new ReentrantStartState(fsm);

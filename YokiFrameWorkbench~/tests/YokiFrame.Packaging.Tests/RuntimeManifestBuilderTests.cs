@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
-using System.Text.Json;
+using System.Text;
+using YokiFrame.Json;
 using YokiFrame.Packaging.Models;
 using YokiFrame.Packaging.Services;
 
@@ -8,8 +9,10 @@ namespace YokiFrame.Packaging.Tests;
 /// <summary>
 /// 覆盖运行副本 manifest 生成与写入。
 /// </summary>
-public sealed class RuntimeManifestBuilderTests
+public sealed class RuntimeManifestBuilderTests : IDisposable
 {
+    private readonly List<string> mCleanupRoots = new();
+
     /// <summary>
     /// 验证 manifest 会记录平台入口、文件数量、总大小和文件哈希。
     /// </summary>
@@ -30,7 +33,7 @@ public sealed class RuntimeManifestBuilderTests
         Assert.Equal("win-x64/YokiFrame.Workbench.Avalonia.exe", platform.Entrypoint);
         Assert.Equal(2, platform.FileCount);
         Assert.Equal(14, platform.TotalBytes);
-        Assert.Contains(platform.Files, file => file.RelativePath == "win-x64/YokiFrame.Tooling.Application.dll" && file.Sha256 == Sha256(dllPath));
+        Assert.Single(platform.Files, file => file.RelativePath == "win-x64/YokiFrame.Tooling.Application.dll" && file.Sha256 == Sha256(dllPath));
     }
 
     /// <summary>
@@ -52,8 +55,8 @@ public sealed class RuntimeManifestBuilderTests
             "YokiFrame.Workbench.Avalonia.exe");
 
         var platform = Assert.Single(manifest.Platforms);
-        Assert.Equal(1, platform.FileCount);
-        Assert.DoesNotContain(platform.Files, file => file.RelativePath.Contains("/.yokiframe/", StringComparison.Ordinal));
+        var file = Assert.Single(platform.Files);
+        Assert.Equal("win-x64/YokiFrame.Workbench.Avalonia.exe", file.RelativePath);
     }
 
     /// <summary>
@@ -99,7 +102,7 @@ public sealed class RuntimeManifestBuilderTests
         Assert.Equal("win-x64/YokiFrame.Workbench.Avalonia.exe", platform.GuiEntry);
         Assert.Equal("win-x64/yoki.exe", platform.CliEntry);
         Assert.Equal(platform.GuiEntry, platform.Entrypoint);
-        Assert.Contains(platform.Files, file => file.RelativePath == "win-x64/yoki.exe");
+        Assert.Single(platform.Files, file => file.RelativePath == "win-x64/yoki.exe");
     }
 
     /// <summary>
@@ -124,7 +127,7 @@ public sealed class RuntimeManifestBuilderTests
         var platform = Assert.Single(manifest.Platforms);
         Assert.False(platform.SharedRuntime);
         Assert.Equal("win-x64-aot/yoki.exe", platform.CliEntry);
-        Assert.Contains(platform.Files, file => file.RelativePath == "win-x64-aot/yoki.exe");
+        Assert.Single(platform.Files, file => file.RelativePath == "win-x64-aot/yoki.exe");
     }
 
     /// <summary>
@@ -157,8 +160,8 @@ public sealed class RuntimeManifestBuilderTests
 
         Assert.Equal(2, mergedManifest.LayoutVersion);
         Assert.Equal(new[] { "osx-arm64", "win-x64" }, mergedManifest.Platforms.Select(platform => platform.Platform).ToArray());
-        Assert.Contains(mergedManifest.Platforms, platform => platform.Platform == "win-x64" && platform.CliEntry == "win-x64/yoki.exe");
-        Assert.Contains(mergedManifest.Platforms, platform => platform.Platform == "osx-arm64" && platform.GuiEntry == "osx-arm64/YokiFrame.Workbench.Avalonia.app/Contents/MacOS/YokiFrame.Workbench.Avalonia");
+        Assert.Single(mergedManifest.Platforms, platform => platform.Platform == "win-x64" && platform.CliEntry == "win-x64/yoki.exe");
+        Assert.Single(mergedManifest.Platforms, platform => platform.Platform == "osx-arm64" && platform.GuiEntry == "osx-arm64/YokiFrame.Workbench.Avalonia.app/Contents/MacOS/YokiFrame.Workbench.Avalonia");
     }
 
     /// <summary>
@@ -315,6 +318,7 @@ public sealed class RuntimeManifestBuilderTests
     {
         var runtimeRoot = CreateRuntimeRoot();
         var outsideRoot = Path.Combine(Path.GetDirectoryName(runtimeRoot)!, "outside-" + Guid.NewGuid().ToString("N"));
+        mCleanupRoots.Add(outsideRoot);
         WriteFile(Path.Combine(outsideRoot, "Workbench.exe"), "outside");
         var platform = useAbsolutePath ? outsideRoot : Path.GetRelativePath(runtimeRoot, outsideRoot);
 
@@ -374,10 +378,12 @@ public sealed class RuntimeManifestBuilderTests
     {
         if (OperatingSystem.IsWindows())
         {
+            // 当前 xUnit runner 会把动态 Skip 记为失败；Windows 无法观察大小写敏感 containment。
             return;
         }
 
         var parentRoot = Path.Combine(Path.GetTempPath(), "yokiframe-packaging-tests", Guid.NewGuid().ToString("N"));
+        mCleanupRoots.Add(parentRoot);
         var runtimeRoot = Path.Combine(parentRoot, "Runtime");
         var outsideRoot = Path.Combine(parentRoot, "runtime");
         Directory.CreateDirectory(Path.Combine(runtimeRoot, "linux-x64"));
@@ -403,9 +409,8 @@ public sealed class RuntimeManifestBuilderTests
 
         new RuntimeManifestWriter().Write(manifest, outputPath);
 
-        var written = JsonSerializer.Deserialize<RuntimeManifest>(File.ReadAllText(outputPath), new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        Assert.NotNull(written);
-        Assert.Equal("YokiFrameTool", written.Product);
+        using var document = JsonDocument.Parse(File.ReadAllText(outputPath));
+        Assert.Equal("YokiFrameTool", document.RootElement.GetProperty("product").GetString());
     }
 
     /// <summary>
@@ -419,7 +424,8 @@ public sealed class RuntimeManifestBuilderTests
         var manifest = new RuntimeManifestBuilder().Build(runtimeRoot, "YokiFrameTool", "win-x64", "YokiFrame.Workbench.Avalonia.exe");
         var outputPath = Path.Combine(runtimeRoot, "tool-manifest.json");
         const string originalContent = "original-manifest";
-        File.WriteAllText(outputPath, originalContent);
+        var originalBytes = Encoding.UTF8.GetBytes(originalContent);
+        File.WriteAllBytes(outputPath, originalBytes);
 
         using var originalHandle = new FileStream(
             outputPath,
@@ -428,9 +434,13 @@ public sealed class RuntimeManifestBuilderTests
             FileShare.ReadWrite | FileShare.Delete);
         new RuntimeManifestWriter().Write(manifest, outputPath);
 
-        using var reader = new StreamReader(originalHandle, System.Text.Encoding.UTF8, true, 1024, leaveOpen: true);
-        Assert.Equal(originalContent, reader.ReadToEnd());
-        Assert.NotEqual(originalContent, File.ReadAllText(outputPath));
+        originalHandle.Position = 0;
+        var observedBytes = new byte[originalBytes.Length];
+        var readCount = originalHandle.Read(observedBytes, 0, observedBytes.Length);
+        Assert.Equal(originalBytes.Length, readCount);
+        Assert.Equal(-1, originalHandle.ReadByte());
+        Assert.Equal(originalBytes, observedBytes);
+        Assert.NotEqual(originalBytes, File.ReadAllBytes(outputPath));
     }
 
     /// <summary>
@@ -453,11 +463,26 @@ public sealed class RuntimeManifestBuilderTests
     /// 创建测试专用 runtime root。
     /// </summary>
     /// <returns>runtime root。</returns>
-    private static string CreateRuntimeRoot()
+    private string CreateRuntimeRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "yokiframe-packaging-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        mCleanupRoots.Add(root);
         return root;
+    }
+
+    /// <summary>
+    /// 删除当前测试创建的 runtime 根和越界旁路目录。
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var cleanupRoot in mCleanupRoots)
+        {
+            if (Directory.Exists(cleanupRoot))
+            {
+                Directory.Delete(cleanupRoot, recursive: true);
+            }
+        }
     }
 
     /// <summary>

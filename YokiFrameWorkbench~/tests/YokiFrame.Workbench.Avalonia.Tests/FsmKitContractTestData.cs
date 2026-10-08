@@ -51,7 +51,7 @@ internal static class FsmKitContractTestData
         var selected = machines.Single(machine => machine.InstanceId == selectedInstanceId);
         var details = CreateDetails(selected);
         var history = CreateHistory(transitions, transitionTarget);
-        return CreateInternal<WorkbenchFsmKitState>(
+        return new WorkbenchFsmKitState(
             dataSource,
             selected.Name,
             selected.InstanceId,
@@ -77,7 +77,7 @@ internal static class FsmKitContractTestData
             "snapshot",
             "F:/Project/fsm-empty.json",
             "{\"fsms\":[],\"count\":0}");
-        return CreateInternal<WorkbenchFsmKitState>(
+        return new WorkbenchFsmKitState(
             dataSource,
             string.Empty,
             string.Empty,
@@ -110,7 +110,7 @@ internal static class FsmKitContractTestData
         string rawPayload,
         DateTimeOffset? updatedAtUtc = null)
     {
-        return CreateInternal<WorkbenchFsmKitDataSource>(
+        return new WorkbenchFsmKitDataSource(
             engineId,
             sessionId,
             generation,
@@ -130,7 +130,7 @@ internal static class FsmKitContractTestData
     /// <returns>与摘要一致的实例详情。</returns>
     private static WorkbenchFsmMachineDetails CreateDetails(WorkbenchFsmMachineSummary selected)
     {
-        return CreateInternal<WorkbenchFsmMachineDetails>(
+        return new WorkbenchFsmMachineDetails(
             selected.Name,
             selected.InstanceId,
             selected.MachineState,
@@ -151,7 +151,7 @@ internal static class FsmKitContractTestData
         string transitionTarget)
     {
         return (transitions ?? new[] { ("Start", transitionTarget) })
-            .Select((transition, index) => CreateInternal<WorkbenchFsmTransition>(
+            .Select((transition, index) => new WorkbenchFsmTransition(
                 transition.From,
                 transition.To,
                 "10:00:0" + index))
@@ -170,7 +170,7 @@ internal static class FsmKitContractTestData
         string name,
         string currentState)
     {
-        return CreateInternal<WorkbenchFsmMachineSummary>(
+        return new WorkbenchFsmMachineSummary(
             instanceId,
             name,
             "Running",
@@ -179,20 +179,4 @@ internal static class FsmKitContractTestData
             2);
     }
 
-    /// <summary>
-    /// 调用 Application 模型的受控内部构造方法，避免测试复制 JSON parser。
-    /// </summary>
-    /// <typeparam name="T">待创建的 Application 模型类型。</typeparam>
-    /// <param name="arguments">内部构造方法的实参数组。</param>
-    /// <returns>构造完成且类型匹配的模型。</returns>
-    private static T CreateInternal<T>(params object[] arguments)
-    {
-        var instance = Activator.CreateInstance(
-            typeof(T),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null,
-            arguments,
-            null);
-        return Assert.IsType<T>(instance);
-    }
 }

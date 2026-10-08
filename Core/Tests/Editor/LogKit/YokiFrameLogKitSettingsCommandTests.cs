@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
-using UnityEngine;
+using JsonDocument = YokiFrame.Json.JsonDocument;
+using JsonElement = YokiFrame.Json.JsonElement;
+using JsonValueKind = YokiFrame.Json.JsonValueKind;
 
 namespace YokiFrame
 {
@@ -46,9 +48,9 @@ namespace YokiFrame
             }
         }
 
-        /// <summary>验证 System.Text.Json 风格 unicode escape 能还原中文及代理对并返回完整 state。</summary>
+        /// <summary>验证 unicode escape 能还原中文及代理对，并在返回 state 中保留同一路径。</summary>
         [Test]
-        public void SetSettingsDecodesUnicodeEscapesAndReturnsFullState()
+        public void SetSettings_Unicode转义_运行时与返回字段一致()
         {
             string payload = CreateSettingsPayload(
                 false,
@@ -59,19 +61,23 @@ namespace YokiFrame
 
             YokiFrameCommandResult result = Execute("set_settings", payload);
             Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
-            WorkbenchState state = JsonUtility.FromJson<WorkbenchState>(result.ResultJson);
             Assert.IsFalse(LogKit.Enabled);
             Assert.AreEqual(LogLevel.Error, LogKit.MinimumLevel);
             Assert.AreEqual("日志📁", LogKitSettings.GetString(LogKitSettings.LOG_DIRECTORY_KEY, string.Empty));
             Assert.AreEqual("编辑.log", LogKitSettings.GetString(LogKitSettings.EDITOR_FILE_NAME_KEY, string.Empty));
             Assert.AreEqual("玩家.log", LogKitSettings.GetString(LogKitSettings.PLAYER_FILE_NAME_KEY, string.Empty));
-            Assert.AreEqual("日志📁", state.settings.logDirectory);
-            Assert.AreEqual("编辑.log", state.settings.editorFileName);
-            Assert.IsTrue(state.capabilities.settingsApply);
-            Assert.IsTrue(state.capabilities.filePreview);
-            Assert.IsFalse(state.capabilities.fileWriter);
-            Assert.IsFalse(state.capabilities.playerImGui);
-            Assert.IsFalse(state.capabilities.encryption);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                JsonElement settings = document.RootElement.GetProperty("settings");
+                JsonElement capabilities = document.RootElement.GetProperty("capabilities");
+                Assert.AreEqual("日志📁", ReadString(settings, "logDirectory"));
+                Assert.AreEqual("编辑.log", ReadString(settings, "editorFileName"));
+                Assert.IsTrue(ReadBool(capabilities, "settingsApply"));
+                Assert.IsTrue(ReadBool(capabilities, "filePreview"));
+                Assert.IsFalse(ReadBool(capabilities, "fileWriter"));
+                Assert.IsFalse(ReadBool(capabilities, "playerImGui"));
+                Assert.IsFalse(ReadBool(capabilities, "encryption"));
+            }
         }
 
         /// <summary>验证畸形、重复、嵌套、未知或错误 primitive 不会部分修改当前设置。</summary>
@@ -102,9 +108,9 @@ namespace YokiFrame
                 LogKitSettings.GetString(LogKitSettings.LOG_DIRECTORY_KEY, "changed"));
         }
 
-        /// <summary>验证 reset_settings 与 clear_history 都返回同一完整 state，而非零散确认对象。</summary>
+        /// <summary>验证 reset_settings 与 clear_history 都返回完整 state，而不是零散确认对象。</summary>
         [Test]
-        public void ResetAndClearCommandsReturnCompleteState()
+        public void ResetSettings_清空历史_返回完整状态()
         {
             YokiFrameCommandResult changed = Execute(
                 "set_settings",
@@ -116,19 +122,23 @@ namespace YokiFrame
             Assert.IsTrue(changed.IsSuccess);
             Assert.IsTrue(reset.IsSuccess);
             Assert.IsTrue(cleared.IsSuccess);
-            WorkbenchState resetState = JsonUtility.FromJson<WorkbenchState>(reset.ResultJson);
-            WorkbenchState clearedState = JsonUtility.FromJson<WorkbenchState>(cleared.ResultJson);
-            Assert.IsTrue(resetState.settings.enabled);
-            Assert.AreEqual("Debug", resetState.settings.minimumLevel);
-            Assert.IsNotNull(resetState.files);
-            Assert.AreEqual(0, clearedState.history.count);
-            Assert.AreEqual(0, clearedState.history.totalCount);
-            Assert.AreEqual(0, clearedState.history.droppedCount);
+            using (JsonDocument resetDocument = JsonDocument.Parse(reset.ResultJson))
+            using (JsonDocument clearedDocument = JsonDocument.Parse(cleared.ResultJson))
+            {
+                JsonElement resetSettings = resetDocument.RootElement.GetProperty("settings");
+                Assert.IsTrue(ReadBool(resetSettings, "enabled"));
+                Assert.AreEqual("Debug", ReadString(resetSettings, "minimumLevel"));
+                Assert.AreEqual(JsonValueKind.Object, resetDocument.RootElement.GetProperty("files").ValueKind);
+                JsonElement history = clearedDocument.RootElement.GetProperty("history");
+                Assert.AreEqual(0, ReadInt32(history, "count"));
+                Assert.AreEqual(0, ReadInt32(history, "totalCount"));
+                Assert.AreEqual(0, ReadInt32(history, "droppedCount"));
+            }
         }
 
         /// <summary>验证 editor 文件预览字段完整，末尾换行不会制造额外空行。</summary>
         [Test]
-        public void ReadLogFileReturnsCompletePreviewWithoutTrailingEmptyLine()
+        public void ReadLogFile_编辑器文件_预览不增加空行()
         {
             string directory = Path.Combine(mTempRoot, "LogFiles");
             string path = Path.Combine(directory, LogKitSettings.DEFAULT_EDITOR_FILE_NAME);
@@ -139,24 +149,27 @@ namespace YokiFrame
             YokiFrameCommandResult invalid = Execute("read_log_file", "{\"kind\":\"runtime\"}");
 
             Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
-            FilePreview preview = JsonUtility.FromJson<FilePreview>(result.ResultJson);
-            Assert.AreEqual("editor", preview.kind);
-            Assert.AreEqual(path, preview.path);
-            Assert.AreEqual(LogKitSettings.DEFAULT_EDITOR_FILE_NAME, preview.fileName);
-            Assert.IsTrue(preview.exists);
-            Assert.Greater(preview.sizeBytes, 0L);
-            Assert.IsNotEmpty(preview.modifiedUtc);
-            Assert.AreEqual(2, preview.lineCount);
-            Assert.IsFalse(preview.truncated);
-            Assert.AreEqual("first\nsecond\n", preview.content);
-            Assert.AreEqual(string.Empty, preview.errorMessage);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                JsonElement preview = document.RootElement;
+                Assert.AreEqual("editor", ReadString(preview, "kind"));
+                Assert.AreEqual(path, ReadString(preview, "path"));
+                Assert.AreEqual(LogKitSettings.DEFAULT_EDITOR_FILE_NAME, ReadString(preview, "fileName"));
+                Assert.IsTrue(ReadBool(preview, "exists"));
+                Assert.Greater(ReadInt64(preview, "sizeBytes"), 0L);
+                Assert.IsNotEmpty(ReadString(preview, "modifiedUtc"));
+                Assert.AreEqual(2, ReadInt32(preview, "lineCount"));
+                Assert.IsFalse(ReadBool(preview, "truncated"));
+                Assert.AreEqual("first\nsecond\n", ReadString(preview, "content"));
+                Assert.AreEqual(string.Empty, ReadString(preview, "errorMessage"));
+            }
             Assert.IsFalse(invalid.IsSuccess);
             Assert.AreEqual("InvalidPayload", invalid.ErrorCode);
         }
 
         /// <summary>验证大文件只读取最后 48 KiB，并从第一条完整日志行开始返回。</summary>
         [Test]
-        public void ReadLogFileBoundsTailAndDropsPartialFirstLine()
+        public void ReadLogFile_超过尾部上限_丢掉半行并保留末尾()
         {
             string directory = Path.Combine(mTempRoot, "LogFiles");
             string path = Path.Combine(directory, LogKitSettings.DEFAULT_EDITOR_FILE_NAME);
@@ -166,12 +179,16 @@ namespace YokiFrame
             YokiFrameCommandResult result = Execute("read_log_file", "{\"kind\":\"editor\"}");
 
             Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
-            FilePreview preview = JsonUtility.FromJson<FilePreview>(result.ResultJson);
-            Assert.IsTrue(preview.truncated);
-            Assert.LessOrEqual(Encoding.UTF8.GetByteCount(preview.content), 48 * 1024);
-            StringAssert.DoesNotContain("discard-prefix", preview.content);
-            StringAssert.Contains("final-marker", preview.content);
-            Assert.Greater(preview.lineCount, 0);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                JsonElement preview = document.RootElement;
+                string content = ReadString(preview, "content");
+                Assert.IsTrue(ReadBool(preview, "truncated"));
+                Assert.LessOrEqual(Encoding.UTF8.GetByteCount(content), 48 * 1024);
+                Assert.IsTrue(content.IndexOf("discard-prefix", StringComparison.Ordinal) < 0);
+                Assert.IsTrue(content.EndsWith("final-marker\n", StringComparison.Ordinal));
+                Assert.Greater(ReadInt32(preview, "lineCount"), 0);
+            }
         }
 
         /// <summary>执行当前默认 Registry 中的 LogKit 命令。</summary>
@@ -241,68 +258,44 @@ namespace YokiFrame
             return builder.ToString();
         }
 
-        /// <summary>映射命令返回的完整 state 关键字段。</summary>
-        [Serializable]
-        private sealed class WorkbenchState
+        /// <summary>读取 JSON 布尔字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段值。</returns>
+        private static bool ReadBool(JsonElement element, string propertyName)
         {
-            public SettingsState settings;
-            public CapabilitiesState capabilities;
-            public FilesState files;
-            public HistoryState history;
+            return element.GetProperty(propertyName).GetBoolean();
         }
 
-        /// <summary>映射命令可修改的设置字段。</summary>
-        [Serializable]
-        private sealed class SettingsState
+        /// <summary>读取 JSON 字符串字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段文本。</returns>
+        private static string ReadString(JsonElement element, string propertyName)
         {
-            public bool enabled;
-            public string minimumLevel;
-            public string logDirectory;
-            public string editorFileName;
-            public string playerFileName;
+            return element.GetProperty(propertyName).GetString();
         }
 
-        /// <summary>映射宿主能力，确保 UI 不展示未实现功能。</summary>
-        [Serializable]
-        private sealed class CapabilitiesState
+        /// <summary>读取 JSON 整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static int ReadInt32(JsonElement element, string propertyName)
         {
-            public bool settingsApply;
-            public bool filePreview;
-            public bool fileWriter;
-            public bool playerImGui;
-            public bool encryption;
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
         }
 
-        /// <summary>映射日志文件状态容器。</summary>
-        [Serializable]
-        private sealed class FilesState
+        /// <summary>读取 JSON 64 位整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static long ReadInt64(JsonElement element, string propertyName)
         {
-            public string directory;
-        }
-
-        /// <summary>映射清空后历史统计。</summary>
-        [Serializable]
-        private sealed class HistoryState
-        {
-            public int count;
-            public int totalCount;
-            public int droppedCount;
-        }
-
-        /// <summary>映射 read_log_file 的固定响应对象。</summary>
-        [Serializable]
-        private sealed class FilePreview
-        {
-            public string kind;
-            public string path;
-            public string fileName;
-            public bool exists;
-            public long sizeBytes;
-            public string modifiedUtc;
-            public int lineCount;
-            public bool truncated;
-            public string content;
-            public string errorMessage;
+            long value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt64(out value), propertyName);
+            return value;
         }
     }
 }

@@ -100,7 +100,7 @@ internal sealed class UnityInstallFixture : IDisposable
     /// <param name="gitUrl">待设置的 Git URL。</param>
     internal void SetYokiFrameGitDependency(string gitUrl)
     {
-        var manifest = JsonNode.Parse(File.ReadAllText(ManifestPath))?.AsObject()
+        var manifest = JsonNode.Parse(File.ReadAllBytes(ManifestPath))?.AsObject()
             ?? throw new InvalidDataException("Fixture manifest is empty.");
         var dependencies = manifest["dependencies"]?.AsObject()
             ?? throw new InvalidDataException("Fixture manifest dependencies are missing.");
@@ -114,7 +114,7 @@ internal sealed class UnityInstallFixture : IDisposable
     /// <returns>已解析的 manifest 根对象。</returns>
     internal JsonObject ReadManifest()
     {
-        return JsonNode.Parse(File.ReadAllText(ManifestPath))?.AsObject()
+        return JsonNode.Parse(File.ReadAllBytes(ManifestPath))?.AsObject()
             ?? throw new InvalidDataException("Fixture manifest is empty.");
     }
 

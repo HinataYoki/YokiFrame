@@ -2,19 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
     public sealed partial class YokiFrameFsmKitBehaviorTests
     {
-        /// <summary>
-        /// 验证七个诊断事件按创建、状态、启动、切换、释放、清理顺序发布。
-        /// </summary>
+        /// <summary>验证创建、加入、启动、切换、释放和清理按固定顺序发布诊断事件。</summary>
         [Test]
-        public void DiagnosticsHookPublishesClosedLifecycleEvents()
+        public void Start_创建到释放_按顺序发布诊断事件()
         {
-            List<string> events = new List<string>();
+            List<string> events = new();
             Action<IFSM> created = _ => events.Add("created");
             Action<IFSM> disposed = _ => events.Add("disposed");
             Action<IFSM> cleared = _ => events.Add("cleared");
@@ -50,11 +48,9 @@ namespace YokiFrame
                 events);
         }
 
-        /// <summary>
-        /// 验证同名 FSM 在诊断注册表中保持独立 instanceId，并可用 instanceId 精确读取。
-        /// </summary>
+        /// <summary>验证同名 FSM 保持独立 instanceId，并能按该标识精确读取。</summary>
         [Test]
-        public void CommandRegistryKeepsSameNameInstancesSeparate()
+        public void HandleAction_同名两台_按instanceId分别读取()
         {
             FSM<SampleStateId> first = new FSM<SampleStateId>("Duplicate");
             FSM<SampleStateId> second = new FSM<SampleStateId>("Duplicate");
@@ -62,26 +58,23 @@ namespace YokiFrame
             second.Add(SampleStateId.Run, new TrackingState("second"));
             FsmKitCommandHandler handler = new FsmKitCommandHandler();
 
-            FsmListEnvelope list = JsonUtility.FromJson<FsmListEnvelope>(handler.HandleAction("list_all", "{}"));
+            using (JsonDocument listDocument = JsonDocument.Parse(handler.HandleAction("list_all", "{}")))
+            {
+                JsonElement fsms = listDocument.RootElement.GetProperty("fsms");
+                string secondId = ReadString(fsms[1], "instanceId");
+                Assert.AreEqual(2, ReadCount(listDocument.RootElement));
+                Assert.AreEqual(2, fsms.GetArrayLength());
+                Assert.AreNotEqual(ReadString(fsms[0], "instanceId"), secondId);
+                AssertSelectedInstance(handler, secondId);
+            }
 
-            Assert.AreEqual(2, list.count);
-            Assert.AreEqual(2, list.fsms.Length);
-            Assert.AreNotEqual(list.fsms[0].instanceId, list.fsms[1].instanceId);
-            string selectedJson = handler.HandleAction(
-                "get_state",
-                "{\"instanceId\":\"" + list.fsms[1].instanceId + "\"}");
-            FsmStateEnvelope selected = JsonUtility.FromJson<FsmStateEnvelope>(selectedJson);
-            Assert.AreEqual(list.fsms[1].instanceId, selected.instanceId);
-            Assert.AreEqual("Run", selected.currentState);
             GC.KeepAlive(first);
             GC.KeepAlive(second);
         }
 
-        /// <summary>
-        /// 验证 get_state 返回当前状态、加入顺序和可递归诊断的状态节点。
-        /// </summary>
+        /// <summary>验证 get_state 返回当前状态、加入顺序和进入次数。</summary>
         [Test]
-        public void GetStateReturnsCurrentSelectionAndStateTree()
+        public void HandleAction_get_state_返回当前状态和加入顺序()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Player");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -89,26 +82,28 @@ namespace YokiFrame
             fsm.Start(SampleStateId.Run);
             FsmKitCommandHandler handler = new FsmKitCommandHandler();
 
-            FsmStateEnvelope state = JsonUtility.FromJson<FsmStateEnvelope>(
-                handler.HandleAction("get_state", "{\"fsmName\":\"Player\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                handler.HandleAction("get_state", "{\"fsmName\":\"Player\"}")))
+            {
+                JsonElement root = document.RootElement;
+                JsonElement states = root.GetProperty("states");
+                Assert.AreEqual("Player", ReadString(root, "fsmName"));
+                Assert.AreEqual("Running", ReadString(root, "machineState"));
+                Assert.AreEqual("Run", ReadString(root, "currentState"));
+                Assert.AreEqual(2, states.GetArrayLength());
+                Assert.AreEqual(0, ReadInt32(states[0], "orderIndex"));
+                Assert.AreEqual(1, ReadInt32(states[1], "orderIndex"));
+                Assert.IsTrue(ReadBool(states[1], "isCurrent"));
+                Assert.AreEqual(0L, ReadInt64(states[0], "entryCount"));
+                Assert.AreEqual(1L, ReadInt64(states[1], "entryCount"));
+            }
 
-            Assert.AreEqual("Player", state.fsmName);
-            Assert.AreEqual("Running", state.machineState);
-            Assert.AreEqual("Run", state.currentState);
-            Assert.AreEqual(2, state.states.Length);
-            Assert.AreEqual(0, state.states[0].orderIndex);
-            Assert.AreEqual(1, state.states[1].orderIndex);
-            Assert.IsTrue(state.states[1].isCurrent);
-            Assert.AreEqual(0L, state.states[0].entryCount);
-            Assert.AreEqual(1L, state.states[1].entryCount);
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证 Core 内建切换历史为有界队列，超过 200 条后只保留最新记录。
-        /// </summary>
+        /// <summary>验证内建切换历史超过 200 条后只保留最新记录。</summary>
         [Test]
-        public void TransitionHistoryIsBoundedToLatestTwoHundredRecords()
+        public void HandleAction_切换超过两百次_历史只保留最新()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("History");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -119,20 +114,21 @@ namespace YokiFrame
                 fsm.Change(index % 2 == 0 ? SampleStateId.Run : SampleStateId.Idle);
             }
 
-            FsmHistoryEnvelope history = JsonUtility.FromJson<FsmHistoryEnvelope>(
-                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"History\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("get_history", "{\"fsmName\":\"History\"}")))
+            {
+                JsonElement history = document.RootElement.GetProperty("history");
+                Assert.AreEqual(200, ReadCount(document.RootElement));
+                Assert.AreEqual(200, history.GetArrayLength());
+                Assert.AreEqual("Run", ReadString(history[history.GetArrayLength() - 1], "to"));
+            }
 
-            Assert.AreEqual(200, history.count);
-            Assert.AreEqual(200, history.history.Length);
-            Assert.AreEqual("Run", history.history[history.history.Length - 1].to);
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证状态进入次数独立于两百条历史窗口持续累计，Workbench 不会在窗口填满后显示停滞。
-        /// </summary>
+        /// <summary>验证历史窗口填满后，状态进入次数仍继续累计。</summary>
         [Test]
-        public void StateEntryCountContinuesAfterTransitionHistoryIsFull()
+        public void HandleAction_历史窗口已满_进入次数继续累计()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("EntryCount");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -143,40 +139,42 @@ namespace YokiFrame
                 fsm.Change(index % 2 == 0 ? SampleStateId.Run : SampleStateId.Idle);
             }
 
-            FsmStateEnvelope state = JsonUtility.FromJson<FsmStateEnvelope>(
-                new FsmKitCommandHandler().HandleAction("get_state", "{\"fsmName\":\"EntryCount\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("get_state", "{\"fsmName\":\"EntryCount\"}")))
+            {
+                JsonElement states = document.RootElement.GetProperty("states");
+                Assert.AreEqual(203L, ReadInt64(states[0], "entryCount"));
+                Assert.AreEqual(203L, ReadInt64(states[1], "entryCount"));
+            }
 
-            Assert.AreEqual(203L, state.states[0].entryCount);
-            Assert.AreEqual(203L, state.states[1].entryCount);
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证状态加入和移除会进入生命周期记录，供 Workbench/AI 调试状态图变化。
-        /// </summary>
+        /// <summary>验证状态加入和移除会进入生命周期记录。</summary>
         [Test]
-        public void StateLifecycleCommandReturnsAddAndRemoveEvents()
+        public void HandleAction_加入后移除_返回新增和移除事件()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Lifecycle");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
             fsm.Add(SampleStateId.Run, new TrackingState("run"));
             fsm.Remove(SampleStateId.Run);
 
-            FsmStateEventsEnvelope stateEvents = JsonUtility.FromJson<FsmStateEventsEnvelope>(
-                new FsmKitCommandHandler().HandleAction("get_state_events", "{\"fsmName\":\"Lifecycle\"}"));
+            using (JsonDocument document = JsonDocument.Parse(
+                new FsmKitCommandHandler().HandleAction("get_state_events", "{\"fsmName\":\"Lifecycle\"}")))
+            {
+                JsonElement events = document.RootElement.GetProperty("events");
+                Assert.AreEqual(3, ReadCount(document.RootElement));
+                Assert.AreEqual("added", ReadString(events[0], "eventName"));
+                Assert.AreEqual("removed", ReadString(events[2], "eventName"));
+                Assert.AreEqual("Run", ReadString(events[2], "state"));
+            }
 
-            Assert.AreEqual(3, stateEvents.count);
-            Assert.AreEqual("added", stateEvents.events[0].eventName);
-            Assert.AreEqual("removed", stateEvents.events[2].eventName);
-            Assert.AreEqual("Run", stateEvents.events[2].state);
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证外部 provider 仍可覆盖历史和状态事件 JSON，不影响新版内建记录。
-        /// </summary>
+        /// <summary>验证外部 provider 覆盖历史和状态事件 JSON。</summary>
         [Test]
-        public void OptionalProvidersOverrideHistoryAndStateEvents()
+        public void HandleAction_外部provider_覆盖历史和状态事件()
         {
             FsmKitCommandHandler.HistoryProvider = _ => "{\"history\":[],\"count\":7}";
             FsmKitCommandHandler.StateLifecycleProvider = _ => "{\"events\":[],\"count\":9}";
@@ -185,15 +183,17 @@ namespace YokiFrame
             string history = handler.HandleAction("get_history", "{\"fsmName\":\"Any\"}");
             string stateEvents = handler.HandleAction("get_state_events", "{\"fsmName\":\"Any\"}");
 
-            StringAssert.Contains("\"count\":7", history);
-            StringAssert.Contains("\"count\":9", stateEvents);
+            using (JsonDocument historyDocument = JsonDocument.Parse(history))
+            using (JsonDocument eventDocument = JsonDocument.Parse(stateEvents))
+            {
+                Assert.AreEqual(7, ReadCount(historyDocument.RootElement));
+                Assert.AreEqual(9, ReadCount(eventDocument.RootElement));
+            }
         }
 
-        /// <summary>
-        /// 验证缺失查询标识和未知 FSM 产生明确异常，而不是返回含糊空对象。
-        /// </summary>
+        /// <summary>验证缺失标识和未知 FSM 分别拒绝查询，而不是返回空对象。</summary>
         [Test]
-        public void StateQueryRejectsMissingOrUnknownIdentity()
+        public void HandleAction_缺少或未知标识_拒绝查询()
         {
             FsmKitCommandHandler handler = new FsmKitCommandHandler();
 
@@ -202,11 +202,9 @@ namespace YokiFrame
                 handler.HandleAction("get_state", "{\"fsmName\":\"Missing\"}"));
         }
 
-        /// <summary>
-        /// 验证新版 Runtime dispatcher 入口把 FsmKit 只读查询转换为成功终态。
-        /// </summary>
+        /// <summary>验证 Runtime 命令入口把 list_all 转换为包含已注册实例的成功终态。</summary>
         [Test]
-        public void RuntimeCommandHandlerReturnsTerminalSuccess()
+        public void Handle_list_all_返回成功终态()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Command");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -222,15 +220,18 @@ namespace YokiFrame
             YokiFrameCommandResult result = handler.Handle(request);
 
             Assert.IsTrue(result.IsSuccess);
-            StringAssert.Contains("\"count\":1", result.ResultJson);
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                Assert.AreEqual(1, ReadCount(document.RootElement));
+                Assert.AreEqual("Command", document.RootElement.GetProperty("fsms")[0].GetProperty("name").GetString());
+            }
+
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证 Workbench 聚合 action 同时包含列表、选中状态、历史和生命周期记录。
-        /// </summary>
+        /// <summary>验证 Workbench 聚合结果同时包含列表、选中状态、历史和生命周期记录。</summary>
         [Test]
-        public void WorkbenchSnapshotContainsAllFsmDiagnosticSections()
+        public void HandleAction_get_workbench_snapshot_包含全部诊断段()
         {
             FSM<SampleStateId> fsm = new FSM<SampleStateId>("Workbench");
             fsm.Add(SampleStateId.Idle, new TrackingState("idle"));
@@ -240,18 +241,23 @@ namespace YokiFrame
                 "get_workbench_snapshot",
                 "{\"fsmName\":\"Workbench\"}");
 
-            StringAssert.Contains("\"fsms\":", json);
-            StringAssert.Contains("\"selected\":", json);
-            StringAssert.Contains("\"history\":", json);
-            StringAssert.Contains("\"stateEvents\":", json);
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual("Workbench", root.GetProperty("selected").GetProperty("fsmName").GetString());
+                Assert.AreEqual(1, ReadCount(root));
+                Assert.AreEqual("Workbench", root.GetProperty("fsms")[0].GetProperty("name").GetString());
+                Assert.AreEqual(1, ReadCount(root.GetProperty("history")));
+                Assert.AreEqual("Idle", root.GetProperty("history").GetProperty("history")[0].GetProperty("to").GetString());
+                Assert.GreaterOrEqual(ReadCount(root.GetProperty("stateEvents")), 1);
+            }
+
             GC.KeepAlive(fsm);
         }
 
-        /// <summary>
-        /// 验证 FsmKit 领域变化推进版本，并为每个活动 instanceId 提供完整命名 Telemetry payload。
-        /// </summary>
+        /// <summary>验证领域变化推进版本，且每个活动实例都有独立 Telemetry payload。</summary>
         [Test]
-        public void FsmKitPublishesVersionedTelemetryPerActiveInstance()
+        public void CreateTelemetry_活动实例_版本随领域变化推进()
         {
             YokiFrameKitInteractionRegistry registry = YokiFrameCoreKitInteractions.CreateDefault();
             IYokiFrameKitInteractionProvider provider = registry.Providers.First(
@@ -276,11 +282,56 @@ namespace YokiFrame
             string unchangedInstanceId = named.TelemetryNames[1];
             long unchangedVersion = named.GetTelemetryVersion(unchangedInstanceId);
 
+            AssertVersionedTelemetry(
+                versioned,
+                named,
+                initialVersion,
+                addedVersion,
+                instanceId,
+                instanceVersion,
+                unchangedInstanceId,
+                unchangedVersion,
+                payloadJson,
+                fsm);
+            GC.KeepAlive(unchanged);
+        }
+
+        /// <summary>确认选中结果就是请求的 instanceId，且当前状态来自第二台状态机。</summary>
+        /// <param name="handler">FsmKit 命令入口。</param>
+        /// <param name="instanceId">第二台状态机标识。</param>
+        private static void AssertSelectedInstance(FsmKitCommandHandler handler, string instanceId)
+        {
+            using (JsonDocument selected = JsonDocument.Parse(handler.HandleAction(
+                "get_state",
+                "{\"instanceId\":\"" + instanceId + "\"}")))
+            {
+                JsonElement root = selected.RootElement;
+                Assert.AreEqual(instanceId, ReadString(root, "instanceId"));
+                Assert.AreEqual("Run", ReadString(root, "currentState"));
+            }
+        }
+
+        /// <summary>确认版本只随目标实例变化，且 Telemetry 指向该实例。</summary>
+        private static void AssertVersionedTelemetry(
+            IYokiFrameVersionedKitInteractionProvider versioned,
+            IYokiFrameVersionedNamedTelemetryProvider named,
+            long initialVersion,
+            long addedVersion,
+            string instanceId,
+            long instanceVersion,
+            string unchangedInstanceId,
+            long unchangedVersion,
+            string payloadJson,
+            FSM<SampleStateId> fsm)
+        {
             Assert.Greater(addedVersion, initialVersion);
             Assert.Greater(instanceVersion, 0L);
             Assert.AreEqual(0L, named.GetTelemetryVersion("fsm-missing"));
-            StringAssert.Contains("\"fsmName\":\"Responsive\"", payloadJson);
-            StringAssert.Contains("\"instanceId\":\"" + instanceId + "\"", payloadJson);
+            using (JsonDocument document = JsonDocument.Parse(payloadJson))
+            {
+                Assert.AreEqual("Responsive", document.RootElement.GetProperty("fsmName").GetString());
+                Assert.AreEqual(instanceId, document.RootElement.GetProperty("instanceId").GetString());
+            }
 
             fsm.Start();
             long startedVersion = versioned.StateVersion;
@@ -292,7 +343,6 @@ namespace YokiFrame
             Assert.Greater(named.GetTelemetryVersion(instanceId), startedInstanceVersion);
             Assert.AreEqual(unchangedVersion, named.GetTelemetryVersion(unchangedInstanceId));
             GC.KeepAlive(fsm);
-            GC.KeepAlive(unchanged);
         }
 
         /// <summary>订阅本用例需要的六类诊断回调；StateRemoved 在该流程中不参与断言。</summary>
@@ -329,63 +379,44 @@ namespace YokiFrame
             FsmEditorHook.OnStateAdded -= added;
         }
 
-        [Serializable]
-        private sealed class FsmListEnvelope
+        /// <summary>读取 JSON 字符串字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段文本。</returns>
+        private static string ReadString(JsonElement element, string propertyName)
         {
-            public int count;
-            public FsmSummary[] fsms = Array.Empty<FsmSummary>();
+            return element.GetProperty(propertyName).GetString();
         }
 
-        [Serializable]
-        private sealed class FsmSummary
+        /// <summary>读取 JSON 整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static int ReadInt32(JsonElement element, string propertyName)
         {
-            public string instanceId = string.Empty;
-            public string name = string.Empty;
+            int value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt32(out value), propertyName);
+            return value;
         }
 
-        [Serializable]
-        private sealed class FsmStateEnvelope
+        /// <summary>读取 JSON 64 位整数字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段整数。</returns>
+        private static long ReadInt64(JsonElement element, string propertyName)
         {
-            public string fsmName = string.Empty;
-            public string instanceId = string.Empty;
-            public string machineState = string.Empty;
-            public string currentState = string.Empty;
-            public FsmStateNode[] states = Array.Empty<FsmStateNode>();
+            long value;
+            Assert.IsTrue(element.GetProperty(propertyName).TryGetInt64(out value), propertyName);
+            return value;
         }
 
-        [Serializable]
-        private sealed class FsmStateNode
+        /// <summary>读取 JSON 布尔字段。</summary>
+        /// <param name="element">所属对象。</param>
+        /// <param name="propertyName">字段名。</param>
+        /// <returns>字段值。</returns>
+        private static bool ReadBool(JsonElement element, string propertyName)
         {
-            public int orderIndex;
-            public bool isCurrent;
-            public long entryCount;
-        }
-
-        [Serializable]
-        private sealed class FsmHistoryEnvelope
-        {
-            public int count;
-            public FsmHistoryRecord[] history = Array.Empty<FsmHistoryRecord>();
-        }
-
-        [Serializable]
-        private sealed class FsmHistoryRecord
-        {
-            public string to = string.Empty;
-        }
-
-        [Serializable]
-        private sealed class FsmStateEventsEnvelope
-        {
-            public int count;
-            public FsmStateEventRecord[] events = Array.Empty<FsmStateEventRecord>();
-        }
-
-        [Serializable]
-        private sealed class FsmStateEventRecord
-        {
-            public string eventName = string.Empty;
-            public string state = string.Empty;
+            return element.GetProperty(propertyName).GetBoolean();
         }
     }
 }

@@ -27,7 +27,7 @@ public sealed class AudioKitI18nTests
             try
             {
                 Assert.Equal("全部", viewModel.SelectedBusScope);
-                Assert.Contains("内置", viewModel.BusScopeOptions);
+                Assert.Equal(new[] { "全部", "内置", "已注册", "动态" }, viewModel.BusScopeOptions);
                 viewModel.SetProjectRoot("ProjectA");
                 await viewModel.ScanIndexCommand.ExecuteAsync();
                 Assert.Equal("已扫描 0 项", viewModel.IndexStatusText);

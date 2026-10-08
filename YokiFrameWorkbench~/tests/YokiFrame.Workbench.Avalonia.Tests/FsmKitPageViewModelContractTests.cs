@@ -12,7 +12,7 @@ public sealed class FsmKitPageViewModelContractTests
     /// 验证显式 command 详情不会被宿主下一帧默认选择的周期 snapshot 覆盖。
     /// </summary>
     [Fact]
-    public async Task FsmKitPeriodicDefaultSelectionDoesNotOverwriteExplicitDetails()
+    public async Task ApplyPeriodicState_已有显式详情_默认周期选择不覆盖()
     {
         var periodic = FsmKitContractTestData.CreateState(
             "default-instance",
@@ -26,7 +26,7 @@ public sealed class FsmKitPageViewModelContractTests
             "{\"source\":\"command\"}",
             "F:/Project/chosen-response.json",
             "ChosenState");
-        FsmKitPageViewModel viewModel = new((_, _) => Task.FromResult(explicitDetails));
+        using FsmKitPageViewModel viewModel = new((_, _) => Task.FromResult(explicitDetails));
 
         viewModel.ApplyPeriodicState(periodic);
         await viewModel.QueryInstanceAsync("chosen-instance");
@@ -41,9 +41,10 @@ public sealed class FsmKitPageViewModelContractTests
 
     /// <summary>
     /// 验证用户切换 instance 后立即清空上一实例详情，查询完成前不会混看旧证据。
+    /// 未完成查询随页面释放取消，不在断言后手动完成挂起任务。
     /// </summary>
     [Fact]
-    public async Task FsmKitSelectionClearsPreviousInstanceDetailsBeforeQueryCompletes()
+    public async Task SelectedMachine_切换实例_查询完成前清空旧详情()
     {
         var periodic = FsmKitContractTestData.CreateState(
             "default-instance",
@@ -57,15 +58,15 @@ public sealed class FsmKitPageViewModelContractTests
             "{\"source\":\"command\"}",
             "F:/Project/chosen-response.json",
             "ChosenState");
-        TaskCompletionSource<WorkbenchFsmKitState> pending = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<WorkbenchFsmKitState> pending = new TaskCompletionSource<WorkbenchFsmKitState>(
+            TaskCreationOptions.RunContinuationsAsynchronously).Task;
         var queriedInstanceId = string.Empty;
-        FsmKitPageViewModel viewModel = new((instanceId, _) =>
+        using FsmKitPageViewModel viewModel = new((instanceId, cancellationToken) =>
         {
             queriedInstanceId = instanceId;
             return instanceId == "chosen-instance"
                 ? Task.FromResult(explicitDetails)
-                : pending.Task;
+                : pending.WaitAsync(cancellationToken);
         });
 
         viewModel.ApplyPeriodicState(periodic);
@@ -80,16 +81,15 @@ public sealed class FsmKitPageViewModelContractTests
         Assert.Equal(string.Empty, viewModel.RawPayload);
         Assert.Empty(viewModel.EvidencePaths);
         Assert.Contains("default-instance", viewModel.DiagnosticText);
-        pending.SetResult(periodic);
     }
 
     /// <summary>
     /// 验证切换到无 FsmKit 数据的 engine 时不会残留上一宿主身份和证据。
     /// </summary>
     [Fact]
-    public void FsmKitNullStateClearsAllVisibleSourceFields()
+    public void ApplyPeriodicState_空状态_清空宿主与证据()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(FsmKitContractTestData.CreateState(
             "default-instance",
             "telemetry",
@@ -112,9 +112,9 @@ public sealed class FsmKitPageViewModelContractTests
     /// 验证已读取但没有注册 FSM 的快照会显示可行动的空状态，而不是留下空白工作区。
     /// </summary>
     [Fact]
-    public void FsmKitEmptySnapshotShowsActionableEmptyWorkspace()
+    public void ApplyPeriodicState_无注册状态机_显示可行动空状态()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
 
         viewModel.ApplyPeriodicState(FsmKitContractTestData.CreateEmptyState());
 
@@ -130,9 +130,9 @@ public sealed class FsmKitPageViewModelContractTests
     /// 验证真实状态和历史会投影为稳定的观测转换图节点与边，不让 View 自行推导业务数据。
     /// </summary>
     [Fact]
-    public void FsmKitStateProjectsObservedGraphFromStateAndHistory()
+    public void ApplyPeriodicState_有状态和历史_投影观测图()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
 
         viewModel.ApplyPeriodicState(FsmKitContractTestData.CreateState(
             "chosen-instance",
@@ -156,11 +156,11 @@ public sealed class FsmKitPageViewModelContractTests
     /// 验证切换宿主后，旧 session 尚未完成的详情响应不会覆盖新宿主页面。
     /// </summary>
     [Fact]
-    public async Task FsmKitIgnoresInFlightDetailsFromPreviousHostIdentity()
+    public async Task QueryInstanceAsync_宿主已切换_忽略旧详情响应()
     {
         TaskCompletionSource<WorkbenchFsmKitState> response = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        FsmKitPageViewModel viewModel = new((_, _) => response.Task);
+        using FsmKitPageViewModel viewModel = new((_, _) => response.Task);
         var oldHost = FsmKitContractTestData.CreateState(
             "default-instance", "snapshot", "{\"host\":\"unity\"}", "F:/Project/unity.json", "UnityState");
         var newHost = FsmKitContractTestData.CreateState(
@@ -196,7 +196,7 @@ public sealed class FsmKitPageViewModelContractTests
     /// 验证实例身份变化会发起一次强类型详情查询，而不是只切换本地摘要。
     /// </summary>
     [Fact]
-    public async Task FsmKitInstanceSelectionQueriesDetailsByExactInstanceId()
+    public async Task QueryInstanceAsync_指定实例_按精确instanceId查询并报告失败()
     {
         var requestedInstanceId = string.Empty;
         Func<string, CancellationToken, Task<WorkbenchFsmKitState>> query = (instanceId, _) =>
@@ -204,18 +204,12 @@ public sealed class FsmKitPageViewModelContractTests
             requestedInstanceId = instanceId;
             return Task.FromException<WorkbenchFsmKitState>(new InvalidOperationException("query failed"));
         };
-        var type = typeof(WorkbenchShellViewModel).Assembly.GetType(
-            "YokiFrame.Workbench.Avalonia.ViewModels.FsmKitPageViewModel");
+        using FsmKitPageViewModel viewModel = new(query);
 
-        Assert.NotNull(type);
-        var viewModel = Assert.IsAssignableFrom<object>(Activator.CreateInstance(type, query));
-        var method = type.GetMethod("QueryInstanceAsync");
-        Assert.NotNull(method);
-        var task = Assert.IsAssignableFrom<Task>(method.Invoke(viewModel, new object[] { "fsm-instance-42" }));
-        await task;
+        await viewModel.QueryInstanceAsync("fsm-instance-42");
 
         Assert.Equal("fsm-instance-42", requestedInstanceId);
-        Assert.Equal("fsm-instance-42", type.GetProperty("SelectedInstanceId")?.GetValue(viewModel));
-        Assert.Contains("query failed", type.GetProperty("DiagnosticText")?.GetValue(viewModel)?.ToString());
+        Assert.Equal("fsm-instance-42", viewModel.SelectedInstanceId);
+        Assert.Contains("query failed", viewModel.DiagnosticText, StringComparison.Ordinal);
     }
 }

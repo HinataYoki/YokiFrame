@@ -31,7 +31,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证执行中捕获控制钩子异常并 Finish 仍由故障终态优先。</summary>
         [Test]
-        public void CaughtControlHookFaultWinsNormalFinishInSameTick()
+        public void Tick_控制钩子故障_优先于同帧正常完成()
         {
             CaughtControlFaultAction action = new();
             IActionController controller = action.Start();
@@ -50,7 +50,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证子 OnFinish 登记控制故障后不会继续执行 Sequence 兄弟。</summary>
         [Test]
-        public void ControlFaultFromChildFinishStopsSequenceSiblings()
+        public void Finish_子动作控制故障_停止序列兄弟()
         {
             FinishHookControlFaultAction action = new();
             var siblingCount = 0;
@@ -71,7 +71,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证根 Condition 在 predicate 内先取消再满足时不会进入正常完成。</summary>
         [Test]
-        public void ConditionCancellationBeforeFinishWinsCompletedPredicate()
+        public void Finish_条件先取消_优先于完成谓词()
         {
             IActionController controller = null;
             var predicateCount = 0;
@@ -98,7 +98,7 @@ namespace YokiFrame.Tests
         [TestCase(ContainerKind.Sequence)]
         [TestCase(ContainerKind.Parallel)]
         [TestCase(ContainerKind.Repeat)]
-        public void ParentFinishDuringChildInitStopsRemainingSiblings(ContainerKind containerKind)
+        public void Init_父级在子初始化时结束_停止其余兄弟(ContainerKind containerKind)
         {
             ISequence container = CreateContainer(containerKind);
             IAction root = container;
@@ -114,7 +114,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Repeat 新轮首个 OnInit 取消后不会重启后续兄弟。</summary>
         [Test]
-        public void RepeatCancellationDuringRoundResetStopsRemainingSiblings()
+        public void Reset_重复轮重置时取消_停止其余兄弟()
         {
             CancelOnSecondInitAction first = new();
             InitProbeAction sibling = new();

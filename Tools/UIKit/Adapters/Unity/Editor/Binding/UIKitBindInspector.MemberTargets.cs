@@ -77,7 +77,7 @@ namespace YokiFrame
         }
 
         /// <summary>切换一个组件的选择状态，并保持至少一个 Member 目标。</summary>
-        private void SetMemberSelected(Component component, bool selected)
+        internal void SetMemberSelected(Component component, bool selected)
         {
             serializedObject.Update();
             List<MemberTargetValue> values = ReadMemberTargetValues();
@@ -177,7 +177,7 @@ namespace YokiFrame
         }
 
         /// <summary>修改一个已选组件的字段名，并在首项变化时同步旧 Name。</summary>
-        private void WriteMemberName(Component component, string value)
+        internal void WriteMemberName(Component component, string value)
         {
             serializedObject.Update();
             List<MemberTargetValue> values = ReadMemberTargetValues();

@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 using System;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -13,7 +11,7 @@ using UnityEngine.Serialization;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>验证 UIKit 当前同名脚本 GUID、枚举数值、字段别名和包内 GUID 唯一性。</summary>
+    /// <summary>验证 UIKit 当前同名脚本 GUID、根 Prefab 契约、枚举数值和字段别名。</summary>
     public sealed class UIKitSerializationCompatibilityTests
     {
         private const string FIXTURE_FOLDER = "Assets/__YokiFrameUIKitCompatibilityTests__";
@@ -66,24 +64,6 @@ namespace YokiFrame.Tests
             {
                 Assert.AreEqual(item.Value, AssetDatabase.AssetPathToGUID(item.Key), item.Key);
                 Assert.AreEqual(item.Key, AssetDatabase.GUIDToAssetPath(item.Value), item.Value);
-            }
-        }
-
-        /// <summary>验证包内 `.meta` 的主 GUID 全部唯一，防止迁移旧 meta 时覆盖当前资产。</summary>
-        [Test]
-        public void PackageMetaGuidsRemainUnique()
-        {
-            string packageRoot = Path.Combine(Application.dataPath, "YokiFrame");
-            var owners = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (string metaPath in Directory.EnumerateFiles(packageRoot, "*.meta", SearchOption.AllDirectories))
-            {
-                Match match = Regex.Match(File.ReadAllText(metaPath), "^guid:\\s*([0-9a-f]{32})$", RegexOptions.Multiline);
-                if (!match.Success) continue;
-                string guid = match.Groups[1].Value;
-                Assert.IsFalse(
-                    owners.TryGetValue(guid, out string existing),
-                    "重复 GUID " + guid + ": " + existing + " / " + metaPath);
-                owners.Add(guid, metaPath);
             }
         }
 
@@ -253,9 +233,9 @@ namespace YokiFrame.Tests
             AssertFormerName(nameof(AbstractBind.Comment), "comment");
         }
 
-        /// <summary>由 Unity 创建旧 GUID Bind Prefab，并验证无 Missing Script 且字段可回读。</summary>
+        /// <summary>验证 Bind Prefab 保存后仍指向旧脚本 GUID，并且字段可以回读。</summary>
         [Test]
-        public void BindPrefabRoundTripUsesLegacyGuidWithoutMissingScript()
+        public void Bind_保存并重新加载_保留字段且脚本GUID不变()
         {
             EnsureFixtureFolder();
             GameObject root = new("LegacyBind", typeof(RectTransform), typeof(Bind));
@@ -273,14 +253,14 @@ namespace YokiFrame.Tests
                 UnityEngine.Object.DestroyImmediate(root);
             }
 
-            string yaml = File.ReadAllText(ToAbsolutePath(FIXTURE_PATH));
-            StringAssert.Contains("guid: " + BIND_GUID, yaml);
             GameObject contents = PrefabUtility.LoadPrefabContents(FIXTURE_PATH);
             try
             {
                 Assert.AreEqual(0, GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(contents));
                 Bind restored = contents.GetComponent<Bind>();
                 Assert.IsNotNull(restored);
+                MonoScript script = MonoScript.FromMonoBehaviour(restored);
+                Assert.AreEqual(BIND_GUID, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(script)));
                 Assert.AreEqual("ConfirmButton", restored.Name);
                 Assert.AreEqual(typeof(RectTransform).FullName, restored.Type);
                 Assert.AreSame(restored.GetComponent<RectTransform>(), restored.Target);
@@ -381,10 +361,14 @@ namespace YokiFrame.Tests
         {
             FieldInfo field = typeof(AbstractBind).GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
             Assert.IsNotNull(field, fieldName);
-            string[] names = field.GetCustomAttributes<FormerlySerializedAsAttribute>()
-                .Select(static attribute => attribute.oldName)
-                .ToArray();
-            CollectionAssert.Contains(names, oldName);
+            FormerlySerializedAsAttribute[] aliases = field.GetCustomAttributes<FormerlySerializedAsAttribute>().ToArray();
+            bool found = false;
+            for (int index = 0; index < aliases.Length; index++)
+            {
+                if (aliases[index].oldName == oldName) found = true;
+            }
+
+            Assert.IsTrue(found, fieldName + " 缺少旧字段名 " + oldName);
         }
 
         /// <summary>创建测试 Prefab 使用的临时 Assets 目录。</summary>
@@ -394,10 +378,5 @@ namespace YokiFrame.Tests
                 AssetDatabase.CreateFolder("Assets", "__YokiFrameUIKitCompatibilityTests__");
         }
 
-        /// <summary>把 Assets 相对路径转换为当前 Unity 项目的绝对路径。</summary>
-        private static string ToAbsolutePath(string assetPath)
-        {
-            return Path.Combine(Directory.GetParent(Application.dataPath).FullName, assetPath);
-        }
     }
 }

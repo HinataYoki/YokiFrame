@@ -9,7 +9,7 @@ public sealed class LogKitRuntimeSettingsServiceTests
 {
     /// <summary>验证保存替换 LogKit 条目但保留其它 Kit，并清理临时文件。</summary>
     [Fact]
-    public async Task SavePreservesOtherKitsAndCommitsAtomically()
+    public async Task SaveUnitySettingsAsync_已有其他Kit_保留条目并隔离编辑器字段()
     {
         var projectRoot = CreateProjectRoot();
         var service = new LogKitRuntimeSettingsService(projectRoot);
@@ -32,13 +32,13 @@ public sealed class LogKitRuntimeSettingsServiceTests
         Assert.False(result.RuntimeApplied);
         Assert.Equal("Warning", result.ProjectSettings.Settings.MinimumLevel);
         Assert.Equal(512, result.ProjectSettings.Settings.MaxQueueSize);
-        using var document = JsonDocument.Parse(File.ReadAllText(service.SettingsPath));
-        var entries = document.RootElement.GetProperty("settings").EnumerateArray().ToArray();
+        using JsonDocument document = ToolingFileObservation.OpenJson(service.SettingsPath);
+        JsonElement[] entries = document.RootElement.GetProperty("settings").EnumerateArray().ToArray();
         Assert.Contains(entries, static entry => entry.GetProperty("kit").GetString() == "EventKit");
         Assert.DoesNotContain(entries, static entry =>
             entry.GetProperty("key").GetString() is "saveLogInEditor" or "editorFileName");
-        using var editorDocument = JsonDocument.Parse(File.ReadAllText(service.EditorSettingsPath));
-        var editorEntries = editorDocument.RootElement.GetProperty("settings").EnumerateArray().ToArray();
+        using JsonDocument editorDocument = ToolingFileObservation.OpenJson(service.EditorSettingsPath);
+        JsonElement[] editorEntries = editorDocument.RootElement.GetProperty("settings").EnumerateArray().ToArray();
         Assert.Contains(editorEntries, static entry =>
             entry.GetProperty("key").GetString() == "saveLogInEditor"
             && entry.GetProperty("value").GetString() == "true");
@@ -51,7 +51,7 @@ public sealed class LogKitRuntimeSettingsServiceTests
 
     /// <summary>验证页面指纹过期时拒绝覆盖外部修改。</summary>
     [Fact]
-    public async Task SaveRejectsFingerprintConflictWithoutOverwritingExternalChange()
+    public async Task SaveUnitySettingsAsync_指纹冲突_不覆盖外部字节()
     {
         var projectRoot = CreateProjectRoot();
         var service = new LogKitRuntimeSettingsService(projectRoot);
@@ -68,7 +68,7 @@ public sealed class LogKitRuntimeSettingsServiceTests
 
         Assert.False(result.ProjectSaved);
         Assert.True(result.ConflictDetected);
-        Assert.Equal(external, File.ReadAllText(service.SettingsPath));
+        ToolingFileObservation.AssertUtf8(service.SettingsPath, external);
     }
 
     /// <summary>验证缺失文件使用稳定指纹并可创建完整配置。</summary>
@@ -91,7 +91,7 @@ public sealed class LogKitRuntimeSettingsServiceTests
 
     /// <summary>验证重新加载会合并 Editor 文件，同时拒绝 Editor 字段回流 Resources。</summary>
     [Fact]
-    public async Task LoadMergesIsolatedEditorSettingsWithoutPollutingRuntimeJson()
+    public async Task LoadUnitySettings_保存后重载_编辑器键不进入运行时文档()
     {
         var service = new LogKitRuntimeSettingsService(CreateProjectRoot());
         var loaded = service.LoadUnitySettings("unity-editor");
@@ -107,9 +107,9 @@ public sealed class LogKitRuntimeSettingsServiceTests
 
         Assert.True(reloaded.Settings.SaveLogInEditor);
         Assert.Equal("persisted-editor.log", reloaded.Settings.EditorFileName);
-        string runtimeJson = File.ReadAllText(service.SettingsPath);
-        Assert.DoesNotContain("saveLogInEditor", runtimeJson, StringComparison.Ordinal);
-        Assert.DoesNotContain("editorFileName", runtimeJson, StringComparison.Ordinal);
+        using JsonDocument runtime = ToolingFileObservation.OpenJson(service.SettingsPath);
+        ToolingFileObservation.AssertJsonOmits(runtime.RootElement, "saveLogInEditor");
+        ToolingFileObservation.AssertJsonOmits(runtime.RootElement, "editorFileName");
     }
 
     /// <summary>验证 Workbench 与 Core 对日志目录使用同一 4096 字符边界，不会提前拒绝 Runtime 可接受的设置。</summary>
@@ -132,7 +132,7 @@ public sealed class LogKitRuntimeSettingsServiceTests
 
     /// <summary>验证 Godot 运行时写入 project.godot，编辑器字段写入 .yokiframe，不创建 Unity 目录。</summary>
     [Fact]
-    public async Task GodotSaveSplitsRuntimeAndEditorDocuments()
+    public async Task SaveGodotSettingsAsync_混合字段_运行时与编辑器分区()
     {
         string root = CreateProjectRoot();
         Directory.CreateDirectory(root);
@@ -149,19 +149,21 @@ public sealed class LogKitRuntimeSettingsServiceTests
         WorkbenchLogKitSettingsSaveResult result = await service.SaveGodotSettingsAsync(
             "godot-editor", settings, loaded.Fingerprint, CancellationToken.None);
         WorkbenchLogKitProjectSettings reloaded = service.LoadGodotSettings("godot-editor");
-        string projectSettings = File.ReadAllText(Path.Combine(root, "project.godot"));
-        string editorSettings = projectSettings;
+        Dictionary<string, Dictionary<string, string>> projectSettings = ToolingFileObservation.ReadGodot(Path.Combine(root, "project.godot"));
 
         Assert.True(result.ProjectSaved);
         Assert.Equal("Warning", reloaded.Settings.MinimumLevel);
         Assert.True(reloaded.Settings.SaveLogInEditor);
         Assert.Equal("godot-editor.log", reloaded.Settings.EditorFileName);
-        Assert.Contains("[application]", projectSettings, StringComparison.Ordinal);
-        Assert.Contains("[yokiframe/runtime]", projectSettings, StringComparison.Ordinal);
-        Assert.Contains("[yokiframe/editor]", projectSettings, StringComparison.Ordinal);
-        Assert.Contains("log_kit/minimum_level=\"Warning\"", projectSettings, StringComparison.Ordinal);
-        Assert.Contains("LogKit/saveLogInEditor=\"true\"", editorSettings, StringComparison.Ordinal);
-        Assert.DoesNotContain("saveLogInEditor", ExtractGodotSection(projectSettings, "[yokiframe/runtime]"), StringComparison.Ordinal);
+        Assert.Equal("\"Game\"", projectSettings["[application]"]["config/name"]);
+        Assert.Equal("\"Warning\"", projectSettings["[yokiframe/runtime]"]["log_kit/minimum_level"]);
+        Assert.Equal("\"true\"", projectSettings["[yokiframe/editor]"]["LogKit/saveLogInEditor"]);
+        Assert.Equal("\"godot-editor.log\"", projectSettings["[yokiframe/editor]"]["LogKit/editorFileName"]);
+        Assert.All(projectSettings["[yokiframe/runtime]"], static setting =>
+        {
+            Assert.True(setting.Key.IndexOf("saveLogInEditor", StringComparison.Ordinal) < 0);
+            Assert.True(setting.Value.IndexOf("saveLogInEditor", StringComparison.Ordinal) < 0);
+        });
         Assert.False(Directory.Exists(Path.Combine(root, "ProjectSettings")));
         Assert.False(Directory.Exists(Path.Combine(root, "Assets")));
     }
@@ -176,15 +178,6 @@ public sealed class LogKitRuntimeSettingsServiceTests
             LogKitRuntimeSettingsService.ResolveContainedPath(root, "../outside.json"));
         Assert.Throws<ArgumentException>(() =>
             LogKitRuntimeSettingsService.ResolveContainedPath(root, Path.GetFullPath("outside.json")));
-    }
-
-    /// <summary>截取一个 Godot section，供断言编辑器字段没有进入运行时 section。</summary>
-    private static string ExtractGodotSection(string content, string section)
-    {
-        int start = content.IndexOf(section, StringComparison.Ordinal);
-        if (start < 0) return string.Empty;
-        int next = content.IndexOf("\n[", start + section.Length, StringComparison.Ordinal);
-        return next < 0 ? content[start..] : content[start..next];
     }
 
     /// <summary>创建唯一测试项目根。</summary>

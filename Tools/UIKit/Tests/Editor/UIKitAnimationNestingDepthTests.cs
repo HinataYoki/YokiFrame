@@ -1,8 +1,5 @@
 #if UNITY_EDITOR && UNITY_INCLUDE_TESTS
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -42,44 +39,25 @@ namespace YokiFrame.Tests
         {
             if (!(animation is CompositeAnimation composite)) return 1;
 
-            FieldInfo field = typeof(CompositeAnimation).GetField(
-                "mAnimations",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, "未找到 CompositeAnimation.mAnimations");
-            var children = (IList)field.GetValue(composite);
-
             int maxDepth = 1;
-            for (var index = 0; index < children.Count; index++)
+            for (var index = 0; index < composite.ChildCount; index++)
             {
-                int childDepth = 1 + MeasureDepth((IUIAnimation)children[index]);
+                int childDepth = 1 + MeasureDepth(composite.GetChild(index));
                 if (childDepth > maxDepth) maxDepth = childDepth;
             }
 
             return maxDepth;
         }
 
-        /// <summary>通过反射调用校验器的私有动画规则，避免依赖面板 GameObject 装配。</summary>
+        /// <summary>
+        /// 直接调用动画配置校验，避免依赖面板 GameObject 装配。
+        /// </summary>
         /// <param name="config">待校验配置。</param>
         /// <returns>校验结果。</returns>
         private static UIPanelValidationResult Validate(UIAnimationConfig config)
         {
-            MethodInfo method = null;
-            MethodInfo[] candidates = typeof(UIPanelValidator).GetMethods(
-                BindingFlags.Static | BindingFlags.NonPublic);
-            for (var index = 0; index < candidates.Length; index++)
-            {
-                if (candidates[index].Name != "ValidateAnimationConfig") continue;
-                if (candidates[index].GetParameters().Length < 4) continue;
-                method = candidates[index];
-                break;
-            }
-
-            Assert.IsNotNull(method, "未找到 UIPanelValidator.ValidateAnimationConfig");
             var result = new UIPanelValidationResult(null);
-            object[] arguments = method.GetParameters().Length >= 5
-                ? new object[] { config, "动画", null, result, 0 }
-                : new object[] { config, "动画", null, result };
-            _ = method.Invoke(null, arguments);
+            UIPanelValidator.ValidateAnimationConfig(config, "动画", null, result);
             return result;
         }
 

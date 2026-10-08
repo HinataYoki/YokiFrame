@@ -11,6 +11,14 @@ namespace YokiFrame
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Install()
         {
+            InstallForTests();
+        }
+
+        /// <summary>
+        /// 注册 Input System UI 模块工厂。测试直接调用此缝，避免反射私有安装器。
+        /// </summary>
+        internal static void InstallForTests()
+        {
             UIKit.RegisterInputModuleFactory(static owner =>
             {
                 return owner.AddComponent<InputSystemUIInputModule>();

@@ -12,9 +12,9 @@ namespace YokiFrame.Tests
     /// <summary>验证 UIPanel 其它属性区域保留第三方 IMGUI 绘制管线。</summary>
     public sealed class UIKitPanelInspectorExternalPropertiesTests
     {
-        /// <summary>验证其它属性卡片使用局部 IMGUI 容器而不是 UI Toolkit PropertyField。</summary>
+        /// <summary>验证派生字段的 Inspector 使用局部 IMGUI 容器，而不是 UI Toolkit PropertyField。</summary>
         [Test]
-        public void OtherPropertiesUseIMGUIBridge()
+        public void CreateInspectorGUI_派生字段_使用局部IMGUI容器()
         {
             GameObject gameObject = new("ExternalPropertiesPanel", typeof(RectTransform));
             UnityEditor.Editor editor = default;
@@ -36,27 +36,22 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证字段收集保留生成绑定字段和业务字段，并过滤 UIPanel 内部字段。</summary>
+        /// <summary>验证字段收集保留派生业务字段，并排除 UIPanel 框架字段和生成数据字段。</summary>
         [Test]
-        public void CustomPropertyPathsKeepDerivedFieldsOnly()
+        public void CollectCustomPropertyPaths_派生面板_只保留业务字段()
         {
             GameObject gameObject = new("ExternalPropertiesFilterPanel", typeof(RectTransform));
             try
             {
                 ExternalPropertiesPanel panel = gameObject.AddComponent<ExternalPropertiesPanel>();
                 List<string> paths = new();
-                Type inspectorType = GetInspectorType();
-                MethodInfo collect = inspectorType == null
-                    ? default
-                    : inspectorType.GetMethod(
-                        "CollectCustomPropertyPaths",
-                        BindingFlags.Static | BindingFlags.NonPublic);
-
-                Assert.IsNotNull(collect);
-                collect.Invoke(null, new object[] { new SerializedObject(panel), panel.GetType(), paths });
+                UIKitPanelInspector.CollectCustomPropertyPaths(
+                    new SerializedObject(panel),
+                    panel.GetType(),
+                    paths);
 
                 CollectionAssert.Contains(paths, "Panel");
-                CollectionAssert.Contains(paths, "mWayPointList");
+                CollectionAssert.Contains(paths, "WayPointList");
                 CollectionAssert.DoesNotContain(paths, "mShowAnimationConfig");
                 CollectionAssert.DoesNotContain(paths, "mHideAnimationConfig");
                 CollectionAssert.DoesNotContain(paths, "mAutoFocusOnShow");
@@ -69,98 +64,51 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>验证兼容层按属性类型名读取标题、标签、提示、只读和列表展开配置。</summary>
+        /// <summary>验证兼容层按特性类型名解析标题、标签、提示、信息框、只读和列表展开。</summary>
         [Test]
-        public void ExternalAttributesResolveByTypeName()
+        public void ResolveAttributeTitle_按类型名标注_解析标题标签提示只读和展开()
         {
-            FieldInfo field = typeof(ExternalPropertiesPanel).GetField(
-                "mWayPointList",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Type inspectorType = GetInspectorType();
+            FieldInfo field = GetFixtureField(nameof(ExternalPropertiesPanel.WayPointList));
+            FieldInfo readOnlyField = GetFixtureField(nameof(ExternalPropertiesPanel.ReadOnlyStateField));
             Assert.IsNotNull(field);
-            Assert.IsNotNull(inspectorType);
+            Assert.IsNotNull(readOnlyField);
 
-            MethodInfo resolveTitle = inspectorType.GetMethod(
-                "ResolveAttributeTitle",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo resolveLabel = inspectorType.GetMethod(
-                "ResolveAttributeLabel",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo resolveTooltip = inspectorType.GetMethod(
-                "ResolveAttributeTooltip",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo resolveInfoBoxText = inspectorType.GetMethod(
-                "ResolveAttributeInfoBoxText",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo resolveInfoBoxType = inspectorType.GetMethod(
-                "ResolveAttributeInfoBoxType",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo readOnly = inspectorType.GetMethod(
-                "HasReadOnlyAttribute",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo alwaysExpanded = inspectorType.GetMethod(
-                "ShouldForceExpandCustomProperty",
-                BindingFlags.Static | BindingFlags.NonPublic);
-
-            Assert.AreEqual("Inspector 兼容测试", resolveTitle.Invoke(null, new object[] { field }));
-            Assert.AreEqual("路径点大小", resolveLabel.Invoke(null, new object[] { field }));
-            Assert.AreEqual("路径点列表提示", resolveTooltip.Invoke(null, new object[] { field }));
-            Assert.AreEqual("字段说明", resolveInfoBoxText.Invoke(null, new object[] { field }));
-            Assert.AreEqual(MessageType.Info, resolveInfoBoxType.Invoke(null, new object[] { field }));
-            Assert.IsTrue((bool)readOnly.Invoke(null, new object[] { typeof(ExternalPropertiesPanel).GetField(
-                "mReadOnlyState", BindingFlags.Instance | BindingFlags.NonPublic) }));
-            Assert.IsTrue((bool)alwaysExpanded.Invoke(null, new object[] { field }));
+            Assert.AreEqual("Inspector 兼容测试", UIKitPanelInspector.ResolveAttributeTitle(field));
+            Assert.AreEqual("路径点大小", UIKitPanelInspector.ResolveAttributeLabel(field));
+            Assert.AreEqual("路径点列表提示", UIKitPanelInspector.ResolveAttributeTooltip(field));
+            Assert.AreEqual("字段说明", UIKitPanelInspector.ResolveAttributeInfoBoxText(field));
+            Assert.AreEqual(MessageType.Info, UIKitPanelInspector.ResolveAttributeInfoBoxType(field));
+            Assert.IsTrue(UIKitPanelInspector.HasReadOnlyAttribute(readOnlyField));
+            Assert.IsTrue(UIKitPanelInspector.ShouldForceExpandCustomProperty(field));
         }
 
-        /// <summary>验证 Unity 刷新期间的空目标不会进入 SerializedObject 创建流程。</summary>
+        /// <summary>验证包含空对象的目标集合不会被当作可创建 SerializedObject 的有效目标。</summary>
         [Test]
-        public void InvalidTargetsAreRejected()
+        public void HasValidTargets_包含空目标_返回假()
         {
-            Type inspectorType = GetInspectorType();
-            MethodInfo hasValidTargets = inspectorType == null
-                ? default
-                : inspectorType.GetMethod("HasValidTargets", BindingFlags.Static | BindingFlags.NonPublic);
-
-            Assert.IsNotNull(hasValidTargets);
-            Assert.IsFalse((bool)hasValidTargets.Invoke(null, new object[] { new UnityEngine.Object[] { null } }));
+            Assert.IsFalse(UIKitPanelInspector.HasValidTargets(new UnityEngine.Object[] { null }));
         }
 
-        /// <summary>验证兼容层收集无参数按钮、过滤带参数按钮并解析按钮标签。</summary>
+        /// <summary>验证兼容层只收集无参数按钮，解析按钮标签，并在执行后增加可观察调用次数。</summary>
         [Test]
-        public void CustomButtonsKeepParameterlessMethodsOnly()
+        public void CollectCustomButtonMethods_无参数按钮_收集标签并执行()
         {
             GameObject gameObject = new("ExternalPropertiesButtonPanel", typeof(RectTransform));
             UnityEditor.Editor editor = default;
             try
             {
                 ExternalPropertiesPanel panel = gameObject.AddComponent<ExternalPropertiesPanel>();
-                Type inspectorType = GetInspectorType();
-                MethodInfo collect = inspectorType == null
-                    ? default
-                    : inspectorType.GetMethod(
-                        "CollectCustomButtonMethods",
-                        BindingFlags.Static | BindingFlags.NonPublic);
-                MethodInfo resolveLabel = inspectorType == null
-                    ? default
-                    : inspectorType.GetMethod(
-                        "ResolveButtonLabel",
-                        BindingFlags.Static | BindingFlags.NonPublic);
-
-                Assert.IsNotNull(collect);
-                Assert.IsNotNull(resolveLabel);
                 List<MethodInfo> methods = new();
-                collect.Invoke(null, new object[] { panel.GetType(), methods });
+                UIKitPanelInspector.CollectCustomButtonMethods(panel.GetType(), methods);
 
                 Assert.AreEqual(1, methods.Count);
                 Assert.AreEqual("RunCompatibilityButton", methods[0].Name);
-                Assert.AreEqual("执行兼容按钮", resolveLabel.Invoke(null, new object[] { methods[0] }));
+                Assert.AreEqual("执行兼容按钮", UIKitPanelInspector.ResolveButtonLabel(methods[0]));
 
                 editor = UnityEditor.Editor.CreateEditor(panel);
-                MethodInfo invoke = inspectorType.GetMethod(
-                    "InvokeCustomButton",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.IsNotNull(invoke);
-                invoke.Invoke(editor, new object[] { methods[0] });
+                var inspector = editor as UIKitPanelInspector;
+                Assert.IsNotNull(inspector);
+                inspector.InvokeCustomButton(methods[0]);
 
                 Assert.AreEqual(1, panel.ButtonInvocationCount);
             }
@@ -170,24 +118,6 @@ namespace YokiFrame.Tests
                     UnityEngine.Object.DestroyImmediate(editor);
                 UnityEngine.Object.DestroyImmediate(gameObject);
             }
-        }
-
-        /// <summary>从当前已加载的 Unity Editor 程序集中定位 UIPanel Inspector 类型。</summary>
-        /// <returns>Inspector 类型；编辑器程序集尚未加载时返回空。</returns>
-        private static Type GetInspectorType()
-        {
-            var editorTypes = TypeCache.GetTypesDerivedFrom<UnityEditor.Editor>();
-            for (var index = 0; index < editorTypes.Count; index++)
-            {
-                Type type = editorTypes[index];
-                if (type != null)
-                {
-                    if (type.FullName == "YokiFrame.UIKitPanelInspector")
-                        return type;
-                }
-            }
-
-            return default;
         }
 
         /// <summary>递归查找指定类型的视觉元素。</summary>
@@ -209,6 +139,17 @@ namespace YokiFrame.Tests
             return default;
         }
 
+        /// <summary>
+        /// 读取测试夹具的公开字段元数据。
+        /// 特性解析 API 需要 FieldInfo，这里只读取本夹具的公开字段，不反射生产类型的私有成员。
+        /// </summary>
+        /// <param name="fieldName">夹具公开字段名。</param>
+        /// <returns>公开字段元数据；字段不存在时返回空。</returns>
+        private static FieldInfo GetFixtureField(string fieldName)
+        {
+            return typeof(ExternalPropertiesPanel).GetField(fieldName);
+        }
+
         /// <summary>提供带第三方属性名的最小 UIPanel 测试类型。</summary>
         private sealed class ExternalPropertiesPanel : UIPanel
         {
@@ -221,7 +162,7 @@ namespace YokiFrame.Tests
             [LabelText("路径点大小")]
             [PropertyTooltip("路径点列表提示")]
             [ListDrawerSettings(AlwaysExpanded = true)]
-            private List<Vector2> mWayPointList = new()
+            public List<Vector2> WayPointList = new()
             {
                 new Vector2(-80f, -40f),
                 new Vector2(0f, 120f),
@@ -229,7 +170,7 @@ namespace YokiFrame.Tests
             };
 
             [SerializeField, ReadOnly]
-            private string mReadOnlyState = "只读";
+            public string ReadOnlyStateField = "只读";
 
             [SerializeField]
             private ExternalPropertiesData mData;
@@ -238,7 +179,7 @@ namespace YokiFrame.Tests
 #pragma warning restore 0649
 
             /// <summary>读取测试只读字段，避免测试夹具产生无意义的未使用警告。</summary>
-            internal string ReadOnlyState => mReadOnlyState;
+            internal string ReadOnlyState => ReadOnlyStateField;
 
             /// <summary>获取兼容按钮被调用的次数。</summary>
             internal int ButtonInvocationCount => mButtonInvocationCount;

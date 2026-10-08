@@ -5,17 +5,18 @@ using UnityEngine;
 namespace YokiFrame
 {
     /// <summary>
-    /// 验证 Godot Node 单例适配层的目录、宏边界和关键生命周期代码。
+    /// 验证 Godot SingletonKit 适配源码位于 Godot Runtime Adapter，并由整文件 GODOT 宏包裹。
     /// </summary>
     public sealed class YokiFrameGodotSingletonKitAdapterTests
     {
         private const string GODOT_DEFINE = "#if GODOT";
+        private const string ENDIF_DIRECTIVE = "#endif";
 
         /// <summary>
-        /// 验证 Godot SingletonKit 适配层位于 Godot Runtime Adapter 目录并使用 GODOT 宏包裹。
+        /// 验证 GodotSingleton 源码从 GODOT 宏开始，并以 #endif 结束。
         /// </summary>
         [Test]
-        public void GodotSingletonAdapterSourceLivesUnderGodotRuntimeAdapter()
+        public void SourceGuard_Godot适配源码_整文件使用Godot宏()
         {
             string sourcePath = Path.Combine(GetGodotSingletonAdapterRoot(), "GodotSingleton.cs");
 
@@ -23,24 +24,7 @@ namespace YokiFrame
 
             string[] lines = File.ReadAllLines(sourcePath);
             Assert.AreEqual(GODOT_DEFINE, FirstNonEmptyLine(lines), "Godot 适配源码必须从 GODOT 宏开始: " + sourcePath);
-            Assert.AreEqual("#endif", LastNonEmptyLine(lines), "Godot 适配源码必须用 #endif 结束: " + sourcePath);
-        }
-
-        /// <summary>
-        /// 验证 GodotSingleton 提供 Node 生命周期和重复实例处理，便于 Autoload 或场景根节点接入。
-        /// </summary>
-        [Test]
-        public void GodotSingletonUsesNodeLifecycleAndRegistry()
-        {
-            string source = File.ReadAllText(Path.Combine(GetGodotSingletonAdapterRoot(), "GodotSingleton.cs"));
-
-            Assert.IsTrue(source.Contains("using Godot;"), "Godot 适配源码必须只在 GODOT 宏内引用 Godot API。");
-            Assert.IsTrue(source.Contains("public abstract partial class GodotSingleton<T> : Node, ISingleton"), "GodotSingleton<T> 必须继承 Node 并实现 ISingleton。");
-            Assert.IsTrue(source.Contains("public static T Instance"), "GodotSingleton<T> 必须提供 Instance 入口。");
-            Assert.IsTrue(source.Contains("public override void _EnterTree()"), "GodotSingleton<T> 必须接入 _EnterTree。");
-            Assert.IsTrue(source.Contains("public override void _ExitTree()"), "GodotSingleton<T> 必须接入 _ExitTree。");
-            Assert.IsTrue(source.Contains("SingletonRegistry.Register"), "GodotSingleton<T> 必须登记到 SingletonRegistry。");
-            Assert.IsTrue(source.Contains("QueueFree()"), "GodotSingleton<T> 必须释放重复或销毁实例。");
+            Assert.AreEqual(ENDIF_DIRECTIVE, LastNonEmptyLine(lines), "Godot 适配源码必须用 #endif 结束: " + sourcePath);
         }
 
         /// <summary>

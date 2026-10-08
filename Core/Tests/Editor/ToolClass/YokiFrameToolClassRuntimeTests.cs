@@ -13,7 +13,7 @@ namespace YokiFrame
         /// 验证 BindValue 只在值实际变化时通知，并支持静默更新。
         /// </summary>
         [Test]
-        public void BindValueNotifiesOnlyForChangedValues()
+        public void Bind_值相同或静默写入_只通知真实变化()
         {
             var value = new BindValue<int>(10);
             int notificationCount = 0;
@@ -37,7 +37,7 @@ namespace YokiFrame
         /// 验证 BindWithCallback 注册后立即回放当前值，令牌仍能停止后续通知。
         /// </summary>
         [Test]
-        public void BindWithCallbackReplaysCurrentValueAndReturnsToken()
+        public void BindWithCallback_注册时_回放当前值且令牌停止后续通知()
         {
             var value = new BindValue<string>("ready");
             string receivedValue = null;
@@ -54,7 +54,7 @@ namespace YokiFrame
         /// 验证快速字典在墓碑复用和扩容后仍保持正确数量与查找结果。
         /// </summary>
         [Test]
-        public void FastDictionaryReusesRemovedSlotsAndResizes()
+        public void Add_删除并继续插入_复用槽位且查找正确()
         {
             var dictionary = new FastDictionary<int, int>(4);
             for (var index = 0; index < 100; index++)
@@ -75,7 +75,7 @@ namespace YokiFrame
         /// 验证快速字典拒绝重复 Add，但 TryAdd 以 false 表达重复键。
         /// </summary>
         [Test]
-        public void FastDictionaryRejectsDuplicateKeys()
+        public void Add_键已存在_拒绝重复并保留原值()
         {
             var dictionary = new FastDictionary<string, int>();
             dictionary.Add("key", 1);
@@ -89,7 +89,7 @@ namespace YokiFrame
         /// 验证构造容量表示预计元素数量，在达到峰值前不会触发扩容。
         /// </summary>
         [Test]
-        public void FastDictionaryCapacityHoldsExpectedElementCount()
+        public void Add_数量不超过构造容量_容量保持不变()
         {
             var dictionary = new FastDictionary<int, int>(17);
             int initialCapacity = dictionary.Capacity;
@@ -106,7 +106,7 @@ namespace YokiFrame
         /// 验证值版 GetOrAdd 在未命中时只计算一次哈希并执行一次探测流程。
         /// </summary>
         [Test]
-        public void FastDictionaryValueGetOrAddUsesSingleHashCalculation()
+        public void GetOrAdd_键未命中_只计算一次哈希()
         {
             var comparer = new CountingIntComparer();
             var dictionary = new FastDictionary<int, int>(4, comparer);
@@ -121,7 +121,7 @@ namespace YokiFrame
         /// 验证 Clear 会释放槽位中的引用，而不是只隐藏有效哈希标记。
         /// </summary>
         [Test]
-        public void FastDictionaryClearReleasesStoredReferences()
+        public void Clear_清空字典_释放已存引用()
         {
             var dictionary = new FastDictionary<int, object>();
             WeakReference reference = AddReferenceAndClear(dictionary);
@@ -135,10 +135,11 @@ namespace YokiFrame
         }
 
         /// <summary>
-        /// 验证池化链表预热节点会在移除后复用，而不会创建新的链表节点。
+        /// 验证移除预热节点后再次添加时，旧租约失效且只保留新值。
+        /// 公开租约没有节点身份，不能把不同租约编号当成新建节点。
         /// </summary>
         [Test]
-        public void PooledLinkedListReusesDetachedNode()
+        public void AddLast_移除预热节点后再添加_旧租约失效且保留新值()
         {
             var list = new PooledLinkedList<int>(1);
             list.Prewarm(1);
@@ -158,7 +159,7 @@ namespace YokiFrame
         /// 验证池容量收缩会立即丢弃超出上限的已回收节点。
         /// </summary>
         [Test]
-        public void PooledLinkedListTrimsPoolToConfiguredLimit()
+        public void MaxPoolSize_收缩到更小上限_立即丢弃超出节点()
         {
             var list = new PooledLinkedList<int>(4);
             list.Prewarm(4);
@@ -172,7 +173,7 @@ namespace YokiFrame
         /// 验证反向延迟枚举在链表被修改后立即失败，而不会读取已复用节点。
         /// </summary>
         [Test]
-        public void PooledLinkedListReverseDetectsMutation()
+        public void MoveNext_反向枚举期间链表被修改_抛出无效操作()
         {
             var list = new PooledLinkedList<int>();
             list.AddLast(1);
@@ -190,7 +191,7 @@ namespace YokiFrame
         /// 验证 SpanSplitter 按顺序返回片段，并在消费完成后停止。
         /// </summary>
         [Test]
-        public void SpanSplitterReturnsSlicesWithoutIntermediateArray()
+        public void MoveNext_按分隔符切分_按顺序返回全部片段()
         {
             ReadOnlySpan<char> source = "one,two,three";
             var splitter = new SpanSplitter(source, ',');
@@ -208,7 +209,7 @@ namespace YokiFrame
         /// 验证默认分隔策略一致保留开头、中间和末尾空片段。
         /// </summary>
         [Test]
-        public void SpanSplitterPreservesAllEmptyEntriesByDefault()
+        public void MoveNext_默认保留空项_开头中间和末尾空片段都在()
         {
             var splitter = new SpanSplitter(",a,,".AsSpan(), ',');
 
@@ -227,7 +228,7 @@ namespace YokiFrame
         /// 验证 RemoveEmptyEntries 与 ref struct foreach 模式不会产出空片段。
         /// </summary>
         [Test]
-        public void SpanSplitterForeachRemovesEmptyEntries()
+        public void GetEnumerator_移除空项_只返回非空片段()
         {
             var splitter = new SpanSplitter(",one,,two,".AsSpan(), ',', StringSplitOptions.RemoveEmptyEntries);
             int count = 0;

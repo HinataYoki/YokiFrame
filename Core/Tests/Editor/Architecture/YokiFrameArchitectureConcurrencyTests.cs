@@ -43,7 +43,7 @@ namespace YokiFrame
         /// 构造屏障会让旧实现的两个候选稳定重叠，同时让修复后的单个候选在超时后继续。
         /// </summary>
         [Test]
-        public void ForceCreationIsSharedAcrossConcurrentCallers()
+        public void GetService_并发强制创建_只构造并返回一个实例()
         {
             using (var readyGate = new CountdownEvent(2))
             using (var startGate = new ManualResetEventSlim(false))
@@ -81,7 +81,7 @@ namespace YokiFrame
         /// 验证 force 候选构造期间完成的显式注册优先，候选释放后所有查询返回显式实例。
         /// </summary>
         [Test]
-        public void ExplicitRegistrationWinsWhileForceCandidateIsBeingCreated()
+        public void Register_强制候选构造期间_显式注册优先()
         {
             var explicitService = new ConcurrentForcedService();
             using (var constructorBarrier = new Barrier(
@@ -118,7 +118,7 @@ namespace YokiFrame
         /// 门闩让后台候选稳定停在构造阶段放大互等时序，验证持锁线程绕过共享创建后双方均能完成。
         /// </summary>
         [Test]
-        public void ReentrantForceDuringRegisterDoesNotDeadlockWithConcurrentForce()
+        public void Register_持锁重入强制获取_不与后台强制获取互等()
         {
             IArchitecture architecture = Architecture<ReentrantForceArchitecture>.Interface;
             using (var constructorEntered = new ManualResetEventSlim(false))

@@ -48,7 +48,7 @@ public sealed class SkillInstallationServiceTests
     /// 验证 Skills 公开 API 不向 Avalonia 泄漏 Installer.Core 类型。
     /// </summary>
     [Fact]
-    public void SkillPublicApiDoesNotExposeInstallerCoreTypes()
+    public void GetExportedTypes_Skills公开面_AssemblyBoundary不含InstallerCore()
     {
         var types = typeof(SkillInstallationService).Assembly
             .GetExportedTypes()
@@ -74,7 +74,12 @@ public sealed class SkillInstallationServiceTests
     /// <param name="type">待检查类型。</param>
     private static void AssertNotCoreType(Type type)
     {
-        Assert.DoesNotContain("YokiFrame.Installer.Core", type.FullName ?? string.Empty, StringComparison.Ordinal);
+        Assert.NotEqual("YokiFrame.Installer.Core", type.Assembly.GetName().Name);
+        string? typeNamespace = type.Namespace;
+        if (typeNamespace != null)
+        {
+            Assert.False(typeNamespace == "YokiFrame.Installer.Core" || typeNamespace.StartsWith("YokiFrame.Installer.Core.", StringComparison.Ordinal));
+        }
         if (type.IsArray)
         {
             AssertNotCoreType(type.GetElementType()!);

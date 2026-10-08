@@ -11,7 +11,7 @@ namespace YokiFrame.Tests
         /// 验证二维向量的零值、平方长度和算术运算保留每个分量的确定性结果。
         /// </summary>
         [Test]
-        public void Vector2_ZeroMagnitudeAndOperatorsPreserveComponents()
+        public void 运算符_给定分量_零值长度和算术都保留分量()
         {
             YokiVector2 left = new(3f, -4f);
             YokiVector2 right = new(-2f, 5f);
@@ -24,26 +24,22 @@ namespace YokiFrame.Tests
         }
 
         /// <summary>
-        /// 验证二维向量的对象比较、哈希和诊断文本均采用值语义而非装箱引用语义。
+        /// 验证相同分量的比较、哈希和诊断文本都按值成立，不同对象不会被当成相等。
         /// </summary>
         [Test]
-        public void Vector2_EqualityHashAndDiagnosticTextUseValueSemantics()
+        public void Equals_相同分量_比较哈希和诊断文本都按值成立()
         {
             YokiVector2 value = new(1.25f, -2.5f);
             YokiVector2 equalValue = new(1.25f, -2.5f);
             object boxedEqualValue = equalValue;
 
-            Assert.True(value == equalValue);
-            Assert.False(value != equalValue);
-            Assert.True(value.Equals(equalValue));
-            Assert.True(value.Equals(boxedEqualValue));
-            Assert.False(value.Equals(new object()));
+            Assert.IsTrue(value == equalValue);
+            Assert.IsFalse(value != equalValue);
+            Assert.IsTrue(value.Equals(equalValue));
+            Assert.IsTrue(value.Equals(boxedEqualValue));
+            Assert.IsFalse(value.Equals(new object()));
             Assert.AreEqual(value.GetHashCode(), equalValue.GetHashCode());
-
-            string text = value.ToString();
-            Assert.True(text.StartsWith("(", System.StringComparison.Ordinal));
-            Assert.True(text.Contains(", ", System.StringComparison.Ordinal));
-            Assert.True(text.EndsWith(")", System.StringComparison.Ordinal));
+            Assert.AreEqual("(1.25, -2.50)", value.ToString());
         }
     }
 }

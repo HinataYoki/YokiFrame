@@ -13,7 +13,7 @@ public sealed class EventKitHealthStatusTests
     [InlineData(1, 1, 1, "发送与注册均存在", "注册/注销数量平衡", false)]
     [InlineData(1, 2, 1, "发送与注册均存在", "注册多于注销", false)]
     [InlineData(1, 1, 2, "发送与注册均存在", "注销多于注册", false)]
-    public void StaticRelationCountsCreateExpectedHealthText(
+    public void EventKitEventListItemViewModel_静态调用点组合_映射覆盖和平衡文本(
         int senderCount,
         int receiverCount,
         int unregisterCount,

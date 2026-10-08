@@ -28,7 +28,7 @@ namespace YokiFrame
         /// 验证容量配置是零堆分配的值类型，且 C# 9 的默认值仍表示零预热和无限缓存。
         /// </summary>
         [Test]
-        public void PoolOptionsIsValueTypeAndDefaultKeepsUnboundedCache()
+        public void PoolOptions_默认值_缓存不设上限()
         {
             PoolOptions defaultValue = default;
             PoolOptions implicitDefault = new();
@@ -56,7 +56,7 @@ namespace YokiFrame
         /// 验证容量配置继续在构造时拒绝无效的预热数量和容量组合。
         /// </summary>
         [Test]
-        public void PoolOptionsRejectsInvalidCapacityCombinations()
+        public void PoolOptions_容量组合非法_立即拒绝()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => { _ = new PoolOptions(initialCount: -1); });
             Assert.Throws<ArgumentOutOfRangeException>(() => { _ = new PoolOptions(maxRetained: PoolOptions.UNBOUNDED - 1); });
@@ -67,7 +67,7 @@ namespace YokiFrame
         /// 验证委托池会预热、执行借出和回收回调，并拒绝同一对象重复回收。
         /// </summary>
         [Test]
-        public void DelegatePoolPrewarmsRunsLifecycleAndRejectsDuplicateRecycle()
+        public void Allocate_委托池_预热后拒绝重复回收()
         {
             var pool = PoolKit.Create(
                 factory: static () => new PoolToken(),
@@ -91,7 +91,7 @@ namespace YokiFrame
         /// 验证借出生命周期失败时，调用方无法取得的对象会被确定性释放，且保留原始异常。
         /// </summary>
         [Test]
-        public void AllocateLifecycleFailureDisposesUnreturnedItem()
+        public void Allocate_生命周期失败_释放未归还对象()
         {
             FailingAllocationToken created = null;
             var pool = PoolKit.Create(
@@ -110,7 +110,7 @@ namespace YokiFrame
         /// 验证预热工厂中途失败时已经创建的对象会被释放，避免构造异常泄漏资源。
         /// </summary>
         [Test]
-        public void WarmUpFailureDisposesAlreadyCreatedItems()
+        public void WarmUp_中途失败_释放已创建对象()
         {
             var created = new List<TrackingDisposeToken>();
             int factoryCalls = 0;
@@ -138,7 +138,7 @@ namespace YokiFrame
         /// 验证批量清理不会因第一个对象释放失败而跳过后续对象。
         /// </summary>
         [Test]
-        public void ClearAttemptsEveryObjectWhenDisposeFails()
+        public void Clear_释放抛错_仍尝试其余对象()
         {
             var first = new TrackingDisposeToken(throwOnDispose: true);
             var second = new TrackingDisposeToken(throwOnDispose: true);
@@ -156,7 +156,7 @@ namespace YokiFrame
         /// 验证 IPoolable 约定池自动绑定标准生命周期，并在容量满时清理和释放对象但不缓存。
         /// </summary>
         [Test]
-        public void PoolablePoolRunsStandardLifecycleAndDiscardsOverflow()
+        public void Recycle_可池化对象超过保留_丢弃溢出()
         {
             var pool = PoolKit.Create<ReusableToken>(
                 new PoolOptions(initialCount: 2, maxRetained: 2));
@@ -182,7 +182,7 @@ namespace YokiFrame
         /// 验证显式委托重载不会因为对象实现 IPoolable 而隐式重复调用接口生命周期。
         /// </summary>
         [Test]
-        public void DelegatePoolDoesNotImplicitlyInvokePoolableLifecycle()
+        public void Allocate_委托池_不隐式调用池化生命周期()
         {
             var pool = PoolKit.Create(
                 factory: static () => new ReusableToken(),
@@ -202,7 +202,7 @@ namespace YokiFrame
         /// 验证共享注册表显式登记每种类型的唯一全局池，并支持确定性移除。
         /// </summary>
         [Test]
-        public void SharedRegistryRegistersGetsAndRemovesSinglePoolPerType()
+        public void Shared_同一类型_只登记一个池()
         {
             ObjectPool<ReusableToken> registered = PoolKit.Shared.Register<ReusableToken>(
                 new PoolOptions(initialCount: 1, maxRetained: 3));
@@ -225,7 +225,7 @@ namespace YokiFrame
         /// 验证 PoolDebugger 只在显式开启时记录活跃对象和事件，并返回隔离的诊断快照。
         /// </summary>
         [Test]
-        public void PoolDebuggerTracksActiveObjectsEventsAndReturnsCopies()
+        public void Track_开启诊断_返回活动对象和事件副本()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -260,7 +260,7 @@ namespace YokiFrame
         /// 验证同类型局部池在当前诊断会话内具有不同稳定标识，且缓存明细只在快照读取时按预算复制。
         /// </summary>
         [Test]
-        public void PoolDebuggerUsesDistinctPoolIdsAndBoundedInactiveSnapshots()
+        public void Track_多个池_标识不同且非活动快照有界()
         {
             PoolDebugger.EnableTracking = true;
             var firstPool = PoolKit.Create(static () => new PoolToken());
@@ -290,7 +290,7 @@ namespace YokiFrame
         /// 验证诊断事件中的对象显示名异常不会反向中断对象池借还。
         /// </summary>
         [Test]
-        public void DiagnosticObjectNameFailureDoesNotInterruptPoolLifecycle()
+        public void Allocate_对象名失败_不中断池生命周期()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -308,7 +308,7 @@ namespace YokiFrame
         /// 验证关闭跟踪期间的借还不会在重新开启后保留过期的活跃对象记录。
         /// </summary>
         [Test]
-        public void TrackingTransitionClearsStaleActiveObjects()
+        public void Tracking_开关切换_清掉过期活动对象()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;
@@ -329,7 +329,7 @@ namespace YokiFrame
         /// 验证 PoolDebugger 能通过内部诊断契约把仍借出的对象强制归还原池。
         /// </summary>
         [Test]
-        public void PoolDebuggerForceReturnRecyclesTrackedObject()
+        public void ForceReturn_被跟踪对象_回收成功()
         {
             PoolDebugger.EnableTracking = true;
             PoolDebugger.EnableEventHistory = true;

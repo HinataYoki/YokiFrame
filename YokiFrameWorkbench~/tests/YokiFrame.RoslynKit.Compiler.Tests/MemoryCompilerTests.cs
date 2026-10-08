@@ -9,7 +9,7 @@ public sealed class MemoryCompilerTests
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
         .Append(typeof(LiveService).Assembly.Location).Distinct().ToArray();
 
-    /// <summary>两次编译调用同一个 LiveService 实例，且程序集标识不同。不替换服务，不写磁盘程序集。</summary>
+    /// <summary>两次编译调用同一个 LiveService 实例，且程序集标识不同。编译结果没有编译期类型，只反射其公开 Run，不调用本仓库私有成员。不替换服务，不写磁盘程序集。</summary>
     [Fact]
     public async Task Compiled_assemblies_call_the_same_live_service_without_replacing_it()
     {

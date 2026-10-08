@@ -22,6 +22,20 @@ namespace YokiFrame
         private static DateTime sCachedWriteTime;
         private static SettingsDocument sCachedDocument;
         private static bool sCachedResult;
+        private static string sSettingsPathForTests;
+
+        /// <summary>
+        /// 仅供测试替换 Editor 配置绝对路径。传入空白时恢复项目文件，并清空读取缓存。
+        /// </summary>
+        /// <param name="absolutePath">测试配置绝对路径；恢复生产路径时传 null。</param>
+        internal static void SetSettingsPathForTests(string absolutePath)
+        {
+            sSettingsPathForTests = string.IsNullOrWhiteSpace(absolutePath) ? null : absolutePath;
+            sCachedPath = null;
+            sCachedWriteTime = DateTime.MinValue;
+            sCachedDocument = default;
+            sCachedResult = false;
+        }
 
         /// <summary>读取当前项目配置并覆盖生成请求默认值；文件缺失或无效时保留代码默认值。</summary>
         /// <param name="request">待应用项目默认值的生成请求。</param>
@@ -118,6 +132,7 @@ namespace YokiFrame
         /// <returns>当前 Unity 项目的 Editor 配置绝对路径。</returns>
         private static string ResolveSettingsPath()
         {
+            if (sSettingsPathForTests != null) return Path.GetFullPath(sSettingsPathForTests);
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             return Path.GetFullPath(Path.Combine(
                 projectRoot,

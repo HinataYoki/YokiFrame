@@ -291,12 +291,12 @@ public sealed class ProjectModelFileStoreTests : IDisposable
     /// <param name="generation">要写入 architecture 的新代次。</param>
     private static void RewriteArchitectureGeneration(YokiFramePaths paths, string generation)
     {
-        var architecture = ProjectArchitectureDocument.FromJson(File.ReadAllText(paths.ProjectArchitecturePath, sUtf8));
+        var architecture = ProjectArchitectureDocument.FromJson(sUtf8.GetString(File.ReadAllBytes(paths.ProjectArchitecturePath)));
         architecture.ModelGeneration = generation;
         var architectureBytes = sUtf8.GetBytes(architecture.ToJson());
         File.WriteAllBytes(paths.ProjectArchitecturePath, architectureBytes);
 
-        var manifest = ProjectModelManifest.FromJson(File.ReadAllText(paths.ProjectModelManifestPath, sUtf8));
+        var manifest = ProjectModelManifest.FromJson(sUtf8.GetString(File.ReadAllBytes(paths.ProjectModelManifestPath)));
         var reference = manifest.Documents.Single(static item => item.Path == ProjectModelContract.ARCHITECTURE_FILE_NAME);
         reference.ContentHash = ComputeHash(architectureBytes);
         File.WriteAllBytes(paths.ProjectModelManifestPath, sUtf8.GetBytes(manifest.ToJson()));

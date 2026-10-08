@@ -21,7 +21,7 @@ namespace YokiFrame.Tests
         /// 验证空 Sequence 和空 Parallel 都在 Start 调用内完成。
         /// </summary>
         [Test]
-        public void EmptyContainersCompleteSynchronously()
+        public void Start_空容器_同步完成()
         {
             IAction sequence = ActionKit.Sequence();
             IAction parallel = ActionKit.Parallel();
@@ -38,7 +38,7 @@ namespace YokiFrame.Tests
         /// 验证 Sequence 在一个 Tick 内不会把同一 delta 重复消费给两段 Delay。
         /// </summary>
         [Test]
-        public void SequenceConsumesDeltaOnlyOncePerTick()
+        public void Tick_序列_每帧只消耗一次时间()
         {
             var order = new List<int>();
             ISequence sequence = ActionKit.Sequence()
@@ -59,7 +59,7 @@ namespace YokiFrame.Tests
         /// 验证 waitAny 在首个分支完成后不会继续执行同 Tick 的后续副作用。
         /// </summary>
         [Test]
-        public void ParallelWaitAnyStopsAfterFirstWinner()
+        public void Tick_并行任一_首个完成后停止()
         {
             var winnerCount = 0;
             var loserCount = 0;
@@ -78,7 +78,7 @@ namespace YokiFrame.Tests
         /// 验证 waitAll 会推进所有分支，并等待最后一条分支完成。
         /// </summary>
         [Test]
-        public void ParallelWaitAllCompletesAfterEveryBranch()
+        public void Tick_并行全部_所有分支完成后结束()
         {
             var finishCount = 0;
             IParallel parallel = ActionKit.Parallel()
@@ -97,7 +97,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证子回调提前结束 Sequence 后，同 Tick 不再执行后续兄弟节点。</summary>
         [Test]
-        public void ExternalFinishStopsSequenceImmediately()
+        public void Finish_序列外部结束_立即停止()
         {
             ISequence sequence = null;
             var trailingCount = 0;
@@ -113,7 +113,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证子回调提前结束 waitAll Parallel 后，不再推进后续并行分支。</summary>
         [Test]
-        public void ExternalFinishStopsParallelImmediately()
+        public void Finish_并行外部结束_立即停止()
         {
             IParallel parallel = null;
             var trailingCount = 0;
@@ -129,7 +129,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证子回调提前结束 Repeat 后，不再推进本轮后续节点。</summary>
         [Test]
-        public void ExternalFinishStopsRepeatImmediately()
+        public void Finish_重复外部结束_立即停止()
         {
             IRepeat repeat = null;
             var trailingCount = 0;
@@ -145,7 +145,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 condition 提前结束 Repeat 后，不会重置已终结子树。</summary>
         [Test]
-        public void ExternalFinishFromRepeatConditionDoesNotResetRound()
+        public void Finish_重复条件中结束_不重置本轮()
         {
             IRepeat repeat = null;
             RoundRestartProbeAction child = new();
@@ -164,7 +164,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Sequence 子回调取消根后，同 Tick 不再执行后续兄弟节点。</summary>
         [Test]
-        public void CancellationFromSequenceChildStopsRemainingSiblings()
+        public void Cancel_序列子动作_停止后续兄弟()
         {
             IActionController controller = null;
             var trailingCount = 0;
@@ -182,7 +182,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Parallel 分支取消根后，本 Tick 不再推进尚未访问的分支。</summary>
         [Test]
-        public void CancellationFromParallelBranchStopsRemainingBranches()
+        public void Cancel_并行分支_停止其余分支()
         {
             IActionController controller = null;
             var trailingCount = 0;
@@ -199,7 +199,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证 Repeat 子回调取消根后，不再推进本轮后续节点或重启下一轮。</summary>
         [Test]
-        public void CancellationFromRepeatChildStopsCurrentRound()
+        public void Cancel_重复子动作_停止当前轮()
         {
             IActionController controller = null;
             var trailingCount = 0;
@@ -217,7 +217,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证外层取消上下文不会污染回调中手动推进的独立组合树。</summary>
         [Test]
-        public void ManualUpdateInsideCancelledCallbackUsesDetachedContext()
+        public void Update_取消回调内手动推进_使用脱离上下文()
         {
             IActionController controller = null;
             var detachedCount = 0;
@@ -252,7 +252,7 @@ namespace YokiFrame.Tests
         /// 验证后置分支先完成时，交换到后方的前置分支不会在同一个 Tick 重复消费 delta。
         /// </summary>
         [Test]
-        public void ParallelAdvancesEachPendingBranchOnlyOncePerTick()
+        public void Tick_并行_每个未完成分支只推进一次()
         {
             var slowFinishCount = 0;
             IParallel parallel = ActionKit.Parallel()
@@ -275,7 +275,7 @@ namespace YokiFrame.Tests
         /// 验证 Repeat 按轮执行即时序列，condition 在第一轮结束后才参与判断。
         /// </summary>
         [Test]
-        public void RepeatExecutesFirstRoundBeforeCheckingCondition()
+        public void Start_重复_先执行首轮再检查条件()
         {
             var count = 0;
             IRepeat repeat = ActionKit.Repeat(10, () => false);
@@ -291,7 +291,7 @@ namespace YokiFrame.Tests
         /// 验证有限 Repeat 每个调度周期至多执行一轮即时子树，避免无限同步循环。
         /// </summary>
         [Test]
-        public void RepeatRunsAtMostOneImmediateRoundPerUpdate()
+        public void Update_重复_每帧最多立即一轮()
         {
             var count = 0;
             IRepeat repeat = ActionKit.Repeat(3);
@@ -308,7 +308,7 @@ namespace YokiFrame.Tests
 
         /// <summary>验证有限 Repeat 的最后一轮也会按 2.0-pre 语义调用 condition。</summary>
         [Test]
-        public void RepeatChecksConditionAfterEveryRoundIncludingLast()
+        public void Repeat_每一轮结束_都检查条件()
         {
             var conditionCount = 0;
             IRepeat repeat = ActionKit.Repeat(2, () =>
@@ -329,7 +329,7 @@ namespace YokiFrame.Tests
         /// 验证组合器在装配阶段拒绝 null，避免延迟到 Tick 才形成循环异常。
         /// </summary>
         [Test]
-        public void AppendRejectsNullAction()
+        public void Append_空动作_立即拒绝()
         {
             ISequence sequence = ActionKit.Sequence();
 
@@ -340,7 +340,7 @@ namespace YokiFrame.Tests
         /// 验证容器不能把自己作为子 Action，避免递归初始化导致栈溢出。
         /// </summary>
         [Test]
-        public void AppendRejectsSelfReference()
+        public void Append_自身_立即拒绝()
         {
             ISequence sequence = ActionKit.Sequence();
 
@@ -351,7 +351,7 @@ namespace YokiFrame.Tests
         /// 验证同一个 Action 不能被两个父容器持有和重复释放。
         /// </summary>
         [Test]
-        public void ActionCannotBelongToTwoParents()
+        public void Append_已有父级_拒绝第二个父级()
         {
             IAction child = ActionKit.Delay(1f, null);
             ISequence first = ActionKit.Sequence().Append(child);
@@ -365,7 +365,7 @@ namespace YokiFrame.Tests
         /// 验证跨两个容器形成的间接环会在 Append 时被拒绝。
         /// </summary>
         [Test]
-        public void AppendRejectsIndirectContainerCycle()
+        public void Append_间接成环_立即拒绝()
         {
             ISequence outer = ActionKit.Sequence();
             ISequence inner = ActionKit.Sequence();
@@ -378,7 +378,7 @@ namespace YokiFrame.Tests
         /// 验证活动根 Action 不能被第二个 controller 重复启动。
         /// </summary>
         [Test]
-        public void ActiveActionCannotStartTwice()
+        public void Start_已启动_拒绝第二次()
         {
             IAction action = ActionKit.Delay(10f, null);
             action.Start();
@@ -390,7 +390,7 @@ namespace YokiFrame.Tests
         /// 验证全局 Cleanup 不会清除尚未启动树的父子所有权，使同一个子节点被第二棵树窃取。
         /// </summary>
         [Test]
-        public void CleanupPreservesOwnershipOfUnscheduledTree()
+        public void Cleanup_未调度树_保留所有权()
         {
             IAction child = ActionKit.Delay(1f, null);
             ISequence first = ActionKit.Sequence().Append(child);
@@ -413,7 +413,7 @@ namespace YokiFrame.Tests
         /// 验证根树一旦启动，后续 fluent Append 会立即失败，而不是在 Tick 中修改活动列表。
         /// </summary>
         [Test]
-        public void ActiveContainerRejectsFurtherConfiguration()
+        public void Append_容器已启动_拒绝再配置()
         {
             ISequence sequence = ActionKit.Sequence().Delay(10f);
             sequence.Start();
@@ -425,7 +425,7 @@ namespace YokiFrame.Tests
         /// 验证嵌套配置回调抛异常时，已创建容器及其子树仍会完成 Deinit 并等待回池。
         /// </summary>
         [Test]
-        public void FailedNestedBuilderClosesCreatedTree()
+        public void Build_嵌套构建失败_关闭已创建树()
         {
             ISequence parent = ActionKit.Sequence();
             IAction nestedAction = null;

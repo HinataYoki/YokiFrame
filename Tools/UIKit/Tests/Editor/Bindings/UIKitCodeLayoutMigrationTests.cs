@@ -19,9 +19,9 @@ namespace YokiFrame.Tests
             if (AssetDatabase.IsValidFolder(TEST_ROOT)) AssetDatabase.DeleteAsset(TEST_ROOT);
         }
 
-        /// <summary>父目录与内部 Element 分步移动后，伴随文件和各级 .meta 均保持原字节与 GUID。</summary>
+        /// <summary>父目录与内部 Element 分步移动后，校验通过，回滚恢复原 GUID 并移除新建目录。</summary>
         [Test]
-        public void MovesPreserveBytesGuidsAndCanRollback()
+        public void Apply_分步移动后回滚_GUID回到原路径且新目录消失()
         {
             var plan = CreatePlan();
             string guid = AssetDatabase.AssetPathToGUID(TEST_ROOT + "/InventoryPanel/UIElement/Item.txt");
@@ -40,22 +40,24 @@ namespace YokiFrame.Tests
 
         /// <summary>目标冲突在计划构建阶段就被拒绝，源文件内容和位置完全不变。</summary>
         [Test]
-        public void ConflictRejectsBeforeAnyMove()
+        public void Add_目标已存在_拒绝且源文件内容不变()
         {
             CreatePlan();
+            byte[] ownerBytes = File.ReadAllBytes(TEST_ROOT + "/InventoryPanel/Owner.txt");
             Directory.CreateDirectory(TEST_ROOT + "/Panel/InventoryPanel");
             File.WriteAllText(TEST_ROOT + "/Panel/InventoryPanel/existing.txt", "target");
             AssetDatabase.Refresh();
             var plan = new UIKitCodeLayoutMigrationPlan(TEST_ROOT);
             Assert.Throws<InvalidOperationException>(() => plan.Add(TEST_ROOT + "/InventoryPanel", TEST_ROOT + "/Panel/InventoryPanel"));
-            Assert.AreEqual("owner", File.ReadAllText(TEST_ROOT + "/InventoryPanel/Owner.txt"));
+            CollectionAssert.AreEqual(ownerBytes, File.ReadAllBytes(TEST_ROOT + "/InventoryPanel/Owner.txt"));
         }
 
         /// <summary>首步成功后第二步意外冲突，记录仅含成功移动，移除故障后可以完整逆序恢复。</summary>
         [Test]
-        public void FailedLaterMoveRestoresEarlierMove()
+        public void Apply_后续移动冲突_回滚已完成移动()
         {
             var plan = CreatePlan();
+            byte[] elementBytes = File.ReadAllBytes(TEST_ROOT + "/InventoryPanel/UIElement/Item.txt");
             var record = new UIKitCodeLayoutMigrationTransaction.Record { moves = plan.Moves, files = plan.Files };
             record.moves[1].destination = record.moves[1].source;
             try
@@ -63,26 +65,30 @@ namespace YokiFrame.Tests
                 Assert.Throws<IOException>(() => UIKitCodeLayoutMigrationTransaction.Apply(record));
                 Assert.AreEqual(1, record.completed);
                 UIKitCodeLayoutMigrationTransaction.Restore(record);
-                Assert.AreEqual("element", File.ReadAllText(TEST_ROOT + "/InventoryPanel/UIElement/Item.txt"));
+                CollectionAssert.AreEqual(elementBytes, File.ReadAllBytes(TEST_ROOT + "/InventoryPanel/UIElement/Item.txt"));
             }
             finally { UIKitCodeLayoutMigrationTransaction.Save(null); }
         }
 
         /// <summary>含程序集定义的目录不能自动迁移，防止改变脚本所属程序集。</summary>
         [Test]
-        public void AssemblyBoundaryFileRejectsPlan()
+        public void Validate_目录含程序集定义_拒绝迁移()
         {
             CreatePlan();
-            File.WriteAllText(TEST_ROOT + "/InventoryPanel/custom.asmref", "{}");
+            string definitionPath = TEST_ROOT + "/InventoryPanel/custom.asmref";
+            File.WriteAllText(definitionPath, "{}");
             var plan = new UIKitCodeLayoutMigrationPlan(TEST_ROOT);
             plan.Add(TEST_ROOT + "/InventoryPanel", TEST_ROOT + "/Panel/InventoryPanel");
-            Assert.That(Assert.Throws<InvalidOperationException>(() => plan.Validate()).Message, Does.Contain("程序集定义"));
-            File.Delete(TEST_ROOT + "/InventoryPanel/custom.asmref");
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => plan.Validate());
+
+            Assert.AreEqual("迁移范围含程序集定义，需先人工规划: " + definitionPath, exception.Message);
+            File.Delete(definitionPath);
         }
 
         /// <summary>新布局不再产生移动计划，重复迁移保持幂等。</summary>
         [Test]
-        public void NewLayoutProducesNoMoves()
+        public void Build_已是新布局_不产生移动()
         {
             Directory.CreateDirectory(TEST_ROOT + "/Panel/InventoryPanel/Element");
             File.WriteAllText(TEST_ROOT + "/Panel/InventoryPanel/Element/Item.txt", "unchanged");

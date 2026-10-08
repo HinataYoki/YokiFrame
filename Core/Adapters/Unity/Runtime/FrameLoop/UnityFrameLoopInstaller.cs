@@ -120,7 +120,17 @@ namespace YokiFrame.Unity
         /// </summary>
         private static void DispatchFrame()
         {
-            YokiFrameUpdateDispatcher.Tick(Time.deltaTime, Time.unscaledDeltaTime);
+            DispatchFrame(Time.deltaTime, Time.unscaledDeltaTime);
+        }
+
+        /// <summary>
+        /// 用调用方提供的两个时间源投递一帧，供测试验证宿主时间没有被合并或丢弃。
+        /// </summary>
+        /// <param name="scaledDeltaTime">受宿主时间缩放影响的秒数。</param>
+        /// <param name="unscaledDeltaTime">不受宿主时间缩放影响的秒数。</param>
+        internal static void DispatchFrame(float scaledDeltaTime, float unscaledDeltaTime)
+        {
+            YokiFrameUpdateDispatcher.Tick(scaledDeltaTime, unscaledDeltaTime);
         }
     }
 }

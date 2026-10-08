@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Xunit;
+using YokiFrame.Json;
 
 namespace YokiFrame.RoslynKit.Tests;
 
@@ -16,7 +17,7 @@ public sealed class InspectOperationTests
         YokiFrameCommandResult result = Inspect(_ => model, "{\"selector\":\"FakeModel\",\"path\":\"Hp\"}");
 
         Assert.True(result.IsSuccess, result.ErrorCode + " " + result.ErrorMessage);
-        Assert.Contains("\"value\":\"20\"", Compact(result.ResultJson), System.StringComparison.Ordinal);
+        Assert.Equal("20", ReadString(result.ResultJson, "value"));
     }
 
     [Fact]
@@ -30,11 +31,11 @@ public sealed class InspectOperationTests
 
         YokiFrameCommandResult byKey = Inspect(_ => model, "{\"selector\":\"FakeModel\",\"path\":\"Items[k1].Hp\"}");
         Assert.True(byKey.IsSuccess, byKey.ErrorCode + " " + byKey.ErrorMessage);
-        Assert.Contains("\"value\":\"77\"", Compact(byKey.ResultJson), System.StringComparison.Ordinal);
+        Assert.Equal("77", ReadString(byKey.ResultJson, "value"));
 
         YokiFrameCommandResult byIndex = Inspect(_ => model, "{\"selector\":\"FakeModel\",\"path\":\"Order[1].Name\"}");
         Assert.True(byIndex.IsSuccess, byIndex.ErrorCode + " " + byIndex.ErrorMessage);
-        Assert.Contains("second", Compact(byIndex.ResultJson), System.StringComparison.Ordinal);
+        Assert.Equal("second", ReadString(byIndex.ResultJson, "value"));
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public sealed class InspectOperationTests
         YokiFrameCommandResult result = Inspect(_ => null, "{\"root\":\"static\",\"selector\":\"YokiFrame.RoslynKit.Tests.InspectStatics\",\"path\":\"Counter\"}");
 
         Assert.True(result.IsSuccess, result.ErrorCode + " " + result.ErrorMessage);
-        Assert.Contains("\"value\":\"42\"", Compact(result.ResultJson), System.StringComparison.Ordinal);
+        Assert.Equal("42", ReadString(result.ResultJson, "value"));
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public sealed class InspectOperationTests
             "{\"root\":\"fake\",\"selector\":\"anything\",\"path\":\"Hp\"}"));
 
         Assert.True(result.IsSuccess, result.ErrorCode + " " + result.ErrorMessage);
-        Assert.Contains("\"value\":\"9\"", Compact(result.ResultJson), System.StringComparison.Ordinal);
+        Assert.Equal("9", ReadString(result.ResultJson, "value"));
     }
 
     [Fact]
@@ -96,9 +97,9 @@ public sealed class InspectOperationTests
         YokiFrameCommandResult result = Inspect(_ => new FakeModel { Name = "hero", Hp = 5 }, "{\"selector\":\"FakeModel\"}");
 
         Assert.True(result.IsSuccess, result.ErrorCode + " " + result.ErrorMessage);
-        string json = Compact(result.ResultJson);
-        Assert.Contains("\"name\":\"Hp\"", json, System.StringComparison.Ordinal);
-        Assert.Contains("\"name\":\"Name\"", json, System.StringComparison.Ordinal);
+        List<string> names = MemberNames(result.ResultJson);
+        Assert.Contains("Hp", names);
+        Assert.Contains("Name", names);
     }
 
     /// <summary>用给定解析器替换 service 根并执行 inspect。不写文件。</summary>
@@ -117,12 +118,30 @@ public sealed class InspectOperationTests
             payload));
     }
 
-    /// <summary>去掉空白，便于断言压缩后的 JSON 片段。不解析 JSON。</summary>
-    /// <param name="json">原始结果 JSON。</param>
-    /// <returns>去掉空格和换行后的文本。</returns>
-    private static string Compact(string json)
+    /// <summary>读取结果 JSON 的字符串字段。不校验同级其他字段。</summary>
+    /// <param name="json">inspect 成功结果。</param>
+    /// <param name="name">字段名。</param>
+    /// <returns>字段文本。</returns>
+    private static string ReadString(string json, string name)
     {
-        return json.Replace(" ", string.Empty).Replace("\n", string.Empty).Replace("\r", string.Empty);
+        using JsonDocument document = JsonDocument.Parse(json);
+        return document.RootElement.GetProperty(name).GetString();
+    }
+
+    /// <summary>收集 members 数组中的成员名。结果没有 members 时失败。</summary>
+    /// <param name="json">不带路径的 inspect 结果。</param>
+    /// <returns>成员名列表。</returns>
+    private static List<string> MemberNames(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement members = document.RootElement.GetProperty("members");
+        var names = new List<string>();
+        for (var index = 0; index < members.GetArrayLength(); index++)
+        {
+            names.Add(members[index].GetProperty("name").GetString());
+        }
+
+        return names;
     }
 
     private sealed class FakeModel

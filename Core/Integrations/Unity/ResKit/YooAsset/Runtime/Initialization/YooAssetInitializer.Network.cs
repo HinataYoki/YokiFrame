@@ -57,7 +57,7 @@ namespace YokiFrame.Unity
         }
 
         /// <summary>校验联网策略只用于它能够提供完整语义的运行模式。</summary>
-        private static void ValidateStrategy(YooAssetInitializationOptions options)
+        internal static void ValidateStrategy(YooAssetInitializationOptions options)
         {
             if (options.InitializationStrategy == YooAssetInitializationStrategy.ManifestOnly
                 || (options.PlayMode != EPlayMode.HostPlayMode

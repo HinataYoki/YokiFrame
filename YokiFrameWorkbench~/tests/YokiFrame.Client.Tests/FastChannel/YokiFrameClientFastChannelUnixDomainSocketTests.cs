@@ -18,14 +18,9 @@ public sealed class YokiFrameClientFastChannelUnixDomainSocketTests
     /// <summary>
     /// 验证 Unix 宿主在同一 registry endpoint 上连续发送两个只读 System 命令时只完成一次 Hello。
     /// </summary>
-    [Fact]
+    [UnixFact]
     public async Task ReadOnlySystemCommandsReuseUnixDomainSocketConnectionWhenEndpointIsUnchanged()
     {
-        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
-        {
-            return;
-        }
-
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var projectRoot = CreateProjectRoot();
         var socketPath = CreateSocketPath();

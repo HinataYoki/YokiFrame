@@ -102,19 +102,6 @@ public sealed class RuntimePublishProfileResolverTests
     }
 
     /// <summary>
-    /// 验证 Packaging 提供按受控 profile 标识解析发布配置的公开入口，供薄脚本和维护流程复用。
-    /// </summary>
-    [Fact]
-    public void ResolveExposesAllowlistedProfileEntryPoint()
-    {
-        var method = typeof(RuntimePublishProfileResolver).GetMethod(
-            nameof(RuntimePublishProfileResolver.Resolve),
-            new[] { typeof(string), typeof(bool) });
-
-        Assert.NotNull(method);
-    }
-
-    /// <summary>
     /// 验证 Windows Native AOT 使用独立 profile 目录、真实 win-x64 RID，并同时发布 GUI 和 CLI。
     /// </summary>
     [Fact]
@@ -126,7 +113,7 @@ public sealed class RuntimePublishProfileResolverTests
         Assert.Equal("win-x64", profile.DotnetRuntimeIdentifier);
         Assert.Equal("YokiFrame.Workbench.Avalonia.exe", profile.GuiEntry);
         Assert.Equal("yoki.exe", profile.CliEntry);
-        Assert.False(GetBooleanProperty(profile, "SharedRuntime"));
+        Assert.False(profile.SharedRuntime);
     }
 
     /// <summary>
@@ -152,22 +139,9 @@ public sealed class RuntimePublishProfileResolverTests
     {
         var profile = RuntimePublishProfileResolver.Resolve(runtimeIdentifier, startupOptimized);
 
-        Assert.Equal(publishCli, GetBooleanProperty(profile, "PublishCli"));
-        Assert.Equal(selfContained, GetBooleanProperty(profile, "SelfContained"));
-        Assert.Equal(publishReadyToRun, GetBooleanProperty(profile, "PublishReadyToRun"));
-        Assert.Equal(publishAot, GetBooleanProperty(profile, "PublishAot"));
-    }
-
-    /// <summary>
-    /// 读取 profile 的公开布尔构建选项；属性缺失时保留清晰的 TDD 失败原因。
-    /// </summary>
-    /// <param name="profile">待检查 profile。</param>
-    /// <param name="propertyName">属性名。</param>
-    /// <returns>布尔属性值。</returns>
-    private static bool GetBooleanProperty(object profile, string propertyName)
-    {
-        var property = profile.GetType().GetProperty(propertyName);
-        Assert.NotNull(property);
-        return Assert.IsType<bool>(property.GetValue(profile));
+        Assert.Equal(publishCli, profile.PublishCli);
+        Assert.Equal(selfContained, profile.SelfContained);
+        Assert.Equal(publishReadyToRun, profile.PublishReadyToRun);
+        Assert.Equal(publishAot, profile.PublishAot);
     }
 }

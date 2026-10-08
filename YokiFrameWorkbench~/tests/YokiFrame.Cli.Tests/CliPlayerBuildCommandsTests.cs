@@ -40,8 +40,13 @@ public sealed class CliPlayerBuildCommandsTests
         var evidencePaths = json["error"]!["evidencePaths"]!.AsArray()
             .Select(static node => node!.GetValue<string>())
             .ToArray();
-        Assert.Contains("missing-godot.exe", evidencePaths);
-        Assert.Contains(evidencePaths, static path => path.EndsWith(".log", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, evidencePaths.Length);
+        Assert.Equal("missing-godot.exe", evidencePaths[0]);
+        var logPath = Path.GetFullPath(evidencePaths[1]);
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(project.Path, ".yokiframe", "builds", "godot", "logs")),
+            Path.GetDirectoryName(logPath));
+        Assert.EndsWith("-Validation.log", logPath, StringComparison.Ordinal);
     }
 
     /// <summary>验证 Unity Player 构建返回 YokiFrame 自有的中性能力边界，不耦合具体外部插件。</summary>

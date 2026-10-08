@@ -8,19 +8,22 @@ namespace YokiFrame.Godot.Runtime.Tests;
 /// </summary>
 public sealed class GodotScriptEvalHostTests
 {
+    /// <summary>编译时把令牌、RefCounted 和缩进后的 run 入口写成完整脚本。</summary>
     [Fact]
     public void Compile_wraps_code_with_token_and_entry()
     {
-        var compiler = new FakeCompiler();
-        var host = new GodotScriptEvalHost(compiler);
+        FakeCompiler compiler = new();
+        GodotScriptEvalHost host = new(compiler);
 
         Assert.True(host.TryCompile("a", "tok-1", "return 1\nreturn 2", out string error));
         Assert.Equal(string.Empty, error);
-        Assert.Contains("# yokiframe-eval-token: tok-1", compiler.LastSource, System.StringComparison.Ordinal);
-        Assert.Contains("extends RefCounted", compiler.LastSource, System.StringComparison.Ordinal);
-        Assert.Contains("func run():", compiler.LastSource, System.StringComparison.Ordinal);
-        // 函数体必须被制表符缩进，否则 GDScript 解析失败
-        Assert.Contains("\treturn 1\n\treturn 2", compiler.LastSource, System.StringComparison.Ordinal);
+        Assert.Equal(
+            "# yokiframe-eval-token: tok-1\n"
+            + "extends RefCounted\n\n"
+            + "func run():\n"
+            + "\treturn 1\n"
+            + "\treturn 2\n",
+            compiler.LastSource);
     }
 
     [Fact]

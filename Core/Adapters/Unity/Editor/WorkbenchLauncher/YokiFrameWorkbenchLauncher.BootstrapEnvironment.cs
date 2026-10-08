@@ -55,6 +55,49 @@ namespace YokiFrame
         }
 
         /// <summary>
+        /// 为测试生成与生产相同的 bootstrap 失败文本，并写入最近一次缺失环境。
+        /// </summary>
+        /// <param name="bootstrapOutput">dotnet bootstrap 合并后的标准输出和标准错误。</param>
+        /// <returns>适合 Unity Console 展示的失败信息。</returns>
+        internal static string CreateRuntimeBootstrapFailureMessageForTests(string bootstrapOutput)
+        {
+            return CreateRuntimeBootstrapFailureMessage(bootstrapOutput);
+        }
+
+        /// <summary>
+        /// 读取测试可观察的缺失环境菜单状态，避免测试扫描菜单源码。
+        /// </summary>
+        /// <returns>菜单是否启用，以及启用时会打开的官方地址。</returns>
+        internal static RuntimeBootstrapEnvironmentMenuState GetRuntimeBootstrapEnvironmentMenuStateForTests()
+        {
+            RuntimeBootstrapEnvironment environment = sMissingBootstrapEnvironment;
+            return new RuntimeBootstrapEnvironmentMenuState(
+                environment != RuntimeBootstrapEnvironment.None,
+                environment == RuntimeBootstrapEnvironment.None
+                    ? string.Empty
+                    : GetRuntimeBootstrapEnvironmentUrl(environment));
+        }
+
+        /// <summary>描述缺失编译环境菜单的启用状态和下载地址。</summary>
+        internal readonly struct RuntimeBootstrapEnvironmentMenuState
+        {
+            /// <summary>创建菜单状态快照。</summary>
+            /// <param name="enabled">菜单当前是否启用。</param>
+            /// <param name="url">启用时会打开的官方地址；未启用时为空。</param>
+            internal RuntimeBootstrapEnvironmentMenuState(bool enabled, string url)
+            {
+                Enabled = enabled;
+                Url = url;
+            }
+
+            /// <summary>获取菜单是否启用。</summary>
+            internal bool Enabled { get; }
+
+            /// <summary>获取菜单会打开的官方地址。</summary>
+            internal string Url { get; }
+        }
+
+        /// <summary>
         /// 将 bootstrap 原始输出转化为包含缺失环境、菜单入口和原始日志的 Console 错误文本。
         /// </summary>
         /// <param name="bootstrapOutput">dotnet bootstrap 合并后的标准输出和标准错误。</param>

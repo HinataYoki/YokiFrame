@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using YokiFrame.Json;
 
 namespace YokiFrame
 {
@@ -11,8 +11,6 @@ namespace YokiFrame
     /// </summary>
     public sealed class YokiFrameEditorSystemCommandHandlerTests
     {
-        private const string EDITOR_SYSTEM_HANDLER_TYPE = "EditorSystemCommandHandler";
-
         /// <summary>
         /// 验证 Editor System handler 声明支持打开项目目录，但不实际触发系统窗口。
         /// </summary>
@@ -188,13 +186,29 @@ namespace YokiFrame
             YokiFrameCommandResult result = handler.Handle(CreateSystemRequest("bridge_status"));
 
             Assert.IsTrue(result.IsSuccess);
-            Assert.IsTrue(result.ResultJson.Contains("\"protocolFileCount\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"protocolBytes\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"oldestProtocolFileUtc\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"backpressureActive\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"lastPollLimitReason\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"bridgeBusyCount\""));
-            Assert.IsTrue(result.ResultJson.Contains("\"lastError\""));
+            using (JsonDocument document = JsonDocument.Parse(result.ResultJson))
+            {
+                JsonElement root = document.RootElement;
+                Assert.GreaterOrEqual(ReadInt(root, "protocolFileCount"), 0);
+                Assert.IsTrue(root.GetProperty("protocolBytes").TryGetInt64(out _));
+                Assert.IsNotNull(root.GetProperty("oldestProtocolFileUtc").GetString());
+                Assert.IsFalse(root.GetProperty("backpressureActive").GetBoolean());
+                Assert.IsNotNull(root.GetProperty("lastPollLimitReason").GetString());
+                Assert.AreEqual(0, ReadInt(root, "bridgeBusyCount"));
+                Assert.IsNotNull(root.GetProperty("lastError").GetString());
+            }
+        }
+
+        /// <summary>
+        /// 读取必需整数属性。
+        /// </summary>
+        /// <param name="owner">所属对象。</param>
+        /// <param name="propertyName">属性名。</param>
+        /// <returns>整数值。</returns>
+        private static int ReadInt(JsonElement owner, string propertyName)
+        {
+            Assert.IsTrue(owner.GetProperty(propertyName).TryGetInt32(out int value), propertyName);
+            return value;
         }
 
         /// <summary>
@@ -224,19 +238,10 @@ namespace YokiFrame
             Action<string> revealPath,
             Func<string, int, bool> openCodeLocation)
         {
-            Type handlerType = typeof(YokiFrameEditorFileBridgePump).GetNestedType(EDITOR_SYSTEM_HANDLER_TYPE, BindingFlags.NonPublic);
-            Assert.IsNotNull(handlerType);
-            return (IYokiFrameCommandHandler)Activator.CreateInstance(
-                handlerType,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new object[]
-                {
-                    revealPath,
-                    openCodeLocation,
-                    CreateEditorPolicy()
-                },
-                null);
+            return new YokiFrameEditorFileBridgePump.EditorSystemCommandHandler(
+                revealPath,
+                openCodeLocation,
+                CreateEditorPolicy());
         }
 
         /// <summary>创建包含 Unity Harness 与源码定位 UserAction 的测试策略。</summary>

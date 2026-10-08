@@ -188,6 +188,19 @@ namespace YokiFrame
             }
         }
 
+        /// <summary>
+        /// 读取调度列表当前容量，供测试确认峰值后的缩容结果。
+        /// </summary>
+        /// <param name="listName">prepared、executing 或 recycle。</param>
+        /// <returns>对应列表容量。</returns>
+        internal static int GetRetainedListCapacityForTests(string listName)
+        {
+            if (listName == "prepared") return sPrepared.Capacity;
+            if (listName == "executing") return sExecuting.Capacity;
+            if (listName == "recycle") return sPendingRecycle.Capacity;
+            throw new ArgumentException("未知 ActionKit 调度列表: " + listName, nameof(listName));
+        }
+
         /// <summary>在宿主清理后释放超出常态阈值的静态缓冲区。</summary>
         private static void TrimSchedulerBuffersAfterCleanup()
         {

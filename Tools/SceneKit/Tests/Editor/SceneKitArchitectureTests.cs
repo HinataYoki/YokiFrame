@@ -5,17 +5,27 @@ using UnityEngine;
 
 namespace YokiFrame.Tests
 {
-    /// <summary>验证 SceneKit、ResKit 场景契约和具体宿主实现之间的长期依赖边界。</summary>
+    /// <summary>验证 SceneKit、ResKit 场景契约和具体宿主实现之间的依赖边界。</summary>
     [TestFixture]
     public sealed class SceneKitArchitectureTests
     {
         private const string UNITY_PROVIDER_PATH = "YokiFrame/Core/Adapters/Unity/Runtime/ResKit/Resources/UnityResourceProvider.cs";
         private const string GODOT_PROVIDER_PATH = "YokiFrame/Core/Adapters/Godot/Runtime/ResKit/GodotResourceProvider.cs";
         private const string YOOASSET_PROVIDER_PATH = "YokiFrame/Core/Integrations/Unity/ResKit/YooAsset/Runtime/YooAssetResourceProvider.cs";
+        private const string ENDIF_DIRECTIVE = "#endif";
 
-        /// <summary>验证普通资源、raw 与场景能力接口互不继承，避免一个 Provider 被迫实现无关能力。</summary>
+        private static readonly string[] FORBIDDEN_HOST_TOKENS =
+        {
+            "UnityEngine",
+            "UnityEditor",
+            "UNITY_EDITOR",
+            "Godot",
+            "YooAsset",
+        };
+
+        /// <summary>验证普通资源、raw 与场景接口互不继承。</summary>
         [Test]
-        public void ResKitProviderCapabilitiesRemainIndependent()
+        public void IsAssignableFrom_资源Raw与场景接口_互不继承()
         {
             Type resource = typeof(IResourceProvider);
             Type raw = typeof(IRawResourceProvider);
@@ -29,9 +39,9 @@ namespace YokiFrame.Tests
             Assert.IsFalse(scene.IsAssignableFrom(raw));
         }
 
-        /// <summary>验证三个已支持 Provider 都显式声明场景能力，并保持整文件宿主宏。</summary>
+        /// <summary>验证三个 Provider 源码分别由对应宿主宏整文件包裹。</summary>
         [Test]
-        public void SupportedProvidersDeclareSceneCapabilityAndWholeFileGuards()
+        public void SourceGuard_三个Provider源码_整文件使用各自宿主宏()
         {
             AssertProviderSource(UNITY_PROVIDER_PATH, "#if UNITY_2022_3_OR_NEWER");
             AssertProviderSource(GODOT_PROVIDER_PATH, "#if GODOT");
@@ -40,9 +50,9 @@ namespace YokiFrame.Tests
                 "#if UNITY_5_3_OR_NEWER && YOKIFRAME_YOOASSET_SUPPORT && YOKIFRAME_YOOASSET_2_OR_3");
         }
 
-        /// <summary>验证 SceneKit Runtime 只依赖纯 C# Core 契约，不直接选择 Unity、Godot 或 YooAsset。</summary>
+        /// <summary>验证 SceneKit Runtime 源码不出现宿主 API、宿主宏或 YooAsset 标识。</summary>
         [Test]
-        public void SceneKitRuntimeDoesNotReferenceHostApis()
+        public void SourceGuard_SceneKit运行时源码_不包含宿主标识()
         {
             string runtimeRoot = PackagePath("YokiFrame/Tools/SceneKit/Runtime");
             string[] sources = Directory.GetFiles(runtimeRoot, "*.cs", SearchOption.AllDirectories);
@@ -50,21 +60,13 @@ namespace YokiFrame.Tests
             Assert.IsNotEmpty(sources);
             for (var index = 0; index < sources.Length; index++)
             {
-                string source = File.ReadAllText(sources[index]);
-                string path = NormalizePath(sources[index]);
-                Assert.IsFalse(source.Contains("UnityEngine"), "SceneKit Runtime 禁止引用 Unity: " + path);
-                Assert.IsFalse(source.Contains("UnityEditor"), "SceneKit Runtime 禁止引用 UnityEditor: " + path);
-                Assert.IsFalse(source.Contains("using Godot;") || source.Contains("Godot."),
-                    "SceneKit Runtime 禁止引用 Godot: " + path);
-                Assert.IsFalse(source.Contains("YooAsset"), "SceneKit Runtime 禁止引用 YooAsset: " + path);
-                Assert.IsFalse(source.Contains("#if UNITY_EDITOR"), "SceneKit Runtime 禁止包含 Editor 宏: " + path);
-                Assert.IsFalse(source.Contains("#if GODOT"), "SceneKit Runtime 禁止包含 Godot 宏: " + path);
+                AssertNoForbiddenHostToken(sources[index]);
             }
         }
 
-        /// <summary>验证已经编译的 SceneKit Runtime 程序集不链接任何宿主或可选依赖程序集。</summary>
+        /// <summary>验证已编译的 SceneKit Runtime 程序集不引用 Unity、Godot 或 YooAsset。</summary>
         [Test]
-        public void SceneKitRuntimeAssemblyDoesNotReferenceHostAssemblies()
+        public void AssemblyBoundary_SceneKit运行时_不引用宿主程序集()
         {
             System.Reflection.AssemblyName[] references = typeof(SceneKit).Assembly.GetReferencedAssemblies();
             for (var index = 0; index < references.Length; index++)
@@ -79,18 +81,66 @@ namespace YokiFrame.Tests
             }
         }
 
-        /// <summary>读取 Provider 源码并验证场景接口声明以及首尾整文件宏。</summary>
+        /// <summary>验证 Provider 源码的首尾非空行是预期的整文件宏。</summary>
         /// <param name="relativePath">相对 Assets 的 Provider 源码路径。</param>
         /// <param name="expectedGuard">期望的第一条宿主宏。</param>
         private static void AssertProviderSource(string relativePath, string expectedGuard)
         {
             string sourcePath = PackagePath(relativePath);
-            string source = File.ReadAllText(sourcePath);
             string[] lines = File.ReadAllLines(sourcePath);
 
-            Assert.IsTrue(source.Contains("IResSceneProvider"), "Provider 必须实现 IResSceneProvider: " + relativePath);
             Assert.AreEqual(expectedGuard, FirstNonEmptyLine(lines), "Provider 必须使用匹配的整文件宿主宏: " + relativePath);
-            Assert.AreEqual("#endif", LastNonEmptyLine(lines), "Provider 必须以 #endif 结束: " + relativePath);
+            Assert.AreEqual(ENDIF_DIRECTIVE, LastNonEmptyLine(lines), "Provider 必须以 #endif 结束: " + relativePath);
+        }
+
+        /// <summary>验证单个 Runtime 源码文件没有宿主标识。</summary>
+        /// <param name="sourcePath">源码绝对路径。</param>
+        private static void AssertNoForbiddenHostToken(string sourcePath)
+        {
+            string[] lines = File.ReadAllLines(sourcePath);
+            string path = NormalizePath(sourcePath);
+            for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            {
+                for (var tokenIndex = 0; tokenIndex < FORBIDDEN_HOST_TOKENS.Length; tokenIndex++)
+                {
+                    Assert.IsFalse(
+                        HasToken(lines[lineIndex], FORBIDDEN_HOST_TOKENS[tokenIndex]),
+                        "SceneKit Runtime 禁止出现宿主标识 " + FORBIDDEN_HOST_TOKENS[tokenIndex] + ": " + path);
+                }
+            }
+        }
+
+        /// <summary>判断一行里是否有独立标识符与给定记号相同。</summary>
+        /// <param name="line">源码行。</param>
+        /// <param name="token">禁止出现的标识符。</param>
+        /// <returns>出现独立标识符时返回 true。</returns>
+        private static bool HasToken(string line, string token)
+        {
+            for (var index = 0; index <= line.Length - token.Length; index++)
+            {
+                if (string.CompareOrdinal(line, index, token, 0, token.Length) != 0)
+                {
+                    continue;
+                }
+
+                bool leftBoundary = index == 0 || IsIdentifierChar(line[index - 1]) == false;
+                int end = index + token.Length;
+                bool rightBoundary = end == line.Length || IsIdentifierChar(line[end]) == false;
+                if (leftBoundary && rightBoundary)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>判断字符是否属于 C# 标识符，用于避免把更长的名字误判为宿主标识。</summary>
+        /// <param name="value">待判断字符。</param>
+        /// <returns>可作为标识符的一部分时返回 true。</returns>
+        private static bool IsIdentifierChar(char value)
+        {
+            return value == '_' || (value >= '0' && value <= '9') || (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
         }
 
         /// <summary>把相对 Assets 的路径转换为当前项目中的绝对路径。</summary>

@@ -1,5 +1,6 @@
 using YokiFrame.Tooling.Application.Models.AudioKit;
 using YokiFrame.Tooling.Application.Services.AudioKit;
+using YokiFrame.Tooling.Application.Services.Settings;
 
 namespace YokiFrame.Tooling.Application.Tests;
 
@@ -80,7 +81,7 @@ public sealed class AudioIndexSettingsServiceTests
 
     /// <summary>验证保存 AudioKit 时保留统一文件中的其它 Kit 配置。</summary>
     [Fact]
-    public async Task SavePreservesOtherKitEntries()
+    public async Task SaveAsync_统一设置含其它Kit_保留原条目()
     {
         using TestProject project = new();
         AudioIndexSettingsService service = new(project.Root);
@@ -90,9 +91,11 @@ public sealed class AudioIndexSettingsServiceTests
 
         await service.SaveAsync(AudioIndexSettings.CreateDefault() with { NamespaceName = "PreservedAudio" }, CancellationToken.None);
 
-        string json = await File.ReadAllTextAsync(service.SettingsPath);
-        Assert.Contains("LogKit", json, StringComparison.Ordinal);
-        Assert.Contains("PreservedAudio", json, StringComparison.Ordinal);
+        YokiFrameProjectSettingsDocument document = new YokiFrameProjectSettingsStore(project.Root)
+            .Read(YokiFrameProjectSettingsTarget.UnityEditor)
+            .GetDocument(YokiFrameProjectSettingsTarget.UnityEditor);
+        Assert.Equal("Debug", document.GetValues("LogKit")["minimumLevel"]);
+        Assert.Equal("PreservedAudio", document.GetValues("AudioKit")["index.namespaceName"]);
     }
 
     /// <summary>验证历史 AudioKit 独立文件会自动迁移到统一 Editor Settings。</summary>
@@ -112,9 +115,9 @@ public sealed class AudioIndexSettingsServiceTests
         Assert.False(File.Exists(service.LegacySettingsPath));
     }
 
-    /// <summary>验证 Godot 项目把索引配置写入 .yokiframe，不创建 Unity ProjectSettings。</summary>
+    /// <summary>验证 Godot 项目把索引配置写入 project.godot，不创建 Unity ProjectSettings。</summary>
     [Fact]
-    public async Task GodotProjectWritesEditorSettingsOutsideUnityDirectories()
+    public async Task SaveAsync_Godot项目_写入projectGodot且不创建ProjectSettings()
     {
         using TestProject project = new();
         File.WriteAllText(Path.Combine(project.Root, "project.godot"), "config_version=5\n");
@@ -123,10 +126,11 @@ public sealed class AudioIndexSettingsServiceTests
         await service.SaveAsync(AudioIndexSettings.CreateDefault(), CancellationToken.None);
 
         Assert.Equal(Path.Combine(project.Root, "project.godot"), service.SettingsPath);
-        string text = File.ReadAllText(service.SettingsPath);
-        Assert.Contains("[yokiframe/editor]", text, StringComparison.Ordinal);
-        Assert.Contains("AudioKit/index.namespaceName=\"GameAudio\"", text, StringComparison.Ordinal);
         Assert.False(Directory.Exists(Path.Combine(project.Root, "ProjectSettings")));
+        YokiFrameProjectSettingsDocument document = new YokiFrameProjectSettingsStore(project.Root)
+            .Read(YokiFrameProjectSettingsTarget.GodotEditor)
+            .GetDocument(YokiFrameProjectSettingsTarget.GodotEditor);
+        Assert.Equal("GameAudio", document.GetValues("AudioKit")["index.namespaceName"]);
     }
 
     /// <summary>验证重复保存相同 Godot 设置时不改写 project.godot。</summary>
@@ -148,7 +152,7 @@ public sealed class AudioIndexSettingsServiceTests
 
     /// <summary>验证 Godot 改写过的 TableKit 草稿不会被 AudioKit 无改动保存重排。</summary>
     [Fact]
-    public async Task UnchangedAudioSaveKeepsGodotEscapedDraftInPlace()
+    public async Task SaveAsync_Godot音频设置未变化_不改写转义草稿()
     {
         using TestProject project = new();
         string path = Path.Combine(project.Root, "project.godot");
@@ -169,10 +173,12 @@ public sealed class AudioIndexSettingsServiceTests
         File.SetLastWriteTimeUtc(path, timestamp);
         AudioIndexSettingsService service = new(project.Root);
 
+        byte[] before = File.ReadAllBytes(path);
+
         await service.SaveAsync(service.Load(), CancellationToken.None);
 
         Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
-        Assert.Contains("tablekit/document=\"{\\r\\n  \\u0022ProjectRoot\\u0022:", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.Equal(before, File.ReadAllBytes(path));
     }
 
     /// <summary>创建和清理一个隔离测试项目根。</summary>

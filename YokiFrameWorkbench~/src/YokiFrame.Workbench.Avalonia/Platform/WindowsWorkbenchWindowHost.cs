@@ -232,7 +232,7 @@ internal static partial class WindowsWorkbenchWindowHost
     /// </summary>
     /// <param name="currentStyle">当前 Win32 window style。</param>
     /// <returns>作为 Unity owned tool window 显示时应使用的 Win32 window style。</returns>
-    private static long CreateOwnedWindowStyle(long currentStyle)
+    internal static long CreateOwnedWindowStyle(long currentStyle)
     {
         return currentStyle & ~WS_CHILD & ~WS_MINIMIZEBOX;
     }
@@ -242,7 +242,7 @@ internal static partial class WindowsWorkbenchWindowHost
     /// </summary>
     /// <param name="currentExStyle">当前 Win32 extended window style。</param>
     /// <returns>作为 Unity owned tool window 显示时应使用的 extended style。</returns>
-    private static long CreateOwnedToolWindowExStyle(long currentExStyle)
+    internal static long CreateOwnedToolWindowExStyle(long currentExStyle)
     {
         return (currentExStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW;
     }

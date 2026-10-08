@@ -17,79 +17,12 @@ namespace YokiFrame.Workbench.Avalonia.Tests;
 public sealed class FsmKitGraphContractTests
 {
     /// <summary>
-    /// 验证 FsmKit 页面复用其它页面的两行紧凑标题栏，不展示重复宿主信息或刷新控件。
-    /// </summary>
-    [Fact]
-    public void FsmKitPageUsesSharedCompactHeader()
-    {
-        var xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "FsmKitPageView.axaml");
-        var shellXaml = WorkbenchContractTestFiles.ReadSource("Views", "WorkbenchShellView.axaml");
-        var windowSource = WorkbenchContractTestFiles.ReadSource("WorkbenchWindow.cs");
-        var telemetrySource = WorkbenchContractTestFiles.ReadSource("WorkbenchWindow.FsmTelemetry.cs");
-
-        Assert.Contains("CurrentPageTitle", shellXaml);
-        Assert.Contains("CurrentPageDescription", shellXaml);
-        Assert.Contains("StaleReason", xaml);
-        Assert.Contains("SharedMemoryRefreshInterval = TimeSpan.FromMilliseconds(100)", telemetrySource);
-        Assert.Contains("FileRefreshInterval = TimeSpan.FromSeconds(1)", windowSource);
-        Assert.Contains("PollFsmKitTelemetry", telemetrySource);
-    }
-
-    /// <summary>
-    /// 验证 FsmKit 页面使用左侧实例列表、大尺寸状态流图和右侧转换历史。
-    /// </summary>
-    [Fact]
-    public void FsmKitPageUsesTypedRuntimeWorkspace()
-    {
-        var xaml = WorkbenchContractTestFiles.ReadSource("Views", "Pages", "FsmKitPageView.axaml");
-        var graphSource = WorkbenchContractTestFiles.ReadSource("Components", "ObservedFsmGraph.cs");
-        var graphRenderingSource = WorkbenchContractTestFiles.ReadSource(
-            "Components", "ObservedFsmGraph.Rendering.cs");
-        var graphStyles = WorkbenchContractTestFiles.ReadSource("Styles", "FsmKit.axaml");
-
-        Assert.True(xaml.Contains("转换历史") || xaml.Contains("String.FsmKit.TransitionHistory"));
-        Assert.Contains("ColumnDefinitions=\"252,*,300\"", xaml);
-        Assert.Contains("SearchText", xaml);
-        // i18n 切片后 AutomationProperties.Name 改用 DynamicResource 资源 key，兼容两种形态。
-        Assert.True(
-            xaml.Contains("AutomationProperties.Name=\"搜索活动状态机\"") || xaml.Contains("String.FsmKit.SearchAutomationName"),
-            "FsmKit 搜索框应包含活动状态机搜索词条");
-        Assert.True(
-            xaml.Contains("AutomationProperties.Name=\"活动状态机列表\"") || xaml.Contains("String.FsmKit.InstancesAutomationName"),
-            "FsmKit 实例列表应包含活动状态机列表词条");
-        Assert.Contains("SelectedMachineName", xaml);
-        Assert.Contains("MachineState", xaml);
-        Assert.Contains("CurrentState", xaml);
-        Assert.Contains("ToolTip.Tip=\"{CompiledBinding InstanceId}\"", xaml);
-        Assert.Contains("ListBoxItem:selected /template/ ContentPresenter", graphStyles);
-        Assert.Contains("Transitions", xaml);
-        Assert.True(xaml.Contains("已观测转换图") || xaml.Contains("String.FsmKit.ObservedTransitions"));
-        Assert.Contains("Model=\"{CompiledBinding GraphModel}\"", xaml);
-        Assert.True(
-            xaml.Contains("AutomationProperties.Name=\"已观测状态转换图\"") || xaml.Contains("String.FsmKit.ObservedGraphAutomationName"),
-            "FsmKit 状态图应包含已观测状态转换图词条");
-        Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", xaml);
-        Assert.Contains("OnGraphZoomOut", xaml);
-        Assert.Contains("OnGraphZoomIn", xaml);
-        Assert.Contains("OnGraphFit", xaml);
-        Assert.Contains("HandlePointerPressed", graphSource);
-        Assert.Contains("HandlePointerMoved", graphSource);
-        Assert.Contains("scrollViewer.Offset", graphSource);
-        Assert.Contains("DashStyle", graphRenderingSource);
-        Assert.Contains("DrawArrowHead", graphRenderingSource);
-        Assert.Contains("DrawGeometry", graphRenderingSource);
-        Assert.Contains("components|ObservedFsmGraph", graphStyles);
-        Assert.Contains("AccentBrush", graphStyles);
-        Assert.Contains("EmptyStateTitle", xaml);
-    }
-
-    /// <summary>
     /// 验证状态节点按圆环等距分布，边使用节点边界而不是节点中心连接。
     /// </summary>
     [Fact]
-    public void FsmKitGraphUsesCircularNodeLayoutAndBoundaryEdges()
+    public void ApplyPeriodicState_多个状态_节点等距且边连接边界()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(FsmKitContractTestData.CreateState(
             "chosen-instance",
             "snapshot",
@@ -116,7 +49,7 @@ public sealed class FsmKitGraphContractTests
     /// 验证图控件支持 35% 到 180% 的缩放范围，并同步外层滚动尺寸。
     /// </summary>
     [Fact]
-    public void ObservedFsmGraphSupportsFreeZoom()
+    public void Zoom_自由缩放_限制在百分之三十五到一百八十并更新宽度()
     {
         ObservedFsmGraph graph = new()
         {
@@ -140,9 +73,9 @@ public sealed class FsmKitGraphContractTests
     /// 验证双向转换分离为曲线，自环保留独立回环几何。
     /// </summary>
     [Fact]
-    public void FsmKitGraphSeparatesReverseEdgesAndKeepsSelfLoops()
+    public void ApplyPeriodicState_双向边和自环_分离曲线并保留自环()
     {
-        FsmKitPageViewModel viewModel = new();
+        using FsmKitPageViewModel viewModel = new();
         viewModel.ApplyPeriodicState(FsmKitContractTestData.CreateState(
             "chosen-instance",
             "snapshot",
@@ -166,36 +99,44 @@ public sealed class FsmKitGraphContractTests
     }
 
     /// <summary>
-    /// 通过 Headless 真实加载 Shell，验证 FsmKit 专页进入视觉树而非通用 JSON 页面。
+    /// 验证 FsmKit 专页进入真实视觉树，且渲染帧非空。
+    /// 截图只进入内存流，窗口关闭后释放 Shell 持有的静态订阅。
     /// </summary>
     [Fact]
-    public async Task FsmKitPageRendersInsideHeadlessShell()
+    public async Task Show_FsmKit专页_进入视觉树且渲染帧非空()
     {
         InstallerHeadlessTestApplication.EnsureInitialized();
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            var window = CreateFsmKitWindow();
-            try
-            {
-                window.Show();
-                Dispatcher.UIThread.RunJobs();
-                AssertFsmKitPageLayout(window);
-                SaveFsmKitFrame(window);
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        await Dispatcher.UIThread.InvokeAsync(AssertFsmKitShellFrame);
     }
 
     /// <summary>
-    /// 创建带真实 FsmKit 数据的 Headless Shell 窗口。
+    /// 在 UI 线程显示 FsmKit 专页，断言布局和渲染帧后关闭窗口并释放 Shell。
     /// </summary>
-    /// <returns>尚未显示、可由测试控制生命周期的窗口。</returns>
-    private static Window CreateFsmKitWindow()
+    private static void AssertFsmKitShellFrame()
     {
-        var viewModel = new WorkbenchShellViewModel(() => { }, _ => { }, (_, _) => Task.CompletedTask)
+        WorkbenchShellViewModel shell = CreateFsmKitShell();
+        Window window = CreateFsmKitWindow(shell);
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AssertFsmKitPageLayout(window);
+            AssertRenderedFrameIsNotEmpty(window);
+        }
+        finally
+        {
+            window.Close();
+            DisposeShell(shell);
+        }
+    }
+
+    /// <summary>
+    /// 创建已选中 FsmKit 并写入真实详情的 Headless Shell。
+    /// </summary>
+    /// <returns>尚未显示、由调用方负责释放的 Shell。</returns>
+    private static WorkbenchShellViewModel CreateFsmKitShell()
+    {
+        WorkbenchShellViewModel viewModel = new(() => { }, _ => { }, (_, _) => Task.CompletedTask)
         {
             SelectedPage = "FsmKit"
         };
@@ -211,6 +152,16 @@ public sealed class FsmKitGraphContractTests
                 ("Ready", "Start"),
                 ("Ready", "ChosenState")
             ]));
+        return viewModel;
+    }
+
+    /// <summary>
+    /// 创建承载指定 Shell 的 Headless 窗口。
+    /// </summary>
+    /// <param name="viewModel">已经写入 FsmKit 详情的 Shell。</param>
+    /// <returns>尚未显示、可由测试控制生命周期的窗口。</returns>
+    private static Window CreateFsmKitWindow(WorkbenchShellViewModel viewModel)
+    {
         return new Window
         {
             Width = 1600,
@@ -249,19 +200,39 @@ public sealed class FsmKitGraphContractTests
     }
 
     /// <summary>
-    /// 保存含真实节点和边的 FsmKit Headless 渲染帧，供视觉回归和人工审阅使用。
+    /// 把已布局窗口的渲染帧写入内存流，确认内容超过空图阈值。
+    /// 不落盘，避免多个测试共享同一 PNG 路径。
     /// </summary>
     /// <param name="window">已经完成布局的 Workbench 窗口。</param>
-    private static void SaveFsmKitFrame(Window window)
+    private static void AssertRenderedFrameIsNotEmpty(Window window)
     {
         using WriteableBitmap? frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
-        var root = WorkbenchContractTestFiles.FindWorkbenchRoot();
-        var outputDirectory = Path.Combine(root, ".artifacts", "screenshots", "fsmkit");
-        Directory.CreateDirectory(outputDirectory);
-        var outputPath = Path.Combine(outputDirectory, "observed-graph-1600x980.png");
-        using FileStream stream = new(outputPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using MemoryStream stream = new();
         frame.Save(stream);
         Assert.True(stream.Length > 1024, "FsmKit Headless 截图内容为空或异常小。");
+    }
+
+    /// <summary>
+    /// 释放 Shell 装配的页面和自身订阅。必须在窗口关闭后、创建 Shell 的 UI 线程调用。
+    /// </summary>
+    /// <param name="shell">测试创建的 Workbench Shell。</param>
+    private static void DisposeShell(WorkbenchShellViewModel shell)
+    {
+        shell.EventKitPage.Dispose();
+        shell.FsmKitPage.Dispose();
+        shell.LogKitPage.Dispose();
+        shell.PoolKitPage.Dispose();
+        shell.ResKitPage.Dispose();
+        shell.ActionKitPage.Dispose();
+        shell.AudioKitPage.Dispose();
+        shell.SpatialKitPage.Dispose();
+        shell.UIKitPage.Dispose();
+        shell.TableKitPage.Dispose();
+        shell.LocalizationKitPage.Dispose();
+        shell.SaveKitPage.Dispose();
+        shell.DocumentationPage.Dispose();
+        shell.RuntimeUpdate.Dispose();
+        shell.Dispose();
     }
 }

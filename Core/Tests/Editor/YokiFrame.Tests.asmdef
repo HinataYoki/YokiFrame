@@ -8,6 +8,7 @@
         "GUID:57d76a5674b6f474e97d39484877f63c",
         "GUID:27619889b8ba8c24980f49ee34dbb44a",
         "GUID:0acc523941302664db1f4e527237feb3",
+        "YokiFrame.Core.PlayMode.Tests",
         "UniTask"
     ],
     "includePlatforms": [
