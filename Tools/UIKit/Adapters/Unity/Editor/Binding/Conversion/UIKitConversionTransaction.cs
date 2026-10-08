@@ -89,17 +89,10 @@ namespace YokiFrame
         {
             if (!IsPending) { EditorApplication.update -= WatchCompilation; return; }
             if (EditorApplication.isCompiling) { sObservedCompilation = true; return; }
-            if (EditorApplication.isUpdating) return;
-            if (EditorUtility.scriptCompilationFailed)
-            {
-                EditorApplication.update -= WatchCompilation;
-                RollbackCompilation();
-            }
-            else if (sObservedCompilation)
-            {
-                EditorApplication.update -= WatchCompilation;
-                OnScriptsReloaded();
-            }
+            if (EditorApplication.isUpdating || !sObservedCompilation) return;
+            if (!EditorUtility.scriptCompilationFailed && !sCompilationFailed) return;
+            EditorApplication.update -= WatchCompilation;
+            RollbackCompilation();
         }
 
         /// <summary>通过 AssetDatabase 建立目标目录，使脚本移动在暂停导入期间也能识别合法资源路径。</summary>
@@ -158,7 +151,7 @@ namespace YokiFrame
                 if (message.type == CompilerMessageType.Error) sCompilationFailed = true;
         }
 
-        /// <summary>编译失败时延后回滚，避开 Unity 编译回调内部再次导入资源。</summary>
+        /// <summary>编译失败时安排回滚；成功时只记录完成，避免在旧域验证新类型。</summary>
         private static void OnCompilationFinished(object _)
         {
             if (!IsPending) return;
@@ -166,15 +159,13 @@ namespace YokiFrame
             {
                 EditorApplication.update -= RollbackWhenReady;
                 EditorApplication.update += RollbackWhenReady;
+                return;
             }
-            else
-            {
-                Record record = JsonUtility.FromJson<Record>(SessionState.GetString(SESSION_KEY, string.Empty));
-                record.compiled = true;
-                SessionState.SetString(SESSION_KEY, JsonUtility.ToJson(record));
-                EditorApplication.update -= ValidateAfterReload;
-                EditorApplication.update += ValidateAfterReload;
-            }
+
+            // 只标记编译完成。新类型要等 Domain Reload 后再验证，避免旧域解析失败并回滚。
+            Record record = JsonUtility.FromJson<Record>(SessionState.GetString(SESSION_KEY, string.Empty));
+            record.compiled = true;
+            SessionState.SetString(SESSION_KEY, JsonUtility.ToJson(record));
         }
 
         /// <summary>编译器退出后恢复失败事务，回调执行一次即移除，避免在编译回调内重入导入。</summary>
@@ -188,12 +179,26 @@ namespace YokiFrame
         /// <summary>脚本编译失败后恢复原代码和绑定，并触发原代码重新导入。</summary>
         private static void RollbackCompilation()
         {
+            RollbackCompilation("UIKit 绑定转换未通过编译，已恢复原代码和 Prefab；请查看编译诊断。");
+        }
+
+        /// <summary>恢复本事务触及的代码和绑定，并记录调用方给出的失败原因。</summary>
+        private static void RollbackCompilation(string reason)
+        {
             if (!IsPending) return;
             Record record = JsonUtility.FromJson<Record>(SessionState.GetString(SESSION_KEY, string.Empty));
             Restore(record);
             SessionState.EraseString(SESSION_KEY);
             AssetDatabase.Refresh();
-            Debug.LogError("UIKit 绑定转换未通过编译，已恢复原代码和 Prefab；请查看编译诊断。");
+            Debug.LogError(reason);
+        }
+
+        /// <summary>类型验证失败时回滚，保留预期类型、程序集和实际解析结果。</summary>
+        private static void RollbackTypeValidation(Record record, Type type, Type expected)
+        {
+            string actual = type == null ? "null" : type.FullName;
+            RollbackCompilation("UIKit 绑定转换类型验证失败: " + record.typeName + " @ " + record.assemblyName
+                + "，实际 " + actual + "，期望基类 " + expected.Name);
         }
 
         /// <summary>Domain Reload 后核对目标类型基类与脚本身份，再完成 Prefab 回填并结束事务。</summary>
@@ -215,7 +220,7 @@ namespace YokiFrame
             if (type == null || !expected.IsAssignableFrom(type)
                 || (record.kind == BindType.Element && typeof(UIComponent).IsAssignableFrom(type)))
             {
-                RollbackCompilation();
+                RollbackTypeValidation(record, type, expected);
                 return;
             }
             UIKitPanelCodeLayout layout = new(record.request, record.elementComponentName);
