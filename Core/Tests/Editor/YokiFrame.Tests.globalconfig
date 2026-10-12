@@ -1,0 +1,8 @@
+# YokiFrame.Tests 的静态字段属于测试夹具，由用例自行重置。
+# 关闭 UAL 分析；代码生成保持开启，没有 AutoStaticsCleanup 时不会发出清理代码。
+# 诊断严重级别同时设为 none，避免分析开关被后续配置覆盖后警告仍进入 Console。
+is_global = true
+build_property.UnityEnableAutoStaticsCleanupCodeGen = true
+build_property.UnityEnableAutoStaticsCleanupAnalysis = false
+dotnet_diagnostic.UAL0010.severity = none
+dotnet_diagnostic.UAL0013.severity = none

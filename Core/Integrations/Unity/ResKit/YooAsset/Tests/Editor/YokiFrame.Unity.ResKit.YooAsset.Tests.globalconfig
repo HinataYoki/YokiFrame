@@ -1,0 +1,8 @@
+# 关闭 UAL0010/UAL0013。Unity 7000 关闭域重载后要求静态类型标注 AutoStaticsCleanup。
+# 最低支持 2022.3，不能无条件引用该特性；按程序集抑制，而不是逐类型标注。
+# 代码生成保持开启，显式标注 AutoStaticsCleanup 时仍会发出清理代码。
+is_global = true
+build_property.UnityEnableAutoStaticsCleanupCodeGen = true
+build_property.UnityEnableAutoStaticsCleanupAnalysis = false
+dotnet_diagnostic.UAL0010.severity = none
+dotnet_diagnostic.UAL0013.severity = none

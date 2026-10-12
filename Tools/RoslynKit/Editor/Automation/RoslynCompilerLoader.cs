@@ -117,7 +117,7 @@ namespace YokiFrame
         /// <param name="projectRoot">工程根；<see cref="RELATIVE_PATH"/> 以它为基准。</param>
         /// <param name="compilerDirectories">优先尝试的编译器目录（通常为包内 bundle）。</param>
         /// <param name="referenceDirectory">编译引用程序集目录；null 时由调用方另行提供。</param>
-        /// <param name="loadAssembly">用户脚本 PE/PDB 加载委托；null 时使用 <see cref="Assembly.Load(byte[], byte[])"/>。</param>
+        /// <param name="loadAssembly">用户脚本 PE/PDB 加载委托；null 只在 2022.3、Godot 与工具链使用旧 API，Unity 6.5 必须由适配器提供。</param>
         /// <param name="loadCompilerAssembly">编译器 bundle 加载委托；null 时加载到不可回收上下文。</param>
         public RoslynCompilerLoader(string projectRoot, IReadOnlyList<string> compilerDirectories,
             string referenceDirectory, Func<byte[], byte[], Assembly> loadAssembly,
@@ -133,7 +133,7 @@ namespace YokiFrame
         /// <param name="projectRoot">工程根；<see cref="RELATIVE_PATH"/> 以它为基准。</param>
         /// <param name="compilerDirectories">优先尝试的编译器目录（通常为包内 bundle）。</param>
         /// <param name="referenceDirectory">编译引用程序集目录；null 时由调用方另行提供。</param>
-        /// <param name="loadAssembly">PE/PDB 加载委托；null 时使用 <see cref="Assembly.Load(byte[], byte[])"/>。</param>
+        /// <param name="loadAssembly">PE/PDB 加载委托；null 只在 2022.3、Godot 与工具链使用旧 API，Unity 6.5 必须由适配器提供。</param>
         public RoslynCompilerLoader(string projectRoot, IReadOnlyList<string> compilerDirectories,
             string referenceDirectory = null,
             Func<byte[], byte[], Assembly> loadAssembly = null)
@@ -197,8 +197,62 @@ namespace YokiFrame
         }
 
         public string[] CaptureReferences() => RoslynScriptOperations.CaptureReferences(mReferenceDirectory);
-        public Assembly LoadAssembly(byte[] pe, byte[] symbols) =>
-            mLoadAssembly == null ? Assembly.Load(pe, symbols) : mLoadAssembly(pe, symbols);
+
+        /// <summary>
+        /// 加载用户脚本程序集。宿主未提供委托时，仅 2022.3、Godot 与工具链走旧 API。
+        /// </summary>
+        /// <param name="pe">程序集 PE。</param>
+        /// <param name="symbols">PDB；可为 null。</param>
+        /// <returns>已加载程序集。</returns>
+        public Assembly LoadAssembly(byte[] pe, byte[] symbols)
+        {
+            return mLoadAssembly == null
+                ? LoadScriptFallback(pe, symbols)
+                : mLoadAssembly(pe, symbols);
+        }
+
+        /// <summary>
+        /// 在没有宿主加载器时加载内存脚本。Unity 6.5 起必须由适配器接管。
+        /// </summary>
+        /// <param name="pe">程序集 PE。</param>
+        /// <param name="symbols">PDB；可为 null。</param>
+        /// <returns>已加载程序集。</returns>
+        private static Assembly LoadScriptFallback(byte[] pe, byte[] symbols)
+        {
+#if UNITY_6000_5_OR_NEWER
+            throw new InvalidOperationException(
+                "Unity 6.5+ requires the host adapter to load script assemblies.");
+#else
+            return Assembly.Load(pe, symbols);
+#endif
+        }
+
+        /// <summary>
+        /// 加载编译器或依赖程序集。宿主未提供委托时，仅 2022.3、Godot 与工具链走路径加载。
+        /// </summary>
+        /// <param name="path">程序集绝对路径。</param>
+        /// <returns>已加载程序集。</returns>
+        private Assembly LoadCompilerFromPath(string path)
+        {
+            return mLoadCompilerAssembly == null
+                ? LoadCompilerFallback(path)
+                : mLoadCompilerAssembly(path);
+        }
+
+        /// <summary>
+        /// 在没有宿主加载器时按路径加载编译器程序集。Unity 6.5 起必须由适配器接管。
+        /// </summary>
+        /// <param name="path">程序集绝对路径。</param>
+        /// <returns>已加载程序集。</returns>
+        private static Assembly LoadCompilerFallback(string path)
+        {
+#if UNITY_6000_5_OR_NEWER
+            throw new InvalidOperationException(
+                "Unity 6.5+ requires the host adapter to load compiler assemblies.");
+#else
+            return Assembly.LoadFrom(path);
+#endif
+        }
 
         /// <summary>
         /// 获取是否至少有一个候选目录带有编译器入口程序集。
@@ -276,9 +330,7 @@ namespace YokiFrame
                 }
                 string compilerPath = Path.Combine(directory, COMPILER_ASSEMBLY_NAME);
                 // 宿主未提供加载器时保留旧路径；Unity 6.5 必须由 Adapter 注入不可回收加载器。
-                Assembly compiler = mLoadCompilerAssembly == null
-                    ? Assembly.LoadFrom(compilerPath)
-                    : mLoadCompilerAssembly(compilerPath);
+                Assembly compiler = LoadCompilerFromPath(compilerPath);
                 mCompile = compiler.GetType("YokiFrame.RoslynKit.Compiler.MemoryCompiler", true).GetMethod("Compile");
                 if (mCompile == null) throw new InvalidOperationException("Compiler bundle has an incompatible API.");
             }
@@ -297,7 +349,7 @@ namespace YokiFrame
             AssemblyName bundled = AssemblyName.GetAssemblyName(path);
             if (bundled.FullName != requested.FullName) return null;
             // Unity 6.5 的默认 LoadFrom 会进入可回收上下文，其依赖随后无法被 AssemblyResolve 返回。
-            return mLoadCompilerAssembly == null ? Assembly.LoadFrom(path) : mLoadCompilerAssembly(path);
+            return LoadCompilerFromPath(path);
         }
 
         public void Dispose()

@@ -1,0 +1,8 @@
+# 该程序集 noEngineReferences=true，不能引用 Unity.Scripting.LifecycleManagement。
+# 关闭 UAL0013 分析；代码生成保持默认开启，没有特性时不会发出清理代码。
+is_global = true
+build_property.UnityEnableAutoStaticsCleanupCodeGen = true
+build_property.UnityEnableAutoStaticsCleanupAnalysis = false
+# 诊断严重级别同时设为 none，避免分析开关被后续配置覆盖后警告仍进入 Console。
+dotnet_diagnostic.UAL0010.severity = none
+dotnet_diagnostic.UAL0013.severity = none

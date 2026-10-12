@@ -255,6 +255,7 @@ namespace YokiFrame
 
         /// <summary>
         /// 收集当前已加载、可作为原型编译引用的程序集路径。动态程序集和编辑器程序集排除。
+        /// Unity 6.5 起路径由宿主适配器提供，不再读取 Assembly.Location。
         /// </summary>
         /// <param name="referenceDirectory">位置为空时可选的同名 DLL 目录。</param>
         /// <returns>去重后的引用路径。</returns>
@@ -265,7 +266,7 @@ namespace YokiFrame
             foreach (Assembly assembly in LoadedAssemblies.Get())
             {
                 if (assembly.IsDynamic || !IsLiveCompileReference(assembly)) continue;
-                string path = assembly.Location;
+                string path = LoadedAssemblies.GetPath(assembly);
                 if (string.IsNullOrEmpty(path) && referenceDirectory != null)
                 {
                     string candidate = YokiFrameFilePathPolicy.CombineInside(referenceDirectory, assembly.GetName().Name + ".dll");

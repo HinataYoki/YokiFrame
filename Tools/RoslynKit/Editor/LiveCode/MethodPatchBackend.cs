@@ -19,7 +19,7 @@ namespace YokiFrame
 
         /// <summary>记录补丁包目录和宿主加载器。不在构造时加载程序集。</summary>
         /// <param name="directory">包含补丁包和依赖 DLL 的目录。</param>
-        /// <param name="loadAssembly">程序集加载委托；null 时使用 <see cref="Assembly.LoadFrom"/>。</param>
+        /// <param name="loadAssembly">程序集加载委托；null 只在 2022.3、Godot 与工具链使用旧 API，Unity 6.5 必须由适配器提供。</param>
         public MethodPatchBackend(string directory, Func<string, Assembly> loadAssembly)
         {
             mDirectory = directory;
@@ -85,12 +85,25 @@ namespace YokiFrame
             return LoadBundle(path);
         }
 
-        /// <summary>按宿主委托加载补丁程序集；未提供委托时保留路径加载。</summary>
+        /// <summary>按宿主委托加载补丁程序集。未提供委托时，仅 2022.3、Godot 与工具链走路径加载。</summary>
         /// <param name="path">程序集绝对路径。</param>
         /// <returns>已加载程序集。</returns>
         private Assembly LoadBundle(string path)
         {
-            return mLoadAssembly == null ? Assembly.LoadFrom(path) : mLoadAssembly(path);
+            return mLoadAssembly == null ? LoadBundleFallback(path) : mLoadAssembly(path);
+        }
+
+        /// <summary>没有宿主加载器时按路径加载。Unity 6.5 起必须由适配器接管。</summary>
+        /// <param name="path">程序集绝对路径。</param>
+        /// <returns>已加载程序集。</returns>
+        private static Assembly LoadBundleFallback(string path)
+        {
+#if UNITY_6000_5_OR_NEWER
+            throw new InvalidOperationException(
+                "Unity 6.5+ requires the host adapter to load patch assemblies.");
+#else
+            return Assembly.LoadFrom(path);
+#endif
         }
 
         /// <summary>调用静态补丁 API。目标异常保留原栈重新抛出。</summary>

@@ -36,8 +36,9 @@ namespace YokiFrame
         public static void EnsureInstalled()
         {
 #if UNITY_6000_5_OR_NEWER
-            // Unity 6.5 不再保证 AppDomain 只返回仍存活的程序集。
+            // Unity 6.5 不再保证 AppDomain 只返回仍存活的程序集，Location 也恒为空。
             LoadedAssemblies.Use(CurrentAssemblies.GetLoadedAssemblies);
+            LoadedAssemblies.UsePath(static assembly => UnityEngine.AssemblyExtension.GetLoadedAssemblyPath(assembly));
 #endif
             YokiFrameToolKitInteractionCatalog.Register(GetProvider());
         }
@@ -108,7 +109,7 @@ namespace YokiFrame
             sLivePermission = () => !settingsSource.Read().BlocksExecution && !trustedSource.Read().BlocksExecution;
             var compiler = new RoslynCompilerLoader(projectRoot,
                 new[] { ResolvePackageDirectory(RoslynCompilerLoader.PACKAGE_RELATIVE_PATH) },
-                null, null, LoadCompilerAssembly);
+                null, LoadUserAssembly, LoadCompilerAssembly);
             var budget = new RoslynLoadBudget();
             var liveHost = new UnityLiveCodeHost(projectRoot,
                 (id, method, arguments) => sLiveCode.Invoke(id, method, arguments, () => { }));
@@ -189,6 +190,26 @@ namespace YokiFrame
             if (File.Exists(Path.Combine(packaged, "0Harmony.dll"))) return packaged;
             return Path.GetFullPath(Path.Combine(projectRoot,
                 ".yokiframe/automation/patches/harmonyx-2.16.1".Replace('/', Path.DirectorySeparatorChar)));
+        }
+
+        /// <summary>
+        /// 从内存加载用户脚本。Unity 6.5 起 <c>Assembly.Load(byte[], byte[])</c> 会进入非 Unity 上下文。
+        /// </summary>
+        /// <param name="pe">程序集 PE。</param>
+        /// <param name="symbols">PDB；为空时只加载 PE。</param>
+        /// <returns>已加载程序集。</returns>
+        private static Assembly LoadUserAssembly(byte[] pe, byte[] symbols)
+        {
+#if UNITY_6000_5_OR_NEWER
+            if (symbols == null || symbols.Length == 0)
+            {
+                return CurrentAssemblies.LoadFromBytes(pe);
+            }
+
+            return CurrentAssemblies.LoadFromBytes(pe, symbols);
+#else
+            return Assembly.Load(pe, symbols);
+#endif
         }
 
         /// <summary>
