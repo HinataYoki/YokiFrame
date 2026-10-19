@@ -2,21 +2,16 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Threading;
 using Nino.Core;
-#if UNITY_6000_5_OR_NEWER
-using UnityEngine.Assemblies;
-#endif
 
 namespace YokiFrame
 {
     /// <summary>
     /// SaveKit 的 Nino 二进制序列化后端。payload 版本和迁移由 Nino 自己负责。
+    /// Nino 4.x 的生成代码由程序集级 ModuleInitializer 自行注册，适配层不再手工扫描并初始化生成类型。
     /// </summary>
     public sealed class NinoSaveSerializer : ISaveSerializer, IModuleIdAwareSaveSerializer
     {
-        private static int sInitialized;
-
         /// <inheritdoc />
         public string SerializerId
         {
@@ -31,7 +26,6 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(data));
             }
 
-            EnsureNinoInitialized();
             return NinoSerializer.Serialize(data);
         }
 
@@ -39,7 +33,6 @@ namespace YokiFrame
         public T Deserialize<T>(byte[] bytes)
         {
             ValidateBytes(bytes);
-            EnsureNinoInitialized();
             return NinoDeserializer.Deserialize<T>(bytes);
         }
 
@@ -57,8 +50,8 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(data));
             }
 
-            EnsureNinoInitialized();
-            return NinoSerializer.Serialize(data);
+            // 非泛型入口必须显式传入运行时类型，否则 Nino 只能看到 object 的静态类型。
+            return NinoSerializer.SerializeBoxed(data, data.GetType());
         }
 
         /// <inheritdoc />
@@ -79,12 +72,13 @@ namespace YokiFrame
                 throw new ArgumentNullException(nameof(target));
             }
 
-            EnsureNinoInitialized();
-            var targetType = target.GetType();
+            Type targetType = target.GetType();
             object boxedTarget = target;
-            NinoDeserializer.DeserializeRefBoxed(ref boxedTarget, bytes, targetType);
+            // Nino 4.x 以 DeserializeBoxed 取代已移除的 DeserializeRefBoxed：目标实例存在时按原实例写入。
+            NinoDeserializer.DeserializeBoxed(bytes, ref boxedTarget, targetType);
             if (!ReferenceEquals(boxedTarget, target))
             {
+                // payload 运行时类型与目标类型不一致时 Nino 会返回新实例，此处回拷以保持“原地覆盖”契约。
                 CopyInstanceValues(boxedTarget, target, targetType);
             }
         }
@@ -93,92 +87,6 @@ namespace YokiFrame
         public void DeserializeOverwrite(string moduleId, byte[] bytes, object target)
         {
             DeserializeOverwrite(bytes, target);
-        }
-
-        /// <summary>
-        /// 确保 Nino 生成注册代码只初始化一次；Unity 6.5 及以上通过 Unity 维护的程序集集合规避卸载程序集，
-        /// Unity 2022.3 基线继续使用其可用的 AppDomain 路径。
-        /// </summary>
-        private static void EnsureNinoInitialized()
-        {
-            if (Volatile.Read(ref sInitialized) != 0 || Interlocked.Exchange(ref sInitialized, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-#if UNITY_6000_5_OR_NEWER
-                foreach (Assembly assembly in CurrentAssemblies.GetLoadedAssemblies())
-                {
-                    if (ReferencesNino(assembly)) InitializeGeneratedRegistration(assembly);
-                }
-#else
-                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-                for (var i = 0; i < assemblies.Length; i++)
-                {
-                    if (ReferencesNino(assemblies[i])) InitializeGeneratedRegistration(assemblies[i]);
-                }
-#endif
-            }
-            catch
-            {
-                // 扫描失败必须放开闩锁，否则 Nino 永久停在半注册状态。
-                Volatile.Write(ref sInitialized, 0);
-                throw;
-            }
-        }
-
-        /// <summary>只有引用 Nino.Core 的程序集才可能包含 NinoGen 生成注册代码。</summary>
-        private static bool ReferencesNino(Assembly assembly)
-        {
-            if (assembly == null || assembly.IsDynamic) return false;
-            AssemblyName[] references = assembly.GetReferencedAssemblies();
-            for (var i = 0; i < references.Length; i++)
-            {
-                if (string.Equals(references[i].Name, "Nino.Core", StringComparison.Ordinal)) return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>扫描已加载程序集并调用 Nino 生成注册入口。</summary>
-        private static void InitializeGeneratedRegistration(Assembly assembly)
-        {
-            Type[] types;
-            try
-            {
-                types = assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException exception)
-            {
-                types = exception.Types;
-            }
-            catch (FileNotFoundException) { return; }
-            catch (TypeLoadException) { return; }
-            catch (BadImageFormatException) { return; }
-
-            if (types == null)
-            {
-                return;
-            }
-
-            for (var i = 0; i < types.Length; i++)
-            {
-                var type = types[i];
-                if (type == null || type.FullName == null || type.FullName.IndexOf(".NinoGen.", StringComparison.Ordinal) < 0)
-                {
-                    continue;
-                }
-
-                if (type.Name != "Serializer" && type.Name != "Deserializer" && type.Name != "NinoBuiltInTypesRegistration")
-                {
-                    continue;
-                }
-
-                var init = type.GetMethod("Init", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, Type.EmptyTypes, null);
-                init?.Invoke(null, null);
-            }
         }
 
         /// <summary>验证 Nino payload 非空。</summary>
